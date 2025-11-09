@@ -14,16 +14,557 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      agendamentos: {
+        Row: {
+          barbeiro_id: string | null
+          created_at: string | null
+          data: string
+          duracao: number
+          hora: string
+          id: string
+          is_free: boolean | null
+          observacoes: string | null
+          preco: number
+          servico_id: string
+          status: Database["public"]["Enums"]["appointment_status"] | null
+          updated_at: string | null
+          usado_redemption_id: string | null
+          user_id: string
+        }
+        Insert: {
+          barbeiro_id?: string | null
+          created_at?: string | null
+          data: string
+          duracao: number
+          hora: string
+          id?: string
+          is_free?: boolean | null
+          observacoes?: string | null
+          preco: number
+          servico_id: string
+          status?: Database["public"]["Enums"]["appointment_status"] | null
+          updated_at?: string | null
+          usado_redemption_id?: string | null
+          user_id: string
+        }
+        Update: {
+          barbeiro_id?: string | null
+          created_at?: string | null
+          data?: string
+          duracao?: number
+          hora?: string
+          id?: string
+          is_free?: boolean | null
+          observacoes?: string | null
+          preco?: number
+          servico_id?: string
+          status?: Database["public"]["Enums"]["appointment_status"] | null
+          updated_at?: string | null
+          usado_redemption_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agendamentos_barbeiro_id_fkey"
+            columns: ["barbeiro_id"]
+            isOneToOne: false
+            referencedRelation: "barbeiros"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agendamentos_servico_id_fkey"
+            columns: ["servico_id"]
+            isOneToOne: false
+            referencedRelation: "servicos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      assinaturas: {
+        Row: {
+          created_at: string | null
+          gateway_subscription_id: string | null
+          id: string
+          next_billing_date: string | null
+          payment_method: Database["public"]["Enums"]["payment_method"] | null
+          plano_id: string
+          status: Database["public"]["Enums"]["subscription_status"] | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          gateway_subscription_id?: string | null
+          id?: string
+          next_billing_date?: string | null
+          payment_method?: Database["public"]["Enums"]["payment_method"] | null
+          plano_id: string
+          status?: Database["public"]["Enums"]["subscription_status"] | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          gateway_subscription_id?: string | null
+          id?: string
+          next_billing_date?: string | null
+          payment_method?: Database["public"]["Enums"]["payment_method"] | null
+          plano_id?: string
+          status?: Database["public"]["Enums"]["subscription_status"] | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assinaturas_plano_id_fkey"
+            columns: ["plano_id"]
+            isOneToOne: false
+            referencedRelation: "planos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      barbeiros: {
+        Row: {
+          apelido: string
+          ativo: boolean | null
+          comissao_pct: number | null
+          created_at: string | null
+          id: string
+          user_id: string | null
+        }
+        Insert: {
+          apelido: string
+          ativo?: boolean | null
+          comissao_pct?: number | null
+          created_at?: string | null
+          id?: string
+          user_id?: string | null
+        }
+        Update: {
+          apelido?: string
+          ativo?: boolean | null
+          comissao_pct?: number | null
+          created_at?: string | null
+          id?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      comissoes: {
+        Row: {
+          appointment_id: string
+          barbeiro_id: string
+          created_at: string | null
+          id: string
+          pago: boolean | null
+          percentual: number | null
+          valor: number
+        }
+        Insert: {
+          appointment_id: string
+          barbeiro_id: string
+          created_at?: string | null
+          id?: string
+          pago?: boolean | null
+          percentual?: number | null
+          valor: number
+        }
+        Update: {
+          appointment_id?: string
+          barbeiro_id?: string
+          created_at?: string | null
+          id?: string
+          pago?: boolean | null
+          percentual?: number | null
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comissoes_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "agendamentos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comissoes_barbeiro_id_fkey"
+            columns: ["barbeiro_id"]
+            isOneToOne: false
+            referencedRelation: "barbeiros"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      financial_entries: {
+        Row: {
+          categoria: string
+          created_at: string | null
+          data: string
+          descricao: string | null
+          id: string
+          nota_anexo: string | null
+          related_appointment_id: string | null
+          tipo: Database["public"]["Enums"]["financial_entry_type"]
+          updated_at: string | null
+          valor: number
+        }
+        Insert: {
+          categoria: string
+          created_at?: string | null
+          data: string
+          descricao?: string | null
+          id?: string
+          nota_anexo?: string | null
+          related_appointment_id?: string | null
+          tipo: Database["public"]["Enums"]["financial_entry_type"]
+          updated_at?: string | null
+          valor: number
+        }
+        Update: {
+          categoria?: string
+          created_at?: string | null
+          data?: string
+          descricao?: string | null
+          id?: string
+          nota_anexo?: string | null
+          related_appointment_id?: string | null
+          tipo?: Database["public"]["Enums"]["financial_entry_type"]
+          updated_at?: string | null
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "financial_entries_related_appointment_id_fkey"
+            columns: ["related_appointment_id"]
+            isOneToOne: false
+            referencedRelation: "agendamentos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pagamentos: {
+        Row: {
+          agendamento_id: string | null
+          assinatura_id: string | null
+          created_at: string | null
+          data_pagamento: string | null
+          gateway_payment_id: string | null
+          id: string
+          metodo: Database["public"]["Enums"]["payment_method"]
+          status: Database["public"]["Enums"]["payment_status"] | null
+          user_id: string
+          valor: number
+        }
+        Insert: {
+          agendamento_id?: string | null
+          assinatura_id?: string | null
+          created_at?: string | null
+          data_pagamento?: string | null
+          gateway_payment_id?: string | null
+          id?: string
+          metodo: Database["public"]["Enums"]["payment_method"]
+          status?: Database["public"]["Enums"]["payment_status"] | null
+          user_id: string
+          valor: number
+        }
+        Update: {
+          agendamento_id?: string | null
+          assinatura_id?: string | null
+          created_at?: string | null
+          data_pagamento?: string | null
+          gateway_payment_id?: string | null
+          id?: string
+          metodo?: Database["public"]["Enums"]["payment_method"]
+          status?: Database["public"]["Enums"]["payment_status"] | null
+          user_id?: string
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pagamentos_agendamento_id_fkey"
+            columns: ["agendamento_id"]
+            isOneToOne: false
+            referencedRelation: "agendamentos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pagamentos_assinatura_id_fkey"
+            columns: ["assinatura_id"]
+            isOneToOne: false
+            referencedRelation: "assinaturas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      planos: {
+        Row: {
+          ativo: boolean | null
+          beneficios_json: Json | null
+          created_at: string | null
+          descricao: string | null
+          id: string
+          limite_agendamentos_mes: number | null
+          nome: string
+          preco_mensal: number
+          prioridade_agendamento: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          ativo?: boolean | null
+          beneficios_json?: Json | null
+          created_at?: string | null
+          descricao?: string | null
+          id?: string
+          limite_agendamentos_mes?: number | null
+          nome: string
+          preco_mensal: number
+          prioridade_agendamento?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          ativo?: boolean | null
+          beneficios_json?: Json | null
+          created_at?: string | null
+          descricao?: string | null
+          id?: string
+          limite_agendamentos_mes?: number | null
+          nome?: string
+          preco_mensal?: number
+          prioridade_agendamento?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      pontos: {
+        Row: {
+          created_at: string | null
+          id: string
+          last_awarded_at: string | null
+          pontos: number | null
+          promocao_id: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          last_awarded_at?: string | null
+          pontos?: number | null
+          promocao_id?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          last_awarded_at?: string | null
+          pontos?: number | null
+          promocao_id?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pontos_promocao_id_fkey"
+            columns: ["promocao_id"]
+            isOneToOne: false
+            referencedRelation: "promocoes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          blocked: boolean | null
+          cpf: string | null
+          created_at: string | null
+          id: string
+          nome: string
+          updated_at: string | null
+        }
+        Insert: {
+          blocked?: boolean | null
+          cpf?: string | null
+          created_at?: string | null
+          id: string
+          nome: string
+          updated_at?: string | null
+        }
+        Update: {
+          blocked?: boolean | null
+          cpf?: string | null
+          created_at?: string | null
+          id?: string
+          nome?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      promocoes: {
+        Row: {
+          ativo: boolean | null
+          created_at: string | null
+          descricao: string | null
+          id: string
+          nome: string
+          pontos_necessarios: number | null
+          weekly_required: boolean | null
+        }
+        Insert: {
+          ativo?: boolean | null
+          created_at?: string | null
+          descricao?: string | null
+          id?: string
+          nome: string
+          pontos_necessarios?: number | null
+          weekly_required?: boolean | null
+        }
+        Update: {
+          ativo?: boolean | null
+          created_at?: string | null
+          descricao?: string | null
+          id?: string
+          nome?: string
+          pontos_necessarios?: number | null
+          weekly_required?: boolean | null
+        }
+        Relationships: []
+      }
+      resgates: {
+        Row: {
+          appointment_id: string | null
+          created_at: string | null
+          expired_at: string | null
+          id: string
+          promocao_id: string | null
+          status: string | null
+          used_at: string | null
+          user_id: string
+        }
+        Insert: {
+          appointment_id?: string | null
+          created_at?: string | null
+          expired_at?: string | null
+          id?: string
+          promocao_id?: string | null
+          status?: string | null
+          used_at?: string | null
+          user_id: string
+        }
+        Update: {
+          appointment_id?: string | null
+          created_at?: string | null
+          expired_at?: string | null
+          id?: string
+          promocao_id?: string | null
+          status?: string | null
+          used_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "resgates_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "agendamentos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "resgates_promocao_id_fkey"
+            columns: ["promocao_id"]
+            isOneToOne: false
+            referencedRelation: "promocoes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      servicos: {
+        Row: {
+          ativo: boolean | null
+          created_at: string | null
+          custo_mao_obra: number | null
+          custo_produtos: number | null
+          descricao: string | null
+          duracao_minutos: number
+          id: string
+          nome: string
+          preco: number
+          updated_at: string | null
+        }
+        Insert: {
+          ativo?: boolean | null
+          created_at?: string | null
+          custo_mao_obra?: number | null
+          custo_produtos?: number | null
+          descricao?: string | null
+          duracao_minutos: number
+          id?: string
+          nome: string
+          preco: number
+          updated_at?: string | null
+        }
+        Update: {
+          ativo?: boolean | null
+          created_at?: string | null
+          custo_mao_obra?: number | null
+          custo_produtos?: number | null
+          descricao?: string | null
+          duracao_minutos?: number
+          id?: string
+          nome?: string
+          preco?: number
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string | null
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "barber" | "cliente"
+      appointment_status:
+        | "pending"
+        | "confirmed"
+        | "completed"
+        | "cancelled_by_admin"
+        | "cancelled_by_user"
+        | "no_show"
+      financial_entry_type: "income" | "expense"
+      payment_method: "card" | "pix" | "cash"
+      payment_status: "pending" | "paid" | "failed" | "refunded"
+      subscription_status: "active" | "cancelled" | "past_due" | "suspended"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +691,20 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "barber", "cliente"],
+      appointment_status: [
+        "pending",
+        "confirmed",
+        "completed",
+        "cancelled_by_admin",
+        "cancelled_by_user",
+        "no_show",
+      ],
+      financial_entry_type: ["income", "expense"],
+      payment_method: ["card", "pix", "cash"],
+      payment_status: ["pending", "paid", "failed", "refunded"],
+      subscription_status: ["active", "cancelled", "past_due", "suspended"],
+    },
   },
 } as const
