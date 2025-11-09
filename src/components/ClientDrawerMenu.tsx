@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { useState } from "react";
 import { AppointmentHistorySheet } from "./AppointmentHistorySheet";
+import { toast } from "sonner";
 
 interface ClientDrawerMenuProps {
   open: boolean;
@@ -16,6 +17,9 @@ interface ClientDrawerMenuProps {
   onLogout: () => void;
   profile: any;
   userId?: string;
+  onProfileClick: () => void;
+  onPlansClick: () => void;
+  onPointsClick: () => void;
 }
 
 export function ClientDrawerMenu({ 
@@ -23,25 +27,36 @@ export function ClientDrawerMenu({
   onOpenChange, 
   onLogout, 
   profile,
-  userId 
+  userId,
+  onProfileClick,
+  onPlansClick,
+  onPointsClick
 }: ClientDrawerMenuProps) {
   const [historyOpen, setHistoryOpen] = useState(false);
+
+  const handleSupport = () => {
+    toast.info("Você será redirecionado para o nosso atendimento via WhatsApp");
+    setTimeout(() => {
+      window.open("https://wa.me/5511952263002", "_blank");
+    }, 1000);
+    onOpenChange(false);
+  };
 
   const menuItems = [
     {
       icon: User,
       label: "Meu Perfil",
       onClick: () => {
-        // TODO: Navigate to profile page
         onOpenChange(false);
+        onProfileClick();
       }
     },
     {
       icon: Gift,
       label: "Meus Planos",
       onClick: () => {
-        // TODO: Navigate to plans page
         onOpenChange(false);
+        onPlansClick();
       }
     },
     {
@@ -55,17 +70,14 @@ export function ClientDrawerMenu({
       icon: Trophy,
       label: "Programa de Pontos",
       onClick: () => {
-        // TODO: Navigate to points details
         onOpenChange(false);
+        onPointsClick();
       }
     },
     {
       icon: HeadphonesIcon,
       label: "Suporte / Fale Conosco",
-      onClick: () => {
-        // TODO: Navigate to support
-        onOpenChange(false);
-      }
+      onClick: handleSupport
     },
   ];
 

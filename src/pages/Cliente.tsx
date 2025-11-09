@@ -11,6 +11,9 @@ import { ClientDrawerMenu } from "@/components/ClientDrawerMenu";
 import { PointsDetailModal } from "@/components/PointsDetailModal";
 import { AppointmentCard } from "@/components/AppointmentCard";
 import { NotificationBell } from "@/components/NotificationBell";
+import { MyPlansSheet } from "@/components/MyPlansSheet";
+import { SubscribePlanSheet } from "@/components/SubscribePlanSheet";
+import { MyProfileSheet } from "@/components/MyProfileSheet";
 
 interface Appointment {
   id: string;
@@ -33,6 +36,9 @@ const Cliente = () => {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [pointsModalOpen, setPointsModalOpen] = useState(false);
   const [completedAppointments, setCompletedAppointments] = useState(0);
+  const [plansSheetOpen, setPlansSheetOpen] = useState(false);
+  const [subscribeSheetOpen, setSubscribeSheetOpen] = useState(false);
+  const [profileSheetOpen, setProfileSheetOpen] = useState(false);
 
   useEffect(() => {
     checkAuth();
@@ -249,6 +255,35 @@ const Cliente = () => {
         onLogout={handleLogout}
         profile={profile}
         userId={user?.id}
+        onProfileClick={() => setProfileSheetOpen(true)}
+        onPlansClick={() => setPlansSheetOpen(true)}
+        onPointsClick={() => setPointsModalOpen(true)}
+      />
+
+      {/* My Plans Sheet */}
+      <MyPlansSheet
+        open={plansSheetOpen}
+        onOpenChange={setPlansSheetOpen}
+        userId={user?.id}
+        onSubscribe={() => setSubscribeSheetOpen(true)}
+      />
+
+      {/* Subscribe Plan Sheet */}
+      <SubscribePlanSheet
+        open={subscribeSheetOpen}
+        onOpenChange={setSubscribeSheetOpen}
+        userId={user?.id}
+      />
+
+      {/* My Profile Sheet */}
+      <MyProfileSheet
+        open={profileSheetOpen}
+        onOpenChange={setProfileSheetOpen}
+        userId={user?.id}
+        profile={profile}
+        onProfileUpdate={() => {
+          if (user) loadUserData(user.id);
+        }}
       />
 
       {/* Points Detail Modal */}
