@@ -161,7 +161,7 @@ export function MyPlansSheet({ open, onOpenChange, userId, onSubscribe }: MyPlan
               <Button
                 onClick={() => {
                   onOpenChange(false);
-                  onSubscribe();
+                  setTimeout(() => onSubscribe(), 300);
                 }}
                 className="h-12 px-8 bg-primary hover:bg-primary/90 transition-all duration-300"
               >

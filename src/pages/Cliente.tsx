@@ -265,7 +265,10 @@ const Cliente = () => {
         open={plansSheetOpen}
         onOpenChange={setPlansSheetOpen}
         userId={user?.id}
-        onSubscribe={() => setSubscribeSheetOpen(true)}
+        onSubscribe={() => {
+          setPlansSheetOpen(false);
+          setTimeout(() => setSubscribeSheetOpen(true), 300);
+        }}
       />
 
       {/* Subscribe Plan Sheet */}
