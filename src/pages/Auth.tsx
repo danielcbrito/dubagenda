@@ -206,7 +206,18 @@ const Auth = () => {
           </div>
 
           <div>
-            <Label htmlFor="senha" className="text-sm">Senha</Label>
+            <div className="flex items-center justify-between mb-1">
+              <Label htmlFor="senha" className="text-sm">Senha</Label>
+              {mode === "login" && (
+                <button
+                  type="button"
+                  onClick={() => navigate("/esqueci-senha")}
+                  className="text-xs text-primary hover:underline"
+                >
+                  Esqueci minha senha
+                </button>
+              )}
+            </div>
             <Input
               id="senha"
               name="senha"
