@@ -54,7 +54,17 @@ export function SubscribePlanSheet({ open, onOpenChange, userId }: SubscribePlan
         setErrorMessage("Não foi possível carregar os planos disponíveis.");
         toast.error("Erro ao carregar planos");
       } else {
-        setPlans(data || []);
+        // Normalize beneficios_json to always be an array
+        const normalizedData = (data || []).map(plan => ({
+          ...plan,
+          beneficios_json: Array.isArray(plan.beneficios_json) 
+            ? plan.beneficios_json 
+            : typeof plan.beneficios_json === 'string'
+            ? JSON.parse(plan.beneficios_json)
+            : []
+        }));
+        
+        setPlans(normalizedData);
         setLoadingState("success");
         
         if (!data || data.length === 0) {
