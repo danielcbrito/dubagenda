@@ -126,6 +126,7 @@ const Cliente = () => {
       .eq("id", appointmentId);
 
     if (error) {
+      console.error("Deletion error:", error);
       toast.error("Erro ao cancelar agendamento");
       return;
     }
@@ -133,9 +134,6 @@ const Cliente = () => {
     // Remove appointment from state immediately
     setAppointments(prev => prev.filter(apt => apt.id !== appointmentId));
     toast.success("Agendamento cancelado com sucesso");
-    
-    // Reload all data to ensure consistency
-    if (user) loadUserData(user.id);
   };
 
   const pointsProgress = (points % 5) * 20;

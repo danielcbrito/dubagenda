@@ -66,6 +66,7 @@ const ClienteAgendar = () => {
 
     // Calculate total duration needed
     const totalDuration = selectedServices.reduce((sum, s) => sum + s.duracao_minutos, 0);
+    const bufferTime = 10; // 10-minute buffer between appointments
 
     // Generate time slots from 9:00 to 20:00
     const slots: TimeSlot[] = [];
@@ -83,7 +84,7 @@ const ClienteAgendar = () => {
           continue;
         }
 
-        // Check if slot conflicts with existing appointments
+        // Check if slot conflicts with existing appointments (including buffer)
         let isAvailable = true;
         
         if (appointments) {
@@ -91,9 +92,9 @@ const ClienteAgendar = () => {
             const aptHour = parseInt(apt.hora.split(':')[0]);
             const aptMinute = parseInt(apt.hora.split(':')[1]);
             const aptStart = aptHour * 60 + aptMinute;
-            const aptEnd = aptStart + apt.duracao;
+            const aptEnd = aptStart + apt.duracao + bufferTime; // Add buffer after appointment
 
-            // Check for overlap
+            // Check for overlap (including buffer time)
             if (
               (slotStart >= aptStart && slotStart < aptEnd) ||
               (slotEnd > aptStart && slotEnd <= aptEnd) ||
