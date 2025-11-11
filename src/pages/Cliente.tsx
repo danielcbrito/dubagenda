@@ -130,7 +130,11 @@ const Cliente = () => {
       return;
     }
 
+    // Remove appointment from state immediately
+    setAppointments(prev => prev.filter(apt => apt.id !== appointmentId));
     toast.success("Agendamento cancelado com sucesso");
+    
+    // Reload all data to ensure consistency
     if (user) loadUserData(user.id);
   };
 
