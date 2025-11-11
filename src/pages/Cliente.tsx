@@ -44,6 +44,39 @@ const Cliente = () => {
     checkAuth();
   }, []);
 
+  useEffect(() => {
+    if (!user) return;
+
+    // Set up realtime listener for appointments
+    const channel = supabase
+      .channel('appointments-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'agendamentos',
+          filter: `user_id=eq.${user.id}`
+        },
+        (payload) => {
+          console.log('Appointment change detected:', payload);
+          
+          if (payload.eventType === 'INSERT') {
+            loadUserData(user.id);
+          } else if (payload.eventType === 'DELETE') {
+            setAppointments(prev => prev.filter(apt => apt.id !== payload.old.id));
+          } else if (payload.eventType === 'UPDATE') {
+            loadUserData(user.id);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
+
   const checkAuth = async () => {
     const { data: { session } } = await supabase.auth.getSession();
     
@@ -120,6 +153,13 @@ const Cliente = () => {
   };
 
   const handleCancelAppointment = async (appointmentId: string) => {
+    // Get appointment details before deletion for Google Calendar sync
+    const { data: appointment } = await supabase
+      .from("agendamentos")
+      .select("observacoes")
+      .eq("id", appointmentId)
+      .single();
+
     const { error } = await supabase
       .from("agendamentos")
       .delete()
@@ -133,6 +173,22 @@ const Cliente = () => {
 
     // Remove appointment from state immediately
     setAppointments(prev => prev.filter(apt => apt.id !== appointmentId));
+    
+    // Try to delete from Google Calendar if it was synced
+    if (appointment?.observacoes?.includes('Google Calendar ID:')) {
+      const eventId = appointment.observacoes.split('Google Calendar ID: ')[1];
+      await supabase.functions.invoke('google-calendar-sync', {
+        body: {
+          action: 'delete',
+          eventId: eventId,
+          appointmentId: appointmentId,
+        }
+      }).catch(err => {
+        console.warn('Google Calendar deletion failed:', err);
+        // Don't fail the cancellation if calendar sync fails
+      });
+    }
+
     toast.success("Agendamento cancelado com sucesso");
   };
 

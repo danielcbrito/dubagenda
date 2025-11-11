@@ -161,10 +161,26 @@ const ClienteAgendar = () => {
       const totalPrice = selectedServices.reduce((sum, s) => sum + s.preco, 0);
       const serviceNames = selectedServices.map(s => s.nome).join(", ");
 
+      // Validate appointment with backend
+      const { data: validation } = await supabase.functions.invoke('validate-appointment', {
+        body: {
+          data: selectedDate.toISOString().split('T')[0],
+          hora: selectedTime,
+          duracao: totalDuration,
+          userId: session.user.id,
+        }
+      });
+
+      if (!validation?.valid) {
+        toast.error(validation?.message || "Horário indisponível");
+        setLoading(false);
+        return;
+      }
+
       // Use the first service as the main service for servico_id
       const mainService = selectedServices[0];
 
-      const { error } = await supabase
+      const { error, data: newAppointment } = await supabase
         .from("agendamentos")
         .insert({
           user_id: session.user.id,
@@ -177,9 +193,29 @@ const ClienteAgendar = () => {
           observacoes: selectedServices.length > 1 
             ? `Serviços: ${serviceNames}` 
             : null,
-        });
+        })
+        .select()
+        .single();
 
       if (error) throw error;
+
+      // Sync with Google Calendar
+      const dateTime = new Date(`${selectedDate.toISOString().split('T')[0]}T${selectedTime}:00`);
+      const endDateTime = new Date(dateTime.getTime() + totalDuration * 60000);
+      
+      await supabase.functions.invoke('google-calendar-sync', {
+        body: {
+          action: 'create',
+          appointmentId: newAppointment.id,
+          summary: `Agendamento - ${serviceNames}`,
+          description: `Cliente: ${session.user.email}\nServiços: ${serviceNames}\nValor: R$ ${totalPrice.toFixed(2)}`,
+          startDateTime: dateTime.toISOString(),
+          endDateTime: endDateTime.toISOString(),
+        }
+      }).catch(err => {
+        console.warn('Google Calendar sync failed:', err);
+        // Don't fail the appointment if calendar sync fails
+      });
 
       toast.success("Agendamento realizado com sucesso!");
       navigate("/cliente");

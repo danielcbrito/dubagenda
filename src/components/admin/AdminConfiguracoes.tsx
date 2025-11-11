@@ -150,15 +150,43 @@ export function AdminConfiguracoes() {
         )}
       </Card>
 
-      {/* API Settings Placeholder */}
+      {/* Google Calendar Integration */}
       <Card className="p-6 card-premium">
         <div className="flex items-center gap-3 mb-4">
           <Settings className="w-6 h-6 text-primary" />
-          <h3 className="font-semibold text-lg">Integrações</h3>
+          <h3 className="font-semibold text-lg">Google Calendar</h3>
         </div>
-        <p className="text-muted-foreground text-sm">
-          Em breve: Configuração de chaves de API (OpenAI, Mercado Pago, WhatsApp)
-        </p>
+        
+        <div className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            Para sincronizar agendamentos com o Google Calendar, você precisa configurar as seguintes variáveis no Supabase:
+          </p>
+          
+          <div className="bg-muted/30 p-4 rounded-lg space-y-2">
+            <p className="text-xs font-mono">GOOGLE_CLIENT_ID</p>
+            <p className="text-xs font-mono">GOOGLE_CLIENT_SECRET</p>
+            <p className="text-xs font-mono">GOOGLE_REFRESH_TOKEN</p>
+          </div>
+          
+          <div className="space-y-2">
+            <h4 className="font-semibold text-sm">Como configurar:</h4>
+            <ol className="text-sm text-muted-foreground space-y-1 list-decimal list-inside">
+              <li>Acesse o Google Cloud Console</li>
+              <li>Crie um projeto e ative a Google Calendar API</li>
+              <li>Crie credenciais OAuth 2.0</li>
+              <li>Gere um Refresh Token usando as credenciais</li>
+              <li>Adicione as variáveis no Supabase Dashboard (Edge Functions Secrets)</li>
+            </ol>
+          </div>
+          
+          <Button
+            variant="outline"
+            onClick={() => window.open('https://console.cloud.google.com', '_blank')}
+            className="w-full"
+          >
+            Abrir Google Cloud Console
+          </Button>
+        </div>
       </Card>
     </div>
   );
