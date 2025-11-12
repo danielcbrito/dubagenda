@@ -87,12 +87,32 @@ export function AdminAgenda() {
 
   const handleCancelAppointment = async (id: string) => {
     try {
+      // Read event id from observacoes to sync Calendar
+      const { data: apt } = await supabase
+        .from("agendamentos")
+        .select("observacoes")
+        .eq("id", id)
+        .maybeSingle();
+
       const { error } = await supabase
         .from("agendamentos")
-        .update({ status: "cancelled_by_admin" })
+        .update({ status: "cancelled_by_admin" } as any)
         .eq("id", id);
 
       if (error) throw error;
+
+      if (apt?.observacoes?.includes("Google Calendar ID:")) {
+        const eventId = apt.observacoes.split("Google Calendar ID: ")[1];
+        await supabase.functions.invoke('google-calendar-sync', {
+          body: {
+            action: 'update',
+            eventId,
+            appointmentId: id,
+            summaryPrefix: '❌ Cancelado - '
+          }
+        }).catch(err => console.warn('Calendar update failed:', err));
+      }
+
       toast.success("Agendamento cancelado");
     } catch (error) {
       console.error("Error cancelling:", error);
@@ -102,15 +122,43 @@ export function AdminAgenda() {
 
   const handleConfirmAppointment = async (id: string) => {
     try {
-      const { error } = await supabase
+      // Mark barber confirmation
+      const { error: updError } = await supabase
         .from("agendamentos")
-        .update({ status: "confirmed" })
+        .update({ barbeiro_confirmou: true } as any)
         .eq("id", id);
 
-      if (error) throw error;
-      toast.success("Agendamento confirmado");
+      if (updError) throw updError;
+
+      // Check if client also confirmed
+      const { data: row } = await supabase
+        .from("agendamentos")
+        .select("cliente_confirmou, ponto_liberado")
+        .eq("id", id)
+        .single();
+
+      const clientConfirmed = (row as any)?.cliente_confirmou;
+      const pointReleased = (row as any)?.ponto_liberado;
+
+      if (clientConfirmed && !pointReleased) {
+        // Release point and complete
+        const { error: completeErr } = await supabase
+          .from("agendamentos")
+          .update({ ponto_liberado: true, status: 'completed' as any } as any)
+          .eq("id", id);
+        if (completeErr) throw completeErr;
+        toast.success("✅ Atendimento confirmado e ponto liberado");
+      } else {
+        // Keep as confirmed until client confirms
+        const { error: statusErr } = await supabase
+          .from("agendamentos")
+          .update({ status: 'confirmed' as any } as any)
+          .eq("id", id);
+        if (statusErr) throw statusErr;
+        toast.success("✅ Atendimento confirmado (aguardando cliente)");
+      }
     } catch (error) {
-      console.error("Error confirming:", error);
+      console.error("Error confirming agendamento:", error);
       toast.error("Erro ao confirmar agendamento");
     }
   };

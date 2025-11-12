@@ -163,43 +163,44 @@ const Cliente = () => {
 
   const handleCancelAppointment = async (appointmentId: string) => {
     try {
-      // Get appointment details before deletion for Google Calendar sync
-      const { data: appointment } = await supabase
+      // Fetch event id (if any) before status update for Google Calendar sync
+      const { data: appointmentBefore } = await supabase
         .from("agendamentos")
         .select("observacoes")
         .eq("id", appointmentId)
         .maybeSingle();
 
-      // Delete from database
-      const { error: deleteError } = await supabase
+      // Soft cancel in DB (persisted). Users don't have DELETE permission by RLS.
+      const { error: updateError } = await supabase
         .from("agendamentos")
-        .delete()
+        .update({ status: "cancelled_by_user" })
         .eq("id", appointmentId);
 
-      if (deleteError) {
-        console.error("Deletion error:", deleteError);
+      if (updateError) {
+        console.error("Cancel error:", updateError);
         toast.error("Erro ao cancelar agendamento");
         return;
       }
 
-      // Optimistic UI update - remove immediately from state
-      setAppointments(prev => prev.filter(apt => apt.id !== appointmentId));
-      
-      // Try to delete from Google Calendar if it was synced
-      if (appointment?.observacoes?.includes('Google Calendar ID:')) {
-        const eventId = appointment.observacoes.split('Google Calendar ID: ')[1];
+      // Optimistic UI update
+      setAppointments(prev => prev.map(apt => apt.id === appointmentId ? { ...apt, status: "cancelled_by_user" } : apt));
+
+      // Update Google Calendar event title to reflect cancellation
+      if (appointmentBefore?.observacoes?.includes('Google Calendar ID:')) {
+        const eventId = appointmentBefore.observacoes.split('Google Calendar ID: ')[1];
         await supabase.functions.invoke('google-calendar-sync', {
           body: {
-            action: 'delete',
-            eventId: eventId,
-            appointmentId: appointmentId,
+            action: 'update',
+            eventId,
+            appointmentId,
+            summaryPrefix: '❌ Cancelado - '
           }
         }).catch(err => {
-          console.warn('Google Calendar deletion failed:', err);
+          console.warn('Google Calendar update failed:', err);
         });
       }
 
-      toast.success("Agendamento cancelado com sucesso");
+      toast.success("Agendamento cancelado");
     } catch (err) {
       console.error("Unexpected error during cancellation:", err);
       toast.error("Erro ao cancelar agendamento");
@@ -209,7 +210,7 @@ const Cliente = () => {
   const handleConfirmAppointment = async (appointmentId: string) => {
     const { error } = await supabase
       .from("agendamentos")
-      .update({ cliente_confirmou: true })
+      .update({ cliente_confirmou: true } as any)
       .eq("id", appointmentId);
 
     if (error) {
@@ -220,23 +221,31 @@ const Cliente = () => {
     // Check if barber also confirmed
     const { data: appointment } = await supabase
       .from("agendamentos")
+      .select("barbeiro_confirmou, ponto_liberado") as any;
+
+    // Fallback fetch for the specific appointment
+    const { data: appointmentRow } = await supabase
+      .from("agendamentos")
       .select("barbeiro_confirmou, ponto_liberado")
       .eq("id", appointmentId)
       .single();
 
-    if (appointment?.barbeiro_confirmou && !appointment?.ponto_liberado) {
-      // Both confirmed, award point
+    const barberConfirmed = (appointment as any)?.barbeiro_confirmou ?? (appointmentRow as any)?.barbeiro_confirmou;
+    const pointReleased = (appointment as any)?.ponto_liberado ?? (appointmentRow as any)?.ponto_liberado;
+
+    if (barberConfirmed && !pointReleased) {
+      // Both confirmed, award point and complete
       const { error: pointError } = await supabase
         .from("agendamentos")
         .update({ 
           ponto_liberado: true,
-          status: 'completed'
-        })
+          status: 'completed' as any
+        } as any)
         .eq("id", appointmentId);
 
       if (!pointError) {
         toast.success("🎉 Atendimento confirmado! 1 ponto adicionado ao seu programa de fidelidade.");
-        loadUserData(user!.id);
+        if (user) loadUserData(user.id);
       }
     } else {
       toast.success("✅ Aguardando confirmação do barbeiro");
