@@ -17,9 +17,10 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { Calendar, Clock, Info } from "lucide-react";
+import { Calendar, Clock, CheckCircle } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -32,16 +33,19 @@ interface Appointment {
   duracao?: number;
   preco?: number;
   observacoes?: string;
+  cliente_confirmou?: boolean;
+  barbeiro_confirmou?: boolean;
+  ponto_liberado?: boolean;
 }
 
 interface AppointmentCardProps {
   appointment: Appointment;
   onCancel: (id: string) => void;
+  onConfirm?: (id: string) => void;
 }
 
-export function AppointmentCard({ appointment, onCancel }: AppointmentCardProps) {
+export function AppointmentCard({ appointment, onCancel, onConfirm }: AppointmentCardProps) {
   const [detailsOpen, setDetailsOpen] = useState(false);
-  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
 
   const getStatusConfig = (status: string) => {
     switch (status) {
@@ -52,6 +56,7 @@ export function AppointmentCard({ appointment, onCancel }: AppointmentCardProps)
       case "pending":
         return { label: "Pendente", className: "bg-muted text-muted-foreground border-muted" };
       case "cancelled":
+      case "cancelled_by_admin":
         return { label: "Cancelado", className: "bg-destructive/20 text-destructive border-destructive/30" };
       default:
         return { label: status, className: "bg-muted text-muted-foreground border-muted" };
@@ -60,6 +65,22 @@ export function AppointmentCard({ appointment, onCancel }: AppointmentCardProps)
 
   const statusConfig = getStatusConfig(appointment.status);
   const canCancel = appointment.status === "pending" || appointment.status === "confirmed";
+  const needsConfirmation = appointment.status === "completed" && !appointment.cliente_confirmou && onConfirm;
+  
+  const getConfirmationStatus = () => {
+    if (appointment.ponto_liberado) {
+      return { text: "✅ Ponto liberado", variant: "default" as const };
+    }
+    if (appointment.cliente_confirmou && !appointment.barbeiro_confirmou) {
+      return { text: "⏳ Aguardando barbeiro", variant: "secondary" as const };
+    }
+    if (appointment.cliente_confirmou && appointment.barbeiro_confirmou) {
+      return { text: "✅ Confirmado", variant: "default" as const };
+    }
+    return null;
+  };
+
+  const confirmationStatus = getConfirmationStatus();
 
   return (
     <>
@@ -80,6 +101,11 @@ export function AppointmentCard({ appointment, onCancel }: AppointmentCardProps)
                 {appointment.hora}
               </span>
             </div>
+            {confirmationStatus && (
+              <Badge variant={confirmationStatus.variant} className="text-[9px] mt-2">
+                {confirmationStatus.text}
+              </Badge>
+            )}
           </div>
           <Badge variant="outline" className={`text-[10px] px-2 py-0.5 shrink-0 ${statusConfig.className}`}>
             {statusConfig.label}
@@ -132,51 +158,71 @@ export function AppointmentCard({ appointment, onCancel }: AppointmentCardProps)
               <Badge variant="outline" className={`text-xs ${statusConfig.className}`}>
                 {statusConfig.label}
               </Badge>
+              {confirmationStatus && (
+                <Badge variant={confirmationStatus.variant} className="text-xs ml-2">
+                  {confirmationStatus.text}
+                </Badge>
+              )}
             </div>
 
-            {appointment.observacoes && (
+            {appointment.observacoes && !appointment.observacoes.includes('Google Calendar ID') && (
               <div className="space-y-1">
                 <p className="text-xs text-muted-foreground">Observações</p>
                 <p className="text-sm">{appointment.observacoes}</p>
               </div>
             )}
 
-            {canCancel && (
-              <Button
-                variant="destructive"
-                className="w-full mt-6"
-                onClick={() => {
-                  setDetailsOpen(false);
-                  setCancelDialogOpen(true);
-                }}
-              >
-                Cancelar Agendamento
-              </Button>
-            )}
+            <div className="space-y-2 pt-2">
+              {needsConfirmation && (
+                <Button
+                  variant="default"
+                  className="w-full bg-gold hover:bg-gold/90"
+                  onClick={() => {
+                    onConfirm!(appointment.id);
+                    setDetailsOpen(false);
+                  }}
+                >
+                  <CheckCircle className="w-4 h-4 mr-2" />
+                  Confirmar Atendimento
+                </Button>
+              )}
+
+              {canCancel && (
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      variant="destructive"
+                      className="w-full"
+                    >
+                      Cancelar Agendamento
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Cancelar agendamento?</AlertDialogTitle>
+                      <AlertDialogDescription className="text-xs">
+                        Tem certeza que deseja cancelar este agendamento? Esta ação não pode ser desfeita.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Voltar</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={() => {
+                          onCancel(appointment.id);
+                          setDetailsOpen(false);
+                        }}
+                        className="bg-destructive hover:bg-destructive/90"
+                      >
+                        Sim, cancelar
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              )}
+            </div>
           </div>
         </SheetContent>
       </Sheet>
-
-      {/* Cancel Confirmation Dialog */}
-      <AlertDialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Cancelar agendamento?</AlertDialogTitle>
-            <AlertDialogDescription className="text-xs">
-              Tem certeza que deseja cancelar este agendamento? Esta ação não pode ser desfeita.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Voltar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => onCancel(appointment.id)}
-              className="bg-destructive hover:bg-destructive/90"
-            >
-              Sim, cancelar
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </>
   );
 }
