@@ -64,10 +64,18 @@ export function SubscribePlanSheet({ open, onOpenChange, userId }: SubscribePlan
             : []
         }));
         
-        setPlans(normalizedData);
+        // Filter to show only the 2 main plans
+        const filteredPlans = normalizedData.filter(plan => 
+          plan.nome.toLowerCase().includes('corte') && 
+          !plan.nome.toLowerCase().includes('deluxe') &&
+          !plan.nome.toLowerCase().includes('supreme') &&
+          !plan.nome.toLowerCase().includes('gentleman')
+        );
+        
+        setPlans(filteredPlans);
         setLoadingState("success");
         
-        if (!data || data.length === 0) {
+        if (filteredPlans.length === 0) {
           setErrorMessage("Nenhum plano disponível no momento.");
         }
       }
