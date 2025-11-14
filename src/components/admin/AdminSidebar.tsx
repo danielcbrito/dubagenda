@@ -1,4 +1,4 @@
-import { Home, Calendar, Users, DollarSign, FileText, Gift, Sparkles, Settings, LogOut } from "lucide-react";
+import { Home, Calendar, Users, DollarSign, FileText, Gift, Sparkles, Settings, LogOut, CheckCircle } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -19,6 +19,7 @@ import {
 const menuItems = [
   { title: "Dashboard", url: "/admin", icon: Home, end: true },
   { title: "Agenda", url: "/admin/agenda", icon: Calendar },
+  { title: "Confirmações Pendentes", url: "/admin/confirmacoes-pendentes", icon: CheckCircle },
   { title: "Clientes", url: "/admin/clientes", icon: Users },
   { title: "Financeiro", url: "/admin/financeiro", icon: DollarSign },
   { title: "Relatórios", url: "/admin/relatorios", icon: FileText },

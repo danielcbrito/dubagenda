@@ -12,6 +12,7 @@ import { AdminRelatorios } from "@/components/admin/AdminRelatorios";
 import { AdminPromocoes } from "@/components/admin/AdminPromocoes";
 import { AdminPlanos } from "@/components/admin/AdminPlanos";
 import { AdminConfiguracoes } from "@/components/admin/AdminConfiguracoes";
+import { AdminConfirmacoesPendentes } from "@/components/admin/AdminConfirmacoesPendentes";
 
 const Admin = () => {
   const navigate = useNavigate();
@@ -50,6 +51,7 @@ const Admin = () => {
           <Routes>
             <Route index element={<AdminDashboard />} />
             <Route path="agenda" element={<AdminAgenda />} />
+            <Route path="confirmacoes-pendentes" element={<AdminConfirmacoesPendentes />} />
             <Route path="clientes" element={<AdminClientes />} />
             <Route path="financeiro" element={<AdminFinanceiro />} />
             <Route path="relatorios" element={<AdminRelatorios />} />
