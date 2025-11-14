@@ -57,6 +57,7 @@ export function AppointmentHistorySheet({
         servico:servicos(nome)
       `)
       .eq("user_id", userId)
+      .in("status", ["completed", "cancelled_by_admin", "cancelled_by_user", "no_show", "excluido"])
       .order("data", { ascending: false });
 
     setAppointments(data || []);

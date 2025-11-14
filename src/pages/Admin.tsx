@@ -10,6 +10,7 @@ import { AdminClientes } from "@/components/admin/AdminClientes";
 import { AdminFinanceiro } from "@/components/admin/AdminFinanceiro";
 import { AdminRelatorios } from "@/components/admin/AdminRelatorios";
 import { AdminPromocoes } from "@/components/admin/AdminPromocoes";
+import { AdminPlanos } from "@/components/admin/AdminPlanos";
 import { AdminConfiguracoes } from "@/components/admin/AdminConfiguracoes";
 
 const Admin = () => {
@@ -52,6 +53,7 @@ const Admin = () => {
             <Route path="clientes" element={<AdminClientes />} />
             <Route path="financeiro" element={<AdminFinanceiro />} />
             <Route path="relatorios" element={<AdminRelatorios />} />
+            <Route path="planos" element={<AdminPlanos />} />
             <Route path="promocoes" element={<AdminPromocoes />} />
             <Route path="configuracoes" element={<AdminConfiguracoes />} />
           </Routes>

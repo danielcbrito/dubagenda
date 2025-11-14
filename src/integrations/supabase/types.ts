@@ -252,6 +252,41 @@ export type Database = {
           },
         ]
       }
+      logs_agendamentos: {
+        Row: {
+          acao: string
+          agendamento_id: string | null
+          detalhes: string | null
+          id: string
+          timestamp: string | null
+          usuario_id: string | null
+        }
+        Insert: {
+          acao: string
+          agendamento_id?: string | null
+          detalhes?: string | null
+          id?: string
+          timestamp?: string | null
+          usuario_id?: string | null
+        }
+        Update: {
+          acao?: string
+          agendamento_id?: string | null
+          detalhes?: string | null
+          id?: string
+          timestamp?: string | null
+          usuario_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "logs_agendamentos_agendamento_id_fkey"
+            columns: ["agendamento_id"]
+            isOneToOne: false
+            referencedRelation: "agendamentos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pagamentos: {
         Row: {
           agendamento_id: string | null
@@ -570,6 +605,7 @@ export type Database = {
         | "cancelled_by_admin"
         | "cancelled_by_user"
         | "no_show"
+        | "excluido"
       financial_entry_type: "income" | "expense"
       payment_method: "card" | "pix" | "cash"
       payment_status: "pending" | "paid" | "failed" | "refunded"
@@ -709,6 +745,7 @@ export const Constants = {
         "cancelled_by_admin",
         "cancelled_by_user",
         "no_show",
+        "excluido",
       ],
       financial_entry_type: ["income", "expense"],
       payment_method: ["card", "pix", "cash"],
