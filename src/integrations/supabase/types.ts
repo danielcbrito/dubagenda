@@ -16,7 +16,9 @@ export type Database = {
     Tables: {
       agendamentos: {
         Row: {
+          barbeiro_confirmou: boolean | null
           barbeiro_id: string | null
+          cliente_confirmou: boolean | null
           created_at: string | null
           data: string
           duracao: number
@@ -24,6 +26,7 @@ export type Database = {
           id: string
           is_free: boolean | null
           observacoes: string | null
+          ponto_liberado: boolean | null
           preco: number
           servico_id: string
           status: Database["public"]["Enums"]["appointment_status"] | null
@@ -32,7 +35,9 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          barbeiro_confirmou?: boolean | null
           barbeiro_id?: string | null
+          cliente_confirmou?: boolean | null
           created_at?: string | null
           data: string
           duracao: number
@@ -40,6 +45,7 @@ export type Database = {
           id?: string
           is_free?: boolean | null
           observacoes?: string | null
+          ponto_liberado?: boolean | null
           preco: number
           servico_id: string
           status?: Database["public"]["Enums"]["appointment_status"] | null
@@ -48,7 +54,9 @@ export type Database = {
           user_id: string
         }
         Update: {
+          barbeiro_confirmou?: boolean | null
           barbeiro_id?: string | null
+          cliente_confirmou?: boolean | null
           created_at?: string | null
           data?: string
           duracao?: number
@@ -56,6 +64,7 @@ export type Database = {
           id?: string
           is_free?: boolean | null
           observacoes?: string | null
+          ponto_liberado?: boolean | null
           preco?: number
           servico_id?: string
           status?: Database["public"]["Enums"]["appointment_status"] | null
