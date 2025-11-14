@@ -37,6 +37,41 @@ export function SubscribePlanSheet({ open, onOpenChange, userId }: SubscribePlan
     }
   }, [open]);
 
+  useEffect(() => {
+    // Set up realtime listener for plans
+    const channel = supabase
+      .channel('plans-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'planos'
+        },
+        (payload) => {
+          console.log('Plan change detected:', payload);
+          if (open) {
+            loadPlans();
+            if (payload.eventType === 'INSERT') {
+              toast.success("Novo plano disponível!");
+            } else if (payload.eventType === 'UPDATE') {
+              const newData = payload.new as any;
+              if (newData.ativo === false) {
+                toast.info("Um plano foi desativado");
+              } else if (newData.ativo === true && payload.old.ativo === false) {
+                toast.success("Novo plano ativado!");
+              }
+            }
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [open]);
+
   const loadPlans = async () => {
     setLoadingState("loading");
     setErrorMessage("");

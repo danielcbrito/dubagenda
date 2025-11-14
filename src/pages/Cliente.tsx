@@ -24,6 +24,11 @@ interface Appointment {
   duracao?: number;
   preco?: number;
   observacoes?: string;
+  cancelado_em?: string;
+  visivel_para_usuario?: boolean;
+  cliente_confirmou?: boolean;
+  barbeiro_confirmou?: boolean;
+  ponto_liberado?: boolean;
 }
 
 const Cliente = () => {
@@ -63,19 +68,29 @@ const Cliente = () => {
           
           if (payload.eventType === 'INSERT') {
             loadUserData(user.id);
+            toast.success("Novo agendamento recebido!");
           } else if (payload.eventType === 'DELETE') {
-            // Remove deleted appointment from state
             setAppointments(prev => prev.filter(apt => apt.id !== payload.old.id));
-            toast.success("Agendamento removido");
           } else if (payload.eventType === 'UPDATE') {
-            // Update specific appointment in state
-            setAppointments(prev => 
-              prev.map(apt => 
-                apt.id === payload.new.id 
-                  ? { ...apt, ...payload.new }
-                  : apt
-              )
-            );
+            const newData = payload.new as any;
+            
+            // If marked as not visible, remove from list
+            if (newData.visivel_para_usuario === false) {
+              setAppointments(prev => prev.filter(apt => apt.id !== newData.id));
+              return;
+            }
+            
+            // Update appointment in state
+            loadUserData(user.id);
+            
+            // Show notification based on status change
+            if (newData.status === 'confirmed' && payload.old.status !== 'confirmed') {
+              toast.success("✅ Agendamento confirmado pelo barbeiro!");
+            } else if (newData.status === 'completed') {
+              toast.success("🎉 Atendimento concluído!");
+            } else if (newData.status === 'cancelled_by_admin') {
+              toast.error("❌ Agendamento cancelado pela barbearia");
+            }
           }
         }
       )
@@ -108,7 +123,7 @@ const Cliente = () => {
     
     setProfile(profileData);
 
-    // Load appointments (excluding deleted ones)
+    // Load appointments (excluding hidden ones)
     const { data: appointmentsData } = await supabase
       .from("agendamentos")
       .select(`
@@ -119,10 +134,15 @@ const Cliente = () => {
         duracao,
         preco,
         observacoes,
+        cancelado_em,
+        visivel_para_usuario,
+        cliente_confirmou,
+        barbeiro_confirmou,
+        ponto_liberado,
         servico:servicos(nome)
       `)
       .eq("user_id", userId)
-      .neq("status", "excluido")
+      .eq("visivel_para_usuario", true)
       .order("data", { ascending: false })
       .limit(5);
 
@@ -164,17 +184,40 @@ const Cliente = () => {
 
   const handleCancelAppointment = async (appointmentId: string) => {
     try {
-      // Fetch event id (if any) before status update for Google Calendar sync
+      const appointment = appointments.find(apt => apt.id === appointmentId);
+      
+      // Check current status
+      if (appointment?.status === 'cancelled_by_user' || appointment?.status === 'cancelled_by_admin') {
+        // Second action: hide from view
+        const { error: hideError } = await supabase
+          .from("agendamentos")
+          .update({ visivel_para_usuario: false })
+          .eq("id", appointmentId);
+
+        if (hideError) {
+          console.error("Hide error:", hideError);
+          toast.error("Erro ao remover da visualização");
+          return;
+        }
+
+        // Remove from UI
+        setAppointments(prev => prev.filter(apt => apt.id !== appointmentId));
+        toast.success("Agendamento removido da visualização");
+        return;
+      }
+
+      // First action: mark as cancelled
       const { data: appointmentBefore } = await supabase
         .from("agendamentos")
         .select("observacoes")
         .eq("id", appointmentId)
         .maybeSingle();
 
-      // Mark as "excluido" status (soft delete, persisted in DB)
       const { error: updateError } = await supabase
         .from("agendamentos")
-        .update({ status: "excluido" })
+        .update({ 
+          status: "cancelled_by_user"
+        })
         .eq("id", appointmentId);
 
       if (updateError) {
@@ -183,10 +226,7 @@ const Cliente = () => {
         return;
       }
 
-      // Remove from active appointments list (UI update)
-      setAppointments(prev => prev.filter(apt => apt.id !== appointmentId));
-
-      // Update Google Calendar event title to reflect deletion
+      // Update Google Calendar event
       if (appointmentBefore?.observacoes?.includes('Google Calendar ID:')) {
         const eventId = appointmentBefore.observacoes.split('Google Calendar ID: ')[1];
         await supabase.functions.invoke('google-calendar-sync', {
@@ -194,14 +234,14 @@ const Cliente = () => {
             action: 'update',
             eventId,
             appointmentId,
-            summaryPrefix: '🗑️ Excluído - '
+            summaryPrefix: '❌ Cancelado - '
           }
         }).catch(err => {
           console.warn('Google Calendar update failed:', err);
         });
       }
 
-      toast.success("Agendamento removido");
+      toast.success("Agendamento cancelado. Clique novamente para remover da lista.");
     } catch (err) {
       console.error("Unexpected error during cancellation:", err);
       toast.error("Erro ao cancelar agendamento");

@@ -18,6 +18,7 @@ export type Database = {
         Row: {
           barbeiro_confirmou: boolean | null
           barbeiro_id: string | null
+          cancelado_em: string | null
           cliente_confirmou: boolean | null
           created_at: string | null
           data: string
@@ -33,10 +34,12 @@ export type Database = {
           updated_at: string | null
           usado_redemption_id: string | null
           user_id: string
+          visivel_para_usuario: boolean | null
         }
         Insert: {
           barbeiro_confirmou?: boolean | null
           barbeiro_id?: string | null
+          cancelado_em?: string | null
           cliente_confirmou?: boolean | null
           created_at?: string | null
           data: string
@@ -52,10 +55,12 @@ export type Database = {
           updated_at?: string | null
           usado_redemption_id?: string | null
           user_id: string
+          visivel_para_usuario?: boolean | null
         }
         Update: {
           barbeiro_confirmou?: boolean | null
           barbeiro_id?: string | null
+          cancelado_em?: string | null
           cliente_confirmou?: boolean | null
           created_at?: string | null
           data?: string
@@ -71,6 +76,7 @@ export type Database = {
           updated_at?: string | null
           usado_redemption_id?: string | null
           user_id?: string
+          visivel_para_usuario?: boolean | null
         }
         Relationships: [
           {
@@ -588,6 +594,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      auto_hide_old_cancelled_appointments: { Args: never; Returns: undefined }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
