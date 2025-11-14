@@ -108,7 +108,7 @@ const Cliente = () => {
     
     setProfile(profileData);
 
-    // Load appointments
+    // Load appointments (excluding deleted ones)
     const { data: appointmentsData } = await supabase
       .from("agendamentos")
       .select(`
@@ -122,6 +122,7 @@ const Cliente = () => {
         servico:servicos(nome)
       `)
       .eq("user_id", userId)
+      .neq("status", "excluido")
       .order("data", { ascending: false })
       .limit(5);
 
@@ -170,10 +171,10 @@ const Cliente = () => {
         .eq("id", appointmentId)
         .maybeSingle();
 
-      // Soft cancel in DB (persisted). Users don't have DELETE permission by RLS.
+      // Mark as "excluido" status (soft delete, persisted in DB)
       const { error: updateError } = await supabase
         .from("agendamentos")
-        .update({ status: "cancelled_by_user" })
+        .update({ status: "excluido" })
         .eq("id", appointmentId);
 
       if (updateError) {
@@ -182,10 +183,10 @@ const Cliente = () => {
         return;
       }
 
-      // Optimistic UI update
-      setAppointments(prev => prev.map(apt => apt.id === appointmentId ? { ...apt, status: "cancelled_by_user" } : apt));
+      // Remove from active appointments list (UI update)
+      setAppointments(prev => prev.filter(apt => apt.id !== appointmentId));
 
-      // Update Google Calendar event title to reflect cancellation
+      // Update Google Calendar event title to reflect deletion
       if (appointmentBefore?.observacoes?.includes('Google Calendar ID:')) {
         const eventId = appointmentBefore.observacoes.split('Google Calendar ID: ')[1];
         await supabase.functions.invoke('google-calendar-sync', {
@@ -193,14 +194,14 @@ const Cliente = () => {
             action: 'update',
             eventId,
             appointmentId,
-            summaryPrefix: '❌ Cancelado - '
+            summaryPrefix: '🗑️ Excluído - '
           }
         }).catch(err => {
           console.warn('Google Calendar update failed:', err);
         });
       }
 
-      toast.success("Agendamento cancelado");
+      toast.success("Agendamento removido");
     } catch (err) {
       console.error("Unexpected error during cancellation:", err);
       toast.error("Erro ao cancelar agendamento");

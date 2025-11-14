@@ -64,13 +64,14 @@ export function SubscribePlanSheet({ open, onOpenChange, userId }: SubscribePlan
             : []
         }));
         
-        // Filter to show only the 2 main plans
-        const filteredPlans = normalizedData.filter(plan => 
-          plan.nome.toLowerCase().includes('corte') && 
-          !plan.nome.toLowerCase().includes('deluxe') &&
-          !plan.nome.toLowerCase().includes('supreme') &&
-          !plan.nome.toLowerCase().includes('gentleman')
-        );
+        // Filter to show only "Plano Corte" and "Plano Corte + Barba"
+        const filteredPlans = normalizedData.filter(plan => {
+          const nomeLower = plan.nome.toLowerCase();
+          return (nomeLower === 'plano corte' || 
+                  nomeLower === 'plano corte + barba' ||
+                  nomeLower.includes('corte') && !nomeLower.includes('deluxe') &&
+                  !nomeLower.includes('supreme') && !nomeLower.includes('gentleman'));
+        });
         
         setPlans(filteredPlans);
         setLoadingState("success");
