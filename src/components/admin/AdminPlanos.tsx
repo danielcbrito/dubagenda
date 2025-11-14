@@ -111,12 +111,19 @@ export function AdminPlanos() {
 
   const handleTogglePlano = async (id: string, currentStatus: boolean) => {
     try {
+      // Update optimistically for instant UI feedback
+      setPlanos(prev => prev.map(p => p.id === id ? { ...p, ativo: !currentStatus } : p));
+      
       const { error } = await supabase
         .from("planos")
         .update({ ativo: !currentStatus })
         .eq("id", id);
 
-      if (error) throw error;
+      if (error) {
+        // Revert on error
+        setPlanos(prev => prev.map(p => p.id === id ? { ...p, ativo: currentStatus } : p));
+        throw error;
+      }
       toast.success(currentStatus ? "Plano desativado" : "Plano ativado");
     } catch (error) {
       console.error("Error toggling plano:", error);
