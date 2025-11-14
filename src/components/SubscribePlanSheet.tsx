@@ -77,6 +77,7 @@ export function SubscribePlanSheet({ open, onOpenChange, userId }: SubscribePlan
     setErrorMessage("");
     
     try {
+      console.log("[SubscribePlanSheet] Loading plans with ativo=true filter");
       const { data, error } = await supabase
         .from("planos")
         .select("*")
@@ -84,11 +85,13 @@ export function SubscribePlanSheet({ open, onOpenChange, userId }: SubscribePlan
         .order("prioridade_agendamento", { ascending: false });
 
       if (error) {
-        console.error("Error loading plans:", error);
+        console.error("[SubscribePlanSheet] Error loading plans:", error);
         setLoadingState("error");
         setErrorMessage("Não foi possível carregar os planos disponíveis.");
         toast.error("Erro ao carregar planos");
       } else {
+        console.log("[SubscribePlanSheet] Raw plans from DB:", data);
+        
         // Normalize beneficios_json to always be an array
         const normalizedData = (data || []).map(plan => ({
           ...plan,
@@ -108,15 +111,17 @@ export function SubscribePlanSheet({ open, onOpenChange, userId }: SubscribePlan
                   !nomeLower.includes('supreme') && !nomeLower.includes('gentleman'));
         });
         
+        console.log("[SubscribePlanSheet] Filtered plans to show:", filteredPlans);
         setPlans(filteredPlans);
         setLoadingState("success");
         
         if (filteredPlans.length === 0) {
           setErrorMessage("Nenhum plano disponível no momento.");
+          console.warn("[SubscribePlanSheet] No plans match filter criteria");
         }
       }
     } catch (err) {
-      console.error("Unexpected error loading plans:", err);
+      console.error("[SubscribePlanSheet] Unexpected error loading plans:", err);
       setLoadingState("error");
       setErrorMessage("Erro inesperado ao carregar planos. Verifique sua conexão.");
     }

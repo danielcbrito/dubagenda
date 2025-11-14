@@ -58,9 +58,9 @@ export function AppointmentCard({ appointment, onCancel, onConfirm }: Appointmen
       case "pending":
         return { label: "Pendente", className: "bg-yellow-500/20 text-yellow-500 border-yellow-500/30" };
       case "cancelled_by_user":
-        return { label: "Cancelado", className: "bg-destructive/30 text-destructive border-destructive/50" };
+        return { label: "❌ CANCELADO", className: "bg-red-600/30 text-red-500 border-red-500/50 font-bold" };
       case "cancelled_by_admin":
-        return { label: "Cancelado pelo Admin", className: "bg-destructive/30 text-destructive border-destructive/50" };
+        return { label: "❌ Cancelado pelo Admin", className: "bg-red-600/30 text-red-500 border-red-500/50 font-bold" };
       default:
         return { label: status, className: "bg-muted text-muted-foreground border-muted" };
     }
