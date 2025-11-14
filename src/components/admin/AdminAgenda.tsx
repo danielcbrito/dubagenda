@@ -13,6 +13,11 @@ interface Appointment {
   status: string;
   preco: number;
   observacoes: string | null;
+  cancelado_em?: string | null;
+  visivel_para_usuario?: boolean;
+  barbeiro_confirmou?: boolean;
+  cliente_confirmou?: boolean;
+  ponto_liberado?: boolean;
   profile: { nome: string } | null;
   servico: { nome: string; duracao_minutos: number } | null;
 }
@@ -30,13 +35,34 @@ export function AdminAgenda() {
     // Real-time subscription
     const channel = supabase
       .channel('admin-agenda')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'agendamentos' }, () => {
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'agendamentos' }, (payload) => {
+        console.log('Appointment change in admin:', payload);
         if (date) loadAppointments(date);
+        
+        // Show notification for status changes
+        if (payload.eventType === 'UPDATE') {
+          const newData = payload.new as any;
+          if (newData.status === 'cancelled_by_user') {
+            toast.info("Cliente cancelou um agendamento");
+          }
+        } else if (payload.eventType === 'INSERT') {
+          toast.success("Novo agendamento recebido!");
+        }
       })
       .subscribe();
 
+    // Auto-cleanup cancelled appointments after 7 days (run daily)
+    const cleanupInterval = setInterval(async () => {
+      try {
+        await supabase.rpc('auto_hide_old_cancelled_appointments');
+      } catch (err) {
+        console.warn('Auto cleanup failed:', err);
+      }
+    }, 24 * 60 * 60 * 1000); // Run once per day
+
     return () => {
       supabase.removeChannel(channel);
+      clearInterval(cleanupInterval);
     };
   }, [date]);
 
@@ -47,7 +73,7 @@ export function AdminAgenda() {
       
       const { data, error } = await supabase
         .from("agendamentos")
-        .select("id, data, hora, status, preco, observacoes, user_id, servico_id")
+        .select("id, data, hora, status, preco, observacoes, cancelado_em, visivel_para_usuario, barbeiro_confirmou, cliente_confirmou, ponto_liberado, user_id, servico_id")
         .eq("data", dateStr)
         .order("hora", { ascending: true });
 

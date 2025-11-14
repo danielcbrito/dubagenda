@@ -36,6 +36,8 @@ interface Appointment {
   cliente_confirmou?: boolean;
   barbeiro_confirmou?: boolean;
   ponto_liberado?: boolean;
+  cancelado_em?: string;
+  visivel_para_usuario?: boolean;
 }
 
 interface AppointmentCardProps {
@@ -54,17 +56,19 @@ export function AppointmentCard({ appointment, onCancel, onConfirm }: Appointmen
       case "completed":
         return { label: "Concluído", className: "bg-gold/20 text-gold border-gold/30" };
       case "pending":
-        return { label: "Pendente", className: "bg-muted text-muted-foreground border-muted" };
-      case "cancelled":
+        return { label: "Pendente", className: "bg-yellow-500/20 text-yellow-500 border-yellow-500/30" };
+      case "cancelled_by_user":
+        return { label: "Cancelado", className: "bg-destructive/30 text-destructive border-destructive/50" };
       case "cancelled_by_admin":
-        return { label: "Cancelado", className: "bg-destructive/20 text-destructive border-destructive/30" };
+        return { label: "Cancelado pelo Admin", className: "bg-destructive/30 text-destructive border-destructive/50" };
       default:
         return { label: status, className: "bg-muted text-muted-foreground border-muted" };
     }
   };
 
   const statusConfig = getStatusConfig(appointment.status);
-  const canCancel = appointment.status === "pending" || appointment.status === "confirmed";
+  const isCancelled = appointment.status === "cancelled_by_user" || appointment.status === "cancelled_by_admin";
+  const canCancel = appointment.status === "pending" || appointment.status === "confirmed" || isCancelled;
   const needsConfirmation = appointment.status === "completed" && !appointment.cliente_confirmou && onConfirm;
   
   const getConfirmationStatus = () => {
@@ -194,14 +198,19 @@ export function AppointmentCard({ appointment, onCancel, onConfirm }: Appointmen
                       variant="destructive"
                       className="w-full"
                     >
-                      Cancelar Agendamento
+                      {isCancelled ? "Remover da Lista" : "Cancelar Agendamento"}
                     </Button>
                   </AlertDialogTrigger>
                   <AlertDialogContent>
                     <AlertDialogHeader>
-                      <AlertDialogTitle>Cancelar agendamento?</AlertDialogTitle>
+                      <AlertDialogTitle>
+                        {isCancelled ? "Remover da visualização?" : "Cancelar agendamento?"}
+                      </AlertDialogTitle>
                       <AlertDialogDescription className="text-xs">
-                        Tem certeza que deseja cancelar este agendamento? Esta ação não pode ser desfeita.
+                        {isCancelled 
+                          ? "Tem certeza que deseja remover este agendamento da lista? Ele não será mais exibido."
+                          : "Tem certeza que deseja cancelar este agendamento? Você poderá removê-lo da lista posteriormente."
+                        }
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
@@ -213,7 +222,7 @@ export function AppointmentCard({ appointment, onCancel, onConfirm }: Appointmen
                         }}
                         className="bg-destructive hover:bg-destructive/90"
                       >
-                        Sim, cancelar
+                        {isCancelled ? "Sim, remover" : "Sim, cancelar"}
                       </AlertDialogAction>
                     </AlertDialogFooter>
                   </AlertDialogContent>

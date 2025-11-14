@@ -57,7 +57,7 @@ export function AppointmentHistorySheet({
         servico:servicos(nome)
       `)
       .eq("user_id", userId)
-      .in("status", ["completed", "cancelled_by_admin", "cancelled_by_user", "no_show", "excluido"])
+      .in("status", ["completed", "cancelled_by_admin", "cancelled_by_user", "no_show"])
       .order("data", { ascending: false });
 
     setAppointments(data || []);
@@ -124,10 +124,20 @@ export function AppointmentHistorySheet({
                       className={`text-[10px] px-2 py-0.5 shrink-0 ${
                         isCompleted 
                           ? 'bg-gold/20 text-gold border-gold/30' 
+                          : apt.status === 'cancelled_by_user' || apt.status === 'cancelled_by_admin'
+                          ? 'bg-destructive/20 text-destructive border-destructive/30'
                           : 'bg-muted text-muted-foreground'
                       }`}
                     >
-                      {isCompleted ? 'Concluído' : apt.status}
+                      {isCompleted 
+                        ? 'Concluído' 
+                        : apt.status === 'cancelled_by_user' 
+                        ? 'Cancelado' 
+                        : apt.status === 'cancelled_by_admin'
+                        ? 'Cancelado pelo Admin'
+                        : apt.status === 'no_show'
+                        ? 'Não Compareceu'
+                        : apt.status}
                     </Badge>
                   </div>
                 </Card>
