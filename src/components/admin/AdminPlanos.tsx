@@ -135,12 +135,19 @@ export function AdminPlanos() {
     if (!confirm("Tem certeza que deseja remover este plano?")) return;
 
     try {
+      // Optimistic UI update
+      setPlanos(prev => prev.filter(p => p.id !== id));
+
       const { error } = await supabase
         .from("planos")
         .delete()
         .eq("id", id);
 
-      if (error) throw error;
+      if (error) {
+        // Revert on error - reload plans
+        await loadPlanos();
+        throw error;
+      }
       toast.success("Plano removido");
     } catch (error) {
       console.error("Error deleting plano:", error);

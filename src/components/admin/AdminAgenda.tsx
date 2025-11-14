@@ -1,10 +1,10 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
-import { Calendar } from "@/components/ui/calendar";
-import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { ptBR } from "date-fns/locale";
+import { AgendaMensalView } from "./AgendaMensalView";
+import { AgendaDiariaView } from "./AgendaDiariaView";
 
 interface Appointment {
   id: string;
@@ -23,21 +23,23 @@ interface Appointment {
 }
 
 export function AdminAgenda() {
-  const [date, setDate] = useState<Date | undefined>(new Date());
+  const [date, setDate] = useState<Date>(new Date());
   const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [allAppointments, setAllAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(false);
+  const [activeView, setActiveView] = useState<"mensal" | "diaria">("mensal");
 
   useEffect(() => {
-    if (date) {
-      loadAppointments(date);
-    }
+    loadAppointments(date);
+    loadAllAppointments();
 
     // Real-time subscription
     const channel = supabase
       .channel('admin-agenda')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'agendamentos' }, (payload) => {
         console.log('Appointment change in admin:', payload);
-        if (date) loadAppointments(date);
+        loadAppointments(date);
+        loadAllAppointments();
         
         // Show notification for status changes
         if (payload.eventType === 'UPDATE') {
@@ -51,18 +53,8 @@ export function AdminAgenda() {
       })
       .subscribe();
 
-    // Auto-cleanup cancelled appointments after 7 days (run daily)
-    const cleanupInterval = setInterval(async () => {
-      try {
-        await supabase.rpc('auto_hide_old_cancelled_appointments');
-      } catch (err) {
-        console.warn('Auto cleanup failed:', err);
-      }
-    }, 24 * 60 * 60 * 1000); // Run once per day
-
     return () => {
       supabase.removeChannel(channel);
-      clearInterval(cleanupInterval);
     };
   }, [date]);
 
@@ -79,7 +71,6 @@ export function AdminAgenda() {
 
       if (error) throw error;
 
-      // Get profile and service details separately
       const appointmentsWithDetails = await Promise.all(
         (data || []).map(async (apt) => {
           const { data: profile } = await supabase
@@ -108,6 +99,44 @@ export function AdminAgenda() {
       toast.error("Erro ao carregar agendamentos");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadAllAppointments = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("agendamentos")
+        .select("id, data, hora, status, preco, observacoes, cancelado_em, visivel_para_usuario, barbeiro_confirmou, cliente_confirmou, ponto_liberado, user_id, servico_id")
+        .order("data", { ascending: true })
+        .order("hora", { ascending: true });
+
+      if (error) throw error;
+
+      const appointmentsWithDetails = await Promise.all(
+        (data || []).map(async (apt) => {
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("nome")
+            .eq("id", apt.user_id)
+            .single();
+
+          const { data: servico } = await supabase
+            .from("servicos")
+            .select("nome, duracao_minutos")
+            .eq("id", apt.servico_id)
+            .single();
+
+          return {
+            ...apt,
+            profile: profile || null,
+            servico: servico || null,
+          };
+        })
+      );
+
+      setAllAppointments(appointmentsWithDetails);
+    } catch (error) {
+      console.error("Error loading all appointments:", error);
     }
   };
 
@@ -217,81 +246,30 @@ export function AdminAgenda() {
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">Agenda</h1>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Calendar */}
-        <Card className="p-6 card-premium lg:col-span-1">
-          <Calendar
-            mode="single"
-            selected={date}
-            onSelect={setDate}
-            locale={ptBR}
-            className="rounded-md"
+      <Tabs value={activeView} onValueChange={(v) => setActiveView(v as "mensal" | "diaria")}>
+        <TabsList className="grid w-full max-w-md grid-cols-2">
+          <TabsTrigger value="mensal">Visão Mensal</TabsTrigger>
+          <TabsTrigger value="diaria">Visão Diária</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="mensal" className="mt-6">
+          <AgendaMensalView 
+            appointments={allAppointments}
+            onSelectDate={(newDate) => {
+              setDate(newDate);
+              setActiveView("diaria");
+            }}
           />
-        </Card>
+        </TabsContent>
 
-        {/* Appointments List */}
-        <Card className="p-6 card-premium lg:col-span-2">
-          <h3 className="font-semibold text-lg mb-4">
-            Agendamentos - {date?.toLocaleDateString('pt-BR', { dateStyle: 'long' })}
-          </h3>
-
-          {loading ? (
-            <p className="text-muted-foreground">Carregando...</p>
-          ) : appointments.length === 0 ? (
-            <p className="text-muted-foreground">Nenhum agendamento para este dia</p>
-          ) : (
-            <div className="space-y-3">
-              {appointments.map((apt) => (
-                <div
-                  key={apt.id}
-                  className="p-4 rounded-lg bg-muted/30 space-y-3"
-                >
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold text-lg">{apt.hora}</span>
-                        <span className={`px-2 py-1 rounded-full text-xs border ${getStatusColor(apt.status)}`}>
-                          {getStatusLabel(apt.status)}
-                        </span>
-                      </div>
-                      <p className="font-medium mt-1">{apt.profile?.nome || "Cliente"}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {apt.servico?.nome || "Serviço"} ({apt.servico?.duracao_minutos || 0} min)
-                      </p>
-                      {apt.observacoes && (
-                        <p className="text-sm text-muted-foreground mt-1">
-                          Obs: {apt.observacoes}
-                        </p>
-                      )}
-                    </div>
-                    <span className="font-bold text-primary">
-                      R$ {Number(apt.preco).toFixed(2)}
-                    </span>
-                  </div>
-
-                  {apt.status === "pending" && (
-                    <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                        onClick={() => handleConfirmAppointment(apt.id)}
-                      >
-                        Confirmar
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        onClick={() => handleCancelAppointment(apt.id)}
-                      >
-                        Cancelar
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-        </Card>
-      </div>
+        <TabsContent value="diaria" className="mt-6">
+          <AgendaDiariaView 
+            date={date}
+            appointments={appointments}
+            onCancelAppointment={handleCancelAppointment}
+          />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
