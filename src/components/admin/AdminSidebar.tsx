@@ -65,7 +65,7 @@ export function AdminSidebar() {
       .subscribe();
 
     // Fallback polling every 60 seconds
-    const interval = setInterval(loadPendingCount, 60000);
+    const interval = setInterval(loadPendingCount, 20000);
 
     return () => {
       supabase.removeChannel(channel);
