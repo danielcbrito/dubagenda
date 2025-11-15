@@ -33,8 +33,14 @@ export function AdminConfirmacoesPendentes() {
       })
       .subscribe();
 
+    // Fallback polling every 60 seconds
+    const pollingInterval = setInterval(() => {
+      loadPending();
+    }, 60000);
+
     return () => {
       supabase.removeChannel(channel);
+      clearInterval(pollingInterval);
     };
   }, []);
 
