@@ -33,10 +33,10 @@ export function AdminConfirmacoesPendentes() {
       })
       .subscribe();
 
-    // Fallback polling every 60 seconds
+    // Fallback polling every 20 seconds
     const pollingInterval = setInterval(() => {
       loadPending();
-    }, 60000);
+    }, 20000);
 
     return () => {
       supabase.removeChannel(channel);
@@ -92,7 +92,7 @@ export function AdminConfirmacoesPendentes() {
     try {
       const { error } = await supabase
         .from("agendamentos")
-        .update({ barbeiro_confirmou: true })
+        .update({ barbeiro_confirmou: true, status: 'confirmed' })
         .eq("id", appointmentId);
 
       if (error) throw error;
@@ -115,6 +115,8 @@ export function AdminConfirmacoesPendentes() {
         toast.success("✅ Confirmação registrada. Aguardando confirmação do cliente.");
       }
 
+      // Optimistic UI: remove from the list immediately
+      setAppointments(prev => prev.filter(a => a.id !== appointmentId));
       loadPending();
     } catch (error) {
       console.error("Error confirming appointment:", error);

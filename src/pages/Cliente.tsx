@@ -101,6 +101,15 @@ const Cliente = () => {
     };
   }, [user]);
 
+  // Fallback polling every 20 seconds to ensure UI stays in sync
+  useEffect(() => {
+    if (!user) return;
+    const interval = setInterval(() => {
+      loadUserData(user.id);
+    }, 20000);
+    return () => clearInterval(interval);
+  }, [user]);
+
   const checkAuth = async () => {
     const { data: { session } } = await supabase.auth.getSession();
     
