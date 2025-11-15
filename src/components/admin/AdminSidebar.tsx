@@ -4,6 +4,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import logoDub from "@/assets/logo-dub.png";
+import { useEffect, useState } from "react";
 import {
   Sidebar,
   SidebarContent,
@@ -15,6 +16,7 @@ import {
   SidebarHeader,
   SidebarFooter,
 } from "@/components/ui/sidebar";
+import { Badge } from "@/components/ui/badge";
 
 const menuItems = [
   { title: "Dashboard", url: "/admin", icon: Home, end: true },
@@ -31,6 +33,45 @@ const menuItems = [
 export function AdminSidebar() {
   const location = useLocation();
   const navigate = useNavigate();
+  const [pendingCount, setPendingCount] = useState(0);
+
+  useEffect(() => {
+    const loadPendingCount = async () => {
+      const { count } = await supabase
+        .from('agendamentos')
+        .select('*', { count: 'exact', head: true })
+        .in('status', ['pending', 'confirmed'])
+        .eq('barbeiro_confirmou', false);
+      
+      setPendingCount(count || 0);
+    };
+
+    loadPendingCount();
+
+    // Real-time subscription for instant updates
+    const channel = supabase
+      .channel('pending-count-updates')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'agendamentos',
+        },
+        () => {
+          loadPendingCount();
+        }
+      )
+      .subscribe();
+
+    // Fallback polling every 60 seconds
+    const interval = setInterval(loadPendingCount, 60000);
+
+    return () => {
+      supabase.removeChannel(channel);
+      clearInterval(interval);
+    };
+  }, []);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -59,6 +100,8 @@ export function AdminSidebar() {
                   ? location.pathname === item.url
                   : location.pathname.startsWith(item.url);
                 
+                const isPendingPage = item.url === "/admin/confirmacoes-pendentes";
+                
                 return (
                   <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton asChild>
@@ -71,8 +114,15 @@ export function AdminSidebar() {
                             : 'text-muted-foreground hover:bg-muted/50'
                         }`}
                       >
-                        <item.icon className="w-5 h-5" />
-                        <span>{item.title}</span>
+                        <div className="flex items-center gap-3 flex-1">
+                          <item.icon className="w-5 h-5" />
+                          <span>{item.title}</span>
+                        </div>
+                        {isPendingPage && pendingCount > 0 && (
+                          <Badge variant="destructive" className="ml-auto">
+                            {pendingCount}
+                          </Badge>
+                        )}
                       </NavLink>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
