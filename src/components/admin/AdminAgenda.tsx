@@ -53,8 +53,15 @@ export function AdminAgenda() {
       })
       .subscribe();
 
+    // Fallback polling every 60 seconds
+    const pollingInterval = setInterval(() => {
+      loadAppointments(date);
+      loadAllAppointments();
+    }, 60000);
+
     return () => {
       supabase.removeChannel(channel);
+      clearInterval(pollingInterval);
     };
   }, [date]);
 
@@ -246,7 +253,14 @@ export function AdminAgenda() {
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">Agenda</h1>
 
-      <Tabs value={activeView} onValueChange={(v) => setActiveView(v as "mensal" | "diaria")}>
+      <Tabs value={activeView} onValueChange={(v) => {
+        const newView = v as "mensal" | "diaria";
+        setActiveView(newView);
+        // Always reset to today when switching to daily view
+        if (newView === "diaria") {
+          setDate(new Date());
+        }
+      }}>
         <TabsList className="grid w-full max-w-md grid-cols-2">
           <TabsTrigger value="mensal">Visão Mensal</TabsTrigger>
           <TabsTrigger value="diaria">Visão Diária</TabsTrigger>
