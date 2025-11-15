@@ -50,7 +50,7 @@ export function AdminConfirmacoesPendentes() {
       const { data, error } = await supabase
         .from("agendamentos")
         .select("id, data, hora, status, cliente_confirmou, barbeiro_confirmou, user_id, servico_id")
-        .eq("status", "completed")
+        .in("status", ["pending", "confirmed"])
         .eq("barbeiro_confirmou", false)
         .order("data", { ascending: true })
         .order("hora", { ascending: true });
