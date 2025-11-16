@@ -589,6 +589,33 @@ export type Database = {
         }
         Relationships: []
       }
+      webhook_logs: {
+        Row: {
+          created_at: string | null
+          event_type: string
+          id: string
+          payload: Json
+          processed_at: string | null
+          provider: string
+        }
+        Insert: {
+          created_at?: string | null
+          event_type: string
+          id?: string
+          payload: Json
+          processed_at?: string | null
+          provider: string
+        }
+        Update: {
+          created_at?: string | null
+          event_type?: string
+          id?: string
+          payload?: Json
+          processed_at?: string | null
+          provider?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -615,7 +642,7 @@ export type Database = {
         | "excluido"
       financial_entry_type: "income" | "expense"
       payment_method: "card" | "pix" | "cash"
-      payment_status: "pending" | "paid" | "failed" | "refunded"
+      payment_status: "pending" | "paid" | "failed" | "refunded" | "overdue"
       subscription_status: "active" | "cancelled" | "past_due" | "suspended"
     }
     CompositeTypes: {
@@ -756,7 +783,7 @@ export const Constants = {
       ],
       financial_entry_type: ["income", "expense"],
       payment_method: ["card", "pix", "cash"],
-      payment_status: ["pending", "paid", "failed", "refunded"],
+      payment_status: ["pending", "paid", "failed", "refunded", "overdue"],
       subscription_status: ["active", "cancelled", "past_due", "suspended"],
     },
   },
