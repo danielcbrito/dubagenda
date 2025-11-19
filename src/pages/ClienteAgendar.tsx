@@ -31,6 +31,9 @@ const ClienteAgendar = () => {
   const [availableSlots, setAvailableSlots] = useState<TimeSlot[]>([]);
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState(1);
+  const [paymentMethod, setPaymentMethod] = useState<'pix' | 'card' | 'cash'>('pix');
+  const [processingPayment, setProcessingPayment] = useState(false);
+  const [pixQrCode, setPixQrCode] = useState<string | null>(null);
 
   useEffect(() => {
     loadServices();
@@ -124,7 +127,7 @@ const ClienteAgendar = () => {
     });
   };
 
-  const handleNextStep = () => {
+  const handleNextStep = async () => {
     if (step === 1 && selectedServices.length === 0) {
       toast.error("Selecione pelo menos um serviço");
       return;
@@ -137,10 +140,16 @@ const ClienteAgendar = () => {
       toast.error("Selecione um horário");
       return;
     }
-    setStep(step + 1);
+    
+    // If moving from step 3 to 4, create the appointment first
+    if (step === 3) {
+      await createAppointment();
+    } else {
+      setStep(step + 1);
+    }
   };
 
-  const handleBooking = async () => {
+  const createAppointment = async () => {
     if (!selectedDate || !selectedTime || selectedServices.length === 0) {
       toast.error("Preencha todos os campos");
       return;
@@ -199,6 +208,9 @@ const ClienteAgendar = () => {
 
       if (error) throw error;
 
+      // Store appointment ID for payment
+      (window as any).currentAppointmentId = newAppointment.id;
+
       // Sync with Google Calendar
       const dateTime = new Date(`${selectedDate.toISOString().split('T')[0]}T${selectedTime}:00`);
       const endDateTime = new Date(dateTime.getTime() + totalDuration * 60000);
@@ -214,15 +226,59 @@ const ClienteAgendar = () => {
         }
       }).catch(err => {
         console.warn('Google Calendar sync failed:', err);
-        // Don't fail the appointment if calendar sync fails
       });
 
-      toast.success("Agendamento realizado com sucesso!");
-      navigate("/cliente");
+      setStep(4); // Move to payment step
     } catch (error: any) {
-      toast.error("Erro ao agendar: " + error.message);
+      toast.error("Erro ao criar agendamento: " + error.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handlePayment = async () => {
+    setProcessingPayment(true);
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        toast.error("Você precisa estar logado");
+        navigate("/auth");
+        return;
+      }
+
+      const appointmentId = (window as any).currentAppointmentId;
+      if (!appointmentId) {
+        toast.error("Erro: Agendamento não encontrado");
+        return;
+      }
+
+      // Call payment function
+      const { data, error } = await supabase.functions.invoke('create-payment', {
+        body: {
+          agendamentoId: appointmentId,
+          metodo: paymentMethod,
+        }
+      });
+
+      if (error) throw error;
+
+      if (paymentMethod === 'pix' && data.asaasPayment?.pixQrCode) {
+        setPixQrCode(data.asaasPayment.pixQrCode.encodedImage);
+        toast.success(data.message);
+      } else if (paymentMethod === 'card') {
+        toast.success("Pagamento aprovado!");
+        navigate("/cliente");
+      } else if (paymentMethod === 'cash') {
+        toast.success("Agendamento confirmado! Pague na barbearia.");
+        navigate("/cliente");
+      }
+    } catch (error: any) {
+      console.error('Payment error:', error);
+      toast.error("Erro ao processar pagamento: " + error.message);
+    } finally {
+      setProcessingPayment(false);
     }
   };
 
@@ -234,7 +290,7 @@ const ClienteAgendar = () => {
     return selectedServices.reduce((sum, s) => sum + s.preco, 0);
   };
 
-  const progressValue = (step / 4) * 100;
+  const progressValue = (step / 5) * 100;
 
   return (
     <div className="min-h-screen bg-background">
@@ -256,7 +312,7 @@ const ClienteAgendar = () => {
         {step === 1 && (
           <div className="space-y-4">
             <div>
-              <h3 className="text-sm font-semibold mb-1">Etapa 1 de 4</h3>
+              <h3 className="text-sm font-semibold mb-1">Etapa 1 de 5</h3>
               <h2 className="text-xl font-bold mb-3">Escolha os Serviços</h2>
               <p className="text-sm text-muted-foreground mb-4">
                 Selecione um ou mais serviços que deseja realizar
@@ -337,7 +393,7 @@ const ClienteAgendar = () => {
         {step === 2 && (
           <div className="space-y-4">
             <div>
-              <h3 className="text-sm font-semibold mb-1">Etapa 2 de 4</h3>
+              <h3 className="text-sm font-semibold mb-1">Etapa 2 de 5</h3>
               <h2 className="text-xl font-bold mb-3">Escolha a Data</h2>
               <p className="text-sm text-muted-foreground mb-4">
                 Selecione o dia desejado para o atendimento
@@ -369,7 +425,7 @@ const ClienteAgendar = () => {
         {step === 3 && (
           <div className="space-y-4">
             <div>
-              <h3 className="text-sm font-semibold mb-1">Etapa 3 de 4</h3>
+              <h3 className="text-sm font-semibold mb-1">Etapa 3 de 5</h3>
               <h2 className="text-xl font-bold mb-3">Escolha o Horário</h2>
               <p className="text-sm text-muted-foreground mb-4">
                 Horários disponíveis para {selectedDate?.toLocaleDateString('pt-BR')}
@@ -417,48 +473,150 @@ const ClienteAgendar = () => {
           </div>
         )}
 
-        {/* Step 4: Review and Confirm */}
+        {/* Step 4: Payment Method */}
         {step === 4 && (
           <div className="space-y-4">
             <div>
-              <h3 className="text-sm font-semibold mb-1">Etapa 4 de 4</h3>
-              <h2 className="text-xl font-bold mb-3">Confirmar Agendamento</h2>
+              <h3 className="text-sm font-semibold mb-1">Etapa 4 de 5</h3>
+              <h2 className="text-xl font-bold mb-3">Forma de Pagamento</h2>
               <p className="text-sm text-muted-foreground mb-4">
-                Revise os detalhes do seu agendamento
+                Escolha como deseja pagar
               </p>
             </div>
 
-            <Card className="p-6 card-premium space-y-4">
-              <div>
-                <h4 className="text-sm font-semibold text-muted-foreground mb-2">Serviços</h4>
-                <div className="space-y-2">
-                  {selectedServices.map((service) => (
-                    <div key={service.id} className="flex justify-between text-sm">
-                      <span>{service.nome}</span>
-                      <span className="text-muted-foreground">R$ {service.preco.toFixed(2)}</span>
-                    </div>
-                  ))}
+            <div className="grid gap-3">
+              <Card
+                className={`p-4 cursor-pointer transition-all ${
+                  paymentMethod === 'pix'
+                    ? "border-primary bg-primary/5 ring-2 ring-primary"
+                    : "card-premium hover:border-primary/50"
+                }`}
+                onClick={() => setPaymentMethod('pix')}
+              >
+                <div className="flex items-center gap-3">
+                  <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                    paymentMethod === 'pix' ? 'border-primary' : 'border-muted'
+                  }`}>
+                    {paymentMethod === 'pix' && (
+                      <div className="w-3 h-3 rounded-full bg-primary" />
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="font-semibold">PIX</h4>
+                    <p className="text-xs text-muted-foreground">
+                      Pagamento instantâneo via QR Code
+                    </p>
+                  </div>
                 </div>
-              </div>
+              </Card>
 
-              <div className="border-t border-border pt-4">
-                <div className="flex justify-between text-sm mb-2">
-                  <span className="text-muted-foreground">Data</span>
-                  <span className="font-semibold">{selectedDate?.toLocaleDateString('pt-BR')}</span>
+              <Card
+                className={`p-4 cursor-pointer transition-all ${
+                  paymentMethod === 'card'
+                    ? "border-primary bg-primary/5 ring-2 ring-primary"
+                    : "card-premium hover:border-primary/50"
+                }`}
+                onClick={() => setPaymentMethod('card')}
+              >
+                <div className="flex items-center gap-3">
+                  <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                    paymentMethod === 'card' ? 'border-primary' : 'border-muted'
+                  }`}>
+                    {paymentMethod === 'card' && (
+                      <div className="w-3 h-3 rounded-full bg-primary" />
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="font-semibold">Cartão de Crédito</h4>
+                    <p className="text-xs text-muted-foreground">
+                      Pagamento aprovado na hora
+                    </p>
+                  </div>
                 </div>
-                <div className="flex justify-between text-sm mb-2">
-                  <span className="text-muted-foreground">Horário</span>
+              </Card>
+
+              <Card
+                className={`p-4 cursor-pointer transition-all ${
+                  paymentMethod === 'cash'
+                    ? "border-primary bg-primary/5 ring-2 ring-primary"
+                    : "card-premium hover:border-primary/50"
+                }`}
+                onClick={() => setPaymentMethod('cash')}
+              >
+                <div className="flex items-center gap-3">
+                  <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                    paymentMethod === 'cash' ? 'border-primary' : 'border-muted'
+                  }`}>
+                    {paymentMethod === 'cash' && (
+                      <div className="w-3 h-3 rounded-full bg-primary" />
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="font-semibold">Dinheiro</h4>
+                    <p className="text-xs text-muted-foreground">
+                      Pague na barbearia
+                    </p>
+                  </div>
+                </div>
+              </Card>
+            </div>
+
+            <Card className="p-4 bg-primary/5 border-primary/20">
+              <div className="flex justify-between items-center">
+                <span className="font-semibold">Valor Total:</span>
+                <span className="text-2xl font-bold text-primary">
+                  R$ {getTotalPrice().toFixed(2)}
+                </span>
+              </div>
+            </Card>
+
+            <Button
+              onClick={() => setStep(5)}
+              className="w-full h-14 bg-primary hover:bg-primary/90 text-base"
+            >
+              Continuar
+            </Button>
+          </div>
+        )}
+
+        {/* Step 5: Review and Confirm Payment */}
+        {step === 5 && (
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-sm font-semibold mb-1">Etapa 5 de 5</h3>
+              <h2 className="text-xl font-bold mb-3">Confirmar Pagamento</h2>
+            </div>
+
+            <Card className="p-6 space-y-4 card-premium">
+              <div className="space-y-3">
+                <div className="flex justify-between py-2 border-b border-border">
+                  <span className="text-muted-foreground">Serviços:</span>
+                  <span className="font-semibold text-right">
+                    {selectedServices.map(s => s.nome).join(", ")}
+                  </span>
+                </div>
+                <div className="flex justify-between py-2 border-b border-border">
+                  <span className="text-muted-foreground">Data:</span>
+                  <span className="font-semibold">
+                    {selectedDate?.toLocaleDateString('pt-BR', { 
+                      day: '2-digit', 
+                      month: 'long', 
+                      year: 'numeric' 
+                    })}
+                  </span>
+                </div>
+                <div className="flex justify-between py-2 border-b border-border">
+                  <span className="text-muted-foreground">Horário:</span>
                   <span className="font-semibold">{selectedTime}</span>
                 </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Duração total</span>
-                  <span className="font-semibold">{getTotalDuration()} minutos</span>
+                <div className="flex justify-between py-2 border-b border-border">
+                  <span className="text-muted-foreground">Forma de Pagamento:</span>
+                  <span className="font-semibold">
+                    {paymentMethod === 'pix' ? 'PIX' : paymentMethod === 'card' ? 'Cartão' : 'Dinheiro'}
+                  </span>
                 </div>
-              </div>
-
-              <div className="border-t border-border pt-4">
-                <div className="flex justify-between items-center">
-                  <span className="font-bold">Valor Total</span>
+                <div className="flex justify-between items-center py-3 bg-primary/10 -m-6 mt-2 px-6 rounded-b-lg">
+                  <span className="font-semibold">Total:</span>
                   <span className="text-2xl font-bold text-primary">
                     R$ {getTotalPrice().toFixed(2)}
                   </span>
@@ -466,13 +624,34 @@ const ClienteAgendar = () => {
               </div>
             </Card>
 
-            <Button
-              onClick={handleBooking}
-              disabled={loading}
-              className="w-full h-14 bg-primary hover:bg-primary/90 text-base"
-            >
-              {loading ? "Confirmando..." : "Confirmar Agendamento"}
-            </Button>
+            {pixQrCode && (
+              <Card className="p-6 text-center space-y-4">
+                <h3 className="font-semibold">Escaneie o QR Code para pagar</h3>
+                <div className="flex justify-center">
+                  <img src={`data:image/png;base64,${pixQrCode}`} alt="QR Code PIX" className="w-64 h-64" />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  O pagamento será confirmado automaticamente
+                </p>
+                <Button
+                  onClick={() => navigate("/cliente")}
+                  variant="outline"
+                  className="w-full"
+                >
+                  Voltar para Início
+                </Button>
+              </Card>
+            )}
+
+            {!pixQrCode && (
+              <Button
+                onClick={handlePayment}
+                disabled={processingPayment}
+                className="w-full h-14 bg-primary hover:bg-primary/90 text-base"
+              >
+                {processingPayment ? "Processando..." : "Confirmar Pagamento"}
+              </Button>
+            )}
           </div>
         )}
       </div>
