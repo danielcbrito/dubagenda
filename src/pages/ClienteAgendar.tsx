@@ -41,18 +41,17 @@ const ClienteAgendar = () => {
   const [cardExpiryYear, setCardExpiryYear] = useState("");
   const [cardCvv, setCardCvv] = useState("");
   const [cardCpf, setCardCpf] = useState("");
-  const [resumeAppointmentId, setResumeAppointmentId] = useState<string | null>(null);
+  const [resumePendingBookingId, setResumePendingBookingId] = useState<string | null>(null);
 
   useEffect(() => {
     loadServices();
     
-    // Check if resuming payment
-    const resumeId = sessionStorage.getItem('resumePaymentId');
-    if (resumeId) {
-      setResumeAppointmentId(resumeId);
-      sessionStorage.removeItem('resumePaymentId');
-      setStep(4); // Go to payment method selection
-      toast.info("Continue o pagamento do seu agendamento");
+    // Check if resuming payment from pending booking
+    const resumeBookingId = sessionStorage.getItem('resumePendingBookingId');
+    if (resumeBookingId) {
+      setResumePendingBookingId(resumeBookingId);
+      sessionStorage.removeItem('resumePendingBookingId');
+      loadPendingBookingDetails(resumeBookingId);
     }
   }, []);
 
@@ -70,6 +69,35 @@ const ClienteAgendar = () => {
       .order("preco");
 
     setServices(data || []);
+  };
+
+  const loadPendingBookingDetails = async (bookingId: string) => {
+    try {
+      const { data: booking, error } = await supabase
+        .from("pending_bookings")
+        .select(`
+          *,
+          servico:servicos(*)
+        `)
+        .eq("id", bookingId)
+        .single();
+
+      if (error) throw error;
+      if (!booking) {
+        toast.error("Reserva não encontrada");
+        return;
+      }
+
+      // Set booking details
+      setSelectedServices([booking.servico]);
+      setSelectedDate(new Date(booking.data));
+      setSelectedTime(booking.hora);
+      setStep(4); // Go directly to payment
+      toast.info("Continue o pagamento do seu agendamento");
+    } catch (error) {
+      console.error("Error loading pending booking:", error);
+      toast.error("Erro ao carregar reserva");
+    }
   };
 
   const loadAvailableSlots = async () => {

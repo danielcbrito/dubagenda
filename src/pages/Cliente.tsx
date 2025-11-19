@@ -10,6 +10,7 @@ import logoDub from "@/assets/logo-dub.png";
 import { ClientDrawerMenu } from "@/components/ClientDrawerMenu";
 import { PointsDetailModal } from "@/components/PointsDetailModal";
 import { AppointmentCard } from "@/components/AppointmentCard";
+import { PendingPaymentCard } from "@/components/PendingPaymentCard";
 import { NotificationBell } from "@/components/NotificationBell";
 import { MyPlansSheet } from "@/components/MyPlansSheet";
 import { SubscribePlanSheet } from "@/components/SubscribePlanSheet";
@@ -40,6 +41,7 @@ const Cliente = () => {
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [pendingBookings, setPendingBookings] = useState<any[]>([]);
   const [points, setPoints] = useState(0);
   const [redemptions, setRedemptions] = useState(0);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -188,6 +190,24 @@ const Cliente = () => {
       .eq("status", "available");
 
     setRedemptions(redemptionsData?.length || 0);
+
+    // Load pending bookings (awaiting payment)
+    const { data: pendingBookingsData } = await supabase
+      .from("pending_bookings")
+      .select(`
+        id,
+        data,
+        hora,
+        servico_id,
+        preco,
+        payment_method,
+        created_at,
+        servico:servicos(nome)
+      `)
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false });
+
+    setPendingBookings(pendingBookingsData || []);
   };
 
   const handleLogout = async () => {
@@ -196,10 +216,27 @@ const Cliente = () => {
     navigate("/");
   };
 
-  const handleResumePayment = (appointmentId: string) => {
-    // Store appointment ID and navigate to payment screen
-    sessionStorage.setItem('resumePaymentId', appointmentId);
+  const handleResumePayment = (bookingId: string) => {
+    // Store pending booking ID and navigate to payment screen
+    sessionStorage.setItem('resumePendingBookingId', bookingId);
     navigate("/cliente/agendar");
+  };
+
+  const handleCancelPendingBooking = async (bookingId: string) => {
+    try {
+      const { error } = await supabase
+        .from("pending_bookings")
+        .delete()
+        .eq("id", bookingId);
+
+      if (error) throw error;
+
+      setPendingBookings(prev => prev.filter(b => b.id !== bookingId));
+      toast.success("Reserva cancelada");
+    } catch (error) {
+      console.error("Error canceling pending booking:", error);
+      toast.error("Erro ao cancelar reserva");
+    }
   };
 
   const handleCancelAppointment = async (appointmentId: string) => {
@@ -402,11 +439,28 @@ const Cliente = () => {
           Agendar Horário
         </Button>
 
+        {/* Pending Bookings - Awaiting Payment */}
+        {pendingBookings.length > 0 && (
+          <div className="mb-6">
+            <h3 className="text-base font-semibold mb-4">Pagamentos Pendentes</h3>
+            <div className="space-y-3">
+              {pendingBookings.map((booking) => (
+                <PendingPaymentCard
+                  key={booking.id}
+                  booking={booking}
+                  onResumePayment={handleResumePayment}
+                  onCancel={handleCancelPendingBooking}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Appointments */}
         <div>
           <h3 className="text-base font-semibold mb-4">Meus Agendamentos</h3>
           
-          {appointments.length === 0 ? (
+          {appointments.length === 0 && pendingBookings.length === 0 ? (
             <Card className="p-8 text-center border-dashed">
               <Calendar className="w-12 h-12 mx-auto mb-3 text-muted-foreground opacity-50" />
               <p className="text-xs text-muted-foreground">
