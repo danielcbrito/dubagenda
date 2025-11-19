@@ -144,7 +144,70 @@ async function handlePaymentConfirmed(supabase: any, payload: AsaasWebhookEvent)
 
   console.log(`Processing payment confirmation: ${payload.payment.id}`);
 
-  // Update payment status in database
+  // First, check if this is a pending booking (PIX payment for reservation)
+  if (payload.payment.externalReference) {
+    const { data: pendingBooking } = await supabase
+      .from('pending_bookings')
+      .select('*')
+      .eq('payment_intent_id', payload.payment.id)
+      .maybeSingle();
+
+    if (pendingBooking) {
+      console.log('Found pending booking, converting to appointment:', pendingBooking.id);
+
+      // Create the appointment
+      const { data: appointment, error: aptError } = await supabase
+        .from('agendamentos')
+        .insert({
+          user_id: pendingBooking.user_id,
+          servico_id: pendingBooking.servico_id,
+          barbeiro_id: pendingBooking.barbeiro_id,
+          data: pendingBooking.data,
+          hora: pendingBooking.hora,
+          duracao: pendingBooking.duracao,
+          preco: pendingBooking.preco,
+          observacoes: pendingBooking.observacoes,
+          status: 'pending', // Barbeiro needs to confirm
+          barbeiro_confirmou: false,
+          cliente_confirmou: true,
+        })
+        .select()
+        .single();
+
+      if (aptError) {
+        console.error('Failed to create appointment from pending booking:', aptError);
+        return;
+      }
+
+      console.log('Appointment created:', appointment.id);
+
+      // Save payment record
+      const { error: paymentError } = await supabase
+        .from('pagamentos')
+        .insert({
+          user_id: pendingBooking.user_id,
+          agendamento_id: appointment.id,
+          metodo: pendingBooking.payment_method,
+          valor: pendingBooking.preco,
+          gateway_payment_id: payload.payment.id,
+          status: 'paid',
+          data_pagamento: new Date().toISOString(),
+        });
+
+      if (paymentError) {
+        console.error('Failed to save payment record:', paymentError);
+        return;
+      }
+
+      // Delete pending booking
+      await supabase.from('pending_bookings').delete().eq('id', pendingBooking.id);
+
+      console.log('Pending booking converted to appointment successfully');
+      return;
+    }
+  }
+
+  // Legacy flow: Update payment status in database (for old appointments)
   const { error: updateError } = await supabase
     .from('pagamentos')
     .update({
@@ -164,7 +227,7 @@ async function handlePaymentConfirmed(supabase: any, payload: AsaasWebhookEvent)
     .from('pagamentos')
     .select('agendamento_id, assinatura_id, user_id')
     .eq('gateway_payment_id', payload.payment.id)
-    .single();
+    .maybeSingle();
 
   if (payment) {
     // If payment is for an appointment, update appointment to confirmed (ready for barber)
