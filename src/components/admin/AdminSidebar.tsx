@@ -1,4 +1,4 @@
-import { Home, Calendar, Users, DollarSign, FileText, Gift, Sparkles, Settings, LogOut, CheckCircle } from "lucide-react";
+import { Home, Calendar, Users, DollarSign, FileText, Gift, Settings, LogOut, CheckCircle, Scissors, ChevronRight } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -10,12 +10,21 @@ import {
   SidebarContent,
   SidebarGroup,
   SidebarGroupContent,
+  SidebarGroupLabel,
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
+  SidebarMenuSub,
+  SidebarMenuSubItem,
+  SidebarMenuSubButton,
   SidebarHeader,
   SidebarFooter,
 } from "@/components/ui/sidebar";
+import {
+  Collapsible,
+  CollapsibleTrigger,
+  CollapsibleContent,
+} from "@/components/ui/collapsible";
 import { Badge } from "@/components/ui/badge";
 
 const menuItems = [
@@ -25,15 +34,26 @@ const menuItems = [
   { title: "Clientes", url: "/admin/clientes", icon: Users },
   { title: "Financeiro", url: "/admin/financeiro", icon: DollarSign },
   { title: "Relatórios", url: "/admin/relatorios", icon: FileText },
-  { title: "Planos", url: "/admin/planos", icon: Sparkles },
   { title: "Promoções", url: "/admin/promocoes", icon: Gift },
   { title: "Configurações", url: "/admin/configuracoes", icon: Settings },
+];
+
+const servicosItems = [
+  { title: "Planos", url: "/admin/servicos/planos" },
+  { title: "Cortes", url: "/admin/servicos/cortes" },
 ];
 
 export function AdminSidebar() {
   const location = useLocation();
   const navigate = useNavigate();
   const [pendingCount, setPendingCount] = useState(0);
+  const [servicosOpen, setServicosOpen] = useState(
+    location.pathname.startsWith("/admin/servicos")
+  );
+
+  useEffect(() => {
+    setServicosOpen(location.pathname.startsWith("/admin/servicos"));
+  }, [location.pathname]);
 
   useEffect(() => {
     const loadPendingCount = async () => {
@@ -128,6 +148,52 @@ export function AdminSidebar() {
                   </SidebarMenuItem>
                 );
               })}
+
+              {/* Serviços with subitems */}
+              <Collapsible open={servicosOpen} onOpenChange={setServicosOpen}>
+                <SidebarMenuItem>
+                  <CollapsibleTrigger asChild>
+                    <SidebarMenuButton
+                      className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-all ${
+                        location.pathname.startsWith("/admin/servicos")
+                          ? 'bg-primary/10 text-primary font-medium'
+                          : 'text-muted-foreground hover:bg-muted/50'
+                      }`}
+                    >
+                      <Scissors className="w-5 h-5" />
+                      <span>Serviços</span>
+                      <ChevronRight
+                        className={`ml-auto w-4 h-4 transition-transform ${
+                          servicosOpen ? 'rotate-90' : ''
+                        }`}
+                      />
+                    </SidebarMenuButton>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <SidebarMenuSub>
+                      {servicosItems.map((subItem) => {
+                        const isSubActive = location.pathname === subItem.url;
+                        return (
+                          <SidebarMenuSubItem key={subItem.title}>
+                            <SidebarMenuSubButton asChild>
+                              <NavLink
+                                to={subItem.url}
+                                className={`flex items-center gap-3 px-3 py-2 pl-10 rounded-lg transition-all ${
+                                  isSubActive
+                                    ? 'bg-primary/10 text-primary font-medium'
+                                    : 'text-muted-foreground hover:bg-muted/50'
+                                }`}
+                              >
+                                {subItem.title}
+                              </NavLink>
+                            </SidebarMenuSubButton>
+                          </SidebarMenuSubItem>
+                        );
+                      })}
+                    </SidebarMenuSub>
+                  </CollapsibleContent>
+                </SidebarMenuItem>
+              </Collapsible>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
