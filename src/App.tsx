@@ -9,6 +9,7 @@ import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import Cliente from "./pages/Cliente";
 import ClienteAgendar from "./pages/ClienteAgendar";
+import ClienteAssinar from "./pages/ClienteAssinar";
 import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
 
@@ -27,6 +28,7 @@ const App = () => (
           <Route path="/resetar-senha" element={<ResetPassword />} />
           <Route path="/cliente" element={<Cliente />} />
           <Route path="/cliente/agendar" element={<ClienteAgendar />} />
+          <Route path="/cliente/assinar" element={<ClienteAssinar />} />
           <Route path="/admin/*" element={<Admin />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
