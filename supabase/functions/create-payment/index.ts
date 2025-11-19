@@ -65,17 +65,28 @@ serve(async (req) => {
     // Fetch appointment details
     const { data: appointment, error: aptError } = await supabase
       .from('agendamentos')
-      .select('*, profiles!inner(nome, cpf)')
+      .select('*')
       .eq('id', agendamentoId)
       .eq('user_id', user.id)
       .single();
-
+ 
     if (aptError || !appointment) {
       console.error('Appointment not found or not owned by user:', { agendamentoId, userId: user.id, error: aptError?.message });
       return new Response(
         JSON.stringify({ error: 'Agendamento não encontrado' }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
+    }
+ 
+    // Fetch user profile for name and CPF used in Asaas
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('nome, cpf')
+      .eq('id', user.id)
+      .single();
+ 
+    if (profileError || !profile) {
+      console.warn('Profile not found for user, proceeding with limited data:', { userId: user.id, error: profileError?.message });
     }
 
     // Handle different payment methods
@@ -114,9 +125,9 @@ serve(async (req) => {
 
     // Get or create customer in Asaas
     const customerData = {
-      name: customerInfo?.name || appointment.profiles.nome,
+      name: customerInfo?.name || profile?.nome || user.email || 'Cliente',
       email: user.email,
-      cpfCnpj: (customerInfo?.cpf || appointment.profiles.cpf)?.replace(/\D/g, ''),
+      cpfCnpj: (customerInfo?.cpf || profile?.cpf || '')?.replace(/\D/g, ''),
       externalReference: user.id,
     };
 
