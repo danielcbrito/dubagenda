@@ -34,6 +34,7 @@ const ClienteAgendar = () => {
   const [paymentMethod, setPaymentMethod] = useState<'pix' | 'card' | 'cash'>('pix');
   const [processingPayment, setProcessingPayment] = useState(false);
   const [pixQrCode, setPixQrCode] = useState<string | null>(null);
+  const [pixPayload, setPixPayload] = useState<string | null>(null);
   const [cardHolderName, setCardHolderName] = useState("");
   const [cardNumber, setCardNumber] = useState("");
   const [cardExpiryMonth, setCardExpiryMonth] = useState("");
@@ -66,12 +67,12 @@ const ClienteAgendar = () => {
 
     const dateStr = selectedDate.toISOString().split('T')[0];
     
-    // Fetch all appointments for the selected date
+    // Fetch all appointments for the selected date (exclude cancelled and no_show)
     const { data: appointments } = await supabase
       .from("agendamentos")
       .select("hora, duracao")
       .eq("data", dateStr)
-      .in("status", ["pending", "confirmed"]);
+      .in("status", ["pending", "confirmed", "completed"]);
 
     // Calculate total duration needed
     const totalDuration = selectedServices.reduce((sum, s) => sum + s.duracao_minutos, 0);
@@ -197,9 +198,9 @@ const ClienteAgendar = () => {
         return;
       }
 
-      // Create appointment with appropriate status
+      // Create appointment with appropriate status based on payment method
       const mainService = selectedServices[0];
-      const appointmentStatus = paymentMethod === 'cash' ? 'pending' : 'pending';
+      const appointmentStatus = 'pending'; // All start as pending until payment is confirmed
       
       const { error: aptError, data: newAppointment } = await supabase
         .from("agendamentos")
@@ -302,11 +303,16 @@ const ClienteAgendar = () => {
 
       if (paymentMethod === 'pix' && data.asaasPayment?.pixQrCode) {
         setPixQrCode(data.asaasPayment.pixQrCode.encodedImage);
+        setPixPayload(data.asaasPayment.pixQrCode.payload);
         toast.success("QR Code gerado! Escaneie para pagar.");
         setStep(6); // Move to QR Code display step
       } else if (paymentMethod === 'card') {
-        toast.success("Pagamento aprovado! Agendamento confirmado.");
-        navigate("/cliente");
+        if (data.asaasPayment?.status === 'CONFIRMED') {
+          toast.success("Pagamento aprovado! Agendamento confirmado.");
+          navigate("/cliente");
+        } else {
+          toast.error("Pagamento recusado. Verifique os dados do cartão.");
+        }
       }
     } catch (error: any) {
       console.error('Payment error:', error);
@@ -786,22 +792,63 @@ const ClienteAgendar = () => {
         {/* Step 6: PIX QR Code Display */}
         {step === 6 && pixQrCode && (
           <div className="space-y-4">
+            <div>
+              <h3 className="text-sm font-semibold mb-1">Pagamento PIX</h3>
+              <h2 className="text-xl font-bold mb-3">Escaneie o QR Code</h2>
+            </div>
+
             <Card className="p-6 text-center space-y-4">
-              <h2 className="text-xl font-bold">Escaneie o QR Code</h2>
-              <p className="text-muted-foreground">
-                Abra o app do seu banco e escaneie o código para pagar
-              </p>
-              <div className="flex justify-center bg-white p-4 rounded-lg">
-                <img src={`data:image/png;base64,${pixQrCode}`} alt="QR Code PIX" className="w-64 h-64" />
-              </div>
-              <div className="bg-primary/10 p-4 rounded-lg">
-                <p className="text-2xl font-bold text-primary">
+              <div className="bg-primary/10 p-4 rounded-lg mb-4">
+                <p className="text-sm text-muted-foreground mb-1">Valor a pagar</p>
+                <p className="text-3xl font-bold text-primary">
                   R$ {getTotalPrice().toFixed(2)}
                 </p>
               </div>
-              <p className="text-xs text-muted-foreground">
-                Após o pagamento, seu agendamento será confirmado automaticamente
+
+              <p className="text-muted-foreground mb-4">
+                Abra o app do seu banco e escaneie o código abaixo para pagar
               </p>
+              
+              <div className="flex justify-center bg-white p-6 rounded-lg border-2 border-border">
+                <img 
+                  src={`data:image/png;base64,${pixQrCode}`} 
+                  alt="QR Code PIX" 
+                  className="w-64 h-64" 
+                />
+              </div>
+
+              {pixPayload && (
+                <div className="mt-6 space-y-2">
+                  <p className="text-sm font-semibold">Ou copie o código PIX</p>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={pixPayload}
+                      readOnly
+                      className="flex-1 px-4 py-3 text-sm rounded-lg border border-border bg-muted font-mono"
+                    />
+                    <Button
+                      onClick={() => {
+                        navigator.clipboard.writeText(pixPayload);
+                        toast.success("Código copiado!");
+                      }}
+                      variant="outline"
+                      className="whitespace-nowrap"
+                    >
+                      Copiar
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              <div className="mt-6 p-4 bg-muted rounded-lg">
+                <p className="text-xs text-muted-foreground">
+                  ⏱️ Status: <span className="font-semibold text-yellow-600">Aguardando pagamento</span>
+                </p>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Após o pagamento, seu agendamento será confirmado automaticamente
+                </p>
+              </div>
               <Button
                 onClick={() => navigate("/cliente")}
                 className="w-full"
