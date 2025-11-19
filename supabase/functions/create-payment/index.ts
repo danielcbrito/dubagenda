@@ -7,7 +7,15 @@ const corsHeaders = {
 };
 
 interface CreatePaymentRequest {
-  agendamentoId: string;
+  bookingData: {
+    servico_id: string;
+    barbeiro_id: string | null;
+    data: string;
+    hora: string;
+    duracao: number;
+    preco: number;
+    observacoes?: string;
+  };
   metodo: 'card' | 'pix' | 'cash';
   customerInfo?: {
     name: string;
@@ -58,26 +66,10 @@ serve(async (req) => {
 
     console.log('User authenticated:', user.id);
 
-    const { agendamentoId, metodo, customerInfo, cardInfo }: CreatePaymentRequest = await req.json();
+    const { bookingData, metodo, customerInfo, cardInfo }: CreatePaymentRequest = await req.json();
 
-    console.log('Received payment request:', { agendamentoId, metodo, hasCustomerInfo: !!customerInfo, hasCardInfo: !!cardInfo });
+    console.log('Received payment request:', { bookingData, metodo, hasCustomerInfo: !!customerInfo, hasCardInfo: !!cardInfo });
 
-    // Fetch appointment details
-    const { data: appointment, error: aptError } = await supabase
-      .from('agendamentos')
-      .select('*')
-      .eq('id', agendamentoId)
-      .eq('user_id', user.id)
-      .single();
- 
-    if (aptError || !appointment) {
-      console.error('Appointment not found or not owned by user:', { agendamentoId, userId: user.id, error: aptError?.message });
-      return new Response(
-        JSON.stringify({ error: 'Agendamento não encontrado' }),
-        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
- 
     // Fetch user profile for name and CPF used in Asaas
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
@@ -89,132 +81,194 @@ serve(async (req) => {
       console.warn('Profile not found for user, proceeding with limited data:', { userId: user.id, error: profileError?.message });
     }
 
-    // Handle different payment methods
+    // Handle "cash" payment - create appointment immediately
     if (metodo === 'cash') {
-      // For cash payments, just create a pending payment record
+      console.log('Creating cash appointment immediately');
+      
+      // Create the appointment directly
+      const { data: appointment, error: aptError } = await supabase
+        .from('agendamentos')
+        .insert({
+          user_id: user.id,
+          servico_id: bookingData.servico_id,
+          barbeiro_id: bookingData.barbeiro_id,
+          data: bookingData.data,
+          hora: bookingData.hora,
+          duracao: bookingData.duracao,
+          preco: bookingData.preco,
+          observacoes: bookingData.observacoes,
+          status: 'pending', // Barbeiro needs to confirm
+          barbeiro_confirmou: false,
+          cliente_confirmou: false,
+        })
+        .select()
+        .single();
+
+      if (aptError) {
+        console.error('Failed to create appointment:', aptError);
+        throw aptError;
+      }
+
+      // Create payment record
       const { data: payment, error: paymentError } = await supabase
         .from('pagamentos')
         .insert({
           user_id: user.id,
-          agendamento_id: agendamentoId,
+          agendamento_id: appointment.id,
           metodo: 'cash',
-          valor: appointment.preco,
+          valor: bookingData.preco,
           status: 'pending',
         })
         .select()
         .single();
 
-      if (paymentError) throw paymentError;
+      if (paymentError) {
+        console.error('Failed to create payment:', paymentError);
+        throw paymentError;
+      }
+
+      console.log('Cash appointment created successfully:', appointment.id);
 
       return new Response(
         JSON.stringify({
           success: true,
           paymentMethod: 'cash',
+          appointment,
           payment,
-          message: 'Pagamento em dinheiro registrado. Pague na barbearia.',
+          message: 'Agendamento criado! Pague na barbearia.',
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // For PIX and Card, integrate with Asaas
-    const asaasApiKey = Deno.env.get('ASAAS_API_KEY');
-    if (!asaasApiKey) {
-      throw new Error('Asaas API key not configured');
+    // For PIX and Card, create pending booking first
+    console.log('Creating pending booking for PIX/Card payment');
+    
+    const { data: pendingBooking, error: pendingError } = await supabase
+      .from('pending_bookings')
+      .insert({
+        user_id: user.id,
+        servico_id: bookingData.servico_id,
+        barbeiro_id: bookingData.barbeiro_id,
+        data: bookingData.data,
+        hora: bookingData.hora,
+        duracao: bookingData.duracao,
+        preco: bookingData.preco,
+        observacoes: bookingData.observacoes,
+        payment_method: metodo,
+      })
+      .select()
+      .single();
+
+    if (pendingError) {
+      console.error('Failed to create pending booking:', pendingError);
+      throw pendingError;
     }
 
-    // Get or create customer in Asaas
-    const customerData = {
-      name: customerInfo?.name || profile?.nome || user.email || 'Cliente',
-      email: user.email,
-      cpfCnpj: (customerInfo?.cpf || profile?.cpf || '')?.replace(/\D/g, ''),
+    console.log('Pending booking created:', pendingBooking.id);
+
+    // Now integrate with Asaas
+    const asaasApiKey = Deno.env.get('ASAAS_API_KEY');
+    if (!asaasApiKey) {
+      console.error('ASAAS_API_KEY not configured');
+      // Clean up pending booking
+      await supabase.from('pending_bookings').delete().eq('id', pendingBooking.id);
+      return new Response(
+        JSON.stringify({ error: 'Payment gateway not configured' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Create or get customer in Asaas
+    const asaasCustomer = {
+      name: profile?.nome || customerInfo?.name || 'Cliente',
+      email: user.email || customerInfo?.email || 'noemail@example.com',
+      cpfCnpj: profile?.cpf || customerInfo?.cpf || '',
       externalReference: user.id,
     };
 
-    console.log('Creating/fetching Asaas customer:', { ...customerData, cpfCnpj: '[REDACTED]' });
-
-    // Try to find existing customer first
-    let asaasCustomerId;
-    const asaasBaseUrl = 'https://api.asaas.com/v3';
-    
-    const customerSearchResponse = await fetch(
-      `${asaasBaseUrl}/customers?externalReference=${user.id}`,
-      {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'access_token': asaasApiKey,
-        },
-      }
-    );
-
-    const customerSearchResult = await customerSearchResponse.json();
-    console.log('Customer search result:', { 
-      found: customerSearchResult.data?.length > 0,
-      count: customerSearchResult.data?.length 
+    console.log('Creating/fetching Asaas customer:', {
+      name: asaasCustomer.name,
+      email: asaasCustomer.email,
+      cpfCnpj: asaasCustomer.cpfCnpj ? '[REDACTED]' : 'missing',
+      externalReference: asaasCustomer.externalReference,
     });
 
+    // Search for existing customer first
+    const customerSearchUrl = `https://api.asaas.com/v3/customers?externalReference=${user.id}`;
+    const customerSearchResponse = await fetch(customerSearchUrl, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'access_token': asaasApiKey,
+      },
+    });
+
+    const customerSearchResult = await customerSearchResponse.json();
+    let customerId = null;
+
+    console.log('Customer search result:', { found: customerSearchResult.data?.length > 0, count: customerSearchResult.data?.length || 0 });
+
     if (customerSearchResult.data && customerSearchResult.data.length > 0) {
-      asaasCustomerId = customerSearchResult.data[0].id;
-      console.log('Using existing customer:', asaasCustomerId);
+      customerId = customerSearchResult.data[0].id;
+      console.log('Using existing customer:', customerId);
     } else {
       // Create new customer
-      const customerCreateResponse = await fetch(`${asaasBaseUrl}/customers`, {
+      const customerCreateResponse = await fetch('https://api.asaas.com/v3/customers', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'access_token': asaasApiKey,
         },
-        body: JSON.stringify(customerData),
+        body: JSON.stringify(asaasCustomer),
       });
 
       const customerCreateResult = await customerCreateResponse.json();
-      console.log('Customer creation result:', { 
-        status: customerCreateResponse.status,
-        hasId: !!customerCreateResult.id,
-        hasError: !!customerCreateResult.errors 
-      });
 
       if (!customerCreateResponse.ok || customerCreateResult.errors) {
         console.error('Asaas customer error:', customerCreateResult);
+        // Clean up pending booking
+        await supabase.from('pending_bookings').delete().eq('id', pendingBooking.id);
         throw new Error(customerCreateResult.errors?.[0]?.description || 'Erro ao criar cliente no Asaas');
       }
 
-      asaasCustomerId = customerCreateResult.id;
-      console.log('Created new customer:', asaasCustomerId);
+      customerId = customerCreateResult.id;
+      console.log('Created new customer:', customerId);
     }
 
     // Create payment in Asaas
-    const paymentData: any = {
-      customer: asaasCustomerId,
+    const asaasPaymentData: any = {
+      customer: customerId,
       billingType: metodo === 'pix' ? 'PIX' : 'CREDIT_CARD',
-      value: appointment.preco,
+      value: bookingData.preco,
       dueDate: new Date().toISOString().split('T')[0],
-      description: `Agendamento #${agendamentoId.substring(0, 8)}`,
-      externalReference: agendamentoId,
+      description: `Reserva #${pendingBooking.id.substring(0, 8)}`,
+      externalReference: pendingBooking.id, // Reference the pending booking
     };
 
     // For credit card, add card info
     if (metodo === 'card') {
       if (!cardInfo) {
         console.error('Missing card info for card payment');
+        // Clean up pending booking
+        await supabase.from('pending_bookings').delete().eq('id', pendingBooking.id);
         return new Response(
           JSON.stringify({ error: 'Dados do cartão obrigatórios para pagamento com cartão' }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
-      paymentData.creditCard = {
+      asaasPaymentData.creditCard = {
         holderName: cardInfo.holderName,
         number: cardInfo.number.replace(/\s/g, ''),
         expiryMonth: cardInfo.expiryMonth,
         expiryYear: cardInfo.expiryYear,
         ccv: cardInfo.ccv,
       };
-      paymentData.creditCardHolderInfo = {
+      asaasPaymentData.creditCardHolderInfo = {
         name: cardInfo.holderName,
-        email: user.email,
-        cpfCnpj: (customerData.cpfCnpj || '').replace(/\D/g, ''),
+        email: user.email || 'noemail@example.com',
+        cpfCnpj: (asaasCustomer.cpfCnpj || '').replace(/\D/g, ''),
         postalCode: '00000000',
         addressNumber: '0',
         phone: '0000000000',
@@ -222,117 +276,151 @@ serve(async (req) => {
     }
 
     console.log('Creating Asaas payment:', { 
-      customer: asaasCustomerId,
-      billingType: paymentData.billingType,
-      value: paymentData.value,
+      customer: customerId,
+      billingType: asaasPaymentData.billingType,
+      value: asaasPaymentData.value,
       hasCard: metodo === 'card' 
     });
 
-    // Use production URL - sandbox requires different API key
     const asaasUrl = 'https://api.asaas.com/v3/payments';
     console.log('Using Asaas URL:', asaasUrl);
 
-    const asaasResponse = await fetch(asaasUrl, {
+    const asaasPaymentResponse = await fetch(asaasUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'access_token': asaasApiKey,
       },
-      body: JSON.stringify(paymentData),
+      body: JSON.stringify(asaasPaymentData),
     });
 
-    const asaasResult = await asaasResponse.json();
+    const asaasPaymentResult = await asaasPaymentResponse.json();
 
-    console.log('Asaas payment response:', { 
-      status: asaasResponse.status, 
-      id: asaasResult.id,
-      hasError: !!asaasResult.errors,
-      errorMessage: asaasResult.errors?.[0]?.description || asaasResult.message
+    console.log('Asaas payment response:', {
+      status: asaasPaymentResponse.status,
+      id: asaasPaymentResult.id,
+      hasError: !!asaasPaymentResult.errors,
+      errorMessage: asaasPaymentResult.errors?.[0]?.description
     });
 
-    if (!asaasResponse.ok || asaasResult.errors) {
-      console.error('Asaas payment error:', JSON.stringify(asaasResult, null, 2));
-      throw new Error(asaasResult.errors?.[0]?.description || asaasResult.message || 'Erro ao processar pagamento no Asaas');
+    if (!asaasPaymentResponse.ok || asaasPaymentResult.errors) {
+      console.error('Asaas payment creation failed:', asaasPaymentResult);
+      // Clean up pending booking
+      await supabase.from('pending_bookings').delete().eq('id', pendingBooking.id);
+      throw new Error(asaasPaymentResult.errors?.[0]?.description || 'Payment creation failed');
     }
 
-    // Save payment to database
-    const { data: payment, error: paymentError } = await supabase
-      .from('pagamentos')
-      .insert({
-        user_id: user.id,
-        agendamento_id: agendamentoId,
-        metodo: metodo,
-        valor: appointment.preco,
-        status: metodo === 'card' ? 'paid' : 'pending', // Card is instant, PIX is pending
-        gateway_payment_id: asaasResult.id,
-      })
-      .select()
-      .single();
+    // Update pending booking with payment intent ID
+    await supabase
+      .from('pending_bookings')
+      .update({ payment_intent_id: asaasPaymentResult.id })
+      .eq('id', pendingBooking.id);
 
-    if (paymentError) throw paymentError;
-
-    // If card payment was successful, update appointment status
-    if (metodo === 'card') {
-      await supabase
+    // For card payments, if confirmed immediately, convert to appointment
+    if (metodo === 'card' && asaasPaymentResult.status === 'CONFIRMED') {
+      console.log('Card payment confirmed immediately, creating appointment');
+      
+      const { data: appointment, error: aptError } = await supabase
         .from('agendamentos')
-        .update({ status: 'confirmed' })
-        .eq('id', agendamentoId);
+        .insert({
+          user_id: user.id,
+          servico_id: pendingBooking.servico_id,
+          barbeiro_id: pendingBooking.barbeiro_id,
+          data: pendingBooking.data,
+          hora: pendingBooking.hora,
+          duracao: pendingBooking.duracao,
+          preco: pendingBooking.preco,
+          observacoes: pendingBooking.observacoes,
+          status: 'pending', // Barbeiro needs to confirm
+          barbeiro_confirmou: false,
+          cliente_confirmou: true,
+        })
+        .select()
+        .single();
+
+      if (aptError) {
+        console.error('Failed to create appointment:', aptError);
+        throw aptError;
+      }
+
+      // Save payment record
+      const { data: payment, error: paymentError } = await supabase
+        .from('pagamentos')
+        .insert({
+          user_id: user.id,
+          agendamento_id: appointment.id,
+          metodo: metodo,
+          valor: pendingBooking.preco,
+          gateway_payment_id: asaasPaymentResult.id,
+          status: 'paid',
+          data_pagamento: new Date().toISOString(),
+        })
+        .select()
+        .single();
+
+      if (paymentError) {
+        console.error('Failed to save payment record:', paymentError);
+        throw paymentError;
+      }
+
+      // Delete pending booking
+      await supabase.from('pending_bookings').delete().eq('id', pendingBooking.id);
+
+      console.log('Card payment completed, appointment created:', appointment.id);
     }
 
     // For PIX, fetch the QR Code
     let pixQrCodeData = undefined;
-    if (metodo === 'pix' && asaasResult.id) {
+    if (metodo === 'pix' && asaasPaymentResult.id) {
       try {
-        const qrCodeResponse = await fetch(`${asaasUrl}/${asaasResult.id}/pixQrCode`, {
+        const qrCodeResponse = await fetch(`${asaasUrl}/${asaasPaymentResult.id}/pixQrCode`, {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
             'access_token': asaasApiKey,
           },
         });
-        
+
         if (qrCodeResponse.ok) {
-          const qrCodeData = await qrCodeResponse.json();
-          pixQrCodeData = {
-            encodedImage: qrCodeData.encodedImage,
-            payload: qrCodeData.payload,
-            expirationDate: qrCodeData.expirationDate,
-          };
+          pixQrCodeData = await qrCodeResponse.json();
+          console.log('PIX QR Code fetched successfully');
+        } else {
+          console.error('Failed to fetch PIX QR Code:', await qrCodeResponse.text());
         }
-      } catch (qrError) {
-        console.error('Error fetching PIX QR Code:', qrError);
+      } catch (error) {
+        console.error('Error fetching PIX QR Code:', error);
       }
     }
 
+    // Return response with payment details
+    const response: any = {
+      success: true,
+      paymentMethod: metodo,
+      pendingBooking: pendingBooking,
+      asaasPayment: {
+        id: asaasPaymentResult.id,
+        status: asaasPaymentResult.status,
+        value: asaasPaymentResult.value,
+      },
+    };
+
+    if (pixQrCodeData) {
+      response.asaasPayment.pixQrCode = pixQrCodeData;
+    }
+
     return new Response(
-      JSON.stringify({
-        success: true,
-        paymentMethod: metodo,
-        payment,
-        asaasPayment: {
-          id: asaasResult.id,
-          status: asaasResult.status,
-          invoiceUrl: asaasResult.invoiceUrl,
-          pixQrCode: pixQrCodeData,
-        },
-        message: metodo === 'pix' 
-          ? 'PIX gerado com sucesso! Escaneie o QR Code para pagar.'
-          : 'Pagamento processado com sucesso!',
-      }),
+      JSON.stringify(response),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
   } catch (error: any) {
-    console.error('Error in create-payment:', error);
+    console.error('Error processing payment:', error);
     return new Response(
       JSON.stringify({ 
         error: error.message || 'Erro ao processar pagamento',
         details: error.toString()
       }),
-      { 
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-      }
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 });

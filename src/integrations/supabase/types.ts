@@ -347,6 +347,69 @@ export type Database = {
           },
         ]
       }
+      pending_bookings: {
+        Row: {
+          barbeiro_id: string | null
+          created_at: string | null
+          data: string
+          duracao: number
+          expires_at: string | null
+          hora: string
+          id: string
+          observacoes: string | null
+          payment_intent_id: string | null
+          payment_method: string | null
+          preco: number
+          servico_id: string
+          user_id: string
+        }
+        Insert: {
+          barbeiro_id?: string | null
+          created_at?: string | null
+          data: string
+          duracao: number
+          expires_at?: string | null
+          hora: string
+          id?: string
+          observacoes?: string | null
+          payment_intent_id?: string | null
+          payment_method?: string | null
+          preco: number
+          servico_id: string
+          user_id: string
+        }
+        Update: {
+          barbeiro_id?: string | null
+          created_at?: string | null
+          data?: string
+          duracao?: number
+          expires_at?: string | null
+          hora?: string
+          id?: string
+          observacoes?: string | null
+          payment_intent_id?: string | null
+          payment_method?: string | null
+          preco?: number
+          servico_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pending_bookings_barbeiro_id_fkey"
+            columns: ["barbeiro_id"]
+            isOneToOne: false
+            referencedRelation: "barbeiros"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pending_bookings_servico_id_fkey"
+            columns: ["servico_id"]
+            isOneToOne: false
+            referencedRelation: "servicos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       planos: {
         Row: {
           ativo: boolean | null
@@ -622,6 +685,7 @@ export type Database = {
     }
     Functions: {
       auto_hide_old_cancelled_appointments: { Args: never; Returns: undefined }
+      clean_expired_pending_bookings: { Args: never; Returns: undefined }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

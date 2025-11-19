@@ -192,86 +192,29 @@ const ClienteAgendar = () => {
       const totalPrice = selectedServices.reduce((sum, s) => sum + s.preco, 0);
       const serviceNames = selectedServices.map(s => s.nome).join(", ");
 
-      // Validate appointment availability
-      const { data: validation } = await supabase.functions.invoke('validate-appointment', {
-        body: {
-          data: selectedDate.toISOString().split('T')[0],
-          hora: selectedTime,
-          duracao: totalDuration,
-          userId: session.user.id,
-        }
-      });
-
-      if (!validation?.valid) {
-        toast.error(validation?.message || "Horário indisponível");
-        setProcessingPayment(false);
-        return;
-      }
-
-      // Create appointment with appropriate status based on payment method
+      // Prepare booking data
       const mainService = selectedServices[0];
-      const appointmentStatus = 'pending'; // All start as pending until payment is confirmed
-      
-      const { error: aptError, data: newAppointment } = await supabase
-        .from("agendamentos")
-        .insert({
-          user_id: session.user.id,
-          servico_id: mainService.id,
-          data: selectedDate.toISOString().split('T')[0],
-          hora: selectedTime,
-          duracao: totalDuration,
-          preco: totalPrice,
-          status: appointmentStatus,
-          observacoes: selectedServices.length > 1 
-            ? `Serviços: ${serviceNames}` 
-            : null,
-        })
-        .select()
-        .single();
+      const bookingData = {
+        servico_id: mainService.id,
+        barbeiro_id: null, // Can be extended later to include barber selection
+        data: selectedDate.toISOString().split('T')[0],
+        hora: selectedTime,
+        duracao: totalDuration,
+        preco: totalPrice,
+        observacoes: selectedServices.length > 1 
+          ? `Serviços: ${serviceNames}` 
+          : undefined,
+      };
 
-      if (aptError) throw aptError;
+      // Prepare payment payload
+      const payload: any = {
+        bookingData,
+        metodo: paymentMethod,
+      };
 
-      // Sync with Google Calendar
-      const dateTime = new Date(`${selectedDate.toISOString().split('T')[0]}T${selectedTime}:00`);
-      const endDateTime = new Date(dateTime.getTime() + totalDuration * 60000);
-      
-      await supabase.functions.invoke('google-calendar-sync', {
-        body: {
-          action: 'create',
-          appointmentId: newAppointment.id,
-          summary: `Agendamento - ${serviceNames}`,
-          description: `Cliente: ${session.user.email}\nServiços: ${serviceNames}\nValor: R$ ${totalPrice.toFixed(2)}`,
-          startDateTime: dateTime.toISOString(),
-          endDateTime: endDateTime.toISOString(),
-        }
-      }).catch(err => {
-        console.warn('Google Calendar sync failed:', err);
-      });
-
-      // Handle payment based on method
-      if (paymentMethod === 'cash') {
-        // For cash, just create payment record and confirm
-        await supabase
-          .from('pagamentos')
-          .insert({
-            user_id: session.user.id,
-            agendamento_id: newAppointment.id,
-            metodo: 'cash',
-            valor: totalPrice,
-            status: 'pending',
-          });
-
-        toast.success("Agendamento confirmado! Pague na barbearia.");
-        navigate("/cliente");
-        return;
-      }
-
-      // For PIX and Card, call payment gateway
-      let cardInfoPayload: any = undefined;
-      let customerInfoPayload: any = undefined;
-      
+      // For card, add card and customer info
       if (paymentMethod === 'card') {
-        cardInfoPayload = {
+        payload.cardInfo = {
           holderName: cardHolderName.trim(),
           number: cardNumber.replace(/\s/g, ''),
           expiryMonth: cardExpiryMonth.trim(),
@@ -279,36 +222,27 @@ const ClienteAgendar = () => {
           ccv: cardCvv.trim(),
         };
 
-        customerInfoPayload = {
+        payload.customerInfo = {
           name: cardHolderName.trim(),
           email: session.user.email,
           cpf: cardCpf.replace(/\D/g, ''),
         };
       }
 
-      const payload: any = {
-        agendamentoId: newAppointment.id,
-        metodo: paymentMethod,
-      };
-
-      if (cardInfoPayload) {
-        payload.cardInfo = cardInfoPayload;
-      }
-      if (customerInfoPayload) {
-        payload.customerInfo = customerInfoPayload;
-      }
-
+      // Call payment function
       const { data, error } = await supabase.functions.invoke('create-payment', {
         body: payload,
       });
 
       if (error) {
-        // Delete the appointment if payment fails
-        await supabase.from('agendamentos').delete().eq('id', newAppointment.id);
         throw error;
       }
 
-      if (paymentMethod === 'pix' && data.asaasPayment?.pixQrCode) {
+      // Handle response based on payment method
+      if (paymentMethod === 'cash') {
+        toast.success("Agendamento criado! Pague na barbearia.");
+        navigate("/cliente");
+      } else if (paymentMethod === 'pix' && data.asaasPayment?.pixQrCode) {
         setPixQrCode(data.asaasPayment.pixQrCode.encodedImage);
         setPixPayload(data.asaasPayment.pixQrCode.payload);
         toast.success("QR Code gerado! Escaneie para pagar.");
