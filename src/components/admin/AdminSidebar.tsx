@@ -10,7 +10,6 @@ import {
   SidebarContent,
   SidebarGroup,
   SidebarGroupContent,
-  SidebarGroupLabel,
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
@@ -68,7 +67,6 @@ export function AdminSidebar() {
 
     loadPendingCount();
 
-    // Real-time subscription for instant updates
     const channel = supabase
       .channel('pending-count-updates')
       .on(
@@ -84,7 +82,6 @@ export function AdminSidebar() {
       )
       .subscribe();
 
-    // Fallback polling every 60 seconds
     const interval = setInterval(loadPendingCount, 20000);
 
     return () => {
@@ -115,7 +112,8 @@ export function AdminSidebar() {
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
-              {menuItems.map((item) => {
+              {/* First 3 menu items */}
+              {menuItems.slice(0, 3).map((item) => {
                 const isActive = item.end 
                   ? location.pathname === item.url
                   : location.pathname.startsWith(item.url);
@@ -149,7 +147,7 @@ export function AdminSidebar() {
                 );
               })}
 
-              {/* Serviços with subitems */}
+              {/* Serviços - 4th position */}
               <Collapsible open={servicosOpen} onOpenChange={setServicosOpen}>
                 <SidebarMenuItem>
                   <CollapsibleTrigger asChild>
@@ -194,6 +192,34 @@ export function AdminSidebar() {
                   </CollapsibleContent>
                 </SidebarMenuItem>
               </Collapsible>
+
+              {/* Remaining menu items */}
+              {menuItems.slice(3).map((item) => {
+                const isActive = item.end 
+                  ? location.pathname === item.url
+                  : location.pathname.startsWith(item.url);
+                
+                return (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton asChild>
+                      <NavLink 
+                        to={item.url} 
+                        end={item.end}
+                        className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-all ${
+                          isActive 
+                            ? 'bg-primary/10 text-primary font-medium' 
+                            : 'text-muted-foreground hover:bg-muted/50'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3 flex-1">
+                          <item.icon className="w-5 h-5" />
+                          <span>{item.title}</span>
+                        </div>
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
