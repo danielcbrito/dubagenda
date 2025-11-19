@@ -99,12 +99,64 @@ serve(async (req) => {
     const customerData = {
       name: customerInfo?.name || appointment.profiles.nome,
       email: user.email,
-      cpfCnpj: customerInfo?.cpf || appointment.profiles.cpf,
+      cpfCnpj: (customerInfo?.cpf || appointment.profiles.cpf)?.replace(/\D/g, ''),
+      externalReference: user.id,
     };
+
+    console.log('Creating/fetching Asaas customer:', { ...customerData, cpfCnpj: '[REDACTED]' });
+
+    // Try to find existing customer first
+    let asaasCustomerId;
+    const customerSearchResponse = await fetch(
+      `https://sandbox.asaas.com/api/v3/customers?externalReference=${user.id}`,
+      {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'access_token': asaasApiKey,
+        },
+      }
+    );
+
+    const customerSearchResult = await customerSearchResponse.json();
+    console.log('Customer search result:', { 
+      found: customerSearchResult.data?.length > 0,
+      count: customerSearchResult.data?.length 
+    });
+
+    if (customerSearchResult.data && customerSearchResult.data.length > 0) {
+      asaasCustomerId = customerSearchResult.data[0].id;
+      console.log('Using existing customer:', asaasCustomerId);
+    } else {
+      // Create new customer
+      const customerCreateResponse = await fetch('https://sandbox.asaas.com/api/v3/customers', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'access_token': asaasApiKey,
+        },
+        body: JSON.stringify(customerData),
+      });
+
+      const customerCreateResult = await customerCreateResponse.json();
+      console.log('Customer creation result:', { 
+        status: customerCreateResponse.status,
+        hasId: !!customerCreateResult.id,
+        hasError: !!customerCreateResult.errors 
+      });
+
+      if (!customerCreateResponse.ok || customerCreateResult.errors) {
+        console.error('Asaas customer error:', customerCreateResult);
+        throw new Error(customerCreateResult.errors?.[0]?.description || 'Erro ao criar cliente no Asaas');
+      }
+
+      asaasCustomerId = customerCreateResult.id;
+      console.log('Created new customer:', asaasCustomerId);
+    }
 
     // Create payment in Asaas
     const paymentData: any = {
-      customer: user.id, // Use Supabase user ID as external reference
+      customer: asaasCustomerId,
       billingType: metodo === 'pix' ? 'PIX' : 'CREDIT_CARD',
       value: appointment.preco,
       dueDate: new Date().toISOString().split('T')[0],
@@ -124,14 +176,19 @@ serve(async (req) => {
       paymentData.creditCardHolderInfo = {
         name: cardInfo.holderName,
         email: user.email,
-        cpfCnpj: customerData.cpfCnpj,
+        cpfCnpj: (customerData.cpfCnpj || '').replace(/\D/g, ''),
         postalCode: '00000000',
         addressNumber: '0',
         phone: '0000000000',
       };
     }
 
-    console.log('Creating Asaas payment:', { ...paymentData, creditCard: metodo === 'card' ? '[REDACTED]' : undefined });
+    console.log('Creating Asaas payment:', { 
+      customer: asaasCustomerId,
+      billingType: paymentData.billingType,
+      value: paymentData.value,
+      hasCard: metodo === 'card' 
+    });
 
     const asaasResponse = await fetch('https://sandbox.asaas.com/api/v3/payments', {
       method: 'POST',
@@ -144,15 +201,16 @@ serve(async (req) => {
 
     const asaasResult = await asaasResponse.json();
 
-    console.log('Asaas response:', { 
+    console.log('Asaas payment response:', { 
       status: asaasResponse.status, 
       id: asaasResult.id,
-      hasError: !!asaasResult.errors 
+      hasError: !!asaasResult.errors,
+      errorMessage: asaasResult.errors?.[0]?.description || asaasResult.message
     });
 
     if (!asaasResponse.ok || asaasResult.errors) {
-      console.error('Asaas error:', asaasResult);
-      throw new Error(asaasResult.errors?.[0]?.description || 'Erro ao processar pagamento no Asaas');
+      console.error('Asaas payment error:', JSON.stringify(asaasResult, null, 2));
+      throw new Error(asaasResult.errors?.[0]?.description || asaasResult.message || 'Erro ao processar pagamento no Asaas');
     }
 
     // Save payment to database
