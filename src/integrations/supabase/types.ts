@@ -211,6 +211,42 @@ export type Database = {
           },
         ]
       }
+      creditos: {
+        Row: {
+          agendamento_origem_id: string | null
+          agendamento_usado_id: string | null
+          created_at: string | null
+          expires_at: string | null
+          id: string
+          origem: string
+          usado: boolean | null
+          user_id: string
+          valor: number
+        }
+        Insert: {
+          agendamento_origem_id?: string | null
+          agendamento_usado_id?: string | null
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          origem: string
+          usado?: boolean | null
+          user_id: string
+          valor: number
+        }
+        Update: {
+          agendamento_origem_id?: string | null
+          agendamento_usado_id?: string | null
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          origem?: string
+          usado?: boolean | null
+          user_id?: string
+          valor?: number
+        }
+        Relationships: []
+      }
       financial_entries: {
         Row: {
           categoria: string
@@ -686,6 +722,10 @@ export type Database = {
     Functions: {
       auto_hide_old_cancelled_appointments: { Args: never; Returns: undefined }
       clean_expired_pending_bookings: { Args: never; Returns: undefined }
+      get_user_available_credits: {
+        Args: { p_user_id: string }
+        Returns: number
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
