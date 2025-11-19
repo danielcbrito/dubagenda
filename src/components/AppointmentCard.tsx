@@ -38,6 +38,10 @@ interface Appointment {
   ponto_liberado?: boolean;
   cancelado_em?: string;
   visivel_para_usuario?: boolean;
+  pagamentos?: Array<{
+    metodo: string;
+    status: string;
+  }>;
 }
 
 interface AppointmentCardProps {
@@ -84,7 +88,31 @@ export function AppointmentCard({ appointment, onCancel, onConfirm }: Appointmen
     return null;
   };
 
+  const getPaymentBadge = () => {
+    const payment = appointment.pagamentos?.[0];
+    if (!payment) return null;
+
+    const methodLabel = {
+      'pix': 'PIX',
+      'card': 'Cartão',
+      'cash': 'Dinheiro'
+    }[payment.metodo] || payment.metodo;
+
+    const statusConfig = {
+      'paid': { label: '✅ Pago', className: 'bg-green-500/20 text-green-600 border-green-500/30' },
+      'pending': { label: '⏳ Aguardando', className: 'bg-yellow-500/20 text-yellow-600 border-yellow-500/30' },
+      'failed': { label: '❌ Falhou', className: 'bg-red-500/20 text-red-600 border-red-500/30' },
+      'overdue': { label: '⚠️ Atrasado', className: 'bg-orange-500/20 text-orange-600 border-orange-500/30' },
+    }[payment.status] || { label: payment.status, className: 'bg-muted text-muted-foreground' };
+
+    return {
+      text: `${methodLabel} - ${statusConfig.label}`,
+      className: statusConfig.className
+    };
+  };
+
   const confirmationStatus = getConfirmationStatus();
+  const paymentBadge = getPaymentBadge();
 
   return (
     <>
@@ -108,6 +136,11 @@ export function AppointmentCard({ appointment, onCancel, onConfirm }: Appointmen
             {confirmationStatus && (
               <Badge variant={confirmationStatus.variant} className="text-[9px] mt-2">
                 {confirmationStatus.text}
+              </Badge>
+            )}
+            {paymentBadge && (
+              <Badge variant="outline" className={`text-[9px] mt-2 ${paymentBadge.className}`}>
+                {paymentBadge.text}
               </Badge>
             )}
           </div>

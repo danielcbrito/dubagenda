@@ -92,10 +92,16 @@ export function AdminAgenda() {
             .eq("id", apt.servico_id)
             .single();
 
+          const { data: pagamentos } = await supabase
+            .from("pagamentos")
+            .select("metodo, status")
+            .eq("agendamento_id", apt.id);
+
           return {
             ...apt,
             profile: profile || null,
             servico: servico || null,
+            pagamentos: pagamentos || [],
           };
         })
       );
@@ -133,10 +139,16 @@ export function AdminAgenda() {
             .eq("id", apt.servico_id)
             .single();
 
+          const { data: pagamentos } = await supabase
+            .from("pagamentos")
+            .select("metodo, status")
+            .eq("agendamento_id", apt.id);
+
           return {
             ...apt,
             profile: profile || null,
             servico: servico || null,
+            pagamentos: pagamentos || [],
           };
         })
       );

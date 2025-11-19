@@ -39,6 +39,28 @@ export function AgendaDiariaView({ date, appointments, onCancelAppointment }: Ag
     }
   };
 
+  const getPaymentBadge = (appointment: any) => {
+    const payment = appointment.pagamentos?.[0];
+    if (!payment) return null;
+
+    const methodLabel = {
+      'pix': 'PIX',
+      'card': 'Cartão',
+      'cash': 'Dinheiro'
+    }[payment.metodo] || payment.metodo;
+
+    const statusConfig = {
+      'paid': { label: 'Pago', className: 'bg-green-500/20 text-green-600' },
+      'pending': { label: 'Pendente', className: 'bg-yellow-500/20 text-yellow-600' },
+      'failed': { label: 'Falhou', className: 'bg-red-500/20 text-red-600' },
+    }[payment.status] || { label: payment.status, className: 'bg-muted text-muted-foreground' };
+
+    return {
+      text: `${methodLabel} - ${statusConfig.label}`,
+      className: statusConfig.className
+    };
+  };
+
   return (
     <div className="space-y-4">
       <h3 className="font-semibold text-lg">
@@ -53,7 +75,7 @@ export function AgendaDiariaView({ date, appointments, onCancelAppointment }: Ag
           return (
             <Card key={hour} className={`p-4 ${appointment ? 'border-primary/30' : 'border-border/30 opacity-60'}`}>
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-4 flex-1">
                   <div className="flex items-center gap-2">
                     <Clock className="w-4 h-4 text-muted-foreground" />
                     <span className="font-semibold text-sm">{hour}</span>
@@ -66,6 +88,11 @@ export function AgendaDiariaView({ date, appointments, onCancelAppointment }: Ag
                         {statusConfig && (
                           <Badge variant="outline" className={`text-xs ${statusConfig.className}`}>
                             {statusConfig.label}
+                          </Badge>
+                        )}
+                        {getPaymentBadge(appointment) && (
+                          <Badge variant="outline" className={`text-xs ${getPaymentBadge(appointment)?.className}`}>
+                            {getPaymentBadge(appointment)?.text}
                           </Badge>
                         )}
                       </div>

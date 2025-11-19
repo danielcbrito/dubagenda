@@ -29,6 +29,10 @@ interface Appointment {
   cliente_confirmou?: boolean;
   barbeiro_confirmou?: boolean;
   ponto_liberado?: boolean;
+  pagamentos?: Array<{
+    metodo: string;
+    status: string;
+  }>;
 }
 
 const Cliente = () => {
@@ -148,7 +152,8 @@ const Cliente = () => {
         cliente_confirmou,
         barbeiro_confirmou,
         ponto_liberado,
-        servico:servicos(nome)
+        servico:servicos(nome),
+        pagamentos(metodo, status)
       `)
       .eq("user_id", userId)
       .eq("visivel_para_usuario", true)

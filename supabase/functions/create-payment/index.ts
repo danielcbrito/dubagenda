@@ -279,6 +279,31 @@ serve(async (req) => {
         .eq('id', agendamentoId);
     }
 
+    // For PIX, fetch the QR Code
+    let pixQrCodeData = undefined;
+    if (metodo === 'pix' && asaasResult.id) {
+      try {
+        const qrCodeResponse = await fetch(`${asaasUrl}/${asaasResult.id}/pixQrCode`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'access_token': asaasApiKey,
+          },
+        });
+        
+        if (qrCodeResponse.ok) {
+          const qrCodeData = await qrCodeResponse.json();
+          pixQrCodeData = {
+            encodedImage: qrCodeData.encodedImage,
+            payload: qrCodeData.payload,
+            expirationDate: qrCodeData.expirationDate,
+          };
+        }
+      } catch (qrError) {
+        console.error('Error fetching PIX QR Code:', qrError);
+      }
+    }
+
     return new Response(
       JSON.stringify({
         success: true,
@@ -288,11 +313,7 @@ serve(async (req) => {
           id: asaasResult.id,
           status: asaasResult.status,
           invoiceUrl: asaasResult.invoiceUrl,
-          pixQrCode: metodo === 'pix' ? {
-            encodedImage: asaasResult.encodedImage,
-            payload: asaasResult.payload,
-            expirationDate: asaasResult.expirationDate,
-          } : undefined,
+          pixQrCode: pixQrCodeData,
         },
         message: metodo === 'pix' 
           ? 'PIX gerado com sucesso! Escaneie o QR Code para pagar.'
