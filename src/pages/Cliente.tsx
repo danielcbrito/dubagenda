@@ -15,6 +15,7 @@ import { NotificationBell } from "@/components/NotificationBell";
 import { MyPlansSheet } from "@/components/MyPlansSheet";
 import { SubscribePlanSheet } from "@/components/SubscribePlanSheet";
 import { MyProfileSheet } from "@/components/MyProfileSheet";
+import { CancelAppointmentModal } from "@/components/CancelAppointmentModal";
 
 interface Appointment {
   id: string;
@@ -50,6 +51,10 @@ const Cliente = () => {
   const [plansSheetOpen, setPlansSheetOpen] = useState(false);
   const [subscribeSheetOpen, setSubscribeSheetOpen] = useState(false);
   const [profileSheetOpen, setProfileSheetOpen] = useState(false);
+  const [availableCredits, setAvailableCredits] = useState(0);
+  const [cancelModalOpen, setCancelModalOpen] = useState(false);
+  const [appointmentToCancel, setAppointmentToCancel] = useState<any>(null);
+  const [payments, setPayments] = useState<any[]>([]);
 
   useEffect(() => {
     checkAuth();
@@ -129,6 +134,12 @@ const Cliente = () => {
   };
 
   const loadUserData = async (userId: string) => {
+    // Load available credits
+    const { data: creditsData } = await supabase
+      .rpc('get_user_available_credits', { p_user_id: userId });
+    
+    setAvailableCredits(creditsData || 0);
+
     // Load profile
     const { data: profileData } = await supabase
       .from("profiles")
@@ -163,6 +174,14 @@ const Cliente = () => {
       .limit(5);
 
     setAppointments(appointmentsData || []);
+
+    // Load payments for appointments
+    const { data: paymentsData } = await supabase
+      .from("pagamentos")
+      .select("*")
+      .eq("user_id", userId);
+    
+    setPayments(paymentsData || []);
 
     // Load completed appointments count
     const { count } = await supabase
@@ -239,70 +258,19 @@ const Cliente = () => {
     }
   };
 
-  const handleCancelAppointment = async (appointmentId: string) => {
-    try {
-      const appointment = appointments.find(apt => apt.id === appointmentId);
-      
-      // Check current status
-      if (appointment?.status === 'cancelled_by_user' || appointment?.status === 'cancelled_by_admin') {
-        // Second action: hide from view
-        const { error: hideError } = await supabase
-          .from("agendamentos")
-          .update({ visivel_para_usuario: false })
-          .eq("id", appointmentId);
+  const handleCancelAppointment = (appointmentId: string) => {
+    const appointment = appointments.find(a => a.id === appointmentId);
+    if (!appointment) return;
 
-        if (hideError) {
-          console.error("Hide error:", hideError);
-          toast.error("Erro ao remover da visualização");
-          return;
-        }
+    const payment = payments.find(p => p.agendamento_id === appointmentId);
+    const isPaid = payment?.status === "paid";
 
-        // Remove from UI
-        setAppointments(prev => prev.filter(apt => apt.id !== appointmentId));
-        toast.success("Agendamento removido da visualização");
-        return;
-      }
-
-      // First action: mark as cancelled
-      const { data: appointmentBefore } = await supabase
-        .from("agendamentos")
-        .select("observacoes")
-        .eq("id", appointmentId)
-        .maybeSingle();
-
-      const { error: updateError } = await supabase
-        .from("agendamentos")
-        .update({ 
-          status: "cancelled_by_user"
-        })
-        .eq("id", appointmentId);
-
-      if (updateError) {
-        console.error("Cancel error:", updateError);
-        toast.error("Erro ao cancelar agendamento");
-        return;
-      }
-
-      // Update Google Calendar event
-      if (appointmentBefore?.observacoes?.includes('Google Calendar ID:')) {
-        const eventId = appointmentBefore.observacoes.split('Google Calendar ID: ')[1];
-        await supabase.functions.invoke('google-calendar-sync', {
-          body: {
-            action: 'update',
-            eventId,
-            appointmentId,
-            summaryPrefix: '❌ Cancelado - '
-          }
-        }).catch(err => {
-          console.warn('Google Calendar update failed:', err);
-        });
-      }
-
-      toast.success("Agendamento cancelado. Clique novamente para remover da lista.");
-    } catch (err) {
-      console.error("Unexpected error during cancellation:", err);
-      toast.error("Erro ao cancelar agendamento");
-    }
+    setAppointmentToCancel({
+      id: appointmentId,
+      isPaid,
+      amount: appointment.preco || 0,
+    });
+    setCancelModalOpen(true);
   };
 
   const handleConfirmAppointment = async (appointmentId: string) => {
@@ -475,7 +443,6 @@ const Cliente = () => {
                 appointment={apt}
                 onCancel={handleCancelAppointment}
                 onConfirm={handleConfirmAppointment}
-                onResumePayment={handleResumePayment}
               />
               ))}
             </div>
@@ -528,6 +495,21 @@ const Cliente = () => {
         completedAppointments={completedAppointments}
         redemptions={redemptions}
       />
+
+      {/* Cancel Appointment Modal */}
+      {appointmentToCancel && (
+        <CancelAppointmentModal
+          open={cancelModalOpen}
+          onOpenChange={setCancelModalOpen}
+          appointmentId={appointmentToCancel.id}
+          isPaid={appointmentToCancel.isPaid}
+          amount={appointmentToCancel.amount}
+          userId={user?.id}
+          onSuccess={() => {
+            loadUserData(user.id);
+          }}
+        />
+      )}
     </div>
   );
 };

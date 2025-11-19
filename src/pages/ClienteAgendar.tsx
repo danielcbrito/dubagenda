@@ -42,6 +42,8 @@ const ClienteAgendar = () => {
   const [cardCvv, setCardCvv] = useState("");
   const [cardCpf, setCardCpf] = useState("");
   const [resumePendingBookingId, setResumePendingBookingId] = useState<string | null>(null);
+  const [paymentConfirmed, setPaymentConfirmed] = useState(false);
+  const [pendingBookingId, setPendingBookingId] = useState<string | null>(null);
 
   useEffect(() => {
     loadServices();
@@ -60,6 +62,43 @@ const ClienteAgendar = () => {
       loadAvailableSlots();
     }
   }, [selectedDate, selectedServices]);
+
+  // Poll for payment confirmation when showing PIX QR Code
+  useEffect(() => {
+    if (step === 6 && pixQrCode && pendingBookingId && !paymentConfirmed) {
+      const pollInterval = setInterval(async () => {
+        try {
+          // Check if pending booking still exists
+          const { data: pendingBooking, error } = await supabase
+            .from("pending_bookings")
+            .select("id")
+            .eq("id", pendingBookingId)
+            .maybeSingle();
+
+          if (error) {
+            console.error("Error checking pending booking:", error);
+            return;
+          }
+
+          // If pending booking no longer exists, payment was confirmed
+          if (!pendingBooking) {
+            setPaymentConfirmed(true);
+            clearInterval(pollInterval);
+            toast.success("Pagamento confirmado!");
+            
+            // Auto-redirect after 4 seconds
+            setTimeout(() => {
+              navigate("/cliente");
+            }, 4000);
+          }
+        } catch (error) {
+          console.error("Error polling payment status:", error);
+        }
+      }, 3000); // Poll every 3 seconds
+
+      return () => clearInterval(pollInterval);
+    }
+  }, [step, pixQrCode, pendingBookingId, paymentConfirmed, navigate]);
 
   const loadServices = async () => {
     const { data } = await supabase
@@ -273,6 +312,7 @@ const ClienteAgendar = () => {
       } else if (paymentMethod === 'pix' && data.asaasPayment?.pixQrCode) {
         setPixQrCode(data.asaasPayment.pixQrCode.encodedImage);
         setPixPayload(data.asaasPayment.pixQrCode.payload);
+        setPendingBookingId(data.pendingBookingId || null);
         toast.success("QR Code gerado! Escaneie para pagar.");
         setStep(6); // Move to QR Code display step
       } else if (paymentMethod === 'card') {
@@ -761,70 +801,85 @@ const ClienteAgendar = () => {
         {/* Step 6: PIX QR Code Display */}
         {step === 6 && pixQrCode && (
           <div className="space-y-4">
-            <div>
-              <h3 className="text-sm font-semibold mb-1">Pagamento PIX</h3>
-              <h2 className="text-xl font-bold mb-3">Escaneie o QR Code</h2>
-            </div>
-
-            <Card className="p-6 text-center space-y-4">
-              <div className="bg-primary/10 p-4 rounded-lg mb-4">
-                <p className="text-sm text-muted-foreground mb-1">Valor a pagar</p>
-                <p className="text-3xl font-bold text-primary">
-                  R$ {getTotalPrice().toFixed(2)}
-                </p>
-              </div>
-
-              <p className="text-muted-foreground mb-4">
-                Abra o app do seu banco e escaneie o código abaixo para pagar
-              </p>
-              
-              <div className="flex justify-center bg-white p-6 rounded-lg border-2 border-border">
-                <img 
-                  src={`data:image/png;base64,${pixQrCode}`} 
-                  alt="QR Code PIX" 
-                  className="w-64 h-64" 
-                />
-              </div>
-
-              {pixPayload && (
-                <div className="mt-6 space-y-2">
-                  <p className="text-sm font-semibold">Ou copie o código PIX</p>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={pixPayload}
-                      readOnly
-                      className="flex-1 px-4 py-3 text-sm rounded-lg border border-border bg-muted font-mono"
-                    />
-                    <Button
-                      onClick={() => {
-                        navigator.clipboard.writeText(pixPayload);
-                        toast.success("Código copiado!");
-                      }}
-                      variant="outline"
-                      className="whitespace-nowrap"
-                    >
-                      Copiar
-                    </Button>
+            {paymentConfirmed ? (
+              // Payment Confirmed View
+              <div className="space-y-6">
+                <div className="text-center">
+                  <div className="mb-4">
+                    <div className="w-20 h-20 mx-auto bg-green-500/20 rounded-full flex items-center justify-center">
+                      <Check className="w-10 h-10 text-green-500" />
+                    </div>
                   </div>
+                  <h2 className="text-2xl font-bold mb-2 text-foreground">Pagamento realizado com sucesso!</h2>
+                  <p className="text-muted-foreground mb-4">
+                    Seu agendamento foi confirmado. Você será redirecionado automaticamente...
+                  </p>
                 </div>
-              )}
 
-              <div className="mt-6 p-4 bg-muted rounded-lg">
-                <p className="text-xs text-muted-foreground">
-                  ⏱️ Status: <span className="font-semibold text-yellow-600">Aguardando pagamento</span>
-                </p>
-                <p className="text-xs text-muted-foreground mt-2">
-                  Após o pagamento, seu agendamento será confirmado automaticamente
-                </p>
+                <Button
+                  onClick={() => navigate("/cliente")}
+                  className="w-full h-14 bg-primary hover:bg-primary/90 text-base"
+                >
+                  Ir para tela inicial
+                </Button>
               </div>
-              <Button
-                onClick={() => navigate("/cliente")}
-                className="w-full"
-              >
-                Voltar para Início
-              </Button>
-            </Card>
+            ) : (
+              // QR Code View
+              <>
+                <div>
+                  <h3 className="text-sm font-semibold mb-1">Pagamento PIX</h3>
+                  <h2 className="text-xl font-bold mb-3">Escaneie o QR Code</h2>
+                </div>
+
+                <Card className="p-6 text-center space-y-4">
+                  <div className="bg-primary/10 p-4 rounded-lg mb-4">
+                    <p className="text-sm text-muted-foreground mb-1">Valor a pagar</p>
+                    <p className="text-3xl font-bold text-primary">
+                      R$ {getTotalPrice().toFixed(2)}
+                    </p>
+                  </div>
+
+                  <p className="text-muted-foreground mb-4">
+                    Abra o app do seu banco e escaneie o código abaixo para pagar
+                  </p>
+                  
+                  <div className="flex justify-center bg-white p-6 rounded-lg border-2 border-border">
+                    <img 
+                      src={`data:image/png;base64,${pixQrCode}`} 
+                      alt="QR Code PIX" 
+                      className="w-64 h-64" 
+                    />
+                  </div>
+
+                  <div className="animate-pulse text-sm text-muted-foreground py-2">
+                    ⏳ Aguardando confirmação do pagamento...
+                  </div>
+
+                  {pixPayload && (
+                    <div className="mt-6 space-y-2">
+                      <p className="text-sm font-semibold">Ou copie o código PIX</p>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={pixPayload}
+                          readOnly
+                          className="flex-1 px-4 py-2 text-sm bg-muted rounded-lg border"
+                        />
+                        <Button
+                          onClick={() => {
+                            navigator.clipboard.writeText(pixPayload);
+                            toast.success("Código copiado!");
+                          }}
+                          variant="outline"
+                        >
+                          Copiar
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </Card>
+              </>
+            )}
           </div>
         )}
       </div>
