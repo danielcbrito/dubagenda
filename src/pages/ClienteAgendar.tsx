@@ -300,9 +300,6 @@ const ClienteAgendar = () => {
 
       const { data, error } = await supabase.functions.invoke('create-payment', {
         body: payload,
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
       });
 
       if (error) {
