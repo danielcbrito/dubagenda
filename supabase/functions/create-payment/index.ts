@@ -135,8 +135,10 @@ serve(async (req) => {
 
     // Try to find existing customer first
     let asaasCustomerId;
+    const asaasBaseUrl = 'https://api.asaas.com/v3';
+    
     const customerSearchResponse = await fetch(
-      `https://sandbox.asaas.com/api/v3/customers?externalReference=${user.id}`,
+      `${asaasBaseUrl}/customers?externalReference=${user.id}`,
       {
         method: 'GET',
         headers: {
@@ -157,7 +159,7 @@ serve(async (req) => {
       console.log('Using existing customer:', asaasCustomerId);
     } else {
       // Create new customer
-      const customerCreateResponse = await fetch('https://sandbox.asaas.com/api/v3/customers', {
+      const customerCreateResponse = await fetch(`${asaasBaseUrl}/customers`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -226,7 +228,11 @@ serve(async (req) => {
       hasCard: metodo === 'card' 
     });
 
-    const asaasResponse = await fetch('https://sandbox.asaas.com/api/v3/payments', {
+    // Use production URL - sandbox requires different API key
+    const asaasUrl = 'https://api.asaas.com/v3/payments';
+    console.log('Using Asaas URL:', asaasUrl);
+
+    const asaasResponse = await fetch(asaasUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
