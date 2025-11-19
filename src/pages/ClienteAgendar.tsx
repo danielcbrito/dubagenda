@@ -34,6 +34,12 @@ const ClienteAgendar = () => {
   const [paymentMethod, setPaymentMethod] = useState<'pix' | 'card' | 'cash'>('pix');
   const [processingPayment, setProcessingPayment] = useState(false);
   const [pixQrCode, setPixQrCode] = useState<string | null>(null);
+  const [cardHolderName, setCardHolderName] = useState("");
+  const [cardNumber, setCardNumber] = useState("");
+  const [cardExpiryMonth, setCardExpiryMonth] = useState("");
+  const [cardExpiryYear, setCardExpiryYear] = useState("");
+  const [cardCvv, setCardCvv] = useState("");
+  const [cardCpf, setCardCpf] = useState("");
 
   useEffect(() => {
     loadServices();
@@ -254,12 +260,45 @@ const ClienteAgendar = () => {
         return;
       }
 
+      // Validate card data if paying with card
+      let cardInfoPayload: any = undefined;
+      let customerInfoPayload: any = undefined;
+      if (paymentMethod === 'card') {
+        if (!cardHolderName || !cardNumber || !cardExpiryMonth || !cardExpiryYear || !cardCvv || !cardCpf) {
+          toast.error("Preencha todos os dados do cartão");
+          return;
+        }
+
+        cardInfoPayload = {
+          holderName: cardHolderName.trim(),
+          number: cardNumber.trim(),
+          expiryMonth: cardExpiryMonth.trim(),
+          expiryYear: cardExpiryYear.trim(),
+          ccv: cardCvv.trim(),
+        };
+
+        customerInfoPayload = {
+          name: cardHolderName.trim(),
+          email: session.user.email,
+          cpf: cardCpf.trim(),
+        };
+      }
+
+      const payload: any = {
+        agendamentoId: appointmentId,
+        metodo: paymentMethod,
+      };
+
+      if (cardInfoPayload) {
+        payload.cardInfo = cardInfoPayload;
+      }
+      if (customerInfoPayload) {
+        payload.customerInfo = customerInfoPayload;
+      }
+
       // Call payment function with explicit authorization header
       const { data, error } = await supabase.functions.invoke('create-payment', {
-        body: {
-          agendamentoId: appointmentId,
-          metodo: paymentMethod,
-        },
+        body: payload,
         headers: {
           Authorization: `Bearer ${session.access_token}`,
         },

@@ -60,6 +60,8 @@ serve(async (req) => {
 
     const { agendamentoId, metodo, customerInfo, cardInfo }: CreatePaymentRequest = await req.json();
 
+    console.log('Received payment request:', { agendamentoId, metodo, hasCustomerInfo: !!customerInfo, hasCardInfo: !!cardInfo });
+
     // Fetch appointment details
     const { data: appointment, error: aptError } = await supabase
       .from('agendamentos')
@@ -69,7 +71,11 @@ serve(async (req) => {
       .single();
 
     if (aptError || !appointment) {
-      throw new Error('Agendamento não encontrado');
+      console.error('Appointment not found or not owned by user:', { agendamentoId, userId: user.id, error: aptError?.message });
+      return new Response(
+        JSON.stringify({ error: 'Agendamento não encontrado' }),
+        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     // Handle different payment methods
@@ -176,7 +182,15 @@ serve(async (req) => {
     };
 
     // For credit card, add card info
-    if (metodo === 'card' && cardInfo) {
+    if (metodo === 'card') {
+      if (!cardInfo) {
+        console.error('Missing card info for card payment');
+        return new Response(
+          JSON.stringify({ error: 'Dados do cartão obrigatórios para pagamento com cartão' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
       paymentData.creditCard = {
         holderName: cardInfo.holderName,
         number: cardInfo.number.replace(/\s/g, ''),
