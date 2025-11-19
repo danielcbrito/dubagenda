@@ -48,9 +48,10 @@ interface AppointmentCardProps {
   appointment: Appointment;
   onCancel: (id: string) => void;
   onConfirm?: (id: string) => void;
+  onResumePayment?: (id: string) => void;
 }
 
-export function AppointmentCard({ appointment, onCancel, onConfirm }: AppointmentCardProps) {
+export function AppointmentCard({ appointment, onCancel, onConfirm, onResumePayment }: AppointmentCardProps) {
   const [detailsOpen, setDetailsOpen] = useState(false);
 
   const getStatusConfig = (status: string) => {
@@ -113,6 +114,11 @@ export function AppointmentCard({ appointment, onCancel, onConfirm }: Appointmen
 
   const confirmationStatus = getConfirmationStatus();
   const paymentBadge = getPaymentBadge();
+  
+  // Check if payment is pending
+  const isPendingPayment = appointment.status === "pending" && 
+    (!appointment.pagamentos || appointment.pagamentos.length === 0 || 
+     appointment.pagamentos[0]?.status === 'pending');
 
   return (
     <>

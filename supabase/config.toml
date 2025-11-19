@@ -15,5 +15,5 @@ verify_jwt = true
 [functions.create-subscription]
 verify_jwt = true
 
-[functions.cancel-subscription]
-verify_jwt = true
+[functions.generate-subscription-charges]
+verify_jwt = false

@@ -124,7 +124,7 @@ serve(async (req) => {
       creditCard: paymentMethod === 'card' ? '[REDACTED]' : undefined 
     });
 
-    const asaasResponse = await fetch('https://sandbox.asaas.com/api/v3/subscriptions', {
+    const asaasResponse = await fetch('https://api.asaas.com/v3/subscriptions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
