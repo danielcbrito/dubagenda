@@ -196,6 +196,12 @@ const Cliente = () => {
     navigate("/");
   };
 
+  const handleResumePayment = (appointmentId: string) => {
+    // Store appointment ID and navigate to payment screen
+    sessionStorage.setItem('resumePaymentId', appointmentId);
+    navigate("/cliente/agendar");
+  };
+
   const handleCancelAppointment = async (appointmentId: string) => {
     try {
       const appointment = appointments.find(apt => apt.id === appointmentId);
@@ -410,12 +416,13 @@ const Cliente = () => {
           ) : (
             <div className="space-y-3">
               {appointments.map((apt) => (
-                <AppointmentCard
-                  key={apt.id}
-                  appointment={apt}
-                  onCancel={handleCancelAppointment}
-                  onConfirm={handleConfirmAppointment}
-                />
+              <AppointmentCard
+                key={apt.id}
+                appointment={apt}
+                onCancel={handleCancelAppointment}
+                onConfirm={handleConfirmAppointment}
+                onResumePayment={handleResumePayment}
+              />
               ))}
             </div>
           )}

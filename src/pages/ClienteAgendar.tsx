@@ -41,9 +41,19 @@ const ClienteAgendar = () => {
   const [cardExpiryYear, setCardExpiryYear] = useState("");
   const [cardCvv, setCardCvv] = useState("");
   const [cardCpf, setCardCpf] = useState("");
+  const [resumeAppointmentId, setResumeAppointmentId] = useState<string | null>(null);
 
   useEffect(() => {
     loadServices();
+    
+    // Check if resuming payment
+    const resumeId = sessionStorage.getItem('resumePaymentId');
+    if (resumeId) {
+      setResumeAppointmentId(resumeId);
+      sessionStorage.removeItem('resumePaymentId');
+      setStep(4); // Go to payment method selection
+      toast.info("Continue o pagamento do seu agendamento");
+    }
   }, []);
 
   useEffect(() => {

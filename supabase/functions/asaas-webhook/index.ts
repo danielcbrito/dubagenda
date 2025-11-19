@@ -159,17 +159,39 @@ async function handlePaymentConfirmed(supabase: any, payload: AsaasWebhookEvent)
     return;
   }
 
-  // If payment is for an appointment, update appointment status
-  if (payload.payment.externalReference) {
-    const { error: appointmentError } = await supabase
-      .from('agendamentos')
-      .update({ status: 'confirmed' })
-      .eq('id', payload.payment.externalReference);
+  // Check if payment is for appointment or subscription
+  const { data: payment } = await supabase
+    .from('pagamentos')
+    .select('agendamento_id, assinatura_id, user_id')
+    .eq('gateway_payment_id', payload.payment.id)
+    .single();
 
-    if (appointmentError) {
-      console.error('Error updating appointment:', appointmentError);
-    } else {
-      console.log(`Appointment ${payload.payment.externalReference} confirmed`);
+  if (payment) {
+    // If payment is for an appointment, update appointment to confirmed (ready for barber)
+    if (payment.agendamento_id) {
+      const { error: appointmentError } = await supabase
+        .from('agendamentos')
+        .update({ 
+          status: 'confirmed',
+          observacoes: 'Pagamento confirmado - Aguardando confirmação do barbeiro'
+        })
+        .eq('id', payment.agendamento_id);
+
+      if (appointmentError) {
+        console.error('Error updating appointment:', appointmentError);
+      } else {
+        console.log(`Appointment ${payment.agendamento_id} marked as confirmed`);
+      }
+    }
+
+    // If payment is for subscription, unblock user
+    if (payment.assinatura_id) {
+      await supabase
+        .from('profiles')
+        .update({ blocked: false })
+        .eq('id', payment.user_id);
+
+      console.log(`User ${payment.user_id} unblocked after subscription payment`);
     }
   }
 
