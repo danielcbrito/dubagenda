@@ -1,14 +1,25 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Gift, Calendar, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
+import { Gift, Calendar, CheckCircle2, AlertCircle, Loader2, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface Subscription {
   id: string;
@@ -27,15 +38,17 @@ interface MyPlansSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   userId?: string;
-  onSubscribe: () => void;
 }
 
 type LoadingState = "idle" | "loading" | "error" | "success";
 
-export function MyPlansSheet({ open, onOpenChange, userId, onSubscribe }: MyPlansSheetProps) {
+export function MyPlansSheet({ open, onOpenChange, userId }: MyPlansSheetProps) {
+  const navigate = useNavigate();
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [loadingState, setLoadingState] = useState<LoadingState>("idle");
   const [errorMessage, setErrorMessage] = useState<string>("");
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [canceling, setCanceling] = useState(false);
 
   useEffect(() => {
     if (open && userId) {
@@ -99,7 +112,26 @@ export function MyPlansSheet({ open, onOpenChange, userId, onSubscribe }: MyPlan
 
   const handleSubscribeClick = () => {
     onOpenChange(false);
-    setTimeout(() => onSubscribe(), 300);
+    setTimeout(() => navigate("/cliente/assinar"), 300);
+  };
+
+  const handleCancelSubscription = async () => {
+    setCanceling(true);
+
+    try {
+      const { error } = await supabase.functions.invoke('cancel-subscription');
+
+      if (error) throw error;
+
+      toast.success("Assinatura cancelada com sucesso");
+      setCancelDialogOpen(false);
+      loadSubscription();
+    } catch (error: any) {
+      console.error('Cancel subscription error:', error);
+      toast.error("Erro ao cancelar assinatura: " + error.message);
+    } finally {
+      setCanceling(false);
+    }
   };
 
   const renderLoadingState = () => (
@@ -209,31 +241,53 @@ export function MyPlansSheet({ open, onOpenChange, userId, onSubscribe }: MyPlan
         <Button
           variant="ghost"
           size="sm"
-          className="w-full h-8 text-xs hover:bg-primary/10 transition-all duration-300"
-          onClick={() => {
-            toast.info("Gerenciamento de plano em breve");
-          }}
+          className="w-full h-8 text-xs hover:bg-destructive/10 text-destructive transition-all duration-300"
+          onClick={() => setCancelDialogOpen(true)}
         >
-          Gerenciar Plano
+          <XCircle className="w-3.5 h-3.5 mr-2" />
+          Cancelar Assinatura
         </Button>
       </div>
     </Card>
   );
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="h-[85vh] rounded-t-[10px]">
-        <SheetHeader>
-          <SheetTitle className="text-lg">Meus Planos</SheetTitle>
-        </SheetHeader>
+    <>
+      <Sheet open={open} onOpenChange={onOpenChange}>
+        <SheetContent side="bottom" className="h-[85vh] rounded-t-[10px]">
+          <SheetHeader>
+            <SheetTitle className="text-lg">Meus Planos</SheetTitle>
+          </SheetHeader>
 
-        <div className="mt-6 space-y-4 overflow-y-auto h-[calc(85vh-80px)] pb-6">
-          {loadingState === "loading" && renderLoadingState()}
-          {loadingState === "error" && renderErrorState()}
-          {loadingState === "success" && !subscription && renderEmptyState()}
-          {loadingState === "success" && subscription && renderSubscriptionCard()}
-        </div>
-      </SheetContent>
-    </Sheet>
+          <div className="mt-6 space-y-4 overflow-y-auto h-[calc(85vh-80px)] pb-6">
+            {loadingState === "loading" && renderLoadingState()}
+            {loadingState === "error" && renderErrorState()}
+            {loadingState === "success" && !subscription && renderEmptyState()}
+            {loadingState === "success" && subscription && renderSubscriptionCard()}
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      <AlertDialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancelar Assinatura</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja cancelar sua assinatura? Você perderá acesso aos benefícios do plano.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={canceling}>Voltar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleCancelSubscription}
+              disabled={canceling}
+              className="bg-destructive hover:bg-destructive/90"
+            >
+              {canceling ? "Cancelando..." : "Confirmar Cancelamento"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
