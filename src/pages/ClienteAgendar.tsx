@@ -254,12 +254,15 @@ const ClienteAgendar = () => {
         return;
       }
 
-      // Call payment function
+      // Call payment function with explicit authorization header
       const { data, error } = await supabase.functions.invoke('create-payment', {
         body: {
           agendamentoId: appointmentId,
           metodo: paymentMethod,
-        }
+        },
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
       });
 
       if (error) throw error;
