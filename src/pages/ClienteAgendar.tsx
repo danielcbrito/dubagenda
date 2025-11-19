@@ -147,21 +147,26 @@ const ClienteAgendar = () => {
       return;
     }
     
-    // If moving from step 3 to 4, create the appointment first
-    if (step === 3) {
-      await createAppointment();
-    } else {
-      setStep(step + 1);
-    }
+    setStep(step + 1);
   };
 
-  const createAppointment = async () => {
+  // Removed createAppointment - now happens during payment
+
+  const handlePayment = async () => {
     if (!selectedDate || !selectedTime || selectedServices.length === 0) {
-      toast.error("Preencha todos os campos");
+      toast.error("Dados do agendamento inválidos");
       return;
     }
 
-    setLoading(true);
+    // Validate card data if paying with card
+    if (paymentMethod === 'card') {
+      if (!cardHolderName || !cardNumber || !cardExpiryMonth || !cardExpiryYear || !cardCvv || !cardCpf) {
+        toast.error("Preencha todos os dados do cartão");
+        return;
+      }
+    }
+
+    setProcessingPayment(true);
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -176,7 +181,7 @@ const ClienteAgendar = () => {
       const totalPrice = selectedServices.reduce((sum, s) => sum + s.preco, 0);
       const serviceNames = selectedServices.map(s => s.nome).join(", ");
 
-      // Validate appointment with backend
+      // Validate appointment availability
       const { data: validation } = await supabase.functions.invoke('validate-appointment', {
         body: {
           data: selectedDate.toISOString().split('T')[0],
@@ -188,14 +193,15 @@ const ClienteAgendar = () => {
 
       if (!validation?.valid) {
         toast.error(validation?.message || "Horário indisponível");
-        setLoading(false);
+        setProcessingPayment(false);
         return;
       }
 
-      // Use the first service as the main service for servico_id
+      // Create appointment with appropriate status
       const mainService = selectedServices[0];
-
-      const { error, data: newAppointment } = await supabase
+      const appointmentStatus = paymentMethod === 'cash' ? 'pending' : 'pending';
+      
+      const { error: aptError, data: newAppointment } = await supabase
         .from("agendamentos")
         .insert({
           user_id: session.user.id,
@@ -204,7 +210,7 @@ const ClienteAgendar = () => {
           hora: selectedTime,
           duracao: totalDuration,
           preco: totalPrice,
-          status: "pending",
+          status: appointmentStatus,
           observacoes: selectedServices.length > 1 
             ? `Serviços: ${serviceNames}` 
             : null,
@@ -212,10 +218,7 @@ const ClienteAgendar = () => {
         .select()
         .single();
 
-      if (error) throw error;
-
-      // Store appointment ID for payment
-      (window as any).currentAppointmentId = newAppointment.id;
+      if (aptError) throw aptError;
 
       // Sync with Google Calendar
       const dateTime = new Date(`${selectedDate.toISOString().split('T')[0]}T${selectedTime}:00`);
@@ -234,44 +237,32 @@ const ClienteAgendar = () => {
         console.warn('Google Calendar sync failed:', err);
       });
 
-      setStep(4); // Move to payment step
-    } catch (error: any) {
-      toast.error("Erro ao criar agendamento: " + error.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+      // Handle payment based on method
+      if (paymentMethod === 'cash') {
+        // For cash, just create payment record and confirm
+        await supabase
+          .from('pagamentos')
+          .insert({
+            user_id: session.user.id,
+            agendamento_id: newAppointment.id,
+            metodo: 'cash',
+            valor: totalPrice,
+            status: 'pending',
+          });
 
-  const handlePayment = async () => {
-    setProcessingPayment(true);
-
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session) {
-        toast.error("Você precisa estar logado");
-        navigate("/auth");
+        toast.success("Agendamento confirmado! Pague na barbearia.");
+        navigate("/cliente");
         return;
       }
 
-      const appointmentId = (window as any).currentAppointmentId;
-      if (!appointmentId) {
-        toast.error("Erro: Agendamento não encontrado");
-        return;
-      }
-
-      // Validate card data if paying with card
+      // For PIX and Card, call payment gateway
       let cardInfoPayload: any = undefined;
       let customerInfoPayload: any = undefined;
+      
       if (paymentMethod === 'card') {
-        if (!cardHolderName || !cardNumber || !cardExpiryMonth || !cardExpiryYear || !cardCvv || !cardCpf) {
-          toast.error("Preencha todos os dados do cartão");
-          return;
-        }
-
         cardInfoPayload = {
           holderName: cardHolderName.trim(),
-          number: cardNumber.trim(),
+          number: cardNumber.replace(/\s/g, ''),
           expiryMonth: cardExpiryMonth.trim(),
           expiryYear: cardExpiryYear.trim(),
           ccv: cardCvv.trim(),
@@ -280,12 +271,12 @@ const ClienteAgendar = () => {
         customerInfoPayload = {
           name: cardHolderName.trim(),
           email: session.user.email,
-          cpf: cardCpf.trim(),
+          cpf: cardCpf.replace(/\D/g, ''),
         };
       }
 
       const payload: any = {
-        agendamentoId: appointmentId,
+        agendamentoId: newAppointment.id,
         metodo: paymentMethod,
       };
 
@@ -296,7 +287,6 @@ const ClienteAgendar = () => {
         payload.customerInfo = customerInfoPayload;
       }
 
-      // Call payment function with explicit authorization header
       const { data, error } = await supabase.functions.invoke('create-payment', {
         body: payload,
         headers: {
@@ -304,21 +294,23 @@ const ClienteAgendar = () => {
         },
       });
 
-      if (error) throw error;
+      if (error) {
+        // Delete the appointment if payment fails
+        await supabase.from('agendamentos').delete().eq('id', newAppointment.id);
+        throw error;
+      }
 
       if (paymentMethod === 'pix' && data.asaasPayment?.pixQrCode) {
         setPixQrCode(data.asaasPayment.pixQrCode.encodedImage);
-        toast.success(data.message);
+        toast.success("QR Code gerado! Escaneie para pagar.");
+        setStep(6); // Move to QR Code display step
       } else if (paymentMethod === 'card') {
-        toast.success("Pagamento aprovado!");
-        navigate("/cliente");
-      } else if (paymentMethod === 'cash') {
-        toast.success("Agendamento confirmado! Pague na barbearia.");
+        toast.success("Pagamento aprovado! Agendamento confirmado.");
         navigate("/cliente");
       }
     } catch (error: any) {
       console.error('Payment error:', error);
-      toast.error("Erro ao processar pagamento: " + error.message);
+      toast.error("Erro ao processar pagamento: " + (error.message || "Erro desconhecido"));
     } finally {
       setProcessingPayment(false);
     }
@@ -332,7 +324,7 @@ const ClienteAgendar = () => {
     return selectedServices.reduce((sum, s) => sum + s.preco, 0);
   };
 
-  const progressValue = (step / 5) * 100;
+  const progressValue = (step / 6) * 100;
 
   return (
     <div className="min-h-screen bg-background">
@@ -621,12 +613,14 @@ const ClienteAgendar = () => {
           </div>
         )}
 
-        {/* Step 5: Review and Confirm Payment */}
+        {/* Step 5: Review and Card Details (if card) or Confirm */}
         {step === 5 && (
           <div className="space-y-4">
             <div>
               <h3 className="text-sm font-semibold mb-1">Etapa 5 de 5</h3>
-              <h2 className="text-xl font-bold mb-3">Confirmar Pagamento</h2>
+              <h2 className="text-xl font-bold mb-3">
+                {paymentMethod === 'card' ? 'Dados do Cartão' : 'Confirmar Agendamento'}
+              </h2>
             </div>
 
             <Card className="p-6 space-y-4 card-premium">
@@ -654,7 +648,7 @@ const ClienteAgendar = () => {
                 <div className="flex justify-between py-2 border-b border-border">
                   <span className="text-muted-foreground">Forma de Pagamento:</span>
                   <span className="font-semibold">
-                    {paymentMethod === 'pix' ? 'PIX' : paymentMethod === 'card' ? 'Cartão' : 'Dinheiro'}
+                    {paymentMethod === 'pix' ? 'PIX' : paymentMethod === 'card' ? 'Cartão de Crédito' : 'Dinheiro (na barbearia)'}
                   </span>
                 </div>
                 <div className="flex justify-between items-center py-3 bg-primary/10 -m-6 mt-2 px-6 rounded-b-lg">
@@ -666,34 +660,155 @@ const ClienteAgendar = () => {
               </div>
             </Card>
 
-            {pixQrCode && (
-              <Card className="p-6 text-center space-y-4">
-                <h3 className="font-semibold">Escaneie o QR Code para pagar</h3>
-                <div className="flex justify-center">
-                  <img src={`data:image/png;base64,${pixQrCode}`} alt="QR Code PIX" className="w-64 h-64" />
+            {/* Card Payment Form */}
+            {paymentMethod === 'card' && (
+              <Card className="p-6 space-y-4">
+                <h3 className="font-semibold mb-4">Informações do Cartão</h3>
+                
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">Nome no Cartão</label>
+                    <input
+                      type="text"
+                      placeholder="Como está no cartão"
+                      value={cardHolderName}
+                      onChange={(e) => setCardHolderName(e.target.value)}
+                      className="w-full px-4 py-3 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">Número do Cartão</label>
+                    <input
+                      type="text"
+                      placeholder="0000 0000 0000 0000"
+                      value={cardNumber}
+                      onChange={(e) => {
+                        const value = e.target.value.replace(/\D/g, '');
+                        const formatted = value.replace(/(\d{4})(?=\d)/g, '$1 ');
+                        setCardNumber(formatted);
+                      }}
+                      maxLength={19}
+                      className="w-full px-4 py-3 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-3">
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">Mês</label>
+                      <input
+                        type="text"
+                        placeholder="MM"
+                        value={cardExpiryMonth}
+                        onChange={(e) => {
+                          const value = e.target.value.replace(/\D/g, '');
+                          if (parseInt(value) <= 12) setCardExpiryMonth(value);
+                        }}
+                        maxLength={2}
+                        className="w-full px-4 py-3 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">Ano</label>
+                      <input
+                        type="text"
+                        placeholder="AA"
+                        value={cardExpiryYear}
+                        onChange={(e) => {
+                          const value = e.target.value.replace(/\D/g, '');
+                          setCardExpiryYear(value);
+                        }}
+                        maxLength={2}
+                        className="w-full px-4 py-3 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">CVV</label>
+                      <input
+                        type="text"
+                        placeholder="000"
+                        value={cardCvv}
+                        onChange={(e) => setCardCvv(e.target.value.replace(/\D/g, ''))}
+                        maxLength={4}
+                        className="w-full px-4 py-3 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">CPF do Titular</label>
+                    <input
+                      type="text"
+                      placeholder="000.000.000-00"
+                      value={cardCpf}
+                      onChange={(e) => {
+                        const value = e.target.value.replace(/\D/g, '');
+                        let formatted = value;
+                        if (value.length > 3) formatted = value.slice(0,3) + '.' + value.slice(3);
+                        if (value.length > 6) formatted = value.slice(0,3) + '.' + value.slice(3,6) + '.' + value.slice(6);
+                        if (value.length > 9) formatted = value.slice(0,3) + '.' + value.slice(3,6) + '.' + value.slice(6,9) + '-' + value.slice(9,11);
+                        setCardCpf(formatted);
+                      }}
+                      maxLength={14}
+                      className="w-full px-4 py-3 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                  </div>
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  O pagamento será confirmado automaticamente
-                </p>
-                <Button
-                  onClick={() => navigate("/cliente")}
-                  variant="outline"
-                  className="w-full"
-                >
-                  Voltar para Início
-                </Button>
               </Card>
             )}
 
-            {!pixQrCode && (
-              <Button
-                onClick={handlePayment}
-                disabled={processingPayment}
-                className="w-full h-14 bg-primary hover:bg-primary/90 text-base"
-              >
-                {processingPayment ? "Processando..." : "Confirmar Pagamento"}
-              </Button>
+            {paymentMethod === 'pix' && (
+              <Card className="p-4 bg-primary/5 border-primary/20">
+                <p className="text-sm text-center">
+                  Ao confirmar, o QR Code PIX será gerado para pagamento
+                </p>
+              </Card>
             )}
+
+            {paymentMethod === 'cash' && (
+              <Card className="p-4 bg-primary/5 border-primary/20">
+                <p className="text-sm text-center">
+                  Você pagará diretamente na barbearia no dia do atendimento
+                </p>
+              </Card>
+            )}
+
+            <Button
+              onClick={handlePayment}
+              disabled={processingPayment}
+              className="w-full h-14 bg-primary hover:bg-primary/90 text-base"
+            >
+              {processingPayment ? "Processando..." : paymentMethod === 'pix' ? "Gerar QR Code" : "Confirmar Agendamento"}
+            </Button>
+          </div>
+        )}
+
+        {/* Step 6: PIX QR Code Display */}
+        {step === 6 && pixQrCode && (
+          <div className="space-y-4">
+            <Card className="p-6 text-center space-y-4">
+              <h2 className="text-xl font-bold">Escaneie o QR Code</h2>
+              <p className="text-muted-foreground">
+                Abra o app do seu banco e escaneie o código para pagar
+              </p>
+              <div className="flex justify-center bg-white p-4 rounded-lg">
+                <img src={`data:image/png;base64,${pixQrCode}`} alt="QR Code PIX" className="w-64 h-64" />
+              </div>
+              <div className="bg-primary/10 p-4 rounded-lg">
+                <p className="text-2xl font-bold text-primary">
+                  R$ {getTotalPrice().toFixed(2)}
+                </p>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Após o pagamento, seu agendamento será confirmado automaticamente
+              </p>
+              <Button
+                onClick={() => navigate("/cliente")}
+                className="w-full"
+              >
+                Voltar para Início
+              </Button>
+            </Card>
           </div>
         )}
       </div>
