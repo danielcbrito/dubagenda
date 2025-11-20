@@ -33,9 +33,50 @@ export function CancelAppointmentModal({
   const [cancelling, setCancelling] = useState(false);
   const navigate = useNavigate();
 
-  const handleReschedule = () => {
-    onOpenChange(false);
-    navigate("/cliente/agendar");
+  const handleReschedule = async () => {
+    setCancelling(true);
+    try {
+      // Cancel current appointment
+      const { error: updateError } = await supabase
+        .from("agendamentos")
+        .update({ 
+          status: "cancelled_by_user",
+          visivel_para_usuario: false,
+          cancelado_em: new Date().toISOString()
+        })
+        .eq("id", appointmentId);
+
+      if (updateError) throw updateError;
+
+      // If paid, create credit for user
+      if (isPaid) {
+        const { error: creditError } = await supabase
+          .from("creditos")
+          .insert({
+            user_id: userId,
+            valor: amount,
+            origem: "cancelamento",
+            agendamento_origem_id: appointmentId,
+          });
+
+        if (creditError) throw creditError;
+        
+        toast.success("Agendamento cancelado. Crédito disponível para uso.");
+      } else {
+        toast.success("Agendamento cancelado.");
+      }
+
+      onSuccess();
+      onOpenChange(false);
+      
+      // Navigate to scheduling page
+      navigate("/cliente/agendar");
+    } catch (error) {
+      console.error("Error rescheduling appointment:", error);
+      toast.error("Erro ao remarcar agendamento");
+    } finally {
+      setCancelling(false);
+    }
   };
 
   const handleCancelDefinitely = async () => {
