@@ -1,4 +1,4 @@
-import { User, Gift, Calendar, Trophy, HeadphonesIcon, LogOut } from "lucide-react";
+import { User, Gift, Calendar, Trophy, HeadphonesIcon, LogOut, Wallet } from "lucide-react";
 import {
   Drawer,
   DrawerContent,
@@ -20,6 +20,7 @@ interface ClientDrawerMenuProps {
   onProfileClick: () => void;
   onPlansClick: () => void;
   onPointsClick: () => void;
+  onWalletClick: () => void;
 }
 
 export function ClientDrawerMenu({ 
@@ -30,7 +31,8 @@ export function ClientDrawerMenu({
   userId,
   onProfileClick,
   onPlansClick,
-  onPointsClick
+  onPointsClick,
+  onWalletClick
 }: ClientDrawerMenuProps) {
   const [historyOpen, setHistoryOpen] = useState(false);
 
@@ -49,6 +51,14 @@ export function ClientDrawerMenu({
       onClick: () => {
         onOpenChange(false);
         onProfileClick();
+      }
+    },
+    {
+      icon: Wallet,
+      label: "Carteira / Créditos",
+      onClick: () => {
+        onOpenChange(false);
+        onWalletClick();
       }
     },
     {

@@ -44,9 +44,12 @@ const ClienteAgendar = () => {
   const [resumePendingBookingId, setResumePendingBookingId] = useState<string | null>(null);
   const [paymentConfirmed, setPaymentConfirmed] = useState(false);
   const [pendingBookingId, setPendingBookingId] = useState<string | null>(null);
+  const [availableCredits, setAvailableCredits] = useState(0);
+  const [userId, setUserId] = useState<string | null>(null);
 
   useEffect(() => {
     loadServices();
+    loadUserCredits();
     
     // Check if resuming payment from pending booking
     const resumeBookingId = sessionStorage.getItem('resumePendingBookingId');
@@ -108,6 +111,24 @@ const ClienteAgendar = () => {
       .order("preco");
 
     setServices(data || []);
+  };
+
+  const loadUserCredits = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      setUserId(session.user.id);
+
+      const { data: creditsData, error } = await supabase
+        .rpc("get_user_available_credits", { p_user_id: session.user.id });
+
+      if (error) throw error;
+      
+      setAvailableCredits(creditsData || 0);
+    } catch (error) {
+      console.error("Error loading credits:", error);
+    }
   };
 
   const loadPendingBookingDetails = async (bookingId: string) => {
@@ -236,6 +257,15 @@ const ClienteAgendar = () => {
       return;
     }
 
+    const totalPrice = getTotalPrice();
+    const finalPrice = Math.max(0, totalPrice - availableCredits);
+
+    // If fully covered by credits, create appointment directly
+    if (finalPrice === 0) {
+      await createAppointmentWithCredits(totalPrice);
+      return;
+    }
+
     // Validate card data if paying with card
     if (paymentMethod === 'card') {
       if (!cardHolderName || !cardNumber || !cardExpiryMonth || !cardExpiryYear || !cardCvv || !cardCpf) {
@@ -256,18 +286,17 @@ const ClienteAgendar = () => {
       }
 
       const totalDuration = selectedServices.reduce((sum, s) => sum + s.duracao_minutos, 0);
-      const totalPrice = selectedServices.reduce((sum, s) => sum + s.preco, 0);
       const serviceNames = selectedServices.map(s => s.nome).join(", ");
 
       // Prepare booking data
       const mainService = selectedServices[0];
       const bookingData = {
         servico_id: mainService.id,
-        barbeiro_id: null, // Can be extended later to include barber selection
+        barbeiro_id: null,
         data: selectedDate.toISOString().split('T')[0],
         hora: selectedTime,
         duracao: totalDuration,
-        preco: totalPrice,
+        preco: finalPrice, // Use final price after credits
         observacoes: selectedServices.length > 1 
           ? `Serviços: ${serviceNames}` 
           : undefined,
@@ -277,6 +306,7 @@ const ClienteAgendar = () => {
       const payload: any = {
         bookingData,
         metodo: paymentMethod,
+        creditsUsed: Math.min(availableCredits, totalPrice),
       };
 
       // For card, add card and customer info
@@ -305,6 +335,11 @@ const ClienteAgendar = () => {
         throw error;
       }
 
+      // If credits were used, mark them as used
+      if (availableCredits > 0 && data.appointmentId) {
+        await useCredits(Math.min(availableCredits, totalPrice), data.appointmentId);
+      }
+
       // Handle response based on payment method
       if (paymentMethod === 'cash') {
         toast.success("Agendamento criado! Pague na barbearia.");
@@ -314,7 +349,7 @@ const ClienteAgendar = () => {
         setPixPayload(data.asaasPayment.pixQrCode.payload);
         setPendingBookingId(data.pendingBookingId || null);
         toast.success("QR Code gerado! Escaneie para pagar.");
-        setStep(6); // Move to QR Code display step
+        setStep(6);
       } else if (paymentMethod === 'card') {
         if (data.asaasPayment?.status === 'CONFIRMED') {
           toast.success("Pagamento aprovado! Agendamento confirmado.");
@@ -328,6 +363,105 @@ const ClienteAgendar = () => {
       toast.error("Erro ao processar pagamento: " + (error.message || "Erro desconhecido"));
     } finally {
       setProcessingPayment(false);
+    }
+  };
+
+  const createAppointmentWithCredits = async (totalPrice: number) => {
+    setProcessingPayment(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error("Você precisa estar logado");
+        navigate("/auth");
+        return;
+      }
+
+      const totalDuration = selectedServices.reduce((sum, s) => sum + s.duracao_minutos, 0);
+      const serviceNames = selectedServices.map(s => s.nome).join(", ");
+      const mainService = selectedServices[0];
+
+      // Create appointment directly (paid with credits)
+      const { data: appointment, error: aptError } = await supabase
+        .from("agendamentos")
+        .insert({
+          user_id: session.user.id,
+          servico_id: mainService.id,
+          data: selectedDate!.toISOString().split('T')[0],
+          hora: selectedTime,
+          duracao: totalDuration,
+          preco: 0, // Fully paid with credits
+          status: "pending",
+          observacoes: selectedServices.length > 1 ? `Serviços: ${serviceNames}` : undefined,
+        })
+        .select()
+        .single();
+
+      if (aptError) throw aptError;
+
+      // Create payment record
+      await supabase
+        .from("pagamentos")
+        .insert({
+          user_id: session.user.id,
+          agendamento_id: appointment.id,
+          metodo: "cash", // Mark as cash since paid with credits
+          valor: 0,
+          status: "paid",
+        });
+
+      // Use credits
+      await useCredits(totalPrice, appointment.id);
+
+      toast.success("Agendamento criado! Créditos aplicados com sucesso.");
+      navigate("/cliente");
+    } catch (error: any) {
+      console.error('Error creating appointment with credits:', error);
+      toast.error("Erro ao criar agendamento: " + (error.message || "Erro desconhecido"));
+    } finally {
+      setProcessingPayment(false);
+    }
+  };
+
+  const useCredits = async (amount: number, appointmentId: string) => {
+    if (!userId) return;
+
+    try {
+      // Get available credits
+      const { data: credits, error: fetchError } = await supabase
+        .from("creditos")
+        .select("*")
+        .eq("user_id", userId)
+        .eq("usado", false)
+        .is("expires_at", null)
+        .or(`expires_at.gt.${new Date().toISOString()}`)
+        .order("created_at", { ascending: true });
+
+      if (fetchError) throw fetchError;
+
+      let remaining = amount;
+      const creditIdsToUse: string[] = [];
+
+      // Mark credits as used
+      for (const credit of credits || []) {
+        if (remaining <= 0) break;
+        
+        creditIdsToUse.push(credit.id);
+        remaining -= credit.valor;
+      }
+
+      if (creditIdsToUse.length > 0) {
+        const { error: updateError } = await supabase
+          .from("creditos")
+          .update({ 
+            usado: true,
+            agendamento_usado_id: appointmentId
+          })
+          .in("id", creditIdsToUse);
+
+        if (updateError) throw updateError;
+      }
+    } catch (error) {
+      console.error("Error using credits:", error);
     }
   };
 
@@ -611,11 +745,44 @@ const ClienteAgendar = () => {
             </div>
 
             <Card className="p-4 bg-primary/5 border-primary/20">
-              <div className="flex justify-between items-center">
-                <span className="font-semibold">Valor Total:</span>
-                <span className="text-2xl font-bold text-primary">
-                  R$ {getTotalPrice().toFixed(2)}
-                </span>
+              <div className="space-y-3">
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-muted-foreground">Valor do serviço:</span>
+                  <span className="font-semibold">R$ {getTotalPrice().toFixed(2)}</span>
+                </div>
+
+                {availableCredits > 0 && (
+                  <>
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-green-600">Créditos aplicados:</span>
+                      <span className="font-semibold text-green-600">
+                        - R$ {Math.min(availableCredits, getTotalPrice()).toFixed(2)}
+                      </span>
+                    </div>
+                    <div className="border-t border-border/50 pt-2">
+                      <div className="flex justify-between items-center">
+                        <span className="font-semibold">Valor a pagar:</span>
+                        <span className="text-2xl font-bold text-primary">
+                          R$ {Math.max(0, getTotalPrice() - availableCredits).toFixed(2)}
+                        </span>
+                      </div>
+                      {getTotalPrice() <= availableCredits && (
+                        <p className="text-xs text-green-600 mt-2 text-center">
+                          🎉 Seu corte está 100% coberto por créditos!
+                        </p>
+                      )}
+                    </div>
+                  </>
+                )}
+
+                {availableCredits === 0 && (
+                  <div className="flex justify-between items-center">
+                    <span className="font-semibold">Valor Total:</span>
+                    <span className="text-2xl font-bold text-primary">
+                      R$ {getTotalPrice().toFixed(2)}
+                    </span>
+                  </div>
+                )}
               </div>
             </Card>
 

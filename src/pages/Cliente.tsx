@@ -16,6 +16,7 @@ import { MyPlansSheet } from "@/components/MyPlansSheet";
 import { SubscribePlanSheet } from "@/components/SubscribePlanSheet";
 import { MyProfileSheet } from "@/components/MyProfileSheet";
 import { CancelAppointmentModal } from "@/components/CancelAppointmentModal";
+import { WalletSheet } from "@/components/WalletSheet";
 
 interface Appointment {
   id: string;
@@ -51,6 +52,7 @@ const Cliente = () => {
   const [plansSheetOpen, setPlansSheetOpen] = useState(false);
   const [subscribeSheetOpen, setSubscribeSheetOpen] = useState(false);
   const [profileSheetOpen, setProfileSheetOpen] = useState(false);
+  const [walletSheetOpen, setWalletSheetOpen] = useState(false);
   const [availableCredits, setAvailableCredits] = useState(0);
   const [cancelModalOpen, setCancelModalOpen] = useState(false);
   const [appointmentToCancel, setAppointmentToCancel] = useState<any>(null);
@@ -460,6 +462,7 @@ const Cliente = () => {
         onProfileClick={() => setProfileSheetOpen(true)}
         onPlansClick={() => setPlansSheetOpen(true)}
         onPointsClick={() => setPointsModalOpen(true)}
+        onWalletClick={() => setWalletSheetOpen(true)}
       />
 
       {/* My Plans Sheet */}
@@ -510,6 +513,13 @@ const Cliente = () => {
           }}
         />
       )}
+
+      {/* Wallet Sheet */}
+      <WalletSheet
+        open={walletSheetOpen}
+        onOpenChange={setWalletSheetOpen}
+        userId={user?.id}
+      />
     </div>
   );
 };
