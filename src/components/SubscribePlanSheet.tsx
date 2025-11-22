@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -311,6 +311,9 @@ export function SubscribePlanSheet({ open, onOpenChange, userId }: SubscribePlan
             <Sparkles className="w-5 h-5 text-gold" />
             Escolha seu Plano
           </SheetTitle>
+          <SheetDescription className="sr-only">
+            Selecione um plano de assinatura que melhor atende suas necessidades
+          </SheetDescription>
         </SheetHeader>
 
         <ScrollArea className="h-[calc(90vh-60px)] mt-4">

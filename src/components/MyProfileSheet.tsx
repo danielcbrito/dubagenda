@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -103,9 +103,12 @@ export function MyProfileSheet({ open, onOpenChange, userId, profile, onProfileU
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="h-[85vh] rounded-t-[10px]">
+      <SheetContent side="bottom" className="h-[85vh] rounded-t-[10px] z-[100]">
         <SheetHeader>
           <SheetTitle className="text-lg">Meu Perfil</SheetTitle>
+          <SheetDescription className="sr-only">
+            Visualize e edite suas informações pessoais
+          </SheetDescription>
         </SheetHeader>
 
         <div className="mt-6 space-y-4 overflow-y-auto h-[calc(85vh-80px)] pb-6">

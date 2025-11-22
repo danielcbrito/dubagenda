@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -258,6 +258,9 @@ export function MyPlansSheet({ open, onOpenChange, userId }: MyPlansSheetProps) 
         <SheetContent side="bottom" className="h-[85vh] rounded-t-[10px]">
           <SheetHeader>
             <SheetTitle className="text-lg">Meus Planos</SheetTitle>
+            <SheetDescription className="sr-only">
+              Gerencie suas assinaturas e planos ativos
+            </SheetDescription>
           </SheetHeader>
 
           <div className="mt-6 space-y-4 overflow-y-auto h-[calc(85vh-80px)] pb-6">
