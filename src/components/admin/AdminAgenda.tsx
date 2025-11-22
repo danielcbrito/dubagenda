@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { TimelineView } from "./TimelineView";
 import { AppointmentDetailsSidebar } from "./AppointmentDetailsSidebar";
+import { ConfirmAttendanceModal } from "./ConfirmAttendanceModal";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
@@ -23,6 +24,8 @@ export interface TimelineAppointment {
   ponto_liberado: boolean | null;
   user_id: string;
   servico_id: string;
+  is_free: boolean | null;
+  payment_method: string | null;
   profile: { nome: string; cpf?: string } | null;
   servico: { nome: string; duracao_minutos: number } | null;
   pagamentos: Array<{ metodo: string; status: string; valor: number }>;
@@ -33,6 +36,7 @@ export function AdminAgenda() {
   const [appointments, setAppointments] = useState<TimelineAppointment[]>([]);
   const [selectedAppointment, setSelectedAppointment] = useState<TimelineAppointment | null>(null);
   const [loading, setLoading] = useState(false);
+  const [confirmModalAppointment, setConfirmModalAppointment] = useState<TimelineAppointment | null>(null);
   
   // Filters
   const [filterService, setFilterService] = useState<string>("all");
@@ -68,6 +72,45 @@ export function AdminAgenda() {
       supabase.removeChannel(channel);
     };
   }, [date]);
+
+  // Check for appointments that need confirmation (when service duration ends)
+  useEffect(() => {
+    const checkAppointmentCompletion = () => {
+      const now = new Date();
+      const currentDateStr = now.toISOString().split('T')[0];
+      const selectedDateStr = date.toISOString().split('T')[0];
+      
+      // Only check for today's appointments
+      if (currentDateStr !== selectedDateStr) return;
+
+      appointments.forEach(apt => {
+        // Skip if already completed, cancelled, or no-show
+        if (apt.status === 'completed' || apt.status === 'cancelled_by_admin' || 
+            apt.status === 'cancelled_by_user' || apt.status === 'no_show') {
+          return;
+        }
+
+        // Calculate end time
+        const [hours, minutes] = apt.hora.split(':').map(Number);
+        const aptStart = new Date(now);
+        aptStart.setHours(hours, minutes, 0, 0);
+        
+        const aptEnd = new Date(aptStart.getTime() + (apt.servico?.duracao_minutos || 30) * 60000);
+        
+        // If current time is past end time (with 1 minute tolerance)
+        if (now >= aptEnd && now.getTime() - aptEnd.getTime() < 120000) {
+          // Show confirmation modal
+          setConfirmModalAppointment(apt);
+        }
+      });
+    };
+
+    // Check every minute
+    const interval = setInterval(checkAppointmentCompletion, 60000);
+    checkAppointmentCompletion(); // Check immediately
+
+    return () => clearInterval(interval);
+  }, [appointments, date]);
 
   const loadServices = async () => {
     try {
@@ -221,6 +264,14 @@ export function AdminAgenda() {
         appointment={selectedAppointment}
         open={!!selectedAppointment}
         onClose={() => setSelectedAppointment(null)}
+        onUpdate={() => loadAppointments(date)}
+      />
+
+      {/* Confirm Attendance Modal */}
+      <ConfirmAttendanceModal
+        appointment={confirmModalAppointment}
+        open={!!confirmModalAppointment}
+        onClose={() => setConfirmModalAppointment(null)}
         onUpdate={() => loadAppointments(date)}
       />
     </div>

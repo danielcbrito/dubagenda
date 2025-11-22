@@ -27,6 +27,7 @@ export type Database = {
           id: string
           is_free: boolean | null
           observacoes: string | null
+          payment_method: string | null
           ponto_liberado: boolean | null
           preco: number
           remarcado_de: string | null
@@ -49,6 +50,7 @@ export type Database = {
           id?: string
           is_free?: boolean | null
           observacoes?: string | null
+          payment_method?: string | null
           ponto_liberado?: boolean | null
           preco: number
           remarcado_de?: string | null
@@ -71,6 +73,7 @@ export type Database = {
           id?: string
           is_free?: boolean | null
           observacoes?: string | null
+          payment_method?: string | null
           ponto_liberado?: boolean | null
           preco?: number
           remarcado_de?: string | null

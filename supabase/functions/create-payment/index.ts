@@ -100,6 +100,7 @@ serve(async (req) => {
           status: 'pending', // Barbeiro needs to confirm
           barbeiro_confirmou: false,
           cliente_confirmou: false,
+          payment_method: 'cash', // Store payment method
         })
         .select()
         .single();
@@ -334,6 +335,7 @@ serve(async (req) => {
           status: 'pending', // Barbeiro needs to confirm
           barbeiro_confirmou: false,
           cliente_confirmou: true,
+          payment_method: metodo, // Store payment method
         })
         .select()
         .single();

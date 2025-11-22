@@ -170,6 +170,7 @@ async function handlePaymentConfirmed(supabase: any, payload: AsaasWebhookEvent)
           status: 'pending', // Barbeiro needs to confirm
           barbeiro_confirmou: false,
           cliente_confirmou: true,
+          payment_method: pendingBooking.payment_method, // Store payment method
         })
         .select()
         .single();
