@@ -246,11 +246,11 @@ serve(async (req) => {
     const nextBillingDate = new Date(asaasResult.nextDueDate);
 
     // Determine initial subscription status
-    // For PIX, keep as 'pending' until payment is confirmed
-    // For card, mark as 'active' if first payment is confirmed
+    // For PIX, use 'suspended' until payment is confirmed (enum doesn't have 'pending')
+    // For card, mark as 'active' if first payment is confirmed, otherwise 'suspended'
     const initialStatus = (paymentMethod === 'pix') 
-      ? 'pending' 
-      : (firstPaymentDetails?.status === 'CONFIRMED' ? 'active' : 'pending');
+      ? 'suspended' 
+      : (firstPaymentDetails?.status === 'CONFIRMED' ? 'active' : 'suspended');
 
     console.log('Subscription initial status:', { 
       paymentMethod, 
