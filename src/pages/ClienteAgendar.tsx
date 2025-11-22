@@ -46,6 +46,8 @@ const ClienteAgendar = () => {
   const [pendingBookingId, setPendingBookingId] = useState<string | null>(null);
   const [availableCredits, setAvailableCredits] = useState(0);
   const [userId, setUserId] = useState<string | null>(null);
+  const [isRescheduling, setIsRescheduling] = useState(false);
+  const [rescheduleAppointmentId, setRescheduleAppointmentId] = useState<string | null>(null);
 
   useEffect(() => {
     loadServices();
@@ -57,6 +59,16 @@ const ClienteAgendar = () => {
       setResumePendingBookingId(resumeBookingId);
       sessionStorage.removeItem('resumePendingBookingId');
       loadPendingBookingDetails(resumeBookingId);
+    }
+    
+    // Check if rescheduling an existing appointment
+    const isReschedulingSession = sessionStorage.getItem('isRescheduling');
+    const appointmentId = sessionStorage.getItem('rescheduleAppointmentId');
+    
+    if (isReschedulingSession === 'true' && appointmentId) {
+      setIsRescheduling(true);
+      setRescheduleAppointmentId(appointmentId);
+      loadAppointmentForReschedule(appointmentId);
     }
   }, []);
 
@@ -160,6 +172,37 @@ const ClienteAgendar = () => {
     }
   };
 
+  const loadAppointmentForReschedule = async (appointmentId: string) => {
+    try {
+      const { data: appointment, error } = await supabase
+        .from("agendamentos")
+        .select(`
+          *,
+          servico:servicos(*)
+        `)
+        .eq("id", appointmentId)
+        .single();
+
+      if (error) throw error;
+      if (!appointment) {
+        toast.error("Agendamento não encontrado");
+        sessionStorage.removeItem('isRescheduling');
+        sessionStorage.removeItem('rescheduleAppointmentId');
+        return;
+      }
+
+      // Set appointment details
+      setSelectedServices([appointment.servico]);
+      setStep(2); // Go to date selection
+      toast.info("Escolha a nova data e horário");
+    } catch (error) {
+      console.error("Error loading appointment for reschedule:", error);
+      toast.error("Erro ao carregar agendamento");
+      sessionStorage.removeItem('isRescheduling');
+      sessionStorage.removeItem('rescheduleAppointmentId');
+    }
+  };
+
   const loadAvailableSlots = async () => {
     if (!selectedDate) return;
 
@@ -243,6 +286,12 @@ const ClienteAgendar = () => {
     }
     if (step === 3 && !selectedTime) {
       toast.error("Selecione um horário");
+      return;
+    }
+    
+    // If rescheduling and in step 3 (time selection), skip to confirmation
+    if (isRescheduling && step === 3) {
+      setStep(5); // Go to confirmation step for reschedule
       return;
     }
     
@@ -465,6 +514,44 @@ const ClienteAgendar = () => {
     }
   };
 
+  const handleRescheduleUpdate = async () => {
+    if (!rescheduleAppointmentId || !selectedDate || !selectedTime) {
+      toast.error("Dados incompletos para remarcação");
+      return;
+    }
+
+    setProcessingPayment(true);
+    try {
+      const totalDuration = selectedServices.reduce((sum, s) => sum + s.duracao_minutos, 0);
+      
+      // UPDATE the existing appointment
+      const { error } = await supabase
+        .from("agendamentos")
+        .update({
+          data: selectedDate.toISOString().split('T')[0],
+          hora: selectedTime,
+          duracao: totalDuration,
+          status: 'pending', // Reset to pending
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", rescheduleAppointmentId);
+
+      if (error) throw error;
+
+      // Clear reschedule session
+      sessionStorage.removeItem('isRescheduling');
+      sessionStorage.removeItem('rescheduleAppointmentId');
+
+      toast.success("✅ Agendamento remarcado com sucesso!");
+      navigate("/cliente");
+    } catch (error: any) {
+      console.error("Error rescheduling:", error);
+      toast.error("Erro ao remarcar: " + (error.message || "Erro desconhecido"));
+    } finally {
+      setProcessingPayment(false);
+    }
+  };
+
   const getTotalDuration = () => {
     return selectedServices.reduce((sum, s) => sum + s.duracao_minutos, 0);
   };
@@ -657,7 +744,7 @@ const ClienteAgendar = () => {
         )}
 
         {/* Step 4: Payment Method */}
-        {step === 4 && (
+        {step === 4 && !isRescheduling && (
           <div className="space-y-4">
             <div>
               <h3 className="text-sm font-semibold mb-1">Etapa 4 de 5</h3>
@@ -961,6 +1048,50 @@ const ClienteAgendar = () => {
               className="w-full h-14 bg-primary hover:bg-primary/90 text-base"
             >
               {processingPayment ? "Processando..." : paymentMethod === 'pix' ? "Gerar QR Code" : "Confirmar Agendamento"}
+            </Button>
+          </div>
+        )}
+
+        {/* Step 5: Reschedule Confirmation */}
+        {step === 5 && isRescheduling && (
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-sm font-semibold mb-1">Confirmar Remarcação</h3>
+              <h2 className="text-xl font-bold mb-3">Revise os novos dados</h2>
+            </div>
+
+            <Card className="p-4 space-y-3">
+              <div className="flex items-center gap-3">
+                <Clock className="w-5 h-5 text-primary" />
+                <div>
+                  <p className="text-sm font-medium">Nova Data e Horário</p>
+                  <p className="text-sm text-muted-foreground">
+                    {selectedDate?.toLocaleDateString('pt-BR')} às {selectedTime}
+                  </p>
+                </div>
+              </div>
+              
+              {selectedServices[0] && (
+                <div className="flex items-center gap-3">
+                  <div className="w-5 h-5 text-primary" />
+                  <div>
+                    <p className="text-sm font-medium">Serviço</p>
+                    <p className="text-sm text-muted-foreground">{selectedServices[0].nome}</p>
+                  </div>
+                </div>
+              )}
+
+              <div className="p-3 bg-primary/10 rounded-md text-sm">
+                ℹ️ O pagamento existente permanecerá válido
+              </div>
+            </Card>
+
+            <Button
+              onClick={handleRescheduleUpdate}
+              disabled={processingPayment}
+              className="w-full h-14"
+            >
+              {processingPayment ? "Remarcando..." : "Confirmar Remarcação"}
             </Button>
           </div>
         )}

@@ -29,6 +29,7 @@ export type Database = {
           observacoes: string | null
           ponto_liberado: boolean | null
           preco: number
+          remarcado_de: string | null
           servico_id: string
           status: Database["public"]["Enums"]["appointment_status"] | null
           updated_at: string | null
@@ -50,6 +51,7 @@ export type Database = {
           observacoes?: string | null
           ponto_liberado?: boolean | null
           preco: number
+          remarcado_de?: string | null
           servico_id: string
           status?: Database["public"]["Enums"]["appointment_status"] | null
           updated_at?: string | null
@@ -71,6 +73,7 @@ export type Database = {
           observacoes?: string | null
           ponto_liberado?: boolean | null
           preco?: number
+          remarcado_de?: string | null
           servico_id?: string
           status?: Database["public"]["Enums"]["appointment_status"] | null
           updated_at?: string | null
@@ -84,6 +87,13 @@ export type Database = {
             columns: ["barbeiro_id"]
             isOneToOne: false
             referencedRelation: "barbeiros"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agendamentos_remarcado_de_fkey"
+            columns: ["remarcado_de"]
+            isOneToOne: false
+            referencedRelation: "agendamentos"
             referencedColumns: ["id"]
           },
           {
@@ -138,6 +148,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      audit_logs: {
+        Row: {
+          action: string
+          created_at: string | null
+          entity_id: string | null
+          entity_type: string
+          id: string
+          ip_address: string | null
+          new_values: Json | null
+          old_values: Json | null
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string | null
+          entity_id?: string | null
+          entity_type: string
+          id?: string
+          ip_address?: string | null
+          new_values?: Json | null
+          old_values?: Json | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string | null
+          entity_id?: string | null
+          entity_type?: string
+          id?: string
+          ip_address?: string | null
+          new_values?: Json | null
+          old_values?: Json | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
       }
       barbeiros: {
         Row: {

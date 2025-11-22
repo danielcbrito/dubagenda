@@ -15,7 +15,6 @@ import { NotificationBell } from "@/components/NotificationBell";
 import { MyPlansSheet } from "@/components/MyPlansSheet";
 import { SubscribePlanSheet } from "@/components/SubscribePlanSheet";
 import { MyProfileSheet } from "@/components/MyProfileSheet";
-import { CancelAppointmentModal } from "@/components/CancelAppointmentModal";
 import { WalletSheet } from "@/components/WalletSheet";
 
 interface Appointment {
@@ -54,8 +53,6 @@ const Cliente = () => {
   const [profileSheetOpen, setProfileSheetOpen] = useState(false);
   const [walletSheetOpen, setWalletSheetOpen] = useState(false);
   const [availableCredits, setAvailableCredits] = useState(0);
-  const [cancelModalOpen, setCancelModalOpen] = useState(false);
-  const [appointmentToCancel, setAppointmentToCancel] = useState<any>(null);
   const [payments, setPayments] = useState<any[]>([]);
 
   useEffect(() => {
@@ -260,20 +257,6 @@ const Cliente = () => {
     }
   };
 
-  const handleCancelAppointment = (appointmentId: string) => {
-    const appointment = appointments.find(a => a.id === appointmentId);
-    if (!appointment) return;
-
-    const payment = payments.find(p => p.agendamento_id === appointmentId);
-    const isPaid = payment?.status === "paid";
-
-    setAppointmentToCancel({
-      id: appointmentId,
-      isPaid,
-      amount: appointment.preco || 0,
-    });
-    setCancelModalOpen(true);
-  };
 
   const handleConfirmAppointment = async (appointmentId: string) => {
     const { error } = await supabase
@@ -440,12 +423,14 @@ const Cliente = () => {
           ) : (
             <div className="space-y-3">
               {appointments.map((apt) => (
-              <AppointmentCard
-                key={apt.id}
-                appointment={apt}
-                onCancel={handleCancelAppointment}
-                onConfirm={handleConfirmAppointment}
-              />
+                <AppointmentCard
+                  key={apt.id}
+                  appointment={apt}
+                  onCancel={() => loadUserData(user.id)}
+                  onConfirm={handleConfirmAppointment}
+                  userId={user?.id}
+                  payments={payments}
+                />
               ))}
             </div>
           )}
@@ -499,20 +484,6 @@ const Cliente = () => {
         redemptions={redemptions}
       />
 
-      {/* Cancel Appointment Modal */}
-      {appointmentToCancel && (
-        <CancelAppointmentModal
-          open={cancelModalOpen}
-          onOpenChange={setCancelModalOpen}
-          appointmentId={appointmentToCancel.id}
-          isPaid={appointmentToCancel.isPaid}
-          amount={appointmentToCancel.amount}
-          userId={user?.id}
-          onSuccess={() => {
-            loadUserData(user.id);
-          }}
-        />
-      )}
 
       {/* Wallet Sheet */}
       <WalletSheet
