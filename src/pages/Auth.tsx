@@ -10,11 +10,20 @@ import { z } from "zod";
 import logoDub from "@/assets/logo-dub.png";
 import barbershopBg from "@/assets/barbershop-premium-bg.jpg";
 import { Loader2 } from "lucide-react";
+import { validateCPF, formatCPF, formatPhone, validatePhone } from "@/lib/validators";
 
 const signupSchema = z.object({
   nome: z.string().trim().min(2, "Nome deve ter pelo menos 2 caracteres").max(100),
   email: z.string().trim().email("Email inválido").max(255),
-  cpf: z.string().trim().regex(/^\d{11}$/, "CPF deve ter 11 dígitos").max(11),
+  cpf: z.string()
+    .trim()
+    .transform(val => val.replace(/\D/g, ''))
+    .refine(val => val.length === 11, "CPF deve ter 11 dígitos")
+    .refine(validateCPF, "CPF inválido. Verifique e tente novamente."),
+  telefone: z.string()
+    .trim()
+    .transform(val => val.replace(/\D/g, ''))
+    .refine(validatePhone, "Por favor, insira um telefone válido."),
   senha: z.string().min(6, "Senha deve ter pelo menos 6 caracteres"),
 });
 
@@ -33,8 +42,11 @@ const Auth = () => {
     nome: "",
     email: "",
     cpf: "",
+    telefone: "",
     senha: "",
   });
+  const [cpfError, setCpfError] = useState("");
+  const [telefoneError, setTelefoneError] = useState("");
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -58,11 +70,47 @@ const Auth = () => {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    let formattedValue = value;
+
+    // Apply masks
+    if (name === "cpf") {
+      formattedValue = formatCPF(value);
+      const cleanCPF = value.replace(/\D/g, '');
+      if (cleanCPF.length === 11) {
+        if (!validateCPF(cleanCPF)) {
+          setCpfError("CPF inválido. Verifique e tente novamente.");
+        } else {
+          setCpfError("");
+        }
+      } else {
+        setCpfError("");
+      }
+    } else if (name === "telefone") {
+      formattedValue = formatPhone(value);
+      const cleanPhone = value.replace(/\D/g, '');
+      if (cleanPhone.length >= 10) {
+        if (!validatePhone(cleanPhone)) {
+          setTelefoneError("Por favor, insira um telefone válido.");
+        } else {
+          setTelefoneError("");
+        }
+      } else {
+        setTelefoneError("");
+      }
+    }
+
+    setFormData(prev => ({ ...prev, [name]: formattedValue }));
   };
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate before submitting
+    if (cpfError || telefoneError) {
+      toast.error("Corrija os erros antes de continuar");
+      return;
+    }
+
     setIsLoading(true);
 
     try {
@@ -75,6 +123,7 @@ const Auth = () => {
           data: {
             nome: validated.nome,
             cpf: validated.cpf,
+            telefone: validated.telefone,
           },
           emailRedirectTo: `${window.location.origin}/`,
         },
@@ -193,12 +242,33 @@ const Auth = () => {
                     name="cpf"
                     type="text"
                     required
-                    maxLength={11}
+                    maxLength={14}
                     value={formData.cpf}
                     onChange={handleInputChange}
-                    className="input-premium mt-1.5"
-                    placeholder="Apenas números"
+                    className={`input-premium mt-1.5 ${cpfError ? 'border-destructive' : ''}`}
+                    placeholder="000.000.000-00"
                   />
+                  {cpfError && (
+                    <p className="text-xs text-destructive mt-1">{cpfError}</p>
+                  )}
+                </div>
+
+                <div>
+                  <Label htmlFor="telefone" className="text-sm font-medium">Telefone</Label>
+                  <Input
+                    id="telefone"
+                    name="telefone"
+                    type="text"
+                    required
+                    maxLength={15}
+                    value={formData.telefone}
+                    onChange={handleInputChange}
+                    className={`input-premium mt-1.5 ${telefoneError ? 'border-destructive' : ''}`}
+                    placeholder="(99) 99999-9999"
+                  />
+                  {telefoneError && (
+                    <p className="text-xs text-destructive mt-1">{telefoneError}</p>
+                  )}
                 </div>
               </>
             )}
@@ -245,7 +315,7 @@ const Auth = () => {
             <Button 
               type="submit" 
               className="w-full h-11 bg-primary hover:bg-primary/90 font-medium"
-              disabled={isLoading}
+              disabled={isLoading || (mode === "signup" && (!!cpfError || !!telefoneError))}
             >
               {isLoading ? (
                 <>
