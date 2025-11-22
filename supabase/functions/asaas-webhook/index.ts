@@ -167,9 +167,9 @@ async function handlePaymentConfirmed(supabase: any, payload: AsaasWebhookEvent)
           duracao: pendingBooking.duracao,
           preco: pendingBooking.preco,
           observacoes: pendingBooking.observacoes,
-          status: 'pending', // Barbeiro needs to confirm
-          barbeiro_confirmou: false,
-          cliente_confirmou: true,
+          status: 'pending', // PENDING até barbeiro confirmar
+          barbeiro_confirmou: false, // AGUARDANDO APROVAÇÃO DO BARBEIRO
+          cliente_confirmou: true, // Cliente pagou via PIX
           payment_method: pendingBooking.payment_method, // Store payment method
         })
         .select()

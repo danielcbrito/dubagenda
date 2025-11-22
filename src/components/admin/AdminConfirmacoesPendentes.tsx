@@ -13,10 +13,13 @@ interface PendingAppointment {
   data: string;
   hora: string;
   status: string;
+  preco: number;
   cliente_confirmou: boolean;
   barbeiro_confirmou: boolean;
+  payment_method: string | null;
   profile: { nome: string } | null;
   servico: { nome: string } | null;
+  payment: { metodo: string; status: string } | null;
 }
 
 export function AdminConfirmacoesPendentes() {
@@ -49,8 +52,8 @@ export function AdminConfirmacoesPendentes() {
     try {
       const { data, error } = await supabase
         .from("agendamentos")
-        .select("id, data, hora, status, cliente_confirmou, barbeiro_confirmou, user_id, servico_id")
-        .in("status", ["pending", "confirmed"])
+        .select("id, data, hora, status, preco, cliente_confirmou, barbeiro_confirmou, user_id, servico_id, payment_method")
+        .eq("status", "pending")
         .eq("barbeiro_confirmou", false)
         .order("data", { ascending: true })
         .order("hora", { ascending: true });
@@ -71,10 +74,17 @@ export function AdminConfirmacoesPendentes() {
             .eq("id", apt.servico_id)
             .single();
 
+          const { data: payment } = await supabase
+            .from("pagamentos")
+            .select("metodo, status")
+            .eq("agendamento_id", apt.id)
+            .maybeSingle();
+
           return {
             ...apt,
             profile: profile || null,
             servico: servico || null,
+            payment: payment || null,
           };
         })
       );
@@ -92,29 +102,16 @@ export function AdminConfirmacoesPendentes() {
     try {
       const { error } = await supabase
         .from("agendamentos")
-        .update({ barbeiro_confirmou: true, status: 'confirmed' })
+        .update({ 
+          barbeiro_confirmou: true, 
+          status: 'confirmed' as any 
+        } as any)
         .eq("id", appointmentId);
 
       if (error) throw error;
 
-      // Check if client also confirmed to release point
-      const { data: appointment } = await supabase
-        .from("agendamentos")
-        .select("cliente_confirmou, ponto_liberado")
-        .eq("id", appointmentId)
-        .single();
-
-      if (appointment?.cliente_confirmou && !appointment?.ponto_liberado) {
-        await supabase
-          .from("agendamentos")
-          .update({ ponto_liberado: true })
-          .eq("id", appointmentId);
-        
-        toast.success("✅ Confirmado! Ponto liberado para o cliente.");
-      } else {
-        toast.success("✅ Confirmação registrada. Aguardando confirmação do cliente.");
-      }
-
+      toast.success("✅ Agendamento confirmado e movido para a agenda!");
+      
       // Optimistic UI: remove from the list immediately
       setAppointments(prev => prev.filter(a => a.id !== appointmentId));
       loadPending();
@@ -128,11 +125,18 @@ export function AdminConfirmacoesPendentes() {
     try {
       const { error } = await supabase
         .from("agendamentos")
-        .update({ status: "cancelled_by_admin" })
+        .update({ 
+          status: 'cancelled_by_admin' as any,
+          visivel_para_usuario: false
+        } as any)
         .eq("id", appointmentId);
 
       if (error) throw error;
-      toast.success("❌ Atendimento recusado");
+      
+      toast.success("❌ Agendamento recusado. Cliente será notificado.");
+      
+      // Optimistic UI: remove from the list immediately
+      setAppointments(prev => prev.filter(a => a.id !== appointmentId));
       loadPending();
     } catch (error) {
       console.error("Error rejecting appointment:", error);
@@ -142,7 +146,12 @@ export function AdminConfirmacoesPendentes() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Confirmações Pendentes</h1>
+      <div>
+        <h1 className="text-2xl font-bold">Confirmações Pendentes</h1>
+        <p className="text-sm text-muted-foreground mt-1">
+          Todos os agendamentos precisam ser aprovados antes de entrar na agenda
+        </p>
+      </div>
 
       {loading ? (
         <div className="text-center py-8">
@@ -155,64 +164,92 @@ export function AdminConfirmacoesPendentes() {
         </Card>
       ) : (
         <div className="grid gap-4">
-          {appointments.map((apt) => (
-            <Card key={apt.id} className="p-6">
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-2">
-                    <h3 className="text-lg font-bold">{apt.servico?.nome || "Serviço"}</h3>
-                    <Badge variant="outline" className="text-xs">
-                      Aguardando Confirmação
-                    </Badge>
+          {appointments.map((apt) => {
+            const paymentMethod = apt.payment?.metodo || apt.payment_method || 'cash';
+            const isPrepaid = apt.payment?.status === 'paid';
+            
+            return (
+              <Card key={apt.id} className="p-6 border-l-4 border-l-yellow-500">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-2">
+                      <h3 className="text-lg font-bold">{apt.servico?.nome || "Serviço"}</h3>
+                      <Badge variant="outline" className="bg-yellow-500/10 text-yellow-700 border-yellow-500/20">
+                        🔔 Aguardando Aprovação
+                      </Badge>
+                    </div>
+
+                    <div className="flex flex-wrap gap-4 text-sm text-muted-foreground mb-3">
+                      <span className="flex items-center gap-2">
+                        <User className="w-4 h-4" />
+                        {apt.profile?.nome || "Cliente"}
+                      </span>
+                      <span className="flex items-center gap-2">
+                        <CalendarIcon className="w-4 h-4" />
+                        {format(new Date(apt.data), "dd/MM/yyyy", { locale: ptBR })}
+                      </span>
+                      <span className="flex items-center gap-2">
+                        <Clock className="w-4 h-4" />
+                        {apt.hora}
+                      </span>
+                    </div>
+
+                    {/* Forma de Pagamento */}
+                    <div className="flex flex-wrap gap-2 mb-3">
+                      <Badge variant="outline" className="text-xs">
+                        💰 Valor: R$ {apt.preco.toFixed(2)}
+                      </Badge>
+                      
+                      {paymentMethod === 'pix' && (
+                        <Badge variant="outline" className={isPrepaid ? "bg-green-500/10 text-green-700 border-green-500/20" : "bg-yellow-500/10 text-yellow-700 border-yellow-500/20"}>
+                          💳 PIX {isPrepaid ? '(Pago)' : '(Pendente)'}
+                        </Badge>
+                      )}
+                      
+                      {paymentMethod === 'card' && (
+                        <Badge variant="outline" className={isPrepaid ? "bg-green-500/10 text-green-700 border-green-500/20" : "bg-yellow-500/10 text-yellow-700 border-yellow-500/20"}>
+                          💳 Cartão {isPrepaid ? '(Pago)' : '(Pendente)'}
+                        </Badge>
+                      )}
+                      
+                      {paymentMethod === 'cash' && (
+                        <Badge variant="outline" className="bg-blue-500/10 text-blue-700 border-blue-500/20">
+                          💸 Pagar na Barbearia
+                        </Badge>
+                      )}
+                    </div>
+
+                    <div className="bg-yellow-500/10 border border-yellow-500/20 p-3 rounded-lg">
+                      <p className="text-xs text-yellow-700 dark:text-yellow-400">
+                        ⚠️ Este agendamento só aparecerá na sua agenda após você aprovar
+                      </p>
+                    </div>
                   </div>
 
-                  <div className="flex flex-wrap gap-4 text-sm text-muted-foreground mb-3">
-                    <span className="flex items-center gap-2">
-                      <User className="w-4 h-4" />
-                      {apt.profile?.nome || "Cliente"}
-                    </span>
-                    <span className="flex items-center gap-2">
-                      <CalendarIcon className="w-4 h-4" />
-                      {format(new Date(apt.data), "dd/MM/yyyy", { locale: ptBR })}
-                    </span>
-                    <span className="flex items-center gap-2">
-                      <Clock className="w-4 h-4" />
-                      {apt.hora}
-                    </span>
-                  </div>
-
-                  <div className="flex gap-2 text-xs">
-                    {apt.cliente_confirmou && (
-                      <Badge variant="secondary">✅ Cliente confirmou</Badge>
-                    )}
-                    {!apt.cliente_confirmou && (
-                      <Badge variant="outline">⏳ Aguardando cliente</Badge>
-                    )}
+                  <div className="flex flex-col gap-2">
+                    <Button
+                      variant="default"
+                      size="sm"
+                      className="bg-green-600 hover:bg-green-700 min-w-[120px]"
+                      onClick={() => handleConfirm(apt.id)}
+                    >
+                      <CheckCircle className="w-4 h-4 mr-1" />
+                      Aprovar
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      className="min-w-[120px]"
+                      onClick={() => handleReject(apt.id)}
+                    >
+                      <XCircle className="w-4 h-4 mr-1" />
+                      Recusar
+                    </Button>
                   </div>
                 </div>
-
-                <div className="flex gap-2">
-                  <Button
-                    variant="default"
-                    size="sm"
-                    className="bg-green-600 hover:bg-green-700"
-                    onClick={() => handleConfirm(apt.id)}
-                  >
-                    <CheckCircle className="w-4 h-4 mr-1" />
-                    Confirmar
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => handleReject(apt.id)}
-                  >
-                    <XCircle className="w-4 h-4 mr-1" />
-                    Recusar
-                  </Button>
-                </div>
-              </div>
-            </Card>
-          ))}
+              </Card>
+            );
+          })}
         </div>
       )}
     </div>
