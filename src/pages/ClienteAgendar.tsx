@@ -441,6 +441,8 @@ const ClienteAgendar = () => {
           preco: 0, // Fully paid with credits
           status: "pending",
           observacoes: selectedServices.length > 1 ? `Serviços: ${serviceNames}` : undefined,
+          payment_method: 'cash', // Mark as cash since paid with credits
+          is_free: true, // Mark as free (using credits/redemption)
         })
         .select()
         .single();

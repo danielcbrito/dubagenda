@@ -30,10 +30,12 @@ interface AppointmentDetailsSidebarProps {
 export function AppointmentDetailsSidebar({ appointment, open, onClose, onUpdate }: AppointmentDetailsSidebarProps) {
   const [loading, setLoading] = useState(false);
   const [history, setHistory] = useState<any[]>([]);
+  const [clientPoints, setClientPoints] = useState<number>(0);
 
   useEffect(() => {
     if (appointment) {
       loadHistory();
+      loadClientPoints();
     }
   }, [appointment]);
 
@@ -54,6 +56,23 @@ export function AppointmentDetailsSidebar({ appointment, open, onClose, onUpdate
       setHistory(data || []);
     } catch (error) {
       console.error("Error loading history:", error);
+    }
+  };
+
+  const loadClientPoints = async () => {
+    if (!appointment) return;
+
+    try {
+      const { data, error } = await supabase
+        .from("pontos")
+        .select("pontos")
+        .eq("user_id", appointment.user_id)
+        .maybeSingle();
+
+      if (error) throw error;
+      setClientPoints(data?.pontos || 0);
+    } catch (error) {
+      console.error("Error loading client points:", error);
     }
   };
 
@@ -129,6 +148,8 @@ export function AppointmentDetailsSidebar({ appointment, open, onClose, onUpdate
   if (!appointment) return null;
 
   const payment = appointment.pagamentos?.[0];
+  const paymentMethod = payment?.metodo || appointment.payment_method || 'cash';
+  const isPrepaid = payment?.status === 'paid';
   const canComplete = appointment.status !== 'completed' && appointment.status !== 'cancelled_by_admin';
   const canCancel = appointment.status !== 'completed' && appointment.status !== 'cancelled_by_admin' && appointment.status !== 'cancelled_by_user';
 
@@ -201,32 +222,37 @@ export function AppointmentDetailsSidebar({ appointment, open, onClose, onUpdate
               <CreditCard className="w-4 h-4" />
               PAGAMENTO
             </div>
-            <div className="pl-6 space-y-2">
-              {payment ? (
-                <>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="outline" className={
-                      payment.status === 'paid' 
-                        ? "bg-green-500/20 text-green-600" 
-                        : payment.status === 'pending'
-                        ? "bg-yellow-500/20 text-yellow-600"
-                        : "bg-red-500/20 text-red-600"
-                    }>
-                      {payment.status === 'paid' && <CheckCircle2 className="w-3 h-3 mr-1" />}
-                      {payment.status === 'pending' && <Clock className="w-3 h-3 mr-1" />}
-                      {payment.status === 'failed' && <AlertCircle className="w-3 h-3 mr-1" />}
-                      {payment.status === 'paid' ? 'Pago' : payment.status === 'pending' ? 'Pendente' : 'Falhou'}
-                    </Badge>
-                    <Badge variant="outline">
-                      {payment.metodo === 'pix' ? 'PIX' : payment.metodo === 'card' ? 'Cartão' : 'Dinheiro'}
-                    </Badge>
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    Valor: R$ {payment.valor.toFixed(2)}
+            <div className="pl-6 space-y-3">
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="text-xs">
+                    {paymentMethod === 'pix' && '💳 PIX'}
+                    {paymentMethod === 'card' && '💳 Cartão'}
+                    {paymentMethod === 'cash' && '💸 Dinheiro'}
+                  </Badge>
+                  <Badge variant={isPrepaid ? "default" : "outline"} className={isPrepaid ? "bg-green-500 text-xs" : "text-xs"}>
+                    {isPrepaid ? '✅ Pago Antecipadamente' : '⏳ Pagar na Barbearia'}
+                  </Badge>
+                </div>
+                <p className="text-sm font-medium">
+                  Valor: R$ {appointment.preco.toFixed(2)}
+                </p>
+              </div>
+
+              {appointment.is_free && (
+                <div className="bg-green-500/10 border border-green-500/20 p-2 rounded">
+                  <p className="text-xs text-green-700 dark:text-green-400 font-medium">
+                    🎁 Usando Corte Grátis de Fidelidade
                   </p>
-                </>
-              ) : (
-                <p className="text-sm text-muted-foreground">Sem informação de pagamento</p>
+                </div>
+              )}
+
+              {!isPrepaid && appointment.status !== 'completed' && (
+                <div className="bg-yellow-500/10 border border-yellow-500/20 p-2 rounded">
+                  <p className="text-xs text-yellow-700 dark:text-yellow-400">
+                    ⚠️ Confirme o pagamento ao finalizar o atendimento
+                  </p>
+                </div>
               )}
             </div>
           </div>
@@ -245,6 +271,38 @@ export function AppointmentDetailsSidebar({ appointment, open, onClose, onUpdate
               </div>
             </>
           )}
+
+          {/* Pontos de Fidelidade */}
+          <Separator />
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 text-sm font-semibold text-muted-foreground">
+              <CheckCircle2 className="w-4 h-4" />
+              FIDELIDADE
+            </div>
+            <div className="pl-6 space-y-2">
+              <div className="bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-500/20 p-3 rounded-lg">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">Pontos do Cliente</span>
+                  <Badge className="bg-gradient-to-r from-purple-500 to-pink-500 text-white">
+                    ⭐ {clientPoints}/5 pontos
+                  </Badge>
+                </div>
+                <p className="text-xs text-muted-foreground mt-2">
+                  {clientPoints >= 5 
+                    ? "🎁 Cliente pode resgatar 1 corte grátis!" 
+                    : `Faltam ${5 - clientPoints} pontos para corte grátis`}
+                </p>
+              </div>
+
+              {appointment.ponto_liberado && (
+                <div className="bg-green-500/10 border border-green-500/20 p-2 rounded">
+                  <p className="text-xs text-green-700 dark:text-green-400">
+                    ✅ Ponto já liberado para este atendimento
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
 
           {/* Confirmações */}
           <Separator />
