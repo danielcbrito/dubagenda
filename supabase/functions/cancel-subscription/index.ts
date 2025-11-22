@@ -30,16 +30,21 @@ serve(async (req) => {
       throw new Error('Unauthorized');
     }
 
-    // Get active subscription
+    // Get active or suspended subscription (PIX pending payment)
     const { data: subscription, error: subError } = await supabase
       .from('assinaturas')
       .select('*')
       .eq('user_id', user.id)
-      .eq('status', 'active')
-      .single();
+      .in('status', ['active', 'suspended'])
+      .maybeSingle();
 
-    if (subError || !subscription) {
-      throw new Error('Assinatura ativa não encontrada');
+    if (subError) {
+      console.error('Error fetching subscription:', subError);
+      throw new Error('Erro ao buscar assinatura');
+    }
+
+    if (!subscription) {
+      throw new Error('Nenhuma assinatura encontrada para cancelar');
     }
 
     const asaasApiKey = Deno.env.get('ASAAS_API_KEY');
@@ -52,7 +57,7 @@ serve(async (req) => {
       console.log('Canceling Asaas subscription:', subscription.gateway_subscription_id);
 
       const asaasResponse = await fetch(
-        `https://sandbox.asaas.com/api/v3/subscriptions/${subscription.gateway_subscription_id}`,
+        `https://api.asaas.com/v3/subscriptions/${subscription.gateway_subscription_id}`,
         {
           method: 'DELETE',
           headers: {
@@ -63,8 +68,12 @@ serve(async (req) => {
       );
 
       if (!asaasResponse.ok) {
-        const asaasResult = await asaasResponse.json();
-        console.error('Asaas cancellation error:', asaasResult);
+        const errorText = await asaasResponse.text();
+        console.error('Asaas cancellation error:', {
+          status: asaasResponse.status,
+          statusText: asaasResponse.statusText,
+          body: errorText
+        });
         throw new Error('Erro ao cancelar assinatura no gateway de pagamento');
       }
 
