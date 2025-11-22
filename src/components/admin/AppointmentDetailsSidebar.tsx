@@ -226,12 +226,12 @@ export function AppointmentDetailsSidebar({ appointment, open, onClose, onUpdate
               <div className="flex flex-col gap-2">
                 <div className="flex items-center gap-2">
                   <Badge variant="outline" className="text-xs">
-                    {paymentMethod === 'pix' && '💳 PIX'}
-                    {paymentMethod === 'card' && '💳 Cartão'}
-                    {paymentMethod === 'cash' && '💸 Dinheiro'}
+                    {paymentMethod === 'pix' && 'PIX'}
+                    {paymentMethod === 'card' && 'Cartão'}
+                    {paymentMethod === 'cash' && 'Dinheiro'}
                   </Badge>
                   <Badge variant={isPrepaid ? "default" : "outline"} className={isPrepaid ? "bg-green-500 text-xs" : "text-xs"}>
-                    {isPrepaid ? '✅ Pago Antecipadamente' : '⏳ Pagar na Barbearia'}
+                    {isPrepaid ? 'Pago Antecipadamente' : 'Pagar na Barbearia'}
                   </Badge>
                 </div>
                 <p className="text-sm font-medium">
@@ -242,7 +242,7 @@ export function AppointmentDetailsSidebar({ appointment, open, onClose, onUpdate
               {appointment.is_free && (
                 <div className="bg-green-500/10 border border-green-500/20 p-2 rounded">
                   <p className="text-xs text-green-700 dark:text-green-400 font-medium">
-                    🎁 Usando Corte Grátis de Fidelidade
+                    Usando Corte Grátis de Fidelidade
                   </p>
                 </div>
               )}
@@ -250,7 +250,7 @@ export function AppointmentDetailsSidebar({ appointment, open, onClose, onUpdate
               {!isPrepaid && appointment.status !== 'completed' && (
                 <div className="bg-yellow-500/10 border border-yellow-500/20 p-2 rounded">
                   <p className="text-xs text-yellow-700 dark:text-yellow-400">
-                    ⚠️ Confirme o pagamento ao finalizar o atendimento
+                    Confirme o pagamento ao finalizar o atendimento
                   </p>
                 </div>
               )}
@@ -284,20 +284,20 @@ export function AppointmentDetailsSidebar({ appointment, open, onClose, onUpdate
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium">Pontos do Cliente</span>
                   <Badge className="bg-gradient-to-r from-purple-500 to-pink-500 text-white">
-                    ⭐ {clientPoints}/5 pontos
+                    {clientPoints}/5 pontos
                   </Badge>
                 </div>
                 <p className="text-xs text-muted-foreground mt-2">
                   {clientPoints >= 5 
-                    ? "🎁 Cliente pode resgatar 1 corte grátis!" 
-                    : `Faltam ${5 - clientPoints} pontos para corte grátis`}
+                    ? "Cliente pode resgatar 1 corte gratuito" 
+                    : `Faltam ${5 - clientPoints} pontos para corte gratuito`}
                 </p>
               </div>
 
               {appointment.ponto_liberado && (
                 <div className="bg-green-500/10 border border-green-500/20 p-2 rounded">
                   <p className="text-xs text-green-700 dark:text-green-400">
-                    ✅ Ponto já liberado para este atendimento
+                    Ponto já liberado para este atendimento
                   </p>
                 </div>
               )}

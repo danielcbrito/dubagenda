@@ -110,9 +110,8 @@ export function AdminConfirmacoesPendentes() {
 
       if (error) throw error;
 
-      toast.success("✅ Agendamento confirmado e movido para a agenda!");
+      toast.success("Agendamento confirmado e movido para a agenda");
       
-      // Optimistic UI: remove from the list immediately
       setAppointments(prev => prev.filter(a => a.id !== appointmentId));
       loadPending();
     } catch (error) {
@@ -133,9 +132,8 @@ export function AdminConfirmacoesPendentes() {
 
       if (error) throw error;
       
-      toast.success("❌ Agendamento recusado. Cliente será notificado.");
+      toast.success("Agendamento recusado. Cliente será notificado.");
       
-      // Optimistic UI: remove from the list immediately
       setAppointments(prev => prev.filter(a => a.id !== appointmentId));
       loadPending();
     } catch (error) {
@@ -175,7 +173,7 @@ export function AdminConfirmacoesPendentes() {
                     <div className="flex items-center gap-3 mb-2">
                       <h3 className="text-lg font-bold">{apt.servico?.nome || "Serviço"}</h3>
                       <Badge variant="outline" className="bg-yellow-500/10 text-yellow-700 border-yellow-500/20">
-                        🔔 Aguardando Aprovação
+                        Aguardando Aprovação
                       </Badge>
                     </div>
 
@@ -197,31 +195,31 @@ export function AdminConfirmacoesPendentes() {
                     {/* Forma de Pagamento */}
                     <div className="flex flex-wrap gap-2 mb-3">
                       <Badge variant="outline" className="text-xs">
-                        💰 Valor: R$ {apt.preco.toFixed(2)}
+                        Valor: R$ {apt.preco.toFixed(2)}
                       </Badge>
                       
                       {paymentMethod === 'pix' && (
                         <Badge variant="outline" className={isPrepaid ? "bg-green-500/10 text-green-700 border-green-500/20" : "bg-yellow-500/10 text-yellow-700 border-yellow-500/20"}>
-                          💳 PIX {isPrepaid ? '(Pago)' : '(Pendente)'}
+                          PIX {isPrepaid ? '(Pago)' : '(Pendente)'}
                         </Badge>
                       )}
                       
                       {paymentMethod === 'card' && (
                         <Badge variant="outline" className={isPrepaid ? "bg-green-500/10 text-green-700 border-green-500/20" : "bg-yellow-500/10 text-yellow-700 border-yellow-500/20"}>
-                          💳 Cartão {isPrepaid ? '(Pago)' : '(Pendente)'}
+                          Cartão {isPrepaid ? '(Pago)' : '(Pendente)'}
                         </Badge>
                       )}
                       
                       {paymentMethod === 'cash' && (
                         <Badge variant="outline" className="bg-blue-500/10 text-blue-700 border-blue-500/20">
-                          💸 Pagar na Barbearia
+                          Pagar na Barbearia
                         </Badge>
                       )}
                     </div>
 
                     <div className="bg-yellow-500/10 border border-yellow-500/20 p-3 rounded-lg">
                       <p className="text-xs text-yellow-700 dark:text-yellow-400">
-                        ⚠️ Este agendamento só aparecerá na sua agenda após você aprovar
+                        Este agendamento aparecerá na agenda após aprovação
                       </p>
                     </div>
                   </div>
