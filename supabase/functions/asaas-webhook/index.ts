@@ -18,6 +18,7 @@ interface AsaasWebhookEvent {
     billingType?: string;
     description?: string;
     externalReference?: string;
+    subscription?: string; // Subscription ID if payment is related to a subscription
   };
   subscription?: {
     id: string;
@@ -248,14 +249,67 @@ async function handlePaymentConfirmed(supabase: any, payload: AsaasWebhookEvent)
       }
     }
 
-    // If payment is for subscription, unblock user
+    // If payment is for a subscription, activate it and unblock user
     if (payment.assinatura_id) {
-      await supabase
-        .from('profiles')
-        .update({ blocked: false })
-        .eq('id', payment.user_id);
+      const { error: subscriptionError } = await supabase
+        .from('assinaturas')
+        .update({ status: 'active' })
+        .eq('id', payment.assinatura_id);
 
-      console.log(`User ${payment.user_id} unblocked after subscription payment`);
+      if (subscriptionError) {
+        console.error('Error activating subscription:', subscriptionError);
+      } else {
+        console.log(`Subscription ${payment.assinatura_id} activated`);
+
+        // Unblock user
+        const { error: unblockError } = await supabase
+          .from('profiles')
+          .update({ blocked: false })
+          .eq('id', payment.user_id);
+
+        if (unblockError) {
+          console.error('Error unblocking user:', unblockError);
+        } else {
+          console.log(`User ${payment.user_id} unblocked after subscription payment`);
+        }
+      }
+    }
+  }
+
+  // Also check if this payment is linked to a subscription directly via subscription ID
+  // (for first payments of PIX subscriptions)
+  if (payload.payment.subscription) {
+    const { data: subscription } = await supabase
+      .from('assinaturas')
+      .select('id, user_id, status')
+      .eq('gateway_subscription_id', payload.payment.subscription)
+      .maybeSingle();
+
+    if (subscription && subscription.status === 'pending') {
+      console.log('Activating PIX subscription after first payment:', subscription.id);
+
+      const { error: activateError } = await supabase
+        .from('assinaturas')
+        .update({ status: 'active' })
+        .eq('id', subscription.id);
+
+      if (activateError) {
+        console.error('Error activating PIX subscription:', activateError);
+      } else {
+        console.log(`PIX subscription ${subscription.id} activated`);
+
+        // Unblock user
+        const { error: unblockError } = await supabase
+          .from('profiles')
+          .update({ blocked: false })
+          .eq('id', subscription.user_id);
+
+        if (unblockError) {
+          console.error('Error unblocking user after PIX subscription:', unblockError);
+        } else {
+          console.log(`User ${subscription.user_id} unblocked after PIX subscription payment`);
+        }
+      }
     }
   }
 

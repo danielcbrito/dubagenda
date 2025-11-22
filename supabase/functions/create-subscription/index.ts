@@ -89,9 +89,57 @@ serve(async (req) => {
       throw new Error('Asaas API key not configured');
     }
 
+    // Create or get customer in Asaas
+    const asaasCustomer = {
+      name: profile?.nome || 'Cliente',
+      email: user.email || 'noemail@example.com',
+      cpfCnpj: profile?.cpf || '',
+      externalReference: user.id,
+    };
+
+    console.log('Creating/fetching Asaas customer for subscription');
+
+    // Search for existing customer first
+    const customerSearchUrl = `https://api.asaas.com/v3/customers?externalReference=${user.id}`;
+    const customerSearchResponse = await fetch(customerSearchUrl, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'access_token': asaasApiKey,
+      },
+    });
+
+    const customerSearchResult = await customerSearchResponse.json();
+    let customerId = null;
+
+    if (customerSearchResult.data && customerSearchResult.data.length > 0) {
+      customerId = customerSearchResult.data[0].id;
+      console.log('Using existing customer:', customerId);
+    } else {
+      // Create new customer
+      const customerCreateResponse = await fetch('https://api.asaas.com/v3/customers', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'access_token': asaasApiKey,
+        },
+        body: JSON.stringify(asaasCustomer),
+      });
+
+      const customerCreateResult = await customerCreateResponse.json();
+
+      if (!customerCreateResponse.ok || customerCreateResult.errors) {
+        console.error('Asaas customer error:', customerCreateResult);
+        throw new Error(customerCreateResult.errors?.[0]?.description || 'Erro ao criar cliente no Asaas');
+      }
+
+      customerId = customerCreateResult.id;
+      console.log('Created new customer:', customerId);
+    }
+
     // Create subscription in Asaas
     const subscriptionData: any = {
-      customer: user.id,
+      customer: customerId,
       billingType: paymentMethod === 'pix' ? 'PIX' : 'CREDIT_CARD',
       value: plano.preco_mensal,
       nextDueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 30 days from now
@@ -146,8 +194,69 @@ serve(async (req) => {
       throw new Error(asaasResult.errors?.[0]?.description || 'Erro ao criar assinatura no Asaas');
     }
 
+     // Fetch the first payment details to get PIX QR Code
+    let firstPaymentDetails: any = null;
+    if (asaasResult.id) {
+      try {
+        // Get payments for this subscription
+        const paymentsResponse = await fetch(`https://api.asaas.com/v3/payments?subscription=${asaasResult.id}`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'access_token': asaasApiKey,
+          },
+        });
+
+        const paymentsResult = await paymentsResponse.json();
+        console.log('Subscription payments:', { count: paymentsResult.data?.length || 0 });
+
+        if (paymentsResult.data && paymentsResult.data.length > 0) {
+          const firstPayment = paymentsResult.data[0];
+          firstPaymentDetails = {
+            id: firstPayment.id,
+            status: firstPayment.status,
+            value: firstPayment.value,
+          };
+
+          // For PIX, fetch QR Code
+          if (paymentMethod === 'pix') {
+            const qrCodeResponse = await fetch(`https://api.asaas.com/v3/payments/${firstPayment.id}/pixQrCode`, {
+              method: 'GET',
+              headers: {
+                'Content-Type': 'application/json',
+                'access_token': asaasApiKey,
+              },
+            });
+
+            if (qrCodeResponse.ok) {
+              const qrCodeData = await qrCodeResponse.json();
+              firstPaymentDetails.pixQrCode = qrCodeData;
+              console.log('PIX QR Code fetched for subscription');
+            } else {
+              console.error('Failed to fetch PIX QR Code:', await qrCodeResponse.text());
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching payment details:', error);
+      }
+    }
+
     // Calculate next billing date
     const nextBillingDate = new Date(asaasResult.nextDueDate);
+
+    // Determine initial subscription status
+    // For PIX, keep as 'pending' until payment is confirmed
+    // For card, mark as 'active' if first payment is confirmed
+    const initialStatus = (paymentMethod === 'pix') 
+      ? 'pending' 
+      : (firstPaymentDetails?.status === 'CONFIRMED' ? 'active' : 'pending');
+
+    console.log('Subscription initial status:', { 
+      paymentMethod, 
+      firstPaymentStatus: firstPaymentDetails?.status,
+      initialStatus 
+    });
 
     // Save subscription to database
     const { data: subscription, error: subscriptionError } = await supabase
@@ -155,7 +264,7 @@ serve(async (req) => {
       .insert({
         user_id: user.id,
         plano_id: planoId,
-        status: 'active',
+        status: initialStatus,
         payment_method: paymentMethod,
         gateway_subscription_id: asaasResult.id,
         next_billing_date: nextBillingDate.toISOString().split('T')[0],
@@ -165,25 +274,35 @@ serve(async (req) => {
 
     if (subscriptionError) throw subscriptionError;
 
-    // Unblock user if they were blocked
-    if (profile.blocked) {
+    // Unblock user if they were blocked (only if payment is confirmed)
+    if (profile.blocked && initialStatus === 'active') {
       await supabase
         .from('profiles')
         .update({ blocked: false })
         .eq('id', user.id);
     }
 
+    // Build response
+    const response: any = {
+      success: true,
+      subscription,
+      asaasSubscription: {
+        id: asaasResult.id,
+        status: asaasResult.status,
+        nextDueDate: asaasResult.nextDueDate,
+      },
+      message: paymentMethod === 'pix' 
+        ? 'Assinatura criada! Complete o pagamento via PIX.' 
+        : 'Assinatura criada com sucesso!',
+    };
+
+    // Add first payment details if available
+    if (firstPaymentDetails) {
+      response.asaasSubscription.firstPayment = firstPaymentDetails;
+    }
+
     return new Response(
-      JSON.stringify({
-        success: true,
-        subscription,
-        asaasSubscription: {
-          id: asaasResult.id,
-          status: asaasResult.status,
-          nextDueDate: asaasResult.nextDueDate,
-        },
-        message: 'Assinatura criada com sucesso!',
-      }),
+      JSON.stringify(response),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
