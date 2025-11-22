@@ -82,7 +82,7 @@ export function MyPlansSheet({ open, onOpenChange, userId }: MyPlansSheetProps) 
           )
         `)
         .eq("user_id", userId)
-        .eq("status", "active")
+        .in("status", ["active", "suspended"])
         .maybeSingle();
 
       if (error) {
@@ -104,8 +104,9 @@ export function MyPlansSheet({ open, onOpenChange, userId }: MyPlansSheetProps) 
   const getStatusBadge = (status: string) => {
     const statusMap: Record<string, { label: string; variant: "default" | "secondary" | "destructive" }> = {
       active: { label: "Ativo", variant: "default" },
-      expired: { label: "Vencido", variant: "destructive" },
-      canceled: { label: "Cancelado", variant: "secondary" },
+      suspended: { label: "Aguardando Pagamento", variant: "secondary" },
+      past_due: { label: "Vencido", variant: "destructive" },
+      cancelled: { label: "Cancelado", variant: "secondary" },
     };
     return statusMap[status] || { label: status, variant: "secondary" };
   };

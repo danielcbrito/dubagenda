@@ -285,8 +285,8 @@ async function handlePaymentConfirmed(supabase: any, payload: AsaasWebhookEvent)
       .eq('gateway_subscription_id', payload.payment.subscription)
       .maybeSingle();
 
-    if (subscription && subscription.status === 'pending') {
-      console.log('Activating PIX subscription after first payment:', subscription.id);
+    if (subscription && subscription.status === 'suspended') {
+      console.log('Activating suspended PIX subscription after first payment:', subscription.id);
 
       const { error: activateError } = await supabase
         .from('assinaturas')
