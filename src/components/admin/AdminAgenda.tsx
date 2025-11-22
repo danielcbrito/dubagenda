@@ -136,6 +136,7 @@ export function AdminAgenda() {
         .from("agendamentos")
         .select("*")
         .eq("data", dateStr)
+        .eq("barbeiro_confirmou", true) // APENAS AGENDAMENTOS CONFIRMADOS PELO BARBEIRO
         .order("hora", { ascending: true });
 
       const { data, error } = await query;

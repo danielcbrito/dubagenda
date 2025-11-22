@@ -83,9 +83,9 @@ serve(async (req) => {
 
     // Handle "cash" payment - create appointment immediately
     if (metodo === 'cash') {
-      console.log('Creating cash appointment immediately');
+      console.log('Creating cash appointment as pending (awaiting barber confirmation)');
       
-      // Create the appointment directly
+      // Create the appointment directly but as PENDING
       const { data: appointment, error: aptError } = await supabase
         .from('agendamentos')
         .insert({
@@ -97,8 +97,8 @@ serve(async (req) => {
           duracao: bookingData.duracao,
           preco: bookingData.preco,
           observacoes: bookingData.observacoes,
-          status: 'pending', // Barbeiro needs to confirm
-          barbeiro_confirmou: false,
+          status: 'pending', // PENDING até barbeiro confirmar
+          barbeiro_confirmou: false, // AGUARDANDO APROVAÇÃO DO BARBEIRO
           cliente_confirmou: false,
           payment_method: 'cash', // Store payment method
         })
@@ -118,7 +118,7 @@ serve(async (req) => {
           agendamento_id: appointment.id,
           metodo: 'cash',
           valor: bookingData.preco,
-          status: 'pending',
+          status: 'pending', // Pagamento pendente até confirmação
         })
         .select()
         .single();
@@ -128,7 +128,7 @@ serve(async (req) => {
         throw paymentError;
       }
 
-      console.log('Cash appointment created successfully:', appointment.id);
+      console.log('Cash appointment created successfully (pending barber approval):', appointment.id);
 
       return new Response(
         JSON.stringify({
@@ -136,7 +136,7 @@ serve(async (req) => {
           paymentMethod: 'cash',
           appointment,
           payment,
-          message: 'Agendamento criado! Pague na barbearia.',
+          message: 'Agendamento criado! Aguardando confirmação do barbeiro.',
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
@@ -319,7 +319,7 @@ serve(async (req) => {
 
     // For card payments, if confirmed immediately, convert to appointment
     if (metodo === 'card' && asaasPaymentResult.status === 'CONFIRMED') {
-      console.log('Card payment confirmed immediately, creating appointment');
+      console.log('Card payment confirmed, creating appointment as PENDING (awaiting barber confirmation)');
       
       const { data: appointment, error: aptError } = await supabase
         .from('agendamentos')
@@ -332,9 +332,9 @@ serve(async (req) => {
           duracao: pendingBooking.duracao,
           preco: pendingBooking.preco,
           observacoes: pendingBooking.observacoes,
-          status: 'pending', // Barbeiro needs to confirm
-          barbeiro_confirmou: false,
-          cliente_confirmou: true,
+          status: 'pending', // PENDING até barbeiro confirmar
+          barbeiro_confirmou: false, // AGUARDANDO APROVAÇÃO DO BARBEIRO
+          cliente_confirmou: true, // Cliente já pagou
           payment_method: metodo, // Store payment method
         })
         .select()
@@ -354,7 +354,7 @@ serve(async (req) => {
           metodo: metodo,
           valor: pendingBooking.preco,
           gateway_payment_id: asaasPaymentResult.id,
-          status: 'paid',
+          status: 'paid', // Cartão já foi pago
           data_pagamento: new Date().toISOString(),
         })
         .select()
@@ -368,7 +368,7 @@ serve(async (req) => {
       // Delete pending booking
       await supabase.from('pending_bookings').delete().eq('id', pendingBooking.id);
 
-      console.log('Card payment completed, appointment created:', appointment.id);
+      console.log('Card payment completed, appointment created (awaiting barber approval):', appointment.id);
     }
 
     // For PIX, fetch the QR Code

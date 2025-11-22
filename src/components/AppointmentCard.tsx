@@ -46,7 +46,16 @@ export function AppointmentCard({
   const [rescheduleModalOpen, setRescheduleModalOpen] = useState(false);
   const [cancelModalOpen, setCancelModalOpen] = useState(false);
 
-  const getStatusConfig = (status: string) => {
+  const getStatusConfig = (status: string, barbeiroConfirmou: boolean | undefined) => {
+    // Aguardando confirmação do barbeiro
+    if (status === "pending" && !barbeiroConfirmou) {
+      return { 
+        label: "Aguardando Confirmação", 
+        className: "bg-yellow-500/20 text-yellow-600 border-yellow-500/30",
+        message: "O barbeiro precisa aprovar seu agendamento. Você será notificado assim que for confirmado."
+      };
+    }
+    
     switch (status) {
       case "confirmed":
         return { label: "Confirmado", className: "bg-green-500/20 text-green-500 border-green-500/30" };
@@ -57,15 +66,16 @@ export function AppointmentCard({
       case "cancelled_by_user":
         return { label: "Cancelado", className: "bg-red-600/30 text-red-500 border-red-500/50" };
       case "cancelled_by_admin":
-        return { label: "Cancelado pelo Admin", className: "bg-red-600/30 text-red-500 border-red-500/50" };
+        return { label: "Recusado pela Barbearia", className: "bg-red-600/30 text-red-500 border-red-500/50" };
       default:
         return { label: status, className: "bg-muted text-muted-foreground border-muted" };
     }
   };
 
-  const statusConfig = getStatusConfig(appointment.status);
+  const statusConfig = getStatusConfig(appointment.status, appointment.barbeiro_confirmou);
   const isCancelled = appointment.status === "cancelled_by_user" || appointment.status === "cancelled_by_admin";
-  const canCancel = appointment.status === "pending" || appointment.status === "confirmed";
+  const isAwaitingBarberApproval = appointment.status === "pending" && !appointment.barbeiro_confirmou;
+  const canCancel = (appointment.status === "pending" || appointment.status === "confirmed") && !isAwaitingBarberApproval;
   const needsConfirmation = appointment.status === "completed" && !appointment.cliente_confirmou && onConfirm;
 
   const payment = payments.find(p => p.agendamento_id === appointment.id);
@@ -105,6 +115,15 @@ export function AppointmentCard({
               <span className="font-semibold text-foreground">R$ {appointment.preco.toFixed(2)}</span>
             </div>
           )}
+          
+          {/* Mensagem de aguardando aprovação */}
+          {isAwaitingBarberApproval && statusConfig.message && (
+            <div className="bg-yellow-500/10 border border-yellow-500/20 p-3 rounded-lg mt-3">
+              <p className="text-xs text-yellow-700 dark:text-yellow-400">
+                ⏳ {statusConfig.message}
+              </p>
+            </div>
+          )}
         </div>
 
         {needsConfirmation && (
@@ -125,6 +144,7 @@ export function AppointmentCard({
               size="sm"
               variant="outline"
               className="flex-1"
+              disabled={isAwaitingBarberApproval}
             >
               Remarcar
             </Button>
@@ -133,6 +153,7 @@ export function AppointmentCard({
               size="sm"
               variant="outline"
               className="flex-1 border-destructive/30 text-destructive hover:bg-destructive/10"
+              disabled={isAwaitingBarberApproval}
             >
               Cancelar
             </Button>

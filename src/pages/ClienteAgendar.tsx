@@ -824,9 +824,9 @@ const ClienteAgendar = () => {
                     )}
                   </div>
                   <div className="flex-1">
-                    <h4 className="font-semibold">Dinheiro</h4>
+                    <h4 className="font-semibold">Pagar na Barbearia</h4>
                     <p className="text-xs text-muted-foreground">
-                      Pague na barbearia
+                      Pagamento presencial após confirmação do barbeiro
                     </p>
                   </div>
                 </div>
