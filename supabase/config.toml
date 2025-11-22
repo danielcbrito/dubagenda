@@ -17,3 +17,6 @@ verify_jwt = true
 
 [functions.generate-subscription-charges]
 verify_jwt = false
+
+[functions.get-asaas-financial-data]
+verify_jwt = true
