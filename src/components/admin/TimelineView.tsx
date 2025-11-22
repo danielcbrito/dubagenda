@@ -153,17 +153,17 @@ export function TimelineView({ appointments, loading, onSelectAppointment }: Tim
                       </Badge>
                       {timeStatus === "now" && (
                         <Badge className="bg-green-500 text-white animate-pulse">
-                          ⏰ É AGORA!
+                          É AGORA
                         </Badge>
                       )}
                       {timeStatus === "soon" && (
                         <Badge className="bg-yellow-500 text-white">
-                          ⏳ Em breve
+                          Em breve
                         </Badge>
                       )}
                       {timeStatus === "passed" && appointment.status !== "completed" && (
                         <Badge variant="destructive">
-                          ❌ Atrasado
+                          Atrasado
                         </Badge>
                       )}
                     </div>
@@ -176,7 +176,7 @@ export function TimelineView({ appointments, loading, onSelectAppointment }: Tim
                       
                       {appointment.is_free ? (
                         <Badge className="bg-gradient-to-r from-purple-500 to-pink-500 text-white">
-                          🎁 Corte Grátis
+                          Corte Grátis
                         </Badge>
                       ) : (
                         <>
@@ -195,7 +195,7 @@ export function TimelineView({ appointments, loading, onSelectAppointment }: Tim
 
                       {appointment.cliente_confirmou && (
                         <Badge variant="outline" className="bg-green-500/20 text-green-600">
-                          ✓ Cliente confirmou
+                          Cliente confirmou
                         </Badge>
                       )}
                     </div>

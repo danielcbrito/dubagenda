@@ -47,12 +47,11 @@ export function AppointmentCard({
   const [cancelModalOpen, setCancelModalOpen] = useState(false);
 
   const getStatusConfig = (status: string, barbeiroConfirmou: boolean | undefined) => {
-    // Aguardando confirmação do barbeiro
     if (status === "pending" && !barbeiroConfirmou) {
       return { 
         label: "Aguardando Confirmação", 
         className: "bg-yellow-500/20 text-yellow-600 border-yellow-500/30",
-        message: "O barbeiro precisa aprovar seu agendamento. Você será notificado assim que for confirmado."
+        message: "Seu agendamento está em análise. Aguarde a aprovação da barbearia."
       };
     }
     
@@ -66,7 +65,7 @@ export function AppointmentCard({
       case "cancelled_by_user":
         return { label: "Cancelado", className: "bg-red-600/30 text-red-500 border-red-500/50" };
       case "cancelled_by_admin":
-        return { label: "Recusado pela Barbearia", className: "bg-red-600/30 text-red-500 border-red-500/50" };
+        return { label: "Recusado", className: "bg-red-600/30 text-red-500 border-red-500/50" };
       default:
         return { label: status, className: "bg-muted text-muted-foreground border-muted" };
     }
@@ -92,8 +91,8 @@ export function AppointmentCard({
                 {statusConfig.label}
               </Badge>
               {isPaid && (
-                <span className="text-xs text-green-600 font-normal">
-                  Pago
+                <span className="text-xs text-green-600 font-medium">
+                  Pagamento confirmado
                 </span>
               )}
             </div>
@@ -116,11 +115,10 @@ export function AppointmentCard({
             </div>
           )}
           
-          {/* Mensagem de aguardando aprovação */}
           {isAwaitingBarberApproval && statusConfig.message && (
             <div className="bg-yellow-500/10 border border-yellow-500/20 p-3 rounded-lg mt-3">
-              <p className="text-xs text-yellow-700 dark:text-yellow-400">
-                ⏳ {statusConfig.message}
+              <p className="text-xs text-yellow-700 dark:text-yellow-400 font-medium">
+                {statusConfig.message}
               </p>
             </div>
           )}

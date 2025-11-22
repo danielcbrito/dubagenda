@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { z } from "zod";
 import logoDub from "@/assets/logo-dub.png";
+import barbershopBg from "@/assets/barbershop-premium-bg.jpg";
 import { Loader2 } from "lucide-react";
 
 const signupSchema = z.object({
@@ -36,7 +37,6 @@ const Auth = () => {
   });
 
   useEffect(() => {
-    // Check if user is already logged in
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
         checkUserRoleAndRedirect(session.user.id);
@@ -90,7 +90,7 @@ const Auth = () => {
       }
 
       if (data.user) {
-        toast.success("Conta criada com sucesso!");
+        toast.success("Conta criada com sucesso");
         await checkUserRoleAndRedirect(data.user.id);
       }
     } catch (error) {
@@ -129,7 +129,7 @@ const Auth = () => {
       }
 
       if (data.user) {
-        toast.success("Login realizado com sucesso!");
+        toast.success("Login realizado com sucesso");
         await checkUserRoleAndRedirect(data.user.id);
       }
     } catch (error) {
@@ -144,128 +144,141 @@ const Auth = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-6">
-      <Card className="w-full max-w-md p-8 card-premium">
-        {/* Logo */}
-        <div className="flex justify-center mb-6">
-          <img src={logoDub} alt="Barbearia DUB" className="w-20 h-20 object-contain" />
-        </div>
+    <div className="min-h-screen relative flex items-center justify-center p-6">
+      {/* Background Image */}
+      <div className="absolute inset-0 z-0">
+        <img 
+          src={barbershopBg} 
+          alt="" 
+          className="w-full h-full object-cover"
+        />
+        <div className="absolute inset-0 bg-black/60" />
+      </div>
 
-        {/* Title */}
-        <h2 className="text-2xl font-bold text-center mb-6">
-          {mode === "signup" ? "Criar Conta" : "Entrar"}
-        </h2>
-
-        {/* Form */}
-        <form onSubmit={mode === "signup" ? handleSignup : handleLogin} className="space-y-4">
-          {mode === "signup" && (
-            <>
-              <div>
-                <Label htmlFor="nome" className="text-sm">Nome completo</Label>
-                <Input
-                  id="nome"
-                  name="nome"
-                  type="text"
-                  required
-                  value={formData.nome}
-                  onChange={handleInputChange}
-                  className="input-premium mt-1"
-                  placeholder="Seu nome"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="cpf" className="text-sm">CPF</Label>
-                <Input
-                  id="cpf"
-                  name="cpf"
-                  type="text"
-                  required
-                  maxLength={11}
-                  value={formData.cpf}
-                  onChange={handleInputChange}
-                  className="input-premium mt-1"
-                  placeholder="Apenas números"
-                />
-              </div>
-            </>
-          )}
-
-          <div>
-            <Label htmlFor="email" className="text-sm">Email</Label>
-            <Input
-              id="email"
-              name="email"
-              type="email"
-              required
-              value={formData.email}
-              onChange={handleInputChange}
-              className="input-premium mt-1"
-              placeholder="seu@email.com"
-            />
+      {/* Content */}
+      <div className="relative z-10 w-full max-w-6xl flex items-center justify-end">
+        <Card className="w-full max-w-md p-8 bg-card/95 backdrop-blur-sm border-border/50">
+          {/* Logo */}
+          <div className="flex justify-center mb-6">
+            <img src={logoDub} alt="Barbearia DUB" className="w-20 h-20 object-contain drop-shadow-lg" />
           </div>
 
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <Label htmlFor="senha" className="text-sm">Senha</Label>
-              {mode === "login" && (
-                <button
-                  type="button"
-                  onClick={() => navigate("/esqueci-senha")}
-                  className="text-xs text-primary hover:underline"
-                >
-                  Esqueci minha senha
-                </button>
-              )}
-            </div>
-            <Input
-              id="senha"
-              name="senha"
-              type="password"
-              required
-              value={formData.senha}
-              onChange={handleInputChange}
-              className="input-premium mt-1"
-              placeholder="Mínimo 6 caracteres"
-            />
-          </div>
+          {/* Title */}
+          <h2 className="text-2xl font-semibold text-center mb-6 tracking-tight">
+            {mode === "signup" ? "Criar Conta" : "Acesso ao Sistema"}
+          </h2>
 
-          <Button 
-            type="submit" 
-            className="w-full h-11 bg-primary hover:bg-primary/90"
-            disabled={isLoading}
-          >
-            {isLoading ? (
+          {/* Form */}
+          <form onSubmit={mode === "signup" ? handleSignup : handleLogin} className="space-y-4">
+            {mode === "signup" && (
               <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Processando...
+                <div>
+                  <Label htmlFor="nome" className="text-sm font-medium">Nome completo</Label>
+                  <Input
+                    id="nome"
+                    name="nome"
+                    type="text"
+                    required
+                    value={formData.nome}
+                    onChange={handleInputChange}
+                    className="input-premium mt-1.5"
+                    placeholder="Seu nome"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="cpf" className="text-sm font-medium">CPF</Label>
+                  <Input
+                    id="cpf"
+                    name="cpf"
+                    type="text"
+                    required
+                    maxLength={11}
+                    value={formData.cpf}
+                    onChange={handleInputChange}
+                    className="input-premium mt-1.5"
+                    placeholder="Apenas números"
+                  />
+                </div>
               </>
-            ) : (
-              mode === "signup" ? "Criar conta" : "Entrar"
             )}
-          </Button>
-        </form>
 
-        {/* Toggle mode */}
-        <div className="mt-6 text-center text-sm">
-          <button
-            onClick={() => navigate(`/auth?mode=${mode === "signup" ? "login" : "signup"}`)}
-            className="text-primary hover:underline"
-          >
-            {mode === "signup" ? "Já tem conta? Fazer login" : "Não tem conta? Criar agora"}
-          </button>
-        </div>
+            <div>
+              <Label htmlFor="email" className="text-sm font-medium">Email</Label>
+              <Input
+                id="email"
+                name="email"
+                type="email"
+                required
+                value={formData.email}
+                onChange={handleInputChange}
+                className="input-premium mt-1.5"
+                placeholder="seu@email.com"
+              />
+            </div>
 
-        {/* Back button */}
-        <div className="mt-4 text-center">
-          <button
-            onClick={() => navigate("/")}
-            className="text-xs text-muted-foreground hover:text-foreground"
-          >
-            ← Voltar
-          </button>
-        </div>
-      </Card>
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <Label htmlFor="senha" className="text-sm font-medium">Senha</Label>
+                {mode === "login" && (
+                  <button
+                    type="button"
+                    onClick={() => navigate("/esqueci-senha")}
+                    className="text-xs text-primary hover:underline"
+                  >
+                    Esqueci minha senha
+                  </button>
+                )}
+              </div>
+              <Input
+                id="senha"
+                name="senha"
+                type="password"
+                required
+                value={formData.senha}
+                onChange={handleInputChange}
+                className="input-premium mt-1.5"
+                placeholder="Mínimo 6 caracteres"
+              />
+            </div>
+
+            <Button 
+              type="submit" 
+              className="w-full h-11 bg-primary hover:bg-primary/90 font-medium"
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Processando...
+                </>
+              ) : (
+                mode === "signup" ? "Criar conta" : "Entrar"
+              )}
+            </Button>
+          </form>
+
+          {/* Toggle mode */}
+          <div className="mt-6 text-center text-sm">
+            <button
+              onClick={() => navigate(`/auth?mode=${mode === "signup" ? "login" : "signup"}`)}
+              className="text-primary hover:underline"
+            >
+              {mode === "signup" ? "Já possui conta? Fazer login" : "Não possui conta? Criar agora"}
+            </button>
+          </div>
+
+          {/* Back button */}
+          <div className="mt-4 text-center">
+            <button
+              onClick={() => navigate("/")}
+              className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+            >
+              ← Voltar
+            </button>
+          </div>
+        </Card>
+      </div>
     </div>
   );
 };

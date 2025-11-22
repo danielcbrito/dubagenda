@@ -28,11 +28,11 @@ const Index = () => {
         </div>
 
         {/* Title */}
-        <h1 className="text-3xl font-bold text-center mb-2 tracking-tight">
+        <h1 className="text-3xl font-semibold text-center mb-2 tracking-tight">
           Barbearia <span className="text-primary">DUB</span>
         </h1>
         <p className="text-sm text-muted-foreground text-center mb-12 max-w-xs">
-          Estilo premium, atendimento exclusivo
+          Estilo premium. Atendimento exclusivo.
         </p>
 
         {/* Action buttons */}

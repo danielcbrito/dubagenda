@@ -26,7 +26,6 @@ export function ConfirmAttendanceModal({ appointment, open, onClose, onUpdate }:
   const handleConfirmAttendance = async () => {
     setLoading(true);
     try {
-      // Marcar como completado e liberar ponto automaticamente via trigger
       const { error } = await supabase
         .from("agendamentos")
         .update({ 
@@ -38,7 +37,7 @@ export function ConfirmAttendanceModal({ appointment, open, onClose, onUpdate }:
 
       if (error) throw error;
 
-      toast.success("✅ Atendimento confirmado! Ponto de fidelidade liberado.");
+      toast.success("Atendimento confirmado com sucesso. Ponto de fidelidade liberado.");
       onUpdate();
       onClose();
     } catch (error) {
@@ -63,7 +62,7 @@ export function ConfirmAttendanceModal({ appointment, open, onClose, onUpdate }:
 
       if (error) throw error;
 
-      toast.info("Cliente marcado como ausente (No-show)");
+      toast.info("Cliente marcado como ausente");
       onUpdate();
       onClose();
     } catch (error) {
@@ -78,12 +77,12 @@ export function ConfirmAttendanceModal({ appointment, open, onClose, onUpdate }:
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-xl">
+          <DialogTitle className="flex items-center gap-2 text-xl font-semibold">
             <AlertTriangle className="w-6 h-6 text-yellow-500" />
             Confirmação Obrigatória
           </DialogTitle>
           <DialogDescription className="text-base">
-            O horário do atendimento chegou ao fim. Confirme se tudo ocorreu corretamente.
+            Confirme a realização do atendimento e o pagamento do cliente.
           </DialogDescription>
         </DialogHeader>
 
@@ -107,25 +106,25 @@ export function ConfirmAttendanceModal({ appointment, open, onClose, onUpdate }:
             </div>
             <div className="flex items-center gap-2">
               <Badge variant={isPrepaid ? "default" : "outline"} className={isPrepaid ? "bg-green-500" : ""}>
-                {paymentMethod === 'pix' && '💳 PIX'}
-                {paymentMethod === 'card' && '💳 Cartão'}
-                {paymentMethod === 'cash' && '💸 Dinheiro'}
-                {isPrepaid ? ' (Pago Antecipadamente)' : ' (Pagar na Barbearia)'}
+                {paymentMethod === 'pix' && 'PIX'}
+                {paymentMethod === 'card' && 'Cartão'}
+                {paymentMethod === 'cash' && 'Pagar na Barbearia'}
+                {isPrepaid ? ' - Pago' : ' - Pendente'}
               </Badge>
             </div>
           </div>
 
           {/* Perguntas */}
           <div className="space-y-2 bg-blue-500/10 border border-blue-500/20 p-4 rounded-lg">
-            <p className="font-semibold text-sm">❓ O cliente compareceu ao atendimento?</p>
-            <p className="font-semibold text-sm">❓ O pagamento foi realizado corretamente?</p>
+            <p className="font-medium text-sm">O cliente compareceu ao atendimento?</p>
+            <p className="font-medium text-sm">O pagamento foi realizado corretamente?</p>
           </div>
 
           {/* Aviso de Segurança */}
           {!isPrepaid && (
             <div className="bg-yellow-500/10 border border-yellow-500/20 p-3 rounded-lg">
               <p className="text-xs text-yellow-700 dark:text-yellow-400">
-                ⚠️ Cliente ainda não pagou. Confirme apenas se o pagamento foi realizado na barbearia.
+                Atenção: Cliente ainda não efetuou o pagamento. Confirme apenas após receber o pagamento na barbearia.
               </p>
             </div>
           )}
@@ -133,8 +132,8 @@ export function ConfirmAttendanceModal({ appointment, open, onClose, onUpdate }:
           {/* Explicação do Sistema de Pontos */}
           <div className="bg-green-500/10 border border-green-500/20 p-3 rounded-lg">
             <p className="text-xs text-green-700 dark:text-green-400">
-              ✅ Ao confirmar, o cliente ganhará <strong>1 ponto de fidelidade</strong>. 
-              Após 5 pontos, ele receberá automaticamente 1 corte grátis.
+              Ao confirmar, o cliente receberá <strong>1 ponto de fidelidade</strong>. 
+              Após 5 pontos, será creditado automaticamente 1 corte gratuito.
             </p>
           </div>
         </div>
