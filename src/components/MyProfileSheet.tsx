@@ -5,10 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
-import { User, Mail, CreditCard, Calendar, Lock, Edit2, Save, X } from "lucide-react";
+import { User, Mail, CreditCard, Calendar, Lock, Edit2, Save, X, Phone } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { validateCPF, formatCPF, formatPhone, validatePhone } from "@/lib/validators";
 
 interface MyProfileSheetProps {
   open: boolean;
@@ -24,17 +25,21 @@ export function MyProfileSheet({ open, onOpenChange, userId, profile, onProfileU
   const [formData, setFormData] = useState({
     nome: "",
     email: "",
-    cpf: ""
+    cpf: "",
+    telefone: ""
   });
   const [userEmail, setUserEmail] = useState("");
   const [createdAt, setCreatedAt] = useState("");
+  const [cpfError, setCpfError] = useState("");
+  const [telefoneError, setTelefoneError] = useState("");
 
   useEffect(() => {
     if (open && profile) {
       setFormData({
         nome: profile.nome || "",
         email: userEmail || "",
-        cpf: profile.cpf || ""
+        cpf: formatCPF(profile.cpf || ""),
+        telefone: formatPhone(profile.telefone || "")
       });
       loadUserData();
     }
@@ -54,6 +59,20 @@ export function MyProfileSheet({ open, onOpenChange, userId, profile, onProfileU
   const handleSave = async () => {
     if (!userId) return;
 
+    // Validate before saving
+    const cleanCPF = formData.cpf.replace(/\D/g, '');
+    const cleanPhone = formData.telefone.replace(/\D/g, '');
+
+    if (cleanCPF && !validateCPF(cleanCPF)) {
+      toast.error("CPF inválido. Verifique e tente novamente.");
+      return;
+    }
+
+    if (cleanPhone && !validatePhone(cleanPhone)) {
+      toast.error("Por favor, insira um telefone válido.");
+      return;
+    }
+
     setLoading(true);
 
     // Update profile
@@ -61,7 +80,8 @@ export function MyProfileSheet({ open, onOpenChange, userId, profile, onProfileU
       .from("profiles")
       .update({
         nome: formData.nome,
-        cpf: formData.cpf
+        cpf: cleanCPF,
+        telefone: cleanPhone
       })
       .eq("id", userId);
 
@@ -96,9 +116,44 @@ export function MyProfileSheet({ open, onOpenChange, userId, profile, onProfileU
     setFormData({
       nome: profile?.nome || "",
       email: userEmail || "",
-      cpf: profile?.cpf || ""
+      cpf: formatCPF(profile?.cpf || ""),
+      telefone: formatPhone(profile?.telefone || "")
     });
+    setCpfError("");
+    setTelefoneError("");
     setEditing(false);
+  };
+
+  const handleInputChange = (field: string, value: string) => {
+    let formattedValue = value;
+
+    if (field === "cpf") {
+      formattedValue = formatCPF(value);
+      const cleanCPF = value.replace(/\D/g, '');
+      if (cleanCPF.length === 11) {
+        if (!validateCPF(cleanCPF)) {
+          setCpfError("CPF inválido. Verifique e tente novamente.");
+        } else {
+          setCpfError("");
+        }
+      } else {
+        setCpfError("");
+      }
+    } else if (field === "telefone") {
+      formattedValue = formatPhone(value);
+      const cleanPhone = value.replace(/\D/g, '');
+      if (cleanPhone.length >= 10) {
+        if (!validatePhone(cleanPhone)) {
+          setTelefoneError("Por favor, insira um telefone válido.");
+        } else {
+          setTelefoneError("");
+        }
+      } else {
+        setTelefoneError("");
+      }
+    }
+
+    setFormData({ ...formData, [field]: formattedValue });
   };
 
   return (
@@ -122,7 +177,7 @@ export function MyProfileSheet({ open, onOpenChange, userId, profile, onProfileU
                   </Label>
                   <Input
                     value={formData.nome}
-                    onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
+                    onChange={(e) => handleInputChange('nome', e.target.value)}
                     disabled={!editing}
                     className="h-10 text-sm"
                   />
@@ -135,7 +190,7 @@ export function MyProfileSheet({ open, onOpenChange, userId, profile, onProfileU
                   </Label>
                   <Input
                     value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    onChange={(e) => handleInputChange('email', e.target.value)}
                     disabled={!editing}
                     type="email"
                     className="h-10 text-sm"
@@ -149,10 +204,33 @@ export function MyProfileSheet({ open, onOpenChange, userId, profile, onProfileU
                   </Label>
                   <Input
                     value={formData.cpf}
-                    onChange={(e) => setFormData({ ...formData, cpf: e.target.value })}
+                    onChange={(e) => handleInputChange('cpf', e.target.value)}
                     disabled={!editing}
-                    className="h-10 text-sm"
+                    maxLength={14}
+                    className={`h-10 text-sm ${cpfError ? 'border-destructive' : ''}`}
+                    placeholder="000.000.000-00"
                   />
+                  {cpfError && editing && (
+                    <p className="text-xs text-destructive">{cpfError}</p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-xs flex items-center gap-2">
+                    <Phone className="w-3.5 h-3.5" />
+                    Telefone
+                  </Label>
+                  <Input
+                    value={formData.telefone}
+                    onChange={(e) => handleInputChange('telefone', e.target.value)}
+                    disabled={!editing}
+                    maxLength={15}
+                    className={`h-10 text-sm ${telefoneError ? 'border-destructive' : ''}`}
+                    placeholder="(99) 99999-9999"
+                  />
+                  {telefoneError && editing && (
+                    <p className="text-xs text-destructive">{telefoneError}</p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -207,7 +285,7 @@ export function MyProfileSheet({ open, onOpenChange, userId, profile, onProfileU
                     </Button>
                     <Button
                       onClick={handleSave}
-                      disabled={loading}
+                      disabled={loading || !!cpfError || !!telefoneError}
                       className="flex-1 h-11 bg-primary hover:bg-primary/90 transition-all duration-300"
                     >
                       <Save className="w-4 h-4 mr-2" />
