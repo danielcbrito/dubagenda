@@ -1,80 +1,101 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Card } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { AgendaMensalView } from "./AgendaMensalView";
-import { AgendaDiariaView } from "./AgendaDiariaView";
+import { TimelineView } from "./TimelineView";
+import { AppointmentDetailsSidebar } from "./AppointmentDetailsSidebar";
+import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { CalendarIcon, Filter } from "lucide-react";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
-interface Appointment {
+export interface TimelineAppointment {
   id: string;
   data: string;
   hora: string;
   status: string;
   preco: number;
   observacoes: string | null;
-  cancelado_em?: string | null;
-  visivel_para_usuario?: boolean;
-  barbeiro_confirmou?: boolean;
-  cliente_confirmou?: boolean;
-  ponto_liberado?: boolean;
-  profile: { nome: string } | null;
+  barbeiro_confirmou: boolean | null;
+  cliente_confirmou: boolean | null;
+  ponto_liberado: boolean | null;
+  user_id: string;
+  servico_id: string;
+  profile: { nome: string; cpf?: string } | null;
   servico: { nome: string; duracao_minutos: number } | null;
+  pagamentos: Array<{ metodo: string; status: string; valor: number }>;
 }
 
 export function AdminAgenda() {
   const [date, setDate] = useState<Date>(new Date());
-  const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [allAppointments, setAllAppointments] = useState<Appointment[]>([]);
+  const [appointments, setAppointments] = useState<TimelineAppointment[]>([]);
+  const [selectedAppointment, setSelectedAppointment] = useState<TimelineAppointment | null>(null);
   const [loading, setLoading] = useState(false);
-  const [activeView, setActiveView] = useState<"mensal" | "diaria">("mensal");
+  
+  // Filters
+  const [filterService, setFilterService] = useState<string>("all");
+  const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [services, setServices] = useState<Array<{ id: string; nome: string }>>([]);
+
+  useEffect(() => {
+    loadServices();
+  }, []);
 
   useEffect(() => {
     loadAppointments(date);
-    loadAllAppointments();
 
     // Real-time subscription
     const channel = supabase
-      .channel('admin-agenda')
+      .channel('admin-agenda-timeline')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'agendamentos' }, (payload) => {
-        console.log('Appointment change in admin:', payload);
+        console.log('Appointment change:', payload);
         loadAppointments(date);
-        loadAllAppointments();
         
-        // Show notification for status changes
-        if (payload.eventType === 'UPDATE') {
+        if (payload.eventType === 'INSERT') {
+          toast.success("🔔 Novo agendamento recebido!");
+        } else if (payload.eventType === 'UPDATE') {
           const newData = payload.new as any;
           if (newData.status === 'cancelled_by_user') {
-            toast.info("Cliente cancelou um agendamento");
+            toast.info("ℹ️ Cliente cancelou um agendamento");
           }
-        } else if (payload.eventType === 'INSERT') {
-          toast.success("Novo agendamento recebido!");
         }
       })
       .subscribe();
 
-    // Fallback polling every 60 seconds
-    const pollingInterval = setInterval(() => {
-      loadAppointments(date);
-      loadAllAppointments();
-    }, 60000);
-
     return () => {
       supabase.removeChannel(channel);
-      clearInterval(pollingInterval);
     };
   }, [date]);
+
+  const loadServices = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("servicos")
+        .select("id, nome")
+        .eq("ativo", true)
+        .order("nome");
+
+      if (error) throw error;
+      setServices(data || []);
+    } catch (error) {
+      console.error("Error loading services:", error);
+    }
+  };
 
   const loadAppointments = async (selectedDate: Date) => {
     setLoading(true);
     try {
       const dateStr = selectedDate.toISOString().split('T')[0];
       
-      const { data, error } = await supabase
+      let query = supabase
         .from("agendamentos")
-        .select("id, data, hora, status, preco, observacoes, cancelado_em, visivel_para_usuario, barbeiro_confirmou, cliente_confirmou, ponto_liberado, user_id, servico_id")
+        .select("*")
         .eq("data", dateStr)
         .order("hora", { ascending: true });
+
+      const { data, error } = await query;
 
       if (error) throw error;
 
@@ -82,7 +103,7 @@ export function AdminAgenda() {
         (data || []).map(async (apt) => {
           const { data: profile } = await supabase
             .from("profiles")
-            .select("nome")
+            .select("nome, cpf")
             .eq("id", apt.user_id)
             .single();
 
@@ -94,7 +115,7 @@ export function AdminAgenda() {
 
           const { data: pagamentos } = await supabase
             .from("pagamentos")
-            .select("metodo, status")
+            .select("metodo, status, valor")
             .eq("agendamento_id", apt.id);
 
           return {
@@ -115,187 +136,93 @@ export function AdminAgenda() {
     }
   };
 
-  const loadAllAppointments = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("agendamentos")
-        .select("id, data, hora, status, preco, observacoes, cancelado_em, visivel_para_usuario, barbeiro_confirmou, cliente_confirmou, ponto_liberado, user_id, servico_id")
-        .order("data", { ascending: true })
-        .order("hora", { ascending: true });
-
-      if (error) throw error;
-
-      const appointmentsWithDetails = await Promise.all(
-        (data || []).map(async (apt) => {
-          const { data: profile } = await supabase
-            .from("profiles")
-            .select("nome")
-            .eq("id", apt.user_id)
-            .single();
-
-          const { data: servico } = await supabase
-            .from("servicos")
-            .select("nome, duracao_minutos")
-            .eq("id", apt.servico_id)
-            .single();
-
-          const { data: pagamentos } = await supabase
-            .from("pagamentos")
-            .select("metodo, status")
-            .eq("agendamento_id", apt.id);
-
-          return {
-            ...apt,
-            profile: profile || null,
-            servico: servico || null,
-            pagamentos: pagamentos || [],
-          };
-        })
-      );
-
-      setAllAppointments(appointmentsWithDetails);
-    } catch (error) {
-      console.error("Error loading all appointments:", error);
-    }
+  const handleGoToToday = () => {
+    setDate(new Date());
   };
 
-  const handleCancelAppointment = async (id: string) => {
-    try {
-      // Read event id from observacoes to sync Calendar
-      const { data: apt } = await supabase
-        .from("agendamentos")
-        .select("observacoes")
-        .eq("id", id)
-        .maybeSingle();
-
-      const { error } = await supabase
-        .from("agendamentos")
-        .update({ status: "cancelled_by_admin" } as any)
-        .eq("id", id);
-
-      if (error) throw error;
-
-      if (apt?.observacoes?.includes("Google Calendar ID:")) {
-        const eventId = apt.observacoes.split("Google Calendar ID: ")[1];
-        await supabase.functions.invoke('google-calendar-sync', {
-          body: {
-            action: 'update',
-            eventId,
-            appointmentId: id,
-            summaryPrefix: '❌ Cancelado - '
-          }
-        }).catch(err => console.warn('Calendar update failed:', err));
-      }
-
-      toast.success("Agendamento cancelado");
-    } catch (error) {
-      console.error("Error cancelling:", error);
-      toast.error("Erro ao cancelar agendamento");
-    }
-  };
-
-  const handleConfirmAppointment = async (id: string) => {
-    try {
-      // Mark barber confirmation
-      const { error: updError } = await supabase
-        .from("agendamentos")
-        .update({ barbeiro_confirmou: true } as any)
-        .eq("id", id);
-
-      if (updError) throw updError;
-
-      // Check if client also confirmed
-      const { data: row } = await supabase
-        .from("agendamentos")
-        .select("cliente_confirmou, ponto_liberado")
-        .eq("id", id)
-        .single();
-
-      const clientConfirmed = (row as any)?.cliente_confirmou;
-      const pointReleased = (row as any)?.ponto_liberado;
-
-      if (clientConfirmed && !pointReleased) {
-        // Release point and complete
-        const { error: completeErr } = await supabase
-          .from("agendamentos")
-          .update({ ponto_liberado: true, status: 'completed' as any } as any)
-          .eq("id", id);
-        if (completeErr) throw completeErr;
-        toast.success("✅ Atendimento confirmado e ponto liberado");
-      } else {
-        // Keep as confirmed until client confirms
-        const { error: statusErr } = await supabase
-          .from("agendamentos")
-          .update({ status: 'confirmed' as any } as any)
-          .eq("id", id);
-        if (statusErr) throw statusErr;
-        toast.success("✅ Atendimento confirmado (aguardando cliente)");
-      }
-    } catch (error) {
-      console.error("Error confirming agendamento:", error);
-      toast.error("Erro ao confirmar agendamento");
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    const colors = {
-      pending: "bg-yellow-500/20 text-yellow-300 border-yellow-500/30",
-      confirmed: "bg-green-500/20 text-green-300 border-green-500/30",
-      completed: "bg-blue-500/20 text-blue-300 border-blue-500/30",
-      cancelled_by_admin: "bg-red-500/20 text-red-300 border-red-500/30",
-      cancelled_by_user: "bg-red-500/20 text-red-300 border-red-500/30",
-      no_show: "bg-gray-500/20 text-gray-300 border-gray-500/30",
-    };
-    return colors[status as keyof typeof colors] || colors.pending;
-  };
-
-  const getStatusLabel = (status: string) => {
-    const labels = {
-      pending: "Pendente",
-      confirmed: "Confirmado",
-      completed: "Concluído",
-      cancelled_by_admin: "Cancelado pelo Admin",
-      cancelled_by_user: "Cancelado pelo Cliente",
-      no_show: "Não Compareceu",
-    };
-    return labels[status as keyof typeof labels] || status;
-  };
+  const filteredAppointments = appointments.filter(apt => {
+    if (filterService !== "all" && apt.servico_id !== filterService) return false;
+    if (filterStatus !== "all" && apt.status !== filterStatus) return false;
+    return true;
+  });
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Agenda</h1>
+    <div className="h-full flex flex-col gap-4">
+      {/* Header with filters */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Agenda do Dia</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            {format(date, "EEEE, dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+          </p>
+        </div>
 
-      <Tabs value={activeView} onValueChange={(v) => {
-        const newView = v as "mensal" | "diaria";
-        setActiveView(newView);
-        // Always reset to today when switching to daily view
-        if (newView === "diaria") {
-          setDate(new Date());
-        }
-      }}>
-        <TabsList className="grid w-full max-w-md grid-cols-2">
-          <TabsTrigger value="mensal">Visão Mensal</TabsTrigger>
-          <TabsTrigger value="diaria">Visão Diária</TabsTrigger>
-        </TabsList>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button onClick={handleGoToToday} variant="outline" size="sm">
+            Hoje
+          </Button>
 
-        <TabsContent value="mensal" className="mt-6">
-          <AgendaMensalView 
-            appointments={allAppointments}
-            onSelectDate={(newDate) => {
-              setDate(newDate);
-              setActiveView("diaria");
-            }}
-          />
-        </TabsContent>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm">
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                Selecionar Data
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="end">
+              <Calendar
+                mode="single"
+                selected={date}
+                onSelect={(newDate) => newDate && setDate(newDate)}
+                locale={ptBR}
+              />
+            </PopoverContent>
+          </Popover>
 
-        <TabsContent value="diaria" className="mt-6">
-          <AgendaDiariaView 
-            date={date}
-            appointments={appointments}
-            onCancelAppointment={handleCancelAppointment}
-          />
-        </TabsContent>
-      </Tabs>
+          <Select value={filterService} onValueChange={setFilterService}>
+            <SelectTrigger className="w-[180px]">
+              <Filter className="mr-2 h-4 w-4" />
+              <SelectValue placeholder="Serviço" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os serviços</SelectItem>
+              {services.map(s => (
+                <SelectItem key={s.id} value={s.id}>{s.nome}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select value={filterStatus} onValueChange={setFilterStatus}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os status</SelectItem>
+              <SelectItem value="pending">Pendente</SelectItem>
+              <SelectItem value="confirmed">Confirmado</SelectItem>
+              <SelectItem value="completed">Concluído</SelectItem>
+              <SelectItem value="cancelled_by_user">Cancelado</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      {/* Timeline */}
+      <div className="flex-1 overflow-auto">
+        <TimelineView 
+          appointments={filteredAppointments}
+          loading={loading}
+          onSelectAppointment={setSelectedAppointment}
+        />
+      </div>
+
+      {/* Details Sidebar */}
+      <AppointmentDetailsSidebar
+        appointment={selectedAppointment}
+        open={!!selectedAppointment}
+        onClose={() => setSelectedAppointment(null)}
+        onUpdate={() => loadAppointments(date)}
+      />
     </div>
   );
 }
