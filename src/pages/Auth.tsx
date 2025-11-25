@@ -38,6 +38,7 @@ const Auth = () => {
   const mode = searchParams.get("mode") || "login";
   
   const [isLoading, setIsLoading] = useState(false);
+  const [cooldownTimer, setCooldownTimer] = useState<number>(0);
   const [formData, setFormData] = useState({
     nome: "",
     email: "",
@@ -55,6 +56,15 @@ const Auth = () => {
       }
     });
   }, []);
+
+  useEffect(() => {
+    if (cooldownTimer > 0) {
+      const timer = setTimeout(() => {
+        setCooldownTimer(cooldownTimer - 1);
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [cooldownTimer]);
 
   const checkUserRoleAndRedirect = async (userId: string) => {
     const { data: roles } = await supabase
@@ -132,8 +142,15 @@ const Auth = () => {
       if (error) {
         if (error.message.includes("already registered")) {
           toast.error("Este email já está cadastrado");
+        } else if (error.message.includes("only request this after")) {
+          const seconds = parseInt(error.message.match(/\d+/)?.[0] || "10");
+          setCooldownTimer(seconds);
+          toast.error(`Por favor, aguarde ${seconds} segundos antes de tentar novamente.`);
+        } else if (error.message.includes("rate limit")) {
+          setCooldownTimer(10);
+          toast.error("Muitas tentativas. Aguarde alguns segundos e tente novamente.");
         } else {
-          toast.error("Erro ao criar conta: " + error.message);
+          toast.error("Erro ao criar conta. Tente novamente em alguns instantes.");
         }
         return;
       }
@@ -315,13 +332,15 @@ const Auth = () => {
             <Button 
               type="submit" 
               className="w-full h-11 bg-primary hover:bg-primary/90 font-medium"
-              disabled={isLoading || (mode === "signup" && (!!cpfError || !!telefoneError))}
+              disabled={isLoading || cooldownTimer > 0 || (mode === "signup" && (!!cpfError || !!telefoneError))}
             >
               {isLoading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Processando...
                 </>
+              ) : cooldownTimer > 0 ? (
+                `Aguarde ${cooldownTimer}s...`
               ) : (
                 mode === "signup" ? "Criar conta" : "Entrar"
               )}
