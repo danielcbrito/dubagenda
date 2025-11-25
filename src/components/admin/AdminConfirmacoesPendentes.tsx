@@ -17,6 +17,7 @@ interface PendingAppointment {
   cliente_confirmou: boolean;
   barbeiro_confirmou: boolean;
   payment_method: string | null;
+  remarcado_de: string | null;
   profile: { nome: string } | null;
   servico: { nome: string } | null;
   payment: { metodo: string; status: string } | null;
@@ -52,7 +53,7 @@ export function AdminConfirmacoesPendentes() {
     try {
       const { data, error } = await supabase
         .from("agendamentos")
-        .select("id, data, hora, status, preco, cliente_confirmou, barbeiro_confirmou, user_id, servico_id, payment_method")
+        .select("id, data, hora, status, preco, cliente_confirmou, barbeiro_confirmou, user_id, servico_id, payment_method, remarcado_de")
         .eq("status", "pending")
         .eq("barbeiro_confirmou", false)
         .order("data", { ascending: true })
@@ -175,6 +176,11 @@ export function AdminConfirmacoesPendentes() {
                       <Badge variant="outline" className="bg-yellow-500/10 text-yellow-700 border-yellow-500/20">
                         Aguardando Aprovação
                       </Badge>
+                      {apt.remarcado_de && (
+                        <Badge variant="outline" className="bg-blue-500/10 text-blue-700 border-blue-500/20">
+                          Remarcado
+                        </Badge>
+                      )}
                     </div>
 
                     <div className="flex flex-wrap gap-4 text-sm text-muted-foreground mb-3">

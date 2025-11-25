@@ -61,6 +61,7 @@ interface CreatePaymentRequest {
     expiryYear: string;
     ccv: string;
   };
+  rescheduleFromId?: string;
 }
 
 serve(async (req) => {
@@ -98,9 +99,9 @@ serve(async (req) => {
 
     console.log('User authenticated:', user.id);
 
-    const { bookingData, metodo, customerInfo, cardInfo }: CreatePaymentRequest = await req.json();
+    const { bookingData, metodo, customerInfo, cardInfo, rescheduleFromId }: CreatePaymentRequest = await req.json();
 
-    console.log('Received payment request:', { bookingData, metodo, hasCustomerInfo: !!customerInfo, hasCardInfo: !!cardInfo });
+    console.log('Received payment request:', { bookingData, metodo, hasCustomerInfo: !!customerInfo, hasCardInfo: !!cardInfo, isRescheduling: !!rescheduleFromId });
 
     // Fetch user profile for name and CPF used in Asaas
     const { data: profile, error: profileError } = await supabase
@@ -128,6 +129,18 @@ serve(async (req) => {
     if (metodo === 'cash') {
       console.log('Creating cash appointment as pending (awaiting barber confirmation)');
       
+      // If rescheduling, cancel old appointment first
+      if (rescheduleFromId) {
+        console.log('Cancelling previous appointment:', rescheduleFromId);
+        await supabase
+          .from('agendamentos')
+          .update({
+            status: 'cancelled_by_user',
+            visivel_para_usuario: false,
+          })
+          .eq('id', rescheduleFromId);
+      }
+      
       // Create the appointment directly but as PENDING
       const { data: appointment, error: aptError } = await supabase
         .from('agendamentos')
@@ -144,6 +157,7 @@ serve(async (req) => {
           barbeiro_confirmou: false, // AGUARDANDO APROVAÇÃO DO BARBEIRO
           cliente_confirmou: false,
           payment_method: 'cash', // Store payment method
+          remarcado_de: rescheduleFromId || null, // Link to old appointment if rescheduling
         })
         .select()
         .single();
@@ -364,6 +378,18 @@ serve(async (req) => {
     if (metodo === 'card' && asaasPaymentResult.status === 'CONFIRMED') {
       console.log('Card payment confirmed, creating appointment as PENDING (awaiting barber confirmation)');
       
+      // If rescheduling, cancel old appointment first
+      if (rescheduleFromId) {
+        console.log('Cancelling previous appointment:', rescheduleFromId);
+        await supabase
+          .from('agendamentos')
+          .update({
+            status: 'cancelled_by_user',
+            visivel_para_usuario: false,
+          })
+          .eq('id', rescheduleFromId);
+      }
+      
       const { data: appointment, error: aptError } = await supabase
         .from('agendamentos')
         .insert({
@@ -379,6 +405,7 @@ serve(async (req) => {
           barbeiro_confirmou: false, // AGUARDANDO APROVAÇÃO DO BARBEIRO
           cliente_confirmou: true, // Cliente já pagou
           payment_method: metodo, // Store payment method
+          remarcado_de: rescheduleFromId || null, // Link to old appointment if rescheduling
         })
         .select()
         .single();

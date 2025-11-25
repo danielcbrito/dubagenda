@@ -356,6 +356,7 @@ const ClienteAgendar = () => {
         bookingData,
         metodo: paymentMethod,
         creditsUsed: Math.min(availableCredits, totalPrice),
+        rescheduleFromId: isRescheduling ? rescheduleAppointmentId : undefined,
       };
 
       // For card, add card and customer info
@@ -391,6 +392,10 @@ const ClienteAgendar = () => {
 
       // Handle response based on payment method
       if (paymentMethod === 'cash') {
+        // Clear rescheduling session data
+        sessionStorage.removeItem('isRescheduling');
+        sessionStorage.removeItem('rescheduleAppointmentId');
+        
         toast.success("Agendamento criado! Pague na barbearia.");
         navigate("/cliente");
       } else if (paymentMethod === 'pix' && data.asaasPayment?.pixQrCode) {
@@ -400,6 +405,10 @@ const ClienteAgendar = () => {
         toast.success("QR Code gerado! Escaneie para pagar.");
         setStep(6);
       } else if (paymentMethod === 'card') {
+        // Clear rescheduling session data
+        sessionStorage.removeItem('isRescheduling');
+        sessionStorage.removeItem('rescheduleAppointmentId');
+        
         if (data.asaasPayment?.status === 'CONFIRMED') {
           toast.success("Pagamento aprovado! Agendamento confirmado.");
           navigate("/cliente");
@@ -429,6 +438,17 @@ const ClienteAgendar = () => {
       const serviceNames = selectedServices.map(s => s.nome).join(", ");
       const mainService = selectedServices[0];
 
+      // If rescheduling, cancel old appointment first
+      if (isRescheduling && rescheduleAppointmentId) {
+        await supabase
+          .from("agendamentos")
+          .update({ 
+            status: 'cancelled_by_user' as any,
+            visivel_para_usuario: false
+          } as any)
+          .eq("id", rescheduleAppointmentId);
+      }
+
       // Create appointment directly (paid with credits)
       const { data: appointment, error: aptError } = await supabase
         .from("agendamentos")
@@ -443,6 +463,9 @@ const ClienteAgendar = () => {
           observacoes: selectedServices.length > 1 ? `Serviços: ${serviceNames}` : undefined,
           payment_method: 'cash', // Mark as cash since paid with credits
           is_free: true, // Mark as free (using credits/redemption)
+          remarcado_de: isRescheduling ? rescheduleAppointmentId : null,
+          barbeiro_confirmou: false, // Reset barber confirmation for rescheduled appointments
+          cliente_confirmou: false,
         })
         .select()
         .single();
@@ -462,6 +485,10 @@ const ClienteAgendar = () => {
 
       // Use credits
       await useCredits(totalPrice, appointment.id);
+
+      // Clear rescheduling session data
+      sessionStorage.removeItem('isRescheduling');
+      sessionStorage.removeItem('rescheduleAppointmentId');
 
       toast.success("Agendamento criado! Créditos aplicados com sucesso.");
       navigate("/cliente");
