@@ -9,8 +9,16 @@ import { toast } from "sonner";
 import { z } from "zod";
 import logoDub from "@/assets/logo-dub.png";
 import barbershopBg from "@/assets/barbershop-premium-bg.jpg";
-import { Loader2 } from "lucide-react";
+import { Loader2, Mail } from "lucide-react";
 import { validateCPF, formatCPF, formatPhone, validatePhone } from "@/lib/validators";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const signupSchema = z.object({
   nome: z.string().trim().min(2, "Nome deve ter pelo menos 2 caracteres").max(100),
@@ -39,6 +47,8 @@ const Auth = () => {
   
   const [isLoading, setIsLoading] = useState(false);
   const [cooldownTimer, setCooldownTimer] = useState<number>(0);
+  const [showEmailConfirmDialog, setShowEmailConfirmDialog] = useState(false);
+  const [userEmail, setUserEmail] = useState("");
   const [formData, setFormData] = useState({
     nome: "",
     email: "",
@@ -156,8 +166,15 @@ const Auth = () => {
       }
 
       if (data.user) {
-        toast.success("Conta criada com sucesso");
-        await checkUserRoleAndRedirect(data.user.id);
+        // Check if email confirmation is required
+        if (data.user.identities && data.user.identities.length === 0) {
+          // Email confirmation is required
+          setUserEmail(validated.email);
+          setShowEmailConfirmDialog(true);
+        } else {
+          toast.success("Conta criada com sucesso");
+          await checkUserRoleAndRedirect(data.user.id);
+        }
       }
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -210,16 +227,55 @@ const Auth = () => {
   };
 
   return (
-    <div className="min-h-screen relative flex items-center justify-center p-6">
-      {/* Background Image */}
-      <div className="absolute inset-0 z-0">
-        <img 
-          src={barbershopBg} 
-          alt="" 
-          className="w-full h-full object-cover"
-        />
-        <div className="absolute inset-0 bg-black/60" />
-      </div>
+    <>
+      {/* Email Confirmation Dialog */}
+      <AlertDialog open={showEmailConfirmDialog} onOpenChange={setShowEmailConfirmDialog}>
+        <AlertDialogContent className="max-w-md">
+          <AlertDialogHeader>
+            <div className="flex justify-center mb-4">
+              <div className="rounded-full bg-primary/10 p-4">
+                <Mail className="h-10 w-10 text-primary" />
+              </div>
+            </div>
+            <AlertDialogTitle className="text-center text-xl">
+              Confirme seu email
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-center space-y-3 pt-2">
+              <p className="text-base">
+                Enviamos um link de confirmação para:
+              </p>
+              <p className="font-semibold text-foreground">
+                {userEmail}
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Por favor, verifique sua caixa de entrada (e também a pasta de spam) e clique no link para ativar sua conta.
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <Button 
+              onClick={() => {
+                setShowEmailConfirmDialog(false);
+                navigate("/auth?mode=login");
+              }}
+              className="w-full"
+            >
+              Entendi
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <div className="min-h-screen relative flex items-center justify-center p-6">
+        {/* Background Image */}
+        <div className="absolute inset-0 z-0">
+          <img 
+            src={barbershopBg} 
+            alt="" 
+            className="w-full h-full object-cover"
+          />
+          <div className="absolute inset-0 bg-black/60" />
+        </div>
 
       {/* Content */}
       <div className="relative z-10 w-full max-w-6xl flex items-center justify-end">
@@ -369,6 +425,7 @@ const Auth = () => {
         </Card>
       </div>
     </div>
+    </>
   );
 };
 
