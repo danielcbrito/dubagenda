@@ -29,6 +29,24 @@ Deno.serve(async (req) => {
     const startTimeInMinutes = startHour * 60 + startMinute;
     const endTimeInMinutes = startTimeInMinutes + duracao + 10; // 10-minute buffer
 
+    // Block lunch break (13:00-14:00)
+    const lunchStart = 13 * 60; // 780 minutes
+    const lunchEnd = 14 * 60; // 840 minutes
+    
+    if (
+      (startTimeInMinutes >= lunchStart && startTimeInMinutes < lunchEnd) ||
+      (endTimeInMinutes > lunchStart && endTimeInMinutes <= lunchEnd) ||
+      (startTimeInMinutes < lunchStart && endTimeInMinutes > lunchEnd)
+    ) {
+      return new Response(
+        JSON.stringify({ 
+          valid: false, 
+          message: 'Horário indisponível. A barbearia está fechada para almoço entre 13:00 e 14:00.' 
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+      );
+    }
+
     // Check for conflicts in the database
     const { data: existingAppointments, error } = await supabase
       .from('agendamentos')
