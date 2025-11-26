@@ -223,6 +223,8 @@ const ClienteAgendar = () => {
     const slots: TimeSlot[] = [];
     const startHour = 9;
     const endHour = 20;
+    const lunchStart = 13 * 60; // 13:00 = 780 minutes
+    const lunchEnd = 14 * 60; // 14:00 = 840 minutes
 
     for (let hour = startHour; hour < endHour; hour++) {
       for (let minute = 0; minute < 60; minute += 30) {
@@ -232,6 +234,16 @@ const ClienteAgendar = () => {
 
         // Check if slot would extend past closing time
         if (slotEnd > endHour * 60) {
+          continue;
+        }
+
+        // Block lunch break (13:00-14:00)
+        // Skip if slot starts, ends, or overlaps with lunch break
+        if (
+          (slotStart >= lunchStart && slotStart < lunchEnd) ||
+          (slotEnd > lunchStart && slotEnd <= lunchEnd) ||
+          (slotStart < lunchStart && slotEnd > lunchEnd)
+        ) {
           continue;
         }
 
