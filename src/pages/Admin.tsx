@@ -13,6 +13,7 @@ import { AdminPromocoes } from "@/components/admin/AdminPromocoes";
 import { AdminServicos } from "@/components/admin/AdminServicos";
 import { AdminConfiguracoes } from "@/components/admin/AdminConfiguracoes";
 import { AdminConfirmacoesPendentes } from "@/components/admin/AdminConfirmacoesPendentes";
+import { AdminMensagens } from "@/components/admin/AdminMensagens";
 
 const Admin = () => {
   const navigate = useNavigate();
@@ -57,6 +58,7 @@ const Admin = () => {
             <Route path="relatorios" element={<AdminRelatorios />} />
             <Route path="servicos/*" element={<AdminServicos />} />
             <Route path="promocoes" element={<AdminPromocoes />} />
+            <Route path="mensagens" element={<AdminMensagens />} />
             <Route path="configuracoes" element={<AdminConfiguracoes />} />
           </Routes>
         </main>

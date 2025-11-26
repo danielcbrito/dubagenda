@@ -16,6 +16,7 @@ import { MyPlansSheet } from "@/components/MyPlansSheet";
 import { SubscribePlanSheet } from "@/components/SubscribePlanSheet";
 import { MyProfileSheet } from "@/components/MyProfileSheet";
 import { WalletSheet } from "@/components/WalletSheet";
+import { AnnouncementDialog } from "@/components/AnnouncementDialog";
 
 interface Appointment {
   id: string;
@@ -491,6 +492,9 @@ const Cliente = () => {
         onOpenChange={setWalletSheetOpen}
         userId={user?.id}
       />
+
+      {/* Announcement Dialog */}
+      <AnnouncementDialog />
     </div>
   );
 };
