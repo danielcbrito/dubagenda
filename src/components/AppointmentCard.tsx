@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Calendar, Clock, CheckCircle } from "lucide-react";
+import { Calendar, Clock, CheckCircle, AlertCircle } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { RescheduleAppointmentModal } from "./RescheduleAppointmentModal";
@@ -73,6 +73,7 @@ export function AppointmentCard({
 
   const statusConfig = getStatusConfig(appointment.status, appointment.barbeiro_confirmou);
   const isCancelled = appointment.status === "cancelled_by_user" || appointment.status === "cancelled_by_admin";
+  const isCancelledByAdmin = appointment.status === "cancelled_by_admin";
   const isAwaitingBarberApproval = appointment.status === "pending" && !appointment.barbeiro_confirmou;
   const canCancel = (appointment.status === "pending" || appointment.status === "confirmed") && !isAwaitingBarberApproval;
   const needsConfirmation = appointment.status === "completed" && !appointment.cliente_confirmou && onConfirm;
@@ -80,6 +81,13 @@ export function AppointmentCard({
   const payment = payments.find(p => p.agendamento_id === appointment.id);
   const isPaid = payment?.status === "paid";
   const amount = appointment.preco || 0;
+
+  // Extrair motivo do cancelamento das observações
+  const cancellationReason = appointment.observacoes?.includes("Cancelado em massa:") 
+    ? appointment.observacoes.replace("Cancelado em massa: ", "")
+    : appointment.observacoes?.includes("Cancelamento definitivo:")
+    ? appointment.observacoes.replace("Cancelamento definitivo: ", "")
+    : null;
 
   return (
     <>
@@ -122,6 +130,30 @@ export function AppointmentCard({
               </p>
             </div>
           )}
+
+          {isCancelledByAdmin && cancellationReason && (
+            <div className="bg-red-500/10 border border-red-500/30 p-4 rounded-lg mt-3 space-y-3">
+              <div className="flex items-start gap-2">
+                <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-red-600 dark:text-red-400 mb-1">
+                    Agendamento Cancelado pela Barbearia
+                  </p>
+                  <p className="text-xs text-red-700 dark:text-red-300">
+                    <strong>Motivo:</strong> {cancellationReason}
+                  </p>
+                </div>
+              </div>
+              <Button
+                onClick={() => setRescheduleModalOpen(true)}
+                size="sm"
+                className="w-full bg-primary hover:bg-primary/90"
+              >
+                <Calendar className="w-4 h-4 mr-2" />
+                Remarcar Agora
+              </Button>
+            </div>
+          )}
         </div>
 
         {needsConfirmation && (
@@ -135,7 +167,7 @@ export function AppointmentCard({
           </Button>
         )}
 
-        {canCancel && (
+        {canCancel && !isCancelledByAdmin && (
           <div className="flex gap-2">
             <Button 
               onClick={() => setRescheduleModalOpen(true)}
@@ -158,7 +190,7 @@ export function AppointmentCard({
           </div>
         )}
 
-        {isCancelled && (
+        {isCancelled && !cancellationReason && (
           <div className="text-xs text-muted-foreground text-center py-2">
             Cancelado em {appointment.cancelado_em ? format(new Date(appointment.cancelado_em), "dd/MM/yyyy", { locale: ptBR }) : "—"}
           </div>

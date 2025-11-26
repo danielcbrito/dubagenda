@@ -102,22 +102,34 @@ export function CancelAllAppointmentsModal({
       
       // Verificar se alguma notificação falhou
       const failedNotifications = notificacoesResults.filter(r => r.status === 'rejected');
+      const successCount = appointments.length;
+      
       if (failedNotifications.length > 0) {
         console.error("Algumas notificações falharam:", failedNotifications);
-        toast.warning(`${appointments.length} agendamento(s) cancelado(s), mas ${failedNotifications.length} notificação(ões) falharam`);
+        toast.warning(
+          `${successCount} agendamento(s) cancelado(s), mas ${failedNotifications.length} notificação(ões) falharam`,
+          { duration: 5000 }
+        );
       } else {
-        toast.success(`${appointments.length} agendamento(s) cancelado(s) e usuários notificados`);
+        toast.success(
+          `✅ ${successCount} agendamento(s) cancelado(s) com sucesso! Todos os clientes foram notificados.`,
+          { duration: 5000 }
+        );
       }
       
       setReason("");
       onOpenChange(false);
-      onSuccess();
+      
+      // Aguardar um momento para garantir que o banco atualize antes de recarregar
+      setTimeout(() => {
+        onSuccess();
+      }, 500);
     } catch (error: any) {
       console.error("Erro ao cancelar agendamentos:", error);
       
       // Exibir mensagem de erro mais detalhada
       const errorMessage = error?.message || "Erro desconhecido ao cancelar agendamentos";
-      toast.error(errorMessage);
+      toast.error(`Erro: ${errorMessage}`, { duration: 7000 });
       
       // Se for erro de permissão RLS, exibir mensagem específica
       if (error?.message?.includes("policy")) {
@@ -156,8 +168,9 @@ export function CancelAllAppointmentsModal({
           </div>
 
           <div className="bg-destructive/10 p-3 rounded-md text-sm">
-            ⚠️ Esta ação não pode ser desfeita. Todos os clientes receberão uma notificação e
-            poderão remarcar seus horários.
+            ⚠️ <strong>Atenção:</strong> Esta ação não pode ser desfeita. Todos os{" "}
+            <strong>{appointmentsCount} agendamento(s)</strong> serão cancelados e os clientes
+            receberão uma notificação automática com a opção de remarcar.
           </div>
         </div>
 
