@@ -17,6 +17,7 @@ import { SubscribePlanSheet } from "@/components/SubscribePlanSheet";
 import { MyProfileSheet } from "@/components/MyProfileSheet";
 import { WalletSheet } from "@/components/WalletSheet";
 import { AnnouncementDialog } from "@/components/AnnouncementDialog";
+import { CancelledAppointmentBanner } from "@/components/CancelledAppointmentBanner";
 
 interface Appointment {
   id: string;
@@ -55,6 +56,7 @@ const Cliente = () => {
   const [walletSheetOpen, setWalletSheetOpen] = useState(false);
   const [availableCredits, setAvailableCredits] = useState(0);
   const [payments, setPayments] = useState<any[]>([]);
+  const [recentCancellations, setRecentCancellations] = useState<Appointment[]>([]);
 
   useEffect(() => {
     checkAuth();
@@ -174,6 +176,19 @@ const Cliente = () => {
       .limit(5);
 
     setAppointments(appointmentsData || []);
+    
+    // Filtrar cancelamentos recentes pelo admin (últimas 48h)
+    const twoDaysAgo = new Date();
+    twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
+    
+    const recentlyCancelled = (appointmentsData || []).filter(apt => 
+      apt.status === 'cancelled_by_admin' && 
+      apt.cancelado_em &&
+      new Date(apt.cancelado_em) > twoDaysAgo &&
+      apt.observacoes?.includes("Cancelado em massa:")
+    );
+    
+    setRecentCancellations(recentlyCancelled);
 
     // Load payments for appointments
     const { data: paymentsData } = await supabase
@@ -413,6 +428,24 @@ const Cliente = () => {
         {/* Appointments */}
         <div>
           <h3 className="text-base font-semibold mb-4">Meus Agendamentos</h3>
+          
+          {/* Banner de Cancelamento Recente */}
+          {recentCancellations.length > 0 && (
+            <div className="space-y-4 mb-6">
+              {recentCancellations.map(apt => {
+                const reason = apt.observacoes?.replace("Cancelado em massa: ", "") || "Não informado";
+                return (
+                  <CancelledAppointmentBanner
+                    key={apt.id}
+                    reason={reason}
+                    serviceName={apt.servico?.nome || "Serviço"}
+                    date={apt.data}
+                    time={apt.hora}
+                  />
+                );
+              })}
+            </div>
+          )}
           
           {appointments.length === 0 && pendingBookings.length === 0 ? (
             <Card className="p-8 text-center border-dashed">

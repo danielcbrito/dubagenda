@@ -75,9 +75,19 @@ export function AdminAgenda() {
             setTimeout(() => loadAppointments(date), 300);
           }
           
+          // Detectar cancelamento pelo admin (cancelamento em massa ou individual)
+          if (oldData?.status !== 'cancelled_by_admin' && newData?.status === 'cancelled_by_admin') {
+            console.log("🚫 Agendamento cancelado pelo administrador");
+            // Recarregar imediatamente para remover da lista
+            loadAppointments(date);
+          }
+          
           if (newData.status === 'cancelled_by_user') {
             toast.info("ℹ️ Cliente cancelou um agendamento");
           }
+        } else if (payload.eventType === 'DELETE') {
+          console.log("🗑️ Agendamento removido");
+          loadAppointments(date);
         }
       })
       .subscribe();
@@ -158,14 +168,16 @@ export function AdminAgenda() {
         .from("agendamentos")
         .select("*")
         .eq("data", dateStr)
-        .eq("barbeiro_confirmou", true) // APENAS AGENDAMENTOS CONFIRMADOS PELO BARBEIRO
+        .eq("barbeiro_confirmou", true)
+        .neq("status", "cancelled_by_admin") // Excluir cancelados pelo admin
+        .neq("status", "cancelled_by_user") // Excluir cancelados pelo usuário
         .order("hora", { ascending: true });
 
       const { data, error } = await query;
 
       if (error) throw error;
       
-      console.log(`📊 Encontrados ${data?.length || 0} agendamentos confirmados para ${dateStr}`);
+      console.log(`📊 Encontrados ${data?.length || 0} agendamentos ativos para ${dateStr}`);
 
       const appointmentsWithDetails = await Promise.all(
         (data || []).map(async (apt) => {
