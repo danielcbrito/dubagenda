@@ -22,6 +22,8 @@ interface Appointment {
   ponto_liberado?: boolean;
   cancelado_em?: string;
   visivel_para_usuario?: boolean;
+  remarcacao_solicitada?: boolean;
+  motivo_remarcacao?: string;
   pagamentos?: Array<{
     metodo: string;
     status: string;
@@ -75,7 +77,8 @@ export function AppointmentCard({
   const isCancelled = appointment.status === "cancelled_by_user" || appointment.status === "cancelled_by_admin";
   const isCancelledByAdmin = appointment.status === "cancelled_by_admin";
   const isAwaitingBarberApproval = appointment.status === "pending" && !appointment.barbeiro_confirmou;
-  const canCancel = (appointment.status === "pending" || appointment.status === "confirmed") && !isAwaitingBarberApproval;
+  const rescheduleRequested = appointment.remarcacao_solicitada === true;
+  const canCancel = (appointment.status === "pending" || appointment.status === "confirmed") && !isAwaitingBarberApproval && !rescheduleRequested;
   const needsConfirmation = appointment.status === "completed" && !appointment.cliente_confirmou && onConfirm;
 
   const payment = payments.find(p => p.agendamento_id === appointment.id);
@@ -131,6 +134,35 @@ export function AppointmentCard({
             </div>
           )}
 
+          {rescheduleRequested && !isCancelled && (
+            <div className="bg-primary/10 border-2 border-primary/30 p-4 rounded-lg mt-3 space-y-3">
+              <div className="flex items-start gap-2">
+                <Calendar className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-primary mb-2">
+                    Remarcação Solicitada pelo Barbeiro
+                  </p>
+                  {appointment.motivo_remarcacao && (
+                    <div className="bg-background/50 p-3 rounded-md mb-3">
+                      <p className="text-xs font-medium text-foreground mb-1">Mensagem do barbeiro:</p>
+                      <p className="text-xs text-muted-foreground whitespace-pre-line">
+                        {appointment.motivo_remarcacao}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+              <Button
+                onClick={() => setRescheduleModalOpen(true)}
+                size="sm"
+                className="w-full bg-primary hover:bg-primary/90"
+              >
+                <Calendar className="w-4 h-4 mr-2" />
+                Remarcar Agora
+              </Button>
+            </div>
+          )}
+
           {isCancelledByAdmin && cancellationReason && (
             <div className="bg-red-500/10 border border-red-500/30 p-4 rounded-lg mt-3 space-y-3">
               <div className="flex items-start gap-2">
@@ -167,7 +199,7 @@ export function AppointmentCard({
           </Button>
         )}
 
-        {canCancel && !isCancelledByAdmin && (
+        {canCancel && !isCancelledByAdmin && !rescheduleRequested && (
           <div className="flex gap-2">
             <Button 
               onClick={() => setRescheduleModalOpen(true)}
