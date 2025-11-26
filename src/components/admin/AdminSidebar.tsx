@@ -1,4 +1,4 @@
-import { Home, Calendar, Users, DollarSign, FileText, Gift, Settings, LogOut, CheckCircle, Scissors, ChevronRight } from "lucide-react";
+import { Home, Calendar, Users, DollarSign, FileText, Gift, Settings, LogOut, CheckCircle, Scissors, ChevronRight, MessageSquare } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -34,6 +34,7 @@ const menuItems = [
   { title: "Financeiro", url: "/admin/financeiro", icon: DollarSign },
   { title: "Relatórios", url: "/admin/relatorios", icon: FileText },
   { title: "Promoções", url: "/admin/promocoes", icon: Gift },
+  { title: "Mensagens", url: "/admin/mensagens", icon: MessageSquare },
   { title: "Configurações", url: "/admin/configuracoes", icon: Settings },
 ];
 
