@@ -109,9 +109,17 @@ export function AdminRescheduleModal({
       setAction(null);
       onOpenChange(false);
       onSuccess();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erro ao processar ação:", error);
-      toast.error("Erro ao processar a ação");
+      
+      // Exibir mensagem de erro mais detalhada
+      const errorMessage = error?.message || "Erro desconhecido ao processar a ação";
+      toast.error(errorMessage);
+      
+      // Se for erro de permissão RLS, exibir mensagem específica
+      if (error?.message?.includes("policy")) {
+        toast.error("Erro de permissão. Verifique se você tem privilégios de administrador.");
+      }
     } finally {
       setProcessing(false);
     }
