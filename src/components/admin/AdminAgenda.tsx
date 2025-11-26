@@ -50,17 +50,29 @@ export function AdminAgenda() {
   useEffect(() => {
     loadAppointments(date);
 
-    // Real-time subscription
+    // Real-time subscription com múltiplos tratamentos
     const channel = supabase
       .channel('admin-agenda-timeline')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'agendamentos' }, (payload) => {
-        console.log('Appointment change:', payload);
+        console.log('📢 Mudança no agendamento:', payload);
+        
+        const oldData = payload.old as any;
+        const newData = payload.new as any;
+        
+        // Recarregar sempre que houver mudança
         loadAppointments(date);
         
         if (payload.eventType === 'INSERT') {
           toast.success("🔔 Novo agendamento recebido!");
         } else if (payload.eventType === 'UPDATE') {
-          const newData = payload.new as any;
+          // Detectar quando barbeiro confirma
+          if (oldData?.barbeiro_confirmou === false && newData?.barbeiro_confirmou === true) {
+            console.log("✅ Agendamento confirmado pelo barbeiro - aparecerá na agenda agora!");
+            toast.success("✅ Agendamento aprovado e adicionado à agenda!");
+            // Força reload extra para garantir
+            setTimeout(() => loadAppointments(date), 300);
+          }
+          
           if (newData.status === 'cancelled_by_user') {
             toast.info("ℹ️ Cliente cancelou um agendamento");
           }
@@ -68,8 +80,14 @@ export function AdminAgenda() {
       })
       .subscribe();
 
+    // Polling de backup a cada 15 segundos
+    const pollingInterval = setInterval(() => {
+      loadAppointments(date);
+    }, 15000);
+
     return () => {
       supabase.removeChannel(channel);
+      clearInterval(pollingInterval);
     };
   }, [date]);
 
@@ -132,6 +150,8 @@ export function AdminAgenda() {
     try {
       const dateStr = selectedDate.toISOString().split('T')[0];
       
+      console.log(`🔍 Carregando agendamentos para ${dateStr} (apenas confirmados pelo barbeiro)`);
+      
       let query = supabase
         .from("agendamentos")
         .select("*")
@@ -142,6 +162,8 @@ export function AdminAgenda() {
       const { data, error } = await query;
 
       if (error) throw error;
+      
+      console.log(`📊 Encontrados ${data?.length || 0} agendamentos confirmados para ${dateStr}`);
 
       const appointmentsWithDetails = await Promise.all(
         (data || []).map(async (apt) => {
@@ -172,8 +194,17 @@ export function AdminAgenda() {
       );
 
       setAppointments(appointmentsWithDetails);
+      
+      if (appointmentsWithDetails.length > 0) {
+        console.log("✅ Agendamentos carregados:", appointmentsWithDetails.map(a => ({
+          hora: a.hora,
+          servico: a.servico?.nome,
+          cliente: a.profile?.nome,
+          status: a.status
+        })));
+      }
     } catch (error) {
-      console.error("Error loading appointments:", error);
+      console.error("❌ Erro ao carregar agendamentos:", error);
       toast.error("Erro ao carregar agendamentos");
     } finally {
       setLoading(false);

@@ -101,20 +101,33 @@ export function AdminConfirmacoesPendentes() {
 
   const handleConfirm = async (appointmentId: string) => {
     try {
-      const { error } = await supabase
+      // Buscar dados do agendamento primeiro para log
+      const appointmentToConfirm = appointments.find(a => a.id === appointmentId);
+      
+      const { error, data } = await supabase
         .from("agendamentos")
         .update({ 
           barbeiro_confirmou: true, 
-          status: 'confirmed' as any 
+          status: 'confirmed' as any,
+          updated_at: new Date().toISOString()
         } as any)
-        .eq("id", appointmentId);
+        .eq("id", appointmentId)
+        .select()
+        .single();
 
       if (error) throw error;
 
-      toast.success("Agendamento confirmado e movido para a agenda");
+      console.log("✅ Agendamento confirmado:", data);
       
+      toast.success(
+        `Agendamento confirmado! ${appointmentToConfirm?.servico?.nome || 'Serviço'} às ${appointmentToConfirm?.hora || ''} - ${appointmentToConfirm?.profile?.nome || 'Cliente'}`
+      );
+      
+      // Atualizar lista local imediatamente
       setAppointments(prev => prev.filter(a => a.id !== appointmentId));
-      loadPending();
+      
+      // Recarregar para garantir sincronização
+      setTimeout(() => loadPending(), 500);
     } catch (error) {
       console.error("Error confirming appointment:", error);
       toast.error("Erro ao confirmar atendimento");
