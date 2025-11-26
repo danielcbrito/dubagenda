@@ -45,13 +45,21 @@ export function CancelAllAppointmentsModal({
       // Buscar todos os agendamentos confirmados do dia
       const { data: appointments, error: fetchError } = await supabase
         .from("agendamentos")
-        .select("id, user_id, servico:servicos(nome), hora, profile:profiles(nome)")
+        .select(`
+          id, 
+          user_id, 
+          hora,
+          servicos!inner(nome)
+        `)
         .eq("data", dateStr)
         .eq("barbeiro_confirmou", true)
         .neq("status", "cancelled_by_admin")
         .neq("status", "cancelled_by_user");
 
-      if (fetchError) throw fetchError;
+      if (fetchError) {
+        console.error("Erro ao buscar agendamentos:", fetchError);
+        throw new Error(`Erro ao buscar agendamentos: ${fetchError.message}`);
+      }
 
       if (!appointments || appointments.length === 0) {
         toast.info("Não há agendamentos para cancelar neste dia");
@@ -72,29 +80,49 @@ export function CancelAllAppointmentsModal({
         .neq("status", "cancelled_by_admin")
         .neq("status", "cancelled_by_user");
 
-      if (updateError) throw updateError;
+      if (updateError) {
+        console.error("Erro ao atualizar agendamentos:", updateError);
+        throw new Error(`Erro ao cancelar agendamentos: ${updateError.message}`);
+      }
 
       // Criar notificações para todos os usuários afetados
-      const notificacoesPromises = appointments.map(apt => 
-        supabase.from("notificacoes").insert({
+      const notificacoesPromises = appointments.map(apt => {
+        const serviceName = apt.servicos?.nome || "Serviço";
+        return supabase.from("notificacoes").insert({
           user_id: apt.user_id,
           tipo: "cancelamento_massa",
           titulo: "Agendamento Cancelado",
-          mensagem: `Seu agendamento de ${apt.servico?.nome} às ${apt.hora} foi cancelado. Motivo: ${reason}. Você pode reagendar quando quiser.`,
+          mensagem: `Seu agendamento de ${serviceName} às ${apt.hora} foi cancelado. Motivo: ${reason}. Você pode reagendar quando quiser.`,
           agendamento_id: apt.id,
           lida: false,
-        })
-      );
+        });
+      });
 
-      await Promise.all(notificacoesPromises);
-
-      toast.success(`${appointments.length} agendamento(s) cancelado(s) com sucesso`);
+      const notificacoesResults = await Promise.allSettled(notificacoesPromises);
+      
+      // Verificar se alguma notificação falhou
+      const failedNotifications = notificacoesResults.filter(r => r.status === 'rejected');
+      if (failedNotifications.length > 0) {
+        console.error("Algumas notificações falharam:", failedNotifications);
+        toast.warning(`${appointments.length} agendamento(s) cancelado(s), mas ${failedNotifications.length} notificação(ões) falharam`);
+      } else {
+        toast.success(`${appointments.length} agendamento(s) cancelado(s) e usuários notificados`);
+      }
+      
       setReason("");
       onOpenChange(false);
       onSuccess();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erro ao cancelar agendamentos:", error);
-      toast.error("Erro ao cancelar agendamentos");
+      
+      // Exibir mensagem de erro mais detalhada
+      const errorMessage = error?.message || "Erro desconhecido ao cancelar agendamentos";
+      toast.error(errorMessage);
+      
+      // Se for erro de permissão RLS, exibir mensagem específica
+      if (error?.message?.includes("policy")) {
+        toast.error("Erro de permissão. Verifique se você tem privilégios de administrador.");
+      }
     } finally {
       setCancelling(false);
     }
