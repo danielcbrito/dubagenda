@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import { Loader2, Plus, Trash2, Pencil } from "lucide-react";
+import { Loader2, Plus, Trash2, Pencil, AlertTriangle } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -15,6 +15,16 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface Servico {
   id: string;
@@ -30,6 +40,13 @@ export function AdminCortes() {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingServico, setEditingServico] = useState<Servico | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [servicoToDelete, setServicoToDelete] = useState<Servico | null>(null);
+  const [deleteMessage, setDeleteMessage] = useState<{
+    title: string;
+    description: string;
+    canDelete: boolean;
+  }>({ title: "", description: "", canDelete: false });
   const [formData, setFormData] = useState({
     nome: "",
     descricao: "",
@@ -160,17 +177,82 @@ export function AdminCortes() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("Tem certeza que deseja excluir este corte?")) return;
-
+  const handleOpenDeleteDialog = async (servico: Servico) => {
     try {
-      const { error } = await supabase.from("servicos").delete().eq("id", id);
+      // Verificar se existem agendamentos vinculados a este serviço
+      const { data: agendamentos, error } = await supabase
+        .from("agendamentos")
+        .select("id")
+        .eq("servico_id", servico.id)
+        .limit(1);
 
       if (error) throw error;
-      toast.success("Corte excluído com sucesso");
+
+      if (agendamentos && agendamentos.length > 0) {
+        // Existem agendamentos vinculados - não pode deletar
+        setDeleteMessage({
+          title: "Não é possível excluir este corte",
+          description: `O corte "${servico.nome}" possui agendamentos vinculados e não pode ser excluído. Você pode desativá-lo para que não apareça mais para novos agendamentos.`,
+          canDelete: false,
+        });
+      } else {
+        // Não existem agendamentos - pode deletar
+        setDeleteMessage({
+          title: "Tem certeza que deseja remover este corte?",
+          description: `O corte "${servico.nome}" será removido permanentemente. Esta ação não pode ser desfeita.`,
+          canDelete: true,
+        });
+      }
+
+      setServicoToDelete(servico);
+      setDeleteDialogOpen(true);
+    } catch (error: any) {
+      toast.error("Erro ao verificar corte: " + error.message);
+    }
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!servicoToDelete || !deleteMessage.canDelete) {
+      setDeleteDialogOpen(false);
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from("servicos")
+        .delete()
+        .eq("id", servicoToDelete.id);
+
+      if (error) throw error;
+      
+      toast.success("Corte removido com sucesso");
       loadServicos();
     } catch (error: any) {
       toast.error("Erro ao excluir corte: " + error.message);
+    } finally {
+      setDeleteDialogOpen(false);
+      setServicoToDelete(null);
+    }
+  };
+
+  const handleDeactivateInstead = async () => {
+    if (!servicoToDelete) return;
+
+    try {
+      const { error } = await supabase
+        .from("servicos")
+        .update({ ativo: false })
+        .eq("id", servicoToDelete.id);
+
+      if (error) throw error;
+      
+      toast.success("Corte desativado com sucesso");
+      loadServicos();
+    } catch (error: any) {
+      toast.error("Erro ao desativar corte: " + error.message);
+    } finally {
+      setDeleteDialogOpen(false);
+      setServicoToDelete(null);
     }
   };
 
@@ -333,7 +415,7 @@ export function AdminCortes() {
                   <Button
                     variant="ghost"
                     size="icon"
-                    onClick={() => handleDelete(servico.id)}
+                    onClick={() => handleOpenDeleteDialog(servico)}
                   >
                     <Trash2 className="w-4 h-4 text-destructive" />
                   </Button>
@@ -343,6 +425,44 @@ export function AdminCortes() {
           ))}
         </div>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-destructive" />
+              {deleteMessage.title}
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-base">
+              {deleteMessage.description}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            {deleteMessage.canDelete ? (
+              <>
+                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={handleConfirmDelete}
+                  className="bg-destructive hover:bg-destructive/90"
+                >
+                  Sim, remover
+                </AlertDialogAction>
+              </>
+            ) : (
+              <>
+                <AlertDialogCancel>Fechar</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={handleDeactivateInstead}
+                  className="bg-primary hover:bg-primary/90"
+                >
+                  Desativar corte
+                </AlertDialogAction>
+              </>
+            )}
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
