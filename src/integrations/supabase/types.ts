@@ -346,6 +346,42 @@ export type Database = {
           },
         ]
       }
+      informacoes_aplicativo: {
+        Row: {
+          ativo: boolean | null
+          atualizado_em: string | null
+          atualizado_por: string | null
+          categoria: string
+          chave: string
+          conteudo: string
+          id: number
+          ordem: number | null
+          titulo: string
+        }
+        Insert: {
+          ativo?: boolean | null
+          atualizado_em?: string | null
+          atualizado_por?: string | null
+          categoria: string
+          chave: string
+          conteudo: string
+          id?: number
+          ordem?: number | null
+          titulo: string
+        }
+        Update: {
+          ativo?: boolean | null
+          atualizado_em?: string | null
+          atualizado_por?: string | null
+          categoria?: string
+          chave?: string
+          conteudo?: string
+          id?: number
+          ordem?: number | null
+          titulo?: string
+        }
+        Relationships: []
+      }
       informacoes_empresa: {
         Row: {
           ativo: boolean | null
