@@ -346,6 +346,33 @@ export type Database = {
           },
         ]
       }
+      informacoes_empresa: {
+        Row: {
+          ativo: boolean | null
+          atualizado_em: string | null
+          categoria: string
+          chave: string
+          id: number
+          valor: string
+        }
+        Insert: {
+          ativo?: boolean | null
+          atualizado_em?: string | null
+          categoria: string
+          chave: string
+          id?: number
+          valor: string
+        }
+        Update: {
+          ativo?: boolean | null
+          atualizado_em?: string | null
+          categoria?: string
+          chave?: string
+          id?: number
+          valor?: string
+        }
+        Relationships: []
+      }
       logs_agendamentos: {
         Row: {
           acao: string
