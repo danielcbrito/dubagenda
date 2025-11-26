@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { TimelineAppointment } from "./AdminAgenda";
+import { AdminRescheduleModal } from "./AdminRescheduleModal";
 import { 
   User, 
   Clock, 
@@ -12,7 +13,8 @@ import {
   CheckCircle2, 
   XCircle,
   History,
-  AlertCircle
+  AlertCircle,
+  Edit
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -31,6 +33,7 @@ export function AppointmentDetailsSidebar({ appointment, open, onClose, onUpdate
   const [loading, setLoading] = useState(false);
   const [history, setHistory] = useState<any[]>([]);
   const [clientPoints, setClientPoints] = useState<number>(0);
+  const [rescheduleModalOpen, setRescheduleModalOpen] = useState(false);
 
   useEffect(() => {
     if (appointment) {
@@ -381,18 +384,36 @@ export function AppointmentDetailsSidebar({ appointment, open, onClose, onUpdate
             
             {canCancel && (
               <Button 
-                onClick={handleCancel} 
+                onClick={() => setRescheduleModalOpen(true)} 
                 disabled={loading}
-                variant="destructive"
+                variant="outline"
                 className="w-full"
               >
-                <XCircle className="w-4 h-4 mr-2" />
-                Cancelar Agendamento
+                <Edit className="w-4 h-4 mr-2" />
+                Remarcar / Cancelar
               </Button>
             )}
           </div>
         </div>
       </SheetContent>
+
+      {/* Admin Reschedule Modal */}
+      {appointment && (
+        <AdminRescheduleModal
+          open={rescheduleModalOpen}
+          onOpenChange={setRescheduleModalOpen}
+          appointmentId={appointment.id}
+          userId={appointment.user_id}
+          serviceName={appointment.servico?.nome || "Serviço"}
+          currentDate={appointment.data}
+          currentTime={appointment.hora}
+          onSuccess={() => {
+            setRescheduleModalOpen(false);
+            onClose();
+            onUpdate();
+          }}
+        />
+      )}
     </Sheet>
   );
 }
