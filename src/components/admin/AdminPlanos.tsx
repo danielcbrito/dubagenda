@@ -5,8 +5,18 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import { Plus, Sparkles, Trash2 } from "lucide-react";
+import { Plus, Sparkles, Trash2, Pencil, AlertTriangle } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 
@@ -25,6 +35,9 @@ export function AdminPlanos() {
   const [planos, setPlanos] = useState<Plano[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingPlano, setEditingPlano] = useState<Plano | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [planoToDelete, setPlanoToDelete] = useState<Plano | null>(null);
   const [newPlano, setNewPlano] = useState({
     nome: "",
     descricao: "",
@@ -77,35 +90,75 @@ export function AdminPlanos() {
     }
   };
 
-  const handleCreatePlano = async () => {
+  const resetForm = () => {
+    setNewPlano({
+      nome: "",
+      descricao: "",
+      preco_mensal: 0,
+      limite_agendamentos_mes: 4,
+      prioridade_agendamento: 0,
+      beneficios_json: [""],
+    });
+    setEditingPlano(null);
+  };
+
+  const handleOpenDialog = (plano?: Plano) => {
+    if (plano) {
+      setEditingPlano(plano);
+      setNewPlano({
+        nome: plano.nome,
+        descricao: plano.descricao || "",
+        preco_mensal: plano.preco_mensal,
+        limite_agendamentos_mes: plano.limite_agendamentos_mes || 4,
+        prioridade_agendamento: plano.prioridade_agendamento || 0,
+        beneficios_json: plano.beneficios_json && plano.beneficios_json.length > 0 
+          ? plano.beneficios_json 
+          : [""],
+      });
+    } else {
+      resetForm();
+    }
+    setDialogOpen(true);
+  };
+
+  const handleCloseDialog = () => {
+    setDialogOpen(false);
+    resetForm();
+  };
+
+  const handleSubmit = async () => {
     if (!newPlano.nome || newPlano.preco_mensal <= 0) {
       toast.error("Preencha nome e preço do plano");
       return;
     }
 
     try {
-      const { error } = await supabase
-        .from("planos")
-        .insert([{
-          ...newPlano,
-          beneficios_json: newPlano.beneficios_json.filter(b => b.trim() !== "")
-        }]);
+      const payload = {
+        ...newPlano,
+        beneficios_json: newPlano.beneficios_json.filter(b => b.trim() !== "")
+      };
 
-      if (error) throw error;
+      if (editingPlano) {
+        const { error } = await supabase
+          .from("planos")
+          .update(payload)
+          .eq("id", editingPlano.id);
+
+        if (error) throw error;
+        toast.success("Plano atualizado com sucesso!");
+      } else {
+        const { error } = await supabase
+          .from("planos")
+          .insert([payload]);
+
+        if (error) throw error;
+        toast.success("Plano criado com sucesso!");
+      }
       
-      toast.success("Plano criado com sucesso!");
-      setDialogOpen(false);
-      setNewPlano({
-        nome: "",
-        descricao: "",
-        preco_mensal: 0,
-        limite_agendamentos_mes: 4,
-        prioridade_agendamento: 0,
-        beneficios_json: [""],
-      });
+      handleCloseDialog();
     } catch (error) {
-      console.error("Error creating plano:", error);
-      toast.error("Erro ao criar plano");
+      console.error("Error saving plano:", error);
+      toast.error("Erro ao salvar plano");
     }
   };
 
@@ -131,27 +184,29 @@ export function AdminPlanos() {
     }
   };
 
-  const handleDeletePlano = async (id: string) => {
-    if (!confirm("Tem certeza que deseja remover este plano?")) return;
+  const handleOpenDeleteDialog = (plano: Plano) => {
+    setPlanoToDelete(plano);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!planoToDelete) return;
 
     try {
-      // Optimistic UI update
-      setPlanos(prev => prev.filter(p => p.id !== id));
-
       const { error } = await supabase
         .from("planos")
         .delete()
-        .eq("id", id);
+        .eq("id", planoToDelete.id);
 
-      if (error) {
-        // Revert on error - reload plans
-        await loadPlanos();
-        throw error;
-      }
-      toast.success("Plano removido");
-    } catch (error) {
-      console.error("Error deleting plano:", error);
-      toast.error("Erro ao remover plano");
+      if (error) throw error;
+      
+      toast.success("Plano removido com sucesso");
+      loadPlanos();
+    } catch (error: any) {
+      toast.error("Erro ao excluir plano: " + error.message);
+    } finally {
+      setDeleteDialogOpen(false);
+      setPlanoToDelete(null);
     }
   };
 
@@ -182,14 +237,14 @@ export function AdminPlanos() {
         <h1 className="text-2xl font-bold">Planos de Assinatura</h1>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
-            <Button>
+            <Button onClick={() => handleOpenDialog()}>
               <Plus className="w-4 h-4 mr-2" />
               Novo Plano
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Criar Novo Plano</DialogTitle>
+              <DialogTitle>{editingPlano ? "Editar Plano" : "Criar Novo Plano"}</DialogTitle>
             </DialogHeader>
             <div className="space-y-4 py-4">
               <div>
@@ -281,9 +336,14 @@ export function AdminPlanos() {
                 </div>
               </div>
 
-              <Button onClick={handleCreatePlano} className="w-full">
-                Criar Plano
-              </Button>
+              <div className="flex gap-2 pt-4">
+                <Button type="button" variant="outline" onClick={handleCloseDialog} className="flex-1">
+                  Cancelar
+                </Button>
+                <Button onClick={handleSubmit} className="flex-1">
+                  {editingPlano ? "Atualizar" : "Criar"}
+                </Button>
+              </div>
             </div>
           </DialogContent>
         </Dialog>
@@ -342,10 +402,16 @@ export function AdminPlanos() {
                   <Button
                     variant="ghost"
                     size="icon"
-                    onClick={() => handleDeletePlano(plano.id)}
-                    className="text-destructive hover:text-destructive"
+                    onClick={() => handleOpenDialog(plano)}
                   >
-                    <Trash2 className="w-4 h-4" />
+                    <Pencil className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => handleOpenDeleteDialog(plano)}
+                  >
+                    <Trash2 className="w-4 h-4 text-destructive" />
                   </Button>
                 </div>
               </div>
@@ -353,6 +419,34 @@ export function AdminPlanos() {
           ))}
         </div>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-destructive" />
+              Tem certeza que deseja remover este plano?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-base">
+              {planoToDelete && (
+                <>
+                  O plano "<strong>{planoToDelete.nome}</strong>" será removido permanentemente. Esta ação não pode ser desfeita.
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
+              className="bg-destructive hover:bg-destructive/90"
+            >
+              Sim, remover
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

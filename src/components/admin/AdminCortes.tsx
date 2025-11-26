@@ -42,11 +42,6 @@ export function AdminCortes() {
   const [editingServico, setEditingServico] = useState<Servico | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [servicoToDelete, setServicoToDelete] = useState<Servico | null>(null);
-  const [deleteMessage, setDeleteMessage] = useState<{
-    title: string;
-    description: string;
-    canDelete: boolean;
-  }>({ title: "", description: "", canDelete: false });
   const [formData, setFormData] = useState({
     nome: "",
     descricao: "",
@@ -177,42 +172,13 @@ export function AdminCortes() {
     }
   };
 
-  const handleOpenDeleteDialog = async (servico: Servico) => {
-    try {
-      // Verificar se existem agendamentos vinculados a este serviço
-      const { data: agendamentos, error } = await supabase
-        .from("agendamentos")
-        .select("id")
-        .eq("servico_id", servico.id)
-        .limit(1);
-
-      if (error) throw error;
-
-      if (agendamentos && agendamentos.length > 0) {
-        // Existem agendamentos vinculados - não pode deletar
-        setDeleteMessage({
-          title: "Não é possível excluir este corte",
-          description: `O corte "${servico.nome}" possui agendamentos vinculados e não pode ser excluído. Você pode desativá-lo para que não apareça mais para novos agendamentos.`,
-          canDelete: false,
-        });
-      } else {
-        // Não existem agendamentos - pode deletar
-        setDeleteMessage({
-          title: "Tem certeza que deseja remover este corte?",
-          description: `O corte "${servico.nome}" será removido permanentemente. Esta ação não pode ser desfeita.`,
-          canDelete: true,
-        });
-      }
-
-      setServicoToDelete(servico);
-      setDeleteDialogOpen(true);
-    } catch (error: any) {
-      toast.error("Erro ao verificar corte: " + error.message);
-    }
+  const handleOpenDeleteDialog = (servico: Servico) => {
+    setServicoToDelete(servico);
+    setDeleteDialogOpen(true);
   };
 
   const handleConfirmDelete = async () => {
-    if (!servicoToDelete || !deleteMessage.canDelete) {
+    if (!servicoToDelete) {
       setDeleteDialogOpen(false);
       return;
     }
@@ -229,27 +195,6 @@ export function AdminCortes() {
       loadServicos();
     } catch (error: any) {
       toast.error("Erro ao excluir corte: " + error.message);
-    } finally {
-      setDeleteDialogOpen(false);
-      setServicoToDelete(null);
-    }
-  };
-
-  const handleDeactivateInstead = async () => {
-    if (!servicoToDelete) return;
-
-    try {
-      const { error } = await supabase
-        .from("servicos")
-        .update({ ativo: false })
-        .eq("id", servicoToDelete.id);
-
-      if (error) throw error;
-      
-      toast.success("Corte desativado com sucesso");
-      loadServicos();
-    } catch (error: any) {
-      toast.error("Erro ao desativar corte: " + error.message);
     } finally {
       setDeleteDialogOpen(false);
       setServicoToDelete(null);
@@ -432,34 +377,24 @@ export function AdminCortes() {
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
               <AlertTriangle className="w-5 h-5 text-destructive" />
-              {deleteMessage.title}
+              Tem certeza que deseja remover este corte?
             </AlertDialogTitle>
             <AlertDialogDescription className="text-base">
-              {deleteMessage.description}
+              {servicoToDelete && (
+                <>
+                  O corte "<strong>{servicoToDelete.nome}</strong>" será removido permanentemente. Esta ação não pode ser desfeita.
+                </>
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            {deleteMessage.canDelete ? (
-              <>
-                <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                <AlertDialogAction
-                  onClick={handleConfirmDelete}
-                  className="bg-destructive hover:bg-destructive/90"
-                >
-                  Sim, remover
-                </AlertDialogAction>
-              </>
-            ) : (
-              <>
-                <AlertDialogCancel>Fechar</AlertDialogCancel>
-                <AlertDialogAction
-                  onClick={handleDeactivateInstead}
-                  className="bg-primary hover:bg-primary/90"
-                >
-                  Desativar corte
-                </AlertDialogAction>
-              </>
-            )}
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
+              className="bg-destructive hover:bg-destructive/90"
+            >
+              Sim, remover
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
