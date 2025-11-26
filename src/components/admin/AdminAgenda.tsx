@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { TimelineView } from "./TimelineView";
 import { AppointmentDetailsSidebar } from "./AppointmentDetailsSidebar";
 import { ConfirmAttendanceModal } from "./ConfirmAttendanceModal";
+import { CancelAllAppointmentsModal } from "./CancelAllAppointmentsModal";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
@@ -37,6 +38,7 @@ export function AdminAgenda() {
   const [selectedAppointment, setSelectedAppointment] = useState<TimelineAppointment | null>(null);
   const [loading, setLoading] = useState(false);
   const [confirmModalAppointment, setConfirmModalAppointment] = useState<TimelineAppointment | null>(null);
+  const [cancelAllModalOpen, setCancelAllModalOpen] = useState(false);
   
   // Filters
   const [filterService, setFilterService] = useState<string>("all");
@@ -237,6 +239,16 @@ export function AdminAgenda() {
             Hoje
           </Button>
 
+          {filteredAppointments.length > 0 && (
+            <Button
+              onClick={() => setCancelAllModalOpen(true)}
+              variant="destructive"
+              size="sm"
+            >
+              Cancelar Todos
+            </Button>
+          )}
+
           <Popover>
             <PopoverTrigger asChild>
               <Button variant="outline" size="sm">
@@ -305,6 +317,15 @@ export function AdminAgenda() {
         open={!!confirmModalAppointment}
         onClose={() => setConfirmModalAppointment(null)}
         onUpdate={() => loadAppointments(date)}
+      />
+
+      {/* Cancel All Appointments Modal */}
+      <CancelAllAppointmentsModal
+        open={cancelAllModalOpen}
+        onOpenChange={setCancelAllModalOpen}
+        date={date}
+        appointmentsCount={filteredAppointments.length}
+        onSuccess={() => loadAppointments(date)}
       />
     </div>
   );

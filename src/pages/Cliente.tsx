@@ -330,8 +330,8 @@ const Cliente = () => {
           </div>
           
           <div className="flex items-center gap-2">
-            <NotificationBell />
-            <Button 
+            {user && <NotificationBell userId={user.id} />}
+            <Button
               variant="ghost" 
               size="icon"
               onClick={() => setDrawerOpen(true)}
