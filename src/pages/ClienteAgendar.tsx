@@ -573,8 +573,10 @@ const ClienteAgendar = () => {
           hora: selectedTime,
           duracao: totalDuration,
           status: 'pending', // Reset to pending
+          barbeiro_confirmou: false, // Volta para confirmação do barbeiro
+          cliente_confirmou: false, // Volta para confirmação do cliente
           updated_at: new Date().toISOString(),
-        })
+        } as any)
         .eq("id", rescheduleAppointmentId);
 
       if (error) throw error;
