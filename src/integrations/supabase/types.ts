@@ -26,10 +26,12 @@ export type Database = {
           hora: string
           id: string
           is_free: boolean | null
+          motivo_remarcacao: string | null
           observacoes: string | null
           payment_method: string | null
           ponto_liberado: boolean | null
           preco: number
+          remarcacao_solicitada: boolean | null
           remarcado_de: string | null
           servico_id: string
           status: Database["public"]["Enums"]["appointment_status"] | null
@@ -49,10 +51,12 @@ export type Database = {
           hora: string
           id?: string
           is_free?: boolean | null
+          motivo_remarcacao?: string | null
           observacoes?: string | null
           payment_method?: string | null
           ponto_liberado?: boolean | null
           preco: number
+          remarcacao_solicitada?: boolean | null
           remarcado_de?: string | null
           servico_id: string
           status?: Database["public"]["Enums"]["appointment_status"] | null
@@ -72,10 +76,12 @@ export type Database = {
           hora?: string
           id?: string
           is_free?: boolean | null
+          motivo_remarcacao?: string | null
           observacoes?: string | null
           payment_method?: string | null
           ponto_liberado?: boolean | null
           preco?: number
+          remarcacao_solicitada?: boolean | null
           remarcado_de?: string | null
           servico_id?: string
           status?: Database["public"]["Enums"]["appointment_status"] | null

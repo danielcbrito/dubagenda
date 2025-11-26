@@ -48,13 +48,13 @@ export function AdminRescheduleModal({
     setProcessing(true);
     try {
       if (action === "reschedule") {
-        // Atualizar status para remarcação pendente
+        // Marcar como remarcação solicitada SEM cancelar
         const { error: updateError } = await supabase
           .from("agendamentos")
           .update({
-            status: "cancelled_by_admin",
-            cancelado_em: new Date().toISOString(),
-            observacoes: `Solicitação de remarcação: ${reason}`,
+            remarcacao_solicitada: true,
+            motivo_remarcacao: reason,
+            observacoes: `Remarcação solicitada pelo barbeiro: ${reason}`,
           })
           .eq("id", appointmentId);
 
@@ -67,7 +67,7 @@ export function AdminRescheduleModal({
             user_id: userId,
             tipo: "remarcacao",
             titulo: "Remarcação Solicitada",
-            mensagem: `Seu agendamento de ${serviceName} precisa ser remarcado. Motivo: ${reason}. Por favor, escolha um novo horário no aplicativo.`,
+            mensagem: `Olá! O barbeiro solicita a remarcação do seu agendamento de ${serviceName}.\n\nMotivo: ${reason}\n\nPor favor, escolha um novo horário disponível no aplicativo.`,
             agendamento_id: appointmentId,
             lida: false,
           });
