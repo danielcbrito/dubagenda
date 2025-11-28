@@ -228,39 +228,59 @@ const Auth = () => {
 
   return (
     <>
-      {/* Email Confirmation Dialog */}
+      {/* 📨 PREMIUM Email Confirmation Dialog */}
       <AlertDialog open={showEmailConfirmDialog} onOpenChange={setShowEmailConfirmDialog}>
-        <AlertDialogContent className="max-w-md">
+        <AlertDialogContent className="card-glass max-w-md border-primary/20 shadow-glow-red">
           <AlertDialogHeader>
-            <div className="flex justify-center mb-4">
-              <div className="rounded-full bg-primary/10 p-4">
-                <Mail className="h-10 w-10 text-primary" />
+            {/* Ícone Premium Brilhante */}
+            <div className="flex justify-center mb-6">
+              <div className="relative">
+                <div className="absolute inset-0 bg-primary/30 blur-2xl animate-pulse" />
+                <div className="relative rounded-full bg-gradient-primary p-6 shadow-glow-red">
+                  <Mail className="h-12 w-12 text-primary-foreground animate-bounce" />
+                </div>
               </div>
             </div>
-            <AlertDialogTitle className="text-center text-xl">
-              Confirme seu email
+            
+            <AlertDialogTitle className="text-center text-2xl font-bold tracking-wide">
+              Verifique seu e-mail
             </AlertDialogTitle>
-            <AlertDialogDescription className="text-center space-y-3 pt-2">
-              <p className="text-base">
-                Enviamos um link de confirmação para:
+            
+            <AlertDialogDescription className="text-center space-y-4 pt-4">
+              <p className="text-base text-foreground">
+                Enviamos um link de verificação para:
               </p>
-              <p className="font-semibold text-foreground">
-                {userEmail}
+              <div className="p-3 bg-secondary/50 rounded-lg border border-primary/20">
+                <p className="font-bold text-lg text-primary">
+                  {userEmail}
+                </p>
+              </div>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                Assim que você confirmar, você será redirecionado automaticamente e poderá fazer login.
               </p>
-              <p className="text-sm text-muted-foreground">
-                Por favor, verifique sua caixa de entrada (e também a pasta de spam) e clique no link para ativar sua conta.
-              </p>
+              <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground pt-2">
+                <div className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse" />
+                <span>Verifique também sua pasta de spam</span>
+              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
+          
+          <AlertDialogFooter className="flex flex-col gap-3">
             <Button 
               onClick={() => {
                 setShowEmailConfirmDialog(false);
                 navigate("/auth?mode=login");
               }}
-              className="w-full"
+              className="w-full h-12 bg-gradient-primary shadow-glow-red hover:scale-[1.02] transition-all font-semibold"
             >
               Entendi
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={() => toast.info("Função de reenvio será implementada em breve")}
+              className="w-full text-sm text-muted-foreground hover:text-primary transition-colors"
+            >
+              Reenviar confirmação
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>

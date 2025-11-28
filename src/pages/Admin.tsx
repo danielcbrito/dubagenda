@@ -11,6 +11,8 @@ import { AdminFinanceiro } from "@/components/admin/AdminFinanceiro";
 import { AdminRelatorios } from "@/components/admin/AdminRelatorios";
 import { AdminPromocoes } from "@/components/admin/AdminPromocoes";
 import { AdminServicos } from "@/components/admin/AdminServicos";
+import { AdminAPIs } from "@/components/admin/AdminAPIs";
+import { AdminSeguranca } from "@/components/admin/AdminSeguranca";
 import { AdminConfiguracoes } from "@/components/admin/AdminConfiguracoes";
 import { AdminConfirmacoesPendentes } from "@/components/admin/AdminConfirmacoesPendentes";
 import { AdminDev } from "@/components/admin/AdminDev";
@@ -59,6 +61,8 @@ const Admin = () => {
             <Route path="servicos/*" element={<AdminServicos />} />
             <Route path="promocoes" element={<AdminPromocoes />} />
             <Route path="configuracoes" element={<AdminConfiguracoes />} />
+            <Route path="apis" element={<AdminAPIs />} />
+            <Route path="seguranca" element={<AdminSeguranca />} />
             <Route path="dev" element={<AdminDev />} />
           </Routes>
         </main>

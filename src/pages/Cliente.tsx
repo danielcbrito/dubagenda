@@ -363,53 +363,69 @@ const Cliente = () => {
       </div>
 
       <div className="max-w-4xl mx-auto px-4 py-6 space-y-6 relative z-10">
-        {/* Points Card with Gradient */}
-        <Card className="overflow-hidden border-0 shadow-elegant hover:shadow-glow transition-all duration-500 hover:scale-[1.02]">
+        {/* 💎 Premium Points Card */}
+        <Card className="card-glass overflow-hidden border border-gold/20 shadow-glow-gold hover:scale-[1.02] transition-all duration-500">
           <div 
-            className="p-6"
+            className="p-6 relative"
             style={{
-              background: "linear-gradient(135deg, hsl(var(--background)) 0%, hsl(var(--primary) / 0.15) 100%)"
+              background: "linear-gradient(135deg, hsl(var(--card)) 0%, hsl(var(--gold) / 0.1) 100%)"
             }}
           >
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h3 className="text-base font-semibold">Programa de Pontos</h3>
-                <p className="text-[10px] text-muted-foreground">A cada 5 cortes, ganhe 1 grátis</p>
-              </div>
-              <Gift className="w-7 h-7 text-gold animate-pulse" />
-            </div>
+            {/* Glow effect */}
+            <div className="absolute top-0 right-0 w-32 h-32 bg-gold/10 rounded-full blur-3xl" />
             
-            <div className="space-y-3">
-              <div className="flex justify-between text-xs">
-                <span className="text-muted-foreground">{points % 5} de 5 cortes</span>
-                <span className="text-gold font-semibold">
-                  {redemptions} {redemptions === 1 ? 'disponível' : 'disponíveis'}
-                </span>
+            <div className="relative z-10">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="text-lg font-bold tracking-wide">Programa de Pontos</h3>
+                  <p className="text-xs text-muted-foreground">A cada 5 cortes, ganhe 1 grátis</p>
+                </div>
+                <div className="relative">
+                  <div className="absolute inset-0 bg-gold/30 blur-lg animate-pulse" />
+                  <Gift className="relative w-8 h-8 text-gold" />
+                </div>
               </div>
-              <Progress value={pointsProgress} className="h-1.5" />
-              <p className="text-[10px] text-center text-muted-foreground">
-                Faltam {cutsUntilFree} {cutsUntilFree === 1 ? 'corte' : 'cortes'} para o próximo grátis
-              </p>
-            </div>
+              
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground">{points % 5} de 5 cortes</span>
+                  <span className="text-gold font-bold text-sm flex items-center gap-1">
+                    <div className="w-2 h-2 bg-gold rounded-full animate-pulse" />
+                    {redemptions} {redemptions === 1 ? 'disponível' : 'disponíveis'}
+                  </span>
+                </div>
+                
+                <Progress value={pointsProgress} className="h-2 bg-secondary/50" />
+                
+                <p className="text-xs text-center text-muted-foreground font-medium">
+                  Faltam {cutsUntilFree} {cutsUntilFree === 1 ? 'corte' : 'cortes'} para o próximo grátis 🎁
+                </p>
+              </div>
 
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setPointsModalOpen(true)}
-              className="w-full mt-4 h-8 text-xs hover:bg-primary/10 transition-all duration-300"
-            >
-              Ver detalhes
-            </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setPointsModalOpen(true)}
+                className="w-full mt-4 h-9 text-xs hover:bg-gold/10 hover:text-gold transition-all duration-300 font-semibold"
+              >
+                Ver detalhes completos
+              </Button>
+            </div>
           </div>
         </Card>
 
-        {/* Schedule Button */}
+        {/* 🔥 Premium Schedule Button */}
         <Button 
-          className="w-full h-14 bg-primary hover:bg-primary/90 text-sm font-semibold transition-all duration-300 hover:scale-[1.02] hover:shadow-glow group"
+          className="relative w-full h-16 bg-gradient-primary text-base font-bold tracking-wide overflow-hidden group shadow-glow-red hover:shadow-premium-hover transition-all duration-300 hover:scale-[1.02]"
           onClick={() => navigate("/cliente/agendar")}
         >
-          <Calendar className="mr-2 w-5 h-5 group-hover:rotate-12 transition-transform duration-300" />
-          Agendar Horário
+          {/* Animated background glow */}
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
+          
+          <div className="relative flex items-center justify-center gap-3">
+            <Calendar className="w-6 h-6 group-hover:rotate-12 transition-transform duration-300" />
+            <span>Agendar Horário</span>
+          </div>
         </Button>
 
         {/* Pending Bookings - Awaiting Payment */}
