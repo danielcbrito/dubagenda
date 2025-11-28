@@ -277,6 +277,64 @@ All colors MUST be HSL. */
   }
 }
 
+/* 🎨 MOBILE-FIRST OPTIMIZATIONS */
+@layer utilities {
+  /* Touch targets - minimum 44x44px */
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  /* Prevent zoom on input focus (iOS) */
+  @media screen and (max-width: 767px) {
+    input[type="text"],
+    input[type="email"],
+    input[type="password"],
+    input[type="tel"],
+    input[type="number"],
+    textarea,
+    select {
+      font-size: 16px !important;
+    }
+  }
+  
+  /* Sticky CTA button */
+  .sticky-cta {
+    position: sticky;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 40;
+    padding: 16px;
+    background: linear-gradient(to top, hsl(var(--background)) 60%, transparent);
+    backdrop-filter: blur(12px);
+  }
+  
+  /* Service cards optimized for mobile */
+  .service-card {
+    @apply card-glass p-4 cursor-pointer transition-all duration-300;
+    border: 2px solid transparent;
+  }
+  
+  .service-card.selected {
+    border-color: hsl(var(--primary));
+    box-shadow: var(--shadow-glow-red);
+    transform: scale(1.02);
+  }
+  
+  .service-card:active {
+    transform: scale(0.98);
+  }
+}
+
+/* 🎭 DARK MODE CARD FIX */
+.card-glass-dark {
+  background: linear-gradient(135deg, hsl(0 0% 10%), hsl(0 0% 8%));
+  backdrop-filter: var(--blur-glass);
+  border: 1px solid hsl(var(--border));
+  box-shadow: var(--shadow-premium), var(--shadow-inset-titanium);
+}
+
 /* Hide Lovable badge */
 a[href*="lovable.dev"],
 iframe[src*="lovable.dev"],

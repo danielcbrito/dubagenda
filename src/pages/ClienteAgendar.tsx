@@ -623,12 +623,12 @@ const ClienteAgendar = () => {
       <div className="max-w-4xl mx-auto p-6 space-y-6">
         {/* Step 1: Select Services */}
         {step === 1 && (
-          <div className="space-y-4">
+          <div className="space-y-4 pb-24">
             <div>
-              <h3 className="text-sm font-semibold mb-1">Etapa 1 de 5</h3>
-              <h2 className="text-xl font-bold mb-3">Escolha os Serviços</h2>
-              <p className="text-sm text-muted-foreground mb-4">
-                Selecione um ou mais serviços que deseja realizar
+              <h3 className="text-sm font-semibold mb-1 text-muted-foreground">Etapa 1 de 5</h3>
+              <h2 className="text-2xl font-bold mb-2">Escolha os Serviços</h2>
+              <p className="text-sm text-muted-foreground">
+                Selecione um ou mais serviços
               </p>
             </div>
             
@@ -638,32 +638,37 @@ const ClienteAgendar = () => {
                 return (
                   <Card
                     key={service.id}
-                    className={`p-4 cursor-pointer transition-all ${
-                      isSelected
-                        ? "border-primary bg-primary/5 ring-2 ring-primary"
-                        : "card-premium hover:border-primary/50"
-                    }`}
+                    className={`service-card ${isSelected ? 'selected' : ''}`}
                     onClick={() => toggleService(service)}
+                    style={{ minHeight: '100px' }}
                   >
-                    <div className="flex justify-between items-start">
+                    <div className="flex justify-between items-start gap-3">
                       <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                          <h4 className="font-semibold">{service.nome}</h4>
+                        <div className="flex items-center gap-2 mb-1">
+                          <h4 className="font-semibold text-base">{service.nome}</h4>
                           {isSelected && (
-                            <div className="bg-primary rounded-full p-1">
-                              <Check className="w-3 h-3 text-primary-foreground" />
+                            <div 
+                              className="rounded-full p-1.5 flex-shrink-0"
+                              style={{
+                                background: 'linear-gradient(135deg, hsl(0 64% 52%), hsl(0 64% 42%))',
+                                boxShadow: '0 2px 8px rgba(212,49,49,0.3)'
+                              }}
+                            >
+                              <Check className="w-3 h-3 text-white" />
                             </div>
                           )}
                         </div>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {service.descricao}
-                        </p>
-                        <div className="flex items-center gap-3 mt-2 text-xs">
-                          <span className="flex items-center gap-1">
-                            <Clock className="w-3 h-3" />
+                        {service.descricao && (
+                          <p className="text-xs text-muted-foreground leading-relaxed mb-2">
+                            {service.descricao}
+                          </p>
+                        )}
+                        <div className="flex items-center gap-4 text-xs">
+                          <span className="flex items-center gap-1.5 text-muted-foreground">
+                            <Clock className="w-3.5 h-3.5" />
                             {service.duracao_minutos} min
                           </span>
-                          <span className="text-primary font-semibold">
+                          <span className="font-bold text-base" style={{ color: 'hsl(0 64% 52%)' }}>
                             R$ {service.preco.toFixed(2)}
                           </span>
                         </div>
@@ -674,31 +679,42 @@ const ClienteAgendar = () => {
               })}
             </div>
 
+            {/* Sticky CTA */}
             {selectedServices.length > 0 && (
-              <Card className="p-4 bg-primary/5 border-primary/20">
-                <div className="flex justify-between items-center text-sm">
-                  <div>
-                    <span className="font-semibold">{selectedServices.length} serviço(s) selecionado(s)</span>
-                    <div className="text-xs text-muted-foreground mt-1">
-                      Tempo total: {getTotalDuration()} min
+              <div className="sticky-cta">
+                <Card className="p-4 mb-3" style={{
+                  background: 'linear-gradient(135deg, hsl(0 64% 52% / 0.1), hsl(0 64% 42% / 0.05))',
+                  border: '1px solid hsl(0 64% 52% / 0.3)'
+                }}>
+                  <div className="flex justify-between items-center text-sm">
+                    <div>
+                      <span className="font-semibold text-foreground">
+                        {selectedServices.length} {selectedServices.length === 1 ? 'serviço' : 'serviços'}
+                      </span>
+                      <div className="text-xs text-muted-foreground">
+                        {getTotalDuration()} minutos
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="font-bold text-xl" style={{ color: 'hsl(0 64% 52%)' }}>
+                        R$ {getTotalPrice().toFixed(2)}
+                      </div>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <div className="font-bold text-lg text-primary">
-                      R$ {getTotalPrice().toFixed(2)}
-                    </div>
-                  </div>
-                </div>
-              </Card>
+                </Card>
+                <Button
+                  onClick={handleNextStep}
+                  className="w-full touch-target font-semibold text-base"
+                  style={{
+                    background: 'linear-gradient(135deg, hsl(0 64% 52%), hsl(0 64% 42%))',
+                    boxShadow: '0 4px 12px rgba(212,49,49,0.3)',
+                    minHeight: '52px'
+                  }}
+                >
+                  Escolher Data e Horário
+                </Button>
+              </div>
             )}
-
-            <Button
-              onClick={handleNextStep}
-              disabled={selectedServices.length === 0}
-              className="w-full h-14 bg-primary hover:bg-primary/90 text-base"
-            >
-              Continuar
-            </Button>
           </div>
         )}
 
@@ -727,7 +743,11 @@ const ClienteAgendar = () => {
             <Button
               onClick={handleNextStep}
               disabled={!selectedDate}
-              className="w-full h-14 bg-primary hover:bg-primary/90 text-base"
+              className="w-full touch-target font-semibold"
+              style={{
+                background: 'linear-gradient(135deg, hsl(0 64% 52%), hsl(0 64% 42%))',
+                minHeight: '52px'
+              }}
             >
               Continuar
             </Button>
@@ -777,7 +797,11 @@ const ClienteAgendar = () => {
                 <Button
                   onClick={handleNextStep}
                   disabled={!selectedTime}
-                  className="w-full h-14 bg-primary hover:bg-primary/90 text-base"
+                  className="w-full touch-target font-semibold"
+                  style={{
+                    background: 'linear-gradient(135deg, hsl(0 64% 52%), hsl(0 64% 42%))',
+                    minHeight: '52px'
+                  }}
                 >
                   Continuar
                 </Button>

@@ -18,6 +18,7 @@ import { MyProfileSheet } from "@/components/MyProfileSheet";
 import { WalletSheet } from "@/components/WalletSheet";
 import { AnnouncementDialog } from "@/components/AnnouncementDialog";
 import { CancelledAppointmentBanner } from "@/components/CancelledAppointmentBanner";
+import { AnnouncementModal } from "@/components/AnnouncementModal";
 
 interface Appointment {
   id: string;
@@ -328,6 +329,8 @@ const Cliente = () => {
 
   return (
     <div className="min-h-screen bg-background relative overflow-hidden">
+      <AnnouncementModal />
+      
       {/* Background Image with Blur */}
       <div 
         className="absolute inset-0 opacity-[0.08] bg-cover bg-center pointer-events-none"

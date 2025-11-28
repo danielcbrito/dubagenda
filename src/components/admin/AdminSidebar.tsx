@@ -1,4 +1,4 @@
-import { Home, Calendar, Users, DollarSign, FileText, Gift, Settings, LogOut, CheckCircle, Scissors, Code, Menu, ChevronDown, ShieldCheck, Cpu, Key } from "lucide-react";
+import { Home, Calendar, Users, DollarSign, FileText, Gift, Settings, LogOut, CheckCircle, Scissors, Code, Menu, ChevronDown, ChevronRight, ShieldCheck, Key } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -16,7 +16,6 @@ import {
   SidebarMenuButton,
   SidebarHeader,
   SidebarFooter,
-  useSidebar,
 } from "@/components/ui/sidebar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -26,7 +25,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 
-// 🎨 Grupos organizados premium
+// 🎨 Grupos organizados premium com gavetas
 const menuGroups = [
   {
     label: "Dashboard",
@@ -57,8 +56,8 @@ const menuGroups = [
         icon: Scissors, 
         hasSubmenu: true,
         submenuItems: [
-          { title: "Planos", url: "/admin/servicos/planos" },
           { title: "Cortes", url: "/admin/servicos/cortes" },
+          { title: "Planos", url: "/admin/servicos/planos" },
         ]
       },
       { title: "Promoções", url: "/admin/promocoes", icon: Gift },
@@ -67,26 +66,10 @@ const menuGroups = [
   {
     label: "Sistema",
     items: [
-      { 
-        title: "Configurações", 
-        url: "/admin/configuracoes", 
-        icon: Settings,
-      },
-      { 
-        title: "APIs & Integrações", 
-        url: "/admin/apis", 
-        icon: Key,
-      },
-      { 
-        title: "Segurança", 
-        url: "/admin/seguranca", 
-        icon: ShieldCheck,
-      },
-      { 
-        title: "Dev Tools", 
-        url: "/admin/dev", 
-        icon: Code,
-      },
+      { title: "Configurações", url: "/admin/configuracoes", icon: Settings },
+      { title: "APIs & Integrações", url: "/admin/apis", icon: Key },
+      { title: "Segurança", url: "/admin/seguranca", icon: ShieldCheck },
+      { title: "Dev Tools", url: "/admin/dev", icon: Code },
     ],
   },
 ];
@@ -95,8 +78,10 @@ export function AdminSidebar() {
   const location = useLocation();
   const navigate = useNavigate();
   const [pendingCount, setPendingCount] = useState(0);
-  const { state, toggleSidebar } = useSidebar();
-  const [openMenus, setOpenMenus] = useState<Record<string, boolean>>({});
+  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [openMenus, setOpenMenus] = useState<Record<string, boolean>>({
+    'Atendimento': true, // Default open
+  });
 
   useEffect(() => {
     const loadPendingCount = async () => {
@@ -153,44 +138,50 @@ export function AdminSidebar() {
     setOpenMenus(prev => ({ ...prev, [title]: !prev[title] }));
   };
 
-  const collapsed = state === "collapsed";
-
   return (
-    <Sidebar className="sidebar-glass" collapsible="icon">
-      <SidebarHeader className="border-b border-border/50 p-6 backdrop-blur-[12px]">
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-gradient-primary flex items-center justify-center shadow-glow-red shrink-0">
+    <Sidebar 
+      className="sidebar-glass border-r-0"
+      style={{ 
+        width: isCollapsed ? '64px' : '260px',
+        transition: 'width 250ms cubic-bezier(0.4, 0, 0.2, 1)'
+      }}
+    >
+      <SidebarHeader className="border-b border-border/50 py-3 px-3">
+        <div className="flex items-center justify-between">
+          {!isCollapsed && (
+            <div className="flex items-center gap-2">
               <img src={logoDub} alt="DUB" className="w-8 h-8 object-contain" />
-            </div>
-            {!collapsed && (
-              <div>
-                <h2 className="font-bold text-lg text-foreground tracking-widest">DUB</h2>
-                <p className="text-xs text-muted-foreground tracking-wider">PREMIUM ADMIN</p>
+              <div className="flex flex-col">
+                <span className="font-semibold text-sm tracking-wide text-primary">DUB</span>
+                <span className="text-[9px] text-muted-foreground">Admin Panel</span>
               </div>
-            )}
-          </div>
+            </div>
+          )}
+          {isCollapsed && (
+            <img src={logoDub} alt="DUB" className="w-8 h-8 object-contain mx-auto" />
+          )}
           <Button
             variant="ghost"
             size="icon"
-            onClick={toggleSidebar}
-            className="hover:bg-secondary/50 hover:text-primary transition-all"
+            onClick={() => setIsCollapsed(!isCollapsed)}
+            className="h-8 w-8 hover:bg-secondary/50 shrink-0"
+            title={isCollapsed ? "Expandir" : "Recolher"}
           >
-            <Menu className="w-5 h-5" />
+            {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
           </Button>
         </div>
       </SidebarHeader>
 
-      <SidebarContent className="px-3 py-6">
+      <SidebarContent className="px-2 py-3" style={{ overflowX: 'hidden' }}>
         {menuGroups.map((group) => (
-          <SidebarGroup key={group.label} className="mb-6">
-            {!collapsed && (
-              <SidebarGroupLabel className="px-4 mb-3 text-xs font-bold text-muted-foreground tracking-widest uppercase">
+          <SidebarGroup key={group.label} className="mb-3">
+            {!isCollapsed && (
+              <SidebarGroupLabel className="text-[10px] font-semibold tracking-wider text-muted-foreground/60 px-3 mb-1.5">
                 {group.label}
               </SidebarGroupLabel>
             )}
             <SidebarGroupContent>
-              <SidebarMenu className="space-y-1">
+              <SidebarMenu className="space-y-0.5">
                 {group.items.map((item) => {
                   const isActive = isItemActive(item);
                   const Icon = item.icon;
@@ -200,27 +191,28 @@ export function AdminSidebar() {
                     const isOpen = openMenus[item.title] ?? isActive;
                     
                     return (
-                      <Collapsible key={item.title} open={isOpen} onOpenChange={() => toggleMenu(item.title)}>
+                      <Collapsible key={item.title} open={!isCollapsed && isOpen} onOpenChange={() => toggleMenu(item.title)}>
                         <SidebarMenuItem>
                           <CollapsibleTrigger asChild>
-                            <SidebarMenuButton className={`sidebar-menu-item ${isActive ? 'active' : ''}`}>
-                              <div className="flex items-center gap-4 flex-1">
-                                <div className={`w-10 h-10 rounded-lg flex items-center justify-center transition-all shrink-0 ${
-                                  isActive 
-                                    ? 'bg-gradient-primary shadow-glow-red' 
-                                    : 'bg-secondary/50'
-                                }`}>
-                                  <Icon className="w-5 h-5" strokeWidth={2.5} />
-                                </div>
-                                {!collapsed && <span className="text-sm font-semibold">{item.title}</span>}
-                              </div>
-                              {!collapsed && (
-                                <ChevronDown className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                            <SidebarMenuButton 
+                              className={`sidebar-menu-item h-10 ${isActive ? 'active' : ''}`}
+                              title={isCollapsed ? item.title : undefined}
+                            >
+                              <Icon className="w-5 h-5 flex-shrink-0" />
+                              {!isCollapsed && (
+                                <>
+                                  <span className="flex-1 text-sm">{item.title}</span>
+                                  <ChevronDown
+                                    className={`w-3.5 h-3.5 transition-transform duration-200 ${
+                                      isOpen ? 'rotate-180' : ''
+                                    }`}
+                                  />
+                                </>
                               )}
                             </SidebarMenuButton>
                           </CollapsibleTrigger>
-                          {!collapsed && (
-                            <CollapsibleContent className="ml-6 mt-1 space-y-1">
+                          {!isCollapsed && (
+                            <CollapsibleContent className="pl-5 mt-0.5 space-y-0.5">
                               {item.submenuItems?.map((subItem: any) => {
                                 const subIsActive = location.pathname === subItem.url;
                                 return (
@@ -231,7 +223,7 @@ export function AdminSidebar() {
                                   >
                                     <NavLink
                                       to={subItem.url}
-                                      className={`flex items-center gap-3 px-4 py-2 rounded-lg text-sm transition-all ${
+                                      className={`flex items-center gap-3 px-4 py-2 rounded-lg text-xs transition-all ${
                                         subIsActive 
                                           ? 'text-primary font-semibold bg-primary/10' 
                                           : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50'
@@ -258,22 +250,15 @@ export function AdminSidebar() {
                         <NavLink 
                           to={item.url} 
                           end={item.end}
-                          className={`sidebar-menu-item ${isActive ? 'active' : ''}`}
+                          className={`sidebar-menu-item h-10 ${isActive ? 'active' : ''}`}
+                          title={isCollapsed ? item.title : undefined}
                         >
-                          <div className="flex items-center gap-4 flex-1">
-                            <div className={`w-10 h-10 rounded-lg flex items-center justify-center transition-all shrink-0 ${
-                              isActive 
-                                ? 'bg-gradient-primary shadow-glow-red' 
-                                : 'bg-secondary/50'
-                            }`}>
-                              <Icon className="w-5 h-5" strokeWidth={2.5} />
-                            </div>
-                            {!collapsed && <span className="text-sm font-semibold">{item.title}</span>}
-                          </div>
-                          {hasBadge && !collapsed && (
+                          <Icon className="w-5 h-5 flex-shrink-0" />
+                          {!isCollapsed && <span className="flex-1 text-sm">{item.title}</span>}
+                          {hasBadge && !isCollapsed && (
                             <Badge 
                               variant="destructive" 
-                              className="ml-auto bg-primary shadow-glow-red font-bold"
+                              className="ml-auto text-[10px] h-4 px-1.5"
                             >
                               {pendingCount > 9 ? "9+" : pendingCount}
                             </Badge>
@@ -289,15 +274,16 @@ export function AdminSidebar() {
         ))}
       </SidebarContent>
 
-      <SidebarFooter className="border-t border-border/50 p-6 backdrop-blur-[12px]">
+      <SidebarFooter className="border-t border-border/50 p-3">
         <button
           onClick={handleLogout}
-          className="flex items-center gap-4 w-full px-4 py-3 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-all border border-transparent hover:border-border-glow hover:shadow-glow-red"
+          className={`flex items-center w-full px-3 py-2.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all ${
+            isCollapsed ? 'justify-center' : 'gap-3'
+          }`}
+          title={isCollapsed ? "Sair" : undefined}
         >
-          <div className="w-10 h-10 rounded-lg bg-secondary/50 flex items-center justify-center shrink-0">
-            <LogOut className="w-5 h-5" strokeWidth={2.5} />
-          </div>
-          {!collapsed && <span className="text-sm font-semibold">Sair</span>}
+          <LogOut className="w-5 h-5 flex-shrink-0" />
+          {!isCollapsed && <span className="text-sm font-medium">Sair</span>}
         </button>
       </SidebarFooter>
     </Sidebar>

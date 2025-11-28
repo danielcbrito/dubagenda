@@ -87,87 +87,98 @@ const EmailVerification = () => {
   };
 
   return (
-    <div className="min-h-screen relative flex items-center justify-center bg-gradient-to-br from-black via-background to-black">
-      {/* Subtle radial gradient overlay */}
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(212,49,49,0.03),transparent_70%)]" />
+    <div className="min-h-screen relative flex items-center justify-center" style={{ background: '#050505' }}>
+      {/* Subtle blur overlay */}
+      <div className="absolute inset-0" style={{ 
+        backdropFilter: 'blur(2px)',
+        background: 'radial-gradient(circle at center, rgba(212,49,49,0.02), transparent 60%)' 
+      }} />
       
       {/* Logo at top */}
-      <div className="absolute top-8 left-1/2 -translate-x-1/2">
-        <img src={logoDub} alt="DUB" className="w-16 h-16 object-contain drop-shadow-glow-red" />
+      <div className="absolute top-8 left-1/2 -translate-x-1/2 z-20">
+        <img src={logoDub} alt="DUB" className="w-12 h-12 object-contain" style={{ filter: 'drop-shadow(0 0 8px rgba(212,49,49,0.3))' }} />
       </div>
 
-      {/* Main card */}
-      <div className="relative z-10 w-full max-w-md mx-4">
-        <div className="card-glass-dark p-12 rounded-3xl shadow-glow-red border border-primary/10">
-          {/* Icon */}
-          <div className="flex justify-center mb-8">
-            <div className="relative">
-              <div className="absolute inset-0 bg-primary/20 blur-3xl animate-pulse" />
-              <div className="relative rounded-full bg-gradient-primary p-8 shadow-glow-red">
-                {isVerified ? (
-                  <CheckCircle className="h-16 w-16 text-primary-foreground" />
-                ) : (
-                  <Mail className="h-16 w-16 text-primary-foreground animate-bounce" />
-                )}
-              </div>
+      {/* Main card - clean & centered */}
+      <div className="relative z-10 w-full max-w-[420px] mx-4">
+        <div className="bg-card rounded-2xl p-8 border border-border/50" style={{
+          boxShadow: '0 8px 32px rgba(0,0,0,0.6), 0 0 1px rgba(255,255,255,0.1) inset'
+        }}>
+          {/* Icon - Clean & Elegant */}
+          <div className="flex justify-center mb-6">
+            <div className="relative w-16 h-16 rounded-full flex items-center justify-center"
+              style={{
+                background: 'linear-gradient(135deg, hsl(0 64% 52%), hsl(0 64% 42%))',
+                boxShadow: '0 4px 20px rgba(212,49,49,0.3)'
+              }}>
+              {isVerified ? (
+                <CheckCircle className="h-8 w-8 text-white" />
+              ) : (
+                <Mail className="h-8 w-8 text-white" />
+              )}
             </div>
           </div>
 
-          {/* Content */}
-          <div className="text-center space-y-6">
-            <h1 className="text-3xl font-bold tracking-wide text-foreground">
-              {isVerified ? "Conta Verificada!" : "Verifique seu e-mail"}
-            </h1>
+          {/* Content - Clean Typography */}
+          <div className="text-center space-y-4">
+            <h2 className="text-2xl font-semibold text-foreground" style={{ letterSpacing: '0.02em' }}>
+              {isVerified ? "Conta Verificada!" : "Quase lá — confirme seu e-mail"}
+            </h2>
 
             {isVerified ? (
-              <div className="space-y-4">
-                <p className="text-lg text-foreground/90 leading-relaxed">
+              <div className="space-y-3">
+                <p className="text-base text-foreground/90">
                   Sua conta foi verificada com sucesso!
                 </p>
                 <p className="text-sm text-muted-foreground">
                   Redirecionando para o login...
                 </p>
-                <div className="flex justify-center">
-                  <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                <div className="flex justify-center pt-2">
+                  <Loader2 className="h-5 w-5 animate-spin text-primary" />
                 </div>
               </div>
             ) : (
-              <div className="space-y-6">
-                <p className="text-base text-foreground/90 leading-relaxed">
-                  Nós enviamos um link de confirmação para o seu e-mail.
+              <div className="space-y-4">
+                <p className="text-sm text-foreground/80 leading-relaxed">
+                  Enviamos um link de confirmação para seu e-mail.
                 </p>
                 
                 {userEmail && (
-                  <div className="p-4 bg-secondary/30 rounded-xl border border-primary/10">
-                    <p className="font-semibold text-lg text-primary break-all">
+                  <div className="p-3 bg-secondary/40 rounded-lg border border-border">
+                    <p className="font-medium text-sm text-primary break-all">
                       {userEmail}
                     </p>
                   </div>
                 )}
 
-                <p className="text-sm text-muted-foreground leading-relaxed">
+                <p className="text-xs text-muted-foreground leading-relaxed">
                   Para continuar, acesse sua caixa de entrada e confirme sua conta.
                 </p>
 
-                <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground pt-2">
-                  <div className="w-2 h-2 bg-primary rounded-full animate-pulse" />
-                  <span>Verifique também sua pasta de spam</span>
+                <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+                  <div className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse" />
+                  <span>Não recebeu? Verifique spam ou fale com suporte</span>
                 </div>
               </div>
             )}
           </div>
 
-          {/* Buttons */}
+          {/* Buttons - Touch Friendly */}
           {!isVerified && (
-            <div className="mt-8 space-y-3">
+            <div className="mt-6 space-y-2">
               <Button
                 onClick={handleResendEmail}
                 disabled={isResending}
-                className="w-full h-12 bg-gradient-primary hover:opacity-90 shadow-glow-red font-semibold text-base transition-all"
+                className="w-full font-medium"
+                style={{
+                  minHeight: '44px',
+                  background: 'linear-gradient(135deg, hsl(0 64% 52%), hsl(0 64% 42%))',
+                  boxShadow: '0 4px 12px rgba(212,49,49,0.25)'
+                }}
               >
                 {isResending ? (
                   <>
-                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Reenviando...
                   </>
                 ) : (
@@ -178,7 +189,8 @@ const EmailVerification = () => {
               <Button
                 onClick={handleBackToLogin}
                 variant="ghost"
-                className="w-full h-12 text-muted-foreground hover:text-primary hover:bg-secondary/20 transition-colors font-medium"
+                className="w-full text-muted-foreground hover:text-primary hover:bg-secondary/30 font-medium"
+                style={{ minHeight: '44px' }}
               >
                 Voltar para login
               </Button>
@@ -186,8 +198,8 @@ const EmailVerification = () => {
           )}
         </div>
 
-        {/* Footer text */}
-        <p className="text-center text-xs text-muted-foreground mt-6">
+        {/* Footer text - subtle */}
+        <p className="text-center text-xs text-muted-foreground/60 mt-4">
           Ao confirmar seu e-mail, você concorda com nossos termos de uso
         </p>
       </div>
