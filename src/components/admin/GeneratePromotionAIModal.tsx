@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Sparkles, Loader2 } from "lucide-react";
+import { Sparkles, Loader2, Calendar } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
@@ -105,131 +105,151 @@ export function GeneratePromotionAIModal({ open, onOpenChange, onSuccess }: Gene
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto card-glass">
+      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto card-glass border-border-glow">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-primary" />
+          <DialogTitle className="flex items-center gap-3 text-2xl tracking-wide">
+            <div className="w-10 h-10 rounded-lg bg-gradient-primary flex items-center justify-center shadow-glow-red">
+              <Sparkles className="w-5 h-5 text-primary-foreground" />
+            </div>
             Gerar Promoção com IA
           </DialogTitle>
-          <DialogDescription>
-            Preencha os detalhes e deixe a IA criar 3 propostas de promoções personalizadas
+          <DialogDescription className="text-muted-foreground mt-2 tracking-wide">
+            Preencha os detalhes e deixe a IA criar 3 propostas de promoções premium personalizadas
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-6 mt-4">
-          {/* Form */}
-          <div className="grid gap-4">
+        <div className="space-y-8 mt-6">
+          {/* Form Premium */}
+          <div className="grid gap-6 p-6 rounded-xl bg-secondary/30 border border-border/50">
             <div>
-              <Label htmlFor="servico">Serviço Alvo (opcional)</Label>
+              <Label htmlFor="servico" className="text-sm font-bold tracking-wide uppercase text-muted-foreground">
+                Serviço Alvo
+              </Label>
               <Input
                 id="servico"
-                placeholder="Ex: Corte + Barba"
+                placeholder="Ex: Corte + Barba Premium"
                 value={servico}
                 onChange={(e) => setServico(e.target.value)}
-                className="input-premium"
+                className="input-premium mt-2"
               />
             </div>
 
             <div>
-              <Label htmlFor="objetivo">Objetivo da Promoção</Label>
+              <Label htmlFor="objetivo" className="text-sm font-bold tracking-wide uppercase text-muted-foreground">
+                Objetivo da Promoção *
+              </Label>
               <Input
                 id="objetivo"
                 placeholder="Ex: Aumentar vendas às segundas-feiras"
                 value={objetivo}
                 onChange={(e) => setObjetivo(e.target.value)}
-                className="input-premium"
+                className="input-premium mt-2"
               />
             </div>
 
             <div>
-              <Label htmlFor="duracao">Duração Máxima (dias)</Label>
+              <Label htmlFor="duracao" className="text-sm font-bold tracking-wide uppercase text-muted-foreground">
+                Duração Máxima (dias)
+              </Label>
               <Input
                 id="duracao"
                 type="number"
                 value={duracaoMaximaDias}
                 onChange={(e) => setDuracaoMaximaDias(Number(e.target.value))}
-                className="input-premium"
+                className="input-premium mt-2"
               />
             </div>
 
             <Button
               onClick={handleGenerate}
               disabled={loading || !objetivo}
-              className="w-full gap-2"
+              className="w-full gap-3 h-14 text-base font-bold tracking-wide bg-gradient-primary shadow-glow-red hover-elevate"
             >
               {loading ? (
                 <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Gerando propostas...
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  Gerando propostas premium...
                 </>
               ) : (
                 <>
-                  <Sparkles className="w-4 h-4" />
-                  Gerar Propostas com IA
+                  <Sparkles className="w-5 h-5" />
+                  GERAR PROPOSTAS COM IA
                 </>
               )}
             </Button>
           </div>
 
-          {/* Propostas */}
+          {/* Propostas Premium */}
           {propostas.length > 0 && (
-            <div className="space-y-4">
-              <h3 className="font-semibold text-lg">Escolha uma proposta:</h3>
+            <div className="space-y-6">
+              <div className="text-center">
+                <h3 className="font-bold text-2xl tracking-widest mb-2">ESCOLHA SUA PROPOSTA</h3>
+                <p className="text-muted-foreground text-sm tracking-wide">Clique na proposta desejada para selecioná-la</p>
+              </div>
               
-              <div className="grid gap-4 md:grid-cols-3">
+              <div className="grid gap-6 md:grid-cols-3">
                 {propostas.map((proposta, index) => (
-                  <Card
+                  <div
                     key={index}
-                    className={`p-4 cursor-pointer transition-all card-glass hover-elevate ${
+                    className={`card-glass p-6 cursor-pointer hover-elevate transition-all ${
                       selectedProposta === index
-                        ? "ring-2 ring-primary bg-primary/5"
+                        ? "ring-2 ring-primary shadow-glow-red bg-primary/10"
                         : ""
                     }`}
                     onClick={() => setSelectedProposta(index)}
                   >
-                    <div className="space-y-3">
-                      <div>
-                        <h4 className="font-semibold text-primary">{proposta.titulo}</h4>
-                        <p className="text-sm text-muted-foreground mt-1">
+                    <div className="space-y-4">
+                      <div className="relative">
+                        <div className="absolute -top-3 -right-3">
+                          <div className="w-16 h-16 rounded-full bg-gradient-primary flex items-center justify-center shadow-glow-red font-bold text-xl">
+                            {proposta.desconto_percentual}%
+                          </div>
+                        </div>
+                        <h4 className="font-bold text-lg tracking-wide text-primary pr-14">{proposta.titulo}</h4>
+                        <p className="text-sm text-muted-foreground mt-2 leading-relaxed">
                           {proposta.descricao}
                         </p>
                       </div>
 
-                      <div className="flex items-center gap-2">
-                        <Badge variant="default">{proposta.desconto_percentual}% OFF</Badge>
-                        <span className="text-xs text-muted-foreground">
-                          {new Date(proposta.data_inicio).toLocaleDateString()} - {new Date(proposta.data_fim).toLocaleDateString()}
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground tracking-wide">
+                        <Calendar className="w-4 h-4" />
+                        <span>
+                          {new Date(proposta.data_inicio).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })} - 
+                          {new Date(proposta.data_fim).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
                         </span>
                       </div>
 
-                      <div>
-                        <p className="text-xs font-semibold mb-1">Regras:</p>
-                        <ul className="text-xs text-muted-foreground list-disc list-inside space-y-1">
-                          {proposta.regras.slice(0, 2).map((regra, i) => (
-                            <li key={i}>{regra}</li>
+                      <div className="border-t border-border/50 pt-4">
+                        <p className="text-xs font-bold tracking-widest uppercase text-muted-foreground mb-2">Regras</p>
+                        <ul className="text-xs text-muted-foreground space-y-1.5 leading-relaxed">
+                          {proposta.regras.slice(0, 3).map((regra, i) => (
+                            <li key={i} className="flex items-start gap-2">
+                              <span className="text-primary mt-0.5">•</span>
+                              <span>{regra}</span>
+                            </li>
                           ))}
                         </ul>
                       </div>
 
-                      <div className="flex flex-wrap gap-1">
+                      <div className="flex flex-wrap gap-2">
                         {proposta.tags?.slice(0, 3).map((tag, i) => (
-                          <Badge key={i} variant="secondary" className="text-xs">
+                          <Badge key={i} variant="secondary" className="text-xs font-semibold tracking-wide bg-secondary/50 border-border/30">
                             {tag}
                           </Badge>
                         ))}
                       </div>
                     </div>
-                  </Card>
+                  </div>
                 ))}
               </div>
 
               <Button
                 onClick={handleApprove}
                 disabled={selectedProposta === null}
-                className="w-full"
-                size="lg"
+                className="w-full gap-3 h-16 text-lg font-bold tracking-widest bg-gradient-primary shadow-glow-red hover-elevate"
               >
-                Aprovar e Publicar Promoção
+                <Sparkles className="w-6 h-6" />
+                APROVAR E PUBLICAR PROMOÇÃO
               </Button>
             </div>
           )}

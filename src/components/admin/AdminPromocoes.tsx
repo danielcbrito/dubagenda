@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { toast } from "sonner";
 import { Plus, Gift, Trash2, Sparkles } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
 import { GeneratePromotionAIModal } from "./GeneratePromotionAIModal";
 
 interface Promocao {
@@ -116,19 +117,26 @@ export function AdminPromocoes() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Promoções</h1>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setAiModalOpen(true)} className="gap-2">
-            <Sparkles className="w-4 h-4" />
-            Gerar com IA
+        <div>
+          <h1 className="text-3xl font-bold tracking-widest mb-2">PROMOÇÕES</h1>
+          <p className="text-muted-foreground text-sm tracking-wide">Gerencie promoções e benefícios exclusivos</p>
+        </div>
+        <div className="flex gap-3">
+          <Button 
+            variant="outline" 
+            onClick={() => setAiModalOpen(true)} 
+            className="gap-2 glow-red hover-elevate border-primary/30 bg-primary/5"
+          >
+            <Sparkles className="w-5 h-5" />
+            <span className="font-semibold">Gerar com IA</span>
           </Button>
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
-              <Button>
-                <Plus className="w-4 h-4 mr-2" />
-                Nova Promoção
+              <Button className="gap-2 bg-gradient-primary shadow-glow-red hover-elevate">
+                <Plus className="w-5 h-5" />
+                <span className="font-semibold">Nova Promoção</span>
               </Button>
             </DialogTrigger>
             <DialogContent>
@@ -180,47 +188,76 @@ export function AdminPromocoes() {
       </div>
 
       {loading ? (
-        <Card className="p-6 card-premium">
-          <p className="text-muted-foreground">Carregando promoções...</p>
-        </Card>
+        <div className="card-glass p-12 text-center">
+          <div className="inline-block w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4"></div>
+          <p className="text-muted-foreground font-medium tracking-wide">Carregando promoções premium...</p>
+        </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {promocoes.map((promo) => (
-            <Card key={promo.id} className="p-6 card-premium">
-              <div className="space-y-4">
+            <div key={promo.id} className="card-glass p-8 hover-elevate group">
+              <div className="space-y-6">
                 <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-3">
-                    <Gift className="w-8 h-8 text-primary" />
+                  <div className="flex items-center gap-4">
+                    <div className="stat-card-icon">
+                      <Gift className="w-6 h-6 text-primary-foreground" strokeWidth={2.5} />
+                    </div>
                     <div>
-                      <h3 className="font-semibold">{promo.nome}</h3>
-                      <p className="text-sm text-muted-foreground">
-                        {promo.pontos_necessarios} pontos
-                      </p>
+                      <h3 className="font-bold text-lg tracking-wide">{promo.nome}</h3>
+                      <div className="flex items-center gap-2 mt-1">
+                        <Badge variant="outline" className="border-primary/30 text-primary font-bold">
+                          {promo.pontos_necessarios} pontos
+                        </Badge>
+                        {promo.ativo ? (
+                          <Badge className="bg-green-500/20 text-green-400 border-green-500/30">ATIVO</Badge>
+                        ) : (
+                          <Badge variant="secondary">INATIVO</Badge>
+                        )}
+                      </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-3">
                     <Switch
                       checked={promo.ativo}
                       onCheckedChange={() => handleTogglePromo(promo.id, promo.ativo)}
+                      className="data-[state=checked]:bg-primary"
                     />
                     <Button
                       size="icon"
                       variant="ghost"
                       onClick={() => handleDeletePromo(promo.id)}
+                      className="hover:bg-destructive/20 hover:text-destructive transition-all"
                     >
-                      <Trash2 className="w-4 h-4 text-destructive" />
+                      <Trash2 className="w-5 h-5" strokeWidth={2} />
                     </Button>
                   </div>
                 </div>
                 {promo.descricao && (
-                  <p className="text-sm text-muted-foreground">{promo.descricao}</p>
+                  <p className="text-sm text-muted-foreground leading-relaxed border-l-2 border-primary/30 pl-4">
+                    {promo.descricao}
+                  </p>
                 )}
                 {promo.weekly_required && (
-                  <p className="text-xs text-primary">Requer frequência semanal</p>
+                  <div className="flex items-center gap-2 text-xs text-primary font-semibold tracking-wide">
+                    <div className="w-2 h-2 rounded-full bg-primary shadow-glow-red"></div>
+                    REQUER FREQUÊNCIA SEMANAL
+                  </div>
                 )}
               </div>
-            </Card>
+            </div>
           ))}
+
+          {promocoes.length === 0 && (
+            <div className="col-span-full card-glass p-16 text-center">
+              <Gift className="w-16 h-16 mx-auto mb-6 text-muted-foreground/50" strokeWidth={1.5} />
+              <h3 className="text-xl font-bold mb-2 tracking-wide">Nenhuma promoção cadastrada</h3>
+              <p className="text-muted-foreground mb-6">Crie sua primeira promoção premium para fidelizar clientes</p>
+              <Button onClick={() => setDialogOpen(true)} className="gap-2 bg-gradient-primary shadow-glow-red">
+                <Plus className="w-5 h-5" />
+                Criar Primeira Promoção
+              </Button>
+            </div>
+          )}
         </div>
       )}
 

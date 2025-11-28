@@ -18,12 +18,14 @@ export default {
       },
       colors: {
         border: "hsl(var(--border))",
+        'border-glow': "hsl(var(--border-glow))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
         primary: {
           DEFAULT: "hsl(var(--primary))",
+          glow: "hsl(var(--primary-glow))",
           foreground: "hsl(var(--primary-foreground))",
         },
         secondary: {
@@ -52,6 +54,7 @@ export default {
         },
         gold: {
           DEFAULT: "hsl(var(--gold))",
+          glow: "hsl(var(--gold-glow))",
           foreground: "hsl(var(--gold-foreground))",
         },
       },
@@ -61,8 +64,22 @@ export default {
         sm: "calc(var(--radius) - 4px)",
       },
       boxShadow: {
+        'premium': 'var(--shadow-premium)',
+        'premium-hover': 'var(--shadow-premium-hover)',
+        'glow-red': 'var(--shadow-glow-red)',
+        'glow-gold': 'var(--shadow-glow-gold)',
+        'soft': 'var(--shadow-soft)',
+        'inset-titanium': 'var(--shadow-inset-titanium)',
         elegant: "var(--shadow-elegant)",
         glow: "var(--shadow-glow)",
+      },
+      backgroundImage: {
+        'gradient-primary': 'var(--gradient-primary)',
+        'gradient-primary-glow': 'var(--gradient-primary-glow)',
+        'gradient-gold': 'var(--gradient-gold)',
+        'gradient-titanium': 'var(--gradient-titanium)',
+        'gradient-glass-dark': 'var(--gradient-glass-dark)',
+        'gradient-red-neon': 'var(--gradient-red-neon)',
       },
       keyframes: {
         "accordion-down": {
