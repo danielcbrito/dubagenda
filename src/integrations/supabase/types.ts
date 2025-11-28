@@ -305,6 +305,33 @@ export type Database = {
         }
         Relationships: []
       }
+      email_confirmation_tokens: {
+        Row: {
+          created_at: string
+          expires_at: string
+          id: string
+          token: string
+          used_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at: string
+          id?: string
+          token: string
+          used_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          id?: string
+          token?: string
+          used_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       financial_entries: {
         Row: {
           categoria: string
@@ -717,30 +744,54 @@ export type Database = {
       }
       promocoes: {
         Row: {
+          aprovada_em: string | null
+          aprovada_por: string | null
           ativo: boolean | null
           created_at: string | null
+          data_fim: string | null
+          data_inicio: string | null
           descricao: string | null
+          gerada_por_ia: boolean | null
           id: string
+          imagem_url: string | null
           nome: string
           pontos_necessarios: number | null
+          prompt_ia: string | null
+          regras_json: Json | null
           weekly_required: boolean | null
         }
         Insert: {
+          aprovada_em?: string | null
+          aprovada_por?: string | null
           ativo?: boolean | null
           created_at?: string | null
+          data_fim?: string | null
+          data_inicio?: string | null
           descricao?: string | null
+          gerada_por_ia?: boolean | null
           id?: string
+          imagem_url?: string | null
           nome: string
           pontos_necessarios?: number | null
+          prompt_ia?: string | null
+          regras_json?: Json | null
           weekly_required?: boolean | null
         }
         Update: {
+          aprovada_em?: string | null
+          aprovada_por?: string | null
           ativo?: boolean | null
           created_at?: string | null
+          data_fim?: string | null
+          data_inicio?: string | null
           descricao?: string | null
+          gerada_por_ia?: boolean | null
           id?: string
+          imagem_url?: string | null
           nome?: string
           pontos_necessarios?: number | null
+          prompt_ia?: string | null
+          regras_json?: Json | null
           weekly_required?: boolean | null
         }
         Relationships: []
@@ -829,6 +880,66 @@ export type Database = {
           nome?: string
           preco?: number
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      system_health_checks: {
+        Row: {
+          error_message: string | null
+          id: string
+          last_check_at: string
+          metadata: Json | null
+          response_time_ms: number | null
+          service_name: string
+          status: string
+        }
+        Insert: {
+          error_message?: string | null
+          id?: string
+          last_check_at?: string
+          metadata?: Json | null
+          response_time_ms?: number | null
+          service_name: string
+          status: string
+        }
+        Update: {
+          error_message?: string | null
+          id?: string
+          last_check_at?: string
+          metadata?: Json | null
+          response_time_ms?: number | null
+          service_name?: string
+          status?: string
+        }
+        Relationships: []
+      }
+      system_logs: {
+        Row: {
+          category: string
+          created_at: string
+          details: Json | null
+          id: string
+          level: string
+          message: string
+          user_id: string | null
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          level: string
+          message: string
+          user_id?: string | null
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          level?: string
+          message?: string
+          user_id?: string | null
         }
         Relationships: []
       }

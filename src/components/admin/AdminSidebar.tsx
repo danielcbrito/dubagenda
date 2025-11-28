@@ -1,4 +1,4 @@
-import { Home, Calendar, Users, DollarSign, FileText, Gift, Settings, LogOut, CheckCircle, Scissors, ChevronRight, MessageSquare } from "lucide-react";
+import { Home, Calendar, Users, DollarSign, FileText, Gift, Settings, LogOut, CheckCircle, Scissors, ChevronRight, MessageSquare, Code } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -34,8 +34,8 @@ const menuItems = [
   { title: "Financeiro", url: "/admin/financeiro", icon: DollarSign },
   { title: "Relatórios", url: "/admin/relatorios", icon: FileText },
   { title: "Promoções", url: "/admin/promocoes", icon: Gift },
-  { title: "Mensagens", url: "/admin/mensagens", icon: MessageSquare },
   { title: "Configurações", url: "/admin/configuracoes", icon: Settings },
+  { title: "Dev Tools", url: "/admin/dev", icon: Code },
 ];
 
 const servicosItems = [
@@ -98,8 +98,8 @@ export function AdminSidebar() {
   };
 
   return (
-    <Sidebar className="border-r border-border/50">
-      <SidebarHeader className="border-b border-border/50 p-4">
+    <Sidebar className="sidebar-glass">
+      <SidebarHeader className="border-b border-white/10 p-4 backdrop-blur-[12px]">
         <div className="flex items-center gap-3">
           <img src={logoDub} alt="DUB" className="w-10 h-10" />
           <div>
