@@ -151,7 +151,7 @@ const Auth = () => {
             cpf: validated.cpf,
             telefone: validated.telefone,
           },
-          emailRedirectTo: `${window.location.origin}/`,
+          emailRedirectTo: `${window.location.origin}/verificar-email?email=${encodeURIComponent(validated.email)}`,
         },
       });
 
@@ -172,14 +172,9 @@ const Auth = () => {
       }
 
       if (data.user) {
-        // Check if email confirmation is required
-        if (data.user.identities && data.user.identities.length === 0) {
-          // Email confirmation is required - redirect to verification page
-          navigate(`/verificar-email?email=${encodeURIComponent(validated.email)}`);
-        } else {
-          toast.success("Conta criada com sucesso");
-          await checkUserRoleAndRedirect(data.user.id);
-        }
+        // Sempre exigir confirmação de e-mail antes do primeiro acesso
+        localStorage.setItem("pendingVerificationEmail", validated.email);
+        navigate(`/verificar-email?email=${encodeURIComponent(validated.email)}`);
       }
     } catch (error) {
       if (error instanceof z.ZodError) {
