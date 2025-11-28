@@ -8,58 +8,67 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    /* Barbearia DUB Premium Dark Theme */
-    --background: 0 0% 4%;
-    --foreground: 0 0% 92%;
+    /* DUB Premium Glassmorphism Dark Theme */
+    --background: 11 11% 5%;  /* #0B0B0D - quase preto */
+    --foreground: 0 0% 100%;  /* #FFFFFF - branco puro */
 
-    --card: 0 0% 7%;
-    --card-foreground: 0 0% 92%;
+    /* Glass cards com transparência */
+    --card: 0 0% 100% / 0.03;  /* rgba(255,255,255,0.03) */
+    --card-foreground: 0 0% 100%;
 
-    --popover: 0 0% 7%;
-    --popover-foreground: 0 0% 92%;
+    --popover: 0 0% 100% / 0.05;
+    --popover-foreground: 0 0% 100%;
 
-    /* Deep burgundy red for primary brand color */
-    --primary: 0 63% 31%;
-    --primary-foreground: 0 0% 98%;
+    /* Vermelho escuro premium para destaques */
+    --primary: 6 63% 48%;  /* #C0392B */
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 0 0% 12%;
-    --secondary-foreground: 0 0% 92%;
+    --secondary: 0 0% 15% / 0.5;  /* Vidro esfumado */
+    --secondary-foreground: 0 0% 90%;
 
-    --muted: 0 0% 15%;
-    --muted-foreground: 0 0% 55%;
+    --muted: 0 0% 100% / 0.08;
+    --muted-foreground: 214 17% 79%;  /* #BFC3C7 */
 
-    --accent: 0 63% 31%;
-    --accent-foreground: 0 0% 98%;
+    --accent: 6 63% 48%;  /* Mesmo vermelho */
+    --accent-foreground: 0 0% 100%;
 
-    /* Premium gold accent */
+    /* Gold premium para destaques especiais */
     --gold: 45 100% 51%;
     --gold-foreground: 0 0% 10%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 0 0% 18%;
-    --input: 0 0% 18%;
-    --ring: 0 63% 31%;
+    --border: 0 0% 100% / 0.1;  /* Bordas sutis glass */
+    --input: 0 0% 100% / 0.05;
+    --ring: 6 63% 48%;
 
-    --radius: 0.75rem;
+    --radius: 0.875rem;  /* 14px - bordas mais generosas */
 
-    /* Gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(0 63% 31%), hsl(0 63% 25%));
+    /* Gradients premium */
+    --gradient-primary: linear-gradient(135deg, hsl(6 63% 48%), hsl(6 63% 38%));
     --gradient-gold: linear-gradient(135deg, hsl(45 100% 51%), hsl(38 100% 50%));
-    --gradient-overlay: linear-gradient(180deg, rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.8));
+    --gradient-glass: linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02));
+    --gradient-overlay: linear-gradient(180deg, rgba(11, 11, 13, 0.4), rgba(11, 11, 13, 0.9));
 
-    /* Shadows */
+    /* Shadows premium com blur */
+    --shadow-glass: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+    --shadow-glass-hover: 0 12px 48px 0 rgba(0, 0, 0, 0.5);
     --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.4);
     --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.5);
     --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.6);
-    --shadow-red: 0 8px 24px rgba(139, 0, 0, 0.3);
-    --shadow-elegant: 0 10px 30px -10px hsl(var(--primary) / 0.2);
-    --shadow-glow: 0 0 40px hsl(var(--primary) / 0.3);
+    --shadow-red: 0 8px 24px rgba(192, 57, 43, 0.4);
+    --shadow-elegant: 0 10px 30px -10px hsl(var(--primary) / 0.3);
+    --shadow-glow: 0 0 40px hsl(var(--primary) / 0.4);
 
-    /* Transitions */
-    --transition-base: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    --transition-fast: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+    /* Transitions suaves */
+    --transition-base: all 0.24s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-fast: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+    
+    /* Blur values para glassmorphism */
+    --blur-sm: blur(4px);
+    --blur-md: blur(8px);
+    --blur-lg: blur(16px);
   }
 }
 
@@ -98,12 +107,32 @@ All colors MUST be HSL.
     @apply bg-gradient-to-r from-[hsl(45,100%,51%)] to-[hsl(38,100%,50%)] text-[hsl(0,0%,10%)] hover:shadow-lg transition-all duration-300;
   }
 
+  /* Glassmorphism card premium */
+  .card-glass {
+    @apply bg-white/[0.03] backdrop-blur-[8px] border border-white/10 rounded-xl shadow-[0_8px_32px_0_rgba(0,0,0,0.37)];
+    @apply hover:bg-white/[0.05] hover:shadow-[0_12px_48px_0_rgba(0,0,0,0.5)] transition-all;
+    transition-duration: 240ms;
+  }
+
   .card-premium {
-    @apply bg-card border border-border rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300;
+    @apply card-glass;
   }
 
   .input-premium {
-    @apply bg-secondary border-border text-foreground placeholder:text-muted-foreground focus:border-primary transition-colors;
+    @apply bg-white/[0.05] backdrop-blur-[4px] border-white/10 text-foreground placeholder:text-muted-foreground;
+    @apply focus:border-primary focus:bg-white/[0.08] transition-all;
+    transition-duration: 180ms;
+  }
+  
+  /* Sidebar glass effect */
+  .sidebar-glass {
+    @apply bg-white/[0.02] backdrop-blur-[12px] border-r border-white/10;
+  }
+  
+  /* Hover elevate effect */
+  .hover-elevate {
+    @apply hover:translate-y-[-2px] transition-transform;
+    transition-duration: 180ms;
   }
 }
 

@@ -6,8 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Plus, Gift, Trash2 } from "lucide-react";
+import { Plus, Gift, Trash2, Sparkles } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
+import { GeneratePromotionAIModal } from "./GeneratePromotionAIModal";
 
 interface Promocao {
   id: string;
@@ -22,6 +23,7 @@ export function AdminPromocoes() {
   const [promocoes, setPromocoes] = useState<Promocao[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [aiModalOpen, setAiModalOpen] = useState(false);
   const [newPromo, setNewPromo] = useState({
     nome: "",
     descricao: "",
@@ -117,58 +119,64 @@ export function AdminPromocoes() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Promoções</h1>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="w-4 h-4 mr-2" />
-              Nova Promoção
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Criar Nova Promoção</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <label className="text-sm font-medium">Nome</label>
-                <Input
-                  value={newPromo.nome}
-                  onChange={(e) => setNewPromo({ ...newPromo, nome: e.target.value })}
-                  placeholder="Ex: Corte Grátis"
-                  className="input-premium"
-                />
-              </div>
-              <div>
-                <label className="text-sm font-medium">Descrição</label>
-                <Textarea
-                  value={newPromo.descricao}
-                  onChange={(e) => setNewPromo({ ...newPromo, descricao: e.target.value })}
-                  placeholder="Descreva a promoção..."
-                  className="input-premium"
-                />
-              </div>
-              <div>
-                <label className="text-sm font-medium">Pontos Necessários</label>
-                <Input
-                  type="number"
-                  value={newPromo.pontos_necessarios}
-                  onChange={(e) => setNewPromo({ ...newPromo, pontos_necessarios: parseInt(e.target.value) })}
-                  className="input-premium"
-                />
-              </div>
-              <div className="flex items-center gap-2">
-                <Switch
-                  checked={newPromo.weekly_required}
-                  onCheckedChange={(checked) => setNewPromo({ ...newPromo, weekly_required: checked })}
-                />
-                <label className="text-sm">Requer frequência semanal</label>
-              </div>
-              <Button onClick={handleCreatePromo} className="w-full">
-                Criar Promoção
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setAiModalOpen(true)} className="gap-2">
+            <Sparkles className="w-4 h-4" />
+            Gerar com IA
+          </Button>
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="w-4 h-4 mr-2" />
+                Nova Promoção
               </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Criar Nova Promoção</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div>
+                  <label className="text-sm font-medium">Nome</label>
+                  <Input
+                    value={newPromo.nome}
+                    onChange={(e) => setNewPromo({ ...newPromo, nome: e.target.value })}
+                    placeholder="Ex: Corte Grátis"
+                    className="input-premium"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Descrição</label>
+                  <Textarea
+                    value={newPromo.descricao}
+                    onChange={(e) => setNewPromo({ ...newPromo, descricao: e.target.value })}
+                    placeholder="Descreva a promoção..."
+                    className="input-premium"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Pontos Necessários</label>
+                  <Input
+                    type="number"
+                    value={newPromo.pontos_necessarios}
+                    onChange={(e) => setNewPromo({ ...newPromo, pontos_necessarios: parseInt(e.target.value) })}
+                    className="input-premium"
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <Switch
+                    checked={newPromo.weekly_required}
+                    onCheckedChange={(checked) => setNewPromo({ ...newPromo, weekly_required: checked })}
+                  />
+                  <label className="text-sm">Requer frequência semanal</label>
+                </div>
+                <Button onClick={handleCreatePromo} className="w-full">
+                  Criar Promoção
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       {loading ? (
@@ -215,6 +223,12 @@ export function AdminPromocoes() {
           ))}
         </div>
       )}
+
+      <GeneratePromotionAIModal
+        open={aiModalOpen}
+        onOpenChange={setAiModalOpen}
+        onSuccess={loadPromocoes}
+      />
     </div>
   );
 }
