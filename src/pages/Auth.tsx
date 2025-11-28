@@ -47,8 +47,6 @@ const Auth = () => {
   
   const [isLoading, setIsLoading] = useState(false);
   const [cooldownTimer, setCooldownTimer] = useState<number>(0);
-  const [showEmailConfirmDialog, setShowEmailConfirmDialog] = useState(false);
-  const [userEmail, setUserEmail] = useState("");
   const [formData, setFormData] = useState({
     nome: "",
     email: "",
@@ -60,12 +58,20 @@ const Auth = () => {
   const [telefoneError, setTelefoneError] = useState("");
 
   useEffect(() => {
+    // Check if coming back from email verification
+    const verified = searchParams.get("verified");
+    if (verified === "true") {
+      toast.success("E-mail confirmado. Faça login para continuar.", {
+        duration: 5000,
+      });
+    }
+
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
+      if (session?.user?.email_confirmed_at) {
         checkUserRoleAndRedirect(session.user.id);
       }
     });
-  }, []);
+  }, [searchParams]);
 
   useEffect(() => {
     if (cooldownTimer > 0) {
@@ -168,9 +174,8 @@ const Auth = () => {
       if (data.user) {
         // Check if email confirmation is required
         if (data.user.identities && data.user.identities.length === 0) {
-          // Email confirmation is required
-          setUserEmail(validated.email);
-          setShowEmailConfirmDialog(true);
+          // Email confirmation is required - redirect to verification page
+          navigate(`/verificar-email?email=${encodeURIComponent(validated.email)}`);
         } else {
           toast.success("Conta criada com sucesso");
           await checkUserRoleAndRedirect(data.user.id);
@@ -205,6 +210,9 @@ const Auth = () => {
       if (error) {
         if (error.message.includes("Invalid login")) {
           toast.error("Email ou senha incorretos");
+        } else if (error.message.includes("Email not confirmed")) {
+          toast.error("Por favor, confirme seu email antes de fazer login");
+          navigate(`/verificar-email?email=${encodeURIComponent(validated.email)}`);
         } else {
           toast.error("Erro ao fazer login: " + error.message);
         }
@@ -212,6 +220,13 @@ const Auth = () => {
       }
 
       if (data.user) {
+        // Check if email is confirmed
+        if (!data.user.email_confirmed_at) {
+          toast.error("Por favor, confirme seu email antes de fazer login");
+          navigate(`/verificar-email?email=${encodeURIComponent(validated.email)}`);
+          return;
+        }
+        
         toast.success("Login realizado com sucesso");
         await checkUserRoleAndRedirect(data.user.id);
       }
@@ -227,66 +242,7 @@ const Auth = () => {
   };
 
   return (
-    <>
-      {/* 📨 PREMIUM Email Confirmation Dialog */}
-      <AlertDialog open={showEmailConfirmDialog} onOpenChange={setShowEmailConfirmDialog}>
-        <AlertDialogContent className="card-glass max-w-md border-primary/20 shadow-glow-red">
-          <AlertDialogHeader>
-            {/* Ícone Premium Brilhante */}
-            <div className="flex justify-center mb-6">
-              <div className="relative">
-                <div className="absolute inset-0 bg-primary/30 blur-2xl animate-pulse" />
-                <div className="relative rounded-full bg-gradient-primary p-6 shadow-glow-red">
-                  <Mail className="h-12 w-12 text-primary-foreground animate-bounce" />
-                </div>
-              </div>
-            </div>
-            
-            <AlertDialogTitle className="text-center text-2xl font-bold tracking-wide">
-              Verifique seu e-mail
-            </AlertDialogTitle>
-            
-            <AlertDialogDescription className="text-center space-y-4 pt-4">
-              <p className="text-base text-foreground">
-                Enviamos um link de verificação para:
-              </p>
-              <div className="p-3 bg-secondary/50 rounded-lg border border-primary/20">
-                <p className="font-bold text-lg text-primary">
-                  {userEmail}
-                </p>
-              </div>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                Assim que você confirmar, você será redirecionado automaticamente e poderá fazer login.
-              </p>
-              <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground pt-2">
-                <div className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse" />
-                <span>Verifique também sua pasta de spam</span>
-              </div>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          
-          <AlertDialogFooter className="flex flex-col gap-3">
-            <Button 
-              onClick={() => {
-                setShowEmailConfirmDialog(false);
-                navigate("/auth?mode=login");
-              }}
-              className="w-full h-12 bg-gradient-primary shadow-glow-red hover:scale-[1.02] transition-all font-semibold"
-            >
-              Entendi
-            </Button>
-            <Button
-              variant="ghost"
-              onClick={() => toast.info("Função de reenvio será implementada em breve")}
-              className="w-full text-sm text-muted-foreground hover:text-primary transition-colors"
-            >
-              Reenviar confirmação
-            </Button>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <div className="min-h-screen relative flex items-center justify-center p-6">
+    <div className="min-h-screen relative flex items-center justify-center p-6">
         {/* Background Image */}
         <div className="absolute inset-0 z-0">
           <img 
@@ -445,7 +401,6 @@ const Auth = () => {
         </Card>
       </div>
     </div>
-    </>
   );
 };
 
