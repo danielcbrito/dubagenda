@@ -2,73 +2,79 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
-*/
+/* 💎 BARBEARIA DUB - ULTRA PREMIUM BILLIONAIRE DESIGN SYSTEM 
+All colors MUST be HSL. */
 
 @layer base {
   :root {
-    /* DUB Premium Glassmorphism Dark Theme */
-    --background: 11 11% 5%;  /* #0B0B0D - quase preto */
-    --foreground: 0 0% 100%;  /* #FFFFFF - branco puro */
+    /* 🎨 ULTRA PREMIUM BILLIONAIRE THEME */
+    
+    /* Backgrounds - Preto profundo luxuoso */
+    --background: 0 0% 2%;  /* #050505 - Preto profundo */
+    --foreground: 0 0% 95%;  /* #F2F2F2 - Branco suave */
 
-    /* Glass cards com transparência */
-    --card: 0 0% 100% / 0.03;  /* rgba(255,255,255,0.03) */
-    --card-foreground: 0 0% 100%;
+    /* Cards - Titanium Brushed Glass */
+    --card: 0 0% 10%;  /* #1A1A1A - Cinza titanium */
+    --card-foreground: 0 0% 95%;
 
-    --popover: 0 0% 100% / 0.05;
-    --popover-foreground: 0 0% 100%;
+    --popover: 0 0% 8%;
+    --popover-foreground: 0 0% 95%;
 
-    /* Vermelho escuro premium para destaques */
-    --primary: 6 63% 48%;  /* #C0392B */
-    --primary-foreground: 0 0% 100%;
+    /* Vermelho Premium Metalizado com Glow */
+    --primary: 0 64% 52%;  /* #D43131 - Vermelho premium */
+    --primary-glow: 0 64% 62%;  /* Versão mais clara para glow */
+    --primary-foreground: 0 0% 98%;
 
-    --secondary: 0 0% 15% / 0.5;  /* Vidro esfumado */
+    /* Secondary - Titanium escuro */
+    --secondary: 0 0% 12%;
     --secondary-foreground: 0 0% 90%;
 
-    --muted: 0 0% 100% / 0.08;
-    --muted-foreground: 214 17% 79%;  /* #BFC3C7 */
+    --muted: 0 0% 15%;
+    --muted-foreground: 0 0% 60%;
 
-    --accent: 6 63% 48%;  /* Mesmo vermelho */
-    --accent-foreground: 0 0% 100%;
+    --accent: 0 64% 52%;
+    --accent-foreground: 0 0% 98%;
 
-    /* Gold premium para destaques especiais */
-    --gold: 45 100% 51%;
+    /* Dourado Elegante Premium */
+    --gold: 38 41% 60%;  /* #CBA46D */
+    --gold-glow: 38 51% 70%;
     --gold-foreground: 0 0% 10%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 0 0% 100% / 0.1;  /* Bordas sutis glass */
-    --input: 0 0% 100% / 0.05;
-    --ring: 6 63% 48%;
+    /* Bordas com leve brilho */
+    --border: 0 0% 20%;
+    --border-glow: 0 64% 52% / 0.3;
+    --input: 0 0% 12%;
+    --ring: 0 64% 52%;
 
-    --radius: 0.875rem;  /* 14px - bordas mais generosas */
+    --radius: 0.75rem;
 
-    /* Gradients premium */
-    --gradient-primary: linear-gradient(135deg, hsl(6 63% 48%), hsl(6 63% 38%));
-    --gradient-gold: linear-gradient(135deg, hsl(45 100% 51%), hsl(38 100% 50%));
-    --gradient-glass: linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02));
-    --gradient-overlay: linear-gradient(180deg, rgba(11, 11, 13, 0.4), rgba(11, 11, 13, 0.9));
+    /* 🌟 GRADIENTES ULTRA PREMIUM */
+    --gradient-primary: linear-gradient(135deg, hsl(0 64% 52%), hsl(0 64% 42%));
+    --gradient-primary-glow: linear-gradient(135deg, hsl(0 64% 62%), hsl(0 64% 52%));
+    --gradient-gold: linear-gradient(135deg, hsl(38 41% 60%), hsl(38 51% 50%));
+    --gradient-titanium: linear-gradient(135deg, hsl(0 0% 12%), hsl(0 0% 8%));
+    --gradient-glass-dark: linear-gradient(135deg, rgba(26,26,26,0.8), rgba(10,10,10,0.6));
+    --gradient-red-neon: linear-gradient(90deg, transparent, hsl(0 64% 52% / 0.3), transparent);
 
-    /* Shadows premium com blur */
-    --shadow-glass: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-    --shadow-glass-hover: 0 12px 48px 0 rgba(0, 0, 0, 0.5);
-    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.4);
-    --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.5);
-    --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.6);
-    --shadow-red: 0 8px 24px rgba(192, 57, 43, 0.4);
-    --shadow-elegant: 0 10px 30px -10px hsl(var(--primary) / 0.3);
-    --shadow-glow: 0 0 40px hsl(var(--primary) / 0.4);
+    /* 💎 SHADOWS LUXUOSAS */
+    --shadow-premium: 0 20px 60px -15px rgba(0, 0, 0, 0.8);
+    --shadow-premium-hover: 0 25px 80px -15px rgba(0, 0, 0, 0.9);
+    --shadow-glow-red: 0 0 30px rgba(212, 49, 49, 0.4);
+    --shadow-glow-gold: 0 0 30px rgba(203, 164, 109, 0.3);
+    --shadow-inset-titanium: inset 0 1px 2px rgba(255, 255, 255, 0.05);
+    --shadow-soft: 0 4px 20px rgba(0, 0, 0, 0.5);
 
-    /* Transitions suaves */
-    --transition-base: all 0.24s cubic-bezier(0.4, 0, 0.2, 1);
-    --transition-fast: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+    /* ✨ EFEITOS E TEXTURAS */
+    --blur-glass: blur(12px);
+    --blur-heavy: blur(20px);
     
-    /* Blur values para glassmorphism */
-    --blur-sm: blur(4px);
-    --blur-md: blur(8px);
-    --blur-lg: blur(16px);
+    /* 🎭 TRANSIÇÕES SUAVES LUXUOSAS */
+    --transition-smooth: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-quick: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-elegant: all 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
   }
 }
 
@@ -82,57 +88,192 @@ All colors MUST be HSL.
     font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     font-size: 14px;
     font-weight: 400;
-    letter-spacing: -0.01em;
+    letter-spacing: 0.01em;
+    background: linear-gradient(180deg, hsl(0 0% 2%), hsl(0 0% 4%));
+    min-height: 100vh;
   }
 
+  /* 🔤 TIPOGRAFIA LUXUOSA */
   h1, h2, h3, h4, h5, h6 {
-    @apply font-semibold tracking-tight;
+    @apply font-semibold tracking-wide;
+    letter-spacing: 0.05em;
   }
 
   h1 {
-    @apply text-2xl;
+    @apply text-3xl font-bold;
+    letter-spacing: 0.08em;
   }
 
   h2 {
-    @apply text-xl;
+    @apply text-2xl font-semibold;
   }
 
   h3 {
-    @apply text-lg;
+    @apply text-xl;
   }
 }
 
 @layer components {
+  /* 💎 BOTÕES PREMIUM */
   .btn-gold {
-    @apply bg-gradient-to-r from-[hsl(45,100%,51%)] to-[hsl(38,100%,50%)] text-[hsl(0,0%,10%)] hover:shadow-lg transition-all duration-300;
+    background: var(--gradient-gold);
+    box-shadow: var(--shadow-glow-gold);
+    @apply text-gold-foreground font-semibold tracking-wide;
+    transition: var(--transition-smooth);
+  }
+  
+  .btn-gold:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-glow-gold), var(--shadow-premium-hover);
   }
 
-  /* Glassmorphism card premium */
+  /* 🏆 CARDS ULTRA PREMIUM TITANIUM */
   .card-glass {
-    @apply bg-white/[0.03] backdrop-blur-[8px] border border-white/10 rounded-xl shadow-[0_8px_32px_0_rgba(0,0,0,0.37)];
-    @apply hover:bg-white/[0.05] hover:shadow-[0_12px_48px_0_rgba(0,0,0,0.5)] transition-all;
-    transition-duration: 240ms;
+    background: var(--gradient-titanium);
+    backdrop-filter: var(--blur-glass);
+    border: 1px solid hsl(var(--border));
+    box-shadow: var(--shadow-premium), var(--shadow-inset-titanium);
+    @apply rounded-xl relative overflow-hidden;
+    transition: var(--transition-elegant);
+  }
+  
+  .card-glass::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+  }
+  
+  .card-glass:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-premium-hover), var(--shadow-glow-red);
+    border-color: hsl(var(--border-glow));
   }
 
   .card-premium {
     @apply card-glass;
   }
 
+  /* 🔲 INPUTS PREMIUM */
   .input-premium {
-    @apply bg-white/[0.05] backdrop-blur-[4px] border-white/10 text-foreground placeholder:text-muted-foreground;
-    @apply focus:border-primary focus:bg-white/[0.08] transition-all;
-    transition-duration: 180ms;
+    @apply bg-secondary border border-border text-foreground placeholder:text-muted-foreground;
+    @apply rounded-lg px-4 py-2.5 font-medium;
+    box-shadow: var(--shadow-inset-titanium);
+    transition: var(--transition-quick);
   }
   
-  /* Sidebar glass effect */
+  .input-premium:focus {
+    @apply border-primary outline-none;
+    box-shadow: var(--shadow-glow-red), var(--shadow-inset-titanium);
+  }
+  
+  /* 🎨 SIDEBAR ULTRA LUXO */
   .sidebar-glass {
-    @apply bg-white/[0.02] backdrop-blur-[12px] border-r border-white/10;
+    background: linear-gradient(180deg, hsl(0 0% 8%), hsl(0 0% 6%));
+    backdrop-filter: var(--blur-glass);
+    border-right: 1px solid hsl(var(--border));
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.5);
   }
   
-  /* Hover elevate effect */
+  .sidebar-glass::before {
+    content: '';
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background: var(--gradient-red-neon);
+    opacity: 0.5;
+  }
+  
+  /* ✨ HOVER EFFECTS PREMIUM */
   .hover-elevate {
-    @apply hover:translate-y-[-2px] transition-transform;
-    transition-duration: 180ms;
+    transition: var(--transition-elegant);
+  }
+  
+  .hover-elevate:hover {
+    transform: translateY(-3px);
+  }
+  
+  /* 🌟 GLOW EFFECTS */
+  .glow-red {
+    position: relative;
+  }
+  
+  .glow-red::after {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    background: var(--gradient-primary-glow);
+    border-radius: inherit;
+    opacity: 0;
+    z-index: -1;
+    filter: blur(10px);
+    transition: var(--transition-smooth);
+  }
+  
+  .glow-red:hover::after {
+    opacity: 0.4;
+  }
+  
+  /* 💫 SIDEBAR MENU ITEM PREMIUM */
+  .sidebar-menu-item {
+    @apply flex items-center gap-3 px-4 py-3 rounded-lg;
+    @apply text-muted-foreground font-medium tracking-wide;
+    border: 1px solid transparent;
+    transition: var(--transition-smooth);
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .sidebar-menu-item::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 0;
+    background: var(--gradient-primary);
+    transition: var(--transition-smooth);
+  }
+  
+  .sidebar-menu-item:hover {
+    @apply bg-secondary/50 text-foreground;
+    border-color: hsl(var(--border-glow));
+    box-shadow: var(--shadow-glow-red);
+  }
+  
+  .sidebar-menu-item:hover::before {
+    width: 3px;
+  }
+  
+  .sidebar-menu-item.active {
+    @apply bg-primary/10 text-primary border-primary/30;
+    box-shadow: var(--shadow-glow-red);
+  }
+  
+  .sidebar-menu-item.active::before {
+    width: 3px;
+  }
+  
+  /* 📊 STAT CARD PREMIUM */
+  .stat-card {
+    @apply card-glass p-6;
+    background: var(--gradient-titanium);
+  }
+  
+  .stat-card-icon {
+    @apply w-12 h-12 rounded-xl flex items-center justify-center;
+    background: var(--gradient-primary);
+    box-shadow: var(--shadow-glow-red);
+  }
+  
+  .stat-card-icon.gold {
+    background: var(--gradient-gold);
+    box-shadow: var(--shadow-glow-gold);
   }
 }
 

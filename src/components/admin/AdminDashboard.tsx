@@ -215,121 +215,182 @@ export function AdminDashboard() {
   }
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="p-6 card-premium hover:scale-105 transition-transform">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-muted-foreground">Agendamentos Hoje</p>
-              <p className="text-3xl font-bold mt-2">{stats.todayAppointments}</p>
-            </div>
-            <Calendar className="w-10 h-10 text-primary" />
-          </div>
-        </Card>
-
-        <Card className="p-6 card-premium hover:scale-105 transition-transform">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-muted-foreground">Receita do Mês</p>
-              <p className="text-3xl font-bold mt-2">
-                R$ {stats.monthRevenue.toFixed(2)}
-              </p>
-            </div>
-            <DollarSign className="w-10 h-10 text-primary" />
-          </div>
-        </Card>
-
-        <Card className="p-6 card-premium hover:scale-105 transition-transform">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-muted-foreground">Clientes Ativos</p>
-              <p className="text-3xl font-bold mt-2">{stats.activeClients}</p>
-            </div>
-            <Users className="w-10 h-10 text-primary" />
-          </div>
-        </Card>
-
-        <Card className="p-6 card-premium hover:scale-105 transition-transform">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-muted-foreground">Pagamentos Pendentes</p>
-              <p className="text-3xl font-bold mt-2">{stats.pendingPayments}</p>
-            </div>
-            <TrendingUp className="w-10 h-10 text-primary" />
-          </div>
-        </Card>
-
-        <Card className="p-6 card-premium hover:scale-105 transition-transform">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-muted-foreground">Cortes do Mês</p>
-              <p className="text-3xl font-bold mt-2">{stats.totalCutsMonth}</p>
-            </div>
-            <Scissors className="w-10 h-10 text-primary" />
-          </div>
-        </Card>
-
-        <Card className="p-6 card-premium hover:scale-105 transition-transform">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-muted-foreground">Agendamentos Pendentes</p>
-              <p className="text-3xl font-bold mt-2">{stats.pendingAppointments}</p>
-            </div>
-            <Clock className="w-10 h-10 text-primary" />
-          </div>
-        </Card>
+    <div className="space-y-8 animate-fade-in">
+      {/* Header */}
+      <div>
+        <h1 className="text-3xl font-bold tracking-widest mb-2">DASHBOARD</h1>
+        <p className="text-muted-foreground text-sm tracking-wide">Visão geral do seu negócio premium</p>
       </div>
 
-      {/* Revenue Chart */}
-      <Card className="p-6 card-premium">
-        <h3 className="font-semibold text-lg mb-4">Evolução de Receita</h3>
+      {/* Stats Grid Ultra Premium */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="stat-card hover-elevate glow-red">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs text-muted-foreground tracking-widest uppercase mb-2">Hoje</p>
+              <p className="text-4xl font-bold tracking-wide">{stats.todayAppointments}</p>
+              <p className="text-sm text-muted-foreground mt-1">Agendamentos</p>
+            </div>
+            <div className="stat-card-icon">
+              <Calendar className="w-6 h-6 text-primary-foreground" strokeWidth={2.5} />
+            </div>
+          </div>
+        </div>
+
+        <div className="stat-card hover-elevate glow-red">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs text-muted-foreground tracking-widest uppercase mb-2">Mês</p>
+              <p className="text-4xl font-bold tracking-wide">
+                {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(stats.monthRevenue)}
+              </p>
+              <p className="text-sm text-muted-foreground mt-1">Receita</p>
+            </div>
+            <div className="stat-card-icon gold">
+              <DollarSign className="w-6 h-6 text-gold-foreground" strokeWidth={2.5} />
+            </div>
+          </div>
+        </div>
+
+        <div className="stat-card hover-elevate glow-red">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs text-muted-foreground tracking-widest uppercase mb-2">Total</p>
+              <p className="text-4xl font-bold tracking-wide">{stats.activeClients}</p>
+              <p className="text-sm text-muted-foreground mt-1">Clientes Ativos</p>
+            </div>
+            <div className="stat-card-icon">
+              <Users className="w-6 h-6 text-primary-foreground" strokeWidth={2.5} />
+            </div>
+          </div>
+        </div>
+
+        <div className="stat-card hover-elevate glow-red">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs text-muted-foreground tracking-widest uppercase mb-2">Pendente</p>
+              <p className="text-4xl font-bold tracking-wide text-yellow-400">{stats.pendingPayments}</p>
+              <p className="text-sm text-muted-foreground mt-1">Pagamentos</p>
+            </div>
+            <div className="stat-card-icon" style={{background: 'linear-gradient(135deg, hsl(45 100% 51%), hsl(38 100% 50%))'}}>
+              <TrendingUp className="w-6 h-6 text-gold-foreground" strokeWidth={2.5} />
+            </div>
+          </div>
+        </div>
+
+        <div className="stat-card hover-elevate glow-red">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs text-muted-foreground tracking-widest uppercase mb-2">Mês</p>
+              <p className="text-4xl font-bold tracking-wide">{stats.totalCutsMonth}</p>
+              <p className="text-sm text-muted-foreground mt-1">Cortes Realizados</p>
+            </div>
+            <div className="stat-card-icon">
+              <Scissors className="w-6 h-6 text-primary-foreground" strokeWidth={2.5} />
+            </div>
+          </div>
+        </div>
+
+        <div className="stat-card hover-elevate glow-red">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs text-muted-foreground tracking-widest uppercase mb-2">Aguardando</p>
+              <p className="text-4xl font-bold tracking-wide text-orange-400">{stats.pendingAppointments}</p>
+              <p className="text-sm text-muted-foreground mt-1">Confirmações</p>
+            </div>
+            <div className="stat-card-icon">
+              <Clock className="w-6 h-6 text-primary-foreground" strokeWidth={2.5} />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Revenue Chart Premium */}
+      <div className="card-glass p-8 hover-elevate">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-10 h-10 rounded-lg bg-gradient-primary flex items-center justify-center shadow-glow-red">
+            <TrendingUp className="w-5 h-5 text-primary-foreground" strokeWidth={2.5} />
+          </div>
+          <div>
+            <h3 className="font-bold text-xl tracking-wide">Evolução de Receita</h3>
+            <p className="text-xs text-muted-foreground tracking-wide">Últimos 6 meses</p>
+          </div>
+        </div>
         <ResponsiveContainer width="100%" height={300}>
           <LineChart data={revenueData}>
-            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-            <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" />
-            <YAxis stroke="hsl(var(--muted-foreground))" />
+            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
+            <XAxis 
+              dataKey="month" 
+              stroke="hsl(var(--muted-foreground))" 
+              style={{ fontSize: '12px', fontWeight: 600 }}
+            />
+            <YAxis 
+              stroke="hsl(var(--muted-foreground))" 
+              style={{ fontSize: '12px', fontWeight: 600 }}
+            />
             <Tooltip 
               contentStyle={{ 
                 backgroundColor: 'hsl(var(--card))',
                 border: '1px solid hsl(var(--border))',
-                borderRadius: '8px'
+                borderRadius: '12px',
+                backdropFilter: 'blur(12px)',
+                padding: '12px',
+                boxShadow: 'var(--shadow-premium)',
               }}
+              labelStyle={{ color: 'hsl(var(--foreground))', fontWeight: 600 }}
             />
             <Line 
               type="monotone" 
               dataKey="receita" 
               stroke="hsl(var(--primary))" 
-              strokeWidth={2}
-              dot={{ fill: 'hsl(var(--primary))' }}
+              strokeWidth={3}
+              dot={{ fill: 'hsl(var(--primary))', r: 6, strokeWidth: 2, stroke: 'hsl(var(--background))' }}
+              activeDot={{ r: 8, fill: 'hsl(var(--primary))', filter: 'drop-shadow(0 0 8px hsl(var(--primary)))' }}
             />
           </LineChart>
         </ResponsiveContainer>
-      </Card>
+      </div>
 
-      {/* Recent Appointments */}
-      <Card className="p-6 card-premium">
-        <h3 className="font-semibold text-lg mb-4">Agendamentos Recentes</h3>
+      {/* Recent Appointments Premium */}
+      <div className="card-glass p-8 hover-elevate">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-10 h-10 rounded-lg bg-gradient-primary flex items-center justify-center shadow-glow-red">
+            <Calendar className="w-5 h-5 text-primary-foreground" strokeWidth={2.5} />
+          </div>
+          <div>
+            <h3 className="font-bold text-xl tracking-wide">Agendamentos Recentes</h3>
+            <p className="text-xs text-muted-foreground tracking-wide">Últimas movimentações</p>
+          </div>
+        </div>
         <div className="space-y-3">
           {recentAppointments.map((apt) => (
             <div
               key={apt.id}
-              className="flex items-center justify-between p-4 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors"
+              className="flex items-center justify-between p-5 rounded-xl bg-secondary/30 hover:bg-secondary/50 border border-border/30 hover:border-border-glow transition-all hover-elevate"
             >
               <div className="flex-1">
-                <p className="font-medium">{apt.profile?.nome || "Cliente"}</p>
-                <p className="text-sm text-muted-foreground">
+                <p className="font-semibold text-base tracking-wide">{apt.profile?.nome || "Cliente"}</p>
+                <p className="text-sm text-muted-foreground mt-1 tracking-wide">
                   {apt.servico?.nome || "Serviço"} • {new Date(apt.data).toLocaleDateString('pt-BR')} às {apt.hora}
                 </p>
               </div>
-              <div className="flex items-center gap-3">
-                <span className="font-semibold">R$ {Number(apt.preco).toFixed(2)}</span>
+              <div className="flex items-center gap-4">
+                <span className="font-bold text-lg tracking-wide text-primary">
+                  {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(apt.preco))}
+                </span>
                 {getStatusBadge(apt.status)}
               </div>
             </div>
           ))}
+          
+          {recentAppointments.length === 0 && (
+            <div className="text-center py-12">
+              <Calendar className="w-16 h-16 mx-auto mb-4 text-muted-foreground/30" strokeWidth={1.5} />
+              <p className="text-muted-foreground tracking-wide">Nenhum agendamento recente</p>
+            </div>
+          )}
         </div>
-      </Card>
+      </div>
     </div>
   );
 }
