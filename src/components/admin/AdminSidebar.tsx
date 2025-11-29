@@ -66,8 +66,8 @@ const menuGroups = [
   {
     label: "Sistema",
     items: [
-      { title: "Suporte", url: "/admin/suporte", icon: HeadphonesIcon },
-      { title: "Configurações", url: "/admin/configuracoes", icon: Settings },
+      { title: "Tickets Suporte", url: "/admin/suporte", icon: HeadphonesIcon },
+      { title: "Config. Suporte", url: "/admin/suporte-config", icon: Settings },
       { title: "APIs & Integrações", url: "/admin/apis", icon: Key },
       { title: "Segurança", url: "/admin/seguranca", icon: ShieldCheck },
       { title: "Dev Tools", url: "/admin/dev", icon: Code },
