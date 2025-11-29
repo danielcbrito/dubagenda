@@ -888,6 +888,7 @@ export type Database = {
           created_at: string | null
           id: string
           last_message_at: string | null
+          metadata: Json | null
           rating: number | null
           resolved_at: string | null
           status: string
@@ -898,6 +899,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           last_message_at?: string | null
+          metadata?: Json | null
           rating?: number | null
           resolved_at?: string | null
           status?: string
@@ -908,6 +910,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           last_message_at?: string | null
+          metadata?: Json | null
           rating?: number | null
           resolved_at?: string | null
           status?: string
@@ -966,7 +969,7 @@ export type Database = {
           status: string
           title: string
           updated_at: string | null
-          user_id: string
+          user_id: string | null
         }
         Insert: {
           category?: string
@@ -982,7 +985,7 @@ export type Database = {
           status?: string
           title: string
           updated_at?: string | null
-          user_id: string
+          user_id?: string | null
         }
         Update: {
           category?: string
@@ -998,7 +1001,7 @@ export type Database = {
           status?: string
           title?: string
           updated_at?: string | null
-          user_id?: string
+          user_id?: string | null
         }
         Relationships: [
           {
