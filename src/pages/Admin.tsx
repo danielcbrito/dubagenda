@@ -50,9 +50,10 @@ const Admin = () => {
 
   return (
     <SidebarProvider>
-      <div className="min-h-screen flex w-full bg-background">
+      <div className="h-screen flex w-full bg-background overflow-hidden">
         <AdminSidebar />
-        <main className="flex-1 p-8 overflow-auto">
+        <main className="flex-1 p-6 overflow-hidden">
+          <div className="h-full scrollable-content">
           <Suspense fallback={
             <div className="flex items-center justify-center h-screen">
               <div className="text-center">
@@ -77,6 +78,7 @@ const Admin = () => {
               <Route path="dev" element={<AdminDev />} />
             </Routes>
           </Suspense>
+          </div>
         </main>
       </div>
     </SidebarProvider>
