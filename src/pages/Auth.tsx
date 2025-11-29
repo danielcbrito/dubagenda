@@ -9,6 +9,7 @@ import { z } from "zod";
 import logoDub from "@/assets/logo-dub.png";
 import { Loader2 } from "lucide-react";
 import { validateCPF, formatCPF, formatPhone, validatePhone } from "@/lib/validators";
+import { SupportChatBubble } from "@/components/support/SupportChatBubble";
 
 const signupSchema = z.object({
   nome: z.string().trim().min(2, "Nome deve ter pelo menos 2 caracteres").max(100),
@@ -406,6 +407,9 @@ const Auth = () => {
           </div>
         </div>
       </div>
+
+      {/* Bolinha de chat de suporte */}
+      <SupportChatBubble />
     </div>
   );
 };

@@ -19,6 +19,7 @@ import { WalletSheet } from "@/components/WalletSheet";
 import { AnnouncementDialog } from "@/components/AnnouncementDialog";
 import { CancelledAppointmentBanner } from "@/components/CancelledAppointmentBanner";
 import { AnnouncementModal } from "@/components/AnnouncementModal";
+import { SupportChatBubble } from "@/components/support/SupportChatBubble";
 
 interface Appointment {
   id: string;
@@ -551,6 +552,9 @@ const Cliente = () => {
 
       {/* Announcement Dialog */}
       <AnnouncementDialog />
+
+      {/* Bolinha de chat de suporte */}
+      <SupportChatBubble />
     </div>
   );
 };
