@@ -279,14 +279,30 @@ All colors MUST be HSL. */
 
 /* 🎨 MOBILE-FIRST OPTIMIZATIONS */
 @layer utilities {
-  /* Hide scrollbar */
-  .scrollbar-hide {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
+  /* Hide scrollbar - Force hide in ALL browsers */
+  .scrollbar-hide,
+  .sidebar-glass {
+    scrollbar-width: none !important; /* Firefox */
+    -ms-overflow-style: none !important; /* IE/Edge */
   }
   
-  .scrollbar-hide::-webkit-scrollbar {
-    display: none;
+  .scrollbar-hide::-webkit-scrollbar,
+  .sidebar-glass::-webkit-scrollbar {
+    display: none !important; /* Chrome/Safari/Opera */
+    width: 0 !important;
+    height: 0 !important;
+  }
+  
+  /* Additional force hide for nested elements in sidebar */
+  .sidebar-glass * {
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+  }
+  
+  .sidebar-glass *::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
   }
   
   /* Touch targets - minimum 44x44px */
