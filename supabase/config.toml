@@ -30,5 +30,8 @@ verify_jwt = true
 [functions.ai-support-chat]
 verify_jwt = true
 
+[functions.speech-to-text]
+verify_jwt = true
+
 [functions.health-check]
 verify_jwt = true

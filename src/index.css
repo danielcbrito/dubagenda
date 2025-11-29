@@ -91,6 +91,13 @@ All colors MUST be HSL. */
     letter-spacing: 0.01em;
     background: linear-gradient(180deg, hsl(0 0% 2%), hsl(0 0% 4%));
     min-height: 100vh;
+    overflow: hidden;
+    height: 100vh;
+  }
+  
+  #root {
+    overflow: hidden;
+    height: 100vh;
   }
 
   /* 🔤 TIPOGRAFIA LUXUOSA */
@@ -373,3 +380,39 @@ div[style*="Edit with Lovable"],
   position: absolute !important;
   z-index: -9999 !important;
 }
+
+/* 🔒 DISABLE ALL SCROLLING GLOBALLY */
+html {
+  overflow: hidden !important;
+  height: 100vh !important;
+  position: fixed !important;
+  width: 100% !important;
+}
+
+/* Ensure all pages fit without scroll */
+.container,
+main,
+section,
+article {
+  overflow: hidden !important;
+}
+
+/* Special handling for scrollable areas inside components */
+.overflow-y-auto {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+}
+
+.overflow-y-auto::-webkit-scrollbar {
+  width: 6px;
+}
+
+.overflow-y-auto::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.overflow-y-auto::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+}
+
