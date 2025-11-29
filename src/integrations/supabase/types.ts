@@ -114,6 +114,125 @@ export type Database = {
           },
         ]
       }
+      ai_actions_log: {
+        Row: {
+          action_name: string
+          action_type: string
+          after_state: Json | null
+          approved_by: string | null
+          auto_approved: boolean | null
+          before_state: Json | null
+          conversation_id: string | null
+          created_at: string
+          error_message: string | null
+          id: string
+          parameters: Json | null
+          result: Json | null
+          reverted_at: string | null
+          reverted_by: string | null
+          session_id: string | null
+          success: boolean
+          user_id: string | null
+        }
+        Insert: {
+          action_name: string
+          action_type: string
+          after_state?: Json | null
+          approved_by?: string | null
+          auto_approved?: boolean | null
+          before_state?: Json | null
+          conversation_id?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          parameters?: Json | null
+          result?: Json | null
+          reverted_at?: string | null
+          reverted_by?: string | null
+          session_id?: string | null
+          success?: boolean
+          user_id?: string | null
+        }
+        Update: {
+          action_name?: string
+          action_type?: string
+          after_state?: Json | null
+          approved_by?: string | null
+          auto_approved?: boolean | null
+          before_state?: Json | null
+          conversation_id?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          parameters?: Json | null
+          result?: Json | null
+          reverted_at?: string | null
+          reverted_by?: string | null
+          session_id?: string | null
+          success?: boolean
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_actions_log_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "support_conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_feedback: {
+        Row: {
+          comment: string | null
+          conversation_id: string | null
+          created_at: string
+          helpful: boolean | null
+          id: string
+          message_id: string | null
+          rating: number | null
+          resolved_issue: boolean | null
+          user_id: string | null
+        }
+        Insert: {
+          comment?: string | null
+          conversation_id?: string | null
+          created_at?: string
+          helpful?: boolean | null
+          id?: string
+          message_id?: string | null
+          rating?: number | null
+          resolved_issue?: boolean | null
+          user_id?: string | null
+        }
+        Update: {
+          comment?: string | null
+          conversation_id?: string | null
+          created_at?: string
+          helpful?: boolean | null
+          id?: string
+          message_id?: string | null
+          rating?: number | null
+          resolved_issue?: boolean | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_feedback_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "support_conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_feedback_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "support_messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       assinaturas: {
         Row: {
           created_at: string | null
@@ -631,6 +750,93 @@ export type Database = {
             columns: ["servico_id"]
             isOneToOne: false
             referencedRelation: "servicos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pending_tickets: {
+        Row: {
+          category: string
+          conversation_id: string | null
+          created_at: string
+          description: string
+          id: string
+          last_error: string | null
+          payload: Json | null
+          pending_ticket_id: string
+          priority: string
+          resolved_at: string | null
+          resolved_by: string | null
+          retry_count: number
+          session_id: string | null
+          status: string
+          summary: string
+          ticket_id: string | null
+          updated_at: string
+          user_email: string | null
+          user_id: string | null
+          user_name: string | null
+          user_phone: string | null
+        }
+        Insert: {
+          category?: string
+          conversation_id?: string | null
+          created_at?: string
+          description: string
+          id?: string
+          last_error?: string | null
+          payload?: Json | null
+          pending_ticket_id: string
+          priority?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          retry_count?: number
+          session_id?: string | null
+          status?: string
+          summary: string
+          ticket_id?: string | null
+          updated_at?: string
+          user_email?: string | null
+          user_id?: string | null
+          user_name?: string | null
+          user_phone?: string | null
+        }
+        Update: {
+          category?: string
+          conversation_id?: string | null
+          created_at?: string
+          description?: string
+          id?: string
+          last_error?: string | null
+          payload?: Json | null
+          pending_ticket_id?: string
+          priority?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          retry_count?: number
+          session_id?: string | null
+          status?: string
+          summary?: string
+          ticket_id?: string | null
+          updated_at?: string
+          user_email?: string | null
+          user_id?: string | null
+          user_name?: string | null
+          user_phone?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pending_tickets_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "support_conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pending_tickets_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "support_tickets"
             referencedColumns: ["id"]
           },
         ]
