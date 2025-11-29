@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Calendar, Gift, MoreVertical, Bell } from "lucide-react";
+import { Calendar, Gift, MoreVertical } from "lucide-react";
 import { toast } from "sonner";
 import logoDub from "@/assets/logo-dub.png";
 import { ClientDrawerMenu } from "@/components/ClientDrawerMenu";
@@ -329,7 +329,7 @@ const Cliente = () => {
   const cutsUntilFree = 5 - (points % 5);
 
   return (
-    <div className="min-h-screen bg-background relative overflow-hidden">
+    <div className="h-screen bg-background relative overflow-hidden flex flex-col">
       <AnnouncementModal />
       
       {/* Background Image with Blur */}
@@ -341,157 +341,162 @@ const Cliente = () => {
         }}
       />
 
-      {/* Transparent Navbar with Blur */}
-      <div className="sticky top-0 z-50 backdrop-blur-xl bg-background/30 border-b border-border/20">
-        <div className="max-w-4xl mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <img src={logoDub} alt="DUB" className="w-10 h-10" />
+      {/* Transparent Navbar with Blur - Compact */}
+      <div className="z-50 backdrop-blur-xl bg-background/30 border-b border-border/20 flex-shrink-0">
+        <div className="max-w-4xl mx-auto px-3 h-14 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <img src={logoDub} alt="DUB" className="w-8 h-8" />
             <div>
-              <h1 className="font-bold text-sm">Barbearia DUB</h1>
-              <p className="text-[10px] text-muted-foreground">{profile?.nome || user?.email}</p>
+              <h1 className="font-bold text-xs">Barbearia DUB</h1>
+              <p className="text-[9px] text-muted-foreground">{profile?.nome || user?.email}</p>
             </div>
           </div>
           
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
             {user && <NotificationBell userId={user.id} />}
             <Button
               variant="ghost" 
               size="icon"
               onClick={() => setDrawerOpen(true)}
-              className="hover:bg-primary/10 transition-all duration-300"
+              className="h-8 w-8 hover:bg-primary/10 transition-all duration-300"
             >
-              <MoreVertical className="w-5 h-5" />
+              <MoreVertical className="w-4 h-4" />
             </Button>
           </div>
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto px-4 py-6 space-y-6 relative z-10">
-        {/* 💎 Premium Points Card */}
-        <Card className="card-glass overflow-hidden border border-gold/20 shadow-glow-gold hover:scale-[1.02] transition-all duration-500">
-          <div 
-            className="p-6 relative"
-            style={{
-              background: "linear-gradient(135deg, hsl(var(--card)) 0%, hsl(var(--gold) / 0.1) 100%)"
-            }}
-          >
-            {/* Glow effect */}
-            <div className="absolute top-0 right-0 w-32 h-32 bg-gold/10 rounded-full blur-3xl" />
-            
-            <div className="relative z-10">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h3 className="text-lg font-bold tracking-wide">Programa de Pontos</h3>
-                  <p className="text-xs text-muted-foreground">A cada 5 cortes, ganhe 1 grátis</p>
-                </div>
-                <div className="relative">
-                  <div className="absolute inset-0 bg-gold/30 blur-lg animate-pulse" />
-                  <Gift className="relative w-8 h-8 text-gold" />
-                </div>
-              </div>
-              
-              <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">{points % 5} de 5 cortes</span>
-                  <span className="text-gold font-bold text-sm flex items-center gap-1">
-                    <div className="w-2 h-2 bg-gold rounded-full animate-pulse" />
-                    {redemptions} {redemptions === 1 ? 'disponível' : 'disponíveis'}
-                  </span>
-                </div>
-                
-                <Progress value={pointsProgress} className="h-2 bg-secondary/50" />
-                
-                <p className="text-xs text-center text-muted-foreground font-medium">
-                  Faltam {cutsUntilFree} {cutsUntilFree === 1 ? 'corte' : 'cortes'} para o próximo grátis 🎁
-                </p>
-              </div>
-
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setPointsModalOpen(true)}
-                className="w-full mt-4 h-9 text-xs hover:bg-gold/10 hover:text-gold transition-all duration-300 font-semibold"
+      {/* Scrollable content area */}
+      <div className="flex-1 overflow-hidden relative z-10">
+        <div className="h-full scrollable-content">
+          <div className="max-w-4xl mx-auto px-3 py-4 space-y-4">
+            {/* 💎 Premium Points Card - Compact */}
+            <Card className="card-glass overflow-hidden border border-gold/20 shadow-glow-gold hover:scale-[1.01] transition-all duration-500">
+              <div 
+                className="p-4 relative"
+                style={{
+                  background: "linear-gradient(135deg, hsl(var(--card)) 0%, hsl(var(--gold) / 0.1) 100%)"
+                }}
               >
-                Ver detalhes completos
-              </Button>
-            </div>
-          </div>
-        </Card>
+                {/* Glow effect */}
+                <div className="absolute top-0 right-0 w-32 h-32 bg-gold/10 rounded-full blur-3xl" />
+                
+                <div className="relative z-10">
+                  <div className="flex items-center justify-between mb-3">
+                    <div>
+                      <h3 className="text-base font-bold tracking-wide">Programa de Pontos</h3>
+                      <p className="text-[10px] text-muted-foreground">A cada 5 cortes, ganhe 1 grátis</p>
+                    </div>
+                    <div className="relative">
+                      <div className="absolute inset-0 bg-gold/30 blur-lg animate-pulse" />
+                      <Gift className="relative w-6 h-6 text-gold" />
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs text-muted-foreground">{points % 5} de 5 cortes</span>
+                      <span className="text-gold font-bold text-xs flex items-center gap-1">
+                        <div className="w-1.5 h-1.5 bg-gold rounded-full animate-pulse" />
+                        {redemptions} {redemptions === 1 ? 'disponível' : 'disponíveis'}
+                      </span>
+                    </div>
+                    
+                    <Progress value={pointsProgress} className="h-1.5 bg-secondary/50" />
+                    
+                    <p className="text-[10px] text-center text-muted-foreground font-medium">
+                      Faltam {cutsUntilFree} {cutsUntilFree === 1 ? 'corte' : 'cortes'} para o próximo grátis 🎁
+                    </p>
+                  </div>
 
-        {/* 🔥 Premium Schedule Button */}
-        <Button 
-          className="relative w-full h-16 bg-gradient-primary text-base font-bold tracking-wide overflow-hidden group shadow-glow-red hover:shadow-premium-hover transition-all duration-300 hover:scale-[1.02]"
-          onClick={() => navigate("/cliente/agendar")}
-        >
-          {/* Animated background glow */}
-          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
-          
-          <div className="relative flex items-center justify-center gap-3">
-            <Calendar className="w-6 h-6 group-hover:rotate-12 transition-transform duration-300" />
-            <span>Agendar Horário</span>
-          </div>
-        </Button>
-
-        {/* Pending Bookings - Awaiting Payment */}
-        {pendingBookings.length > 0 && (
-          <div className="mb-6">
-            <h3 className="text-base font-semibold mb-4">Pagamentos Pendentes</h3>
-            <div className="space-y-3">
-              {pendingBookings.map((booking) => (
-                <PendingPaymentCard
-                  key={booking.id}
-                  booking={booking}
-                  onResumePayment={handleResumePayment}
-                  onCancel={handleCancelPendingBooking}
-                />
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Appointments */}
-        <div>
-          <h3 className="text-base font-semibold mb-4">Meus Agendamentos</h3>
-          
-          {/* Banner de Cancelamento Recente */}
-          {recentCancellations.length > 0 && (
-            <div className="space-y-4 mb-6">
-              {recentCancellations.map(apt => {
-                const reason = apt.observacoes?.replace("Cancelado em massa: ", "") || "Não informado";
-                return (
-                  <CancelledAppointmentBanner
-                    key={apt.id}
-                    reason={reason}
-                    serviceName={apt.servico?.nome || "Serviço"}
-                    date={apt.data}
-                    time={apt.hora}
-                  />
-                );
-              })}
-            </div>
-          )}
-          
-          {appointments.length === 0 && pendingBookings.length === 0 ? (
-            <Card className="p-8 text-center border-dashed">
-              <Calendar className="w-12 h-12 mx-auto mb-3 text-muted-foreground opacity-50" />
-              <p className="text-xs text-muted-foreground">
-                Você ainda não tem agendamentos
-              </p>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setPointsModalOpen(true)}
+                    className="w-full mt-3 h-8 text-[10px] hover:bg-gold/10 hover:text-gold transition-all duration-300 font-semibold"
+                  >
+                    Ver detalhes completos
+                  </Button>
+                </div>
+              </div>
             </Card>
-          ) : (
-            <div className="space-y-3">
-              {appointments.map((apt) => (
-                <AppointmentCard
-                  key={apt.id}
-                  appointment={apt}
-                  onCancel={() => loadUserData(user.id)}
-                  onConfirm={handleConfirmAppointment}
-                  userId={user?.id}
-                  payments={payments}
-                />
-              ))}
+
+            {/* 🔥 Premium Schedule Button - Compact */}
+            <Button 
+              className="relative w-full h-12 bg-gradient-primary text-sm font-bold tracking-wide overflow-hidden group shadow-glow-red hover:shadow-premium-hover transition-all duration-300 hover:scale-[1.01]"
+              onClick={() => navigate("/cliente/agendar")}
+            >
+              {/* Animated background glow */}
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
+              
+              <div className="relative flex items-center justify-center gap-2">
+                <Calendar className="w-5 h-5 group-hover:rotate-12 transition-transform duration-300" />
+                <span>Agendar Horário</span>
+              </div>
+            </Button>
+
+            {/* Pending Bookings - Awaiting Payment */}
+            {pendingBookings.length > 0 && (
+              <div className="mb-4">
+                <h3 className="text-sm font-semibold mb-3">Pagamentos Pendentes</h3>
+                <div className="space-y-2">
+                  {pendingBookings.map((booking) => (
+                    <PendingPaymentCard
+                      key={booking.id}
+                      booking={booking}
+                      onResumePayment={handleResumePayment}
+                      onCancel={handleCancelPendingBooking}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Appointments */}
+            <div>
+              <h3 className="text-sm font-semibold mb-3">Meus Agendamentos</h3>
+              
+              {/* Banner de Cancelamento Recente */}
+              {recentCancellations.length > 0 && (
+                <div className="space-y-3 mb-4">
+                  {recentCancellations.map(apt => {
+                    const reason = apt.observacoes?.replace("Cancelado em massa: ", "") || "Não informado";
+                    return (
+                      <CancelledAppointmentBanner
+                        key={apt.id}
+                        reason={reason}
+                        serviceName={apt.servico?.nome || "Serviço"}
+                        date={apt.data}
+                        time={apt.hora}
+                      />
+                    );
+                  })}
+                </div>
+              )}
+              
+              {appointments.length === 0 && pendingBookings.length === 0 ? (
+                <Card className="p-6 text-center border-dashed">
+                  <Calendar className="w-10 h-10 mx-auto mb-2 text-muted-foreground opacity-50" />
+                  <p className="text-xs text-muted-foreground">
+                    Você ainda não tem agendamentos
+                  </p>
+                </Card>
+              ) : (
+                <div className="space-y-2">
+                  {appointments.map((apt) => (
+                    <AppointmentCard
+                      key={apt.id}
+                      appointment={apt}
+                      onCancel={() => loadUserData(user.id)}
+                      onConfirm={handleConfirmAppointment}
+                      userId={user?.id}
+                      payments={payments}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
-          )}
+          </div>
         </div>
       </div>
 

@@ -83,21 +83,28 @@ All colors MUST be HSL. */
     @apply border-border;
   }
 
-  body {
+body {
     @apply bg-background text-foreground antialiased;
     font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 400;
     letter-spacing: 0.01em;
     background: linear-gradient(180deg, hsl(0 0% 2%), hsl(0 0% 4%));
     min-height: 100vh;
     overflow: hidden;
     height: 100vh;
+    position: fixed;
+    width: 100%;
+    top: 0;
+    left: 0;
   }
   
   #root {
     overflow: hidden;
     height: 100vh;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
   }
 
   /* 🔤 TIPOGRAFIA LUXUOSA */
@@ -121,17 +128,27 @@ All colors MUST be HSL. */
 }
 
 @layer components {
-  /* 💎 BOTÕES PREMIUM */
+  /* 💎 BOTÕES PREMIUM - Compactos */
   .btn-gold {
     background: var(--gradient-gold);
     box-shadow: var(--shadow-glow-gold);
     @apply text-gold-foreground font-semibold tracking-wide;
     transition: var(--transition-smooth);
+    @apply h-10 px-4 text-sm;
   }
   
   .btn-gold:hover {
     transform: translateY(-2px);
     box-shadow: var(--shadow-glow-gold), var(--shadow-premium-hover);
+  }
+
+  /* Button size variants - Compact */
+  .btn-compact {
+    @apply h-9 px-3 text-sm;
+  }
+
+  .btn-xs {
+    @apply h-8 px-2.5 text-xs;
   }
 
   /* 🏆 CARDS ULTRA PREMIUM TITANIUM */
@@ -381,7 +398,7 @@ div[style*="Edit with Lovable"],
   z-index: -9999 !important;
 }
 
-/* 🔒 DISABLE ALL SCROLLING GLOBALLY */
+/* 🔒 STRATEGIC SCROLL SYSTEM - Internal scroll only */
 html {
   overflow: hidden !important;
   height: 100vh !important;
@@ -389,30 +406,43 @@ html {
   width: 100% !important;
 }
 
-/* Ensure all pages fit without scroll */
-.container,
-main,
-section,
-article {
-  overflow: hidden !important;
+/* Page containers - no scroll on page itself */
+body > * {
+  overflow: hidden;
 }
 
-/* Special handling for scrollable areas inside components */
-.overflow-y-auto {
+/* Internal scrollable areas - premium thin scrollbar */
+.scrollable-content {
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  height: 100%;
   scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+  scrollbar-color: rgba(255, 255, 255, 0.08) transparent;
 }
 
-.overflow-y-auto::-webkit-scrollbar {
-  width: 6px;
+.scrollable-content::-webkit-scrollbar {
+  width: 4px;
 }
 
-.overflow-y-auto::-webkit-scrollbar-track {
+.scrollable-content::-webkit-scrollbar-track {
   background: transparent;
 }
 
-.overflow-y-auto::-webkit-scrollbar-thumb {
-  background-color: rgba(255, 255, 255, 0.1);
-  border-radius: 3px;
+.scrollable-content::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.08);
+  border-radius: 2px;
+}
+
+.scrollable-content::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(255, 255, 255, 0.12);
+}
+
+/* Compact layouts - reduced spacing */
+.compact-spacing {
+  gap: 0.75rem;
+}
+
+.compact-padding {
+  padding: 0.75rem;
 }
 
