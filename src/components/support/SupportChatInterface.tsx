@@ -1,258 +1,391 @@
-import { Send, Bot, User, Loader2 } from "lucide-react";
+import { Send, Paperclip, Mic, X, Image as ImageIcon, FileText, StopCircle } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 interface Message {
-  role: 'user' | 'assistant';
+  role: "user" | "assistant";
   content: string;
   timestamp: Date;
+  attachments?: Array<{
+    type: "image" | "file" | "audio";
+    url: string;
+    name: string;
+  }>;
 }
 
-const thinkingStates = [
-  "Analisando sua solicitação",
-  "Processando informações",
-  "Avaliando melhor solução",
-  "Consultando base de conhecimento",
-  "Preparando resposta detalhada"
+const welcomePrompts = [
+  "Como faço para agendar um corte?",
+  "Quais são os planos disponíveis?",
+  "Como funciona o sistema de pontos?",
+  "Preciso de ajuda com pagamento"
 ];
 
 /**
- * Interface de Chat Premium - Estilo ChatGPT
- * Sem emojis, design minimalista e profissional
+ * Interface Premium Estilo ChatGPT
+ * Design moderno, sem avatares, com suporte a arquivos e áudio
  */
 export function SupportChatInterface() {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      role: 'assistant',
-      content: 'Olá! Como posso ajudá-lo hoje?\n\nPosso auxiliar com dúvidas sobre agendamentos, pontos de fidelidade, pagamentos ou problemas técnicos.',
-      timestamp: new Date()
-    }
-  ]);
-  const [input, setInput] = useState('');
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
-  const [thinkingIndex, setThinkingIndex] = useState(0);
-  const [guestName, setGuestName] = useState('');
-  const [guestEmail, setGuestEmail] = useState('');
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLTextAreaElement>(null);
-  const { toast } = useToast();
+  const [isRecording, setIsRecording] = useState(false);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
 
-  // Auto scroll
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (scrollAreaRef.current) {
+      scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight;
+    }
   }, [messages]);
 
-  // Rotacionar estados de "pensando"
-  useEffect(() => {
-    if (!isLoading) return;
-    const interval = setInterval(() => {
-      setThinkingIndex(prev => (prev + 1) % thinkingStates.length);
-    }, 2000);
-    return () => clearInterval(interval);
-  }, [isLoading]);
+  const adjustTextareaHeight = () => {
+    const textarea = textareaRef.current;
+    if (textarea) {
+      textarea.style.height = "auto";
+      textarea.style.height = `${Math.min(textarea.scrollHeight, 200)}px`;
+    }
+  };
 
-  const sendMessage = async () => {
-    const trimmedInput = input.trim();
-    if (!trimmedInput || isLoading) return;
+  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setInput(e.target.value);
+    adjustTextareaHeight();
+  };
+
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
+
+      mediaRecorder.onstop = () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: "audio/webm" });
+        const audioFile = new File([audioBlob], `audio-${Date.now()}.webm`, { type: "audio/webm" });
+        setSelectedFiles([audioFile]);
+        stream.getTracks().forEach(track => track.stop());
+      };
+
+      mediaRecorder.start();
+      setIsRecording(true);
+      toast.success("Gravação iniciada");
+    } catch (error) {
+      console.error("Erro ao iniciar gravação:", error);
+      toast.error("Não foi possível acessar o microfone");
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+      toast.success("Áudio gravado");
+    }
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    setSelectedFiles(files);
+  };
+
+  const removeFile = (index: number) => {
+    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const sendMessage = async (messageText?: string) => {
+    const textToSend = messageText || input.trim();
+    if (!textToSend && selectedFiles.length === 0) return;
 
     const userMessage: Message = {
-      role: 'user',
-      content: trimmedInput,
-      timestamp: new Date()
+      role: "user",
+      content: textToSend,
+      timestamp: new Date(),
+      attachments: selectedFiles.map(file => ({
+        type: file.type.startsWith("image/") ? "image" : file.type.startsWith("audio/") ? "audio" : "file",
+        url: URL.createObjectURL(file),
+        name: file.name
+      }))
     };
 
     setMessages(prev => [...prev, userMessage]);
-    setInput('');
+    setInput("");
+    setSelectedFiles([]);
     setIsLoading(true);
 
-    if (inputRef.current) {
-      inputRef.current.style.height = 'auto';
+    if (textareaRef.current) {
+      textareaRef.current.style.height = "auto";
     }
 
     try {
-      // Verificar se quer criar ticket
-      const wantsTicket = trimmedInput.toLowerCase().includes('criar ticket');
-      
-      const { data: { session } } = await supabase.auth.getSession();
-
-      const { data, error } = await supabase.functions.invoke('ai-support-chat', {
+      const { data, error } = await supabase.functions.invoke("ai-support-chat", {
         body: {
-          message: userMessage.content,
-          conversationId: conversationId,
-          action: wantsTicket ? 'create_ticket' : null,
-          guestName: guestName || 'Visitante',
-          guestEmail: guestEmail || ''
-        },
-        headers: session?.access_token ? {
-          Authorization: `Bearer ${session.access_token}`
-        } : undefined
+          message: textToSend,
+          conversationId,
+          guestName: "Usuário",
+          guestEmail: "guest@example.com"
+        }
       });
 
       if (error) throw error;
 
-      if (data.conversationId && !conversationId) {
-        setConversationId(data.conversationId);
-      }
-
       const assistantMessage: Message = {
-        role: 'assistant',
+        role: "assistant",
         content: data.response,
         timestamp: new Date()
       };
 
       setMessages(prev => [...prev, assistantMessage]);
-
-      if (data.ticketId) {
-        toast({
-          title: "Chamado Criado",
-          description: `Ticket #${data.ticketId.substring(0, 8)} aberto com sucesso.`,
-        });
-      }
-
-    } catch (error: any) {
-      console.error('Erro ao enviar mensagem:', error);
       
-      const errorMessage: Message = {
-        role: 'assistant',
-        content: 'Desculpe, ocorreu um erro ao processar sua mensagem. Por favor, tente novamente.',
-        timestamp: new Date()
-      };
-
-      setMessages(prev => [...prev, errorMessage]);
-
-      toast({
-        title: "Erro ao enviar mensagem",
-        description: error.message || "Ocorreu um erro inesperado",
-        variant: "destructive"
-      });
+      if (data.conversationId && !conversationId) {
+        setConversationId(data.conversationId);
+      }
+    } catch (error: any) {
+      console.error("Erro ao enviar mensagem:", error);
+      toast.error("Erro ao enviar mensagem. Tente novamente.");
+      setMessages(prev => prev.slice(0, -1));
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       sendMessage();
     }
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setInput(e.target.value);
-    e.target.style.height = 'auto';
-    e.target.style.height = Math.min(e.target.scrollHeight, 128) + 'px';
-  };
+  const renderWelcomeScreen = () => (
+    <div className="flex-1 flex items-center justify-center p-6">
+      <div className="max-w-2xl w-full space-y-8 text-center animate-fade-in">
+        {/* Logo Premium */}
+        <div className="flex justify-center">
+          <div className="relative">
+            <div className="absolute inset-0 bg-primary/20 blur-3xl rounded-full" />
+            <div className="relative h-20 w-20 rounded-2xl bg-gradient-to-br from-primary via-primary/80 to-primary/60 flex items-center justify-center shadow-2xl shadow-primary/20">
+              <svg className="h-10 w-10 text-white" viewBox="0 0 24 24" fill="none">
+                <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M2 17L12 22L22 17" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M2 12L12 17L22 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </div>
+          </div>
+        </div>
 
-  return (
-    <div className="flex-1 flex flex-col overflow-hidden">
-      {/* Messages Area */}
-      <div 
-        className="flex-1 overflow-y-auto px-4 md:px-8 py-8 space-y-6"
-        style={{ 
-          background: 'linear-gradient(to bottom, hsl(0 0% 2%), hsl(0 0% 4%))',
-        }}
-      >
-        <div className="max-w-3xl mx-auto space-y-6">
-          {messages.map((message, index) => (
-            <motion.div
+        {/* Mensagem de Boas-vindas */}
+        <div className="space-y-3">
+          <h2 className="text-3xl lg:text-4xl font-bold text-foreground">
+            Olá! Como posso te ajudar hoje?
+          </h2>
+          <p className="text-muted-foreground text-base lg:text-lg">
+            Estou aqui para responder suas dúvidas sobre agendamentos, planos e muito mais.
+          </p>
+        </div>
+
+        {/* Sugestões de Prompts */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-8">
+          {welcomePrompts.map((prompt, index) => (
+            <button
               key={index}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3 }}
-              className={`flex gap-4 ${message.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}
+              onClick={() => sendMessage(prompt)}
+              className="group p-4 rounded-xl border border-border/50 bg-card/30 hover:bg-card/60 hover:border-primary/30 transition-all duration-200 text-left hover:scale-[1.02]"
             >
-              {/* Avatar */}
-              <div className={`h-10 w-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                message.role === 'user' 
-                  ? 'bg-gradient-to-br from-primary to-primary/80' 
-                  : 'bg-gradient-to-br from-card to-card/60 border border-border/50'
-              }`}>
-                {message.role === 'user' ? (
-                  <User className="h-5 w-5 text-white" />
-                ) : (
-                  <Bot className="h-5 w-5 text-primary" />
-                )}
-              </div>
-
-              {/* Message */}
-              <div className={`max-w-[75%] rounded-2xl px-6 py-4 backdrop-blur-sm ${
-                message.role === 'user'
-                  ? 'bg-primary/10 border border-primary/20 text-foreground'
-                  : 'bg-card/50 border border-border/30 text-foreground'
-              }`}>
-                <p className="text-base leading-relaxed whitespace-pre-wrap">{message.content}</p>
-                <p className="text-xs mt-3 text-muted-foreground">
-                  {message.timestamp.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                </p>
-              </div>
-            </motion.div>
+              <p className="text-sm text-foreground/90 group-hover:text-foreground">
+                {prompt}
+              </p>
+            </button>
           ))}
-
-          {/* Thinking Indicator */}
-          <AnimatePresence>
-            {isLoading && (
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                className="flex gap-4"
-              >
-                <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-card to-card/60 border border-border/50 flex items-center justify-center">
-                  <Bot className="h-5 w-5 text-primary" />
-                </div>
-                <div className="bg-card/50 border border-border/30 rounded-2xl px-6 py-4 backdrop-blur-sm">
-                  <motion.div
-                    key={thinkingIndex}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="flex items-center gap-3 text-sm text-muted-foreground"
-                  >
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    <span>{thinkingStates[thinkingIndex]}...</span>
-                  </motion.div>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          <div ref={messagesEndRef} />
         </div>
       </div>
+    </div>
+  );
 
-      {/* Input Area */}
-      <div className="border-t border-border/50 bg-card/30 backdrop-blur-xl px-4 md:px-8 py-6">
+  const renderMessages = () => (
+    <div ref={scrollAreaRef} className="flex-1 overflow-y-auto px-4 py-6">
+      <div className="max-w-3xl mx-auto space-y-6">
+        {messages.map((message, index) => (
+          <div
+            key={index}
+            className={cn(
+              "flex w-full animate-fade-in",
+              message.role === "user" ? "justify-end" : "justify-start"
+            )}
+          >
+            <div
+              className={cn(
+                "max-w-[85%] rounded-2xl px-4 py-3 shadow-sm",
+                message.role === "user"
+                  ? "bg-gradient-to-br from-primary to-primary/80 text-white ml-auto"
+                  : "bg-card/60 backdrop-blur-sm border border-border/50 text-foreground"
+              )}
+            >
+              {/* Attachments */}
+              {message.attachments && message.attachments.length > 0 && (
+                <div className="mb-2 space-y-2">
+                  {message.attachments.map((attachment, idx) => (
+                    <div key={idx} className="flex items-center gap-2 p-2 rounded-lg bg-background/30">
+                      {attachment.type === "image" ? (
+                        <>
+                          <ImageIcon className="h-4 w-4" />
+                          <img src={attachment.url} alt={attachment.name} className="max-w-xs rounded" />
+                        </>
+                      ) : attachment.type === "audio" ? (
+                        <>
+                          <Mic className="h-4 w-4" />
+                          <audio src={attachment.url} controls className="max-w-xs" />
+                        </>
+                      ) : (
+                        <>
+                          <FileText className="h-4 w-4" />
+                          <span className="text-xs">{attachment.name}</span>
+                        </>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+              
+              {/* Message Content */}
+              <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">
+                {message.content}
+              </p>
+              
+              {/* Timestamp */}
+              <p className={cn(
+                "text-xs mt-2",
+                message.role === "user" ? "text-white/60" : "text-muted-foreground"
+              )}>
+                {message.timestamp.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+              </p>
+            </div>
+          </div>
+        ))}
+
+        {/* Loading State */}
+        {isLoading && (
+          <div className="flex justify-start animate-fade-in">
+            <div className="max-w-[85%] rounded-2xl px-4 py-3 bg-card/60 backdrop-blur-sm border border-border/50">
+              <div className="flex items-center gap-2">
+                <div className="flex gap-1">
+                  <div className="h-2 w-2 rounded-full bg-muted-foreground animate-bounce" style={{ animationDelay: "0ms" }} />
+                  <div className="h-2 w-2 rounded-full bg-muted-foreground animate-bounce" style={{ animationDelay: "150ms" }} />
+                  <div className="h-2 w-2 rounded-full bg-muted-foreground animate-bounce" style={{ animationDelay: "300ms" }} />
+                </div>
+                <span className="text-xs text-muted-foreground">Analisando sua solicitação...</span>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="flex-1 flex flex-col overflow-hidden bg-gradient-to-b from-background to-background/95">
+      {messages.length === 0 && !isLoading ? renderWelcomeScreen() : renderMessages()}
+
+      {/* Input Area - Estilo ChatGPT */}
+      <div className="border-t border-border/30 bg-background/95 backdrop-blur-xl p-4">
         <div className="max-w-3xl mx-auto">
-          <div className="flex gap-3 items-end">
+          {/* Selected Files Preview */}
+          {selectedFiles.length > 0 && (
+            <div className="mb-3 flex flex-wrap gap-2">
+              {selectedFiles.map((file, index) => (
+                <div key={index} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-card/60 border border-border/50 text-sm">
+                  {file.type.startsWith("image/") ? (
+                    <ImageIcon className="h-4 w-4 text-muted-foreground" />
+                  ) : file.type.startsWith("audio/") ? (
+                    <Mic className="h-4 w-4 text-muted-foreground" />
+                  ) : (
+                    <FileText className="h-4 w-4 text-muted-foreground" />
+                  )}
+                  <span className="text-xs text-foreground">{file.name}</span>
+                  <button onClick={() => removeFile(index)} className="hover:text-destructive">
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Input Container */}
+          <div className="relative flex items-end gap-2 p-2 rounded-3xl bg-card/40 border border-border/50 shadow-lg backdrop-blur-sm hover:border-border transition-all duration-200">
+            {/* Attach Button */}
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-10 w-10 rounded-full shrink-0 hover:bg-accent"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isLoading}
+            >
+              <Paperclip className="h-5 w-5" />
+            </Button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              accept="image/*,.pdf,.doc,.docx,.txt"
+              className="hidden"
+              onChange={handleFileSelect}
+            />
+
+            {/* Textarea */}
             <textarea
-              ref={inputRef}
+              ref={textareaRef}
               value={input}
               onChange={handleInputChange}
               onKeyDown={handleKeyPress}
-              placeholder="Digite sua mensagem..."
-              className="flex-1 resize-none rounded-xl bg-background/50 border border-border/50 hover:border-border focus:border-primary/50 px-5 py-4 text-base focus:outline-none transition-all duration-200 min-h-[56px] max-h-32 placeholder:text-muted-foreground"
-              rows={1}
+              placeholder="Pergunte qualquer coisa..."
               disabled={isLoading}
+              className="flex-1 min-h-[40px] max-h-[200px] resize-none border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 px-2 py-2 text-sm placeholder:text-muted-foreground/60 focus:outline-none"
+              rows={1}
             />
-            <motion.button
-              onClick={sendMessage}
-              disabled={!input.trim() || isLoading}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              className="h-14 w-14 rounded-xl bg-gradient-to-br from-primary to-primary/80 text-white hover:shadow-lg hover:shadow-primary/30 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-none flex items-center justify-center transition-all duration-200"
-            >
-              {isLoading ? (
-                <Loader2 className="h-6 w-6 animate-spin" />
-              ) : (
-                <Send className="h-5 w-5" />
+
+            {/* Audio Button */}
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className={cn(
+                "h-10 w-10 rounded-full shrink-0 hover:bg-accent",
+                isRecording && "bg-destructive hover:bg-destructive text-white"
               )}
-            </motion.button>
+              onClick={isRecording ? stopRecording : startRecording}
+              disabled={isLoading}
+            >
+              {isRecording ? <StopCircle className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
+            </Button>
+
+            {/* Send Button */}
+            <Button
+              type="button"
+              size="icon"
+              className="h-10 w-10 rounded-full shrink-0 bg-primary hover:bg-primary/90 text-white shadow-md hover:shadow-lg transition-all duration-200"
+              onClick={() => sendMessage()}
+              disabled={isLoading || (!input.trim() && selectedFiles.length === 0)}
+            >
+              <Send className="h-5 w-5" />
+            </Button>
           </div>
-          <p className="text-xs text-muted-foreground mt-3 text-center">
-            <span className="font-medium">Enter</span> para enviar • <span className="font-medium">Shift+Enter</span> para nova linha
+
+          {/* Helper Text */}
+          <p className="text-xs text-muted-foreground/60 text-center mt-2">
+            Pressione Enter para enviar, Shift+Enter para nova linha
           </p>
         </div>
       </div>
