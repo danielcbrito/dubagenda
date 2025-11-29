@@ -1,6 +1,6 @@
-import { Send, Bot, User, Loader2, X } from "lucide-react";
+import { Send, Bot, User, Loader2, X, Sparkles, Brain, Zap, Target } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -15,22 +15,33 @@ interface SupportChatWidgetProps {
   fullScreen?: boolean;
 }
 
+const thinkingMessages = [
+  { icon: "💭", text: "Pensando..." },
+  { icon: "🔍", text: "Analisando seu problema..." },
+  { icon: "⚡", text: "Processando solução..." },
+  { icon: "🧠", text: "Pensando mais a fundo..." },
+  { icon: "🎯", text: "Avaliando a melhor resposta..." },
+  { icon: "✨", text: "Preparando resposta..." },
+];
+
 /**
- * Widget de chat de suporte com IA
+ * Widget de chat de suporte com IA - Estilo ChatGPT Premium
  * Pode ser usado como pop-up ou página completa
  */
 export function SupportChatWidget({ onClose, fullScreen = false }: SupportChatWidgetProps) {
   const [messages, setMessages] = useState<Message[]>([
     {
       role: 'assistant',
-      content: '👋 Olá! Sou a assistente virtual da Barbearia DUB. Como posso te ajudar hoje?',
+      content: '👋 Olá! Sou a assistente virtual da Barbearia DUB. Como posso te ajudar hoje?\n\n💡 Posso te ajudar com:\n• Fazer agendamento\n• Ver seus pontos de fidelidade\n• Tirar dúvidas sobre pagamento\n• Reportar problema técnico',
       timestamp: new Date()
     }
   ]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
+  const [thinkingMessageIndex, setThinkingMessageIndex] = useState(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const { toast } = useToast();
 
   // Auto scroll para última mensagem
@@ -38,26 +49,46 @@ export function SupportChatWidget({ onClose, fullScreen = false }: SupportChatWi
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  // Rotacionar mensagens de "pensando"
+  useEffect(() => {
+    if (!isLoading) return;
+    
+    const interval = setInterval(() => {
+      setThinkingMessageIndex(prev => (prev + 1) % thinkingMessages.length);
+    }, 2000);
+
+    return () => clearInterval(interval);
+  }, [isLoading]);
+
   const sendMessage = async () => {
-    if (!input.trim() || isLoading) return;
+    const trimmedInput = input.trim();
+    if (!trimmedInput || isLoading) return;
 
     const userMessage: Message = {
       role: 'user',
-      content: input,
+      content: trimmedInput,
       timestamp: new Date()
     };
 
+    // Adicionar mensagem do usuário imediatamente
     setMessages(prev => [...prev, userMessage]);
     setInput('');
     setIsLoading(true);
 
+    // Resetar altura do textarea
+    if (inputRef.current) {
+      inputRef.current.style.height = 'auto';
+    }
+
     try {
       // Verificar se usuário quer criar ticket
-      const wantsTicket = input.toLowerCase().includes('criar ticket');
+      const wantsTicket = trimmedInput.toLowerCase().includes('criar ticket') || 
+                          trimmedInput.toLowerCase().includes('falar com humano') ||
+                          trimmedInput.toLowerCase().includes('falar com atendente');
       
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
-        throw new Error('Você precisa estar logado');
+        throw new Error('Você precisa estar logado para usar o chat');
       }
 
       const { data, error } = await supabase.functions.invoke('ai-support-chat', {
@@ -87,7 +118,7 @@ export function SupportChatWidget({ onClose, fullScreen = false }: SupportChatWi
       if (data.ticketId) {
         toast({
           title: "✅ Ticket Criado!",
-          description: `Ticket #${data.ticketId.substring(0, 8)} criado. Acompanhe pelo painel admin.`,
+          description: `Ticket #${data.ticketId.substring(0, 8)} criado com sucesso!`,
         });
       }
 
@@ -96,7 +127,7 @@ export function SupportChatWidget({ onClose, fullScreen = false }: SupportChatWi
       
       const errorMessage: Message = {
         role: 'assistant',
-        content: '😔 Desculpe, ocorreu um erro. Por favor, tente novamente ou entre em contato diretamente.',
+        content: '😔 Desculpe, ocorreu um erro ao processar sua mensagem. Por favor, tente novamente ou entre em contato diretamente com nosso suporte.',
         timestamp: new Date()
       };
 
@@ -104,7 +135,7 @@ export function SupportChatWidget({ onClose, fullScreen = false }: SupportChatWi
 
       toast({
         title: "Erro ao enviar mensagem",
-        description: error.message,
+        description: error.message || "Ocorreu um erro inesperado",
         variant: "destructive"
       });
     } finally {
@@ -112,123 +143,173 @@ export function SupportChatWidget({ onClose, fullScreen = false }: SupportChatWi
     }
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       sendMessage();
     }
   };
 
+  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setInput(e.target.value);
+    // Auto-resize textarea
+    e.target.style.height = 'auto';
+    e.target.style.height = Math.min(e.target.scrollHeight, 128) + 'px';
+  };
+
   const containerClass = fullScreen 
-    ? "h-full w-full bg-background"
-    : "w-96 h-[600px] bg-card border border-border rounded-2xl shadow-2xl overflow-hidden";
+    ? "h-screen w-full bg-background flex flex-col"
+    : "w-[420px] h-[680px] bg-card border border-border rounded-3xl shadow-2xl overflow-hidden flex flex-col";
 
   return (
     <div className={containerClass}>
-      {/* Header */}
-      <div className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent p-4 border-b border-border backdrop-blur-xl flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-            <Bot className="h-6 w-6 text-primary" />
-          </div>
+      {/* Header Premium */}
+      <div className="bg-gradient-to-r from-primary/20 via-primary/10 to-transparent p-6 border-b border-border/50 backdrop-blur-xl flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <motion.div 
+            className="relative h-12 w-12 rounded-2xl bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center shadow-lg"
+            animate={{ rotate: [0, 5, 0, -5, 0] }}
+            transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+          >
+            <Bot className="h-7 w-7 text-white" />
+            <motion.div
+              className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-green-500 border-2 border-background"
+              animate={{ scale: [1, 1.2, 1] }}
+              transition={{ duration: 2, repeat: Infinity }}
+            />
+          </motion.div>
           <div>
-            <h3 className="font-semibold text-foreground">Suporte DUB</h3>
-            <p className="text-xs text-muted-foreground">IA • Sempre online</p>
+            <h3 className="font-bold text-lg text-foreground">Suporte DUB</h3>
+            <p className="text-sm text-muted-foreground flex items-center gap-1">
+              <Sparkles className="h-3 w-3" />
+              IA • Sempre online
+            </p>
           </div>
         </div>
         {!fullScreen && (
           <button
             onClick={onClose}
-            className="h-8 w-8 rounded-full hover:bg-primary/10 flex items-center justify-center transition-colors"
+            className="h-10 w-10 rounded-xl hover:bg-destructive/10 hover:text-destructive flex items-center justify-center transition-all duration-200"
           >
-            <X className="h-5 w-5 text-muted-foreground" />
+            <X className="h-5 w-5" />
           </button>
         )}
       </div>
 
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4" style={{ height: fullScreen ? 'calc(100vh - 180px)' : 'calc(600px - 140px)' }}>
+      {/* Messages Area */}
+      <div 
+        className="flex-1 overflow-y-auto px-6 py-8 space-y-6 scroll-smooth" 
+        style={{ 
+          background: 'linear-gradient(to bottom, transparent, rgba(239, 68, 68, 0.02))',
+        }}
+      >
         {messages.map((message, index) => (
           <motion.div
             key={index}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.2 }}
-            className={`flex gap-3 ${message.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}
+            initial={{ opacity: 0, y: 20, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{ duration: 0.3, ease: "easeOut" }}
+            className={`flex gap-4 ${message.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}
           >
             {/* Avatar */}
-            <div className={`h-8 w-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+            <div className={`h-10 w-10 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-md ${
               message.role === 'user' 
-                ? 'bg-primary text-primary-foreground' 
-                : 'bg-muted'
+                ? 'bg-gradient-to-br from-primary to-primary/80' 
+                : 'bg-gradient-to-br from-muted to-muted/60'
             }`}>
               {message.role === 'user' ? (
-                <User className="h-4 w-4" />
+                <User className="h-5 w-5 text-white" />
               ) : (
-                <Bot className="h-4 w-4 text-primary" />
+                <Bot className="h-5 w-5 text-primary" />
               )}
             </div>
 
-            {/* Message bubble */}
-            <div className={`max-w-[75%] rounded-2xl p-3 ${
+            {/* Message Bubble */}
+            <div className={`max-w-[80%] rounded-2xl px-5 py-4 shadow-lg ${
               message.role === 'user'
-                ? 'bg-primary text-primary-foreground'
-                : 'bg-muted text-foreground'
+                ? 'bg-gradient-to-br from-primary to-primary/90 text-white'
+                : 'bg-card border border-border/50 text-foreground'
             }`}>
-              <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-              <p className="text-xs opacity-70 mt-1">
+              <p className="text-[15px] leading-relaxed whitespace-pre-wrap">{message.content}</p>
+              <p className={`text-xs mt-2 ${message.role === 'user' ? 'text-white/70' : 'text-muted-foreground'}`}>
                 {message.timestamp.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
               </p>
             </div>
           </motion.div>
         ))}
 
-        {/* Loading indicator */}
-        {isLoading && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="flex gap-3"
-          >
-            <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center">
-              <Bot className="h-4 w-4 text-primary" />
-            </div>
-            <div className="bg-muted rounded-2xl p-3">
-              <Loader2 className="h-4 w-4 animate-spin text-primary" />
-            </div>
-          </motion.div>
-        )}
+        {/* AI Thinking Indicator */}
+        <AnimatePresence>
+          {isLoading && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="flex gap-4"
+            >
+              <div className="h-10 w-10 rounded-2xl bg-gradient-to-br from-muted to-muted/60 flex items-center justify-center shadow-md">
+                <Bot className="h-5 w-5 text-primary" />
+              </div>
+              <div className="bg-card border border-border/50 rounded-2xl px-5 py-4 shadow-lg">
+                <motion.div
+                  key={thinkingMessageIndex}
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 10 }}
+                  className="flex items-center gap-2 text-sm text-muted-foreground italic"
+                >
+                  <span className="text-lg">{thinkingMessages[thinkingMessageIndex].icon}</span>
+                  <span>{thinkingMessages[thinkingMessageIndex].text}</span>
+                  <motion.span
+                    animate={{ opacity: [0, 1, 0] }}
+                    transition={{ duration: 1.5, repeat: Infinity }}
+                  >
+                    ...
+                  </motion.span>
+                </motion.div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input */}
-      <div className="p-4 border-t border-border bg-card/50 backdrop-blur-xl">
-        <div className="flex gap-2">
+      {/* Input Area Premium */}
+      <div className="p-6 border-t border-border/50 bg-card/80 backdrop-blur-xl">
+        <div className="flex gap-3 items-end">
           <textarea
+            ref={inputRef}
             value={input}
-            onChange={(e) => setInput(e.target.value)}
+            onChange={handleInputChange}
             onKeyDown={handleKeyPress}
             placeholder="Digite sua mensagem..."
-            className="flex-1 resize-none rounded-xl bg-background border border-border px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 min-h-[44px] max-h-32"
+            className="flex-1 resize-none rounded-2xl bg-background border-2 border-border hover:border-primary/30 focus:border-primary/50 px-5 py-4 text-[15px] focus:outline-none transition-all duration-200 min-h-[56px] max-h-32"
             rows={1}
             disabled={isLoading}
           />
-          <button
+          <motion.button
             onClick={sendMessage}
             disabled={!input.trim() || isLoading}
-            className="h-11 w-11 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            className="h-14 w-14 rounded-2xl bg-gradient-to-br from-primary to-primary/80 text-white hover:shadow-lg hover:shadow-primary/30 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-none flex items-center justify-center transition-all duration-200"
           >
             {isLoading ? (
-              <Loader2 className="h-5 w-5 animate-spin" />
+              <Loader2 className="h-6 w-6 animate-spin" />
             ) : (
-              <Send className="h-5 w-5" />
+              <Send className="h-6 w-6" />
             )}
-          </button>
+          </motion.button>
         </div>
-        <p className="text-xs text-muted-foreground mt-2 text-center">
-          💡 Aperte Enter para enviar • Shift+Enter para nova linha
-        </p>
+        <motion.p 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.3 }}
+          className="text-xs text-muted-foreground mt-3 text-center"
+        >
+          💡 <span className="font-medium">Enter</span> para enviar • <span className="font-medium">Shift+Enter</span> para nova linha
+        </motion.p>
       </div>
     </div>
   );
