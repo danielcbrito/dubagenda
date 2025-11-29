@@ -17,8 +17,7 @@ import { AdminSeguranca } from "@/components/admin/AdminSeguranca";
 import { AdminConfiguracoes } from "@/components/admin/AdminConfiguracoes";
 import { AdminConfirmacoesPendentes } from "@/components/admin/AdminConfirmacoesPendentes";
 import { AdminDev } from "@/components/admin/AdminDev";
-import { AdminSuporteTickets } from "@/components/admin/AdminSuporteTickets";
-import { AdminSuporteConfig } from "@/components/admin/AdminSuporteConfig";
+import { AdminSuportePanel } from "@/components/admin/AdminSuportePanel";
 
 const Admin = () => {
   const navigate = useNavigate();
@@ -71,8 +70,7 @@ const Admin = () => {
               <Route path="relatorios" element={<AdminRelatorios />} />
               <Route path="servicos/*" element={<AdminServicos />} />
               <Route path="promocoes" element={<AdminPromocoes />} />
-              <Route path="suporte" element={<AdminSuporteTickets />} />
-              <Route path="suporte-config" element={<AdminSuporteConfig />} />
+              <Route path="suporte" element={<AdminSuportePanel />} />
               <Route path="configuracoes" element={<AdminConfiguracoes />} />
               <Route path="apis" element={<AdminAPIs />} />
               <Route path="seguranca" element={<AdminSeguranca />} />
