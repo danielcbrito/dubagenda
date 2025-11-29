@@ -1,19 +1,22 @@
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import logoDub from "@/assets/logo-dub.png";
+import barbershopBg from "@/assets/barbershop-landing-bg.jpg";
 
 const Index = () => {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen bg-background relative overflow-hidden">
-      {/* Background with logo watermark */}
-      <div className="absolute inset-0 opacity-5">
+    <div className="min-h-screen relative overflow-hidden">
+      {/* Premium barbershop background */}
+      <div className="absolute inset-0">
         <img 
-          src={logoDub} 
+          src={barbershopBg} 
           alt="" 
-          className="w-full h-full object-contain"
+          className="w-full h-full object-cover"
         />
+        {/* Dark overlay for better text readability */}
+        <div className="absolute inset-0 bg-black/60" />
       </div>
 
       {/* Content */}
