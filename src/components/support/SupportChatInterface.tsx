@@ -209,8 +209,8 @@ export function SupportChatInterface() {
   );
 
   const renderMessages = () => (
-    <div ref={scrollAreaRef} className="flex-1 overflow-y-auto overflow-x-hidden px-4 md:px-6 py-6 scrollbar-hide">
-      <div className="max-w-3xl mx-auto space-y-6">
+    <div ref={scrollAreaRef} className="chat-messages px-4 md:px-6 py-6">
+      <div className="max-w-3xl mx-auto space-y-4 md:space-y-6">
         {messages.map((message, index) => (
           <div
             key={index}
@@ -289,11 +289,11 @@ export function SupportChatInterface() {
   );
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-hidden">
+    <div className="chat-wrapper">
       {messages.length === 0 && !isLoading ? renderWelcomeScreen() : renderMessages()}
 
-      {/* Input Area Premium 2025 */}
-      <div className="bg-black/20 backdrop-blur-2xl p-3 md:p-4 border-t border-white/5">
+      {/* Input Area Premium 2025 - Always Visible */}
+      <div className="chat-composer bg-black/20 backdrop-blur-2xl p-3 md:p-4 border-t border-white/5">
         <div className="max-w-3xl mx-auto">
           {/* Selected Files Preview Premium */}
           {selectedFiles.length > 0 && (

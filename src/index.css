@@ -399,16 +399,25 @@ div[style*="Edit with Lovable"],
 }
 
 /* 🔒 STRATEGIC SCROLL SYSTEM - Internal scroll only */
+
+/* Lock body scroll on full-screen views (chat, home, etc.) */
+html.lock-scroll,
+body.lock-scroll {
+  overflow: hidden !important;
+  height: 100% !important;
+  position: fixed !important;
+  width: 100% !important;
+  touch-action: none !important;
+}
+
 html {
   overflow: hidden !important;
   height: 100vh !important;
-  position: fixed !important;
   width: 100% !important;
 }
 
-/* Page containers - no scroll on page itself */
-body > * {
-  overflow: hidden;
+body {
+  overflow: hidden !important;
 }
 
 /* Internal scrollable areas - premium thin scrollbar */
@@ -416,8 +425,11 @@ body > * {
   overflow-y: auto !important;
   overflow-x: hidden !important;
   height: 100%;
+  -webkit-overflow-scrolling: touch;
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 255, 255, 0.08) transparent;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
 }
 
 .scrollable-content::-webkit-scrollbar {
@@ -437,12 +449,95 @@ body > * {
   background-color: rgba(255, 255, 255, 0.12);
 }
 
+/* Chat container - strategic layout */
+.chat-wrapper {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.chat-messages {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+}
+
+.chat-composer {
+  flex: 0 0 auto;
+  position: relative;
+  z-index: 10;
+}
+
+/* Services list - strategic scroll */
+.services-list {
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.08) transparent;
+}
+
+.services-list::-webkit-scrollbar {
+  width: 4px;
+}
+
+.services-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.services-list::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.08);
+  border-radius: 2px;
+}
+
+/* 📱 RESPONSIVE BREAKPOINTS - Mobile First */
+@layer utilities {
+  /* Small phones (≤360px) */
+  @media (max-width: 360px) {
+    .responsive-text { font-size: 13px; }
+    .responsive-title { font-size: 18px; }
+    .responsive-padding { padding: 0.5rem; }
+    .responsive-gap { gap: 0.5rem; }
+    .responsive-button { height: 36px; padding: 0 12px; font-size: 13px; }
+  }
+  
+  /* Medium phones (361-420px) */
+  @media (min-width: 361px) and (max-width: 420px) {
+    .responsive-text { font-size: 14px; }
+    .responsive-title { font-size: 20px; }
+    .responsive-padding { padding: 0.75rem; }
+    .responsive-gap { gap: 0.75rem; }
+    .responsive-button { height: 40px; padding: 0 14px; font-size: 14px; }
+  }
+  
+  /* Large phones/tablets (≥421px) */
+  @media (min-width: 421px) {
+    .responsive-text { font-size: 15px; }
+    .responsive-title { font-size: 22px; }
+    .responsive-padding { padding: 1rem; }
+    .responsive-gap { gap: 1rem; }
+    .responsive-button { height: 44px; padding: 0 16px; font-size: 15px; }
+  }
+}
+
 /* Compact layouts - reduced spacing */
 .compact-spacing {
-  gap: 0.75rem;
+  gap: 0.5rem;
 }
 
 .compact-padding {
-  padding: 0.75rem;
+  padding: 0.5rem;
+}
+
+.compact-button {
+  height: 36px;
+  padding: 0 12px;
+  font-size: 13px;
 }
 
