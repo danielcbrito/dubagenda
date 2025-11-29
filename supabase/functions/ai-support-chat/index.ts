@@ -118,7 +118,7 @@ serve(async (req) => {
   }
 
   try {
-    const { message, conversationId, action } = await req.json();
+    const { message, conversationId, action, guestName, guestEmail } = await req.json();
     
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -126,44 +126,64 @@ serve(async (req) => {
     
     const supabase = createClient(supabaseUrl, supabaseKey);
     
-    // Verificar autenticação
+    // Verificar autenticação (OPCIONAL - permite usuários anônimos)
     const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      throw new Error('Não autorizado');
-    }
-
-    const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: userError } = await supabase.auth.getUser(token);
+    let user = null;
+    let isGuest = false;
     
-    if (userError || !user) {
-      throw new Error('Não autorizado');
+    if (authHeader) {
+      const token = authHeader.replace('Bearer ', '');
+      const { data: { user: authUser }, error: userError } = await supabase.auth.getUser(token);
+      if (!userError && authUser) {
+        user = authUser;
+      }
+    }
+    
+    // Se não tem usuário autenticado, é guest
+    if (!user) {
+      isGuest = true;
+      user = { id: `guest-${Date.now()}-${Math.random().toString(36).substr(2, 9)}` };
     }
 
-    console.log('📩 Nova mensagem recebida:', { userId: user.id, action, message: message?.substring(0, 50) });
+    console.log('📩 Nova mensagem recebida:', { 
+      userId: user.id, 
+      isGuest, 
+      action, 
+      message: message?.substring(0, 50) 
+    });
 
     // Ações especiais
     if (action === 'create_ticket') {
+      // Para guests, salvar nome e email no metadata
+      const ticketMetadata = isGuest ? {
+        guest_name: guestName || 'Anônimo',
+        guest_email: guestEmail || 'não fornecido',
+        is_guest: true
+      } : { is_guest: false };
+
       const { data: ticket, error: ticketError } = await supabase
         .from('support_tickets')
         .insert({
           conversation_id: conversationId,
-          user_id: user.id,
+          user_id: isGuest ? null : user.id,
           title: message.substring(0, 100),
           description: message,
           status: 'open',
           priority: 'medium',
-          category: 'bug'
+          category: 'bug',
+          metadata: ticketMetadata
         })
         .select()
         .single();
 
       if (ticketError) throw ticketError;
 
-      console.log('🎫 Ticket criado:', ticket.id);
+      console.log('🎫 Ticket criado:', ticket.id, { isGuest, metadata: ticketMetadata });
 
       return new Response(JSON.stringify({
-        response: `✅ Ticket #${ticket.id.substring(0, 8)} criado com sucesso! Nossa equipe vai analisar e resolver o problema. Você receberá atualizações por aqui.`,
-        ticketId: ticket.id
+        response: `Chamado #${ticket.id.substring(0, 8)} criado com sucesso. Nossa equipe responderá em breve${guestEmail ? ` no email ${guestEmail}` : ''}.`,
+        ticketId: ticket.id,
+        conversationId: conversationId
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
@@ -181,15 +201,27 @@ serve(async (req) => {
     }
 
     if (!conversation) {
+      const conversationMetadata = isGuest ? {
+        guest_name: guestName || 'Visitante',
+        guest_email: guestEmail || '',
+        is_guest: true
+      } : { is_guest: false };
+
       const { data: newConv, error: convError } = await supabase
         .from('support_conversations')
-        .insert({ user_id: user.id })
+        .insert({ 
+          user_id: isGuest ? null : user.id,
+          metadata: conversationMetadata
+        })
         .select()
         .single();
 
-      if (convError) throw convError;
+      if (convError) {
+        console.error('Erro ao criar conversa:', convError);
+        throw convError;
+      }
       conversation = newConv;
-      console.log('💬 Nova conversa criada:', conversation.id);
+      console.log('💬 Nova conversa criada:', conversation.id, { isGuest });
     }
 
     // Salvar mensagem do usuário
@@ -226,24 +258,35 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: `Você é um assistente de suporte inteligente para o sistema de barbearia DUB.
+            content: `Você é um assistente de suporte inteligente e profissional para o sistema de barbearia DUB.
 
-INSTRUÇÕES:
-1. Seja MUITO educado e prestativo
-2. Use o conhecimento do aplicativo abaixo para responder
-3. Dê respostas claras e objetivas
-4. Use emojis quando apropriado (mas não exagere)
-5. Se o usuário reportar um BUG, colete informações e sugira criar um ticket
-6. NUNCA invente funcionalidades que não existem
+ESTILO DE RESPOSTA:
+- Seja educado, claro e objetivo
+- Use linguagem profissional mas acessível
+- Sem emojis ou símbolos decorativos
+- Respostas concisas e diretas ao ponto
+- Mantenha tom neutro e prestativo
 
-Para criar ticket, pergunte:
-- Em qual tela está?
-- Qual erro aparece?
-- O que esperava que acontecesse?
+CAPACIDADES:
+1. Responder dúvidas sobre o sistema
+2. Guiar usuários em funcionalidades
+3. Coletar informações para abertura de tickets
+4. Diagnosticar problemas técnicos
 
-Depois de coletar, diga: "Vou criar um ticket para a equipe resolver isso. Digite 'criar ticket' para confirmar."
+FLUXO DE TICKETS:
+Quando usuário reportar problema complexo ou após 2-3 tentativas sem resolver:
+1. Pergunte: "Em qual tela você está?"
+2. Pergunte: "Qual mensagem de erro aparece?"
+3. Pergunte: "O que você esperava que acontecesse?"
+4. Após coletar, diga: "Vou abrir um chamado para nossa equipe técnica. Para isso, preciso de seu nome e email."
+5. Quando receber, confirme: "Perfeito. Digite 'criar ticket' para finalizar."
 
-CONHECIMENTO DO APLICATIVO:
+IMPORTANTE:
+- NUNCA invente funcionalidades
+- Use apenas informações da base de conhecimento abaixo
+- Se não souber, seja honesto e ofereça criar ticket
+
+BASE DE CONHECIMENTO:
 ${APP_KNOWLEDGE}
 `
           },
