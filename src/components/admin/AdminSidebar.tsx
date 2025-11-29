@@ -36,7 +36,7 @@ const menuGroups = [
     {
       label: "Atendimento",
       items: [
-        { title: "Agenda", url: "/admin/agenda", icon: Calendar, openInNewTab: true },
+        { title: "Agenda", url: "/agenda-fullscreen", icon: Calendar, openInNewTab: true },
         { title: "Confirmações", url: "/admin/confirmacoes-pendentes", icon: CheckCircle, badge: true },
       ],
     },
@@ -140,10 +140,13 @@ export function AdminSidebar() {
 
   return (
     <Sidebar 
-      className="sidebar-glass border-r-0 overflow-y-auto scrollbar-hide"
+      className="sidebar-glass border-r-0 overflow-y-auto"
       style={{ 
         width: isCollapsed ? '64px' : '260px',
-        transition: 'width 250ms cubic-bezier(0.4, 0, 0.2, 1)'
+        transition: 'width 250ms cubic-bezier(0.4, 0, 0.2, 1)',
+        scrollbarWidth: 'none',
+        msOverflowStyle: 'none',
+        WebkitOverflowScrolling: 'touch'
       }}
     >
       <SidebarHeader className="border-b border-border/50 py-3 px-3">
