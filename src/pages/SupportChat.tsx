@@ -37,7 +37,10 @@ export default function SupportChat() {
   }, []);
 
   return (
-    <div className="h-screen w-full flex flex-col bg-[#212121] overflow-hidden" style={{ height: 'calc(var(--vh, 1vh) * 100)' }}>
+    <div
+      className="h-screen w-full flex flex-col bg-[#212121] overflow-hidden"
+      style={{ height: 'calc(var(--vh, 1vh) * 100)' }}
+    >
       {/* Header ChatGPT Style */}
       <header className="bg-[#212121] border-b border-white/10 px-3 py-2.5 flex items-center justify-between z-10 shrink-0">
         <div className="flex items-center gap-2">
@@ -65,7 +68,9 @@ export default function SupportChat() {
       </header>
 
       {/* Chat Interface */}
-      <SupportChatInterface />
+      <div className="flex-1 overflow-hidden">
+        <SupportChatInterface />
+      </div>
     </div>
   );
 }
