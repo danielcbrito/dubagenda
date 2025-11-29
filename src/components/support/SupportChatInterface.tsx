@@ -73,16 +73,17 @@ export function SupportChatInterface() {
         }
       };
 
-      mediaRecorder.onstop = () => {
+      mediaRecorder.onstop = async () => {
         const audioBlob = new Blob(audioChunksRef.current, { type: "audio/webm" });
-        const audioFile = new File([audioBlob], `audio-${Date.now()}.webm`, { type: "audio/webm" });
-        setSelectedFiles([audioFile]);
         stream.getTracks().forEach(track => track.stop());
+        
+        // Converter áudio para texto
+        await convertAudioToText(audioBlob);
       };
 
       mediaRecorder.start();
       setIsRecording(true);
-      toast.success("Gravação iniciada");
+      toast.success("Ouvindo...");
     } catch (error) {
       console.error("Erro ao iniciar gravação:", error);
       toast.error("Não foi possível acessar o microfone");
@@ -93,7 +94,34 @@ export function SupportChatInterface() {
     if (mediaRecorderRef.current && isRecording) {
       mediaRecorderRef.current.stop();
       setIsRecording(false);
-      toast.success("Áudio gravado");
+    }
+  };
+
+  const convertAudioToText = async (audioBlob: Blob) => {
+    try {
+      toast.info("Convertendo áudio em texto...");
+      
+      const reader = new FileReader();
+      reader.readAsDataURL(audioBlob);
+      
+      reader.onloadend = async () => {
+        const base64Audio = (reader.result as string).split(',')[1];
+        
+        const { data, error } = await supabase.functions.invoke("speech-to-text", {
+          body: { audio: base64Audio }
+        });
+
+        if (error) throw error;
+
+        if (data?.text) {
+          setInput(data.text);
+          toast.success("Mensagem transcrita");
+          adjustTextareaHeight();
+        }
+      };
+    } catch (error) {
+      console.error("Erro ao converter áudio:", error);
+      toast.error("Erro ao converter áudio em texto");
     }
   };
 
@@ -170,53 +198,19 @@ export function SupportChatInterface() {
   };
 
   const renderWelcomeScreen = () => (
-    <div className="flex-1 flex items-center justify-center p-4 md:p-6">
-      <div className="max-w-3xl w-full space-y-10 text-center">
-        {/* Logo Premium 2025 */}
-        <div className="flex justify-center">
-          <div className="relative group">
-            {/* Glow Effect */}
-            <div className="absolute inset-0 bg-gradient-to-r from-primary/30 via-primary/40 to-primary/30 blur-3xl rounded-full opacity-60 group-hover:opacity-80 transition-opacity duration-500" />
-            
-            {/* Icon Container */}
-            <div className="relative h-24 w-24 rounded-3xl bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-xl flex items-center justify-center shadow-2xl border border-white/10">
-              <Sparkles className="h-12 w-12 text-white drop-shadow-2xl" />
-            </div>
-          </div>
-        </div>
-
-        {/* Mensagem de Boas-vindas Premium */}
-        <div className="space-y-4">
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white tracking-tight leading-tight">
-            Olá! Como posso te ajudar hoje?
-          </h1>
-          <p className="text-white/60 text-base md:text-lg lg:text-xl font-light max-w-2xl mx-auto leading-relaxed">
-            Estou aqui para responder suas dúvidas sobre agendamentos, planos e muito mais.
-          </p>
-        </div>
-
-        {/* Sugestões Premium */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-12">
-          {welcomePrompts.map((prompt, index) => (
-            <button
-              key={index}
-              onClick={() => sendMessage(prompt)}
-              className="group relative p-5 rounded-2xl bg-white/5 backdrop-blur-xl border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all duration-300 text-left hover:scale-[1.02] hover:shadow-2xl hover:shadow-primary/10"
-            >
-              <div className="absolute inset-0 bg-gradient-to-r from-primary/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-2xl" />
-              <p className="relative text-sm md:text-base text-white/80 group-hover:text-white font-medium transition-colors duration-300">
-                {prompt}
-              </p>
-            </button>
-          ))}
-        </div>
+    <div className="flex-1 flex items-center justify-center p-4 overflow-hidden">
+      <div className="max-w-2xl w-full text-center">
+        {/* Mensagem de Boas-vindas ChatGPT Style */}
+        <h1 className="text-3xl md:text-4xl font-normal text-white mb-8">
+          Como posso ajudar?
+        </h1>
       </div>
     </div>
   );
 
   const renderMessages = () => (
-    <div ref={scrollAreaRef} className="flex-1 overflow-y-auto px-4 md:px-6 py-6">
-      <div className="max-w-4xl mx-auto space-y-4">
+    <div ref={scrollAreaRef} className="flex-1 overflow-y-auto overflow-x-hidden px-4 md:px-6 py-6 scrollbar-hide">
+      <div className="max-w-3xl mx-auto space-y-6">
         {messages.map((message, index) => (
           <div
             key={index}
@@ -295,12 +289,12 @@ export function SupportChatInterface() {
   );
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden">
+    <div className="flex-1 flex flex-col h-full overflow-hidden">
       {messages.length === 0 && !isLoading ? renderWelcomeScreen() : renderMessages()}
 
       {/* Input Area Premium 2025 */}
-      <div className="bg-black/20 backdrop-blur-2xl p-4 md:p-6">
-        <div className="max-w-4xl mx-auto">
+      <div className="bg-black/20 backdrop-blur-2xl p-3 md:p-4 border-t border-white/5">
+        <div className="max-w-3xl mx-auto">
           {/* Selected Files Preview Premium */}
           {selectedFiles.length > 0 && (
             <div className="mb-3 flex flex-wrap gap-2">
@@ -326,13 +320,13 @@ export function SupportChatInterface() {
           )}
 
           {/* Input Container Premium Glassmorphism */}
-          <div className="relative flex items-end gap-2 md:gap-3 p-2 md:p-3 rounded-3xl bg-white/5 backdrop-blur-2xl border border-white/10 shadow-2xl hover:bg-white/10 hover:border-white/20 transition-all duration-300">
+          <div className="relative flex items-center gap-2 p-2 rounded-3xl bg-white/5 backdrop-blur-2xl border border-white/10 shadow-2xl hover:bg-white/10 hover:border-white/20 transition-all duration-300">
             {/* Attach Button Premium */}
             <Button
               type="button"
               variant="ghost"
               size="icon"
-              className="h-11 w-11 rounded-2xl shrink-0 hover:bg-white/10 text-white/70 hover:text-white transition-all duration-300 hover:scale-105"
+              className="h-10 w-10 rounded-full shrink-0 hover:bg-white/10 text-white/60 hover:text-white transition-all duration-300"
               onClick={() => fileInputRef.current?.click()}
               disabled={isLoading}
             >
@@ -353,9 +347,9 @@ export function SupportChatInterface() {
               value={input}
               onChange={handleInputChange}
               onKeyDown={handleKeyPress}
-              placeholder="Pergunte qualquer coisa..."
+              placeholder="Pergunte alguma coisa"
               disabled={isLoading}
-              className="flex-1 min-h-[44px] max-h-[200px] resize-none border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 px-2 py-3 text-[15px] text-white placeholder:text-white/40 focus:outline-none font-light"
+              className="flex-1 min-h-[40px] max-h-[120px] resize-none border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 px-2 py-2 text-[15px] text-white placeholder:text-white/50 focus:outline-none font-light"
               rows={1}
             />
 
@@ -365,10 +359,10 @@ export function SupportChatInterface() {
               variant="ghost"
               size="icon"
               className={cn(
-                "h-11 w-11 rounded-2xl shrink-0 transition-all duration-300 hover:scale-105",
+                "h-10 w-10 rounded-full shrink-0 transition-all duration-300",
                 isRecording 
                   ? "bg-red-500/20 hover:bg-red-500/30 text-red-400 animate-pulse" 
-                  : "hover:bg-white/10 text-white/70 hover:text-white"
+                  : "hover:bg-white/10 text-white/60 hover:text-white"
               )}
               onClick={isRecording ? stopRecording : startRecording}
               disabled={isLoading}
@@ -380,17 +374,17 @@ export function SupportChatInterface() {
             <Button
               type="button"
               size="icon"
-              className="h-11 w-11 rounded-2xl shrink-0 bg-gradient-to-br from-primary via-primary/90 to-primary/80 hover:from-primary hover:to-primary/90 text-white shadow-xl shadow-primary/20 hover:shadow-2xl hover:shadow-primary/30 transition-all duration-300 hover:scale-105 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100"
+              className="h-10 w-10 rounded-full shrink-0 bg-white/10 hover:bg-white/20 text-white transition-all duration-300 disabled:opacity-40 disabled:cursor-not-allowed"
               onClick={() => sendMessage()}
               disabled={isLoading || (!input.trim() && selectedFiles.length === 0)}
             >
-              <Send className="h-5 w-5" />
+              <Send className="h-4 w-4" />
             </Button>
           </div>
 
           {/* Helper Text Premium */}
-          <p className="text-[11px] text-white/40 text-center mt-3 font-medium">
-            <span className="text-white/50">Enter</span> para enviar • <span className="text-white/50">Shift+Enter</span> para nova linha
+          <p className="text-[10px] text-white/30 text-center mt-2 font-light">
+            IA pode cometer erros. Verifique informações importantes.
           </p>
         </div>
       </div>

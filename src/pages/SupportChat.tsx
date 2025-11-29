@@ -15,45 +15,30 @@ export default function SupportChat() {
   };
 
   return (
-    <div className="h-screen w-full flex flex-col bg-gradient-to-b from-[#0A0A0A] to-[#0F0F0F] overflow-hidden">
-      {/* Header Premium Ultra-Minimalista */}
-      <header className="bg-black/30 backdrop-blur-2xl px-4 lg:px-6 py-4 flex items-center justify-between z-10">
-        <div className="flex items-center gap-4">
-          {/* Botão Voltar Premium */}
+    <div className="h-screen w-full flex flex-col bg-[#212121] overflow-hidden">
+      {/* Header ChatGPT Style */}
+      <header className="bg-[#212121] border-b border-white/10 px-3 py-2.5 flex items-center justify-between z-10 shrink-0">
+        <div className="flex items-center gap-2">
+          {/* Menu Button */}
           <button
             onClick={handleBack}
-            className="group flex items-center gap-2 text-white/60 hover:text-white transition-all duration-300"
-            aria-label="Voltar"
+            className="h-9 w-9 rounded-lg hover:bg-white/10 flex items-center justify-center transition-colors"
+            aria-label="Menu"
           >
-            <div className="h-9 w-9 rounded-xl bg-white/5 hover:bg-white/10 flex items-center justify-center transition-all duration-300 group-hover:scale-105">
-              <ArrowLeft className="h-4 w-4" />
-            </div>
-            <span className="font-medium text-sm hidden sm:inline">Voltar</span>
+            <ArrowLeft className="h-5 w-5 text-white/70" />
           </button>
           
-          {/* Logo do Cliente */}
-          <div className="flex items-center gap-3">
-            <div className="relative">
-              <div className="absolute inset-0 bg-primary/20 blur-xl rounded-full" />
-              <img 
-                src={logoImage} 
-                alt="Logo" 
-                className="relative h-8 w-8 object-contain drop-shadow-2xl"
-              />
-            </div>
-            <h1 className="text-base font-semibold text-white tracking-tight hidden sm:inline">
-              Assistente IA
-            </h1>
-          </div>
-        </div>
-        
-        {/* Status Online */}
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5">
-          <div className="relative">
-            <div className="absolute inset-0 bg-emerald-400/30 blur-md rounded-full animate-pulse" />
-            <div className="relative h-2 w-2 rounded-full bg-emerald-400" />
-          </div>
-          <span className="text-xs text-white/70 font-medium hidden sm:inline">Online</span>
+          {/* Logo */}
+          <img 
+            src={logoImage} 
+            alt="Logo" 
+            className="h-6 w-6 object-contain"
+          />
+          
+          {/* Title */}
+          <h1 className="text-sm font-medium text-white/90">
+            ChatDUB
+          </h1>
         </div>
       </header>
 
