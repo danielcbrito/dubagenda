@@ -606,220 +606,232 @@ const ClienteAgendar = () => {
   const progressValue = (step / 6) * 100;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="h-screen flex flex-col bg-background overflow-hidden">
       {/* Header */}
-      <div className="bg-card border-b border-border p-4 sticky top-0 z-10 backdrop-blur-lg bg-card/80">
+      <div className="bg-card border-b border-border p-4 backdrop-blur-lg bg-card/80 flex-shrink-0">
         <div className="max-w-4xl mx-auto">
           <div className="flex items-center gap-3 mb-3">
-            <Button variant="ghost" size="icon" onClick={() => step === 1 ? navigate("/cliente") : setStep(step - 1)}>
+            <Button variant="ghost" size="icon" onClick={() => step === 1 ? navigate("/cliente") : setStep(step - 1)} className="compact-button">
               <ArrowLeft className="w-5 h-5" />
             </Button>
-            <h1 className="font-bold text-lg">Agendar Horário</h1>
+            <h1 className="font-bold text-lg responsive-title">Agendar Horário</h1>
           </div>
           <Progress value={progressValue} className="h-2" />
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto p-6 space-y-6">
-        {/* Step 1: Select Services */}
-        {step === 1 && (
-          <div className="space-y-4 pb-24">
-            <div>
-              <h3 className="text-sm font-semibold mb-1 text-muted-foreground">Etapa 1 de 5</h3>
-              <h2 className="text-2xl font-bold mb-2">Escolha os Serviços</h2>
-              <p className="text-sm text-muted-foreground">
-                Selecione um ou mais serviços
-              </p>
-            </div>
-            
-            <div className="grid gap-3">
-              {services.map((service) => {
-                const isSelected = selectedServices.some(s => s.id === service.id);
-                return (
-                  <Card
-                    key={service.id}
-                    className={`service-card ${isSelected ? 'selected' : ''}`}
-                    onClick={() => toggleService(service)}
-                    style={{ minHeight: '100px' }}
-                  >
-                    <div className="flex justify-between items-start gap-3">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <h4 className="font-semibold text-base">{service.nome}</h4>
-                          {isSelected && (
-                            <div 
-                              className="rounded-full p-1.5 flex-shrink-0"
-                              style={{
-                                background: 'linear-gradient(135deg, hsl(0 64% 52%), hsl(0 64% 42%))',
-                                boxShadow: '0 2px 8px rgba(212,49,49,0.3)'
-                              }}
-                            >
-                              <Check className="w-3 h-3 text-white" />
-                            </div>
-                          )}
-                        </div>
-                        {service.descricao && (
-                          <p className="text-xs text-muted-foreground leading-relaxed mb-2">
-                            {service.descricao}
-                          </p>
-                        )}
-                        <div className="flex items-center gap-4 text-xs">
-                          <span className="flex items-center gap-1.5 text-muted-foreground">
-                            <Clock className="w-3.5 h-3.5" />
-                            {service.duracao_minutos} min
-                          </span>
-                          <span className="font-bold text-base" style={{ color: 'hsl(0 64% 52%)' }}>
-                            R$ {service.preco.toFixed(2)}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </Card>
-                );
-              })}
-            </div>
-
-            {/* Sticky CTA */}
-            {selectedServices.length > 0 && (
-              <div className="sticky-cta">
-                <Card className="p-4 mb-3" style={{
-                  background: 'linear-gradient(135deg, hsl(0 64% 52% / 0.1), hsl(0 64% 42% / 0.05))',
-                  border: '1px solid hsl(0 64% 52% / 0.3)'
-                }}>
-                  <div className="flex justify-between items-center text-sm">
-                    <div>
-                      <span className="font-semibold text-foreground">
-                        {selectedServices.length} {selectedServices.length === 1 ? 'serviço' : 'serviços'}
-                      </span>
-                      <div className="text-xs text-muted-foreground">
-                        {getTotalDuration()} minutos
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="font-bold text-xl" style={{ color: 'hsl(0 64% 52%)' }}>
-                        R$ {getTotalPrice().toFixed(2)}
-                      </div>
-                    </div>
+      <div className="flex-1 overflow-hidden">
+        <div className="h-full max-w-4xl mx-auto flex flex-col">
+          {/* Step 1: Select Services */}
+          {step === 1 && (
+            <>
+              {/* Services List - Scrollable Container */}
+              <div className="services-list flex-1 p-4 md:p-6">
+                <div className="space-y-3 mb-4">
+                  <div>
+                    <h3 className="text-sm font-semibold mb-1 text-muted-foreground">Etapa 1 de 5</h3>
+                    <h2 className="text-xl md:text-2xl font-bold mb-2 responsive-title">Escolha os Serviços</h2>
+                    <p className="text-sm text-muted-foreground responsive-text">
+                      Selecione um ou mais serviços
+                    </p>
                   </div>
-                </Card>
-                <Button
-                  onClick={handleNextStep}
-                  className="w-full touch-target font-semibold text-base"
-                  style={{
-                    background: 'linear-gradient(135deg, hsl(0 64% 52%), hsl(0 64% 42%))',
-                    boxShadow: '0 4px 12px rgba(212,49,49,0.3)',
-                    minHeight: '52px'
-                  }}
-                >
-                  Escolher Data e Horário
-                </Button>
+                </div>
+                
+                <div className="grid gap-3 pb-6">
+                  {services.map((service) => {
+                    const isSelected = selectedServices.some(s => s.id === service.id);
+                    return (
+                      <Card
+                        key={service.id}
+                        className={`service-card cursor-pointer ${isSelected ? 'selected' : ''}`}
+                        onClick={() => toggleService(service)}
+                      >
+                        <div className="flex justify-between items-start gap-3 p-4 compact-padding">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <h4 className="font-semibold text-sm md:text-base responsive-text">{service.nome}</h4>
+                              {isSelected && (
+                                <div 
+                                  className="rounded-full p-1.5 flex-shrink-0"
+                                  style={{
+                                    background: 'linear-gradient(135deg, hsl(0 64% 52%), hsl(0 64% 42%))',
+                                    boxShadow: '0 2px 8px rgba(212,49,49,0.3)'
+                                  }}
+                                >
+                                  <Check className="w-3 h-3 text-white" />
+                                </div>
+                              )}
+                            </div>
+                            {service.descricao && (
+                              <p className="text-xs text-muted-foreground leading-relaxed mb-2 responsive-text">
+                                {service.descricao}
+                              </p>
+                            )}
+                            <div className="flex items-center gap-4 text-xs responsive-text">
+                              <span className="flex items-center gap-1.5 text-muted-foreground">
+                                <Clock className="w-3.5 h-3.5" />
+                                {service.duracao_minutos} min
+                              </span>
+                              <span className="font-bold text-sm md:text-base" style={{ color: 'hsl(0 64% 52%)' }}>
+                                R$ {service.preco.toFixed(2)}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </Card>
+                    );
+                  })}
+                </div>
               </div>
-            )}
-          </div>
-        )}
+
+              {/* Fixed CTA Button */}
+              {selectedServices.length > 0 && (
+                <div className="flex-shrink-0 p-4 bg-gradient-to-t from-background via-background to-background/50 backdrop-blur-lg border-t border-border">
+                  <div className="max-w-4xl mx-auto">
+                    <Card className="p-3 mb-3 compact-padding" style={{
+                      background: 'linear-gradient(135deg, hsl(0 64% 52% / 0.1), hsl(0 64% 42% / 0.05))',
+                      border: '1px solid hsl(0 64% 52% / 0.3)'
+                    }}>
+                      <div className="flex justify-between items-center text-sm responsive-text">
+                        <div>
+                          <span className="font-semibold text-foreground">
+                            {selectedServices.length} {selectedServices.length === 1 ? 'serviço' : 'serviços'}
+                          </span>
+                          <div className="text-xs text-muted-foreground">
+                            {getTotalDuration()} minutos
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="font-bold text-lg md:text-xl" style={{ color: 'hsl(0 64% 52%)' }}>
+                            R$ {getTotalPrice().toFixed(2)}
+                          </div>
+                        </div>
+                      </div>
+                    </Card>
+                    <Button
+                      onClick={handleNextStep}
+                      className="w-full touch-target font-semibold text-sm md:text-base responsive-button"
+                      style={{
+                        background: 'linear-gradient(135deg, hsl(0 64% 52%), hsl(0 64% 42%))',
+                        boxShadow: '0 4px 12px rgba(212,49,49,0.3)',
+                        minHeight: '44px'
+                      }}
+                    >
+                      Escolher Data e Horário
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
 
         {/* Step 2: Select Date */}
         {step === 2 && (
-          <div className="space-y-4">
-            <div>
-              <h3 className="text-sm font-semibold mb-1">Etapa 2 de 5</h3>
-              <h2 className="text-xl font-bold mb-3">Escolha a Data</h2>
-              <p className="text-sm text-muted-foreground mb-4">
-                Selecione o dia desejado para o atendimento
-              </p>
+          <div className="scrollable-content p-4 md:p-6">
+            <div className="space-y-4 max-w-4xl mx-auto">
+              <div>
+                <h3 className="text-sm font-semibold mb-1">Etapa 2 de 5</h3>
+                <h2 className="text-xl font-bold mb-3 responsive-title">Escolha a Data</h2>
+                <p className="text-sm text-muted-foreground mb-4 responsive-text">
+                  Selecione o dia desejado para o atendimento
+                </p>
+              </div>
+
+              <Card className="p-4 card-premium flex justify-center">
+                <Calendar
+                  mode="single"
+                  selected={selectedDate}
+                  onSelect={setSelectedDate}
+                  locale={ptBR}
+                  disabled={(date) => date < new Date() || date.getDay() === 0}
+                  className="rounded-md pointer-events-auto"
+                />
+              </Card>
+
+              <Button
+                onClick={handleNextStep}
+                disabled={!selectedDate}
+                className="w-full touch-target font-semibold responsive-button"
+                style={{
+                  background: 'linear-gradient(135deg, hsl(0 64% 52%), hsl(0 64% 42%))',
+                  minHeight: '44px'
+                }}
+              >
+                Continuar
+              </Button>
             </div>
-
-            <Card className="p-4 card-premium flex justify-center">
-              <Calendar
-                mode="single"
-                selected={selectedDate}
-                onSelect={setSelectedDate}
-                locale={ptBR}
-                disabled={(date) => date < new Date() || date.getDay() === 0}
-                className="rounded-md pointer-events-auto"
-              />
-            </Card>
-
-            <Button
-              onClick={handleNextStep}
-              disabled={!selectedDate}
-              className="w-full touch-target font-semibold"
-              style={{
-                background: 'linear-gradient(135deg, hsl(0 64% 52%), hsl(0 64% 42%))',
-                minHeight: '52px'
-              }}
-            >
-              Continuar
-            </Button>
           </div>
         )}
 
         {/* Step 3: Select Time */}
         {step === 3 && (
-          <div className="space-y-4">
-            <div>
-              <h3 className="text-sm font-semibold mb-1">Etapa 3 de 5</h3>
-              <h2 className="text-xl font-bold mb-3">Escolha o Horário</h2>
-              <p className="text-sm text-muted-foreground mb-4">
-                Horários disponíveis para {selectedDate?.toLocaleDateString('pt-BR')}
-              </p>
-            </div>
-
-            {availableSlots.filter(slot => slot.available).length === 0 ? (
-              <Card className="p-8 text-center">
-                <p className="text-muted-foreground">
-                  😔 Agenda cheia neste dia. Tente outra data.
+          <div className="scrollable-content p-4 md:p-6">
+            <div className="space-y-4 max-w-4xl mx-auto">
+              <div>
+                <h3 className="text-sm font-semibold mb-1">Etapa 3 de 5</h3>
+                <h2 className="text-xl font-bold mb-3 responsive-title">Escolha o Horário</h2>
+                <p className="text-sm text-muted-foreground mb-4 responsive-text">
+                  Horários disponíveis para {selectedDate?.toLocaleDateString('pt-BR')}
                 </p>
-                <Button
-                  onClick={() => setStep(2)}
-                  variant="outline"
-                  className="mt-4"
-                >
-                  Escolher outra data
-                </Button>
-              </Card>
-            ) : (
-              <>
-                <div className="grid grid-cols-3 gap-2">
-                  {availableSlots.map((slot) => (
-                    <Button
-                      key={slot.time}
-                      variant={selectedTime === slot.time ? "default" : "outline"}
-                      onClick={() => slot.available && setSelectedTime(slot.time)}
-                      disabled={!slot.available}
-                      className={`h-12 ${!slot.available ? 'opacity-40' : ''}`}
-                    >
-                      {slot.time}
-                    </Button>
-                  ))}
-                </div>
+              </div>
 
-                <Button
-                  onClick={handleNextStep}
-                  disabled={!selectedTime}
-                  className="w-full touch-target font-semibold"
-                  style={{
-                    background: 'linear-gradient(135deg, hsl(0 64% 52%), hsl(0 64% 42%))',
-                    minHeight: '52px'
-                  }}
-                >
-                  Continuar
-                </Button>
-              </>
-            )}
+              {availableSlots.filter(slot => slot.available).length === 0 ? (
+                <Card className="p-8 text-center">
+                  <p className="text-muted-foreground">
+                    😔 Agenda cheia neste dia. Tente outra data.
+                  </p>
+                  <Button
+                    onClick={() => setStep(2)}
+                    variant="outline"
+                    className="mt-4"
+                  >
+                    Escolher outra data
+                  </Button>
+                </Card>
+              ) : (
+                <>
+                  <div className="grid grid-cols-3 gap-2">
+                    {availableSlots.map((slot) => (
+                      <Button
+                        key={slot.time}
+                        variant={selectedTime === slot.time ? "default" : "outline"}
+                        onClick={() => slot.available && setSelectedTime(slot.time)}
+                        disabled={!slot.available}
+                        className={`h-11 responsive-button ${!slot.available ? 'opacity-40' : ''}`}
+                      >
+                        {slot.time}
+                      </Button>
+                    ))}
+                  </div>
+
+                  <Button
+                    onClick={handleNextStep}
+                    disabled={!selectedTime}
+                    className="w-full touch-target font-semibold responsive-button"
+                    style={{
+                      background: 'linear-gradient(135deg, hsl(0 64% 52%), hsl(0 64% 42%))',
+                      minHeight: '44px'
+                    }}
+                  >
+                    Continuar
+                  </Button>
+                </>
+              )}
+            </div>
           </div>
         )}
 
         {/* Step 4: Payment Method */}
         {step === 4 && !isRescheduling && (
-          <div className="space-y-4">
-            <div>
-              <h3 className="text-sm font-semibold mb-1">Etapa 4 de 5</h3>
-              <h2 className="text-xl font-bold mb-3">Forma de Pagamento</h2>
-              <p className="text-sm text-muted-foreground mb-4">
-                Escolha como deseja pagar
-              </p>
-            </div>
+          <div className="scrollable-content p-4 md:p-6">
+            <div className="space-y-4 max-w-4xl mx-auto">
+              <div>
+                <h3 className="text-sm font-semibold mb-1">Etapa 4 de 5</h3>
+                <h2 className="text-xl font-bold mb-3 responsive-title">Forma de Pagamento</h2>
+                <p className="text-sm text-muted-foreground mb-4 responsive-text">
+                  Escolha como deseja pagar
+                </p>
+              </div>
 
             <div className="grid gap-3">
               <Card
