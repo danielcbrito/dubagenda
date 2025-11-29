@@ -952,24 +952,30 @@ const ClienteAgendar = () => {
               </div>
             </Card>
 
-            <Button
-              onClick={() => setStep(5)}
-              className="w-full h-14 bg-primary hover:bg-primary/90 text-base"
-            >
-              Continuar
-            </Button>
+              <Button
+                onClick={() => setStep(5)}
+                className="w-full touch-target font-semibold responsive-button"
+                style={{
+                  background: 'linear-gradient(135deg, hsl(0 64% 52%), hsl(0 64% 42%))',
+                  minHeight: '44px'
+                }}
+              >
+                Continuar
+              </Button>
+            </div>
           </div>
         )}
 
         {/* Step 5: Review and Card Details (if card) or Confirm */}
-        {step === 5 && (
-          <div className="space-y-4">
-            <div>
-              <h3 className="text-sm font-semibold mb-1">Etapa 5 de 5</h3>
-              <h2 className="text-xl font-bold mb-3">
-                {paymentMethod === 'card' ? 'Dados do Cartão' : 'Confirmar Agendamento'}
-              </h2>
-            </div>
+        {step === 5 && !isRescheduling && (
+          <div className="scrollable-content p-4 md:p-6">
+            <div className="space-y-4 max-w-4xl mx-auto">
+              <div>
+                <h3 className="text-sm font-semibold mb-1">Etapa 5 de 5</h3>
+                <h2 className="text-xl font-bold mb-3 responsive-title">
+                  {paymentMethod === 'card' ? 'Dados do Cartão' : 'Confirmar Agendamento'}
+                </h2>
+              </div>
 
             <Card className="p-6 space-y-4 card-premium">
               <div className="space-y-3">
@@ -1121,63 +1127,75 @@ const ClienteAgendar = () => {
               </Card>
             )}
 
-            <Button
-              onClick={handlePayment}
-              disabled={processingPayment}
-              className="w-full h-14 bg-primary hover:bg-primary/90 text-base"
-            >
-              {processingPayment ? "Processando..." : paymentMethod === 'pix' ? "Gerar QR Code" : "Confirmar Agendamento"}
-            </Button>
+              <Button
+                onClick={handlePayment}
+                disabled={processingPayment}
+                className="w-full responsive-button"
+                style={{
+                  background: 'linear-gradient(135deg, hsl(0 64% 52%), hsl(0 64% 42%))',
+                  minHeight: '44px'
+                }}
+              >
+                {processingPayment ? "Processando..." : paymentMethod === 'pix' ? "Gerar QR Code" : "Confirmar Agendamento"}
+              </Button>
+            </div>
           </div>
         )}
 
         {/* Step 5: Reschedule Confirmation */}
         {step === 5 && isRescheduling && (
-          <div className="space-y-4">
-            <div>
-              <h3 className="text-sm font-semibold mb-1">Confirmar Remarcação</h3>
-              <h2 className="text-xl font-bold mb-3">Revise os novos dados</h2>
-            </div>
-
-            <Card className="p-4 space-y-3">
-              <div className="flex items-center gap-3">
-                <Clock className="w-5 h-5 text-primary" />
-                <div>
-                  <p className="text-sm font-medium">Nova Data e Horário</p>
-                  <p className="text-sm text-muted-foreground">
-                    {selectedDate?.toLocaleDateString('pt-BR')} às {selectedTime}
-                  </p>
-                </div>
+          <div className="scrollable-content p-4 md:p-6">
+            <div className="space-y-4 max-w-4xl mx-auto">
+              <div>
+                <h3 className="text-sm font-semibold mb-1">Confirmar Remarcação</h3>
+                <h2 className="text-xl font-bold mb-3 responsive-title">Revise os novos dados</h2>
               </div>
-              
-              {selectedServices[0] && (
+
+              <Card className="p-4 space-y-3">
                 <div className="flex items-center gap-3">
-                  <div className="w-5 h-5 text-primary" />
+                  <Clock className="w-5 h-5 text-primary" />
                   <div>
-                    <p className="text-sm font-medium">Serviço</p>
-                    <p className="text-sm text-muted-foreground">{selectedServices[0].nome}</p>
+                    <p className="text-sm font-medium responsive-text">Nova Data e Horário</p>
+                    <p className="text-sm text-muted-foreground responsive-text">
+                      {selectedDate?.toLocaleDateString('pt-BR')} às {selectedTime}
+                    </p>
                   </div>
                 </div>
-              )}
+                
+                {selectedServices[0] && (
+                  <div className="flex items-center gap-3">
+                    <div className="w-5 h-5 text-primary" />
+                    <div>
+                      <p className="text-sm font-medium responsive-text">Serviço</p>
+                      <p className="text-sm text-muted-foreground responsive-text">{selectedServices[0].nome}</p>
+                    </div>
+                  </div>
+                )}
 
-              <div className="p-3 bg-primary/10 rounded-md text-sm">
-                ℹ️ O pagamento existente permanecerá válido
-              </div>
-            </Card>
+                <div className="p-3 bg-primary/10 rounded-md text-sm responsive-text compact-padding">
+                  ℹ️ O pagamento existente permanecerá válido
+                </div>
+              </Card>
 
-            <Button
-              onClick={handleRescheduleUpdate}
-              disabled={processingPayment}
-              className="w-full h-14"
-            >
-              {processingPayment ? "Remarcando..." : "Confirmar Remarcação"}
-            </Button>
+              <Button
+                onClick={handleRescheduleUpdate}
+                disabled={processingPayment}
+                className="w-full responsive-button"
+                style={{
+                  background: 'linear-gradient(135deg, hsl(0 64% 52%), hsl(0 64% 42%))',
+                  minHeight: '44px'
+                }}
+              >
+                {processingPayment ? "Remarcando..." : "Confirmar Remarcação"}
+              </Button>
+            </div>
           </div>
         )}
 
         {/* Step 6: PIX QR Code Display */}
         {step === 6 && pixQrCode && (
-          <div className="space-y-4">
+          <div className="scrollable-content p-4 md:p-6">
+            <div className="space-y-4 max-w-4xl mx-auto">
             {paymentConfirmed ? (
               // Payment Confirmed View
               <div className="space-y-6">
@@ -1258,7 +1276,9 @@ const ClienteAgendar = () => {
               </>
             )}
           </div>
+        </div>
         )}
+        </div>
       </div>
     </div>
   );
