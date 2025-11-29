@@ -13,6 +13,7 @@ import ClienteAgendar from "./pages/ClienteAgendar";
 import ClienteAssinar from "./pages/ClienteAssinar";
 import Admin from "./pages/Admin";
 import AgendaFullScreen from "./pages/AgendaFullScreen";
+import Support from "./pages/Support";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -32,6 +33,7 @@ const App = () => (
           <Route path="/cliente" element={<Cliente />} />
           <Route path="/cliente/agendar" element={<ClienteAgendar />} />
           <Route path="/cliente/assinar" element={<ClienteAssinar />} />
+          <Route path="/suporte" element={<Support />} />
           <Route path="/agenda-fullscreen" element={<AgendaFullScreen />} />
           <Route path="/admin/*" element={<Admin />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { useState } from "react";
 import { AppointmentHistorySheet } from "./AppointmentHistorySheet";
-import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
 
 interface ClientDrawerMenuProps {
   open: boolean;
@@ -35,13 +35,11 @@ export function ClientDrawerMenu({
   onWalletClick
 }: ClientDrawerMenuProps) {
   const [historyOpen, setHistoryOpen] = useState(false);
+  const navigate = useNavigate();
 
   const handleSupport = () => {
-    toast.info("Você será redirecionado para o nosso atendimento via WhatsApp");
-    setTimeout(() => {
-      window.open("https://wa.me/5511952263002", "_blank");
-    }, 1000);
     onOpenChange(false);
+    navigate("/suporte");
   };
 
   const menuItems = [

@@ -27,5 +27,8 @@ verify_jwt = false
 [functions.generate-promotion-ai]
 verify_jwt = true
 
+[functions.ai-support-chat]
+verify_jwt = true
+
 [functions.health-check]
 verify_jwt = true

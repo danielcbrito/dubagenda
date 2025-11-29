@@ -17,6 +17,7 @@ import { AdminSeguranca } from "@/components/admin/AdminSeguranca";
 import { AdminConfiguracoes } from "@/components/admin/AdminConfiguracoes";
 import { AdminConfirmacoesPendentes } from "@/components/admin/AdminConfirmacoesPendentes";
 import { AdminDev } from "@/components/admin/AdminDev";
+import SupportAdmin from "@/pages/SupportAdmin";
 
 const Admin = () => {
   const navigate = useNavigate();
@@ -69,6 +70,7 @@ const Admin = () => {
               <Route path="relatorios" element={<AdminRelatorios />} />
               <Route path="servicos/*" element={<AdminServicos />} />
               <Route path="promocoes" element={<AdminPromocoes />} />
+              <Route path="suporte" element={<SupportAdmin />} />
               <Route path="configuracoes" element={<AdminConfiguracoes />} />
               <Route path="apis" element={<AdminAPIs />} />
               <Route path="seguranca" element={<AdminSeguranca />} />
