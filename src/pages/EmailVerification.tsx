@@ -87,121 +87,72 @@ const EmailVerification = () => {
   };
 
   return (
-    <div className="min-h-screen relative flex items-center justify-center" style={{ background: '#050505' }}>
-      {/* Subtle blur overlay */}
-      <div className="absolute inset-0" style={{ 
-        backdropFilter: 'blur(2px)',
-        background: 'radial-gradient(circle at center, rgba(212,49,49,0.02), transparent 60%)' 
-      }} />
-      
-      {/* Logo at top */}
-      <div className="absolute top-8 left-1/2 -translate-x-1/2 z-20">
-        <img src={logoDub} alt="DUB" className="w-12 h-12 object-contain" style={{ filter: 'drop-shadow(0 0 8px rgba(212,49,49,0.3))' }} />
-      </div>
-
-      {/* Main card - clean & centered */}
-      <div className="relative z-10 w-full max-w-[420px] mx-4">
-        <div className="bg-card rounded-2xl p-8 border border-border/50" style={{
-          boxShadow: '0 8px 32px rgba(0,0,0,0.6), 0 0 1px rgba(255,255,255,0.1) inset'
-        }}>
-          {/* Icon - Clean & Elegant */}
+    <div className="min-h-screen flex items-center justify-center bg-background px-4">
+      {/* Small, elegant card - max 400px */}
+      <div className="w-full max-w-[400px]">
+        <div className="bg-card/40 backdrop-blur-sm rounded-xl p-8 border border-border/30 shadow-2xl">
+          
+          {/* Small discrete icon */}
           <div className="flex justify-center mb-6">
-            <div className="relative w-16 h-16 rounded-full flex items-center justify-center"
-              style={{
-                background: 'linear-gradient(135deg, hsl(0 64% 52%), hsl(0 64% 42%))',
-                boxShadow: '0 4px 20px rgba(212,49,49,0.3)'
-              }}>
-              {isVerified ? (
-                <CheckCircle className="h-8 w-8 text-white" />
-              ) : (
-                <Mail className="h-8 w-8 text-white" />
-              )}
-            </div>
+            {isVerified ? (
+              <CheckCircle className="h-10 w-10 text-primary" />
+            ) : (
+              <Mail className="h-10 w-10 text-muted-foreground" />
+            )}
           </div>
 
-          {/* Content - Clean Typography */}
-          <div className="text-center space-y-4">
-            <h2 className="text-2xl font-semibold text-foreground" style={{ letterSpacing: '0.02em' }}>
-              {isVerified ? "Conta Verificada!" : "Quase lá — confirme seu e-mail"}
-            </h2>
+          {/* Content - Minimal & Clean */}
+          <div className="text-center space-y-6">
+            <h1 className="text-xl font-semibold text-foreground tracking-tight">
+              {isVerified ? "Conta Verificada" : "Confirme seu e-mail"}
+            </h1>
 
             {isVerified ? (
-              <div className="space-y-3">
-                <p className="text-base text-foreground/90">
-                  Sua conta foi verificada com sucesso!
-                </p>
+              <div className="space-y-4">
                 <p className="text-sm text-muted-foreground">
-                  Redirecionando para o login...
+                  Redirecionando...
                 </p>
-                <div className="flex justify-center pt-2">
+                <div className="flex justify-center">
                   <Loader2 className="h-5 w-5 animate-spin text-primary" />
                 </div>
               </div>
             ) : (
-              <div className="space-y-4">
-                <p className="text-sm text-foreground/80 leading-relaxed">
-                  Enviamos um link de confirmação para seu e-mail.
-                </p>
-                
+              <div className="space-y-6">
                 {userEmail && (
-                  <div className="p-3 bg-secondary/40 rounded-lg border border-border">
-                    <p className="font-medium text-sm text-primary break-all">
+                  <div className="px-4 py-3 bg-muted/30 rounded-lg">
+                    <p className="text-sm font-medium text-foreground break-all">
                       {userEmail}
                     </p>
                   </div>
                 )}
 
-                <p className="text-xs text-muted-foreground leading-relaxed">
-                  Para continuar, acesse sua caixa de entrada e confirme sua conta.
-                </p>
+                {/* Primary action button */}
+                <Button
+                  onClick={handleResendEmail}
+                  disabled={isResending}
+                  className="w-full h-11 bg-primary hover:bg-primary/90 text-primary-foreground font-medium rounded-lg transition-all"
+                >
+                  {isResending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Reenviando...
+                    </>
+                  ) : (
+                    "Reenviar e-mail"
+                  )}
+                </Button>
 
-                <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
-                  <div className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse" />
-                  <span>Não recebeu? Verifique spam ou fale com suporte</span>
-                </div>
+                {/* Discrete back link */}
+                <button
+                  onClick={handleBackToLogin}
+                  className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  Voltar
+                </button>
               </div>
             )}
           </div>
-
-          {/* Buttons - Touch Friendly */}
-          {!isVerified && (
-            <div className="mt-6 space-y-2">
-              <Button
-                onClick={handleResendEmail}
-                disabled={isResending}
-                className="w-full font-medium"
-                style={{
-                  minHeight: '44px',
-                  background: 'linear-gradient(135deg, hsl(0 64% 52%), hsl(0 64% 42%))',
-                  boxShadow: '0 4px 12px rgba(212,49,49,0.25)'
-                }}
-              >
-                {isResending ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Reenviando...
-                  </>
-                ) : (
-                  "Reenviar e-mail"
-                )}
-              </Button>
-
-              <Button
-                onClick={handleBackToLogin}
-                variant="ghost"
-                className="w-full text-muted-foreground hover:text-primary hover:bg-secondary/30 font-medium"
-                style={{ minHeight: '44px' }}
-              >
-                Voltar para login
-              </Button>
-            </div>
-          )}
         </div>
-
-        {/* Footer text - subtle */}
-        <p className="text-center text-xs text-muted-foreground/60 mt-4">
-          Ao confirmar seu e-mail, você concorda com nossos termos de uso
-        </p>
       </div>
     </div>
   );
