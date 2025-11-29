@@ -87,70 +87,117 @@ const EmailVerification = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background px-4">
-      {/* Small, elegant card - max 400px */}
-      <div className="w-full max-w-[400px]">
-        <div className="bg-card/40 backdrop-blur-sm rounded-xl p-8 border border-border/30 shadow-2xl">
-          
-          {/* Small discrete icon */}
-          <div className="flex justify-center mb-6">
-            {isVerified ? (
-              <CheckCircle className="h-10 w-10 text-primary" />
-            ) : (
-              <Mail className="h-10 w-10 text-muted-foreground" />
-            )}
+    <div className="min-h-screen relative flex items-center justify-center overflow-hidden px-4" style={{ background: '#000000' }}>
+      {/* Ambient background lights - Premium glow effect */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/5 rounded-full blur-[120px] animate-pulse" style={{ animationDuration: '4s' }} />
+        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-primary/5 rounded-full blur-[120px] animate-pulse" style={{ animationDuration: '6s', animationDelay: '2s' }} />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/3 rounded-full blur-[150px]" />
+      </div>
+
+      {/* Content wrapper - Centered */}
+      <div className="relative z-10 w-full max-w-[420px] animate-fade-in">
+        
+        {/* Logo at top - Floating */}
+        <div className="flex justify-center mb-12 animate-scale-in">
+          <div className="relative">
+            <div className="absolute inset-0 bg-primary/20 blur-xl rounded-full" />
+            <img 
+              src={logoDub} 
+              alt="DUB" 
+              className="relative w-16 h-16 object-contain drop-shadow-2xl"
+            />
           </div>
+        </div>
 
-          {/* Content - Minimal & Clean */}
-          <div className="text-center space-y-6">
-            <h1 className="text-xl font-semibold text-foreground tracking-tight">
-              {isVerified ? "Conta Verificada" : "Confirme seu e-mail"}
-            </h1>
-
-            {isVerified ? (
-              <div className="space-y-4">
-                <p className="text-sm text-muted-foreground">
-                  Redirecionando...
-                </p>
-                <div className="flex justify-center">
-                  <Loader2 className="h-5 w-5 animate-spin text-primary" />
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-6">
-                {userEmail && (
-                  <div className="px-4 py-3 bg-muted/30 rounded-lg">
-                    <p className="text-sm font-medium text-foreground break-all">
-                      {userEmail}
-                    </p>
-                  </div>
+        {/* Luxury Glass Card - Mirror effect */}
+        <div className="relative group">
+          {/* Outer glow */}
+          <div className="absolute -inset-[1px] bg-gradient-to-b from-primary/20 via-primary/5 to-transparent rounded-2xl blur-sm opacity-60 group-hover:opacity-100 transition-opacity duration-500" />
+          
+          {/* Main card with glassmorphism */}
+          <div 
+            className="relative bg-gradient-to-b from-white/[0.07] to-white/[0.02] rounded-2xl p-10 border border-white/10 shadow-2xl overflow-hidden"
+            style={{
+              backdropFilter: 'blur(20px) saturate(180%)',
+              WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+            }}
+          >
+            {/* Top reflection line */}
+            <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/30 to-transparent" />
+            
+            {/* Icon with elegant glow */}
+            <div className="flex justify-center mb-8">
+              <div className="relative">
+                {isVerified ? (
+                  <>
+                    <div className="absolute inset-0 bg-primary/30 blur-2xl rounded-full" />
+                    <div className="relative w-16 h-16 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center border border-primary/30">
+                      <CheckCircle className="h-8 w-8 text-primary drop-shadow-lg" />
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="absolute inset-0 bg-white/10 blur-xl rounded-full" />
+                    <div className="relative w-16 h-16 rounded-full bg-gradient-to-br from-white/10 to-white/5 flex items-center justify-center border border-white/20">
+                      <Mail className="h-8 w-8 text-white/90 drop-shadow-lg" />
+                    </div>
+                  </>
                 )}
-
-                {/* Primary action button */}
-                <Button
-                  onClick={handleResendEmail}
-                  disabled={isResending}
-                  className="w-full h-11 bg-primary hover:bg-primary/90 text-primary-foreground font-medium rounded-lg transition-all"
-                >
-                  {isResending ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Reenviando...
-                    </>
-                  ) : (
-                    "Reenviar e-mail"
-                  )}
-                </Button>
-
-                {/* Discrete back link */}
-                <button
-                  onClick={handleBackToLogin}
-                  className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  Voltar
-                </button>
               </div>
-            )}
+            </div>
+
+            {/* Content - Ultra clean */}
+            <div className="text-center space-y-6">
+              <h1 className="text-2xl font-semibold text-white tracking-tight" style={{ textShadow: '0 2px 10px rgba(0,0,0,0.3)' }}>
+                {isVerified ? "Conta Verificada" : "Confirme seu e-mail"}
+              </h1>
+
+              {isVerified ? (
+                <div className="space-y-5">
+                  <p className="text-sm text-white/60">
+                    Redirecionando...
+                  </p>
+                  <div className="flex justify-center">
+                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  {userEmail && (
+                    <div className="relative px-5 py-4 bg-white/5 rounded-xl border border-white/10 backdrop-blur-sm">
+                      <p className="text-sm font-medium text-white/90 break-all">
+                        {userEmail}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Premium CTA button */}
+                  <Button
+                    onClick={handleResendEmail}
+                    disabled={isResending}
+                    className="relative w-full h-12 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary text-white font-semibold rounded-xl transition-all duration-300 shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/40 hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isResending ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Reenviando...
+                      </>
+                    ) : (
+                      "Reenviar e-mail"
+                    )}
+                  </Button>
+
+                  {/* Elegant back link */}
+                  <button
+                    onClick={handleBackToLogin}
+                    className="text-sm text-white/50 hover:text-white/90 transition-colors duration-300 font-medium"
+                  >
+                    Voltar
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
