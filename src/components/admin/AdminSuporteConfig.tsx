@@ -149,10 +149,30 @@ export function AdminSuporteConfig() {
           </div>
 
           <div className="bg-muted/30 border border-border/50 rounded-lg p-4 mt-6">
-            <h4 className="font-semibold text-sm text-foreground mb-2">Sobre a Inteligência</h4>
-            <p className="text-sm text-muted-foreground">
-              O sistema já possui inteligência completa sobre o aplicativo, funcionalidades e resolução de problemas. 
-              Este prompt afeta APENAS o tom das respostas, não a capacidade de resolver problemas.
+            <h4 className="font-semibold text-sm text-foreground mb-2">🤖 Capacidades da IA</h4>
+            <p className="text-sm text-muted-foreground mb-3">
+              A IA possui inteligência avançada e pode executar ações automaticamente:
+            </p>
+            <ul className="text-sm text-muted-foreground space-y-2">
+              <li className="flex items-start">
+                <span className="text-primary mr-2">✓</span>
+                <span><strong>Diagnóstico automático:</strong> verifica agendamentos, pontos, créditos e pagamentos do usuário</span>
+              </li>
+              <li className="flex items-start">
+                <span className="text-primary mr-2">✓</span>
+                <span><strong>Ações corretivas:</strong> reenvia emails, atualiza dados básicos do perfil</span>
+              </li>
+              <li className="flex items-start">
+                <span className="text-primary mr-2">✓</span>
+                <span><strong>Resolução inteligente:</strong> tenta resolver problemas antes de escalar para humano</span>
+              </li>
+              <li className="flex items-start">
+                <span className="text-primary mr-2">✓</span>
+                <span><strong>Tickets automáticos:</strong> abre chamados completos quando não consegue resolver</span>
+              </li>
+            </ul>
+            <p className="text-xs text-muted-foreground/70 mt-3">
+              Este prompt afeta apenas o tom das respostas, não a capacidade técnica da IA.
             </p>
           </div>
         </CardContent>
