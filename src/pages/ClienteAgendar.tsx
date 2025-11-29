@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -48,6 +48,7 @@ const ClienteAgendar = () => {
   const [userId, setUserId] = useState<string | null>(null);
   const [isRescheduling, setIsRescheduling] = useState(false);
   const [rescheduleAppointmentId, setRescheduleAppointmentId] = useState<string | null>(null);
+  const servicesListRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     loadServices();
@@ -71,6 +72,44 @@ const ClienteAgendar = () => {
       loadAppointmentForReschedule(appointmentId);
     }
   }, []);
+
+  // Lock body scroll and set dynamic viewport height for mobile
+  useEffect(() => {
+    document.documentElement.classList.add('lock-scroll');
+    document.body.classList.add('lock-scroll');
+
+    const setFullHeight = () => {
+      const vh = window.innerHeight * 0.01;
+      document.documentElement.style.setProperty('--vh', `${vh}px`);
+    };
+
+    setFullHeight();
+    window.addEventListener('resize', setFullHeight);
+
+    return () => {
+      document.documentElement.classList.remove('lock-scroll');
+      document.body.classList.remove('lock-scroll');
+      window.removeEventListener('resize', setFullHeight);
+    };
+  }, []);
+
+  // Prevent scroll chaining on the services list container
+  useEffect(() => {
+    if (step !== 1) return;
+
+    const el = servicesListRef.current;
+    if (!el) return;
+
+    const handleTouchMove = (event: TouchEvent) => {
+      event.stopPropagation();
+    };
+
+    el.addEventListener('touchmove', handleTouchMove, { passive: false });
+
+    return () => {
+      el.removeEventListener('touchmove', handleTouchMove as any);
+    };
+  }, [step]);
 
   useEffect(() => {
     if (selectedDate && selectedServices.length > 0) {
@@ -606,7 +645,10 @@ const ClienteAgendar = () => {
   const progressValue = (step / 6) * 100;
 
   return (
-    <div className="h-screen flex flex-col bg-background overflow-hidden">
+    <div
+      className="h-screen w-full flex flex-col bg-background overflow-hidden"
+      style={{ height: 'calc(var(--vh, 1vh) * 100)' }}
+    >
       {/* Header */}
       <div className="bg-card border-b border-border p-4 backdrop-blur-lg bg-card/80 flex-shrink-0">
         <div className="max-w-4xl mx-auto">
@@ -626,7 +668,8 @@ const ClienteAgendar = () => {
           {step === 1 && (
             <>
               {/* Services List - Scrollable Container */}
-              <div className="services-list flex-1 p-4 md:p-6">
+              <div ref={servicesListRef} className="services-list flex-1 p-4 md:p-6">
+
                 <div className="space-y-3 mb-4">
                   <div>
                     <h3 className="text-sm font-semibold mb-1 text-muted-foreground">Etapa 1 de 5</h3>
