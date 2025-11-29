@@ -1,4 +1,4 @@
-import { Send, Paperclip, Mic, X, Image as ImageIcon, FileText, StopCircle } from "lucide-react";
+import { Send, Paperclip, Mic, X, Image as ImageIcon, FileText, StopCircle, Sparkles } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
@@ -24,8 +24,8 @@ const welcomePrompts = [
 ];
 
 /**
- * Interface Premium Estilo ChatGPT
- * Design moderno, sem avatares, com suporte a arquivos e áudio
+ * Interface Premium 2025 — Ultra Moderna
+ * Glassmorphism, animações fluidas, tipografia premium
  */
 export function SupportChatInterface() {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -170,41 +170,41 @@ export function SupportChatInterface() {
   };
 
   const renderWelcomeScreen = () => (
-    <div className="flex-1 flex items-center justify-center p-6">
-      <div className="max-w-2xl w-full space-y-8 text-center animate-fade-in">
-        {/* Logo Premium */}
+    <div className="flex-1 flex items-center justify-center p-4 md:p-6">
+      <div className="max-w-3xl w-full space-y-10 text-center">
+        {/* Logo Premium 2025 */}
         <div className="flex justify-center">
-          <div className="relative">
-            <div className="absolute inset-0 bg-primary/20 blur-3xl rounded-full" />
-            <div className="relative h-20 w-20 rounded-2xl bg-gradient-to-br from-primary via-primary/80 to-primary/60 flex items-center justify-center shadow-2xl shadow-primary/20">
-              <svg className="h-10 w-10 text-white" viewBox="0 0 24 24" fill="none">
-                <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                <path d="M2 17L12 22L22 17" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                <path d="M2 12L12 17L22 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
+          <div className="relative group">
+            {/* Glow Effect */}
+            <div className="absolute inset-0 bg-gradient-to-r from-primary/30 via-primary/40 to-primary/30 blur-3xl rounded-full opacity-60 group-hover:opacity-80 transition-opacity duration-500" />
+            
+            {/* Icon Container */}
+            <div className="relative h-24 w-24 rounded-3xl bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-xl flex items-center justify-center shadow-2xl border border-white/10">
+              <Sparkles className="h-12 w-12 text-white drop-shadow-2xl" />
             </div>
           </div>
         </div>
 
-        {/* Mensagem de Boas-vindas */}
-        <div className="space-y-3">
-          <h2 className="text-3xl lg:text-4xl font-bold text-foreground">
+        {/* Mensagem de Boas-vindas Premium */}
+        <div className="space-y-4">
+          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white tracking-tight leading-tight">
             Olá! Como posso te ajudar hoje?
-          </h2>
-          <p className="text-muted-foreground text-base lg:text-lg">
+          </h1>
+          <p className="text-white/60 text-base md:text-lg lg:text-xl font-light max-w-2xl mx-auto leading-relaxed">
             Estou aqui para responder suas dúvidas sobre agendamentos, planos e muito mais.
           </p>
         </div>
 
-        {/* Sugestões de Prompts */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-8">
+        {/* Sugestões Premium */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-12">
           {welcomePrompts.map((prompt, index) => (
             <button
               key={index}
               onClick={() => sendMessage(prompt)}
-              className="group p-4 rounded-xl border border-border/50 bg-card/30 hover:bg-card/60 hover:border-primary/30 transition-all duration-200 text-left hover:scale-[1.02]"
+              className="group relative p-5 rounded-2xl bg-white/5 backdrop-blur-xl border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all duration-300 text-left hover:scale-[1.02] hover:shadow-2xl hover:shadow-primary/10"
             >
-              <p className="text-sm text-foreground/90 group-hover:text-foreground">
+              <div className="absolute inset-0 bg-gradient-to-r from-primary/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-2xl" />
+              <p className="relative text-sm md:text-base text-white/80 group-hover:text-white font-medium transition-colors duration-300">
                 {prompt}
               </p>
             </button>
@@ -215,8 +215,8 @@ export function SupportChatInterface() {
   );
 
   const renderMessages = () => (
-    <div ref={scrollAreaRef} className="flex-1 overflow-y-auto px-4 py-6">
-      <div className="max-w-3xl mx-auto space-y-6">
+    <div ref={scrollAreaRef} className="flex-1 overflow-y-auto px-4 md:px-6 py-6">
+      <div className="max-w-4xl mx-auto space-y-4">
         {messages.map((message, index) => (
           <div
             key={index}
@@ -227,31 +227,31 @@ export function SupportChatInterface() {
           >
             <div
               className={cn(
-                "max-w-[85%] rounded-2xl px-4 py-3 shadow-sm",
+                "max-w-[80%] md:max-w-[75%] rounded-3xl px-5 py-4 shadow-xl backdrop-blur-xl transition-all duration-300 hover:scale-[1.01]",
                 message.role === "user"
-                  ? "bg-gradient-to-br from-primary to-primary/80 text-white ml-auto"
-                  : "bg-card/60 backdrop-blur-sm border border-border/50 text-foreground"
+                  ? "bg-gradient-to-br from-primary via-primary/90 to-primary/80 text-white shadow-primary/20"
+                  : "bg-white/5 backdrop-blur-2xl border border-white/10 text-white/90 shadow-black/20"
               )}
             >
-              {/* Attachments */}
+              {/* Attachments Premium */}
               {message.attachments && message.attachments.length > 0 && (
-                <div className="mb-2 space-y-2">
+                <div className="mb-3 space-y-2">
                   {message.attachments.map((attachment, idx) => (
-                    <div key={idx} className="flex items-center gap-2 p-2 rounded-lg bg-background/30">
+                    <div key={idx} className="flex items-center gap-3 p-3 rounded-2xl bg-black/20 backdrop-blur-xl border border-white/10">
                       {attachment.type === "image" ? (
                         <>
-                          <ImageIcon className="h-4 w-4" />
-                          <img src={attachment.url} alt={attachment.name} className="max-w-xs rounded" />
+                          <ImageIcon className="h-4 w-4 text-white/60" />
+                          <img src={attachment.url} alt={attachment.name} className="max-w-xs rounded-xl shadow-lg" />
                         </>
                       ) : attachment.type === "audio" ? (
                         <>
-                          <Mic className="h-4 w-4" />
+                          <Mic className="h-4 w-4 text-white/60" />
                           <audio src={attachment.url} controls className="max-w-xs" />
                         </>
                       ) : (
                         <>
-                          <FileText className="h-4 w-4" />
-                          <span className="text-xs">{attachment.name}</span>
+                          <FileText className="h-4 w-4 text-white/60" />
+                          <span className="text-xs text-white/70">{attachment.name}</span>
                         </>
                       )}
                     </div>
@@ -259,15 +259,15 @@ export function SupportChatInterface() {
                 </div>
               )}
               
-              {/* Message Content */}
-              <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">
+              {/* Message Content Premium */}
+              <p className="text-[15px] leading-relaxed whitespace-pre-wrap break-words font-light">
                 {message.content}
               </p>
               
-              {/* Timestamp */}
+              {/* Timestamp Premium */}
               <p className={cn(
-                "text-xs mt-2",
-                message.role === "user" ? "text-white/60" : "text-muted-foreground"
+                "text-[11px] mt-2.5 font-medium",
+                message.role === "user" ? "text-white/50" : "text-white/40"
               )}>
                 {message.timestamp.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
               </p>
@@ -275,17 +275,17 @@ export function SupportChatInterface() {
           </div>
         ))}
 
-        {/* Loading State */}
+        {/* Loading State Premium */}
         {isLoading && (
           <div className="flex justify-start animate-fade-in">
-            <div className="max-w-[85%] rounded-2xl px-4 py-3 bg-card/60 backdrop-blur-sm border border-border/50">
-              <div className="flex items-center gap-2">
-                <div className="flex gap-1">
-                  <div className="h-2 w-2 rounded-full bg-muted-foreground animate-bounce" style={{ animationDelay: "0ms" }} />
-                  <div className="h-2 w-2 rounded-full bg-muted-foreground animate-bounce" style={{ animationDelay: "150ms" }} />
-                  <div className="h-2 w-2 rounded-full bg-muted-foreground animate-bounce" style={{ animationDelay: "300ms" }} />
+            <div className="max-w-[75%] rounded-3xl px-5 py-4 bg-white/5 backdrop-blur-2xl border border-white/10">
+              <div className="flex items-center gap-3">
+                <div className="flex gap-1.5">
+                  <div className="h-2.5 w-2.5 rounded-full bg-white/40 animate-bounce" style={{ animationDelay: "0ms" }} />
+                  <div className="h-2.5 w-2.5 rounded-full bg-white/40 animate-bounce" style={{ animationDelay: "150ms" }} />
+                  <div className="h-2.5 w-2.5 rounded-full bg-white/40 animate-bounce" style={{ animationDelay: "300ms" }} />
                 </div>
-                <span className="text-xs text-muted-foreground">Analisando sua solicitação...</span>
+                <span className="text-xs text-white/60 font-medium">Analisando sua solicitação...</span>
               </div>
             </div>
           </div>
@@ -295,41 +295,44 @@ export function SupportChatInterface() {
   );
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden bg-gradient-to-b from-background to-background/95">
+    <div className="flex-1 flex flex-col overflow-hidden">
       {messages.length === 0 && !isLoading ? renderWelcomeScreen() : renderMessages()}
 
-      {/* Input Area - Estilo ChatGPT */}
-      <div className="border-t border-border/30 bg-background/95 backdrop-blur-xl p-4">
-        <div className="max-w-3xl mx-auto">
-          {/* Selected Files Preview */}
+      {/* Input Area Premium 2025 */}
+      <div className="bg-black/20 backdrop-blur-2xl p-4 md:p-6">
+        <div className="max-w-4xl mx-auto">
+          {/* Selected Files Preview Premium */}
           {selectedFiles.length > 0 && (
             <div className="mb-3 flex flex-wrap gap-2">
               {selectedFiles.map((file, index) => (
-                <div key={index} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-card/60 border border-border/50 text-sm">
+                <div key={index} className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/5 backdrop-blur-xl border border-white/10 text-sm group hover:bg-white/10 transition-all duration-300">
                   {file.type.startsWith("image/") ? (
-                    <ImageIcon className="h-4 w-4 text-muted-foreground" />
+                    <ImageIcon className="h-4 w-4 text-white/60" />
                   ) : file.type.startsWith("audio/") ? (
-                    <Mic className="h-4 w-4 text-muted-foreground" />
+                    <Mic className="h-4 w-4 text-white/60" />
                   ) : (
-                    <FileText className="h-4 w-4 text-muted-foreground" />
+                    <FileText className="h-4 w-4 text-white/60" />
                   )}
-                  <span className="text-xs text-foreground">{file.name}</span>
-                  <button onClick={() => removeFile(index)} className="hover:text-destructive">
-                    <X className="h-3 w-3" />
+                  <span className="text-xs text-white/70 font-medium">{file.name}</span>
+                  <button 
+                    onClick={() => removeFile(index)} 
+                    className="hover:text-red-400 transition-colors duration-200"
+                  >
+                    <X className="h-3.5 w-3.5 text-white/50" />
                   </button>
                 </div>
               ))}
             </div>
           )}
 
-          {/* Input Container */}
-          <div className="relative flex items-end gap-2 p-2 rounded-3xl bg-card/40 border border-border/50 shadow-lg backdrop-blur-sm hover:border-border transition-all duration-200">
-            {/* Attach Button */}
+          {/* Input Container Premium Glassmorphism */}
+          <div className="relative flex items-end gap-2 md:gap-3 p-2 md:p-3 rounded-3xl bg-white/5 backdrop-blur-2xl border border-white/10 shadow-2xl hover:bg-white/10 hover:border-white/20 transition-all duration-300">
+            {/* Attach Button Premium */}
             <Button
               type="button"
               variant="ghost"
               size="icon"
-              className="h-10 w-10 rounded-full shrink-0 hover:bg-accent"
+              className="h-11 w-11 rounded-2xl shrink-0 hover:bg-white/10 text-white/70 hover:text-white transition-all duration-300 hover:scale-105"
               onClick={() => fileInputRef.current?.click()}
               disabled={isLoading}
             >
@@ -344,7 +347,7 @@ export function SupportChatInterface() {
               onChange={handleFileSelect}
             />
 
-            {/* Textarea */}
+            {/* Textarea Premium */}
             <textarea
               ref={textareaRef}
               value={input}
@@ -352,18 +355,20 @@ export function SupportChatInterface() {
               onKeyDown={handleKeyPress}
               placeholder="Pergunte qualquer coisa..."
               disabled={isLoading}
-              className="flex-1 min-h-[40px] max-h-[200px] resize-none border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 px-2 py-2 text-sm placeholder:text-muted-foreground/60 focus:outline-none"
+              className="flex-1 min-h-[44px] max-h-[200px] resize-none border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 px-2 py-3 text-[15px] text-white placeholder:text-white/40 focus:outline-none font-light"
               rows={1}
             />
 
-            {/* Audio Button */}
+            {/* Audio Button Premium */}
             <Button
               type="button"
               variant="ghost"
               size="icon"
               className={cn(
-                "h-10 w-10 rounded-full shrink-0 hover:bg-accent",
-                isRecording && "bg-destructive hover:bg-destructive text-white"
+                "h-11 w-11 rounded-2xl shrink-0 transition-all duration-300 hover:scale-105",
+                isRecording 
+                  ? "bg-red-500/20 hover:bg-red-500/30 text-red-400 animate-pulse" 
+                  : "hover:bg-white/10 text-white/70 hover:text-white"
               )}
               onClick={isRecording ? stopRecording : startRecording}
               disabled={isLoading}
@@ -371,11 +376,11 @@ export function SupportChatInterface() {
               {isRecording ? <StopCircle className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
             </Button>
 
-            {/* Send Button */}
+            {/* Send Button Premium */}
             <Button
               type="button"
               size="icon"
-              className="h-10 w-10 rounded-full shrink-0 bg-primary hover:bg-primary/90 text-white shadow-md hover:shadow-lg transition-all duration-200"
+              className="h-11 w-11 rounded-2xl shrink-0 bg-gradient-to-br from-primary via-primary/90 to-primary/80 hover:from-primary hover:to-primary/90 text-white shadow-xl shadow-primary/20 hover:shadow-2xl hover:shadow-primary/30 transition-all duration-300 hover:scale-105 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100"
               onClick={() => sendMessage()}
               disabled={isLoading || (!input.trim() && selectedFiles.length === 0)}
             >
@@ -383,9 +388,9 @@ export function SupportChatInterface() {
             </Button>
           </div>
 
-          {/* Helper Text */}
-          <p className="text-xs text-muted-foreground/60 text-center mt-2">
-            Pressione Enter para enviar, Shift+Enter para nova linha
+          {/* Helper Text Premium */}
+          <p className="text-[11px] text-white/40 text-center mt-3 font-medium">
+            <span className="text-white/50">Enter</span> para enviar • <span className="text-white/50">Shift+Enter</span> para nova linha
           </p>
         </div>
       </div>
