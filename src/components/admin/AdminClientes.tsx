@@ -105,76 +105,133 @@ export function AdminClientes() {
   );
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Clientes</h1>
-        <div className="flex items-center gap-2 max-w-sm">
-          <Search className="w-5 h-5 text-muted-foreground" />
-          <Input
-            placeholder="Buscar cliente..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="input-premium"
-          />
+    <div className="space-y-8">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold mb-2">Clientes</h1>
+          <p className="text-muted-foreground">Gerencie seus clientes e visualize suas informações</p>
+        </div>
+        <div className="flex items-center gap-2 max-w-md w-full md:w-auto">
+          <div className="relative flex-1">
+            <Search className="w-5 h-5 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2" />
+            <Input
+              placeholder="Buscar por nome, e-mail ou CPF..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="input-premium pl-10"
+            />
+          </div>
         </div>
       </div>
 
       {loading ? (
-        <Card className="p-6 card-premium">
-          <p className="text-muted-foreground">Carregando clientes...</p>
+        <Card className="p-12 card-premium">
+          <div className="flex flex-col items-center justify-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-4"></div>
+            <p className="text-muted-foreground">Carregando clientes...</p>
+          </div>
+        </Card>
+      ) : filteredClients.length === 0 ? (
+        <Card className="p-12 card-premium">
+          <div className="text-center">
+            <User className="w-16 h-16 text-muted-foreground mx-auto mb-4 opacity-50" />
+            <p className="text-muted-foreground text-lg">Nenhum cliente encontrado</p>
+          </div>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {filteredClients.map((client) => (
-            <Card key={client.id} className="p-6 card-premium hover:scale-105 transition-transform">
-              <div className="space-y-4">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center">
-                      <User className="w-6 h-6 text-primary" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold">{client.nome}</h3>
-                      {client.blocked && (
-                        <span className="text-xs text-red-400">Bloqueado</span>
+        <Card className="card-premium overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-secondary/30 border-b border-border">
+                <tr>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">
+                    Cliente
+                  </th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-foreground hidden md:table-cell">
+                    Contato
+                  </th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">
+                    Pontos
+                  </th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-foreground hidden lg:table-cell">
+                    Agendamentos
+                  </th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">
+                    Status
+                  </th>
+                  <th className="px-6 py-4 text-right text-sm font-semibold text-foreground">
+                    Ações
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {filteredClients.map((client) => (
+                  <tr key={client.id} className="hover:bg-secondary/20 transition-colors">
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
+                          <User className="w-5 h-5 text-primary" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="font-semibold text-foreground truncate">{client.nome}</p>
+                          <p className="text-sm text-muted-foreground truncate md:hidden">
+                            {client.email || client.cpf}
+                          </p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 hidden md:table-cell">
+                      <div className="space-y-1">
+                        {client.email && (
+                          <div className="flex items-center gap-2 text-sm">
+                            <Mail className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                            <span className="text-foreground truncate">{client.email}</span>
+                          </div>
+                        )}
+                        {client.cpf && (
+                          <div className="flex items-center gap-2 text-sm">
+                            <Phone className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                            <span className="text-muted-foreground">{client.cpf}</span>
+                          </div>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-2">
+                        <Award className="w-4 h-4 text-gold flex-shrink-0" />
+                        <span className="font-semibold text-gold">{client.pontos}</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 hidden lg:table-cell">
+                      <span className="text-foreground font-medium">{client.total_agendamentos}</span>
+                    </td>
+                    <td className="px-6 py-4">
+                      {client.blocked ? (
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-destructive/20 text-destructive">
+                          Bloqueado
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-green-500/20 text-green-400">
+                          Ativo
+                        </span>
                       )}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-2 text-sm">
-                  {client.email && (
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <Mail className="w-4 h-4" />
-                      <span>{client.email}</span>
-                    </div>
-                  )}
-                  {client.cpf && (
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <Phone className="w-4 h-4" />
-                      <span>{client.cpf}</span>
-                    </div>
-                  )}
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <Award className="w-4 h-4" />
-                    <span>{client.pontos} pontos • {client.total_agendamentos} agendamentos</span>
-                  </div>
-                </div>
-
-                <div className="flex gap-2 pt-2">
-                  <Button
-                    size="sm"
-                    variant={client.blocked ? "default" : "destructive"}
-                    onClick={() => handleBlockClient(client.id, client.blocked)}
-                    className="flex-1"
-                  >
-                    {client.blocked ? "Desbloquear" : "Bloquear"}
-                  </Button>
-                </div>
-              </div>
-            </Card>
-          ))}
-        </div>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <Button
+                        size="sm"
+                        variant={client.blocked ? "default" : "destructive"}
+                        onClick={() => handleBlockClient(client.id, client.blocked)}
+                        className="transition-all"
+                      >
+                        {client.blocked ? "Desbloquear" : "Bloquear"}
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Card>
       )}
     </div>
   );
