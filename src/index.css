@@ -279,6 +279,16 @@ All colors MUST be HSL. */
 
 /* 🎨 MOBILE-FIRST OPTIMIZATIONS */
 @layer utilities {
+  /* Hide scrollbar */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+  
   /* Touch targets - minimum 44x44px */
   .touch-target {
     min-height: 44px;

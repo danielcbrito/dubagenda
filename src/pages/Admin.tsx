@@ -1,9 +1,10 @@
-import { useEffect } from "react";
+import { useEffect, Suspense } from "react";
 import { useNavigate, Routes, Route } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
+import { Loader2 } from "lucide-react";
 import { AdminDashboard } from "@/components/admin/AdminDashboard";
 import { AdminAgenda } from "@/components/admin/AdminAgenda";
 import { AdminClientes } from "@/components/admin/AdminClientes";
@@ -50,21 +51,30 @@ const Admin = () => {
     <SidebarProvider>
       <div className="min-h-screen flex w-full bg-background">
         <AdminSidebar />
-        <main className="flex-1 p-6 overflow-auto">
-          <Routes>
-            <Route index element={<AdminDashboard />} />
-            <Route path="agenda" element={<AdminAgenda />} />
-            <Route path="confirmacoes-pendentes" element={<AdminConfirmacoesPendentes />} />
-            <Route path="clientes" element={<AdminClientes />} />
-            <Route path="financeiro" element={<AdminFinanceiro />} />
-            <Route path="relatorios" element={<AdminRelatorios />} />
-            <Route path="servicos/*" element={<AdminServicos />} />
-            <Route path="promocoes" element={<AdminPromocoes />} />
-            <Route path="configuracoes" element={<AdminConfiguracoes />} />
-            <Route path="apis" element={<AdminAPIs />} />
-            <Route path="seguranca" element={<AdminSeguranca />} />
-            <Route path="dev" element={<AdminDev />} />
-          </Routes>
+        <main className="flex-1 p-8 overflow-auto">
+          <Suspense fallback={
+            <div className="flex items-center justify-center h-screen">
+              <div className="text-center">
+                <Loader2 className="w-12 h-12 animate-spin text-primary mx-auto mb-4" />
+                <p className="text-muted-foreground">Carregando...</p>
+              </div>
+            </div>
+          }>
+            <Routes>
+              <Route index element={<AdminDashboard />} />
+              <Route path="agenda" element={<AdminAgenda />} />
+              <Route path="confirmacoes-pendentes" element={<AdminConfirmacoesPendentes />} />
+              <Route path="clientes" element={<AdminClientes />} />
+              <Route path="financeiro" element={<AdminFinanceiro />} />
+              <Route path="relatorios" element={<AdminRelatorios />} />
+              <Route path="servicos/*" element={<AdminServicos />} />
+              <Route path="promocoes" element={<AdminPromocoes />} />
+              <Route path="configuracoes" element={<AdminConfiguracoes />} />
+              <Route path="apis" element={<AdminAPIs />} />
+              <Route path="seguranca" element={<AdminSeguranca />} />
+              <Route path="dev" element={<AdminDev />} />
+            </Routes>
+          </Suspense>
         </main>
       </div>
     </SidebarProvider>

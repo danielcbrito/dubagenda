@@ -33,13 +33,13 @@ const menuGroups = [
       { title: "Visão Geral", url: "/admin", icon: Home, end: true },
     ],
   },
-  {
-    label: "Atendimento",
-    items: [
-      { title: "Agenda", url: "/admin/agenda", icon: Calendar },
-      { title: "Confirmações", url: "/admin/confirmacoes-pendentes", icon: CheckCircle, badge: true },
-    ],
-  },
+    {
+      label: "Atendimento",
+      items: [
+        { title: "Agenda", url: "/admin/agenda", icon: Calendar, openInNewTab: true },
+        { title: "Confirmações", url: "/admin/confirmacoes-pendentes", icon: CheckCircle, badge: true },
+      ],
+    },
   {
     label: "Pagamentos",
     items: [
@@ -140,7 +140,7 @@ export function AdminSidebar() {
 
   return (
     <Sidebar 
-      className="sidebar-glass border-r-0"
+      className="sidebar-glass border-r-0 overflow-y-auto scrollbar-hide"
       style={{ 
         width: isCollapsed ? '64px' : '260px',
         transition: 'width 250ms cubic-bezier(0.4, 0, 0.2, 1)'
@@ -247,23 +247,36 @@ export function AdminSidebar() {
                   return (
                     <SidebarMenuItem key={item.title}>
                       <SidebarMenuButton asChild className="p-0">
-                        <NavLink 
-                          to={item.url} 
-                          end={item.end}
-                          className={`sidebar-menu-item h-10 ${isActive ? 'active' : ''}`}
-                          title={isCollapsed ? item.title : undefined}
-                        >
-                          <Icon className="w-5 h-5 flex-shrink-0" />
-                          {!isCollapsed && <span className="flex-1 text-sm">{item.title}</span>}
-                          {hasBadge && !isCollapsed && (
-                            <Badge 
-                              variant="destructive" 
-                              className="ml-auto text-[10px] h-4 px-1.5"
-                            >
-                              {pendingCount > 9 ? "9+" : pendingCount}
-                            </Badge>
-                          )}
-                        </NavLink>
+                        {item.openInNewTab ? (
+                          <a
+                            href={item.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className={`sidebar-menu-item h-10 ${isActive ? 'active' : ''}`}
+                            title={isCollapsed ? item.title : undefined}
+                          >
+                            <Icon className="w-5 h-5 flex-shrink-0" />
+                            {!isCollapsed && <span className="flex-1 text-sm">{item.title}</span>}
+                          </a>
+                        ) : (
+                          <NavLink 
+                            to={item.url} 
+                            end={item.end}
+                            className={`sidebar-menu-item h-10 ${isActive ? 'active' : ''}`}
+                            title={isCollapsed ? item.title : undefined}
+                          >
+                            <Icon className="w-5 h-5 flex-shrink-0" />
+                            {!isCollapsed && <span className="flex-1 text-sm">{item.title}</span>}
+                            {hasBadge && !isCollapsed && (
+                              <Badge 
+                                variant="destructive" 
+                                className="ml-auto text-[10px] h-4 px-1.5"
+                              >
+                                {pendingCount > 9 ? "9+" : pendingCount}
+                              </Badge>
+                            )}
+                          </NavLink>
+                        )}
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                   );
