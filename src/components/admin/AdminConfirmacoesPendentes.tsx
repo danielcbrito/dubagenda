@@ -104,32 +104,48 @@ export function AdminConfirmacoesPendentes() {
       // Buscar dados do agendamento primeiro para log
       const appointmentToConfirm = appointments.find(a => a.id === appointmentId);
       
+      console.log("🔄 Confirmando agendamento:", {
+        id: appointmentId,
+        servico: appointmentToConfirm?.servico?.nome,
+        hora: appointmentToConfirm?.hora,
+        cliente: appointmentToConfirm?.profile?.nome
+      });
+      
       const { error, data } = await supabase
         .from("agendamentos")
         .update({ 
           barbeiro_confirmou: true, 
-          status: 'confirmed' as any,
+          status: 'confirmed',
           updated_at: new Date().toISOString()
-        } as any)
+        })
         .eq("id", appointmentId)
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error("❌ Erro ao confirmar:", error);
+        throw error;
+      }
 
-      console.log("✅ Agendamento confirmado:", data);
+      console.log("✅ Agendamento confirmado com sucesso:", {
+        id: data.id,
+        status: data.status,
+        barbeiro_confirmou: data.barbeiro_confirmou,
+        hora: data.hora,
+        data: data.data
+      });
       
       toast.success(
-        `Agendamento confirmado! ${appointmentToConfirm?.servico?.nome || 'Serviço'} às ${appointmentToConfirm?.hora || ''} - ${appointmentToConfirm?.profile?.nome || 'Cliente'}`
+        `✅ Agendamento aprovado! Agora aparecerá na agenda: ${appointmentToConfirm?.servico?.nome || 'Serviço'} às ${appointmentToConfirm?.hora || ''}`
       );
       
       // Atualizar lista local imediatamente
       setAppointments(prev => prev.filter(a => a.id !== appointmentId));
       
       // Recarregar para garantir sincronização
-      setTimeout(() => loadPending(), 500);
+      setTimeout(() => loadPending(), 300);
     } catch (error) {
-      console.error("Error confirming appointment:", error);
+      console.error("❌ Erro ao confirmar atendimento:", error);
       toast.error("Erro ao confirmar atendimento");
     }
   };
