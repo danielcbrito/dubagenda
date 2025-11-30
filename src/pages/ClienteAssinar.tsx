@@ -523,24 +523,34 @@ const ClienteAssinar = () => {
                   </div>
 
                   {pixPayload && (
-                    <div className="space-y-3">
-                      <p className="text-xs font-semibold text-center text-muted-foreground">
-                        Ou copie o código PIX:
+                    <div className="space-y-4 mt-6">
+                      <p className="text-base font-semibold text-foreground text-center">
+                        Ou copie o código PIX
                       </p>
-                      <div className="relative">
-                        <div className="bg-muted p-3 rounded-lg break-all text-xs font-mono">
+                      
+                      {/* PIX Code Display */}
+                      <div className="bg-muted/50 backdrop-blur-sm p-4 rounded-xl border border-border/50">
+                        <p className="text-xs text-muted-foreground font-mono break-all">
                           {pixPayload}
-                        </div>
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          className="absolute top-2 right-2"
-                          onClick={copyPixCode}
-                        >
-                          <Copy className="w-3 h-3 mr-1" />
-                          Copiar
-                        </Button>
+                        </p>
                       </div>
+
+                      {/* Copy Button - Large and Prominent */}
+                      <Button
+                        onClick={copyPixCode}
+                        className="w-full h-14 text-base font-semibold"
+                        style={{
+                          background: 'linear-gradient(135deg, hsl(0 64% 52%), hsl(0 64% 42%))',
+                          boxShadow: '0 4px 20px rgba(217, 65, 65, 0.3)'
+                        }}
+                      >
+                        <Copy className="w-5 h-5 mr-2" />
+                        Copiar Código PIX
+                      </Button>
+                      
+                      <p className="text-xs text-muted-foreground text-center">
+                        Toque no botão acima para copiar o código automaticamente
+                      </p>
                     </div>
                   )}
 
