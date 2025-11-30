@@ -211,7 +211,7 @@ export function AppointmentDetailsSidebar({ appointment, open, onClose, onUpdate
             </div>
             <div className="pl-6">
               <p className="font-semibold">
-                {format(new Date(appointment.data), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+                {format(new Date(`${appointment.data}T12:00:00`), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
               </p>
               <p className="text-2xl font-bold text-primary">{appointment.hora}</p>
             </div>
@@ -345,7 +345,7 @@ export function AppointmentDetailsSidebar({ appointment, open, onClose, onUpdate
                   {history.map((h, i) => (
                     <div key={i} className="text-sm">
                       <span className="text-muted-foreground">
-                        {format(new Date(h.data), "dd/MM/yyyy")} às {h.hora}
+                        {format(new Date(`${h.data}T12:00:00`), "dd/MM/yyyy")} às {h.hora}
                       </span>
                       {" - "}
                       <span>{h.servico?.nome}</span>

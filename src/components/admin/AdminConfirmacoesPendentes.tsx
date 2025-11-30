@@ -219,7 +219,7 @@ export function AdminConfirmacoesPendentes() {
                       </span>
                       <span className="flex items-center gap-2">
                         <CalendarIcon className="w-4 h-4" />
-                        {format(new Date(apt.data), "dd/MM/yyyy", { locale: ptBR })}
+                        {format(new Date(`${apt.data}T12:00:00`), "dd/MM/yyyy", { locale: ptBR })}
                       </span>
                       <span className="flex items-center gap-2">
                         <Clock className="w-4 h-4" />
