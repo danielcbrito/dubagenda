@@ -363,9 +363,9 @@ export function SupportChatInterface() {
   );
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="flex flex-col" style={{ height: '100%', minHeight: '100%' }}>
       {/* Messages Area - Flex 1 para ocupar todo espaço disponível */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto" style={{ flexGrow: 1, flexShrink: 1, minHeight: 0 }}>
         {messages.length === 0 && !isLoading ? renderWelcomeScreen() : renderMessages()}
       </div>
 

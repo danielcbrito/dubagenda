@@ -84,7 +84,7 @@ export default function SupportChat() {
       </header>
 
       {/* Chat Interface - Flex 1 para ocupar todo espaço disponível */}
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 overflow-hidden" style={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>
         <SupportChatInterface />
       </div>
     </div>
