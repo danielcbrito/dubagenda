@@ -38,9 +38,9 @@ export default function SupportChat() {
 
   return (
     <div
-      className="h-screen w-full flex flex-col overflow-hidden"
+      className="w-full flex flex-col overflow-hidden"
       style={{ 
-        height: '100vh',
+        height: 'calc(var(--vh, 1vh) * 100)',
         width: '100vw',
         background: 'linear-gradient(180deg, #0A0A0A 0%, #141414 100%)'
       }}
