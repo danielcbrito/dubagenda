@@ -363,11 +363,20 @@ export function SupportChatInterface() {
   );
 
   return (
-    <div className="chat-wrapper">
-      {messages.length === 0 && !isLoading ? renderWelcomeScreen() : renderMessages()}
+    <div className="h-full flex flex-col">
+      {/* Messages Area - Flex 1 para ocupar todo espaço disponível */}
+      <div className="flex-1 overflow-y-auto">
+        {messages.length === 0 && !isLoading ? renderWelcomeScreen() : renderMessages()}
+      </div>
 
-      {/* Input Area Premium 2025 - Always Visible */}
-      <div className="chat-composer bg-black/20 backdrop-blur-2xl p-3 md:p-4 border-t border-white/5">
+      {/* Input Area Premium 2025 - Fixo no bottom */}
+      <div 
+        className="shrink-0 p-3 md:p-4 border-t border-white/5 backdrop-blur-xl"
+        style={{
+          background: 'rgba(255, 255, 255, 0.03)',
+          boxShadow: '0 -4px 20px rgba(0, 0, 0, 0.3)'
+        }}
+      >
         <div className="max-w-3xl mx-auto">
           {/* Selected Files Preview Premium */}
           {selectedFiles.length > 0 && (
@@ -395,7 +404,7 @@ export function SupportChatInterface() {
 
           {/* Input Container Premium Glassmorphism */}
           <div 
-            className="relative flex items-center gap-2 p-2.5 rounded-3xl backdrop-blur-2xl border shadow-2xl transition-all duration-300 focus-within:shadow-[0_0_20px_rgba(217,65,65,0.3)]"
+            className="relative flex items-center gap-2 p-2.5 rounded-3xl backdrop-blur-2xl border transition-all duration-300 focus-within:border-primary/50 focus-within:shadow-[0_0_20px_rgba(217,65,65,0.3)]"
             style={{
               background: 'rgba(255, 255, 255, 0.05)',
               borderColor: 'rgba(255, 255, 255, 0.1)',
@@ -455,20 +464,24 @@ export function SupportChatInterface() {
             <Button
               type="button"
               size="icon"
-              className="h-10 w-10 rounded-full shrink-0 transition-all duration-300 disabled:opacity-40 disabled:cursor-not-allowed hover:scale-105"
+              className="h-10 w-10 rounded-full shrink-0 transition-all duration-300 disabled:opacity-40 disabled:cursor-not-allowed hover:scale-105 active:scale-95"
               style={{
-                background: 'linear-gradient(135deg, hsl(0 64% 52%), hsl(0 64% 42%))',
-                boxShadow: '0 4px 12px rgba(217, 65, 65, 0.3)'
+                background: input.trim() && !isLoading 
+                  ? 'linear-gradient(135deg, hsl(0 64% 52%), hsl(0 64% 42%))' 
+                  : 'rgba(255, 255, 255, 0.1)',
+                boxShadow: input.trim() && !isLoading 
+                  ? '0 4px 16px rgba(217, 65, 65, 0.4), 0 0 20px rgba(217, 65, 65, 0.3)' 
+                  : 'none'
               }}
               onClick={() => sendMessage()}
-              disabled={isLoading || (!input.trim() && selectedFiles.length === 0)}
+              disabled={!input.trim() || isLoading}
             >
-              <Send className="h-4 w-4" />
+              <Send className="h-4 w-4 text-white" />
             </Button>
           </div>
 
-          {/* Helper Text Premium */}
-          <p className="text-[10px] text-white/30 text-center mt-2 font-light">
+          {/* Disclaimer Premium */}
+          <p className="text-center text-[11px] text-white/30 mt-3 font-light">
             IA pode cometer erros. Verifique informações importantes.
           </p>
         </div>
