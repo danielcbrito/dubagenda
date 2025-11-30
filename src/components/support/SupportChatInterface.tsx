@@ -292,8 +292,8 @@ export function SupportChatInterface() {
     <div className="chat-wrapper">
       {messages.length === 0 && !isLoading ? renderWelcomeScreen() : renderMessages()}
 
-      {/* Input Area Premium 2025 - Always Visible */}
-      <div className="chat-composer bg-black/20 backdrop-blur-2xl p-3 md:p-4 border-t border-white/5">
+      {/* Input Area Premium 2025 - Always Visible - SEM BORDAS */}
+      <div className="chat-composer bg-black/20 backdrop-blur-2xl p-3 md:p-4">
         <div className="max-w-3xl mx-auto">
           {/* Selected Files Preview Premium */}
           {selectedFiles.length > 0 && (
