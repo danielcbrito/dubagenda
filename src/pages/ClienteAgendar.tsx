@@ -7,6 +7,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { ArrowLeft, Clock, Check, Copy } from "lucide-react";
 import { toast } from "sonner";
 import { ptBR } from "date-fns/locale";
+import { format } from "date-fns";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 
@@ -246,7 +247,8 @@ const ClienteAgendar = () => {
   const loadAvailableSlots = async () => {
     if (!selectedDate) return;
 
-    const dateStr = selectedDate.toISOString().split('T')[0];
+    // Format date without timezone conversion to avoid day shifting
+    const dateStr = format(selectedDate, 'yyyy-MM-dd');
     
     // Fetch all appointments for the selected date (exclude cancelled and no_show)
     const { data: appointments } = await supabase
@@ -394,7 +396,7 @@ const ClienteAgendar = () => {
       const bookingData = {
         servico_id: mainService.id,
         barbeiro_id: null,
-        data: selectedDate.toISOString().split('T')[0],
+        data: format(selectedDate, 'yyyy-MM-dd'), // Format without timezone conversion
         hora: selectedTime,
         duracao: totalDuration,
         preco: finalPrice, // Use final price after credits
@@ -507,7 +509,7 @@ const ClienteAgendar = () => {
         .insert({
           user_id: session.user.id,
           servico_id: mainService.id,
-          data: selectedDate!.toISOString().split('T')[0],
+          data: format(selectedDate!, 'yyyy-MM-dd'), // Format without timezone conversion
           hora: selectedTime,
           duracao: totalDuration,
           preco: 0, // Fully paid with credits
@@ -609,7 +611,7 @@ const ClienteAgendar = () => {
       const { error } = await supabase
         .from("agendamentos")
         .update({
-          data: selectedDate.toISOString().split('T')[0],
+          data: format(selectedDate, 'yyyy-MM-dd'), // Format without timezone conversion
           hora: selectedTime,
           duracao: totalDuration,
           status: 'pending', // Reset to pending

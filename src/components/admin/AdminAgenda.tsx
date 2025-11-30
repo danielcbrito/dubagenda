@@ -130,8 +130,8 @@ export function AdminAgenda() {
   useEffect(() => {
     const checkAppointmentCompletion = () => {
       const now = new Date();
-      const currentDateStr = now.toISOString().split('T')[0];
-      const selectedDateStr = date.toISOString().split('T')[0];
+      const currentDateStr = format(now, 'yyyy-MM-dd');
+      const selectedDateStr = format(date, 'yyyy-MM-dd');
       
       // Only check for today's appointments
       if (currentDateStr !== selectedDateStr) return;
@@ -183,7 +183,7 @@ export function AdminAgenda() {
   const loadAppointments = async (selectedDate: Date) => {
     setLoading(true);
     try {
-      const dateStr = selectedDate.toISOString().split('T')[0];
+      const dateStr = format(selectedDate, 'yyyy-MM-dd'); // Format without timezone conversion
       
       console.log(`🔍 Carregando agendamentos para ${dateStr}`);
       console.log(`📋 Filtros: barbeiro_confirmou=true, status NOT IN (cancelled_by_admin, cancelled_by_user)`);

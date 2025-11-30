@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Calendar, DollarSign, Users, TrendingUp, Scissors, Clock } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { Skeleton } from "@/components/ui/skeleton";
+import { format } from "date-fns";
 
 interface Stats {
   todayAppointments: number;
@@ -63,8 +64,8 @@ export function AdminDashboard() {
 
   const loadDashboardData = async () => {
     try {
-      const today = new Date().toISOString().split('T')[0];
-      const firstDayOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
+      const today = format(new Date(), 'yyyy-MM-dd'); // Format without timezone conversion
+      const firstDayOfMonth = format(new Date(new Date().getFullYear(), new Date().getMonth(), 1), 'yyyy-MM-dd');
 
       // Today's appointments
       const { count: todayCount } = await supabase

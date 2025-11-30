@@ -7,6 +7,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CheckCircle2, Sparkles, AlertCircle, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { format } from "date-fns";
 
 interface Plan {
   id: string;
@@ -167,7 +168,7 @@ export function SubscribePlanSheet({ open, onOpenChange, userId }: SubscribePlan
           user_id: userId,
           plano_id: planId,
           status: "active",
-          next_billing_date: nextBillingDate.toISOString().split('T')[0]
+          next_billing_date: format(nextBillingDate, 'yyyy-MM-dd') // Format without timezone conversion
         }]);
 
       if (insertError) {
