@@ -24,6 +24,18 @@ Deno.serve(async (req) => {
 
     const { data, hora, duracao, userId }: AppointmentRequest = await req.json();
 
+    // Parse the date and validate it's not Sunday
+    const appointmentDate = new Date(data + 'T00:00:00'); // Parse as local date
+    if (appointmentDate.getDay() === 0) {
+      return new Response(
+        JSON.stringify({ 
+          valid: false, 
+          message: 'A barbearia não funciona aos domingos.' 
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+      );
+    }
+
     // Parse the time to get start time in minutes
     const [startHour, startMinute] = hora.split(':').map(Number);
     const startTimeInMinutes = startHour * 60 + startMinute;
@@ -42,6 +54,20 @@ Deno.serve(async (req) => {
         JSON.stringify({ 
           valid: false, 
           message: 'Horário indisponível. A barbearia está fechada para almoço entre 13:00 e 14:00.' 
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+      );
+    }
+
+    // Validate business hours (09:00 - 20:00, Monday-Saturday)
+    const openHour = 9 * 60; // 540 minutes (09:00)
+    const closeHour = 20 * 60; // 1200 minutes (20:00)
+    
+    if (startTimeInMinutes < openHour || endTimeInMinutes > closeHour) {
+      return new Response(
+        JSON.stringify({ 
+          valid: false, 
+          message: 'Horário fora do expediente. Funcionamento: Segunda a Sábado, 09:00 às 20:00 (exceto 13:00-14:00).' 
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
       );

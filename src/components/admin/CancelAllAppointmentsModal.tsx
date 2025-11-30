@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { AlertTriangle } from "lucide-react";
+import { format } from "date-fns";
 
 interface CancelAllAppointmentsModalProps {
   open: boolean;
@@ -40,14 +41,14 @@ export function CancelAllAppointmentsModal({
 
     setCancelling(true);
     try {
-      const dateStr = date.toISOString().split('T')[0];
+      const dateStr = format(date, 'yyyy-MM-dd'); // Format without timezone conversion
 
       // Buscar todos os agendamentos confirmados do dia
       const { data: appointments, error: fetchError } = await supabase
         .from("agendamentos")
         .select(`
           id, 
-          user_id, 
+          user_id,
           hora,
           servicos!inner(nome)
         `)
