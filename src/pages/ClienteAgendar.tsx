@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
-import { ArrowLeft, Clock, Check } from "lucide-react";
+import { ArrowLeft, Clock, Check, Copy } from "lucide-react";
 import { toast } from "sonner";
 import { ptBR } from "date-fns/locale";
 import { Progress } from "@/components/ui/progress";
@@ -1320,25 +1320,35 @@ const ClienteAgendar = () => {
                   </div>
 
                   {pixPayload && (
-                    <div className="mt-6 space-y-2">
-                      <p className="text-sm font-semibold">Ou copie o código PIX</p>
-                      <div className="flex gap-2">
-                        <input
-                          type="text"
-                          value={pixPayload}
-                          readOnly
-                          className="flex-1 px-4 py-2 text-sm bg-muted rounded-lg border"
-                        />
-                        <Button
-                          onClick={() => {
-                            navigator.clipboard.writeText(pixPayload);
-                            toast.success("Código copiado!");
-                          }}
-                          variant="outline"
-                        >
-                          Copiar
-                        </Button>
+                    <div className="mt-6 space-y-4">
+                      <p className="text-base font-semibold text-foreground">Ou copie o código PIX</p>
+                      
+                      {/* PIX Code Display */}
+                      <div className="bg-muted/50 backdrop-blur-sm p-4 rounded-xl border border-border/50">
+                        <p className="text-xs text-muted-foreground mb-2 font-mono break-all">
+                          {pixPayload}
+                        </p>
                       </div>
+
+                      {/* Copy Button - Large and Prominent */}
+                      <Button
+                        onClick={() => {
+                          navigator.clipboard.writeText(pixPayload);
+                          toast.success("Código PIX copiado!");
+                        }}
+                        className="w-full h-14 text-base font-semibold"
+                        style={{
+                          background: 'linear-gradient(135deg, hsl(0 64% 52%), hsl(0 64% 42%))',
+                          boxShadow: '0 4px 20px rgba(217, 65, 65, 0.3)'
+                        }}
+                      >
+                        <Copy className="w-5 h-5 mr-2" />
+                        Copiar Código PIX
+                      </Button>
+                      
+                      <p className="text-xs text-muted-foreground text-center">
+                        Toque no botão acima para copiar o código automaticamente
+                      </p>
                     </div>
                   )}
                 </Card>
