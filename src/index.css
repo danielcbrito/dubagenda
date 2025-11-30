@@ -91,6 +91,12 @@ body {
     letter-spacing: 0.01em;
     background: linear-gradient(180deg, hsl(0 0% 2%), hsl(0 0% 4%));
     min-height: 100vh;
+    overflow: hidden;
+    height: 100vh;
+    position: fixed;
+    width: 100%;
+    top: 0;
+    left: 0;
   }
   
   #root {
@@ -402,6 +408,16 @@ body.lock-scroll {
   position: fixed !important;
   width: 100% !important;
   touch-action: none !important;
+}
+
+html {
+  overflow: hidden !important;
+  height: 100vh !important;
+  width: 100% !important;
+}
+
+body {
+  overflow: hidden !important;
 }
 
 /* Internal scrollable areas - premium thin scrollbar */

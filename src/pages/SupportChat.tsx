@@ -41,8 +41,8 @@ export default function SupportChat() {
       className="h-screen w-full flex flex-col bg-[#212121] overflow-hidden"
       style={{ height: 'calc(var(--vh, 1vh) * 100)' }}
     >
-      {/* Header ChatGPT Style - SEM BORDAS */}
-      <header className="bg-[#212121] px-3 py-2.5 flex items-center justify-between z-10 shrink-0">
+      {/* Header ChatGPT Style */}
+      <header className="bg-[#212121] border-b border-white/10 px-3 py-2.5 flex items-center justify-between z-10 shrink-0">
         <div className="flex items-center gap-2">
           {/* Menu Button */}
           <button
