@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -38,6 +38,15 @@ export function AdminRescheduleModal({
   const [action, setAction] = useState<"reschedule" | "cancel" | null>(null);
   const [processing, setProcessing] = useState(false);
   const [reason, setReason] = useState("");
+
+  // Reset state when modal closes
+  useEffect(() => {
+    if (!open) {
+      setAction(null);
+      setReason("");
+      setProcessing(false);
+    }
+  }, [open]);
 
   const handleAction = async () => {
     if (!reason.trim()) {
@@ -217,8 +226,9 @@ export function AdminRescheduleModal({
           {action && (
             <Button
               onClick={handleAction}
-              disabled={processing || !reason.trim()}
+              disabled={processing || reason.trim().length === 0}
               variant={action === "cancel" ? "destructive" : "default"}
+              className={reason.trim().length > 0 ? "opacity-100" : "opacity-50"}
             >
               {processing ? "Processando..." : "Confirmar"}
             </Button>
