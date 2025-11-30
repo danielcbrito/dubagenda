@@ -1,4 +1,4 @@
-import { Send, Paperclip, Mic, X, Image as ImageIcon, FileText, StopCircle, Calendar, Clock, DollarSign, MapPin } from "lucide-react";
+import { Send, Paperclip, Mic, X, Image as ImageIcon, FileText, StopCircle, AlertTriangle, CreditCard, Lock, Bug } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
@@ -19,24 +19,24 @@ interface Message {
 
 const quickSuggestions = [
   {
-    icon: Calendar,
-    title: "Agendar horário",
-    message: "Quero agendar um horário"
+    icon: AlertTriangle,
+    title: "Problema com agendamento",
+    message: "Estou tendo problemas para agendar um horário"
   },
   {
-    icon: Clock,
-    title: "Verificar disponibilidade",
-    message: "Quais horários estão disponíveis?"
+    icon: CreditCard,
+    title: "Erro no pagamento",
+    message: "Meu pagamento não foi processado corretamente"
   },
   {
-    icon: DollarSign,
-    title: "Consultar preços",
-    message: "Quais são os preços dos serviços?"
+    icon: Lock,
+    title: "Não consigo acessar",
+    message: "Não estou conseguindo acessar minha conta"
   },
   {
-    icon: MapPin,
-    title: "Ver localização",
-    message: "Onde fica a barbearia?"
+    icon: Bug,
+    title: "Reportar bug",
+    message: "Encontrei um erro no aplicativo"
   }
 ];
 
@@ -215,7 +215,7 @@ export function SupportChatInterface() {
   };
 
   const renderWelcomeScreen = () => (
-    <div className="flex-1 flex items-center justify-center p-4 overflow-auto">
+    <div className="chat-messages px-4 md:px-6 py-6 flex items-center justify-center">
       <div className="max-w-2xl w-full">
         {/* Mensagem de Boas-vindas com Avatar */}
         <div className="flex gap-4 mb-8 animate-fade-in">
@@ -227,7 +227,7 @@ export function SupportChatInterface() {
             }}
           >
             <p className="text-white/90 text-[15px] leading-relaxed font-light">
-              Olá! Sou o assistente virtual da Barbearia DUB. Como posso ajudar você hoje?
+              Olá! Sou o assistente técnico da Barbearia DUB. Estou aqui para ajudar você a resolver problemas com o aplicativo. Qual dificuldade você está enfrentando?
             </p>
             <p className="text-white/40 text-[11px] mt-2 font-medium">
               Agora
@@ -395,8 +395,10 @@ export function SupportChatInterface() {
 
           {/* Input Container Premium Glassmorphism */}
           <div 
-            className="relative flex items-center gap-2 p-2 rounded-3xl bg-white/5 backdrop-blur-2xl border border-white/10 shadow-2xl hover:bg-white/10 hover:border-white/20 transition-all duration-300 focus-within:border-primary/30 focus-within:bg-white/8"
+            className="relative flex items-center gap-2 p-2.5 rounded-3xl backdrop-blur-2xl border shadow-2xl transition-all duration-300 focus-within:shadow-[0_0_20px_rgba(217,65,65,0.3)]"
             style={{
+              background: 'rgba(255, 255, 255, 0.05)',
+              borderColor: 'rgba(255, 255, 255, 0.1)',
               boxShadow: "0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.05)"
             }}
           >
@@ -426,9 +428,9 @@ export function SupportChatInterface() {
               value={input}
               onChange={handleInputChange}
               onKeyDown={handleKeyPress}
-              placeholder="Pergunte alguma coisa"
+              placeholder="Digite sua mensagem..."
               disabled={isLoading}
-              className="flex-1 min-h-[40px] max-h-[120px] resize-none border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 px-2 py-2 text-[15px] text-white placeholder:text-white/50 focus:outline-none font-light"
+              className="flex-1 min-h-[40px] max-h-[120px] resize-none border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 px-2 py-2.5 text-[15px] text-white placeholder:text-white/40 focus:outline-none font-light"
               rows={1}
             />
 
@@ -449,11 +451,15 @@ export function SupportChatInterface() {
               {isRecording ? <StopCircle className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
             </Button>
 
-            {/* Send Button Premium */}
+            {/* Send Button Premium com Destaque */}
             <Button
               type="button"
               size="icon"
-              className="h-10 w-10 rounded-full shrink-0 bg-white/10 hover:bg-white/20 text-white transition-all duration-300 disabled:opacity-40 disabled:cursor-not-allowed"
+              className="h-10 w-10 rounded-full shrink-0 transition-all duration-300 disabled:opacity-40 disabled:cursor-not-allowed hover:scale-105"
+              style={{
+                background: 'linear-gradient(135deg, hsl(0 64% 52%), hsl(0 64% 42%))',
+                boxShadow: '0 4px 12px rgba(217, 65, 65, 0.3)'
+              }}
               onClick={() => sendMessage()}
               disabled={isLoading || (!input.trim() && selectedFiles.length === 0)}
             >

@@ -1,4 +1,4 @@
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, MoreVertical } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useEffect } from "react";
 import { SupportChatInterface } from "@/components/support/SupportChatInterface";
@@ -38,33 +38,48 @@ export default function SupportChat() {
 
   return (
     <div
-      className="h-screen w-full flex flex-col bg-[#212121] overflow-hidden"
-      style={{ height: 'calc(var(--vh, 1vh) * 100)' }}
+      className="h-screen w-full flex flex-col overflow-hidden"
+      style={{ 
+        height: 'calc(var(--vh, 1vh) * 100)',
+        background: 'linear-gradient(180deg, #0A0A0A 0%, #141414 100%)'
+      }}
     >
-      {/* Header ChatGPT Style */}
-      <header className="bg-[#212121] border-b border-white/10 px-3 py-2.5 flex items-center justify-between z-10 shrink-0">
-        <div className="flex items-center gap-2">
-          {/* Menu Button */}
-          <button
-            onClick={handleBack}
-            className="h-9 w-9 rounded-lg hover:bg-white/10 flex items-center justify-center transition-colors"
-            aria-label="Menu"
-          >
-            <ArrowLeft className="h-5 w-5 text-white/70" />
-          </button>
-          
-          {/* Logo */}
+      {/* Header Premium com Glassmorphism */}
+      <header 
+        className="backdrop-blur-2xl border-b border-white/5 px-4 py-3 flex items-center justify-between z-10 shrink-0"
+        style={{
+          background: 'rgba(255, 255, 255, 0.03)',
+          boxShadow: '0 1px 0 rgba(255, 255, 255, 0.05)'
+        }}
+      >
+        {/* Botão Voltar */}
+        <button
+          onClick={handleBack}
+          className="h-10 w-10 rounded-full hover:bg-white/10 flex items-center justify-center transition-all duration-300"
+          aria-label="Voltar"
+        >
+          <ArrowLeft className="h-5 w-5 text-white/70" />
+        </button>
+        
+        {/* Logo e Título Centralizados */}
+        <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2">
           <img 
             src={logoImage} 
             alt="Logo" 
-            className="h-6 w-6 object-contain"
+            className="h-7 w-7 object-contain"
           />
-          
-          {/* Title */}
-          <h1 className="text-sm font-medium text-white/90">
+          <h1 className="text-base font-semibold text-white/90">
             ChatDUB
           </h1>
         </div>
+
+        {/* Botão Menu (3 pontinhos) */}
+        <button
+          className="h-10 w-10 rounded-full hover:bg-white/10 flex items-center justify-center transition-all duration-300"
+          aria-label="Menu"
+        >
+          <MoreVertical className="h-5 w-5 text-white/70" />
+        </button>
       </header>
 
       {/* Chat Interface */}
