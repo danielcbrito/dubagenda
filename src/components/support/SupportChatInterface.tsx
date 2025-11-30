@@ -1,9 +1,10 @@
-import { Send, Paperclip, Mic, X, Image as ImageIcon, FileText, StopCircle, Sparkles } from "lucide-react";
+import { Send, Paperclip, Mic, X, Image as ImageIcon, FileText, StopCircle, Calendar, Clock, DollarSign, MapPin } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { BotAvatar } from "./BotAvatar";
 
 interface Message {
   role: "user" | "assistant";
@@ -16,11 +17,27 @@ interface Message {
   }>;
 }
 
-const welcomePrompts = [
-  "Como faço para agendar um corte?",
-  "Quais são os planos disponíveis?",
-  "Como funciona o sistema de pontos?",
-  "Preciso de ajuda com pagamento"
+const quickSuggestions = [
+  {
+    icon: Calendar,
+    title: "Agendar horário",
+    message: "Quero agendar um horário"
+  },
+  {
+    icon: Clock,
+    title: "Verificar disponibilidade",
+    message: "Quais horários estão disponíveis?"
+  },
+  {
+    icon: DollarSign,
+    title: "Consultar preços",
+    message: "Quais são os preços dos serviços?"
+  },
+  {
+    icon: MapPin,
+    title: "Ver localização",
+    message: "Onde fica a barbearia?"
+  }
 ];
 
 /**
@@ -198,12 +215,53 @@ export function SupportChatInterface() {
   };
 
   const renderWelcomeScreen = () => (
-    <div className="flex-1 flex items-center justify-center p-4 overflow-hidden">
-      <div className="max-w-2xl w-full text-center">
-        {/* Mensagem de Boas-vindas ChatGPT Style */}
-        <h1 className="text-3xl md:text-4xl font-normal text-white mb-8">
-          Como posso ajudar?
-        </h1>
+    <div className="flex-1 flex items-center justify-center p-4 overflow-auto">
+      <div className="max-w-2xl w-full">
+        {/* Mensagem de Boas-vindas com Avatar */}
+        <div className="flex gap-4 mb-8 animate-fade-in">
+          <BotAvatar size="lg" />
+          <div 
+            className="flex-1 rounded-3xl px-6 py-5 bg-white/5 backdrop-blur-2xl border border-white/10 shadow-2xl"
+            style={{
+              boxShadow: "0 8px 32px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1)"
+            }}
+          >
+            <p className="text-white/90 text-[15px] leading-relaxed font-light">
+              Olá! Sou o assistente virtual da Barbearia DUB. Como posso ajudar você hoje?
+            </p>
+            <p className="text-white/40 text-[11px] mt-2 font-medium">
+              Agora
+            </p>
+          </div>
+        </div>
+
+        {/* Sugestões Rápidas Premium */}
+        <div className="grid grid-cols-2 gap-3 animate-fade-in" style={{ animationDelay: "150ms" }}>
+          {quickSuggestions.map((suggestion, index) => {
+            const Icon = suggestion.icon;
+            return (
+              <button
+                key={index}
+                onClick={() => sendMessage(suggestion.message)}
+                className="group p-4 rounded-2xl bg-white/5 backdrop-blur-2xl border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all duration-300 text-left hover:scale-[1.02] active:scale-[0.98]"
+                style={{
+                  boxShadow: "0 4px 16px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.05)"
+                }}
+              >
+                <div className="flex items-start gap-3">
+                  <div className="p-2 rounded-xl bg-primary/10 border border-primary/20 group-hover:bg-primary/20 transition-colors duration-300">
+                    <Icon className="h-5 w-5 text-primary" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-white/90 text-sm font-medium group-hover:text-white transition-colors duration-300">
+                      {suggestion.title}
+                    </p>
+                  </div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
@@ -215,17 +273,27 @@ export function SupportChatInterface() {
           <div
             key={index}
             className={cn(
-              "flex w-full animate-fade-in",
+              "flex w-full animate-fade-in gap-3",
               message.role === "user" ? "justify-end" : "justify-start"
             )}
           >
+            {/* Avatar do Bot - apenas para mensagens do assistente */}
+            {message.role === "assistant" && (
+              <BotAvatar size="md" />
+            )}
+            
             <div
               className={cn(
                 "max-w-[80%] md:max-w-[75%] rounded-3xl px-5 py-4 shadow-xl backdrop-blur-xl transition-all duration-300 hover:scale-[1.01]",
                 message.role === "user"
-                  ? "bg-gradient-to-br from-primary via-primary/90 to-primary/80 text-white shadow-primary/20"
+                  ? "bg-gradient-to-br from-primary/30 via-primary/20 to-primary/10 backdrop-blur-2xl border border-primary/30 text-white shadow-primary/20"
                   : "bg-white/5 backdrop-blur-2xl border border-white/10 text-white/90 shadow-black/20"
               )}
+              style={message.role === "user" ? {
+                boxShadow: "0 0 20px rgba(217, 65, 65, 0.2), 0 8px 32px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1)"
+              } : {
+                boxShadow: "0 8px 32px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1)"
+              }}
             >
               {/* Attachments Premium */}
               {message.attachments && message.attachments.length > 0 && (
@@ -269,17 +337,23 @@ export function SupportChatInterface() {
           </div>
         ))}
 
-        {/* Loading State Premium */}
+        {/* Loading State Premium com Avatar */}
         {isLoading && (
-          <div className="flex justify-start animate-fade-in">
-            <div className="max-w-[75%] rounded-3xl px-5 py-4 bg-white/5 backdrop-blur-2xl border border-white/10">
+          <div className="flex justify-start animate-fade-in gap-3">
+            <BotAvatar size="md" />
+            <div 
+              className="max-w-[75%] rounded-3xl px-5 py-4 bg-white/5 backdrop-blur-2xl border border-white/10"
+              style={{
+                boxShadow: "0 8px 32px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1)"
+              }}
+            >
               <div className="flex items-center gap-3">
                 <div className="flex gap-1.5">
                   <div className="h-2.5 w-2.5 rounded-full bg-white/40 animate-bounce" style={{ animationDelay: "0ms" }} />
                   <div className="h-2.5 w-2.5 rounded-full bg-white/40 animate-bounce" style={{ animationDelay: "150ms" }} />
                   <div className="h-2.5 w-2.5 rounded-full bg-white/40 animate-bounce" style={{ animationDelay: "300ms" }} />
                 </div>
-                <span className="text-xs text-white/60 font-medium">Analisando sua solicitação...</span>
+                <span className="text-xs text-white/30 font-light">Analisando sua mensagem...</span>
               </div>
             </div>
           </div>
@@ -320,7 +394,12 @@ export function SupportChatInterface() {
           )}
 
           {/* Input Container Premium Glassmorphism */}
-          <div className="relative flex items-center gap-2 p-2 rounded-3xl bg-white/5 backdrop-blur-2xl border border-white/10 shadow-2xl hover:bg-white/10 hover:border-white/20 transition-all duration-300">
+          <div 
+            className="relative flex items-center gap-2 p-2 rounded-3xl bg-white/5 backdrop-blur-2xl border border-white/10 shadow-2xl hover:bg-white/10 hover:border-white/20 transition-all duration-300 focus-within:border-primary/30 focus-within:bg-white/8"
+            style={{
+              boxShadow: "0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.05)"
+            }}
+          >
             {/* Attach Button Premium */}
             <Button
               type="button"
