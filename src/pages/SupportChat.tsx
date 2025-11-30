@@ -40,7 +40,8 @@ export default function SupportChat() {
     <div
       className="h-screen w-full flex flex-col overflow-hidden"
       style={{ 
-        height: 'calc(var(--vh, 1vh) * 100)',
+        height: '100vh',
+        width: '100vw',
         background: 'linear-gradient(180deg, #0A0A0A 0%, #141414 100%)'
       }}
     >
@@ -82,7 +83,7 @@ export default function SupportChat() {
         </button>
       </header>
 
-      {/* Chat Interface */}
+      {/* Chat Interface - Flex 1 para ocupar todo espaço disponível */}
       <div className="flex-1 overflow-hidden">
         <SupportChatInterface />
       </div>

@@ -29,14 +29,15 @@ export function AnnouncementModal() {
   return (
     <AlertDialog open={open} onOpenChange={setOpen}>
       <AlertDialogContent 
-        className="max-w-[420px] border-0 p-0 overflow-hidden animate-scale-in"
+        className="max-w-[400px] border-0 p-0 overflow-hidden"
         style={{
           background: 'rgba(255, 255, 255, 0.05)',
-          backdropFilter: 'blur(40px) saturate(180%)',
-          WebkitBackdropFilter: 'blur(40px) saturate(180%)',
-          boxShadow: '0 20px 60px -15px rgba(0, 0, 0, 0.8), 0 0 40px rgba(217, 65, 65, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.1)',
+          backdropFilter: 'blur(20px)',
+          WebkitBackdropFilter: 'blur(20px)',
+          boxShadow: '0 20px 60px -15px rgba(0, 0, 0, 0.9), 0 0 40px rgba(217, 65, 65, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.1)',
           borderRadius: '24px',
-          border: '1px solid rgba(255, 255, 255, 0.1)'
+          border: '1px solid rgba(255, 255, 255, 0.1)',
+          animation: 'scale-in 300ms cubic-bezier(0.4, 0, 0.2, 1)'
         }}
       >
         {/* Top reflection line */}
@@ -55,12 +56,20 @@ export function AnnouncementModal() {
           <AlertDialogHeader>
             <div className="flex flex-col items-center text-center gap-6 mb-2">
               {/* Premium SVG Icon com animação pulse */}
-              <div className="relative animate-pulse" style={{ animationDuration: "2s" }}>
-                <div className="absolute inset-0 bg-primary/30 blur-2xl rounded-full animate-pulse" />
+              <div className="relative" style={{ animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite' }}>
                 <div 
-                  className="relative w-14 h-14 rounded-full flex items-center justify-center border-2 border-primary/30"
+                  className="absolute inset-0 rounded-full"
+                  style={{
+                    background: 'rgba(217, 65, 65, 0.3)',
+                    filter: 'blur(24px)',
+                    animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite'
+                  }}
+                />
+                <div 
+                  className="relative w-14 h-14 rounded-full flex items-center justify-center border-2"
                   style={{
                     background: 'rgba(217, 65, 65, 0.1)',
+                    borderColor: 'rgba(217, 65, 65, 0.3)',
                     boxShadow: '0 0 30px rgba(217, 65, 65, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1)'
                   }}
                 >
@@ -73,7 +82,10 @@ export function AnnouncementModal() {
                 <AlertDialogTitle className="text-2xl font-semibold text-white tracking-tight">
                   Atenção
                 </AlertDialogTitle>
-                <AlertDialogDescription className="text-[15px] text-white/80 leading-relaxed font-light max-w-sm">
+                <AlertDialogDescription 
+                  className="text-[15px] leading-relaxed font-normal max-w-sm"
+                  style={{ color: 'rgba(255, 255, 255, 0.8)', lineHeight: '1.6' }}
+                >
                   Este app acabou de ser lançado, está em teste. Qualquer tipo de erro, entre em contato com nosso suporte.
                 </AlertDialogDescription>
               </div>
@@ -83,15 +95,18 @@ export function AnnouncementModal() {
           <AlertDialogFooter className="mt-8">
             <Button 
               onClick={handleClose}
-              className="relative w-full h-12 font-semibold tracking-wide text-white border-0 overflow-hidden group hover:scale-[1.02] active:scale-[0.98] transition-all duration-300"
+              className="relative w-full h-12 font-semibold tracking-wide text-white border-0 overflow-hidden group hover:scale-[1.02] active:scale-[0.95] transition-all duration-300"
               style={{
                 background: 'linear-gradient(135deg, hsl(0 64% 52%), hsl(0 64% 42%))',
-                boxShadow: '0 8px 24px rgba(217,49,49,0.4), 0 0 20px rgba(217, 65, 65, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1)',
+                boxShadow: '0 8px 24px rgba(217, 49, 49, 0.4), 0 0 20px rgba(217, 65, 65, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1)',
                 borderRadius: '12px'
               }}
             >
               {/* Animated shine effect */}
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
+              <div 
+                className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent transition-transform duration-700"
+                style={{ transform: 'translateX(-100%)' }}
+              />
               <span className="relative">Entendi</span>
             </Button>
           </AlertDialogFooter>
