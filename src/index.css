@@ -58,14 +58,20 @@ All colors MUST be HSL. */
     --gradient-titanium: linear-gradient(135deg, hsl(0 0% 12%), hsl(0 0% 8%));
     --gradient-glass-dark: linear-gradient(135deg, rgba(26,26,26,0.8), rgba(10,10,10,0.6));
     --gradient-red-neon: linear-gradient(90deg, transparent, hsl(0 64% 52% / 0.3), transparent);
+    
+    /* 🎨 GLASSMORPHISM PREMIUM */
+    --glass-bg: rgba(255, 255, 255, 0.05);
+    --glass-border: rgba(255, 255, 255, 0.1);
+    --glass-blur: blur(20px);
 
     /* 💎 SHADOWS LUXUOSAS */
-    --shadow-premium: 0 20px 60px -15px rgba(0, 0, 0, 0.8);
-    --shadow-premium-hover: 0 25px 80px -15px rgba(0, 0, 0, 0.9);
-    --shadow-glow-red: 0 0 30px rgba(212, 49, 49, 0.4);
-    --shadow-glow-gold: 0 0 30px rgba(203, 164, 109, 0.3);
+    --shadow-premium: 0 20px 60px -15px rgba(0, 0, 0, 0.8), 0 8px 32px rgba(0, 0, 0, 0.3);
+    --shadow-premium-hover: 0 25px 80px -15px rgba(0, 0, 0, 0.9), 0 12px 40px rgba(0, 0, 0, 0.4);
+    --shadow-glow-red: 0 0 30px rgba(212, 49, 49, 0.4), 0 0 60px rgba(212, 49, 49, 0.2);
+    --shadow-glow-gold: 0 0 30px rgba(203, 164, 109, 0.3), 0 0 50px rgba(203, 164, 109, 0.15);
     --shadow-inset-titanium: inset 0 1px 2px rgba(255, 255, 255, 0.05);
     --shadow-soft: 0 4px 20px rgba(0, 0, 0, 0.5);
+    --shadow-inset-glass: inset 0 1px 0 rgba(255, 255, 255, 0.1), inset 0 -1px 0 rgba(0, 0, 0, 0.2);
 
     /* ✨ EFEITOS E TEXTURAS */
     --blur-glass: blur(12px);
@@ -128,70 +134,132 @@ body {
 }
 
 @layer components {
-  /* 💎 BOTÕES PREMIUM - Compactos */
-  .btn-gold {
-    background: var(--gradient-gold);
-    box-shadow: var(--shadow-glow-gold);
-    @apply text-gold-foreground font-semibold tracking-wide;
-    transition: var(--transition-smooth);
-    @apply h-10 px-4 text-sm;
-  }
+  /* 💎 GLASSMORPHISM COMPONENTS - ULTRA PREMIUM */
   
-  .btn-gold:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-glow-gold), var(--shadow-premium-hover);
-  }
-
-  /* Button size variants - Compact */
-  .btn-compact {
-    @apply h-9 px-3 text-sm;
-  }
-
-  .btn-xs {
-    @apply h-8 px-2.5 text-xs;
-  }
-
-  /* 🏆 CARDS ULTRA PREMIUM TITANIUM */
-  .card-glass {
-    background: var(--gradient-titanium);
-    backdrop-filter: var(--blur-glass);
-    border: 1px solid hsl(var(--border));
-    box-shadow: var(--shadow-premium), var(--shadow-inset-titanium);
-    @apply rounded-xl relative overflow-hidden;
+  /* Base glass card */
+  .glass-card {
+    background: var(--glass-bg);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--shadow-premium), var(--shadow-inset-glass);
+    @apply rounded-2xl relative overflow-hidden;
     transition: var(--transition-elegant);
   }
   
-  .card-glass::before {
+  .glass-card::before {
     content: '';
     position: absolute;
     top: 0;
     left: 0;
     right: 0;
     height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
   }
   
-  .card-glass:hover {
-    transform: translateY(-4px);
-    box-shadow: var(--shadow-premium-hover), var(--shadow-glow-red);
-    border-color: hsl(var(--border-glow));
+  .glass-card:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-premium-hover), 0 0 40px var(--glass-border);
+    border-color: rgba(255, 255, 255, 0.15);
+  }
+
+  /* Glass card with glow */
+  .glass-card-glow {
+    @apply glass-card;
+    box-shadow: var(--shadow-premium), var(--shadow-glow-red), var(--shadow-inset-glass);
+  }
+  
+  .glass-card-glow:hover {
+    box-shadow: var(--shadow-premium-hover), var(--shadow-glow-red), 0 0 60px rgba(212, 49, 49, 0.3);
+  }
+
+  /* Mirror shine effect */
+  .mirror-shine {
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .mirror-shine::after {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: linear-gradient(
+      45deg,
+      transparent 30%,
+      rgba(255, 255, 255, 0.08) 50%,
+      transparent 70%
+    );
+    animation: shine 4s infinite;
+    pointer-events: none;
+  }
+  
+  @keyframes shine {
+    0% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
+    100% { transform: translateX(100%) translateY(100%) rotate(45deg); }
+  }
+
+  /* 💎 BOTÕES PREMIUM */
+  .btn-glass {
+    background: var(--glass-bg);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--shadow-inset-glass);
+    @apply font-semibold tracking-wide rounded-xl;
+    transition: var(--transition-smooth);
+  }
+  
+  .btn-glass:hover {
+    transform: translateY(-2px);
+    background: rgba(255, 255, 255, 0.08);
+    box-shadow: var(--shadow-soft), var(--shadow-inset-glass);
+    border-color: rgba(255, 255, 255, 0.15);
+  }
+
+  .btn-gold {
+    background: var(--gradient-gold);
+    box-shadow: var(--shadow-glow-gold);
+    @apply text-gold-foreground font-semibold tracking-wide rounded-xl;
+    transition: var(--transition-smooth);
+  }
+  
+  .btn-gold:hover {
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: var(--shadow-glow-gold), var(--shadow-premium-hover);
+  }
+
+  /* Legacy support */
+  .card-glass {
+    @apply glass-card;
   }
 
   .card-premium {
-    @apply card-glass;
+    @apply glass-card-glow;
   }
 
-  /* 🔲 INPUTS PREMIUM */
-  .input-premium {
-    @apply bg-secondary border border-border text-foreground placeholder:text-muted-foreground;
-    @apply rounded-lg px-4 py-2.5 font-medium;
-    box-shadow: var(--shadow-inset-titanium);
+  /* 🔲 INPUTS PREMIUM - GLASSMORPHISM */
+  .input-glass {
+    background: var(--glass-bg);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid var(--glass-border);
+    @apply text-foreground placeholder:text-muted-foreground;
+    @apply rounded-xl px-4 py-3 font-medium;
+    box-shadow: var(--shadow-inset-glass);
     transition: var(--transition-quick);
   }
   
-  .input-premium:focus {
+  .input-glass:focus {
     @apply border-primary outline-none;
-    box-shadow: var(--shadow-glow-red), var(--shadow-inset-titanium);
+    background: rgba(255, 255, 255, 0.08);
+    box-shadow: var(--shadow-glow-red), var(--shadow-inset-glass);
+  }
+  
+  .input-premium {
+    @apply input-glass;
   }
   
   /* 🎨 SIDEBAR ULTRA LUXO */
@@ -303,6 +371,102 @@ body {
 
 /* 🎨 MOBILE-FIRST OPTIMIZATIONS */
 @layer utilities {
+  /* 🌟 ANIMAÇÕES PREMIUM */
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes slideIn {
+    from {
+      opacity: 0;
+      transform: translateX(-30px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  @keyframes scaleIn {
+    from {
+      opacity: 0;
+      transform: scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  @keyframes pulse {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.5;
+    }
+  }
+
+  .animate-fade-in {
+    animation: fadeIn 0.6s ease-out;
+  }
+
+  .animate-slide-in {
+    animation: slideIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .animate-scale-in {
+    animation: scaleIn 0.3s ease-out;
+  }
+
+  /* Hover states premium */
+  .hover-elevate {
+    transition: var(--transition-elegant);
+  }
+  
+  .hover-elevate:hover {
+    transform: translateY(-4px) scale(1.01);
+  }
+
+  .hover-glow {
+    transition: var(--transition-smooth);
+  }
+
+  .hover-glow:hover {
+    box-shadow: 0 0 30px rgba(212, 49, 49, 0.4);
+  }
+
+  /* Interactive ripple effect */
+  .ripple {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .ripple::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.3);
+    transform: translate(-50%, -50%);
+    transition: width 0.6s, height 0.6s;
+  }
+
+  .ripple:active::after {
+    width: 300px;
+    height: 300px;
+  }
+
   /* Hide scrollbar - Force hide in ALL browsers */
   .scrollbar-hide,
   .sidebar-glass {

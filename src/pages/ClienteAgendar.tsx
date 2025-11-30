@@ -8,6 +8,7 @@ import { ArrowLeft, Clock, Check } from "lucide-react";
 import { toast } from "sonner";
 import { ptBR } from "date-fns/locale";
 import { Progress } from "@/components/ui/progress";
+import { cn } from "@/lib/utils";
 
 interface Service {
   id: string;
@@ -649,16 +650,30 @@ const ClienteAgendar = () => {
       className="h-screen w-full flex flex-col bg-background overflow-hidden"
       style={{ height: 'calc(var(--vh, 1vh) * 100)' }}
     >
-      {/* Header */}
-      <div className="bg-card border-b border-border p-4 backdrop-blur-lg bg-card/80 flex-shrink-0">
+      {/* Header Premium - No divider line */}
+      <div className="glass-card rounded-none border-0 border-b border-white/5 p-4 flex-shrink-0">
         <div className="max-w-4xl mx-auto">
-          <div className="flex items-center gap-3 mb-3">
-            <Button variant="ghost" size="icon" onClick={() => step === 1 ? navigate("/cliente") : setStep(step - 1)} className="compact-button">
+          <div className="flex items-center gap-3 mb-4">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={() => step === 1 ? navigate("/cliente") : setStep(step - 1)} 
+              className="h-10 w-10 rounded-full hover:bg-white/10 transition-all duration-300"
+            >
               <ArrowLeft className="w-5 h-5" />
             </Button>
-            <h1 className="font-bold text-lg responsive-title">Agendar Horário</h1>
+            <h1 className="font-bold text-xl responsive-title tracking-tight">Agendar Horário</h1>
           </div>
-          <Progress value={progressValue} className="h-2" />
+          <div className="relative h-1.5 bg-white/5 rounded-full overflow-hidden">
+            <div 
+              className="absolute top-0 left-0 h-full rounded-full transition-all duration-500"
+              style={{
+                width: `${progressValue}%`,
+                background: 'linear-gradient(90deg, hsl(0 64% 52%), hsl(0 64% 62%))',
+                boxShadow: '0 0 20px rgba(212, 49, 49, 0.5)'
+              }}
+            />
+          </div>
         </div>
       </div>
 
@@ -680,87 +695,98 @@ const ClienteAgendar = () => {
                   </div>
                 </div>
                 
-                <div className="grid gap-3 pb-6">
+                <div className="grid gap-4 pb-6">
                   {services.map((service) => {
                     const isSelected = selectedServices.some(s => s.id === service.id);
                     return (
-                      <Card
+                      <div
                         key={service.id}
-                        className={`service-card cursor-pointer ${isSelected ? 'selected' : ''}`}
                         onClick={() => toggleService(service)}
+                        className={cn(
+                          "glass-card mirror-shine cursor-pointer p-5 transition-all duration-300 hover-elevate",
+                          isSelected && "ring-2 ring-primary shadow-glow-red"
+                        )}
                       >
-                        <div className="flex justify-between items-start gap-3 p-4 compact-padding">
+                        <div className="flex justify-between items-start gap-4">
                           <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-1">
-                              <h4 className="font-semibold text-sm md:text-base responsive-text">{service.nome}</h4>
+                            <div className="flex items-center gap-3 mb-2">
+                              <h4 className="font-semibold text-base responsive-text">{service.nome}</h4>
                               {isSelected && (
                                 <div 
-                                  className="rounded-full p-1.5 flex-shrink-0"
+                                  className="rounded-full p-1.5 flex-shrink-0 animate-scale-in"
                                   style={{
-                                    background: 'linear-gradient(135deg, hsl(0 64% 52%), hsl(0 64% 42%))',
-                                    boxShadow: '0 2px 8px rgba(212,49,49,0.3)'
+                                    background: 'linear-gradient(135deg, hsl(0 64% 62%), hsl(0 64% 52%))',
+                                    boxShadow: '0 4px 12px rgba(212,49,49,0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2)'
                                   }}
                                 >
-                                  <Check className="w-3 h-3 text-white" />
+                                  <Check className="w-3.5 h-3.5 text-white" />
                                 </div>
                               )}
                             </div>
                             {service.descricao && (
-                              <p className="text-xs text-muted-foreground leading-relaxed mb-2 responsive-text">
+                              <p className="text-sm text-muted-foreground leading-relaxed mb-3 responsive-text font-light">
                                 {service.descricao}
                               </p>
                             )}
-                            <div className="flex items-center gap-4 text-xs responsive-text">
-                              <span className="flex items-center gap-1.5 text-muted-foreground">
-                                <Clock className="w-3.5 h-3.5" />
+                            <div className="flex items-center gap-4 text-sm responsive-text">
+                              <span className="flex items-center gap-2 text-muted-foreground font-medium">
+                                <Clock className="w-4 h-4" />
                                 {service.duracao_minutos} min
                               </span>
-                              <span className="font-bold text-sm md:text-base" style={{ color: 'hsl(0 64% 52%)' }}>
+                              <span className="font-bold text-base" style={{ 
+                                color: 'hsl(0 64% 52%)',
+                                textShadow: '0 2px 8px rgba(212, 49, 49, 0.3)'
+                              }}>
                                 R$ {service.preco.toFixed(2)}
                               </span>
                             </div>
                           </div>
                         </div>
-                      </Card>
+                      </div>
                     );
                   })}
                 </div>
               </div>
 
-              {/* Fixed CTA Button */}
+              {/* Fixed CTA Button - Premium Footer */}
               {selectedServices.length > 0 && (
-                <div className="flex-shrink-0 p-4 bg-gradient-to-t from-background via-background to-background/50 backdrop-blur-lg border-t border-border">
-                  <div className="max-w-4xl mx-auto">
-                    <Card className="p-3 mb-3 compact-padding" style={{
-                      background: 'linear-gradient(135deg, hsl(0 64% 52% / 0.1), hsl(0 64% 42% / 0.05))',
-                      border: '1px solid hsl(0 64% 52% / 0.3)'
-                    }}>
-                      <div className="flex justify-between items-center text-sm responsive-text">
-                        <div>
-                          <span className="font-semibold text-foreground">
-                            {selectedServices.length} {selectedServices.length === 1 ? 'serviço' : 'serviços'}
-                          </span>
-                          <div className="text-xs text-muted-foreground">
-                            {getTotalDuration()} minutos
-                          </div>
+                <div className="flex-shrink-0 p-4 border-t-0">
+                  <div className="max-w-4xl mx-auto space-y-3 animate-fade-in">
+                    {/* Premium Summary Card */}
+                    <div className="glass-card p-4">
+                      <div className="flex justify-between items-center">
+                        <div className="space-y-1">
+                          <p className="text-sm font-light text-muted-foreground">
+                            {selectedServices.length} {selectedServices.length === 1 ? 'serviço selecionado' : 'serviços selecionados'}
+                          </p>
+                          <p className="text-xs text-muted-foreground font-light">
+                            Duração total: {getTotalDuration()} minutos
+                          </p>
                         </div>
                         <div className="text-right">
-                          <div className="font-bold text-lg md:text-xl" style={{ color: 'hsl(0 64% 52%)' }}>
+                          <p className="text-xs text-muted-foreground font-light mb-1">Total</p>
+                          <p className="text-2xl font-bold tracking-tight" style={{ 
+                            color: 'hsl(0 64% 52%)',
+                            textShadow: '0 2px 12px rgba(212, 49, 49, 0.4)'
+                          }}>
                             R$ {getTotalPrice().toFixed(2)}
-                          </div>
+                          </p>
                         </div>
                       </div>
-                    </Card>
+                    </div>
+
+                    {/* Premium CTA Button */}
                     <Button
-                      onClick={handleNextStep}
-                      className="w-full touch-target font-semibold text-sm md:text-base responsive-button"
+                      onClick={() => setStep(2)}
+                      className="relative w-full h-14 font-bold text-base tracking-wide overflow-hidden group ripple"
                       style={{
                         background: 'linear-gradient(135deg, hsl(0 64% 52%), hsl(0 64% 42%))',
-                        boxShadow: '0 4px 12px rgba(212,49,49,0.3)',
-                        minHeight: '44px'
+                        boxShadow: '0 8px 24px rgba(212, 49, 49, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1)'
                       }}
                     >
-                      Escolher Data e Horário
+                      {/* Animated shine effect */}
+                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
+                      <span className="relative">Continuar</span>
                     </Button>
                   </div>
                 </div>
