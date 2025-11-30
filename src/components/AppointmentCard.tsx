@@ -114,7 +114,9 @@ export function AppointmentCard({
         <div className="space-y-2 text-sm text-muted-foreground mb-4">
           <div className="flex items-center gap-2">
             <Calendar className="w-4 h-4" />
-            <span>{format(new Date(appointment.data), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}</span>
+            <span>
+              {format(new Date(`${appointment.data}T12:00:00`), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+            </span>
           </div>
           <div className="flex items-center gap-2">
             <Clock className="w-4 h-4" />

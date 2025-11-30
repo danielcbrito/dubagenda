@@ -23,7 +23,7 @@ interface PendingPaymentCardProps {
 }
 
 export function PendingPaymentCard({ booking, onResumePayment, onCancel }: PendingPaymentCardProps) {
-  const appointmentDate = new Date(booking.data);
+  const appointmentDate = new Date(`${booking.data}T12:00:00`);
   const formattedDate = format(appointmentDate, "dd 'de' MMMM", { locale: ptBR });
 
   return (

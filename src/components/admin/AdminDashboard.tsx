@@ -372,7 +372,7 @@ export function AdminDashboard() {
               <div className="flex-1">
                 <p className="font-semibold text-base tracking-wide">{apt.profile?.nome || "Cliente"}</p>
                 <p className="text-sm text-muted-foreground mt-1 tracking-wide">
-                  {apt.servico?.nome || "Serviço"} • {new Date(apt.data).toLocaleDateString('pt-BR')} às {apt.hora}
+                  {apt.servico?.nome || "Serviço"} • {new Date(`${apt.data}T12:00:00`).toLocaleDateString('pt-BR')} às {apt.hora}
                 </p>
               </div>
               <div className="flex items-center gap-4">

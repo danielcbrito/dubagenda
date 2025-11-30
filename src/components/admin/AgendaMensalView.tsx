@@ -25,7 +25,7 @@ export function AgendaMensalView({ appointments, onSelectDate }: AgendaMensalVie
 
   const getAppointmentsForDate = (date: Date) => {
     const dateStr = format(date, "yyyy-MM-dd");
-    return appointments.filter(apt => format(new Date(apt.data), "yyyy-MM-dd") === dateStr);
+    return appointments.filter(apt => apt.data === dateStr);
   };
 
   const previousMonth = () => {

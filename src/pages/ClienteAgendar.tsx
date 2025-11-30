@@ -203,7 +203,7 @@ const ClienteAgendar = () => {
 
       // Set booking details
       setSelectedServices([booking.servico]);
-      setSelectedDate(new Date(booking.data));
+      setSelectedDate(new Date(`${booking.data}T12:00:00`));
       setSelectedTime(booking.hora);
       setStep(4); // Go directly to payment
       toast.info("Continue o pagamento do seu agendamento");
