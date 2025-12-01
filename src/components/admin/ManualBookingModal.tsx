@@ -1,4 +1,4 @@
-import { useState, useEffect, memo } from "react";
+import { useState, useEffect, memo, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,6 +10,7 @@ import { Loader2, AlertCircle, Search, User, Clock, DollarSign, Calendar, Check,
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { ErrorBoundary } from "./ErrorBoundary";
 
 interface ManualBookingModalProps {
   open: boolean;
@@ -33,6 +34,16 @@ interface Client {
   cpf: string | null;
 }
 
+// Helper: Promise com timeout
+const promiseWithTimeout = <T,>(promise: Promise<T>, ms: number = 10000): Promise<T> => {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) =>
+      setTimeout(() => reject(new Error('Timeout: operação demorou mais que ' + ms + 'ms')), ms)
+    )
+  ]);
+};
+
 export function ManualBookingModal({ open, onOpenChange, date, time, onSuccess }: ManualBookingModalProps) {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -48,6 +59,9 @@ export function ManualBookingModal({ open, onOpenChange, date, time, onSuccess }
   const [observations, setObservations] = useState("");
   const [validationError, setValidationError] = useState("");
   const [confirmStatus, setConfirmStatus] = useState<"idle" | "success" | "error">("idle");
+  
+  // Prevent multiple submits
+  const isSubmittingRef = useRef(false);
 
   useEffect(() => {
     if (open) {
@@ -187,16 +201,29 @@ export function ManualBookingModal({ open, onOpenChange, date, time, onSuccess }
   };
 
   const handleSubmit = async () => {
+    console.log('[Encaixe] Iniciando confirmação', { date, time, selectedService, selectedClient, manualClientName });
+    
+    // Prevent double-submit
+    if (isSubmittingRef.current) {
+      console.warn('[Encaixe] Submit já em andamento, ignorando');
+      return;
+    }
+    
+    isSubmittingRef.current = true;
     setLoading(true);
     setValidationError("");
 
     try {
-      // Validar horário
-      const isValid = await validateTimeSlot();
+      // Validar horário com timeout
+      console.log('[Encaixe] Validando horário...');
+      const isValid = await promiseWithTimeout(validateTimeSlot(), 8000);
       if (!isValid) {
+        console.warn('[Encaixe] Validação falhou');
         setLoading(false);
+        isSubmittingRef.current = false;
         return;
       }
+      console.log('[Encaixe] Horário validado com sucesso');
 
       const selectedServiceData = services.find((s) => s.id === selectedService);
       if (!selectedServiceData) throw new Error("Serviço não encontrado");
@@ -205,58 +232,78 @@ export function ManualBookingModal({ open, onOpenChange, date, time, onSuccess }
 
       // Se cliente digitado manualmente, criar perfil temporário
       if (!selectedClient && manualClientName.trim()) {
+        console.log('[Encaixe] Criando cliente temporário...');
         const tempClientId = crypto.randomUUID();
         
-        const { error: profileError } = await supabase
-          .from("profiles")
-          .insert({
-            id: tempClientId,
-            nome: manualClientName.trim(),
-            telefone: null,
-            cpf: null
-          });
+        const insertPromise = Promise.resolve(
+          supabase
+            .from("profiles")
+            .insert({
+              id: tempClientId,
+              nome: manualClientName.trim(),
+              telefone: null,
+              cpf: null
+            })
+        );
+          
+        const { error: profileError } = await promiseWithTimeout(insertPromise, 8000);
 
         if (profileError) throw profileError;
         clientId = tempClientId;
+        console.log('[Encaixe] Cliente temporário criado:', tempClientId);
       }
 
       if (!clientId) throw new Error("Cliente não definido");
 
-      // Criar agendamento
-      const { error: appointmentError } = await supabase
-        .from("agendamentos")
-        .insert({
-          user_id: clientId,
-          servico_id: selectedService,
-          data: date,
-          hora: time + ":00",
-          duracao: selectedServiceData.duracao_minutos,
-          preco: selectedServiceData.preco,
-          status: "confirmed",
-          barbeiro_confirmou: true,
-          cliente_confirmou: true,
-          observacoes: observations.trim() || null,
-          tipo_agendamento: "encaixe_manual",
-          criado_por: "barbeiro",
-          payment_method: "cash"
-        });
+      // Criar agendamento com timeout
+      console.log('[Encaixe] Criando agendamento...');
+      const insertPromise = Promise.resolve(
+        supabase
+          .from("agendamentos")
+          .insert({
+            user_id: clientId,
+            servico_id: selectedService,
+            data: date,
+            hora: time + ":00",
+            duracao: selectedServiceData.duracao_minutos,
+            preco: selectedServiceData.preco,
+            status: "confirmed",
+            barbeiro_confirmou: true,
+            cliente_confirmou: true,
+            observacoes: observations.trim() || null,
+            tipo_agendamento: "encaixe_manual",
+            criado_por: "barbeiro",
+            payment_method: "cash"
+          })
+      );
+        
+      const { error: appointmentError } = await promiseWithTimeout(insertPromise, 10000);
 
       if (appointmentError) throw appointmentError;
+      console.log('[Encaixe] Agendamento criado com sucesso');
 
       setConfirmStatus("success");
       toast.success("✅ Encaixe criado com sucesso!");
+      console.log('[Encaixe] Processo concluído com sucesso');
       
       setTimeout(() => {
         onSuccess();
         onOpenChange(false);
       }, 1200);
     } catch (error: any) {
-      console.error("Error creating manual booking:", error);
+      console.error('[Encaixe] Erro ao criar encaixe:', error);
       setConfirmStatus("error");
-      setValidationError(error.message || "Erro ao criar encaixe");
-      toast.error(error.message || "Erro ao criar encaixe");
+      
+      const errorMessage = error.message?.includes('Timeout') 
+        ? 'Operação demorou muito. Verifique sua conexão e tente novamente.'
+        : error.message || 'Erro ao criar encaixe. Tente novamente.';
+        
+      setValidationError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
+      isSubmittingRef.current = false;
+      console.log('[Encaixe] Finalizando submit');
     }
   };
 
@@ -266,8 +313,9 @@ export function ManualBookingModal({ open, onOpenChange, date, time, onSuccess }
   const canProceedStep2 = selectedService;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+    <ErrorBoundary>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-lg">
         <DialogHeader className="space-y-3 pb-4">
           <DialogTitle className="flex items-center gap-2">
             <Calendar className="h-5 w-5 text-primary" />
@@ -538,8 +586,9 @@ export function ManualBookingModal({ open, onOpenChange, date, time, onSuccess }
             </Button>
           )}
         </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </DialogContent>
+      </Dialog>
+    </ErrorBoundary>
   );
 }
 
