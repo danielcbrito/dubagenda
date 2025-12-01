@@ -50,6 +50,7 @@ const ClienteAgendar = () => {
   const [userId, setUserId] = useState<string | null>(null);
   const [isRescheduling, setIsRescheduling] = useState(false);
   const [rescheduleAppointmentId, setRescheduleAppointmentId] = useState<string | null>(null);
+  const [unavailableMessage, setUnavailableMessage] = useState<string | null>(null);
   const servicesListRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -116,6 +117,7 @@ const ClienteAgendar = () => {
   useEffect(() => {
     if (selectedDate && selectedServices.length > 0) {
       loadAvailableSlots();
+      setUnavailableMessage(null); // Limpar mensagem ao mudar data
     }
   }, [selectedDate, selectedServices]);
 
@@ -943,14 +945,30 @@ const ClienteAgendar = () => {
                       <Button
                         key={slot.time}
                         variant={selectedTime === slot.time ? "default" : "outline"}
-                        onClick={() => slot.available && setSelectedTime(slot.time)}
-                        disabled={!slot.available}
-                        className={`h-11 responsive-button ${!slot.available ? 'opacity-40' : ''}`}
+                        onClick={() => {
+                          if (slot.available) {
+                            setSelectedTime(slot.time);
+                            setUnavailableMessage(null);
+                          } else {
+                            setUnavailableMessage("Este horário já foi agendado.");
+                          }
+                        }}
+                        className={cn(
+                          "h-11 responsive-button transition-all",
+                          !slot.available && "opacity-30 cursor-not-allowed bg-muted/20 border-muted/30 text-muted-foreground/50 hover:bg-muted/20 hover:text-muted-foreground/50",
+                          slot.available && selectedTime !== slot.time && "hover:border-primary/50"
+                        )}
                       >
                         {slot.time}
                       </Button>
                     ))}
                   </div>
+
+                  {unavailableMessage && (
+                    <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-center">
+                      <p className="text-sm text-destructive font-medium">{unavailableMessage}</p>
+                    </div>
+                  )}
 
                   <Button
                     onClick={handleNextStep}
