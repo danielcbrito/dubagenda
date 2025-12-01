@@ -21,6 +21,7 @@ export type Database = {
           cancelado_em: string | null
           cliente_confirmou: boolean | null
           created_at: string | null
+          criado_por: string | null
           data: string
           duracao: number
           hora: string
@@ -35,6 +36,7 @@ export type Database = {
           remarcado_de: string | null
           servico_id: string
           status: Database["public"]["Enums"]["appointment_status"] | null
+          tipo_agendamento: string | null
           updated_at: string | null
           usado_redemption_id: string | null
           user_id: string
@@ -46,6 +48,7 @@ export type Database = {
           cancelado_em?: string | null
           cliente_confirmou?: boolean | null
           created_at?: string | null
+          criado_por?: string | null
           data: string
           duracao: number
           hora: string
@@ -60,6 +63,7 @@ export type Database = {
           remarcado_de?: string | null
           servico_id: string
           status?: Database["public"]["Enums"]["appointment_status"] | null
+          tipo_agendamento?: string | null
           updated_at?: string | null
           usado_redemption_id?: string | null
           user_id: string
@@ -71,6 +75,7 @@ export type Database = {
           cancelado_em?: string | null
           cliente_confirmou?: boolean | null
           created_at?: string | null
+          criado_por?: string | null
           data?: string
           duracao?: number
           hora?: string
@@ -85,6 +90,7 @@ export type Database = {
           remarcado_de?: string | null
           servico_id?: string
           status?: Database["public"]["Enums"]["appointment_status"] | null
+          tipo_agendamento?: string | null
           updated_at?: string | null
           usado_redemption_id?: string | null
           user_id?: string
