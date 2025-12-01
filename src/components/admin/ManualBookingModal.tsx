@@ -195,28 +195,28 @@ export function ManualBookingModal({ open, onOpenChange, date, time, onSuccess }
       if (!selectedServiceData) throw new Error("Serviço não encontrado");
 
       let clientId = selectedClient?.id;
+      let appointmentObservations = observations.trim();
 
-      // Se cliente digitado manualmente, criar perfil temporário
+      // Se cliente digitado manualmente (walk-in), usar o barbeiro logado como referência
+      // e guardar o nome do cliente nas observações
       if (!selectedClient && manualClientName.trim()) {
-        console.log('[Encaixe] Criando cliente temporário...');
-        const tempClientId = crypto.randomUUID();
+        console.log('[Encaixe] Cliente walk-in (manual):', manualClientName.trim());
         
-        const insertPromise = Promise.resolve(
-          supabase
-            .from("profiles")
-            .insert({
-              id: tempClientId,
-              nome: manualClientName.trim(),
-              telefone: null,
-              cpf: null
-            })
-        );
+        // Buscar o usuário atual (barbeiro logado) para usar como referência do agendamento
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.user?.id) {
+          throw new Error("Você precisa estar logado para criar encaixes");
+        }
+        
+        clientId = session.user.id;
+        
+        // Adicionar nome do cliente walk-in nas observações
+        const walkInNote = `🚶 Cliente walk-in: ${manualClientName.trim()}`;
+        appointmentObservations = appointmentObservations 
+          ? `${walkInNote}\n${appointmentObservations}`
+          : walkInNote;
           
-        const { error: profileError } = await promiseWithTimeout(insertPromise, 8000);
-
-        if (profileError) throw profileError;
-        clientId = tempClientId;
-        console.log('[Encaixe] Cliente temporário criado:', tempClientId);
+        console.log('[Encaixe] Usando ID do barbeiro como referência, nome do cliente nas observações');
       }
 
       if (!clientId) throw new Error("Cliente não definido");
@@ -236,7 +236,7 @@ export function ManualBookingModal({ open, onOpenChange, date, time, onSuccess }
             status: "confirmed",
             barbeiro_confirmou: true,
             cliente_confirmou: true,
-            observacoes: observations.trim() || null,
+            observacoes: appointmentObservations || null,
             tipo_agendamento: "encaixe_manual",
             criado_por: "barbeiro",
             payment_method: "cash"
@@ -260,9 +260,15 @@ export function ManualBookingModal({ open, onOpenChange, date, time, onSuccess }
       console.error('[Encaixe] Erro ao criar encaixe:', error);
       setConfirmStatus("error");
       
-      const errorMessage = error.message?.includes('Timeout') 
-        ? 'Operação demorou muito. Verifique sua conexão e tente novamente.'
-        : error.message || 'Erro ao criar encaixe. Tente novamente.';
+      let errorMessage = 'Erro ao criar encaixe. Tente novamente.';
+      
+      if (error.message?.includes('Timeout')) {
+        errorMessage = 'Operação demorou muito. Verifique sua conexão e tente novamente.';
+      } else if (error.message?.includes('foreign key') || error.message?.includes('profiles_id_fkey')) {
+        errorMessage = 'Erro de referência de cliente. Por favor, selecione um cliente da lista.';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
         
       setValidationError(errorMessage);
       toast.error(errorMessage);
