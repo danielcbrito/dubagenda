@@ -5,6 +5,7 @@ import { TimelineView } from "./TimelineView";
 import { AppointmentDetailsSidebar } from "./AppointmentDetailsSidebar";
 import { ConfirmAttendanceModal } from "./ConfirmAttendanceModal";
 import { CancelAllAppointmentsModal } from "./CancelAllAppointmentsModal";
+import { ManualBookingModal } from "./ManualBookingModal";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
@@ -39,6 +40,8 @@ export function AdminAgenda() {
   const [loading, setLoading] = useState(false);
   const [confirmModalAppointment, setConfirmModalAppointment] = useState<TimelineAppointment | null>(null);
   const [cancelAllModalOpen, setCancelAllModalOpen] = useState(false);
+  const [manualBookingModalOpen, setManualBookingModalOpen] = useState(false);
+  const [selectedEmptySlot, setSelectedEmptySlot] = useState({ date: "", time: "" });
   
   // Filters
   const [filterService, setFilterService] = useState<string>("all");
@@ -263,6 +266,12 @@ export function AdminAgenda() {
     setDate(new Date());
   };
 
+  const handleEmptySlotClick = (time: string) => {
+    const dateStr = format(date, 'yyyy-MM-dd');
+    setSelectedEmptySlot({ date: dateStr, time });
+    setManualBookingModalOpen(true);
+  };
+
   const filteredAppointments = appointments.filter(apt => {
     if (filterService !== "all" && apt.servico_id !== filterService) return false;
     if (filterStatus !== "all" && apt.status !== filterStatus) return false;
@@ -346,6 +355,7 @@ export function AdminAgenda() {
           appointments={filteredAppointments}
           loading={loading}
           onSelectAppointment={setSelectedAppointment}
+          onEmptySlotClick={handleEmptySlotClick}
         />
       </div>
 
@@ -371,6 +381,15 @@ export function AdminAgenda() {
         onOpenChange={setCancelAllModalOpen}
         date={date}
         appointmentsCount={filteredAppointments.length}
+        onSuccess={() => loadAppointments(date)}
+      />
+
+      {/* Manual Booking Modal */}
+      <ManualBookingModal
+        open={manualBookingModalOpen}
+        onOpenChange={setManualBookingModalOpen}
+        date={selectedEmptySlot.date}
+        time={selectedEmptySlot.time}
         onSuccess={() => loadAppointments(date)}
       />
     </div>

@@ -9,9 +9,10 @@ interface TimelineViewProps {
   appointments: TimelineAppointment[];
   loading: boolean;
   onSelectAppointment: (appointment: TimelineAppointment) => void;
+  onEmptySlotClick: (time: string) => void;
 }
 
-export function TimelineView({ appointments, loading, onSelectAppointment }: TimelineViewProps) {
+export function TimelineView({ appointments, loading, onSelectAppointment, onEmptySlotClick }: TimelineViewProps) {
   const [currentTime, setCurrentTime] = useState(new Date());
 
   // Update current time every minute
@@ -119,9 +120,15 @@ export function TimelineView({ appointments, loading, onSelectAppointment }: Tim
                     timeStatus === "future" && "border-l-primary/50",
                     appointment.status === "completed" && "border-l-blue-500 bg-blue-500/5 opacity-75"
                   )
-                : "border-l-border/30 opacity-60 hover:opacity-80"
+                : "border-l-border/30 opacity-60 hover:opacity-100 hover:bg-primary/5 cursor-pointer hover:border-l-primary"
             )}
-            onClick={() => appointment && onSelectAppointment(appointment)}
+            onClick={() => {
+              if (appointment) {
+                onSelectAppointment(appointment);
+              } else {
+                onEmptySlotClick(slot);
+              }
+            }}
           >
             <div className="flex items-center gap-4">
               {/* Time */}
@@ -202,7 +209,12 @@ export function TimelineView({ appointments, loading, onSelectAppointment }: Tim
                   </div>
                 </div>
               ) : (
-                <span className="text-sm text-muted-foreground">Horário livre</span>
+                <div className="flex items-center justify-between flex-1">
+                  <span className="text-sm text-muted-foreground">Horário livre</span>
+                  <Badge variant="outline" className="text-xs bg-primary/10">
+                    Clique para encaixar
+                  </Badge>
+                </div>
               )}
             </div>
           </Card>
