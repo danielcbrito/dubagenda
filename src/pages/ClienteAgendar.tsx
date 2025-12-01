@@ -259,6 +259,21 @@ const ClienteAgendar = () => {
       .eq("data", dateStr)
       .in("status", ["pending", "confirmed", "completed"]);
 
+    // Also fetch pending bookings (reservas aguardando pagamento)
+    const { data: pendingBookings } = await supabase
+      .from("pending_bookings")
+      .select("hora, duracao, expires_at")
+      .eq("data", dateStr)
+      .gt("expires_at", new Date().toISOString());
+
+    // Combine appointments and pending bookings for conflict check
+    const allOccupiedSlots = [
+      ...(appointments || []),
+      ...(pendingBookings || []).map(pb => ({ hora: pb.hora, duracao: pb.duracao }))
+    ];
+
+    console.log('[loadAvailableSlots] Data:', dateStr, 'Appointments:', appointments?.length, 'PendingBookings:', pendingBookings?.length);
+
     // Calculate total duration needed
     const totalDuration = selectedServices.reduce((sum, s) => sum + s.duracao_minutos, 0);
     const bufferTime = 10; // 10-minute buffer between appointments
@@ -276,13 +291,12 @@ const ClienteAgendar = () => {
         const slotStart = hour * 60 + minute; // Convert to minutes
         const slotEnd = slotStart + totalDuration;
 
-        // Check if slot would extend past closing time
+        // Check if slot would extend past closing time - still skip these
         if (slotEnd > endHour * 60) {
           continue;
         }
 
-        // Block lunch break (13:00-14:00)
-        // Skip if slot starts, ends, or overlaps with lunch break
+        // Check if slot is during lunch break - still skip these
         if (
           (slotStart >= lunchStart && slotStart < lunchEnd) ||
           (slotEnd > lunchStart && slotEnd <= lunchEnd) ||
@@ -291,13 +305,12 @@ const ClienteAgendar = () => {
           continue;
         }
 
-        // Check if slot conflicts with existing appointments (including buffer)
+        // Check if slot conflicts with existing appointments or pending bookings (including buffer)
         let isAvailable = true;
         
-        if (appointments) {
-          for (const apt of appointments) {
-            const aptHour = parseInt(apt.hora.split(':')[0]);
-            const aptMinute = parseInt(apt.hora.split(':')[1]);
+        if (allOccupiedSlots.length > 0) {
+          for (const apt of allOccupiedSlots) {
+            const [aptHour, aptMinute] = apt.hora.split(':').map(Number);
             const aptStart = aptHour * 60 + aptMinute;
             const aptEnd = aptStart + apt.duracao + bufferTime; // Add buffer after appointment
 
@@ -308,6 +321,7 @@ const ClienteAgendar = () => {
               (slotStart <= aptStart && slotEnd >= aptEnd)
             ) {
               isAvailable = false;
+              console.log('[loadAvailableSlots] Slot', time, 'BLOQUEADO por agendamento às', apt.hora);
               break;
             }
           }
@@ -317,6 +331,7 @@ const ClienteAgendar = () => {
       }
     }
 
+    console.log('[loadAvailableSlots] Total slots:', slots.length, 'Indisponíveis:', slots.filter(s => !s.available).length);
     setAvailableSlots(slots);
   };
 
