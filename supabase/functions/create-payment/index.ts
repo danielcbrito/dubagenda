@@ -38,6 +38,123 @@ function validateCPF(cpf: string): boolean {
   return true;
 }
 
+/**
+ * Verifica disponibilidade do horário de forma atômica
+ * CRÍTICO: Evita race conditions e agendamentos duplicados
+ */
+async function checkTimeSlotAvailability(
+  supabase: any,
+  data: string,
+  hora: string,
+  duracao: number,
+  excludeAppointmentId?: string
+): Promise<{ available: boolean; message: string }> {
+  
+  console.log('[checkTimeSlotAvailability] Verificando:', { data, hora, duracao, excludeAppointmentId });
+  
+  // Parse time
+  const [startHour, startMinute] = hora.split(':').map(Number);
+  const startTimeInMinutes = startHour * 60 + startMinute;
+  const endTimeInMinutes = startTimeInMinutes + duracao;
+  const bufferTime = 10; // 10-minute buffer
+
+  // Validate business hours
+  const openHour = 9 * 60;
+  const closeHour = 20 * 60;
+  const lunchStart = 13 * 60;
+  const lunchEnd = 14 * 60;
+
+  // Check business hours
+  if (startTimeInMinutes < openHour || endTimeInMinutes > closeHour) {
+    return { available: false, message: 'Horário fora do expediente (09:00-20:00).' };
+  }
+
+  // Check lunch break
+  if (
+    (startTimeInMinutes >= lunchStart && startTimeInMinutes < lunchEnd) ||
+    (endTimeInMinutes > lunchStart && endTimeInMinutes <= lunchEnd) ||
+    (startTimeInMinutes < lunchStart && endTimeInMinutes > lunchEnd)
+  ) {
+    return { available: false, message: 'Horário de almoço (13:00-14:00).' };
+  }
+
+  // Check Sunday
+  const appointmentDate = new Date(data + 'T00:00:00');
+  if (appointmentDate.getDay() === 0) {
+    return { available: false, message: 'A barbearia não funciona aos domingos.' };
+  }
+
+  // ============================================
+  // VERIFICAÇÃO CRÍTICA: Conflitos
+  // ============================================
+  
+  // Check existing appointments
+  let query = supabase
+    .from('agendamentos')
+    .select('id, hora, duracao')
+    .eq('data', data)
+    .in('status', ['pending', 'confirmed']);
+
+  if (excludeAppointmentId) {
+    query = query.neq('id', excludeAppointmentId);
+  }
+
+  const { data: existingAppointments, error: aptError } = await query;
+
+  if (aptError) {
+    console.error('[checkTimeSlotAvailability] Erro:', aptError);
+    return { available: false, message: 'Erro ao verificar disponibilidade.' };
+  }
+
+  // Check conflicts
+  for (const apt of existingAppointments || []) {
+    const [aptHour, aptMinute] = apt.hora.split(':').map(Number);
+    const aptStart = aptHour * 60 + aptMinute;
+    const aptEnd = aptStart + apt.duracao + bufferTime;
+
+    const newEnd = endTimeInMinutes + bufferTime;
+    const hasConflict = startTimeInMinutes < aptEnd && newEnd > aptStart;
+
+    if (hasConflict) {
+      console.log('[checkTimeSlotAvailability] CONFLITO:', { 
+        requestedTime: hora, 
+        conflictingTime: apt.hora,
+        aptId: apt.id
+      });
+      return { 
+        available: false, 
+        message: 'Horário indisponível. Já existe um agendamento nesse período.' 
+      };
+    }
+  }
+
+  // Check pending bookings
+  const { data: pendingBookings } = await supabase
+    .from('pending_bookings')
+    .select('id, hora, duracao')
+    .eq('data', data)
+    .gt('expires_at', new Date().toISOString());
+
+  for (const pending of pendingBookings || []) {
+    const [pendingHour, pendingMinute] = pending.hora.split(':').map(Number);
+    const pendingStart = pendingHour * 60 + pendingMinute;
+    const pendingEnd = pendingStart + pending.duracao + bufferTime;
+
+    const newEnd = endTimeInMinutes + bufferTime;
+    const hasConflict = startTimeInMinutes < pendingEnd && newEnd > pendingStart;
+
+    if (hasConflict) {
+      console.log('[checkTimeSlotAvailability] CONFLITO com pending:', pending.id);
+      return { 
+        available: false, 
+        message: 'Horário temporariamente reservado. Tente novamente em alguns minutos.' 
+      };
+    }
+  }
+
+  return { available: true, message: 'Horário disponível' };
+}
+
 interface CreatePaymentRequest {
   bookingData: {
     servico_id: string;
@@ -102,6 +219,31 @@ serve(async (req) => {
     const { bookingData, metodo, customerInfo, cardInfo, rescheduleFromId }: CreatePaymentRequest = await req.json();
 
     console.log('Received payment request:', { bookingData, metodo, hasCustomerInfo: !!customerInfo, hasCardInfo: !!cardInfo, isRescheduling: !!rescheduleFromId });
+
+    // ============================================
+    // VERIFICAÇÃO CRÍTICA DE DISPONIBILIDADE
+    // Deve acontecer ANTES de qualquer inserção
+    // ============================================
+    console.log('[create-payment] Verificando disponibilidade do horário...');
+    const availability = await checkTimeSlotAvailability(
+      supabase,
+      bookingData.data,
+      bookingData.hora,
+      bookingData.duracao,
+      rescheduleFromId // Excluir agendamento atual se for reagendamento
+    );
+
+    if (!availability.available) {
+      console.log('[create-payment] Horário INDISPONÍVEL:', availability.message);
+      return new Response(
+        JSON.stringify({ 
+          error: availability.message,
+          code: 'TIME_SLOT_UNAVAILABLE'
+        }),
+        { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    console.log('[create-payment] Horário DISPONÍVEL, prosseguindo...');
 
     // Fetch user profile for name and CPF used in Asaas
     const { data: profile, error: profileError } = await supabase
@@ -468,6 +610,7 @@ serve(async (req) => {
     const response: any = {
       success: true,
       paymentMethod: metodo,
+      pendingBookingId: pendingBooking.id,
       pendingBooking: pendingBooking,
       asaasPayment: {
         id: asaasPaymentResult.id,

@@ -472,7 +472,16 @@ const ClienteAgendar = () => {
       }
     } catch (error: any) {
       console.error('Payment error:', error);
-      toast.error("Erro ao processar pagamento: " + (error.message || "Erro desconhecido"));
+      
+      // Tratar erro de conflito (horário já ocupado)
+      if (error.message?.includes('TIME_SLOT_UNAVAILABLE') || error.message?.includes('indisponível') || error.message?.includes('Horário')) {
+        toast.error(error.message || "Horário indisponível. Escolha outro horário.");
+        // Voltar para seleção de horário e recarregar slots
+        setStep(3);
+        loadAvailableSlots();
+      } else {
+        toast.error("Erro ao processar pagamento: " + (error.message || "Erro desconhecido"));
+      }
     } finally {
       setProcessingPayment(false);
     }
@@ -491,6 +500,37 @@ const ClienteAgendar = () => {
       const totalDuration = selectedServices.reduce((sum, s) => sum + s.duracao_minutos, 0);
       const serviceNames = selectedServices.map(s => s.nome).join(", ");
       const mainService = selectedServices[0];
+      const dateStr = format(selectedDate!, 'yyyy-MM-dd');
+
+      // ============================================
+      // VALIDAÇÃO CRÍTICA: Verificar disponibilidade antes de criar
+      // ============================================
+      console.log('[ClienteAgendar] Validando disponibilidade...');
+      const { data: validation, error: validationError } = await supabase.functions.invoke('validate-appointment', {
+        body: {
+          data: dateStr,
+          hora: selectedTime,
+          duracao: totalDuration,
+          userId: session.user.id,
+          excludeAppointmentId: isRescheduling ? rescheduleAppointmentId : undefined
+        }
+      });
+
+      if (validationError) {
+        console.error('[ClienteAgendar] Erro na validação:', validationError);
+        toast.error("Erro ao verificar disponibilidade. Tente novamente.");
+        return;
+      }
+
+      if (!validation?.valid) {
+        console.log('[ClienteAgendar] Horário INDISPONÍVEL:', validation?.message);
+        toast.error(validation?.message || "Horário indisponível. Escolha outro horário.");
+        // Voltar para seleção de horário
+        setStep(3);
+        loadAvailableSlots();
+        return;
+      }
+      console.log('[ClienteAgendar] Horário DISPONÍVEL, criando agendamento...');
 
       // If rescheduling, cancel old appointment first
       if (isRescheduling && rescheduleAppointmentId) {
@@ -509,7 +549,7 @@ const ClienteAgendar = () => {
         .insert({
           user_id: session.user.id,
           servico_id: mainService.id,
-          data: format(selectedDate!, 'yyyy-MM-dd'), // Format without timezone conversion
+          data: dateStr,
           hora: selectedTime,
           duracao: totalDuration,
           preco: 0, // Fully paid with credits
@@ -605,13 +645,50 @@ const ClienteAgendar = () => {
 
     setProcessingPayment(true);
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error("Você precisa estar logado");
+        navigate("/auth");
+        return;
+      }
+
       const totalDuration = selectedServices.reduce((sum, s) => sum + s.duracao_minutos, 0);
+      const dateStr = format(selectedDate, 'yyyy-MM-dd');
+      
+      // ============================================
+      // VALIDAÇÃO CRÍTICA: Verificar disponibilidade antes de remarcar
+      // ============================================
+      console.log('[ClienteAgendar] Validando disponibilidade para remarcação...');
+      const { data: validation, error: validationError } = await supabase.functions.invoke('validate-appointment', {
+        body: {
+          data: dateStr,
+          hora: selectedTime,
+          duracao: totalDuration,
+          userId: session.user.id,
+          excludeAppointmentId: rescheduleAppointmentId // Excluir o próprio agendamento
+        }
+      });
+
+      if (validationError) {
+        console.error('[ClienteAgendar] Erro na validação:', validationError);
+        toast.error("Erro ao verificar disponibilidade. Tente novamente.");
+        return;
+      }
+
+      if (!validation?.valid) {
+        console.log('[ClienteAgendar] Horário INDISPONÍVEL:', validation?.message);
+        toast.error(validation?.message || "Horário indisponível. Escolha outro horário.");
+        setStep(3);
+        loadAvailableSlots();
+        return;
+      }
+      console.log('[ClienteAgendar] Horário DISPONÍVEL, remarcando...');
       
       // UPDATE the existing appointment
       const { error } = await supabase
         .from("agendamentos")
         .update({
-          data: format(selectedDate, 'yyyy-MM-dd'), // Format without timezone conversion
+          data: dateStr,
           hora: selectedTime,
           duracao: totalDuration,
           status: 'pending', // Reset to pending
