@@ -3,14 +3,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2, AlertCircle, Search, User } from "lucide-react";
+import { Loader2, AlertCircle, Search, User, Clock, DollarSign, Calendar } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Card, CardContent } from "@/components/ui/card";
 
 interface ManualBookingModalProps {
   open: boolean;
@@ -269,156 +269,235 @@ export function ManualBookingModal({ open, onOpenChange, date, time, onSuccess }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>📌 Criar Encaixe Manual</DialogTitle>
-          <p className="text-sm text-muted-foreground">
-            Data: {new Date(`${date}T12:00:00`).toLocaleDateString("pt-BR")} às {time}
-          </p>
+      <DialogContent className="max-w-3xl max-h-[90vh]">
+        <DialogHeader className="space-y-3">
+          <DialogTitle className="flex items-center gap-2 text-2xl">
+            <Calendar className="h-6 w-6 text-primary" />
+            Criar Encaixe Manual
+          </DialogTitle>
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Calendar className="h-4 w-4" />
+            <span className="font-medium">
+              {new Date(`${date}T12:00:00`).toLocaleDateString("pt-BR", { 
+                weekday: 'long', 
+                day: '2-digit', 
+                month: 'long',
+                year: 'numeric'
+              })}
+            </span>
+            <span className="mx-2">•</span>
+            <Clock className="h-4 w-4" />
+            <span className="font-medium">{time}</span>
+          </div>
         </DialogHeader>
 
-        <div className="space-y-4">
-          {/* Cliente */}
-          <div className="space-y-2">
-            <Label>Cliente</Label>
-            
-            {selectedClient ? (
-              <div className="flex items-center justify-between p-3 border rounded-lg bg-muted/50">
-                <div className="flex items-center gap-3">
-                  <User className="w-5 h-5" />
-                  <div>
-                    <p className="font-semibold">{selectedClient.nome}</p>
-                    {selectedClient.telefone && (
-                      <p className="text-sm text-muted-foreground">{selectedClient.telefone}</p>
-                    )}
+        <ScrollArea className="max-h-[calc(90vh-200px)] pr-4">
+          <div className="space-y-6">
+            {/* Cliente */}
+            <div className="space-y-3">
+              <Label className="text-base font-semibold">Cliente</Label>
+              
+              {selectedClient ? (
+                <Card className="border-2 border-primary/20 bg-primary/5">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                          <User className="h-5 w-5 text-primary" />
+                        </div>
+                        <div>
+                          <p className="font-semibold text-lg">{selectedClient.nome}</p>
+                          {selectedClient.telefone && (
+                            <p className="text-sm text-muted-foreground">{selectedClient.telefone}</p>
+                          )}
+                        </div>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setSelectedClient(null)}
+                      >
+                        Trocar
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="space-y-3">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Buscar cliente cadastrado..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-9 h-11"
+                    />
                   </div>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setSelectedClient(null)}
-                >
-                  Trocar
-                </Button>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                <div className="relative">
-                  <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  
+                  {filteredClients.length > 0 && (
+                    <Card>
+                      <ScrollArea className="h-[180px]">
+                        <div className="p-2 space-y-1">
+                          {filteredClients.map((client) => (
+                            <button
+                              key={client.id}
+                              onClick={() => {
+                                setSelectedClient(client);
+                                setSearchQuery("");
+                                setManualClientName("");
+                              }}
+                              className="w-full text-left p-3 hover:bg-muted rounded-lg transition-all duration-200 flex items-center gap-3"
+                            >
+                              <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center">
+                                <User className="h-4 w-4" />
+                              </div>
+                              <div>
+                                <p className="font-medium">{client.nome}</p>
+                                {client.telefone && (
+                                  <p className="text-xs text-muted-foreground">{client.telefone}</p>
+                                )}
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      </ScrollArea>
+                    </Card>
+                  )}
+
+                  <div className="relative">
+                    <div className="absolute inset-0 flex items-center">
+                      <span className="w-full border-t" />
+                    </div>
+                    <div className="relative flex justify-center text-xs uppercase">
+                      <span className="bg-background px-3 text-muted-foreground font-medium">ou digite manualmente</span>
+                    </div>
+                  </div>
+
                   <Input
-                    placeholder="Buscar cliente cadastrado..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-9"
+                    placeholder="Nome do cliente"
+                    value={manualClientName}
+                    onChange={(e) => {
+                      setManualClientName(e.target.value);
+                      setSearchQuery("");
+                    }}
+                    className="h-11"
                   />
                 </div>
-                
-                {filteredClients.length > 0 && (
-                  <ScrollArea className="h-[150px] border rounded-lg p-2">
-                    {filteredClients.map((client) => (
-                      <button
-                        key={client.id}
-                        onClick={() => {
-                          setSelectedClient(client);
-                          setSearchQuery("");
-                          setManualClientName("");
-                        }}
-                        className="w-full text-left p-2 hover:bg-muted rounded-lg transition-colors"
-                      >
-                        <p className="font-medium">{client.nome}</p>
-                        {client.telefone && (
-                          <p className="text-sm text-muted-foreground">{client.telefone}</p>
-                        )}
-                      </button>
-                    ))}
-                  </ScrollArea>
-                )}
-
-                <div className="relative">
-                  <div className="absolute inset-0 flex items-center">
-                    <span className="w-full border-t" />
-                  </div>
-                  <div className="relative flex justify-center text-xs uppercase">
-                    <span className="bg-background px-2 text-muted-foreground">ou</span>
-                  </div>
-                </div>
-
-                <Input
-                  placeholder="Digite o nome do cliente manualmente"
-                  value={manualClientName}
-                  onChange={(e) => {
-                    setManualClientName(e.target.value);
-                    setSearchQuery("");
-                  }}
-                />
-              </div>
-            )}
-          </div>
-
-          {/* Serviço */}
-          <div className="space-y-2">
-            <Label htmlFor="service">Serviço</Label>
-            <Select value={selectedService} onValueChange={setSelectedService}>
-              <SelectTrigger id="service">
-                <SelectValue placeholder="Selecione o serviço" />
-              </SelectTrigger>
-              <SelectContent>
-                {services.map((service) => (
-                  <SelectItem key={service.id} value={service.id}>
-                    {service.nome} - {service.duracao_minutos} min - R$ {service.preco.toFixed(2)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Duração e preço */}
-          {selectedServiceData && (
-            <div className="flex gap-4">
-              <Badge variant="secondary" className="py-2 px-4">
-                ⏱️ Duração: {selectedServiceData.duracao_minutos} minutos
-              </Badge>
-              <Badge variant="secondary" className="py-2 px-4">
-                💰 Preço: R$ {selectedServiceData.preco.toFixed(2)}
-              </Badge>
-              <Badge variant="secondary" className="py-2 px-4">
-                🕐 Término: {(() => {
-                  const [h, m] = time.split(":").map(Number);
-                  const endMinutes = h * 60 + m + selectedServiceData.duracao_minutos;
-                  const endH = Math.floor(endMinutes / 60);
-                  const endM = endMinutes % 60;
-                  return `${endH.toString().padStart(2, "0")}:${endM.toString().padStart(2, "0")}`;
-                })()}
-              </Badge>
+              )}
             </div>
-          )}
 
-          {/* Erro de validação */}
-          {validationError && (
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>{validationError}</AlertDescription>
-            </Alert>
-          )}
+            {/* Serviço */}
+            <div className="space-y-3">
+              <Label className="text-base font-semibold">Serviço</Label>
+              <div className="grid gap-2">
+                {services.map((service) => (
+                  <Card
+                    key={service.id}
+                    className={`cursor-pointer transition-all duration-200 hover:shadow-md ${
+                      selectedService === service.id
+                        ? 'border-2 border-primary bg-primary/5'
+                        : 'border hover:border-primary/50'
+                    }`}
+                    onClick={() => setSelectedService(service.id)}
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1">
+                          <h4 className="font-semibold text-lg mb-2">{service.nome}</h4>
+                          <div className="flex flex-wrap gap-2">
+                            <Badge variant="outline" className="gap-1">
+                              <Clock className="h-3 w-3" />
+                              {service.duracao_minutos} min
+                            </Badge>
+                            <Badge variant="outline" className="gap-1">
+                              <DollarSign className="h-3 w-3" />
+                              R$ {service.preco.toFixed(2)}
+                            </Badge>
+                          </div>
+                        </div>
+                        <div className={`h-6 w-6 rounded-full border-2 flex items-center justify-center ${
+                          selectedService === service.id
+                            ? 'border-primary bg-primary'
+                            : 'border-muted-foreground/30'
+                        }`}>
+                          {selectedService === service.id && (
+                            <div className="h-3 w-3 rounded-full bg-white" />
+                          )}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
 
-          {/* Observações */}
-          <div className="space-y-2">
-            <Label htmlFor="observations">Observações (opcional)</Label>
-            <Textarea
-              id="observations"
-              placeholder="Ex: Cliente preferencial, necessita atenção especial..."
-              value={observations}
-              onChange={(e) => setObservations(e.target.value)}
-              rows={3}
-            />
+            {/* Resumo do Agendamento */}
+            {selectedServiceData && (
+              <Card className="border-2 border-primary/20 bg-gradient-to-br from-primary/5 to-transparent">
+                <CardContent className="p-4">
+                  <h4 className="font-semibold mb-3 flex items-center gap-2">
+                    <Clock className="h-4 w-4 text-primary" />
+                    Resumo do Encaixe
+                  </h4>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="text-center p-3 bg-background rounded-lg">
+                      <Clock className="h-5 w-5 mx-auto mb-1 text-muted-foreground" />
+                      <p className="text-xs text-muted-foreground mb-1">Duração</p>
+                      <p className="font-bold">{selectedServiceData.duracao_minutos} min</p>
+                    </div>
+                    <div className="text-center p-3 bg-background rounded-lg">
+                      <DollarSign className="h-5 w-5 mx-auto mb-1 text-muted-foreground" />
+                      <p className="text-xs text-muted-foreground mb-1">Preço</p>
+                      <p className="font-bold">R$ {selectedServiceData.preco.toFixed(2)}</p>
+                    </div>
+                    <div className="text-center p-3 bg-background rounded-lg">
+                      <Calendar className="h-5 w-5 mx-auto mb-1 text-muted-foreground" />
+                      <p className="text-xs text-muted-foreground mb-1">Término</p>
+                      <p className="font-bold">
+                        {(() => {
+                          const [h, m] = time.split(":").map(Number);
+                          const endMinutes = h * 60 + m + selectedServiceData.duracao_minutos;
+                          const endH = Math.floor(endMinutes / 60);
+                          const endM = endMinutes % 60;
+                          return `${endH.toString().padStart(2, "0")}:${endM.toString().padStart(2, "0")}`;
+                        })()}
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Erro de validação */}
+            {validationError && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{validationError}</AlertDescription>
+              </Alert>
+            )}
+
+            {/* Observações */}
+            <div className="space-y-3">
+              <Label htmlFor="observations" className="text-base font-semibold">
+                Observações <span className="text-muted-foreground font-normal text-sm">(opcional)</span>
+              </Label>
+              <Textarea
+                id="observations"
+                placeholder="Ex: Cliente preferencial, necessita atenção especial..."
+                value={observations}
+                onChange={(e) => setObservations(e.target.value)}
+                rows={3}
+                className="resize-none"
+              />
+            </div>
           </div>
-        </div>
+        </ScrollArea>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
+        <DialogFooter className="gap-2 sm:gap-0">
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading} size="lg">
             Cancelar
           </Button>
-          <Button onClick={handleSubmit} disabled={loading}>
+          <Button onClick={handleSubmit} disabled={loading} size="lg" className="min-w-[160px]">
             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Confirmar Encaixe
           </Button>
