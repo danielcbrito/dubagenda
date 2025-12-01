@@ -1,15 +1,14 @@
-import { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { useState, useEffect, memo } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2, AlertCircle, Search, User, Clock, DollarSign, Calendar } from "lucide-react";
+import { Loader2, AlertCircle, Search, User, Clock, DollarSign, Calendar, Check, ChevronRight, ChevronLeft } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card, CardContent } from "@/components/ui/card";
 
 interface ManualBookingModalProps {
@@ -35,6 +34,7 @@ interface Client {
 }
 
 export function ManualBookingModal({ open, onOpenChange, date, time, onSuccess }: ManualBookingModalProps) {
+  const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [services, setServices] = useState<Service[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
@@ -47,6 +47,7 @@ export function ManualBookingModal({ open, onOpenChange, date, time, onSuccess }
   const [selectedService, setSelectedService] = useState("");
   const [observations, setObservations] = useState("");
   const [validationError, setValidationError] = useState("");
+  const [confirmStatus, setConfirmStatus] = useState<"idle" | "success" | "error">("idle");
 
   useEffect(() => {
     if (open) {
@@ -71,6 +72,7 @@ export function ManualBookingModal({ open, onOpenChange, date, time, onSuccess }
   }, [searchQuery, clients]);
 
   const resetForm = () => {
+    setStep(1);
     setSelectedClient(null);
     setManualClientName("");
     setSelectedService("");
@@ -78,6 +80,7 @@ export function ManualBookingModal({ open, onOpenChange, date, time, onSuccess }
     setValidationError("");
     setSearchQuery("");
     setFilteredClients([]);
+    setConfirmStatus("idle");
   };
 
   const loadServices = async () => {
@@ -184,18 +187,8 @@ export function ManualBookingModal({ open, onOpenChange, date, time, onSuccess }
   };
 
   const handleSubmit = async () => {
-    // Validações
-    if (!selectedClient && !manualClientName.trim()) {
-      toast.error("Selecione ou digite o nome do cliente");
-      return;
-    }
-
-    if (!selectedService) {
-      toast.error("Selecione um serviço");
-      return;
-    }
-
     setLoading(true);
+    setValidationError("");
 
     try {
       // Validar horário
@@ -212,10 +205,6 @@ export function ManualBookingModal({ open, onOpenChange, date, time, onSuccess }
 
       // Se cliente digitado manualmente, criar perfil temporário
       if (!selectedClient && manualClientName.trim()) {
-        const { data: session } = await supabase.auth.getSession();
-        if (!session.session?.user) throw new Error("Usuário não autenticado");
-
-        // Criar um ID único para cliente manual
         const tempClientId = crypto.randomUUID();
         
         const { error: profileError } = await supabase
@@ -254,11 +243,17 @@ export function ManualBookingModal({ open, onOpenChange, date, time, onSuccess }
 
       if (appointmentError) throw appointmentError;
 
+      setConfirmStatus("success");
       toast.success("✅ Encaixe criado com sucesso!");
-      onSuccess();
-      onOpenChange(false);
+      
+      setTimeout(() => {
+        onSuccess();
+        onOpenChange(false);
+      }, 1200);
     } catch (error: any) {
       console.error("Error creating manual booking:", error);
+      setConfirmStatus("error");
+      setValidationError(error.message || "Erro ao criar encaixe");
       toast.error(error.message || "Erro ao criar encaixe");
     } finally {
       setLoading(false);
@@ -267,36 +262,52 @@ export function ManualBookingModal({ open, onOpenChange, date, time, onSuccess }
 
   const selectedServiceData = services.find((s) => s.id === selectedService);
 
+  const canProceedStep1 = selectedClient || manualClientName.trim();
+  const canProceedStep2 = selectedService;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh]">
-        <DialogHeader className="space-y-3">
-          <DialogTitle className="flex items-center gap-2 text-2xl">
-            <Calendar className="h-6 w-6 text-primary" />
+      <DialogContent className="max-w-lg">
+        <DialogHeader className="space-y-3 pb-4">
+          <DialogTitle className="flex items-center gap-2">
+            <Calendar className="h-5 w-5 text-primary" />
             Criar Encaixe Manual
           </DialogTitle>
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Calendar className="h-4 w-4" />
-            <span className="font-medium">
-              {new Date(`${date}T12:00:00`).toLocaleDateString("pt-BR", { 
-                weekday: 'long', 
-                day: '2-digit', 
-                month: 'long',
-                year: 'numeric'
-              })}
-            </span>
-            <span className="mx-2">•</span>
-            <Clock className="h-4 w-4" />
-            <span className="font-medium">{time}</span>
-          </div>
+          <DialogDescription className="flex items-center gap-2 text-xs">
+            <Calendar className="h-3.5 w-3.5" />
+            {new Date(`${date}T12:00:00`).toLocaleDateString("pt-BR", { 
+              weekday: 'short', 
+              day: '2-digit', 
+              month: 'short'
+            })}
+            <span className="mx-1">•</span>
+            <Clock className="h-3.5 w-3.5" />
+            {time}
+          </DialogDescription>
         </DialogHeader>
 
-        <ScrollArea className="max-h-[calc(90vh-200px)] pr-4">
-          <div className="space-y-6">
-            {/* Cliente */}
-            <div className="space-y-3">
-              <Label className="text-base font-semibold">Cliente</Label>
-              
+        {/* Stepper */}
+        <div className="flex items-center justify-center gap-2 pb-4">
+          {[1, 2, 3].map((s) => (
+            <div key={s} className="flex items-center">
+              <div className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-semibold transition-colors ${
+                step >= s ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
+              }`}>
+                {step > s ? <Check className="h-4 w-4" /> : s}
+              </div>
+              {s < 3 && <div className={`w-12 h-0.5 ${step > s ? 'bg-primary' : 'bg-muted'}`} />}
+            </div>
+          ))}
+        </div>
+
+        <div className="space-y-4 min-h-[320px]">
+          {/* Step 1: Cliente */}
+          {step === 1 && (
+            <div className="space-y-4">
+              <div className="text-center pb-2">
+                <h3 className="font-semibold text-lg">Selecione o Cliente</h3>
+                <p className="text-sm text-muted-foreground">Busque ou digite o nome</p>
+              </div>
               {selectedClient ? (
                 <Card className="border-2 border-primary/20 bg-primary/5">
                   <CardContent className="p-4">
@@ -306,7 +317,7 @@ export function ManualBookingModal({ open, onOpenChange, date, time, onSuccess }
                           <User className="h-5 w-5 text-primary" />
                         </div>
                         <div>
-                          <p className="font-semibold text-lg">{selectedClient.nome}</p>
+                          <p className="font-semibold">{selectedClient.nome}</p>
                           {selectedClient.telefone && (
                             <p className="text-sm text-muted-foreground">{selectedClient.telefone}</p>
                           )}
@@ -327,40 +338,36 @@ export function ManualBookingModal({ open, onOpenChange, date, time, onSuccess }
                   <div className="relative">
                     <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                     <Input
-                      placeholder="Buscar cliente cadastrado..."
+                      placeholder="Buscar cliente..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      className="pl-9 h-11"
+                      className="pl-9"
                     />
                   </div>
                   
                   {filteredClients.length > 0 && (
-                    <Card>
-                      <ScrollArea className="h-[180px]">
-                        <div className="p-2 space-y-1">
-                          {filteredClients.map((client) => (
-                            <button
-                              key={client.id}
-                              onClick={() => {
-                                setSelectedClient(client);
-                                setSearchQuery("");
-                                setManualClientName("");
-                              }}
-                              className="w-full text-left p-3 hover:bg-muted rounded-lg transition-all duration-200 flex items-center gap-3"
-                            >
-                              <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center">
-                                <User className="h-4 w-4" />
-                              </div>
-                              <div>
-                                <p className="font-medium">{client.nome}</p>
-                                {client.telefone && (
-                                  <p className="text-xs text-muted-foreground">{client.telefone}</p>
-                                )}
-                              </div>
-                            </button>
-                          ))}
-                        </div>
-                      </ScrollArea>
+                    <Card className="max-h-40 overflow-auto">
+                      <div className="p-2 space-y-1">
+                        {filteredClients.map((client) => (
+                          <button
+                            key={client.id}
+                            onClick={() => {
+                              setSelectedClient(client);
+                              setSearchQuery("");
+                              setManualClientName("");
+                            }}
+                            className="w-full text-left p-2 hover:bg-muted rounded-md transition-colors flex items-center gap-2"
+                          >
+                            <User className="h-4 w-4 text-muted-foreground" />
+                            <div>
+                              <p className="font-medium text-sm">{client.nome}</p>
+                              {client.telefone && (
+                                <p className="text-xs text-muted-foreground">{client.telefone}</p>
+                              )}
+                            </div>
+                          </button>
+                        ))}
+                      </div>
                     </Card>
                   )}
 
@@ -368,8 +375,8 @@ export function ManualBookingModal({ open, onOpenChange, date, time, onSuccess }
                     <div className="absolute inset-0 flex items-center">
                       <span className="w-full border-t" />
                     </div>
-                    <div className="relative flex justify-center text-xs uppercase">
-                      <span className="bg-background px-3 text-muted-foreground font-medium">ou digite manualmente</span>
+                    <div className="relative flex justify-center text-xs">
+                      <span className="bg-background px-2 text-muted-foreground">ou digite</span>
                     </div>
                   </div>
 
@@ -380,129 +387,195 @@ export function ManualBookingModal({ open, onOpenChange, date, time, onSuccess }
                       setManualClientName(e.target.value);
                       setSearchQuery("");
                     }}
-                    className="h-11"
                   />
                 </div>
               )}
             </div>
+          )}
 
-            {/* Serviço */}
-            <div className="space-y-3">
-              <Label className="text-base font-semibold">Serviço</Label>
-              <div className="grid gap-2">
+          {/* Step 2: Serviço */}
+          {step === 2 && (
+            <div className="space-y-4">
+              <div className="text-center pb-2">
+                <h3 className="font-semibold text-lg">Selecione o Serviço</h3>
+                <p className="text-sm text-muted-foreground">Escolha o tipo de atendimento</p>
+              </div>
+
+              <div className="grid gap-2 max-h-80 overflow-y-auto pr-2">
                 {services.map((service) => (
-                  <Card
+                  <ServiceCard
                     key={service.id}
-                    className={`cursor-pointer transition-all duration-200 hover:shadow-md ${
-                      selectedService === service.id
-                        ? 'border-2 border-primary bg-primary/5'
-                        : 'border hover:border-primary/50'
-                    }`}
+                    service={service}
+                    selected={selectedService === service.id}
                     onClick={() => setSelectedService(service.id)}
-                  >
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1">
-                          <h4 className="font-semibold text-lg mb-2">{service.nome}</h4>
-                          <div className="flex flex-wrap gap-2">
-                            <Badge variant="outline" className="gap-1">
-                              <Clock className="h-3 w-3" />
-                              {service.duracao_minutos} min
-                            </Badge>
-                            <Badge variant="outline" className="gap-1">
-                              <DollarSign className="h-3 w-3" />
-                              R$ {service.preco.toFixed(2)}
-                            </Badge>
-                          </div>
-                        </div>
-                        <div className={`h-6 w-6 rounded-full border-2 flex items-center justify-center ${
-                          selectedService === service.id
-                            ? 'border-primary bg-primary'
-                            : 'border-muted-foreground/30'
-                        }`}>
-                          {selectedService === service.id && (
-                            <div className="h-3 w-3 rounded-full bg-white" />
-                          )}
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
+                  />
                 ))}
               </div>
             </div>
+          )}
 
-            {/* Resumo do Agendamento */}
-            {selectedServiceData && (
-              <Card className="border-2 border-primary/20 bg-gradient-to-br from-primary/5 to-transparent">
-                <CardContent className="p-4">
-                  <h4 className="font-semibold mb-3 flex items-center gap-2">
-                    <Clock className="h-4 w-4 text-primary" />
-                    Resumo do Encaixe
-                  </h4>
-                  <div className="grid grid-cols-3 gap-3">
-                    <div className="text-center p-3 bg-background rounded-lg">
-                      <Clock className="h-5 w-5 mx-auto mb-1 text-muted-foreground" />
-                      <p className="text-xs text-muted-foreground mb-1">Duração</p>
-                      <p className="font-bold">{selectedServiceData.duracao_minutos} min</p>
-                    </div>
-                    <div className="text-center p-3 bg-background rounded-lg">
-                      <DollarSign className="h-5 w-5 mx-auto mb-1 text-muted-foreground" />
-                      <p className="text-xs text-muted-foreground mb-1">Preço</p>
-                      <p className="font-bold">R$ {selectedServiceData.preco.toFixed(2)}</p>
-                    </div>
-                    <div className="text-center p-3 bg-background rounded-lg">
-                      <Calendar className="h-5 w-5 mx-auto mb-1 text-muted-foreground" />
-                      <p className="text-xs text-muted-foreground mb-1">Término</p>
-                      <p className="font-bold">
-                        {(() => {
-                          const [h, m] = time.split(":").map(Number);
-                          const endMinutes = h * 60 + m + selectedServiceData.duracao_minutos;
-                          const endH = Math.floor(endMinutes / 60);
-                          const endM = endMinutes % 60;
-                          return `${endH.toString().padStart(2, "0")}:${endM.toString().padStart(2, "0")}`;
-                        })()}
-                      </p>
-                    </div>
+          {/* Step 3: Resumo */}
+          {step === 3 && (
+            <div className="space-y-4">
+              <div className="text-center pb-2">
+                <h3 className="font-semibold text-lg">Confirme os Dados</h3>
+                <p className="text-sm text-muted-foreground">Revise antes de confirmar</p>
+              </div>
+
+              {/* Cliente Info */}
+              <Card>
+                <CardContent className="p-4 space-y-3">
+                  <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                    <User className="h-4 w-4" />
+                    Cliente
                   </div>
+                  <p className="font-semibold">{selectedClient?.nome || manualClientName}</p>
                 </CardContent>
               </Card>
-            )}
 
-            {/* Erro de validação */}
-            {validationError && (
-              <Alert variant="destructive">
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>{validationError}</AlertDescription>
-              </Alert>
-            )}
+              {/* Serviço Info */}
+              {selectedServiceData && (
+                <Card>
+                  <CardContent className="p-4 space-y-3">
+                    <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                      <Clock className="h-4 w-4" />
+                      Serviço
+                    </div>
+                    <div>
+                      <p className="font-semibold mb-2">{selectedServiceData.nome}</p>
+                      <div className="grid grid-cols-3 gap-2 text-center">
+                        <div className="p-2 bg-muted rounded-md">
+                          <p className="text-xs text-muted-foreground">Duração</p>
+                          <p className="font-bold text-sm">{selectedServiceData.duracao_minutos}min</p>
+                        </div>
+                        <div className="p-2 bg-muted rounded-md">
+                          <p className="text-xs text-muted-foreground">Preço</p>
+                          <p className="font-bold text-sm">R$ {selectedServiceData.preco.toFixed(2)}</p>
+                        </div>
+                        <div className="p-2 bg-muted rounded-md">
+                          <p className="text-xs text-muted-foreground">Término</p>
+                          <p className="font-bold text-sm">
+                            {(() => {
+                              const [h, m] = time.split(":").map(Number);
+                              const endMinutes = h * 60 + m + selectedServiceData.duracao_minutos;
+                              const endH = Math.floor(endMinutes / 60);
+                              const endM = endMinutes % 60;
+                              return `${endH.toString().padStart(2, "0")}:${endM.toString().padStart(2, "0")}`;
+                            })()}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
 
-            {/* Observações */}
-            <div className="space-y-3">
-              <Label htmlFor="observations" className="text-base font-semibold">
-                Observações <span className="text-muted-foreground font-normal text-sm">(opcional)</span>
-              </Label>
-              <Textarea
-                id="observations"
-                placeholder="Ex: Cliente preferencial, necessita atenção especial..."
-                value={observations}
-                onChange={(e) => setObservations(e.target.value)}
-                rows={3}
-                className="resize-none"
-              />
+              {/* Observações */}
+              <div className="space-y-2">
+                <Label htmlFor="observations" className="text-sm">
+                  Observações <span className="text-muted-foreground">(opcional)</span>
+                </Label>
+                <Textarea
+                  id="observations"
+                  placeholder="Ex: Cliente preferencial..."
+                  value={observations}
+                  onChange={(e) => setObservations(e.target.value)}
+                  rows={2}
+                  className="resize-none"
+                />
+              </div>
+
+              {validationError && (
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>{validationError}</AlertDescription>
+                </Alert>
+              )}
+
+              {confirmStatus === "success" && (
+                <Alert className="border-green-500 bg-green-50 dark:bg-green-950">
+                  <Check className="h-4 w-4 text-green-600" />
+                  <AlertDescription className="text-green-600">
+                    Encaixe criado com sucesso!
+                  </AlertDescription>
+                </Alert>
+              )}
             </div>
-          </div>
-        </ScrollArea>
+          )}
+        </div>
 
-        <DialogFooter className="gap-2 sm:gap-0">
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading} size="lg">
-            Cancelar
-          </Button>
-          <Button onClick={handleSubmit} disabled={loading} size="lg" className="min-w-[160px]">
-            {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Confirmar Encaixe
-          </Button>
+        <DialogFooter className="gap-2">
+          {step > 1 && step < 3 && (
+            <Button variant="outline" onClick={() => setStep(step - 1)} disabled={loading}>
+              <ChevronLeft className="h-4 w-4 mr-1" />
+              Voltar
+            </Button>
+          )}
+          
+          {step === 1 && (
+            <>
+              <Button variant="outline" onClick={() => onOpenChange(false)}>
+                Cancelar
+              </Button>
+              <Button onClick={() => setStep(2)} disabled={!canProceedStep1}>
+                Próximo
+                <ChevronRight className="h-4 w-4 ml-1" />
+              </Button>
+            </>
+          )}
+
+          {step === 2 && (
+            <Button onClick={() => setStep(3)} disabled={!canProceedStep2}>
+              Próximo
+              <ChevronRight className="h-4 w-4 ml-1" />
+            </Button>
+          )}
+
+          {step === 3 && (
+            <Button onClick={handleSubmit} disabled={loading || confirmStatus === "success"} className="min-w-32">
+              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {confirmStatus === "success" ? "Confirmado!" : "Confirmar"}
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 }
+
+// Memoized service card component to prevent unnecessary re-renders
+const ServiceCard = memo(({ service, selected, onClick }: {
+  service: Service;
+  selected: boolean;
+  onClick: () => void;
+}) => (
+  <Card
+    className={`cursor-pointer transition-all hover:shadow-md ${
+      selected ? 'border-2 border-primary bg-primary/5' : 'border hover:border-primary/30'
+    }`}
+    onClick={onClick}
+  >
+    <CardContent className="p-3">
+      <div className="flex items-center justify-between">
+        <div className="flex-1">
+          <h4 className="font-semibold mb-1">{service.nome}</h4>
+          <div className="flex gap-2 text-xs">
+            <Badge variant="outline" className="gap-1">
+              <Clock className="h-3 w-3" />
+              {service.duracao_minutos}min
+            </Badge>
+            <Badge variant="outline" className="gap-1">
+              <DollarSign className="h-3 w-3" />
+              R$ {service.preco.toFixed(2)}
+            </Badge>
+          </div>
+        </div>
+        <div className={`h-5 w-5 rounded-full border-2 flex items-center justify-center transition-colors ${
+          selected ? 'border-primary bg-primary' : 'border-muted-foreground/30'
+        }`}>
+          {selected && <Check className="h-3 w-3 text-primary-foreground" />}
+        </div>
+      </div>
+    </CardContent>
+  </Card>
+));
