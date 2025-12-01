@@ -156,6 +156,43 @@ async function handlePaymentConfirmed(supabase: any, payload: AsaasWebhookEvent)
     if (pendingBooking) {
       console.log('Found pending booking, converting to appointment:', pendingBooking.id);
 
+      // ============================================
+      // VERIFICAÇÃO CRÍTICA: Verificar se horário ainda está disponível
+      // (pode ter sido ocupado enquanto cliente pagava PIX)
+      // ============================================
+      const [startHour, startMinute] = pendingBooking.hora.split(':').map(Number);
+      const startTimeInMinutes = startHour * 60 + startMinute;
+      const endTimeInMinutes = startTimeInMinutes + pendingBooking.duracao;
+      const bufferTime = 10;
+
+      const { data: existingAppointments } = await supabase
+        .from('agendamentos')
+        .select('id, hora, duracao')
+        .eq('data', pendingBooking.data)
+        .in('status', ['pending', 'confirmed']);
+
+      let hasConflict = false;
+      for (const apt of existingAppointments || []) {
+        const [aptHour, aptMinute] = apt.hora.split(':').map(Number);
+        const aptStart = aptHour * 60 + aptMinute;
+        const aptEnd = aptStart + apt.duracao + bufferTime;
+
+        const newEnd = endTimeInMinutes + bufferTime;
+        if (startTimeInMinutes < aptEnd && newEnd > aptStart) {
+          hasConflict = true;
+          console.error('CONFLITO DETECTADO! Horário já ocupado:', { pendingBooking: pendingBooking.id, conflictApt: apt.id });
+          break;
+        }
+      }
+
+      if (hasConflict) {
+        // Horário foi ocupado - precisamos notificar o cliente e reembolsar
+        console.error('Pagamento confirmado mas horário já ocupado. Cliente precisa reagendar.');
+        // Mantém o pending_booking para análise e não cria o agendamento
+        // TODO: Implementar notificação ao cliente e processo de reembolso
+        return;
+      }
+
       // Create the appointment
       const { data: appointment, error: aptError } = await supabase
         .from('agendamentos')

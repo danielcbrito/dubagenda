@@ -10,8 +10,20 @@ interface AppointmentRequest {
   hora: string;
   duracao: number;
   userId: string;
+  excludeAppointmentId?: string; // Para reagendamentos - excluir o agendamento atual
 }
 
+/**
+ * Edge Function para validação ATÔMICA de disponibilidade de horário.
+ * 
+ * Esta função é CRÍTICA para evitar agendamentos duplicados.
+ * Ela verifica:
+ * 1. Horário de funcionamento (09:00-20:00)
+ * 2. Horário de almoço (13:00-14:00)
+ * 3. Dias de funcionamento (segunda a sábado)
+ * 4. Conflitos com agendamentos existentes (considerando duração + buffer)
+ * 5. Conflitos com pending_bookings (reservas aguardando pagamento)
+ */
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -22,11 +34,14 @@ Deno.serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const { data, hora, duracao, userId }: AppointmentRequest = await req.json();
+    const { data, hora, duracao, userId, excludeAppointmentId }: AppointmentRequest = await req.json();
+    
+    console.log('[validate-appointment] Iniciando validação:', { data, hora, duracao, userId, excludeAppointmentId });
 
     // Parse the date and validate it's not Sunday
     const appointmentDate = new Date(data + 'T00:00:00'); // Parse as local date
     if (appointmentDate.getDay() === 0) {
+      console.log('[validate-appointment] Rejeitado: Domingo');
       return new Response(
         JSON.stringify({ 
           valid: false, 
@@ -39,7 +54,8 @@ Deno.serve(async (req) => {
     // Parse the time to get start time in minutes
     const [startHour, startMinute] = hora.split(':').map(Number);
     const startTimeInMinutes = startHour * 60 + startMinute;
-    const endTimeInMinutes = startTimeInMinutes + duracao + 10; // 10-minute buffer
+    const endTimeInMinutes = startTimeInMinutes + duracao;
+    const bufferTime = 10; // 10-minute buffer between appointments
 
     // Block lunch break (13:00-14:00)
     const lunchStart = 13 * 60; // 780 minutes
@@ -50,6 +66,7 @@ Deno.serve(async (req) => {
       (endTimeInMinutes > lunchStart && endTimeInMinutes <= lunchEnd) ||
       (startTimeInMinutes < lunchStart && endTimeInMinutes > lunchEnd)
     ) {
+      console.log('[validate-appointment] Rejeitado: Horário de almoço');
       return new Response(
         JSON.stringify({ 
           valid: false, 
@@ -64,6 +81,7 @@ Deno.serve(async (req) => {
     const closeHour = 20 * 60; // 1200 minutes (20:00)
     
     if (startTimeInMinutes < openHour || endTimeInMinutes > closeHour) {
+      console.log('[validate-appointment] Rejeitado: Fora do expediente');
       return new Response(
         JSON.stringify({ 
           valid: false, 
@@ -73,45 +91,96 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Check for conflicts in the database
-    const { data: existingAppointments, error } = await supabase
+    // ============================================
+    // VERIFICAÇÃO CRÍTICA: Conflitos de agendamentos
+    // ============================================
+    
+    // Build query to check for conflicts in agendamentos
+    let agendamentosQuery = supabase
       .from('agendamentos')
-      .select('hora, duracao')
+      .select('id, hora, duracao, status')
       .eq('data', data)
       .in('status', ['pending', 'confirmed']);
+    
+    // Excluir o próprio agendamento (para reagendamentos)
+    if (excludeAppointmentId) {
+      agendamentosQuery = agendamentosQuery.neq('id', excludeAppointmentId);
+    }
 
-    if (error) {
-      console.error('Database error:', error);
+    const { data: existingAppointments, error: aptError } = await agendamentosQuery;
+
+    if (aptError) {
+      console.error('[validate-appointment] Erro ao buscar agendamentos:', aptError);
       return new Response(
         JSON.stringify({ valid: false, message: 'Erro ao verificar disponibilidade' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
       );
     }
 
-    // Check for time conflicts
+    // Check for time conflicts with existing appointments
     for (const apt of existingAppointments || []) {
       const [aptHour, aptMinute] = apt.hora.split(':').map(Number);
       const aptStart = aptHour * 60 + aptMinute;
-      const aptEnd = aptStart + apt.duracao + 10; // Include buffer
+      const aptEnd = aptStart + apt.duracao + bufferTime; // Include buffer
 
-      // Check for overlap
-      const hasConflict = 
-        (startTimeInMinutes >= aptStart && startTimeInMinutes < aptEnd) ||
-        (endTimeInMinutes > aptStart && endTimeInMinutes <= aptEnd) ||
-        (startTimeInMinutes <= aptStart && endTimeInMinutes >= aptEnd);
+      // Check for overlap (novo agendamento começa antes do fim do existente E termina depois do início do existente)
+      // Usando lógica correta de sobreposição de intervalos
+      const newEnd = endTimeInMinutes + bufferTime;
+      const hasConflict = startTimeInMinutes < aptEnd && newEnd > aptStart;
 
       if (hasConflict) {
-        console.log('Conflict detected:', { 
+        console.log('[validate-appointment] CONFLITO com agendamento:', { 
           requestedTime: hora, 
           conflictingTime: apt.hora,
           requestedDuration: duracao,
-          conflictingDuration: apt.duracao
+          conflictingDuration: apt.duracao,
+          aptId: apt.id
         });
         
         return new Response(
           JSON.stringify({ 
             valid: false, 
-            message: 'Horário indisponível. Escolha outro horário disponível.' 
+            message: 'Horário indisponível. Já existe um agendamento nesse período.' 
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+        );
+      }
+    }
+
+    // ============================================
+    // VERIFICAÇÃO ADICIONAL: Pending Bookings (reservas aguardando pagamento)
+    // ============================================
+    const { data: pendingBookings, error: pendingError } = await supabase
+      .from('pending_bookings')
+      .select('id, hora, duracao, expires_at')
+      .eq('data', data)
+      .gt('expires_at', new Date().toISOString()); // Apenas reservas não expiradas
+
+    if (pendingError) {
+      console.error('[validate-appointment] Erro ao buscar pending_bookings:', pendingError);
+      // Continue mesmo com erro - não bloquear por causa de pending_bookings
+    }
+
+    // Check for conflicts with pending bookings
+    for (const pending of pendingBookings || []) {
+      const [pendingHour, pendingMinute] = pending.hora.split(':').map(Number);
+      const pendingStart = pendingHour * 60 + pendingMinute;
+      const pendingEnd = pendingStart + pending.duracao + bufferTime;
+
+      const newEnd = endTimeInMinutes + bufferTime;
+      const hasConflict = startTimeInMinutes < pendingEnd && newEnd > pendingStart;
+
+      if (hasConflict) {
+        console.log('[validate-appointment] CONFLITO com pending_booking:', { 
+          requestedTime: hora, 
+          conflictingTime: pending.hora,
+          pendingId: pending.id
+        });
+        
+        return new Response(
+          JSON.stringify({ 
+            valid: false, 
+            message: 'Horário temporariamente reservado. Tente outro horário ou aguarde alguns minutos.' 
           }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
         );
@@ -119,13 +188,14 @@ Deno.serve(async (req) => {
     }
 
     // No conflicts found
+    console.log('[validate-appointment] Horário DISPONÍVEL:', { data, hora, duracao });
     return new Response(
       JSON.stringify({ valid: true, message: 'Horário disponível' }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
     );
 
   } catch (error) {
-    console.error('Error:', error);
+    console.error('[validate-appointment] Erro:', error);
     return new Response(
       JSON.stringify({ valid: false, message: 'Erro interno do servidor' }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }

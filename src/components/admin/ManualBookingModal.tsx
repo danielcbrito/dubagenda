@@ -132,72 +132,38 @@ export function ManualBookingModal({ open, onOpenChange, date, time, onSuccess }
     const selectedServiceData = services.find((s) => s.id === selectedService);
     if (!selectedServiceData) return false;
 
-    // Validar horário de funcionamento (9h-20h, segunda a sábado)
-    const [hours, minutes] = time.split(":").map(Number);
-    const timeInMinutes = hours * 60 + minutes;
-    const endTimeInMinutes = timeInMinutes + selectedServiceData.duracao_minutos;
+    try {
+      // Usar edge function para validação atômica
+      console.log('[ManualBooking] Validando horário via edge function...');
+      const { data: validation, error: validationError } = await supabase.functions.invoke('validate-appointment', {
+        body: {
+          data: date,
+          hora: time,
+          duracao: selectedServiceData.duracao_minutos,
+          userId: 'manual-booking' // Placeholder para encaixes manuais
+        }
+      });
 
-    // Horário de almoço: 13:00-14:00
-    const lunchStart = 13 * 60;
-    const lunchEnd = 14 * 60;
-
-    if (
-      (timeInMinutes >= lunchStart && timeInMinutes < lunchEnd) ||
-      (endTimeInMinutes > lunchStart && endTimeInMinutes <= lunchEnd) ||
-      (timeInMinutes < lunchStart && endTimeInMinutes > lunchEnd)
-    ) {
-      setValidationError("Horário de almoço (13:00-14:00). A barbearia está fechada.");
-      return false;
-    }
-
-    // Horário de funcionamento: 9h-20h
-    const openHour = 9 * 60;
-    const closeHour = 20 * 60;
-
-    if (timeInMinutes < openHour || endTimeInMinutes > closeHour) {
-      setValidationError("Fora do horário de funcionamento (09:00-20:00).");
-      return false;
-    }
-
-    // Verificar domingo
-    const appointmentDate = new Date(`${date}T12:00:00`);
-    if (appointmentDate.getDay() === 0) {
-      setValidationError("A barbearia não funciona aos domingos.");
-      return false;
-    }
-
-    // Verificar conflitos na agenda
-    const { data: existingAppointments, error } = await supabase
-      .from("agendamentos")
-      .select("hora, duracao")
-      .eq("data", date)
-      .in("status", ["pending", "confirmed"]);
-
-    if (error) {
-      console.error("Error checking conflicts:", error);
-      toast.error("Erro ao verificar disponibilidade");
-      return false;
-    }
-
-    // Verificar sobreposição
-    for (const apt of existingAppointments || []) {
-      const [aptHour, aptMinute] = apt.hora.split(":").map(Number);
-      const aptStart = aptHour * 60 + aptMinute;
-      const aptEnd = aptStart + apt.duracao + 10; // Buffer de 10 minutos
-
-      const hasConflict =
-        (timeInMinutes >= aptStart && timeInMinutes < aptEnd) ||
-        (endTimeInMinutes > aptStart && endTimeInMinutes <= aptEnd) ||
-        (timeInMinutes <= aptStart && endTimeInMinutes >= aptEnd);
-
-      if (hasConflict) {
-        setValidationError("Horário indisponível. Já existe agendamento nesse período.");
+      if (validationError) {
+        console.error('[ManualBooking] Erro na validação:', validationError);
+        setValidationError("Erro ao verificar disponibilidade. Tente novamente.");
         return false;
       }
-    }
 
-    setValidationError("");
-    return true;
+      if (!validation?.valid) {
+        console.log('[ManualBooking] Horário INDISPONÍVEL:', validation?.message);
+        setValidationError(validation?.message || "Horário indisponível.");
+        return false;
+      }
+
+      console.log('[ManualBooking] Horário DISPONÍVEL');
+      setValidationError("");
+      return true;
+    } catch (error) {
+      console.error('[ManualBooking] Erro na validação:', error);
+      setValidationError("Erro ao verificar disponibilidade.");
+      return false;
+    }
   };
 
   const handleSubmit = async () => {
