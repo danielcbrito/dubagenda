@@ -4,6 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Clock, User, CheckCircle } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { cn } from "@/lib/utils";
+import { toast } from "sonner";
+import { useState } from "react";
 
 interface AgendaDiariaViewProps {
   date: Date;
@@ -12,14 +15,45 @@ interface AgendaDiariaViewProps {
 }
 
 export function AgendaDiariaView({ date, appointments, onCancelAppointment }: AgendaDiariaViewProps) {
-  // Generate all hours (8:00 to 20:00)
-  const hours = Array.from({ length: 13 }, (_, i) => {
-    const hour = 8 + i;
-    return `${hour.toString().padStart(2, '0')}:00`;
-  });
+  const [clickedUnavailableSlot, setClickedUnavailableSlot] = useState<string | null>(null);
 
-  const getAppointmentForHour = (hour: string) => {
-    return appointments.find(apt => apt.hora === hour);
+  // Generate all time slots (9:00 to 20:00, every 30 minutes)
+  const timeSlots: string[] = [];
+  for (let hour = 9; hour <= 20; hour++) {
+    timeSlots.push(`${hour.toString().padStart(2, '0')}:00`);
+    if (hour < 20) {
+      timeSlots.push(`${hour.toString().padStart(2, '0')}:30`);
+    }
+  }
+
+  const getAppointmentForSlot = (slot: string) => {
+    return appointments.find(apt => apt.hora === slot || apt.hora === slot + ":00");
+  };
+
+  // Check if a slot is blocked by another appointment's duration
+  const isSlotBlockedByDuration = (slot: string): boolean => {
+    const [slotHour, slotMin] = slot.split(':').map(Number);
+    const slotStart = slotHour * 60 + slotMin;
+    const bufferTime = 10;
+
+    for (const apt of appointments) {
+      const [aptHour, aptMin] = apt.hora.split(':').map(Number);
+      const aptStart = aptHour * 60 + aptMin;
+      const duration = apt.servico?.duracao_minutos || apt.duracao || 30;
+      const aptEnd = aptStart + duration + bufferTime;
+
+      if (slotStart > aptStart && slotStart < aptEnd) {
+        return true;
+      }
+    }
+
+    return false;
+  };
+
+  // Check if slot is during lunch break (13:00-14:00)
+  const isLunchBreak = (slot: string): boolean => {
+    const [hour] = slot.split(':').map(Number);
+    return hour === 13;
   };
 
   const getStatusConfig = (status: string) => {
@@ -67,24 +101,73 @@ export function AgendaDiariaView({ date, appointments, onCancelAppointment }: Ag
         {format(date, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })} - Visão Diária Completa
       </h3>
 
+      {/* Mensagem de slot indisponível */}
+      {clickedUnavailableSlot && (
+        <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-center">
+          <p className="text-sm text-destructive font-medium">
+            Este horário já foi agendado.
+          </p>
+        </div>
+      )}
+
       <div className="grid gap-2">
-        {hours.map((hour) => {
-          const appointment = getAppointmentForHour(hour);
+        {timeSlots.map((slot) => {
+          const appointment = getAppointmentForSlot(slot);
           const statusConfig = appointment ? getStatusConfig(appointment.status) : null;
+          const lunchBreak = isLunchBreak(slot);
+          const isBlockedByDuration = !appointment && isSlotBlockedByDuration(slot);
+
+          // Render lunch break
+          if (lunchBreak) {
+            return (
+              <Card key={slot} className="p-4 border-border/30 opacity-40 bg-amber-500/5">
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-muted-foreground" />
+                    <span className="font-semibold text-sm text-muted-foreground">{slot}</span>
+                  </div>
+                  <span className="text-sm text-muted-foreground italic">Horário de almoço</span>
+                </div>
+              </Card>
+            );
+          }
 
           return (
-            <Card key={hour} className={`p-4 ${appointment ? 'border-primary/30' : 'border-border/30 opacity-60'}`}>
+            <Card 
+              key={slot} 
+              className={cn(
+                "p-4",
+                appointment 
+                  ? "border-primary/30" 
+                  : isBlockedByDuration
+                    ? "border-border/30 opacity-30 bg-muted/10"
+                    : "border-border/30 opacity-60"
+              )}
+              onClick={() => {
+                if (isBlockedByDuration) {
+                  setClickedUnavailableSlot(slot);
+                  toast.error("Este horário já foi agendado.");
+                  setTimeout(() => setClickedUnavailableSlot(null), 3000);
+                }
+              }}
+            >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4 flex-1">
                   <div className="flex items-center gap-2">
                     <Clock className="w-4 h-4 text-muted-foreground" />
-                    <span className="font-semibold text-sm">{hour}</span>
+                    <span className={cn(
+                      "font-semibold text-sm",
+                      isBlockedByDuration && "text-muted-foreground/50"
+                    )}>{slot}</span>
                   </div>
 
                   {appointment ? (
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-1">
                         <span className="font-medium text-sm">{appointment.servico?.nome || "Serviço"}</span>
+                        <Badge variant="outline" className="text-xs">
+                          {appointment.servico?.duracao_minutos || appointment.duracao || 30} min
+                        </Badge>
                         {statusConfig && (
                           <Badge variant="outline" className={`text-xs ${statusConfig.className}`}>
                             {statusConfig.label}
@@ -113,6 +196,8 @@ export function AgendaDiariaView({ date, appointments, onCancelAppointment }: Ag
                         )}
                       </div>
                     </div>
+                  ) : isBlockedByDuration ? (
+                    <span className="text-sm text-muted-foreground/50 italic">Ocupado (serviço em andamento)</span>
                   ) : (
                     <span className="text-sm text-muted-foreground">Horário livre</span>
                   )}

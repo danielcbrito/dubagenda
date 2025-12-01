@@ -4,6 +4,7 @@ import { Clock, User, CreditCard, AlertCircle, CheckCircle2 } from "lucide-react
 import { TimelineAppointment } from "./AdminAgenda";
 import { useMemo, useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 interface TimelineViewProps {
   appointments: TimelineAppointment[];
@@ -14,6 +15,7 @@ interface TimelineViewProps {
 
 export function TimelineView({ appointments, loading, onSelectAppointment, onEmptySlotClick }: TimelineViewProps) {
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [clickedUnavailableSlot, setClickedUnavailableSlot] = useState<string | null>(null);
 
   // Update current time every minute
   useEffect(() => {
@@ -23,10 +25,10 @@ export function TimelineView({ appointments, loading, onSelectAppointment, onEmp
     return () => clearInterval(interval);
   }, []);
 
-  // Generate time slots (8:00 to 20:00, every 30 minutes)
+  // Generate time slots (9:00 to 20:00, every 30 minutes)
   const timeSlots = useMemo(() => {
     const slots = [];
-    for (let hour = 8; hour <= 20; hour++) {
+    for (let hour = 9; hour <= 20; hour++) {
       slots.push(`${hour.toString().padStart(2, '0')}:00`);
       if (hour < 20) {
         slots.push(`${hour.toString().padStart(2, '0')}:30`);
@@ -35,8 +37,35 @@ export function TimelineView({ appointments, loading, onSelectAppointment, onEmp
     return slots;
   }, []);
 
+  // Get the appointment that starts at this slot
   const getAppointmentForSlot = (slot: string) => {
     return appointments.find(apt => apt.hora === slot + ":00" || apt.hora === slot);
+  };
+
+  // Check if a slot is blocked by another appointment's duration (overlap check)
+  const isSlotBlockedByDuration = (slot: string): { blocked: boolean; blockingAppointment: TimelineAppointment | null } => {
+    const [slotHour, slotMin] = slot.split(':').map(Number);
+    const slotStart = slotHour * 60 + slotMin;
+    const bufferTime = 10; // 10 minute buffer
+
+    for (const apt of appointments) {
+      const [aptHour, aptMin] = apt.hora.split(':').map(Number);
+      const aptStart = aptHour * 60 + aptMin;
+      const aptEnd = aptStart + (apt.servico?.duracao_minutos || 30) + bufferTime;
+
+      // If this slot starts within the duration of an existing appointment
+      if (slotStart > aptStart && slotStart < aptEnd) {
+        return { blocked: true, blockingAppointment: apt };
+      }
+    }
+
+    return { blocked: false, blockingAppointment: null };
+  };
+
+  // Check if slot is during lunch break (13:00-14:00)
+  const isLunchBreak = (slot: string): boolean => {
+    const [hour] = slot.split(':').map(Number);
+    return hour === 13;
   };
 
   const getTimeStatus = (hora: string) => {
@@ -47,10 +76,10 @@ export function TimelineView({ appointments, loading, onSelectAppointment, onEmp
 
     const diffMinutes = Math.floor((slotTime.getTime() - now.getTime()) / 60000);
 
-    if (diffMinutes < -30) return "passed"; // Passou há mais de 30 min
-    if (diffMinutes <= 0) return "now"; // É agora
-    if (diffMinutes <= 10) return "soon"; // Em 10 minutos
-    return "future"; // Futuro
+    if (diffMinutes < -30) return "passed";
+    if (diffMinutes <= 0) return "now";
+    if (diffMinutes <= 10) return "soon";
+    return "future";
   };
 
   const getServiceColor = (serviceName: string | undefined) => {
@@ -100,11 +129,40 @@ export function TimelineView({ appointments, loading, onSelectAppointment, onEmp
 
   return (
     <div className="space-y-2 pb-8">
+      {/* Mensagem de slot indisponível */}
+      {clickedUnavailableSlot && (
+        <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-center mb-4">
+          <p className="text-sm text-destructive font-medium">
+            Este horário já foi agendado.
+          </p>
+        </div>
+      )}
+
       {timeSlots.map((slot) => {
         const appointment = getAppointmentForSlot(slot);
         const timeStatus = getTimeStatus(slot);
         const paymentInfo = appointment ? getPaymentBadge(appointment) : null;
         const PaymentIcon = paymentInfo?.icon;
+        const lunchBreak = isLunchBreak(slot);
+        const { blocked: isBlockedByDuration } = !appointment ? isSlotBlockedByDuration(slot) : { blocked: false };
+
+        // Render lunch break slots
+        if (lunchBreak) {
+          return (
+            <Card 
+              key={slot}
+              className="p-4 transition-all duration-300 border-l-4 border-l-amber-500/50 opacity-40 bg-amber-500/5"
+            >
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2 min-w-[80px]">
+                  <Clock className="w-4 h-4 text-muted-foreground" />
+                  <span className="font-semibold text-sm text-muted-foreground">{slot}</span>
+                </div>
+                <span className="text-sm text-muted-foreground italic">Horário de almoço</span>
+              </div>
+            </Card>
+          );
+        }
 
         return (
           <Card 
@@ -120,12 +178,19 @@ export function TimelineView({ appointments, loading, onSelectAppointment, onEmp
                     timeStatus === "future" && "border-l-primary/50",
                     appointment.status === "completed" && "border-l-blue-500 bg-blue-500/5 opacity-75"
                   )
-                : "border-l-border/30 opacity-60 hover:opacity-100 hover:bg-primary/5 cursor-pointer hover:border-l-primary"
+                : isBlockedByDuration
+                  ? "border-l-muted/30 opacity-30 cursor-not-allowed bg-muted/10"
+                  : "border-l-border/30 opacity-60 hover:opacity-100 hover:bg-primary/5 cursor-pointer hover:border-l-primary"
             )}
             onClick={() => {
               if (appointment) {
                 onSelectAppointment(appointment);
+              } else if (isBlockedByDuration) {
+                setClickedUnavailableSlot(slot);
+                toast.error("Este horário já foi agendado.");
+                setTimeout(() => setClickedUnavailableSlot(null), 3000);
               } else {
+                setClickedUnavailableSlot(null);
                 onEmptySlotClick(slot);
               }
             }}
@@ -137,7 +202,8 @@ export function TimelineView({ appointments, loading, onSelectAppointment, onEmp
                 <span className={cn(
                   "font-semibold text-sm",
                   timeStatus === "now" && "text-green-500",
-                  timeStatus === "soon" && "text-yellow-500"
+                  timeStatus === "soon" && "text-yellow-500",
+                  isBlockedByDuration && "text-muted-foreground/50"
                 )}>
                   {slot}
                 </span>
@@ -207,6 +273,13 @@ export function TimelineView({ appointments, loading, onSelectAppointment, onEmp
                       )}
                     </div>
                   </div>
+                </div>
+              ) : isBlockedByDuration ? (
+                <div className="flex items-center justify-between flex-1">
+                  <span className="text-sm text-muted-foreground/50 italic">Ocupado (serviço em andamento)</span>
+                  <Badge variant="outline" className="text-xs bg-muted/20 text-muted-foreground/50">
+                    Indisponível
+                  </Badge>
                 </div>
               ) : (
                 <div className="flex items-center justify-between flex-1">
