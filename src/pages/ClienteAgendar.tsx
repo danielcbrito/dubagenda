@@ -22,6 +22,7 @@ interface Service {
 interface TimeSlot {
   time: string;
   available: boolean;
+  blockedReason?: 'occupied' | 'minimum_advance'; // Motivo do bloqueio
 }
 
 const ClienteAgendar = () => {
@@ -251,6 +252,16 @@ const ClienteAgendar = () => {
 
     // Format date without timezone conversion to avoid day shifting
     const dateStr = format(selectedDate, 'yyyy-MM-dd');
+    const todayStr = format(new Date(), 'yyyy-MM-dd');
+    const isToday = dateStr === todayStr;
+    
+    // Calculate minimum allowed time (now + 1 hour) for same-day bookings
+    const now = new Date();
+    const minimumAllowedMinutes = isToday 
+      ? (now.getHours() * 60 + now.getMinutes() + 60) // +60 minutos = 1 hora de antecedência
+      : 0;
+    
+    console.log('[loadAvailableSlots] isToday:', isToday, 'minimumAllowedMinutes:', minimumAllowedMinutes, '(' + Math.floor(minimumAllowedMinutes / 60) + ':' + (minimumAllowedMinutes % 60).toString().padStart(2, '0') + ')');
     
     // Fetch all appointments for the selected date (exclude cancelled and no_show)
     const { data: appointments } = await supabase
@@ -305,6 +316,12 @@ const ClienteAgendar = () => {
           continue;
         }
 
+        // Check minimum advance time for same-day bookings (1 hour)
+        if (isToday && slotStart < minimumAllowedMinutes) {
+          slots.push({ time, available: false, blockedReason: 'minimum_advance' });
+          continue;
+        }
+
         // Check if slot conflicts with existing appointments or pending bookings (including buffer)
         let isAvailable = true;
         
@@ -327,7 +344,7 @@ const ClienteAgendar = () => {
           }
         }
 
-        slots.push({ time, available: isAvailable });
+        slots.push({ time, available: isAvailable, blockedReason: isAvailable ? undefined : 'occupied' });
       }
     }
 
@@ -908,7 +925,14 @@ const ClienteAgendar = () => {
                   selected={selectedDate}
                   onSelect={setSelectedDate}
                   locale={ptBR}
-                  disabled={(date) => date < new Date() || date.getDay() === 0}
+                  disabled={(date) => {
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    const compareDate = new Date(date);
+                    compareDate.setHours(0, 0, 0, 0);
+                    // Permitir hoje e dias futuros, bloquear domingos
+                    return compareDate < today || date.getDay() === 0;
+                  }}
                   className="rounded-md pointer-events-auto"
                 />
               </Card>
@@ -965,7 +989,12 @@ const ClienteAgendar = () => {
                             setSelectedTime(slot.time);
                             setUnavailableMessage(null);
                           } else {
-                            setUnavailableMessage("Este horário já foi agendado.");
+                            // Mensagem específica baseada no motivo do bloqueio
+                            if (slot.blockedReason === 'minimum_advance') {
+                              setUnavailableMessage("Este horário não pode ser agendado. É necessário 1 hora de antecedência.");
+                            } else {
+                              setUnavailableMessage("Este horário já foi agendado.");
+                            }
                           }
                         }}
                         className={cn(
