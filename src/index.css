@@ -2,6 +2,15 @@
 @tailwind components;
 @tailwind utilities;
 
+/* 🚫 PREVENT BROWSER AUTO-TRANSLATION */
+html {
+  translate: no;
+}
+
+.notranslate {
+  translate: no;
+}
+
 /* 💎 BARBEARIA DUB - ULTRA PREMIUM BILLIONAIRE DESIGN SYSTEM 
 All colors MUST be HSL. */
 
