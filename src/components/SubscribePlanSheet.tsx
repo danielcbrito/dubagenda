@@ -3,7 +3,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CheckCircle2, Sparkles, AlertCircle, Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -306,8 +305,11 @@ export function SubscribePlanSheet({ open, onOpenChange, userId }: SubscribePlan
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="h-[90vh] rounded-t-[10px]">
-        <SheetHeader>
+      <SheetContent 
+        side="bottom" 
+        className="h-[90vh] rounded-t-[10px] flex flex-col overflow-hidden"
+      >
+        <SheetHeader className="flex-shrink-0">
           <SheetTitle className="text-lg flex items-center gap-2">
             <Sparkles className="w-5 h-5 text-gold" />
             Escolha seu Plano
@@ -317,12 +319,13 @@ export function SubscribePlanSheet({ open, onOpenChange, userId }: SubscribePlan
           </SheetDescription>
         </SheetHeader>
 
-        <ScrollArea className="h-[calc(90vh-60px)] mt-4">
+        {/* Container com scroll habilitado para mobile */}
+        <div className="flex-1 overflow-y-auto overflow-x-hidden mt-4 -mx-6 px-6 pb-safe touch-pan-y">
           {loadingState === "loading" && renderLoadingState()}
           {loadingState === "error" && renderErrorState()}
           {loadingState === "success" && plans.length === 0 && renderEmptyState()}
           {loadingState === "success" && plans.length > 0 && renderPlansList()}
-        </ScrollArea>
+        </div>
       </SheetContent>
     </Sheet>
   );

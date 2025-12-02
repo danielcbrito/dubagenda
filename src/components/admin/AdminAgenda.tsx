@@ -354,6 +354,7 @@ export function AdminAgenda() {
         <TimelineView 
           appointments={filteredAppointments}
           loading={loading}
+          selectedDate={date}
           onSelectAppointment={setSelectedAppointment}
           onEmptySlotClick={handleEmptySlotClick}
         />

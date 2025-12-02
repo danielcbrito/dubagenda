@@ -9,11 +9,12 @@ import { toast } from "sonner";
 interface TimelineViewProps {
   appointments: TimelineAppointment[];
   loading: boolean;
+  selectedDate: Date; // Data selecionada na agenda
   onSelectAppointment: (appointment: TimelineAppointment) => void;
   onEmptySlotClick: (time: string) => void;
 }
 
-export function TimelineView({ appointments, loading, onSelectAppointment, onEmptySlotClick }: TimelineViewProps) {
+export function TimelineView({ appointments, loading, selectedDate, onSelectAppointment, onEmptySlotClick }: TimelineViewProps) {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [clickedUnavailableSlot, setClickedUnavailableSlot] = useState<string | null>(null);
 
@@ -68,14 +69,28 @@ export function TimelineView({ appointments, loading, onSelectAppointment, onEmp
     return hour === 13;
   };
 
-  const getTimeStatus = (hora: string) => {
+  // Compara DATA + HORA completa para determinar status
+  const getTimeStatus = (hora: string, appointmentDateStr?: string) => {
     const now = currentTime;
     const [hours, minutes] = hora.split(':').map(Number);
-    const slotTime = new Date(now);
-    slotTime.setHours(hours, minutes, 0, 0);
+    
+    // Usar a data do agendamento se disponível, senão usar a data selecionada na agenda
+    let slotTime: Date;
+    if (appointmentDateStr) {
+      // Parse da data do agendamento (formato YYYY-MM-DD)
+      const [year, month, day] = appointmentDateStr.split('-').map(Number);
+      slotTime = new Date(year, month - 1, day, hours, minutes, 0, 0);
+    } else {
+      // Usar a data selecionada na agenda
+      slotTime = new Date(selectedDate);
+      slotTime.setHours(hours, minutes, 0, 0);
+    }
 
     const diffMinutes = Math.floor((slotTime.getTime() - now.getTime()) / 60000);
 
+    // Se a diferença for muito grande (mais de um dia no futuro), é futuro
+    if (diffMinutes > 60 * 24) return "future";
+    
     if (diffMinutes < -30) return "passed";
     if (diffMinutes <= 0) return "now";
     if (diffMinutes <= 10) return "soon";
@@ -140,7 +155,8 @@ export function TimelineView({ appointments, loading, onSelectAppointment, onEmp
 
       {timeSlots.map((slot) => {
         const appointment = getAppointmentForSlot(slot);
-        const timeStatus = getTimeStatus(slot);
+        // Passar a data do agendamento para comparação correta
+        const timeStatus = getTimeStatus(slot, appointment?.data);
         const paymentInfo = appointment ? getPaymentBadge(appointment) : null;
         const PaymentIcon = paymentInfo?.icon;
         const lunchBreak = isLunchBreak(slot);
