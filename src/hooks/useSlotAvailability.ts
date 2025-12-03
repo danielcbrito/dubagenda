@@ -1,25 +1,18 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
-import type { Database } from '@/integrations/supabase/types';
-
-type AppointmentStatus = Database['public']['Enums']['appointment_status'];
 
 /**
- * HOOK DE DISPONIBILIDADE DE HORÁRIOS
+ * HOOK DE DISPONIBILIDADE DE HORÁRIOS - V2 (BACKEND-FIRST)
  * 
- * Este hook é a ÚNICA fonte de verdade para determinar
- * quais horários estão disponíveis para agendamento.
+ * Este hook SEMPRE consulta o backend (Edge Function) como
+ * fonte única da verdade para disponibilidade.
  * 
- * REGRAS DE BLOQUEIO:
- * - pending, confirmed, completed → BLOQUEIA
- * - cancelled_by_user, cancelled_by_admin, no_show, excluido → LIBERA
- * - pending_bookings não expirados → BLOQUEIA
- * 
- * HORÁRIO DE FUNCIONAMENTO:
- * - Segunda a Sábado: 09:00 às 20:00
- * - Almoço: 13:00 às 14:00 (fechado)
- * - Domingo: fechado
+ * FLUXO:
+ * 1. Chama Edge Function check-availability
+ * 2. Recebe slots já calculados pelo backend
+ * 3. Mantém realtime listener para atualizações
+ * 4. Polling de backup a cada 8 segundos
  */
 
 export interface TimeSlot {
@@ -31,12 +24,19 @@ export interface TimeSlot {
 interface OccupiedSlot {
   hora: string;
   duracao: number;
+  status: string;
   source: 'agendamento' | 'pending_booking';
-  status?: string;
 }
 
-// Status que BLOQUEIAM o horário (qualquer outro status = livre)
-const BLOCKING_STATUSES: AppointmentStatus[] = ['pending', 'confirmed', 'completed'];
+interface AvailabilityResponse {
+  success: boolean;
+  date: string;
+  slots: TimeSlot[];
+  occupiedSlots: OccupiedSlot[];
+  message?: string;
+}
+
+const SUPABASE_URL = 'https://djtpzvujzmrrslirzwun.supabase.co';
 
 export function useSlotAvailability(
   selectedDate: Date | undefined,
@@ -46,113 +46,141 @@ export function useSlotAvailability(
   const [slots, setSlots] = useState<TimeSlot[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [occupiedSlots, setOccupiedSlots] = useState<OccupiedSlot[]>([]);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   /**
-   * Função principal que carrega os slots disponíveis
-   * Consulta DIRETAMENTE o banco de dados (fonte da verdade)
+   * Função principal que carrega os slots do BACKEND
+   * A Edge Function check-availability é a ÚNICA fonte da verdade
    */
   const loadSlots = useCallback(async () => {
     if (!selectedDate || serviceDuration <= 0) {
       setSlots([]);
+      setOccupiedSlots([]);
       return;
     }
+
+    // Cancelar requisição anterior se existir
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    abortControllerRef.current = new AbortController();
 
     setLoading(true);
     setError(null);
 
     const dateStr = format(selectedDate, 'yyyy-MM-dd');
-    const now = new Date();
-    const todayStr = format(now, 'yyyy-MM-dd');
-    const isToday = dateStr === todayStr;
-
-    // Tempo mínimo de antecedência para agendamentos no mesmo dia (1 hora)
-    const currentMinutes = now.getHours() * 60 + now.getMinutes();
-    const minimumAdvanceMinutes = isToday ? currentMinutes + 60 : 0;
 
     console.log('='.repeat(60));
-    console.log('[useSlotAvailability] INICIANDO CARGA DE SLOTS');
+    console.log('[useSlotAvailability] CHAMANDO BACKEND');
     console.log(`[useSlotAvailability] Data: ${dateStr} | Duração: ${serviceDuration}min`);
-    console.log(`[useSlotAvailability] É hoje: ${isToday} | Mínimo: ${minimumAdvanceMinutes}min`);
 
     try {
-      // =====================================================
-      // CONSULTA 1: Agendamentos existentes (FONTE DA VERDADE)
-      // =====================================================
-      let appointmentsQuery = supabase
+      const response = await fetch(
+        `${SUPABASE_URL}/functions/v1/check-availability`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            date: dateStr,
+            duration: serviceDuration,
+            excludeAppointmentId: excludeAppointmentId || undefined
+          }),
+          signal: abortControllerRef.current.signal
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data: AvailabilityResponse = await response.json();
+
+      if (!data.success) {
+        throw new Error(data.message || 'Erro ao verificar disponibilidade');
+      }
+
+      console.log(`[useSlotAvailability] RESPOSTA DO BACKEND:`);
+      console.log(`  → Slots: ${data.slots.length}`);
+      console.log(`  → Disponíveis: ${data.slots.filter(s => s.available).length}`);
+      console.log(`  → Ocupados no DB: ${data.occupiedSlots.length}`);
+      data.occupiedSlots.forEach(os => {
+        console.log(`    → ${os.hora} | ${os.duracao}min | ${os.status} | ${os.source}`);
+      });
+      console.log('='.repeat(60));
+
+      setSlots(data.slots);
+      setOccupiedSlots(data.occupiedSlots);
+
+    } catch (err) {
+      if (err instanceof Error && err.name === 'AbortError') {
+        console.log('[useSlotAvailability] Requisição cancelada');
+        return;
+      }
+      console.error('[useSlotAvailability] ERRO:', err);
+      setError('Erro ao carregar horários');
+      
+      // Fallback: carregar direto do banco se Edge Function falhar
+      console.log('[useSlotAvailability] Tentando fallback direto do banco...');
+      await loadSlotsFromDatabase(dateStr);
+    } finally {
+      setLoading(false);
+    }
+  }, [selectedDate, serviceDuration, excludeAppointmentId]);
+
+  /**
+   * Fallback: carregar slots diretamente do banco
+   * Usado apenas se a Edge Function falhar
+   */
+  const loadSlotsFromDatabase = useCallback(async (dateStr: string) => {
+    try {
+      const now = new Date();
+      const todayStr = format(now, 'yyyy-MM-dd');
+      const isToday = dateStr === todayStr;
+      const currentMinutes = now.getHours() * 60 + now.getMinutes();
+      const minimumAdvanceMinutes = isToday ? currentMinutes + 60 : 0;
+
+      // Buscar agendamentos
+      const { data: appointments, error: aptError } = await supabase
         .from('agendamentos')
         .select('id, hora, duracao, status')
         .eq('data', dateStr)
-        .in('status', BLOCKING_STATUSES);
+        .in('status', ['pending', 'confirmed', 'completed']);
 
-      // Se for reagendamento, excluir o próprio agendamento
-      if (excludeAppointmentId) {
-        appointmentsQuery = appointmentsQuery.neq('id', excludeAppointmentId);
-      }
+      if (aptError) throw aptError;
 
-      const { data: appointments, error: aptError } = await appointmentsQuery;
-
-      if (aptError) {
-        console.error('[useSlotAvailability] ERRO ao buscar agendamentos:', aptError);
-        setError('Erro ao verificar disponibilidade');
-        setLoading(false);
-        return;
-      }
-
-      console.log(`[useSlotAvailability] Agendamentos encontrados: ${appointments?.length || 0}`);
-      if (appointments && appointments.length > 0) {
-        appointments.forEach(apt => {
-          console.log(`  → ${apt.hora} | ${apt.duracao}min | ${apt.status} | ID: ${apt.id.substring(0, 8)}`);
-        });
-      }
-
-      // =====================================================
-      // CONSULTA 2: Reservas pendentes (aguardando pagamento)
-      // =====================================================
-      const { data: pendingBookings, error: pendingError } = await supabase
+      // Buscar pending_bookings
+      const { data: pendingBookings } = await supabase
         .from('pending_bookings')
-        .select('id, hora, duracao, expires_at')
+        .select('id, hora, duracao')
         .eq('data', dateStr)
         .gt('expires_at', now.toISOString());
 
-      if (pendingError) {
-        console.error('[useSlotAvailability] ERRO ao buscar pending_bookings:', pendingError);
-        // Continuar mesmo com erro - não bloquear por causa de pending_bookings
-      }
-
-      console.log(`[useSlotAvailability] Pending bookings: ${pendingBookings?.length || 0}`);
-      if (pendingBookings && pendingBookings.length > 0) {
-        pendingBookings.forEach(pb => {
-          console.log(`  → ${pb.hora} | ${pb.duracao}min | Expira: ${pb.expires_at}`);
-        });
-      }
-
-      // =====================================================
-      // COMBINAR TODOS OS SLOTS OCUPADOS
-      // =====================================================
-      const occupiedSlots: OccupiedSlot[] = [
+      const allOccupied = [
         ...(appointments || []).map(apt => ({
           hora: apt.hora,
           duracao: apt.duracao,
-          source: 'agendamento' as const,
-          status: apt.status
+          status: apt.status,
+          source: 'agendamento' as const
         })),
         ...(pendingBookings || []).map(pb => ({
           hora: pb.hora,
           duracao: pb.duracao,
+          status: 'pending_booking',
           source: 'pending_booking' as const
         }))
       ];
 
-      // =====================================================
-      // GERAR SLOTS DE HORÁRIO (09:00 - 20:00)
-      // =====================================================
+      // Gerar slots
       const generatedSlots: TimeSlot[] = [];
-      const OPEN_HOUR = 9;    // 09:00
-      const CLOSE_HOUR = 20;  // 20:00
-      const LUNCH_START = 13 * 60; // 13:00 em minutos
-      const LUNCH_END = 14 * 60;   // 14:00 em minutos
+      const OPEN_HOUR = 9;
+      const CLOSE_HOUR = 20;
+      const LUNCH_START = 13 * 60;
+      const LUNCH_END = 14 * 60;
 
       for (let hour = OPEN_HOUR; hour < CLOSE_HOUR; hour++) {
         for (let minute = 0; minute < 60; minute += 30) {
@@ -160,55 +188,30 @@ export function useSlotAvailability(
           const slotStartMinutes = hour * 60 + minute;
           const slotEndMinutes = slotStartMinutes + serviceDuration;
 
-          // REGRA 1: Não pode ultrapassar horário de fechamento
-          if (slotEndMinutes > CLOSE_HOUR * 60) {
-            continue; // Não adiciona este slot
-          }
+          if (slotEndMinutes > CLOSE_HOUR * 60) continue;
 
-          // REGRA 2: Não pode estar no horário de almoço
           const overlapsLunch = (
             (slotStartMinutes >= LUNCH_START && slotStartMinutes < LUNCH_END) ||
             (slotEndMinutes > LUNCH_START && slotEndMinutes <= LUNCH_END) ||
             (slotStartMinutes < LUNCH_START && slotEndMinutes > LUNCH_END)
           );
+          if (overlapsLunch) continue;
 
-          if (overlapsLunch) {
-            continue; // Não adiciona este slot
-          }
-
-          // REGRA 3: Antecedência mínima de 1 hora para mesmo dia
           if (isToday && slotStartMinutes < minimumAdvanceMinutes) {
-            generatedSlots.push({
-              time: timeStr,
-              available: false,
-              blockedReason: 'minimum_advance'
-            });
+            generatedSlots.push({ time: timeStr, available: false, blockedReason: 'minimum_advance' });
             continue;
           }
 
-          // REGRA 4: Verificar conflito com agendamentos existentes
           let isOccupied = false;
-          let conflictInfo = '';
-
-          for (const occupied of occupiedSlots) {
-            // Parse hora (formato pode ser "09:00" ou "09:00:00")
+          for (const occupied of allOccupied) {
             const [occHour, occMinute] = occupied.hora.split(':').map(Number);
             const occStartMinutes = occHour * 60 + occMinute;
             const occEndMinutes = occStartMinutes + occupied.duracao;
-
-            // FÓRMULA DE SOBREPOSIÇÃO:
-            // Dois intervalos [A, B) e [C, D) se sobrepõem quando: A < D E B > C
             const hasOverlap = slotStartMinutes < occEndMinutes && slotEndMinutes > occStartMinutes;
-
             if (hasOverlap) {
               isOccupied = true;
-              conflictInfo = `${occupied.source} às ${occupied.hora} (${occStartMinutes}-${occEndMinutes})`;
               break;
             }
-          }
-
-          if (isOccupied) {
-            console.log(`[useSlotAvailability] ❌ BLOQUEADO ${timeStr} (${slotStartMinutes}-${slotEndMinutes}) → Conflito: ${conflictInfo}`);
           }
 
           generatedSlots.push({
@@ -219,30 +222,18 @@ export function useSlotAvailability(
         }
       }
 
-      // =====================================================
-      // RESULTADO FINAL
-      // =====================================================
-      const availableCount = generatedSlots.filter(s => s.available).length;
-      const blockedCount = generatedSlots.filter(s => !s.available).length;
-      
-      console.log(`[useSlotAvailability] RESULTADO FINAL:`);
-      console.log(`  → Total de slots: ${generatedSlots.length}`);
-      console.log(`  → Disponíveis: ${availableCount}`);
-      console.log(`  → Bloqueados: ${blockedCount}`);
-      console.log('='.repeat(60));
-
       setSlots(generatedSlots);
+      setOccupiedSlots(allOccupied);
+      console.log('[useSlotAvailability] Fallback concluído com sucesso');
 
     } catch (err) {
-      console.error('[useSlotAvailability] ERRO GERAL:', err);
+      console.error('[useSlotAvailability] Erro no fallback:', err);
       setError('Erro ao carregar horários');
-    } finally {
-      setLoading(false);
     }
-  }, [selectedDate, serviceDuration, excludeAppointmentId]);
+  }, [serviceDuration]);
 
   /**
-   * Configurar listeners em tempo real
+   * Configurar listeners em tempo real e polling
    */
   useEffect(() => {
     if (!selectedDate || serviceDuration <= 0) return;
@@ -295,6 +286,10 @@ export function useSlotAvailability(
       )
       .subscribe((status) => {
         console.log(`[Realtime] Status do canal ${channelName}:`, status);
+        if (status === 'SUBSCRIBED') {
+          console.log('[Realtime] Canal conectado, recarregando slots...');
+          loadSlots();
+        }
       });
 
     channelRef.current = channel;
@@ -313,6 +308,10 @@ export function useSlotAvailability(
       if (pollIntervalRef.current) {
         clearInterval(pollIntervalRef.current);
         pollIntervalRef.current = null;
+      }
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+        abortControllerRef.current = null;
       }
     };
   }, [selectedDate, serviceDuration, loadSlots]);
@@ -349,7 +348,7 @@ export function useSlotAvailability(
         .from('agendamentos')
         .select('id, hora, duracao, status')
         .eq('data', dateStr)
-        .in('status', BLOCKING_STATUSES);
+        .in('status', ['pending', 'confirmed', 'completed']);
 
       if (excludeAppointmentId) {
         query = query.neq('id', excludeAppointmentId);
@@ -362,7 +361,7 @@ export function useSlotAvailability(
         return { available: false, message: 'Erro ao verificar disponibilidade' };
       }
 
-      // Verificar conflitos
+      // Verificar conflitos com agendamentos
       for (const apt of appointments || []) {
         const [aptHour, aptMinute] = apt.hora.split(':').map(Number);
         const aptStartMinutes = aptHour * 60 + aptMinute;
@@ -415,6 +414,7 @@ export function useSlotAvailability(
     slots,
     loading,
     error,
+    occupiedSlots,
     refreshSlots,
     verifySlotAvailability
   };

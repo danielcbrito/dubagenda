@@ -1,5 +1,11 @@
 project_id = "djtpzvujzmrrslirzwun"
 
+[functions.check-availability]
+verify_jwt = false
+
+[functions.atomic-booking]
+verify_jwt = true
+
 [functions.validate-appointment]
 verify_jwt = false
 
@@ -13,6 +19,9 @@ verify_jwt = false
 verify_jwt = true
 
 [functions.create-subscription]
+verify_jwt = true
+
+[functions.cancel-subscription]
 verify_jwt = true
 
 [functions.generate-subscription-charges]
