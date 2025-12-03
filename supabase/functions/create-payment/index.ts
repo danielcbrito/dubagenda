@@ -88,12 +88,12 @@ async function checkTimeSlotAvailability(
   // VERIFICAÇÃO CRÍTICA: Conflitos
   // ============================================
   
-  // Check existing appointments
+  // Check existing appointments - INCLUIR todos os status que bloqueiam (pending, confirmed, completed)
   let query = supabase
     .from('agendamentos')
-    .select('id, hora, duracao')
+    .select('id, hora, duracao, status')
     .eq('data', data)
-    .in('status', ['pending', 'confirmed']);
+    .in('status', ['pending', 'confirmed', 'completed']); // CORRIGIDO: incluir completed
 
   if (excludeAppointmentId) {
     query = query.neq('id', excludeAppointmentId);
@@ -307,6 +307,53 @@ serve(async (req) => {
       if (aptError) {
         console.error('Failed to create appointment:', aptError);
         throw aptError;
+      }
+
+      // ============================================
+      // INTEGRAÇÃO GOOGLE CALENDAR - Criar evento
+      // ============================================
+      try {
+        const { data: servico } = await supabase
+          .from('servicos')
+          .select('nome')
+          .eq('id', bookingData.servico_id)
+          .single();
+
+        const startDateTime = `${bookingData.data}T${bookingData.hora}:00`;
+        const endDate = new Date(`${bookingData.data}T${bookingData.hora}`);
+        endDate.setMinutes(endDate.getMinutes() + bookingData.duracao);
+        const endDateTime = endDate.toISOString().slice(0, 19);
+
+        console.log('Creating Google Calendar event for cash appointment:', appointment.id);
+        
+        // Chamar edge function de sync com Google Calendar
+        const googleCalendarResponse = await fetch(
+          `${Deno.env.get('SUPABASE_URL')}/functions/v1/google-calendar-sync`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
+            },
+            body: JSON.stringify({
+              action: 'create',
+              appointmentId: appointment.id,
+              summary: `Agendamento: ${servico?.nome || 'Serviço'}`,
+              description: `Cliente agendou ${servico?.nome || 'serviço'} - Pagamento em DINHEIRO (aguardando confirmação)`,
+              startDateTime,
+              endDateTime,
+            }),
+          }
+        );
+
+        if (googleCalendarResponse.ok) {
+          console.log('Google Calendar event created successfully');
+        } else {
+          console.error('Failed to create Google Calendar event:', await googleCalendarResponse.text());
+        }
+      } catch (gcError) {
+        console.error('Error creating Google Calendar event:', gcError);
+        // Não bloqueia o fluxo se Google Calendar falhar
       }
 
       // Create payment record

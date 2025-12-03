@@ -96,11 +96,12 @@ Deno.serve(async (req) => {
     // ============================================
     
     // Build query to check for conflicts in agendamentos
+    // INCLUIR todos os status que bloqueiam (pending, confirmed, completed)
     let agendamentosQuery = supabase
       .from('agendamentos')
       .select('id, hora, duracao, status')
       .eq('data', data)
-      .in('status', ['pending', 'confirmed']);
+      .in('status', ['pending', 'confirmed', 'completed']); // CORRIGIDO: incluir completed
     
     // Excluir o próprio agendamento (para reagendamentos)
     if (excludeAppointmentId) {
