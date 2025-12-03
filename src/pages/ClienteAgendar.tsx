@@ -313,26 +313,44 @@ const ClienteAgendar = () => {
     console.log('[loadAvailableSlots] isToday:', isToday, 'minimumAllowedMinutes:', minimumAllowedMinutes, '(' + Math.floor(minimumAllowedMinutes / 60) + ':' + (minimumAllowedMinutes % 60).toString().padStart(2, '0') + ')');
     
     // Fetch all appointments for the selected date (exclude cancelled and no_show)
-    const { data: appointments } = await supabase
+    const { data: appointments, error: aptError } = await supabase
       .from("agendamentos")
-      .select("hora, duracao")
+      .select("hora, duracao, status")
       .eq("data", dateStr)
       .in("status", ["pending", "confirmed", "completed"]);
 
+    if (aptError) {
+      console.error('[loadAvailableSlots] Erro ao buscar agendamentos:', aptError);
+    }
+
     // Also fetch pending bookings (reservas aguardando pagamento)
-    const { data: pendingBookings } = await supabase
+    const { data: pendingBookings, error: pendingError } = await supabase
       .from("pending_bookings")
       .select("hora, duracao, expires_at")
       .eq("data", dateStr)
       .gt("expires_at", new Date().toISOString());
 
+    if (pendingError) {
+      console.error('[loadAvailableSlots] Erro ao buscar pending_bookings:', pendingError);
+    }
+
     // Combine appointments and pending bookings for conflict check
     const allOccupiedSlots = [
-      ...(appointments || []),
-      ...(pendingBookings || []).map(pb => ({ hora: pb.hora, duracao: pb.duracao }))
+      ...(appointments || []).map(apt => ({ 
+        hora: apt.hora, 
+        duracao: apt.duracao,
+        source: 'agendamento' as const
+      })),
+      ...(pendingBookings || []).map(pb => ({ 
+        hora: pb.hora, 
+        duracao: pb.duracao,
+        source: 'pending' as const
+      }))
     ];
 
-    console.log('[loadAvailableSlots] Data:', dateStr, 'Appointments:', appointments?.length, 'PendingBookings:', pendingBookings?.length);
+    console.log('[loadAvailableSlots] Data:', dateStr);
+    console.log('[loadAvailableSlots] Agendamentos encontrados:', appointments?.length || 0, appointments?.map(a => `${a.hora} (${a.duracao}min, ${a.status})`));
+    console.log('[loadAvailableSlots] Pending bookings encontrados:', pendingBookings?.length || 0);
 
     // Calculate total duration needed
     const totalDuration = selectedServices.reduce((sum, s) => sum + s.duracao_minutos, 0);
@@ -371,33 +389,41 @@ const ClienteAgendar = () => {
           continue;
         }
 
-        // Check if slot conflicts with existing appointments or pending bookings (including buffer)
+        // Check if slot conflicts with existing appointments or pending bookings
         let isAvailable = true;
+        let blockingSource = '';
         
-        if (allOccupiedSlots.length > 0) {
-          for (const apt of allOccupiedSlots) {
-            const [aptHour, aptMinute] = apt.hora.split(':').map(Number);
-            const aptStart = aptHour * 60 + aptMinute;
-            const aptEnd = aptStart + apt.duracao + bufferTime; // Add buffer after appointment
+        for (const apt of allOccupiedSlots) {
+          // Parse hora (pode vir como "09:00" ou "09:00:00")
+          const horaParts = apt.hora.split(':');
+          const aptHour = parseInt(horaParts[0], 10);
+          const aptMinute = parseInt(horaParts[1], 10);
+          const aptStart = aptHour * 60 + aptMinute;
+          const aptEnd = aptStart + apt.duracao + bufferTime; // Add buffer AFTER appointment
 
-            // Check for overlap (including buffer time)
-            if (
-              (slotStart >= aptStart && slotStart < aptEnd) ||
-              (slotEnd > aptStart && slotEnd <= aptEnd) ||
-              (slotStart <= aptStart && slotEnd >= aptEnd)
-            ) {
-              isAvailable = false;
-              console.log('[loadAvailableSlots] Slot', time, 'BLOQUEADO por agendamento às', apt.hora);
-              break;
-            }
+          // Verificação de sobreposição correta:
+          // Dois intervalos se sobrepõem quando: início1 < fim2 E fim1 > início2
+          const hasConflict = slotStart < aptEnd && slotEnd > aptStart;
+
+          if (hasConflict) {
+            isAvailable = false;
+            blockingSource = apt.source;
+            console.log(`[loadAvailableSlots] Slot ${time} (${slotStart}-${slotEnd}) BLOQUEADO por ${apt.source} às ${apt.hora} (${aptStart}-${aptEnd})`);
+            break;
           }
         }
 
-        slots.push({ time, available: isAvailable, blockedReason: isAvailable ? undefined : 'occupied' });
+        slots.push({ 
+          time, 
+          available: isAvailable, 
+          blockedReason: isAvailable ? undefined : 'occupied' 
+        });
       }
     }
 
-    console.log('[loadAvailableSlots] Total slots:', slots.length, 'Indisponíveis:', slots.filter(s => !s.available).length);
+    const unavailableCount = slots.filter(s => !s.available).length;
+    const availableCount = slots.filter(s => s.available).length;
+    console.log(`[loadAvailableSlots] Total: ${slots.length} slots | Disponíveis: ${availableCount} | Indisponíveis: ${unavailableCount}`);
     setAvailableSlots(slots);
   };
 
