@@ -146,11 +146,12 @@ async function handlePaymentConfirmed(supabase: any, payload: AsaasWebhookEvent)
   console.log(`Processing payment confirmation: ${payload.payment.id}`);
 
   // First, check if this is a pending booking (PIX payment for reservation)
+  // CORRIGIDO: Buscar por externalReference (ID do pending_booking) OU payment_intent_id
   if (payload.payment.externalReference) {
     const { data: pendingBooking } = await supabase
       .from('pending_bookings')
       .select('*')
-      .eq('payment_intent_id', payload.payment.id)
+      .or(`id.eq.${payload.payment.externalReference},payment_intent_id.eq.${payload.payment.id}`)
       .maybeSingle();
 
     if (pendingBooking) {
@@ -158,27 +159,27 @@ async function handlePaymentConfirmed(supabase: any, payload: AsaasWebhookEvent)
 
       // ============================================
       // VERIFICAÇÃO CRÍTICA: Verificar se horário ainda está disponível
-      // (pode ter sido ocupado enquanto cliente pagava PIX)
+      // CORRIGIDO: Sem buffer adicional para consistência com frontend
       // ============================================
       const [startHour, startMinute] = pendingBooking.hora.split(':').map(Number);
       const startTimeInMinutes = startHour * 60 + startMinute;
       const endTimeInMinutes = startTimeInMinutes + pendingBooking.duracao;
-      const bufferTime = 10;
+      // REMOVIDO buffer de 10 minutos para consistência
 
       const { data: existingAppointments } = await supabase
         .from('agendamentos')
         .select('id, hora, duracao')
         .eq('data', pendingBooking.data)
-        .in('status', ['pending', 'confirmed']);
+        .in('status', ['pending', 'confirmed', 'completed']); // INCLUIR completed
 
       let hasConflict = false;
       for (const apt of existingAppointments || []) {
         const [aptHour, aptMinute] = apt.hora.split(':').map(Number);
         const aptStart = aptHour * 60 + aptMinute;
-        const aptEnd = aptStart + apt.duracao + bufferTime;
+        const aptEnd = aptStart + apt.duracao; // SEM buffer para consistência
 
-        const newEnd = endTimeInMinutes + bufferTime;
-        if (startTimeInMinutes < aptEnd && newEnd > aptStart) {
+        // Overlap correto: início1 < fim2 E fim1 > início2
+        if (startTimeInMinutes < aptEnd && endTimeInMinutes > aptStart) {
           hasConflict = true;
           console.error('CONFLITO DETECTADO! Horário já ocupado:', { pendingBooking: pendingBooking.id, conflictApt: apt.id });
           break;
@@ -219,6 +220,53 @@ async function handlePaymentConfirmed(supabase: any, payload: AsaasWebhookEvent)
       }
 
       console.log('Appointment created:', appointment.id);
+
+      // ============================================
+      // INTEGRAÇÃO GOOGLE CALENDAR - Criar evento
+      // ============================================
+      try {
+        const { data: servico } = await supabase
+          .from('servicos')
+          .select('nome')
+          .eq('id', pendingBooking.servico_id)
+          .single();
+
+        const startDateTime = `${pendingBooking.data}T${pendingBooking.hora}:00`;
+        const endDate = new Date(`${pendingBooking.data}T${pendingBooking.hora}`);
+        endDate.setMinutes(endDate.getMinutes() + pendingBooking.duracao);
+        const endDateTime = endDate.toISOString().slice(0, 19);
+
+        console.log('Creating Google Calendar event for appointment:', appointment.id);
+        
+        // Chamar edge function de sync com Google Calendar
+        const googleCalendarResponse = await fetch(
+          `${Deno.env.get('SUPABASE_URL')}/functions/v1/google-calendar-sync`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
+            },
+            body: JSON.stringify({
+              action: 'create',
+              appointmentId: appointment.id,
+              summary: `Agendamento: ${servico?.nome || 'Serviço'}`,
+              description: `Cliente agendou ${servico?.nome || 'serviço'} - Pagamento via ${pendingBooking.payment_method?.toUpperCase() || 'PIX'}`,
+              startDateTime,
+              endDateTime,
+            }),
+          }
+        );
+
+        if (googleCalendarResponse.ok) {
+          console.log('Google Calendar event created successfully');
+        } else {
+          console.error('Failed to create Google Calendar event:', await googleCalendarResponse.text());
+        }
+      } catch (gcError) {
+        console.error('Error creating Google Calendar event:', gcError);
+        // Não bloqueia o fluxo se Google Calendar falhar
+      }
 
       // Save payment record
       const { error: paymentError } = await supabase
