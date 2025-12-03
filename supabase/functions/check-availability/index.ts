@@ -188,63 +188,62 @@ Deno.serve(async (req) => {
     const currentMinutes = now.getHours() * 60 + now.getMinutes();
     const minimumAdvanceMinutes = isToday ? currentMinutes + 60 : 0;
 
-    // Gerar slots
+    // Gerar slots a cada 10 minutos (para respeitar delay corretamente)
     const slots: TimeSlot[] = [];
-    const OPEN_HOUR = Math.floor(OPEN_MINUTES / 60);
-    const CLOSE_HOUR = Math.ceil(CLOSE_MINUTES / 60);
+    const SLOT_INTERVAL = 10; // Intervalo de 10 minutos entre slots
 
-    for (let hour = OPEN_HOUR; hour < CLOSE_HOUR; hour++) {
-      for (let minute = 0; minute < 60; minute += 30) {
-        const timeStr = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
-        const slotStartMinutes = hour * 60 + minute;
-        const slotEndMinutes = slotStartMinutes + duration;
+    for (let slotStartMinutes = OPEN_MINUTES; slotStartMinutes < CLOSE_MINUTES; slotStartMinutes += SLOT_INTERVAL) {
+      const hour = Math.floor(slotStartMinutes / 60);
+      const minute = slotStartMinutes % 60;
+      const timeStr = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+      const slotEndMinutes = slotStartMinutes + duration;
 
-        // Verificar se está dentro do horário de funcionamento
-        if (slotStartMinutes < OPEN_MINUTES) continue;
+      // Verificar se cabe antes do fechamento (serviço + delay)
+      if (slotEndMinutes + DELAY_MINUTES > CLOSE_MINUTES) continue;
 
-        // Verificar se cabe antes do fechamento (serviço + delay)
-        if (slotEndMinutes + DELAY_MINUTES > CLOSE_MINUTES) continue;
-
-        // Verificar almoço
-        if (LUNCH_START !== null && LUNCH_END !== null) {
-          const overlapsLunch = (
-            (slotStartMinutes >= LUNCH_START && slotStartMinutes < LUNCH_END) ||
-            (slotEndMinutes > LUNCH_START && slotEndMinutes <= LUNCH_END) ||
-            (slotStartMinutes < LUNCH_START && slotEndMinutes > LUNCH_END)
-          );
-          if (overlapsLunch) continue;
-        }
-
-        // Verificar antecedência mínima
-        if (isToday && slotStartMinutes < minimumAdvanceMinutes) {
-          slots.push({ time: timeStr, available: false, blockedReason: 'minimum_advance' });
-          continue;
-        }
-
-        // Verificar conflitos com agendamentos (incluindo delay)
-        let isOccupied = false;
-        for (const occupied of occupiedSlots) {
-          const [occHour, occMinute] = occupied.hora.split(':').map(Number);
-          const occStartMinutes = occHour * 60 + occMinute;
-          const occEndMinutes = occStartMinutes + occupied.duracaoComDelay;
-
-          // Slot solicitado também precisa de espaço para delay
-          const newSlotEndWithDelay = slotEndMinutes + DELAY_MINUTES;
-          const hasOverlap = slotStartMinutes < occEndMinutes && newSlotEndWithDelay > occStartMinutes;
-
-          if (hasOverlap) {
-            isOccupied = true;
-            console.log(`[check-availability] ❌ ${timeStr} bloqueado por ${occupied.hora} (${occupied.source})`);
-            break;
-          }
-        }
-
-        slots.push({
-          time: timeStr,
-          available: !isOccupied,
-          blockedReason: isOccupied ? 'occupied' : undefined
-        });
+      // Verificar almoço - slot não pode começar nem terminar durante o almoço
+      if (LUNCH_START !== null && LUNCH_END !== null) {
+        const overlapsLunch = (
+          (slotStartMinutes >= LUNCH_START && slotStartMinutes < LUNCH_END) ||
+          (slotEndMinutes > LUNCH_START && slotEndMinutes <= LUNCH_END) ||
+          (slotStartMinutes < LUNCH_START && slotEndMinutes > LUNCH_END)
+        );
+        if (overlapsLunch) continue;
       }
+
+      // Verificar antecedência mínima (1h para hoje)
+      if (isToday && slotStartMinutes < minimumAdvanceMinutes) {
+        slots.push({ time: timeStr, available: false, blockedReason: 'minimum_advance' });
+        continue;
+      }
+
+      // Verificar conflitos com agendamentos existentes (incluindo delay obrigatório)
+      let isOccupied = false;
+      for (const occupied of occupiedSlots) {
+        const [occHour, occMinute] = occupied.hora.split(':').map(Number);
+        const occStartMinutes = occHour * 60 + occMinute;
+        // Fim do agendamento existente + delay obrigatório
+        const occEndWithDelay = occStartMinutes + occupied.duracaoComDelay;
+
+        // Novo slot também precisa de espaço para seu próprio serviço + delay
+        const newSlotEndWithDelay = slotEndMinutes + DELAY_MINUTES;
+
+        // Verificar sobreposição considerando delays
+        // Conflito se: novo_inicio < existente_fim_com_delay E novo_fim_com_delay > existente_inicio
+        const hasOverlap = slotStartMinutes < occEndWithDelay && newSlotEndWithDelay > occStartMinutes;
+
+        if (hasOverlap) {
+          isOccupied = true;
+          console.log(`[check-availability] ❌ ${timeStr} bloqueado por ${occupied.hora} (duração: ${occupied.duracao}min + ${DELAY_MINUTES}min delay)`);
+          break;
+        }
+      }
+
+      slots.push({
+        time: timeStr,
+        available: !isOccupied,
+        blockedReason: isOccupied ? 'occupied' : undefined
+      });
     }
 
     const availableCount = slots.filter(s => s.available).length;
