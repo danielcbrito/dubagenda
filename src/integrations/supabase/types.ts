@@ -394,6 +394,45 @@ export type Database = {
           },
         ]
       }
+      configuracoes_horario: {
+        Row: {
+          aberto: boolean
+          created_at: string | null
+          delay_entre_servicos: number
+          dia_semana: number
+          hora_abertura: string
+          hora_almoco_fim: string | null
+          hora_almoco_inicio: string | null
+          hora_fechamento: string
+          id: string
+          updated_at: string | null
+        }
+        Insert: {
+          aberto?: boolean
+          created_at?: string | null
+          delay_entre_servicos?: number
+          dia_semana: number
+          hora_abertura?: string
+          hora_almoco_fim?: string | null
+          hora_almoco_inicio?: string | null
+          hora_fechamento?: string
+          id?: string
+          updated_at?: string | null
+        }
+        Update: {
+          aberto?: boolean
+          created_at?: string | null
+          delay_entre_servicos?: number
+          dia_semana?: number
+          hora_abertura?: string
+          hora_almoco_fim?: string | null
+          hora_almoco_inicio?: string | null
+          hora_fechamento?: string
+          id?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       creditos: {
         Row: {
           agendamento_origem_id: string | null

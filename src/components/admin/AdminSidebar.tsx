@@ -1,4 +1,4 @@
-import { Home, Calendar, Users, DollarSign, FileText, Gift, Settings, LogOut, CheckCircle, Scissors, Code, Menu, ChevronDown, ChevronRight, ShieldCheck, Key, HeadphonesIcon } from "lucide-react";
+import { Home, Calendar, Users, DollarSign, FileText, Gift, Settings, LogOut, CheckCircle, Scissors, Code, Menu, ChevronDown, ChevronRight, ShieldCheck, Key, HeadphonesIcon, Clock } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -66,6 +66,7 @@ const menuGroups = [
   {
     label: "Sistema",
     items: [
+      { title: "Horários", url: "/admin/horarios", icon: Clock },
       { title: "Tickets Suporte", url: "/admin/suporte", icon: HeadphonesIcon },
       { title: "Config. Suporte", url: "/admin/suporte-config", icon: Settings },
       { title: "APIs & Integrações", url: "/admin/apis", icon: Key },
