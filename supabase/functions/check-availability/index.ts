@@ -10,9 +10,8 @@
  * - pending_bookings não expirados → BLOQUEIA
  * 
  * HORÁRIO DE FUNCIONAMENTO:
- * - Segunda a Sábado: 09:00 às 20:00
- * - Almoço: 13:00 às 14:00 (fechado)
- * - Domingo: fechado
+ * - Configurável por dia da semana via tabela configuracoes_horario
+ * - Delay obrigatório entre atendimentos (padrão: 10 minutos)
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.80.0';
@@ -25,24 +24,25 @@ const corsHeaders = {
 // Status que BLOQUEIAM o horário
 const BLOCKING_STATUSES = ['pending', 'confirmed', 'completed'];
 
-// Horários de funcionamento
-const BUSINESS_HOURS = {
-  OPEN: 9,      // 09:00
-  CLOSE: 20,    // 20:00
-  LUNCH_START: 13 * 60, // 13:00 em minutos
-  LUNCH_END: 14 * 60,   // 14:00 em minutos
-};
+interface BusinessHoursConfig {
+  aberto: boolean;
+  hora_abertura: string;
+  hora_fechamento: string;
+  hora_almoco_inicio: string | null;
+  hora_almoco_fim: string | null;
+  delay_entre_servicos: number;
+}
 
 interface AvailabilityRequest {
-  date: string;           // YYYY-MM-DD
-  duration: number;       // minutos
-  excludeAppointmentId?: string; // para reagendamento
+  date: string;
+  duration: number;
+  excludeAppointmentId?: string;
 }
 
 interface TimeSlot {
   time: string;
   available: boolean;
-  blockedReason?: 'occupied' | 'minimum_advance' | 'lunch' | 'closed' | 'overlap';
+  blockedReason?: 'occupied' | 'minimum_advance' | 'lunch' | 'closed' | 'overlap' | 'delay_buffer';
 }
 
 interface AvailabilityResponse {
@@ -55,11 +55,16 @@ interface AvailabilityResponse {
     status: string;
     source: 'agendamento' | 'pending_booking';
   }>;
+  businessHours?: BusinessHoursConfig;
   message?: string;
 }
 
+function timeToMinutes(timeStr: string): number {
+  const [hours, minutes] = timeStr.split(':').map(Number);
+  return hours * 60 + minutes;
+}
+
 Deno.serve(async (req) => {
-  // Handle CORS
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -77,9 +82,7 @@ Deno.serve(async (req) => {
     console.log('='.repeat(60));
     console.log('[check-availability] INICIANDO VERIFICAÇÃO');
     console.log(`[check-availability] Data: ${date} | Duração: ${duration}min`);
-    console.log(`[check-availability] Excluir ID: ${excludeAppointmentId || 'N/A'}`);
 
-    // Validar entrada
     if (!date || !duration) {
       return new Response(
         JSON.stringify({ success: false, message: 'Data e duração são obrigatórios' }),
@@ -87,24 +90,50 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Verificar se é domingo
     const dateObj = new Date(date + 'T12:00:00');
-    if (dateObj.getDay() === 0) {
+    const dayOfWeek = dateObj.getDay();
+
+    // Buscar configurações do dia
+    const { data: configData, error: configError } = await supabase
+      .from('configuracoes_horario')
+      .select('*')
+      .eq('dia_semana', dayOfWeek)
+      .single();
+
+    if (configError) {
+      console.log('[check-availability] Usando configuração padrão');
+    }
+
+    const config: BusinessHoursConfig = configData || {
+      aberto: dayOfWeek !== 0,
+      hora_abertura: '09:00',
+      hora_fechamento: dayOfWeek >= 3 && dayOfWeek <= 6 ? '21:00' : '20:00',
+      hora_almoco_inicio: '13:00',
+      hora_almoco_fim: '14:00',
+      delay_entre_servicos: 10
+    };
+
+    console.log(`[check-availability] Config: ${JSON.stringify(config)}`);
+
+    if (!config.aberto) {
       return new Response(
         JSON.stringify({ 
-          success: true, 
-          date, 
-          slots: [], 
-          occupiedSlots: [],
-          message: 'Fechado aos domingos' 
+          success: true, date, slots: [], occupiedSlots: [],
+          businessHours: config, message: 'Fechado neste dia' 
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
       );
     }
 
-    // =====================================================
-    // CONSULTA 1: Agendamentos existentes (FONTE DA VERDADE)
-    // =====================================================
+    const OPEN_MINUTES = timeToMinutes(config.hora_abertura);
+    const CLOSE_MINUTES = timeToMinutes(config.hora_fechamento);
+    const LUNCH_START = config.hora_almoco_inicio ? timeToMinutes(config.hora_almoco_inicio) : null;
+    const LUNCH_END = config.hora_almoco_fim ? timeToMinutes(config.hora_almoco_fim) : null;
+    const DELAY_MINUTES = config.delay_entre_servicos;
+
+    console.log(`[check-availability] Horário: ${config.hora_abertura}-${config.hora_fechamento} | Delay: ${DELAY_MINUTES}min`);
+
+    // Buscar agendamentos
     let appointmentsQuery = supabase
       .from('agendamentos')
       .select('id, hora, duracao, status')
@@ -118,124 +147,96 @@ Deno.serve(async (req) => {
     const { data: appointments, error: aptError } = await appointmentsQuery;
 
     if (aptError) {
-      console.error('[check-availability] ERRO ao buscar agendamentos:', aptError);
+      console.error('[check-availability] ERRO:', aptError);
       return new Response(
         JSON.stringify({ success: false, message: 'Erro ao verificar disponibilidade' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
       );
     }
 
-    console.log(`[check-availability] Agendamentos encontrados: ${appointments?.length || 0}`);
-    appointments?.forEach(apt => {
-      console.log(`  → ${apt.hora} | ${apt.duracao}min | ${apt.status} | ID: ${apt.id.substring(0, 8)}`);
-    });
-
-    // =====================================================
-    // CONSULTA 2: Reservas pendentes (aguardando pagamento)
-    // =====================================================
+    // Buscar pending bookings
     const now = new Date();
-    const { data: pendingBookings, error: pendingError } = await supabase
+    const { data: pendingBookings } = await supabase
       .from('pending_bookings')
       .select('id, hora, duracao, expires_at')
       .eq('data', date)
       .gt('expires_at', now.toISOString());
 
-    if (pendingError) {
-      console.error('[check-availability] ERRO ao buscar pending_bookings:', pendingError);
-    }
+    console.log(`[check-availability] Agendamentos: ${appointments?.length || 0} | Pending: ${pendingBookings?.length || 0}`);
 
-    console.log(`[check-availability] Pending bookings: ${pendingBookings?.length || 0}`);
-    pendingBookings?.forEach(pb => {
-      console.log(`  → ${pb.hora} | ${pb.duracao}min | Expira: ${pb.expires_at}`);
-    });
-
-    // =====================================================
-    // COMBINAR TODOS OS SLOTS OCUPADOS
-    // =====================================================
+    // Combinar slots ocupados (COM DELAY)
     const occupiedSlots = [
       ...(appointments || []).map(apt => ({
         hora: apt.hora,
         duracao: apt.duracao,
+        duracaoComDelay: apt.duracao + DELAY_MINUTES,
         status: apt.status,
         source: 'agendamento' as const
       })),
       ...(pendingBookings || []).map(pb => ({
         hora: pb.hora,
         duracao: pb.duracao,
+        duracaoComDelay: pb.duracao + DELAY_MINUTES,
         status: 'pending_booking',
         source: 'pending_booking' as const
       }))
     ];
 
-    // =====================================================
-    // CALCULAR HORÁRIO MÍNIMO (antecedência de 1 hora para hoje)
-    // =====================================================
+    // Calcular horário mínimo (1h de antecedência para hoje)
     const todayStr = now.toISOString().split('T')[0];
     const isToday = date === todayStr;
     const currentMinutes = now.getHours() * 60 + now.getMinutes();
     const minimumAdvanceMinutes = isToday ? currentMinutes + 60 : 0;
 
-    console.log(`[check-availability] É hoje: ${isToday} | Mínimo: ${minimumAdvanceMinutes}min`);
-
-    // =====================================================
-    // GERAR SLOTS DE HORÁRIO (09:00 - 20:00)
-    // =====================================================
+    // Gerar slots
     const slots: TimeSlot[] = [];
+    const OPEN_HOUR = Math.floor(OPEN_MINUTES / 60);
+    const CLOSE_HOUR = Math.ceil(CLOSE_MINUTES / 60);
 
-    for (let hour = BUSINESS_HOURS.OPEN; hour < BUSINESS_HOURS.CLOSE; hour++) {
+    for (let hour = OPEN_HOUR; hour < CLOSE_HOUR; hour++) {
       for (let minute = 0; minute < 60; minute += 30) {
         const timeStr = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
         const slotStartMinutes = hour * 60 + minute;
         const slotEndMinutes = slotStartMinutes + duration;
 
-        // REGRA 1: Não pode ultrapassar horário de fechamento
-        if (slotEndMinutes > BUSINESS_HOURS.CLOSE * 60) {
-          continue;
+        // Verificar se está dentro do horário de funcionamento
+        if (slotStartMinutes < OPEN_MINUTES) continue;
+
+        // Verificar se cabe antes do fechamento (serviço + delay)
+        if (slotEndMinutes + DELAY_MINUTES > CLOSE_MINUTES) continue;
+
+        // Verificar almoço
+        if (LUNCH_START !== null && LUNCH_END !== null) {
+          const overlapsLunch = (
+            (slotStartMinutes >= LUNCH_START && slotStartMinutes < LUNCH_END) ||
+            (slotEndMinutes > LUNCH_START && slotEndMinutes <= LUNCH_END) ||
+            (slotStartMinutes < LUNCH_START && slotEndMinutes > LUNCH_END)
+          );
+          if (overlapsLunch) continue;
         }
 
-        // REGRA 2: Não pode estar no horário de almoço
-        const overlapsLunch = (
-          (slotStartMinutes >= BUSINESS_HOURS.LUNCH_START && slotStartMinutes < BUSINESS_HOURS.LUNCH_END) ||
-          (slotEndMinutes > BUSINESS_HOURS.LUNCH_START && slotEndMinutes <= BUSINESS_HOURS.LUNCH_END) ||
-          (slotStartMinutes < BUSINESS_HOURS.LUNCH_START && slotEndMinutes > BUSINESS_HOURS.LUNCH_END)
-        );
-
-        if (overlapsLunch) {
-          continue;
-        }
-
-        // REGRA 3: Antecedência mínima de 1 hora para mesmo dia
+        // Verificar antecedência mínima
         if (isToday && slotStartMinutes < minimumAdvanceMinutes) {
-          slots.push({
-            time: timeStr,
-            available: false,
-            blockedReason: 'minimum_advance'
-          });
+          slots.push({ time: timeStr, available: false, blockedReason: 'minimum_advance' });
           continue;
         }
 
-        // REGRA 4: Verificar conflito com agendamentos existentes
+        // Verificar conflitos com agendamentos (incluindo delay)
         let isOccupied = false;
-        let conflictInfo = '';
-
         for (const occupied of occupiedSlots) {
           const [occHour, occMinute] = occupied.hora.split(':').map(Number);
           const occStartMinutes = occHour * 60 + occMinute;
-          const occEndMinutes = occStartMinutes + occupied.duracao;
+          const occEndMinutes = occStartMinutes + occupied.duracaoComDelay;
 
-          // FÓRMULA DE SOBREPOSIÇÃO:
-          // Dois intervalos [A, B) e [C, D) se sobrepõem quando: A < D E B > C
-          const hasOverlap = slotStartMinutes < occEndMinutes && slotEndMinutes > occStartMinutes;
+          // Slot solicitado também precisa de espaço para delay
+          const newSlotEndWithDelay = slotEndMinutes + DELAY_MINUTES;
+          const hasOverlap = slotStartMinutes < occEndMinutes && newSlotEndWithDelay > occStartMinutes;
 
           if (hasOverlap) {
             isOccupied = true;
-            conflictInfo = `${occupied.source} às ${occupied.hora} (${occStartMinutes}-${occEndMinutes})`;
+            console.log(`[check-availability] ❌ ${timeStr} bloqueado por ${occupied.hora} (${occupied.source})`);
             break;
           }
-        }
-
-        if (isOccupied) {
-          console.log(`[check-availability] ❌ BLOQUEADO ${timeStr} (${slotStartMinutes}-${slotEndMinutes}) → Conflito: ${conflictInfo}`);
         }
 
         slots.push({
@@ -246,37 +247,30 @@ Deno.serve(async (req) => {
       }
     }
 
-    // =====================================================
-    // RESULTADO FINAL
-    // =====================================================
     const availableCount = slots.filter(s => s.available).length;
-    const blockedCount = slots.filter(s => !s.available).length;
-    const executionTime = Date.now() - startTime;
-
-    console.log(`[check-availability] RESULTADO FINAL:`);
-    console.log(`  → Total de slots: ${slots.length}`);
-    console.log(`  → Disponíveis: ${availableCount}`);
-    console.log(`  → Bloqueados: ${blockedCount}`);
-    console.log(`  → Tempo de execução: ${executionTime}ms`);
+    console.log(`[check-availability] Total: ${slots.length} | Disponíveis: ${availableCount}`);
     console.log('='.repeat(60));
 
-    const response: AvailabilityResponse = {
-      success: true,
-      date,
-      slots,
-      occupiedSlots
-    };
-
     return new Response(
-      JSON.stringify(response),
+      JSON.stringify({
+        success: true,
+        date,
+        slots,
+        occupiedSlots: occupiedSlots.map(o => ({
+          hora: o.hora,
+          duracao: o.duracao,
+          status: o.status,
+          source: o.source
+        })),
+        businessHours: config
+      } as AvailabilityResponse),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
     );
 
   } catch (error) {
     console.error('[check-availability] ERRO GERAL:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return new Response(
-      JSON.stringify({ success: false, message: errorMessage }),
+      JSON.stringify({ success: false, message: error instanceof Error ? error.message : 'Unknown error' }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
     );
   }
