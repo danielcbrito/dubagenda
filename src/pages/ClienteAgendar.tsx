@@ -122,6 +122,55 @@ const ClienteAgendar = () => {
     }
   }, [selectedDate, selectedServices]);
 
+  // Realtime listener para atualizar slots quando agendamentos mudam
+  useEffect(() => {
+    if (!selectedDate || selectedServices.length === 0) return;
+
+    const dateStr = format(selectedDate, 'yyyy-MM-dd');
+
+    // Canal para monitorar mudanças em agendamentos
+    const appointmentsChannel = supabase
+      .channel(`agendamentos-slots-${dateStr}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // INSERT, UPDATE, DELETE
+          schema: 'public',
+          table: 'agendamentos',
+          filter: `data=eq.${dateStr}`
+        },
+        (payload) => {
+          console.log('[Realtime] Agendamento alterado:', payload);
+          // Recarregar slots quando qualquer agendamento for alterado
+          loadAvailableSlots();
+        }
+      )
+      .subscribe();
+
+    // Canal para monitorar mudanças em pending_bookings
+    const pendingChannel = supabase
+      .channel(`pending-bookings-slots-${dateStr}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'pending_bookings',
+          filter: `data=eq.${dateStr}`
+        },
+        (payload) => {
+          console.log('[Realtime] Pending booking alterado:', payload);
+          loadAvailableSlots();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(appointmentsChannel);
+      supabase.removeChannel(pendingChannel);
+    };
+  }, [selectedDate, selectedServices]);
+
   // Poll for payment confirmation when showing PIX QR Code
   useEffect(() => {
     if (step === 6 && pixQrCode && pendingBookingId && !paymentConfirmed) {
