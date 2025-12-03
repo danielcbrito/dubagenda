@@ -56,7 +56,7 @@ async function checkTimeSlotAvailability(
   const [startHour, startMinute] = hora.split(':').map(Number);
   const startTimeInMinutes = startHour * 60 + startMinute;
   const endTimeInMinutes = startTimeInMinutes + duracao;
-  const bufferTime = 10; // 10-minute buffer
+  // REMOVIDO buffer - usar duração EXATA para consistência com front-end
 
   // Validate business hours
   const openHour = 9 * 60;
@@ -110,10 +110,10 @@ async function checkTimeSlotAvailability(
   for (const apt of existingAppointments || []) {
     const [aptHour, aptMinute] = apt.hora.split(':').map(Number);
     const aptStart = aptHour * 60 + aptMinute;
-    const aptEnd = aptStart + apt.duracao + bufferTime;
+    const aptEnd = aptStart + apt.duracao; // Duração EXATA
 
-    const newEnd = endTimeInMinutes + bufferTime;
-    const hasConflict = startTimeInMinutes < aptEnd && newEnd > aptStart;
+    // Overlap: início1 < fim2 E fim1 > início2
+    const hasConflict = startTimeInMinutes < aptEnd && endTimeInMinutes > aptStart;
 
     if (hasConflict) {
       console.log('[checkTimeSlotAvailability] CONFLITO:', { 
@@ -138,10 +138,10 @@ async function checkTimeSlotAvailability(
   for (const pending of pendingBookings || []) {
     const [pendingHour, pendingMinute] = pending.hora.split(':').map(Number);
     const pendingStart = pendingHour * 60 + pendingMinute;
-    const pendingEnd = pendingStart + pending.duracao + bufferTime;
+    const pendingEnd = pendingStart + pending.duracao; // Duração EXATA
 
-    const newEnd = endTimeInMinutes + bufferTime;
-    const hasConflict = startTimeInMinutes < pendingEnd && newEnd > pendingStart;
+    // Overlap
+    const hasConflict = startTimeInMinutes < pendingEnd && endTimeInMinutes > pendingStart;
 
     if (hasConflict) {
       console.log('[checkTimeSlotAvailability] CONFLITO com pending:', pending.id);
