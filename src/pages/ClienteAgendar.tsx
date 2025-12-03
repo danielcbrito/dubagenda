@@ -268,9 +268,21 @@ const ClienteAgendar = () => {
     const dateStr = format(selectedDate, 'yyyy-MM-dd');
     const totalDuration = selectedServices.reduce((sum, s) => sum + s.duracao_minutos, 0);
 
-    // Canal para monitorar mudanças em agendamentos
-    const appointmentsChannel = supabase
-      .channel(`agendamentos-slots-${dateStr}-${Date.now()}`)
+    // Função para recarregar slots - definida dentro do useEffect para evitar stale closures
+    const reloadSlots = () => {
+      console.log('[Realtime] Recarregando slots para:', dateStr);
+      loadAvailableSlotsCallback(selectedDate, totalDuration);
+    };
+
+    // Canal ÚNICO para monitorar todas as mudanças (agendamentos + pending_bookings)
+    // Usar nome estático por data para evitar múltiplos canais
+    const channelName = `slots-sync-${dateStr}`;
+    
+    // Remover canal existente antes de criar novo (evita duplicatas)
+    supabase.removeChannel(supabase.channel(channelName));
+
+    const syncChannel = supabase
+      .channel(channelName)
       .on(
         'postgres_changes',
         {
@@ -280,16 +292,10 @@ const ClienteAgendar = () => {
           filter: `data=eq.${dateStr}`
         },
         (payload) => {
-          console.log('[Realtime] Agendamento alterado:', payload);
-          // Recarregar slots quando qualquer agendamento for alterado
-          loadAvailableSlotsCallback(selectedDate, totalDuration);
+          console.log('[Realtime] Agendamento alterado:', payload.eventType, payload.new || payload.old);
+          reloadSlots();
         }
       )
-      .subscribe();
-
-    // Canal para monitorar mudanças em pending_bookings
-    const pendingChannel = supabase
-      .channel(`pending-bookings-slots-${dateStr}-${Date.now()}`)
       .on(
         'postgres_changes',
         {
@@ -299,15 +305,28 @@ const ClienteAgendar = () => {
           filter: `data=eq.${dateStr}`
         },
         (payload) => {
-          console.log('[Realtime] Pending booking alterado:', payload);
-          loadAvailableSlotsCallback(selectedDate, totalDuration);
+          console.log('[Realtime] Pending booking alterado:', payload.eventType, payload.new || payload.old);
+          reloadSlots();
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('[Realtime] Canal status:', status);
+        if (status === 'SUBSCRIBED') {
+          // Carregar dados imediatamente após inscrição bem-sucedida
+          reloadSlots();
+        }
+      });
+
+    // Polling de backup a cada 10 segundos (caso realtime falhe)
+    const pollInterval = setInterval(() => {
+      console.log('[Polling] Atualizando slots...');
+      reloadSlots();
+    }, 10000);
 
     return () => {
-      supabase.removeChannel(appointmentsChannel);
-      supabase.removeChannel(pendingChannel);
+      console.log('[Cleanup] Removendo canal e polling para:', dateStr);
+      clearInterval(pollInterval);
+      supabase.removeChannel(syncChannel);
     };
   }, [selectedDate, selectedServices, loadAvailableSlotsCallback]);
 
@@ -460,6 +479,55 @@ const ClienteAgendar = () => {
     if (step === 3 && !selectedTime) {
       toast.error("Selecione um horário");
       return;
+    }
+    
+    // VALIDAÇÃO CRÍTICA: Verificar disponibilidade do slot ANTES de avançar do step 3
+    if (step === 3 && selectedDate && selectedTime) {
+      setLoading(true);
+      try {
+        const totalDuration = selectedServices.reduce((sum, s) => sum + s.duracao_minutos, 0);
+        const dateStr = format(selectedDate, 'yyyy-MM-dd');
+        
+        // Revalidar disponibilidade direto no banco
+        const { data: conflicts, error } = await supabase
+          .from("agendamentos")
+          .select("id, hora, duracao")
+          .eq("data", dateStr)
+          .in("status", ["pending", "confirmed", "completed"]);
+        
+        if (error) {
+          console.error('[handleNextStep] Erro ao validar:', error);
+          toast.error("Erro ao validar disponibilidade. Tente novamente.");
+          setLoading(false);
+          return;
+        }
+        
+        // Verificar conflitos
+        const [slotHour, slotMinute] = selectedTime.split(':').map(Number);
+        const slotStart = slotHour * 60 + slotMinute;
+        const slotEnd = slotStart + totalDuration;
+        
+        for (const apt of conflicts || []) {
+          const [aptHour, aptMinute] = apt.hora.split(':').map(Number);
+          const aptStart = aptHour * 60 + aptMinute;
+          const aptEnd = aptStart + apt.duracao;
+          
+          if (slotStart < aptEnd && slotEnd > aptStart) {
+            console.log('[handleNextStep] Conflito detectado:', apt);
+            toast.error("Este horário acabou de ser reservado. Por favor, escolha outro.");
+            // Recarregar slots
+            loadAvailableSlotsCallback(selectedDate, totalDuration);
+            setSelectedTime("");
+            setLoading(false);
+            return;
+          }
+        }
+        
+        setLoading(false);
+      } catch (err) {
+        console.error('[handleNextStep] Erro:', err);
+        setLoading(false);
+      }
     }
     
     // If rescheduling and in step 3 (time selection), skip to confirmation

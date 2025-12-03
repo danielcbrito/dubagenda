@@ -55,7 +55,7 @@ Deno.serve(async (req) => {
     const [startHour, startMinute] = hora.split(':').map(Number);
     const startTimeInMinutes = startHour * 60 + startMinute;
     const endTimeInMinutes = startTimeInMinutes + duracao;
-    const bufferTime = 10; // 10-minute buffer between appointments
+    // REMOVIDO buffer de 10 minutos - deve usar duração EXATA para consistência com front-end
 
     // Block lunch break (13:00-14:00)
     const lunchStart = 13 * 60; // 780 minutes
@@ -121,12 +121,10 @@ Deno.serve(async (req) => {
     for (const apt of existingAppointments || []) {
       const [aptHour, aptMinute] = apt.hora.split(':').map(Number);
       const aptStart = aptHour * 60 + aptMinute;
-      const aptEnd = aptStart + apt.duracao + bufferTime; // Include buffer
+      const aptEnd = aptStart + apt.duracao; // Duração EXATA sem buffer
 
-      // Check for overlap (novo agendamento começa antes do fim do existente E termina depois do início do existente)
-      // Usando lógica correta de sobreposição de intervalos
-      const newEnd = endTimeInMinutes + bufferTime;
-      const hasConflict = startTimeInMinutes < aptEnd && newEnd > aptStart;
+      // Check for overlap: dois intervalos se sobrepõem quando início1 < fim2 E fim1 > início2
+      const hasConflict = startTimeInMinutes < aptEnd && endTimeInMinutes > aptStart;
 
       if (hasConflict) {
         console.log('[validate-appointment] CONFLITO com agendamento:', { 
@@ -165,10 +163,10 @@ Deno.serve(async (req) => {
     for (const pending of pendingBookings || []) {
       const [pendingHour, pendingMinute] = pending.hora.split(':').map(Number);
       const pendingStart = pendingHour * 60 + pendingMinute;
-      const pendingEnd = pendingStart + pending.duracao + bufferTime;
+      const pendingEnd = pendingStart + pending.duracao; // Duração EXATA
 
-      const newEnd = endTimeInMinutes + bufferTime;
-      const hasConflict = startTimeInMinutes < pendingEnd && newEnd > pendingStart;
+      // Overlap: início1 < fim2 E fim1 > início2
+      const hasConflict = startTimeInMinutes < pendingEnd && endTimeInMinutes > pendingStart;
 
       if (hasConflict) {
         console.log('[validate-appointment] CONFLITO com pending_booking:', { 
