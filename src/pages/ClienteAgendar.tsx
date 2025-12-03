@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,7 @@ import { ptBR } from "date-fns/locale";
 import { format } from "date-fns";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
+import { useSlotAvailability } from "@/hooks/useSlotAvailability";
 
 interface Service {
   id: string;
@@ -19,21 +20,13 @@ interface Service {
   preco: number;
 }
 
-interface TimeSlot {
-  time: string;
-  available: boolean;
-  blockedReason?: 'occupied' | 'minimum_advance'; // Motivo do bloqueio
-}
-
 const ClienteAgendar = () => {
   const navigate = useNavigate();
   const [services, setServices] = useState<Service[]>([]);
   const [selectedServices, setSelectedServices] = useState<Service[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date>();
   const [selectedTime, setSelectedTime] = useState<string>("");
-  const [availableSlots, setAvailableSlots] = useState<TimeSlot[]>([]);
   const [loading, setLoading] = useState(false);
-  const [loadingSlots, setLoadingSlots] = useState(false);
   const [step, setStep] = useState(1);
   const [paymentMethod, setPaymentMethod] = useState<'pix' | 'card' | 'cash'>('pix');
   const [processingPayment, setProcessingPayment] = useState(false);
@@ -54,6 +47,21 @@ const ClienteAgendar = () => {
   const [rescheduleAppointmentId, setRescheduleAppointmentId] = useState<string | null>(null);
   const [unavailableMessage, setUnavailableMessage] = useState<string | null>(null);
   const servicesListRef = useRef<HTMLDivElement | null>(null);
+
+  // Calcular duração total dos serviços selecionados
+  const totalDuration = selectedServices.reduce((sum, s) => sum + s.duracao_minutos, 0);
+
+  // NOVO HOOK: Gerencia toda a lógica de disponibilidade de slots
+  const { 
+    slots: availableSlots, 
+    loading: loadingSlots, 
+    refreshSlots,
+    verifySlotAvailability 
+  } = useSlotAvailability(
+    selectedDate, 
+    totalDuration,
+    isRescheduling ? rescheduleAppointmentId : null
+  );
 
   useEffect(() => {
     loadServices();
@@ -116,219 +124,12 @@ const ClienteAgendar = () => {
     };
   }, [step]);
 
-  // Função estável para carregar slots disponíveis - USANDO useCallback para evitar stale closures
-  const loadAvailableSlotsCallback = useCallback(async (date: Date, serviceDuration: number) => {
-    if (!date || serviceDuration <= 0) return;
-
-    setLoadingSlots(true);
-    
-    // Format date without timezone conversion to avoid day shifting
-    const dateStr = format(date, 'yyyy-MM-dd');
-    const todayStr = format(new Date(), 'yyyy-MM-dd');
-    const isToday = dateStr === todayStr;
-    
-    // Calculate minimum allowed time (now + 1 hour) for same-day bookings
-    const now = new Date();
-    const minimumAllowedMinutes = isToday 
-      ? (now.getHours() * 60 + now.getMinutes() + 60) // +60 minutos = 1 hora de antecedência
-      : 0;
-    
-    console.log('[loadAvailableSlots] Date:', dateStr, '| isToday:', isToday, '| minAdvance:', minimumAllowedMinutes);
-    
-    try {
-      // Fetch all appointments for the selected date - ONLY blocking statuses
-      const { data: appointments, error: aptError } = await supabase
-        .from("agendamentos")
-        .select("hora, duracao, status")
-        .eq("data", dateStr)
-        .in("status", ["pending", "confirmed", "completed"]);
-
-      if (aptError) {
-        console.error('[loadAvailableSlots] Erro ao buscar agendamentos:', aptError);
-      }
-
-      // Also fetch pending bookings (reservas aguardando pagamento) - não expirados
-      const { data: pendingBookings, error: pendingError } = await supabase
-        .from("pending_bookings")
-        .select("hora, duracao, expires_at")
-        .eq("data", dateStr)
-        .gt("expires_at", new Date().toISOString());
-
-      if (pendingError) {
-        console.error('[loadAvailableSlots] Erro ao buscar pending_bookings:', pendingError);
-      }
-
-      // Combine appointments and pending bookings for conflict check
-      const allOccupiedSlots = [
-        ...(appointments || []).map(apt => ({ 
-          hora: apt.hora, 
-          duracao: apt.duracao,
-          source: 'agendamento' as const
-        })),
-        ...(pendingBookings || []).map(pb => ({ 
-          hora: pb.hora, 
-          duracao: pb.duracao,
-          source: 'pending' as const
-        }))
-      ];
-
-      console.log('[loadAvailableSlots] Agendamentos encontrados:', appointments?.length || 0);
-      console.log('[loadAvailableSlots] Detalhes:', appointments?.map(a => `${a.hora} (${a.duracao}min, ${a.status})`));
-      console.log('[loadAvailableSlots] Pending bookings:', pendingBookings?.length || 0);
-
-      const totalDuration = serviceDuration;
-
-      // Generate time slots from 9:00 to 20:00
-      const slots: TimeSlot[] = [];
-      const startHour = 9;
-      const endHour = 20;
-      const lunchStart = 13 * 60; // 13:00 = 780 minutes
-      const lunchEnd = 14 * 60; // 14:00 = 840 minutes
-
-      for (let hour = startHour; hour < endHour; hour++) {
-        for (let minute = 0; minute < 60; minute += 30) {
-          const time = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
-          const slotStart = hour * 60 + minute; // Convert to minutes
-          const slotEnd = slotStart + totalDuration;
-
-          // Check if slot would extend past closing time - still skip these
-          if (slotEnd > endHour * 60) {
-            continue;
-          }
-
-          // Check if slot is during lunch break - still skip these
-          if (
-            (slotStart >= lunchStart && slotStart < lunchEnd) ||
-            (slotEnd > lunchStart && slotEnd <= lunchEnd) ||
-            (slotStart < lunchStart && slotEnd > lunchEnd)
-          ) {
-            continue;
-          }
-
-          // Check minimum advance time for same-day bookings (1 hour)
-          if (isToday && slotStart < minimumAllowedMinutes) {
-            slots.push({ time, available: false, blockedReason: 'minimum_advance' });
-            continue;
-          }
-
-          // Check if slot conflicts with existing appointments or pending bookings
-          let isAvailable = true;
-          
-          for (const apt of allOccupiedSlots) {
-            // Parse hora (pode vir como "09:00" ou "09:00:00")
-            const horaParts = apt.hora.split(':');
-            const aptHour = parseInt(horaParts[0], 10);
-            const aptMinute = parseInt(horaParts[1], 10);
-            const aptStart = aptHour * 60 + aptMinute;
-            const aptEnd = aptStart + apt.duracao; // SEM buffer adicional para corrigir falso-ocupado
-
-            // Verificação de sobreposição correta:
-            // Dois intervalos se sobrepõem quando: início1 < fim2 E fim1 > início2
-            const hasConflict = slotStart < aptEnd && slotEnd > aptStart;
-
-            if (hasConflict) {
-              isAvailable = false;
-              console.log(`[loadAvailableSlots] Slot ${time} (${slotStart}-${slotEnd}) BLOQUEADO por ${apt.source} às ${apt.hora} (${aptStart}-${aptEnd})`);
-              break;
-            }
-          }
-
-          slots.push({ 
-            time, 
-            available: isAvailable, 
-            blockedReason: isAvailable ? undefined : 'occupied' 
-          });
-        }
-      }
-
-      const unavailableCount = slots.filter(s => !s.available).length;
-      const availableCount = slots.filter(s => s.available).length;
-      console.log(`[loadAvailableSlots] Total: ${slots.length} slots | Disponíveis: ${availableCount} | Indisponíveis: ${unavailableCount}`);
-      setAvailableSlots(slots);
-    } catch (error) {
-      console.error('[loadAvailableSlots] Erro:', error);
-    } finally {
-      setLoadingSlots(false);
-    }
-  }, []);
-
-  // Carregar slots quando data ou serviços mudam
+  // Limpar mensagem de indisponibilidade quando mudar data
   useEffect(() => {
-    if (selectedDate && selectedServices.length > 0) {
-      const totalDuration = selectedServices.reduce((sum, s) => sum + s.duracao_minutos, 0);
-      loadAvailableSlotsCallback(selectedDate, totalDuration);
-      setUnavailableMessage(null); // Limpar mensagem ao mudar data
+    if (selectedDate) {
+      setUnavailableMessage(null);
     }
-  }, [selectedDate, selectedServices, loadAvailableSlotsCallback]);
-
-  // Realtime listener para atualizar slots quando agendamentos mudam
-  useEffect(() => {
-    if (!selectedDate || selectedServices.length === 0) return;
-
-    const dateStr = format(selectedDate, 'yyyy-MM-dd');
-    const totalDuration = selectedServices.reduce((sum, s) => sum + s.duracao_minutos, 0);
-
-    // Função para recarregar slots - definida dentro do useEffect para evitar stale closures
-    const reloadSlots = () => {
-      console.log('[Realtime] Recarregando slots para:', dateStr);
-      loadAvailableSlotsCallback(selectedDate, totalDuration);
-    };
-
-    // Canal ÚNICO para monitorar todas as mudanças (agendamentos + pending_bookings)
-    // Usar nome estático por data para evitar múltiplos canais
-    const channelName = `slots-sync-${dateStr}`;
-    
-    // Remover canal existente antes de criar novo (evita duplicatas)
-    supabase.removeChannel(supabase.channel(channelName));
-
-    const syncChannel = supabase
-      .channel(channelName)
-      .on(
-        'postgres_changes',
-        {
-          event: '*', // INSERT, UPDATE, DELETE
-          schema: 'public',
-          table: 'agendamentos',
-          filter: `data=eq.${dateStr}`
-        },
-        (payload) => {
-          console.log('[Realtime] Agendamento alterado:', payload.eventType, payload.new || payload.old);
-          reloadSlots();
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'pending_bookings',
-          filter: `data=eq.${dateStr}`
-        },
-        (payload) => {
-          console.log('[Realtime] Pending booking alterado:', payload.eventType, payload.new || payload.old);
-          reloadSlots();
-        }
-      )
-      .subscribe((status) => {
-        console.log('[Realtime] Canal status:', status);
-        if (status === 'SUBSCRIBED') {
-          // Carregar dados imediatamente após inscrição bem-sucedida
-          reloadSlots();
-        }
-      });
-
-    // Polling de backup a cada 10 segundos (caso realtime falhe)
-    const pollInterval = setInterval(() => {
-      console.log('[Polling] Atualizando slots...');
-      reloadSlots();
-    }, 10000);
-
-    return () => {
-      console.log('[Cleanup] Removendo canal e polling para:', dateStr);
-      clearInterval(pollInterval);
-      supabase.removeChannel(syncChannel);
-    };
-  }, [selectedDate, selectedServices, loadAvailableSlotsCallback]);
+  }, [selectedDate]);
 
   // Poll for payment confirmation when showing PIX QR Code
   useEffect(() => {
@@ -485,48 +286,25 @@ const ClienteAgendar = () => {
     if (step === 3 && selectedDate && selectedTime) {
       setLoading(true);
       try {
-        const totalDuration = selectedServices.reduce((sum, s) => sum + s.duracao_minutos, 0);
-        const dateStr = format(selectedDate, 'yyyy-MM-dd');
+        // Usar o hook para verificar disponibilidade (double-check direto no banco)
+        const result = await verifySlotAvailability(selectedTime);
         
-        // Revalidar disponibilidade direto no banco
-        const { data: conflicts, error } = await supabase
-          .from("agendamentos")
-          .select("id, hora, duracao")
-          .eq("data", dateStr)
-          .in("status", ["pending", "confirmed", "completed"]);
-        
-        if (error) {
-          console.error('[handleNextStep] Erro ao validar:', error);
-          toast.error("Erro ao validar disponibilidade. Tente novamente.");
+        if (!result.available) {
+          console.log('[handleNextStep] Horário INDISPONÍVEL:', result.message);
+          toast.error(result.message || "Este horário acabou de ser reservado. Por favor, escolha outro.");
+          refreshSlots();
+          setSelectedTime("");
           setLoading(false);
           return;
         }
         
-        // Verificar conflitos
-        const [slotHour, slotMinute] = selectedTime.split(':').map(Number);
-        const slotStart = slotHour * 60 + slotMinute;
-        const slotEnd = slotStart + totalDuration;
-        
-        for (const apt of conflicts || []) {
-          const [aptHour, aptMinute] = apt.hora.split(':').map(Number);
-          const aptStart = aptHour * 60 + aptMinute;
-          const aptEnd = aptStart + apt.duracao;
-          
-          if (slotStart < aptEnd && slotEnd > aptStart) {
-            console.log('[handleNextStep] Conflito detectado:', apt);
-            toast.error("Este horário acabou de ser reservado. Por favor, escolha outro.");
-            // Recarregar slots
-            loadAvailableSlotsCallback(selectedDate, totalDuration);
-            setSelectedTime("");
-            setLoading(false);
-            return;
-          }
-        }
-        
+        console.log('[handleNextStep] Horário DISPONÍVEL, avançando...');
         setLoading(false);
       } catch (err) {
         console.error('[handleNextStep] Erro:', err);
         setLoading(false);
+        toast.error("Erro ao verificar disponibilidade. Tente novamente.");
+        return;
       }
     }
     
@@ -665,10 +443,7 @@ const ClienteAgendar = () => {
         toast.error(error.message || "Horário indisponível. Escolha outro horário.");
         // Voltar para seleção de horário e recarregar slots
         setStep(3);
-        if (selectedDate && selectedServices.length > 0) {
-          const totalDur = selectedServices.reduce((sum, s) => sum + s.duracao_minutos, 0);
-          loadAvailableSlotsCallback(selectedDate, totalDur);
-        }
+        refreshSlots();
       } else {
         toast.error("Erro ao processar pagamento: " + (error.message || "Erro desconhecido"));
       }
@@ -717,10 +492,7 @@ const ClienteAgendar = () => {
         toast.error(validation?.message || "Horário indisponível. Escolha outro horário.");
         // Voltar para seleção de horário
         setStep(3);
-        if (selectedDate && selectedServices.length > 0) {
-          const totalDur = selectedServices.reduce((sum, s) => sum + s.duracao_minutos, 0);
-          loadAvailableSlotsCallback(selectedDate, totalDur);
-        }
+        refreshSlots();
         return;
       }
       console.log('[ClienteAgendar] Horário DISPONÍVEL, criando agendamento...');
@@ -872,10 +644,7 @@ const ClienteAgendar = () => {
         console.log('[ClienteAgendar] Horário INDISPONÍVEL:', validation?.message);
         toast.error(validation?.message || "Horário indisponível. Escolha outro horário.");
         setStep(3);
-        if (selectedDate && selectedServices.length > 0) {
-          const totalDur = selectedServices.reduce((sum, s) => sum + s.duracao_minutos, 0);
-          loadAvailableSlotsCallback(selectedDate, totalDur);
-        }
+        refreshSlots();
         return;
       }
       console.log('[ClienteAgendar] Horário DISPONÍVEL, remarcando...');
