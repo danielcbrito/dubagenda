@@ -3,19 +3,16 @@ import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 
 /**
- * HOOK DE DISPONIBILIDADE DE HORÁRIOS - V3 (BACKEND-FIRST + FALLBACK CORRIGIDO)
+ * HOOK DE DISPONIBILIDADE DE HORÁRIOS - V4 (PARTIAL UPDATES)
  * 
- * Este hook SEMPRE consulta o backend (Edge Function) como
- * fonte única da verdade para disponibilidade.
+ * MELHORIAS NA V4:
+ * - Updates parciais: apenas slots que mudaram são atualizados no state
+ * - Sem re-render completo da lista
+ * - Mantém posição do scroll
+ * - Transições suaves
  * 
  * REGRA DE DISPONIBILIDADE:
  * próximo_horário_disponível = horário_fim_do_serviço + delay (10min)
- * 
- * FLUXO:
- * 1. Chama Edge Function check-availability
- * 2. Recebe slots já calculados pelo backend
- * 3. Mantém realtime listener para atualizações
- * 4. Polling de backup a cada 8 segundos
  */
 
 export interface TimeSlot {
@@ -59,6 +56,72 @@ function minutesToTime(minutes: number): string {
   return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
 }
 
+/**
+ * Compara dois arrays de slots e retorna se são diferentes
+ */
+function slotsAreDifferent(oldSlots: TimeSlot[], newSlots: TimeSlot[]): boolean {
+  if (oldSlots.length !== newSlots.length) return true;
+  
+  for (let i = 0; i < oldSlots.length; i++) {
+    if (oldSlots[i].time !== newSlots[i].time ||
+        oldSlots[i].available !== newSlots[i].available ||
+        oldSlots[i].blockedReason !== newSlots[i].blockedReason) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Aplica updates parciais aos slots existentes
+ * Retorna um novo array apenas se houve mudanças
+ */
+function applyPartialUpdate(existingSlots: TimeSlot[], newSlots: TimeSlot[]): TimeSlot[] | null {
+  if (existingSlots.length === 0) return newSlots;
+  if (newSlots.length === 0) return null;
+  
+  // Criar mapa dos novos slots
+  const newSlotsMap = new Map<string, TimeSlot>();
+  newSlots.forEach(slot => newSlotsMap.set(slot.time, slot));
+  
+  let hasChanges = false;
+  const updatedSlots = existingSlots.map(existingSlot => {
+    const newSlot = newSlotsMap.get(existingSlot.time);
+    
+    if (!newSlot) {
+      // Slot removido - manter como indisponível
+      if (existingSlot.available) {
+        hasChanges = true;
+        return { ...existingSlot, available: false, blockedReason: 'occupied' as const };
+      }
+      return existingSlot;
+    }
+    
+    // Verificar se o slot mudou
+    if (existingSlot.available !== newSlot.available || 
+        existingSlot.blockedReason !== newSlot.blockedReason) {
+      hasChanges = true;
+      return newSlot;
+    }
+    
+    return existingSlot;
+  });
+  
+  // Verificar se há novos slots que não existiam
+  const existingTimes = new Set(existingSlots.map(s => s.time));
+  const newUniqueTimes = newSlots.filter(s => !existingTimes.has(s.time));
+  
+  if (newUniqueTimes.length > 0) {
+    hasChanges = true;
+    // Inserir novos slots na posição correta
+    const allSlots = [...updatedSlots, ...newUniqueTimes];
+    allSlots.sort((a, b) => timeToMinutes(a.time) - timeToMinutes(b.time));
+    return allSlots;
+  }
+  
+  return hasChanges ? updatedSlots : null;
+}
+
 export function useSlotAvailability(
   selectedDate: Date | undefined,
   serviceDuration: number,
@@ -71,16 +134,20 @@ export function useSlotAvailability(
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const isInitialLoadRef = useRef(true);
+  const lastSlotsRef = useRef<TimeSlot[]>([]);
 
   /**
    * Função principal que carrega os slots do BACKEND
-   * A Edge Function check-availability é a ÚNICA fonte da verdade
+   * Usa partial updates para evitar re-render completo
    */
-  const loadSlots = useCallback(async () => {
+  const loadSlots = useCallback(async (forceFullUpdate = false) => {
     if (!selectedDate || serviceDuration <= 0) {
       console.log('[useSlotAvailability] Data ou duração inválida, limpando slots');
       setSlots([]);
       setOccupiedSlots([]);
+      lastSlotsRef.current = [];
+      isInitialLoadRef.current = true;
       return;
     }
 
@@ -90,14 +157,15 @@ export function useSlotAvailability(
     }
     abortControllerRef.current = new AbortController();
 
-    setLoading(true);
+    // Loading apenas no carregamento inicial
+    if (isInitialLoadRef.current || forceFullUpdate) {
+      setLoading(true);
+    }
     setError(null);
 
     const dateStr = format(selectedDate, 'yyyy-MM-dd');
 
-    console.log('='.repeat(60));
-    console.log('[useSlotAvailability] CHAMANDO BACKEND');
-    console.log(`[useSlotAvailability] Data: ${dateStr} | Duração: ${serviceDuration}min`);
+    console.log('[useSlotAvailability] Buscando slots...', isInitialLoadRef.current ? '(inicial)' : '(update parcial)');
 
     try {
       const response = await fetch(
@@ -126,24 +194,36 @@ export function useSlotAvailability(
         throw new Error(data.message || 'Erro ao verificar disponibilidade');
       }
 
-      const availableCount = data.slots.filter(s => s.available).length;
-      const blockedCount = data.slots.filter(s => !s.available).length;
-
-      console.log(`[useSlotAvailability] RESPOSTA DO BACKEND:`);
-      console.log(`  → Total de slots: ${data.slots.length}`);
-      console.log(`  → Disponíveis: ${availableCount}`);
-      console.log(`  → Bloqueados: ${blockedCount}`);
-      console.log(`  → Ocupados no DB: ${data.occupiedSlots.length}`);
-      
-      if (data.occupiedSlots.length > 0) {
-        console.log('  → Detalhes dos ocupados:');
-        data.occupiedSlots.forEach(os => {
-          console.log(`     - ${os.hora} (${os.duracao}min) | ${os.status} | fim: ${os.fim || 'N/A'} | livre após: ${os.fimComDelay || 'N/A'}`);
-        });
+      // ============================================
+      // PARTIAL UPDATE: Atualizar apenas slots que mudaram
+      // ============================================
+      if (isInitialLoadRef.current || forceFullUpdate || lastSlotsRef.current.length === 0) {
+        // Primeiro load ou força update: substituir tudo
+        console.log('[useSlotAvailability] Load completo:', data.slots.length, 'slots');
+        setSlots(data.slots);
+        lastSlotsRef.current = data.slots;
+        isInitialLoadRef.current = false;
+      } else {
+        // Update parcial: atualizar apenas o que mudou
+        const updatedSlots = applyPartialUpdate(lastSlotsRef.current, data.slots);
+        
+        if (updatedSlots) {
+          // Contar quantos slots mudaram
+          let changedCount = 0;
+          for (let i = 0; i < Math.min(lastSlotsRef.current.length, updatedSlots.length); i++) {
+            if (lastSlotsRef.current[i].available !== updatedSlots[i].available) {
+              changedCount++;
+            }
+          }
+          console.log(`[useSlotAvailability] Update parcial: ${changedCount} slot(s) alterado(s)`);
+          
+          setSlots(updatedSlots);
+          lastSlotsRef.current = updatedSlots;
+        } else {
+          console.log('[useSlotAvailability] Nenhuma mudança detectada');
+        }
       }
-      console.log('='.repeat(60));
 
-      setSlots(data.slots);
       setOccupiedSlots(data.occupiedSlots);
 
     } catch (err) {
@@ -156,7 +236,7 @@ export function useSlotAvailability(
       
       // Fallback: carregar direto do banco se Edge Function falhar
       console.log('[useSlotAvailability] Usando FALLBACK direto do banco...');
-      await loadSlotsFromDatabase(dateStr);
+      await loadSlotsFromDatabase(dateStr, forceFullUpdate);
     } finally {
       setLoading(false);
     }
@@ -165,8 +245,9 @@ export function useSlotAvailability(
   /**
    * Fallback CORRIGIDO: carregar slots diretamente do banco
    * Usa as MESMAS regras do backend (intervalo de 10min, delay de 10min)
+   * Também usa partial updates para evitar re-render completo
    */
-  const loadSlotsFromDatabase = useCallback(async (dateStr: string) => {
+  const loadSlotsFromDatabase = useCallback(async (dateStr: string, forceFullUpdate = false) => {
     try {
       console.log('[useSlotAvailability FALLBACK] Iniciando carregamento direto...');
       
@@ -199,6 +280,7 @@ export function useSlotAvailability(
         console.log('[useSlotAvailability FALLBACK] Dia fechado');
         setSlots([]);
         setOccupiedSlots([]);
+        lastSlotsRef.current = [];
         return;
       }
 
@@ -252,8 +334,6 @@ export function useSlotAvailability(
         })
       ];
 
-      console.log(`[useSlotAvailability FALLBACK] ${allOccupied.length} slots ocupados encontrados`);
-
       // Gerar slots a cada 10 minutos (igual ao backend)
       const generatedSlots: TimeSlot[] = [];
 
@@ -300,10 +380,23 @@ export function useSlotAvailability(
         });
       }
 
-      const availableCount = generatedSlots.filter(s => s.available).length;
-      console.log(`[useSlotAvailability FALLBACK] ${generatedSlots.length} slots gerados | ${availableCount} disponíveis`);
+      // ============================================
+      // PARTIAL UPDATE: Atualizar apenas slots que mudaram
+      // ============================================
+      if (isInitialLoadRef.current || forceFullUpdate || lastSlotsRef.current.length === 0) {
+        console.log('[useSlotAvailability FALLBACK] Load completo:', generatedSlots.length, 'slots');
+        setSlots(generatedSlots);
+        lastSlotsRef.current = generatedSlots;
+        isInitialLoadRef.current = false;
+      } else {
+        const updatedSlots = applyPartialUpdate(lastSlotsRef.current, generatedSlots);
+        if (updatedSlots) {
+          console.log('[useSlotAvailability FALLBACK] Update parcial aplicado');
+          setSlots(updatedSlots);
+          lastSlotsRef.current = updatedSlots;
+        }
+      }
 
-      setSlots(generatedSlots);
       setOccupiedSlots(allOccupied);
 
     } catch (err) {
@@ -314,11 +407,16 @@ export function useSlotAvailability(
 
   /**
    * Configurar listeners em tempo real e polling
+   * Usa partial updates para evitar scroll jump
    */
   useEffect(() => {
     if (!selectedDate || serviceDuration <= 0) return;
 
     const dateStr = format(selectedDate, 'yyyy-MM-dd');
+
+    // Reset initial load flag quando data muda
+    isInitialLoadRef.current = true;
+    lastSlotsRef.current = [];
 
     // Limpar canal anterior
     if (channelRef.current) {
@@ -330,10 +428,10 @@ export function useSlotAvailability(
       clearInterval(pollIntervalRef.current);
     }
 
-    // Carregar slots inicialmente
-    loadSlots();
+    // Carregar slots inicialmente (full load)
+    loadSlots(true);
 
-    // Configurar canal de realtime
+    // Configurar canal de realtime - usa partial updates
     const channelName = `slot-availability-${dateStr}-${Date.now()}`;
     
     const channel = supabase
@@ -347,8 +445,9 @@ export function useSlotAvailability(
           filter: `data=eq.${dateStr}`
         },
         (payload) => {
-          console.log('[Realtime] Mudança em agendamentos:', payload.eventType);
-          loadSlots();
+          console.log('[Realtime] Mudança em agendamentos:', payload.eventType, '(partial update)');
+          // Partial update - não força reload completo
+          loadSlots(false);
         }
       )
       .on(
@@ -360,23 +459,21 @@ export function useSlotAvailability(
           filter: `data=eq.${dateStr}`
         },
         (payload) => {
-          console.log('[Realtime] Mudança em pending_bookings:', payload.eventType);
-          loadSlots();
+          console.log('[Realtime] Mudança em pending_bookings:', payload.eventType, '(partial update)');
+          // Partial update - não força reload completo
+          loadSlots(false);
         }
       )
       .subscribe((status) => {
         console.log(`[Realtime] Status do canal:`, status);
-        if (status === 'SUBSCRIBED') {
-          loadSlots();
-        }
       });
 
     channelRef.current = channel;
 
-    // Polling de backup (a cada 8 segundos)
+    // Polling de backup (a cada 10 segundos) - usa partial updates
     pollIntervalRef.current = setInterval(() => {
-      loadSlots();
-    }, 8000);
+      loadSlots(false);
+    }, 10000);
 
     return () => {
       if (channelRef.current) {
@@ -395,10 +492,11 @@ export function useSlotAvailability(
   }, [selectedDate, serviceDuration, loadSlots]);
 
   /**
-   * Função para forçar recarga dos slots
+   * Função para forçar recarga completa dos slots
+   * Usado quando o usuário quer atualizar manualmente
    */
   const refreshSlots = useCallback(() => {
-    loadSlots();
+    loadSlots(true);
   }, [loadSlots]);
 
   /**
