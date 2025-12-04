@@ -164,19 +164,17 @@ Deno.serve(async (req) => {
 
     console.log(`[check-availability] Agendamentos: ${appointments?.length || 0} | Pending: ${pendingBookings?.length || 0}`);
 
-    // Combinar slots ocupados (COM DELAY)
+    // Combinar slots ocupados (duração real SEM delay duplicado)
     const occupiedSlots = [
       ...(appointments || []).map(apt => ({
         hora: apt.hora,
         duracao: apt.duracao,
-        duracaoComDelay: apt.duracao + DELAY_MINUTES,
         status: apt.status,
         source: 'agendamento' as const
       })),
       ...(pendingBookings || []).map(pb => ({
         hora: pb.hora,
         duracao: pb.duracao,
-        duracaoComDelay: pb.duracao + DELAY_MINUTES,
         status: 'pending_booking',
         source: 'pending_booking' as const
       }))
@@ -198,8 +196,8 @@ Deno.serve(async (req) => {
       const timeStr = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
       const slotEndMinutes = slotStartMinutes + duration;
 
-      // Verificar se cabe antes do fechamento (serviço + delay)
-      if (slotEndMinutes + DELAY_MINUTES > CLOSE_MINUTES) continue;
+      // Verificar se cabe antes do fechamento (apenas o serviço, delay não precisa caber)
+      if (slotEndMinutes > CLOSE_MINUTES) continue;
 
       // Verificar almoço - slot não pode começar nem terminar durante o almoço
       if (LUNCH_START !== null && LUNCH_END !== null) {
@@ -217,26 +215,40 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      // Verificar conflitos com agendamentos existentes (incluindo delay obrigatório)
+      // REGRA CORRETA DE BLOQUEIO:
+      // Um slot novo pode começar APÓS o término do agendamento existente + delay
+      // Exemplo: agendamento 09:00 com 30min = termina 09:30 + 10min delay = próximo pode começar 09:40
       let isOccupied = false;
+      let blockingReason = '';
+      
       for (const occupied of occupiedSlots) {
         const [occHour, occMinute] = occupied.hora.split(':').map(Number);
         const occStartMinutes = occHour * 60 + occMinute;
-        // Fim do agendamento existente + delay obrigatório
-        const occEndWithDelay = occStartMinutes + occupied.duracaoComDelay;
+        const occEndMinutes = occStartMinutes + occupied.duracao;
+        const occEndWithDelay = occEndMinutes + DELAY_MINUTES;
 
-        // Novo slot também precisa de espaço para seu próprio serviço + delay
-        const newSlotEndWithDelay = slotEndMinutes + DELAY_MINUTES;
+        // REGRA: Novo slot NÃO pode começar se:
+        // 1. Começa durante o agendamento existente (slotStart < occEnd)
+        // 2. OU começa durante o delay do agendamento existente (slotStart < occEndWithDelay)
+        // 3. E o novo slot terminaria após o início do existente (slotEnd > occStart)
+        
+        // Simplificando: slot novo só pode começar a partir de occEndWithDelay
+        // E não pode terminar após o início de um agendamento
+        
+        const conflictsWithExisting = (
+          // Novo slot começa antes do fim do existente + delay
+          (slotStartMinutes < occEndWithDelay && slotEndMinutes > occStartMinutes)
+        );
 
-        // Verificar sobreposição considerando delays
-        // Conflito se: novo_inicio < existente_fim_com_delay E novo_fim_com_delay > existente_inicio
-        const hasOverlap = slotStartMinutes < occEndWithDelay && newSlotEndWithDelay > occStartMinutes;
-
-        if (hasOverlap) {
+        if (conflictsWithExisting) {
           isOccupied = true;
-          console.log(`[check-availability] ❌ ${timeStr} bloqueado por ${occupied.hora} (duração: ${occupied.duracao}min + ${DELAY_MINUTES}min delay)`);
+          blockingReason = `${occupied.hora} (${occupied.duracao}min termina ${Math.floor(occEndMinutes/60)}:${(occEndMinutes%60).toString().padStart(2,'0')} + ${DELAY_MINUTES}min delay = livre ${Math.floor(occEndWithDelay/60)}:${(occEndWithDelay%60).toString().padStart(2,'0')})`;
           break;
         }
+      }
+
+      if (isOccupied) {
+        console.log(`[check-availability] ❌ ${timeStr} bloqueado por ${blockingReason}`);
       }
 
       slots.push({
