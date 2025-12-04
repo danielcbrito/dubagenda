@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Calendar, X } from "lucide-react";
+import { sendRemarcacaoSolicitadaEvent, sendAgendamentoCanceladoEvent } from "@/lib/webhookService";
 
 interface AdminRescheduleModalProps {
   open: boolean;
@@ -83,6 +84,16 @@ export function AdminRescheduleModal({
 
         if (notifError) throw notifError;
 
+        // Enviar evento para webhook
+        sendRemarcacaoSolicitadaEvent({
+          agendamento_id: appointmentId,
+          cliente_id: userId,
+          servico: serviceName,
+          data: currentDate,
+          hora: currentTime,
+          mensagem_barbeiro: reason
+        });
+
         toast.success("Solicitação de remarcação enviada ao cliente");
       } else if (action === "cancel") {
         // Cancelar definitivamente
@@ -110,6 +121,16 @@ export function AdminRescheduleModal({
           });
 
         if (notifError) throw notifError;
+
+        // Enviar evento para webhook
+        sendAgendamentoCanceladoEvent({
+          agendamento_id: appointmentId,
+          cliente_id: userId,
+          servico: serviceName,
+          data: currentDate,
+          hora: currentTime,
+          mensagem_barbeiro: reason
+        });
 
         toast.success("Agendamento cancelado e cliente notificado");
       }

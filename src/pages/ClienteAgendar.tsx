@@ -11,6 +11,7 @@ import { format } from "date-fns";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import { useSlotAvailability } from "@/hooks/useSlotAvailability";
+import { sendNovoAgendamentoEvent, sendRemarcacaoConcluidaEvent } from "@/lib/webhookService";
 
 interface Service {
   id: string;
@@ -415,6 +416,19 @@ const ClienteAgendar = () => {
         sessionStorage.removeItem('isRescheduling');
         sessionStorage.removeItem('rescheduleAppointmentId');
         
+        // Enviar evento de novo agendamento
+        const { data: profile } = await supabase.from('profiles').select('nome, telefone').eq('id', session.user.id).single();
+        sendNovoAgendamentoEvent({
+          agendamento_id: data.appointmentId || '',
+          cliente_id: session.user.id,
+          cliente_nome: profile?.nome || session.user.email || 'Cliente',
+          cliente_telefone: profile?.telefone,
+          servico: serviceNames,
+          data: format(selectedDate, 'yyyy-MM-dd'),
+          hora: selectedTime,
+          preco: finalPrice
+        });
+        
         toast.success("Agendamento criado! Pague na barbearia.");
         navigate("/cliente");
       } else if (paymentMethod === 'pix' && data.asaasPayment?.pixQrCode) {
@@ -549,6 +563,19 @@ const ClienteAgendar = () => {
       sessionStorage.removeItem('isRescheduling');
       sessionStorage.removeItem('rescheduleAppointmentId');
 
+      // Enviar evento de novo agendamento
+      const { data: profile } = await supabase.from('profiles').select('nome, telefone').eq('id', session.user.id).single();
+      sendNovoAgendamentoEvent({
+        agendamento_id: appointment.id,
+        cliente_id: session.user.id,
+        cliente_nome: profile?.nome || session.user.email || 'Cliente',
+        cliente_telefone: profile?.telefone,
+        servico: serviceNames,
+        data: dateStr,
+        hora: selectedTime,
+        preco: 0
+      });
+
       toast.success("Agendamento criado! Créditos aplicados com sucesso.");
       navigate("/cliente");
     } catch (error: any) {
@@ -668,6 +695,19 @@ const ClienteAgendar = () => {
       // Clear reschedule session
       sessionStorage.removeItem('isRescheduling');
       sessionStorage.removeItem('rescheduleAppointmentId');
+
+      // Enviar evento de remarcação concluída
+      const { data: profile } = await supabase.from('profiles').select('nome, telefone').eq('id', session.user.id).single();
+      const mainService = selectedServices[0];
+      sendRemarcacaoConcluidaEvent({
+        agendamento_id: rescheduleAppointmentId,
+        cliente_id: session.user.id,
+        cliente_nome: profile?.nome || session.user.email || 'Cliente',
+        servico: mainService?.nome || 'Serviço',
+        data: dateStr,
+        hora: selectedTime,
+        preco: mainService?.preco
+      });
 
       toast.success("✅ Agendamento remarcado com sucesso!");
       navigate("/cliente");

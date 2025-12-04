@@ -44,3 +44,6 @@ verify_jwt = true
 
 [functions.health-check]
 verify_jwt = true
+
+[functions.send-webhook-event]
+verify_jwt = true
