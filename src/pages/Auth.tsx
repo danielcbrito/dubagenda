@@ -142,7 +142,7 @@ const Auth = () => {
             cpf: validated.cpf,
             telefone: validated.telefone,
           },
-          emailRedirectTo: `${window.location.origin}/verificar-email?email=${encodeURIComponent(validated.email)}`,
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
         },
       });
 

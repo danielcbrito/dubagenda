@@ -66,7 +66,7 @@ const EmailVerification = () => {
         type: 'signup',
         email: userEmail,
         options: {
-          emailRedirectTo: `${window.location.origin}/verificar-email?email=${encodeURIComponent(userEmail)}`
+          emailRedirectTo: `${window.location.origin}/auth/callback`
         }
       });
 
