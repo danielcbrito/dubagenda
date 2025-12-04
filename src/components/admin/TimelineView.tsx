@@ -26,13 +26,13 @@ export function TimelineView({ appointments, loading, selectedDate, onSelectAppo
     return () => clearInterval(interval);
   }, []);
 
-  // Generate time slots (9:00 to 20:00, every 30 minutes)
+  // Generate time slots (9:00 to 20:00, every 10 minutes for precision)
   const timeSlots = useMemo(() => {
     const slots = [];
     for (let hour = 9; hour <= 20; hour++) {
-      slots.push(`${hour.toString().padStart(2, '0')}:00`);
-      if (hour < 20) {
-        slots.push(`${hour.toString().padStart(2, '0')}:30`);
+      for (let minute = 0; minute < 60; minute += 10) {
+        if (hour === 20 && minute > 0) continue; // Stop at 20:00
+        slots.push(`${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`);
       }
     }
     return slots;
@@ -40,33 +40,44 @@ export function TimelineView({ appointments, loading, selectedDate, onSelectAppo
 
   // Get the appointment that starts at this slot
   const getAppointmentForSlot = (slot: string) => {
-    return appointments.find(apt => apt.hora === slot + ":00" || apt.hora === slot);
+    return appointments.find(apt => {
+      // Normalizar hora do agendamento para comparação
+      const aptHora = apt.hora.substring(0, 5); // Pegar só HH:MM
+      return aptHora === slot;
+    });
   };
 
   // Check if a slot is blocked by another appointment's duration (overlap check)
-  const isSlotBlockedByDuration = (slot: string): { blocked: boolean; blockingAppointment: TimelineAppointment | null } => {
+  const isSlotBlockedByDuration = (slot: string): { blocked: boolean; blockingAppointment: TimelineAppointment | null; nextFreeTime: string | null } => {
     const [slotHour, slotMin] = slot.split(':').map(Number);
     const slotStart = slotHour * 60 + slotMin;
-    const bufferTime = 10; // 10 minute buffer
+    const DELAY_MINUTES = 10; // 10 minute buffer
 
     for (const apt of appointments) {
       const [aptHour, aptMin] = apt.hora.split(':').map(Number);
       const aptStart = aptHour * 60 + aptMin;
-      const aptEnd = aptStart + (apt.servico?.duracao_minutos || 30) + bufferTime;
+      const aptEnd = aptStart + (apt.servico?.duracao_minutos || 30);
+      const aptEndWithDelay = aptEnd + DELAY_MINUTES;
 
-      // If this slot starts within the duration of an existing appointment
-      if (slotStart > aptStart && slotStart < aptEnd) {
-        return { blocked: true, blockingAppointment: apt };
+      // REGRA CORRETA: Slot está bloqueado se começa antes do fim do agendamento + delay
+      // E começa depois do início do agendamento (não é o próprio slot do agendamento)
+      if (slotStart > aptStart && slotStart < aptEndWithDelay) {
+        const nextFreeHour = Math.floor(aptEndWithDelay / 60);
+        const nextFreeMin = aptEndWithDelay % 60;
+        const nextFreeTime = `${nextFreeHour.toString().padStart(2, '0')}:${nextFreeMin.toString().padStart(2, '0')}`;
+        
+        return { blocked: true, blockingAppointment: apt, nextFreeTime };
       }
     }
 
-    return { blocked: false, blockingAppointment: null };
+    return { blocked: false, blockingAppointment: null, nextFreeTime: null };
   };
 
   // Check if slot is during lunch break (13:00-14:00)
   const isLunchBreak = (slot: string): boolean => {
-    const [hour] = slot.split(':').map(Number);
-    return hour === 13;
+    const [hour, minute] = slot.split(':').map(Number);
+    const slotMinutes = hour * 60 + minute;
+    return slotMinutes >= 13 * 60 && slotMinutes < 14 * 60;
   };
 
   // Compara DATA + HORA completa para determinar status
@@ -160,7 +171,7 @@ export function TimelineView({ appointments, loading, selectedDate, onSelectAppo
         const paymentInfo = appointment ? getPaymentBadge(appointment) : null;
         const PaymentIcon = paymentInfo?.icon;
         const lunchBreak = isLunchBreak(slot);
-        const { blocked: isBlockedByDuration } = !appointment ? isSlotBlockedByDuration(slot) : { blocked: false };
+        const { blocked: isBlockedByDuration, nextFreeTime } = !appointment ? isSlotBlockedByDuration(slot) : { blocked: false, nextFreeTime: null };
 
         // Render lunch break slots
         if (lunchBreak) {
@@ -292,7 +303,10 @@ export function TimelineView({ appointments, loading, selectedDate, onSelectAppo
                 </div>
               ) : isBlockedByDuration ? (
                 <div className="flex items-center justify-between flex-1">
-                  <span className="text-sm text-muted-foreground/50 italic">Ocupado (serviço em andamento)</span>
+                  <span className="text-sm text-muted-foreground/50 italic">
+                    Ocupado (serviço em andamento)
+                    {nextFreeTime && <span className="ml-2 text-xs">• Livre às {nextFreeTime}</span>}
+                  </span>
                   <Badge variant="outline" className="text-xs bg-muted/20 text-muted-foreground/50">
                     Indisponível
                   </Badge>

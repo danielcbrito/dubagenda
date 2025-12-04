@@ -63,7 +63,6 @@ Deno.serve(async (req) => {
     const [hour, minute] = time.split(':').map(Number);
     const slotStartMinutes = hour * 60 + minute;
     const slotEndMinutes = slotStartMinutes + duration;
-    const slotEndWithDelay = slotEndMinutes + DELAY_MINUTES;
 
     // Verificar agendamentos existentes
     const { data: existingAppointments } = await supabase
@@ -80,18 +79,17 @@ Deno.serve(async (req) => {
       .eq('data', date)
       .gt('expires_at', now.toISOString());
 
-    // Verificar conflitos (incluindo delay)
+    // Verificar conflitos usando a REGRA CORRETA:
+    // Próximo horário livre = fim do serviço + delay
     const allOccupied = [
       ...(existingAppointments || []).map(apt => ({
         hora: apt.hora,
         duracao: apt.duracao,
-        duracaoComDelay: apt.duracao + DELAY_MINUTES,
         status: apt.status
       })),
       ...(pendingBookings || []).map(pb => ({
         hora: pb.hora,
         duracao: pb.duracao,
-        duracaoComDelay: pb.duracao + DELAY_MINUTES,
         status: 'pending_booking'
       }))
     ];
@@ -99,17 +97,30 @@ Deno.serve(async (req) => {
     for (const occupied of allOccupied) {
       const [occHour, occMinute] = occupied.hora.split(':').map(Number);
       const occStartMinutes = occHour * 60 + occMinute;
-      const occEndMinutes = occStartMinutes + occupied.duracaoComDelay;
+      const occEndMinutes = occStartMinutes + occupied.duracao;
+      const occEndWithDelay = occEndMinutes + DELAY_MINUTES;
 
-      const hasOverlap = slotStartMinutes < occEndMinutes && slotEndWithDelay > occStartMinutes;
+      // REGRA: Novo slot conflita se começa antes do fim do existente + delay
+      // E termina depois do início do existente
+      const hasOverlap = slotStartMinutes < occEndWithDelay && slotEndMinutes > occStartMinutes;
 
       if (hasOverlap) {
-        console.log(`[atomic-booking] ❌ CONFLITO: ${time} vs ${occupied.hora}`);
+        const nextFreeMinutes = occEndWithDelay;
+        const nextFreeHour = Math.floor(nextFreeMinutes / 60);
+        const nextFreeMin = nextFreeMinutes % 60;
+        const nextFreeTime = `${nextFreeHour.toString().padStart(2, '0')}:${nextFreeMin.toString().padStart(2, '0')}`;
+        
+        console.log(`[atomic-booking] ❌ CONFLITO: ${time} vs ${occupied.hora} (próximo livre: ${nextFreeTime})`);
         return new Response(
           JSON.stringify({
             success: false,
             message: 'TIME_SLOT_UNAVAILABLE',
-            conflictDetails: { existingTime: occupied.hora, existingDuration: occupied.duracao, existingStatus: occupied.status }
+            conflictDetails: { 
+              existingTime: occupied.hora, 
+              existingDuration: occupied.duracao, 
+              existingStatus: occupied.status,
+              nextAvailable: nextFreeTime
+            }
           }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 409 }
         );
