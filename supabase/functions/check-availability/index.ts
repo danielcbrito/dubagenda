@@ -9,9 +9,10 @@
  * - cancelled_by_user, cancelled_by_admin, no_show, excluido → LIBERA
  * - pending_bookings não expirados → BLOQUEIA
  * 
- * HORÁRIO DE FUNCIONAMENTO:
- * - Configurável por dia da semana via tabela configuracoes_horario
- * - Delay obrigatório entre atendimentos (padrão: 10 minutos)
+ * REGRA DE DISPONIBILIDADE:
+ * próximo_horário_disponível = horário_fim_do_serviço + delay (10min)
+ * 
+ * Exemplo: Serviço 18:30 (30min) → termina 19:00 + 10min delay = próximo às 19:10
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.80.0';
@@ -45,23 +46,34 @@ interface TimeSlot {
   blockedReason?: 'occupied' | 'minimum_advance' | 'lunch' | 'closed' | 'overlap' | 'delay_buffer';
 }
 
+interface OccupiedSlotInfo {
+  hora: string;
+  duracao: number;
+  status: string;
+  source: 'agendamento' | 'pending_booking';
+  fim: string; // hora de término
+  fimComDelay: string; // hora de término + delay
+}
+
 interface AvailabilityResponse {
   success: boolean;
   date: string;
   slots: TimeSlot[];
-  occupiedSlots: Array<{
-    hora: string;
-    duracao: number;
-    status: string;
-    source: 'agendamento' | 'pending_booking';
-  }>;
+  occupiedSlots: OccupiedSlotInfo[];
   businessHours?: BusinessHoursConfig;
   message?: string;
 }
 
 function timeToMinutes(timeStr: string): number {
-  const [hours, minutes] = timeStr.split(':').map(Number);
-  return hours * 60 + minutes;
+  // Handle both "HH:MM" and "HH:MM:SS" formats
+  const parts = timeStr.split(':').map(Number);
+  return parts[0] * 60 + parts[1];
+}
+
+function minutesToTime(minutes: number): string {
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+  return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
 }
 
 Deno.serve(async (req) => {
@@ -69,8 +81,6 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  const startTime = Date.now();
-  
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -79,11 +89,11 @@ Deno.serve(async (req) => {
     const body: AvailabilityRequest = await req.json();
     const { date, duration, excludeAppointmentId } = body;
 
-    console.log('='.repeat(60));
+    console.log('='.repeat(70));
     console.log('[check-availability] INICIANDO VERIFICAÇÃO');
-    console.log(`[check-availability] Data: ${date} | Duração: ${duration}min`);
+    console.log(`[check-availability] Data: ${date} | Duração solicitada: ${duration}min`);
 
-    if (!date || !duration) {
+    if (!date || !duration || duration <= 0) {
       return new Response(
         JSON.stringify({ success: false, message: 'Data e duração são obrigatórios' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
@@ -98,10 +108,10 @@ Deno.serve(async (req) => {
       .from('configuracoes_horario')
       .select('*')
       .eq('dia_semana', dayOfWeek)
-      .single();
+      .maybeSingle();
 
     if (configError) {
-      console.log('[check-availability] Usando configuração padrão');
+      console.log('[check-availability] Erro ao buscar config:', configError.message);
     }
 
     const config: BusinessHoursConfig = configData || {
@@ -113,7 +123,7 @@ Deno.serve(async (req) => {
       delay_entre_servicos: 10
     };
 
-    console.log(`[check-availability] Config: ${JSON.stringify(config)}`);
+    console.log(`[check-availability] Config do dia ${dayOfWeek}: aberto=${config.aberto}, ${config.hora_abertura}-${config.hora_fechamento}`);
 
     if (!config.aberto) {
       return new Response(
@@ -129,11 +139,11 @@ Deno.serve(async (req) => {
     const CLOSE_MINUTES = timeToMinutes(config.hora_fechamento);
     const LUNCH_START = config.hora_almoco_inicio ? timeToMinutes(config.hora_almoco_inicio) : null;
     const LUNCH_END = config.hora_almoco_fim ? timeToMinutes(config.hora_almoco_fim) : null;
-    const DELAY_MINUTES = config.delay_entre_servicos;
+    const DELAY_MINUTES = config.delay_entre_servicos || 10;
 
-    console.log(`[check-availability] Horário: ${config.hora_abertura}-${config.hora_fechamento} | Delay: ${DELAY_MINUTES}min`);
+    console.log(`[check-availability] Horário: ${minutesToTime(OPEN_MINUTES)}-${minutesToTime(CLOSE_MINUTES)} | Almoço: ${LUNCH_START ? minutesToTime(LUNCH_START) : 'N/A'}-${LUNCH_END ? minutesToTime(LUNCH_END) : 'N/A'} | Delay: ${DELAY_MINUTES}min`);
 
-    // Buscar agendamentos
+    // Buscar agendamentos com status bloqueante
     let appointmentsQuery = supabase
       .from('agendamentos')
       .select('id, hora, duracao, status')
@@ -147,38 +157,64 @@ Deno.serve(async (req) => {
     const { data: appointments, error: aptError } = await appointmentsQuery;
 
     if (aptError) {
-      console.error('[check-availability] ERRO:', aptError);
+      console.error('[check-availability] ERRO ao buscar agendamentos:', aptError);
       return new Response(
         JSON.stringify({ success: false, message: 'Erro ao verificar disponibilidade' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
       );
     }
 
-    // Buscar pending bookings
+    // Buscar pending bookings não expirados
     const now = new Date();
-    const { data: pendingBookings } = await supabase
+    const { data: pendingBookings, error: pbError } = await supabase
       .from('pending_bookings')
       .select('id, hora, duracao, expires_at')
       .eq('data', date)
       .gt('expires_at', now.toISOString());
 
-    console.log(`[check-availability] Agendamentos: ${appointments?.length || 0} | Pending: ${pendingBookings?.length || 0}`);
+    if (pbError) {
+      console.log('[check-availability] Aviso ao buscar pending:', pbError.message);
+    }
 
-    // Combinar slots ocupados (duração real SEM delay duplicado)
-    const occupiedSlots = [
-      ...(appointments || []).map(apt => ({
+    console.log(`[check-availability] Agendamentos encontrados: ${appointments?.length || 0}`);
+    console.log(`[check-availability] Pending bookings encontrados: ${pendingBookings?.length || 0}`);
+
+    // Processar todos os slots ocupados com cálculo correto de fim + delay
+    const occupiedSlots: OccupiedSlotInfo[] = [];
+
+    for (const apt of appointments || []) {
+      const startMinutes = timeToMinutes(apt.hora);
+      const endMinutes = startMinutes + apt.duracao;
+      const endWithDelayMinutes = endMinutes + DELAY_MINUTES;
+
+      const info: OccupiedSlotInfo = {
         hora: apt.hora,
         duracao: apt.duracao,
         status: apt.status,
-        source: 'agendamento' as const
-      })),
-      ...(pendingBookings || []).map(pb => ({
+        source: 'agendamento',
+        fim: minutesToTime(endMinutes),
+        fimComDelay: minutesToTime(endWithDelayMinutes)
+      };
+      occupiedSlots.push(info);
+      console.log(`[check-availability] → Agendamento: ${apt.hora} (${apt.duracao}min) | Fim: ${info.fim} | Livre após: ${info.fimComDelay}`);
+    }
+
+    for (const pb of pendingBookings || []) {
+      const startMinutes = timeToMinutes(pb.hora);
+      const endMinutes = startMinutes + pb.duracao;
+      const endWithDelayMinutes = endMinutes + DELAY_MINUTES;
+
+      const info: OccupiedSlotInfo = {
         hora: pb.hora,
         duracao: pb.duracao,
         status: 'pending_booking',
-        source: 'pending_booking' as const
-      }))
-    ];
+        source: 'pending_booking',
+        fim: minutesToTime(endMinutes),
+        fimComDelay: minutesToTime(endWithDelayMinutes)
+      };
+      occupiedSlots.push(info);
+      console.log(`[check-availability] → Pending: ${pb.hora} (${pb.duracao}min) | Fim: ${info.fim} | Livre após: ${info.fimComDelay}`);
+    }
 
     // Calcular horário mínimo (1h de antecedência para hoje)
     const todayStr = now.toISOString().split('T')[0];
@@ -186,93 +222,89 @@ Deno.serve(async (req) => {
     const currentMinutes = now.getHours() * 60 + now.getMinutes();
     const minimumAdvanceMinutes = isToday ? currentMinutes + 60 : 0;
 
-    // Gerar slots a cada 10 minutos (para respeitar delay corretamente)
+    if (isToday) {
+      console.log(`[check-availability] É HOJE - Hora atual: ${minutesToTime(currentMinutes)} | Mínimo: ${minutesToTime(minimumAdvanceMinutes)}`);
+    }
+
+    // Gerar slots a cada 10 minutos
     const slots: TimeSlot[] = [];
-    const SLOT_INTERVAL = 10; // Intervalo de 10 minutos entre slots
+    const SLOT_INTERVAL = 10;
 
     for (let slotStartMinutes = OPEN_MINUTES; slotStartMinutes < CLOSE_MINUTES; slotStartMinutes += SLOT_INTERVAL) {
-      const hour = Math.floor(slotStartMinutes / 60);
-      const minute = slotStartMinutes % 60;
-      const timeStr = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+      const timeStr = minutesToTime(slotStartMinutes);
       const slotEndMinutes = slotStartMinutes + duration;
 
-      // Verificar se cabe antes do fechamento (apenas o serviço, delay não precisa caber)
-      if (slotEndMinutes > CLOSE_MINUTES) continue;
-
-      // Verificar almoço - slot não pode começar nem terminar durante o almoço
-      if (LUNCH_START !== null && LUNCH_END !== null) {
-        const overlapsLunch = (
-          (slotStartMinutes >= LUNCH_START && slotStartMinutes < LUNCH_END) ||
-          (slotEndMinutes > LUNCH_START && slotEndMinutes <= LUNCH_END) ||
-          (slotStartMinutes < LUNCH_START && slotEndMinutes > LUNCH_END)
-        );
-        if (overlapsLunch) continue;
+      // 1. Verificar se o serviço cabe antes do fechamento
+      if (slotEndMinutes > CLOSE_MINUTES) {
+        continue; // Slot ignorado - não cabe
       }
 
-      // Verificar antecedência mínima (1h para hoje)
+      // 2. Verificar almoço - slot não pode começar durante o almoço nem o serviço terminar durante
+      if (LUNCH_START !== null && LUNCH_END !== null) {
+        // Slot começa durante almoço?
+        if (slotStartMinutes >= LUNCH_START && slotStartMinutes < LUNCH_END) {
+          continue;
+        }
+        // Serviço terminaria durante o almoço?
+        if (slotEndMinutes > LUNCH_START && slotEndMinutes <= LUNCH_END) {
+          continue;
+        }
+        // Serviço atravessa todo o almoço?
+        if (slotStartMinutes < LUNCH_START && slotEndMinutes > LUNCH_END) {
+          continue;
+        }
+      }
+
+      // 3. Verificar antecedência mínima (1h para hoje)
       if (isToday && slotStartMinutes < minimumAdvanceMinutes) {
         slots.push({ time: timeStr, available: false, blockedReason: 'minimum_advance' });
         continue;
       }
 
-      // REGRA CORRETA DE BLOQUEIO:
-      // Um slot novo pode começar APÓS o término do agendamento existente + delay
-      // Exemplo: agendamento 09:00 com 30min = termina 09:30 + 10min delay = próximo pode começar 09:40
-      let isOccupied = false;
-      let blockingReason = '';
-      
+      // 4. Verificar conflitos com slots ocupados
+      // REGRA: Um novo slot pode ser agendado se:
+      //   - slotStart >= fimComDelay de TODOS os agendamentos existentes que começam ANTES do slotEnd
+      //   - slotEnd <= início de QUALQUER agendamento existente
+      let isBlocked = false;
+      let blockReason = '';
+
       for (const occupied of occupiedSlots) {
-        const [occHour, occMinute] = occupied.hora.split(':').map(Number);
-        const occStartMinutes = occHour * 60 + occMinute;
+        const occStartMinutes = timeToMinutes(occupied.hora);
         const occEndMinutes = occStartMinutes + occupied.duracao;
-        const occEndWithDelay = occEndMinutes + DELAY_MINUTES;
+        const occEndWithDelayMinutes = occEndMinutes + DELAY_MINUTES;
 
-        // REGRA: Novo slot NÃO pode começar se:
-        // 1. Começa durante o agendamento existente (slotStart < occEnd)
-        // 2. OU começa durante o delay do agendamento existente (slotStart < occEndWithDelay)
-        // 3. E o novo slot terminaria após o início do existente (slotEnd > occStart)
-        
-        // Simplificando: slot novo só pode começar a partir de occEndWithDelay
-        // E não pode terminar após o início de um agendamento
-        
-        const conflictsWithExisting = (
-          // Novo slot começa antes do fim do existente + delay
-          (slotStartMinutes < occEndWithDelay && slotEndMinutes > occStartMinutes)
-        );
+        // Verificar sobreposição considerando delay
+        // Conflito existe se:
+        // - O novo slot começa ANTES do fim do existente + delay
+        // - E o novo slot termina DEPOIS do início do existente
+        const hasConflict = (slotStartMinutes < occEndWithDelayMinutes) && (slotEndMinutes > occStartMinutes);
 
-        if (conflictsWithExisting) {
-          isOccupied = true;
-          blockingReason = `${occupied.hora} (${occupied.duracao}min termina ${Math.floor(occEndMinutes/60)}:${(occEndMinutes%60).toString().padStart(2,'0')} + ${DELAY_MINUTES}min delay = livre ${Math.floor(occEndWithDelay/60)}:${(occEndWithDelay%60).toString().padStart(2,'0')})`;
+        if (hasConflict) {
+          isBlocked = true;
+          blockReason = `Conflito com ${occupied.hora} (${occupied.duracao}min) - livre após ${occupied.fimComDelay}`;
           break;
         }
       }
 
-      if (isOccupied) {
-        console.log(`[check-availability] ❌ ${timeStr} bloqueado por ${blockingReason}`);
+      if (isBlocked) {
+        slots.push({ time: timeStr, available: false, blockedReason: 'occupied' });
+      } else {
+        slots.push({ time: timeStr, available: true });
       }
-
-      slots.push({
-        time: timeStr,
-        available: !isOccupied,
-        blockedReason: isOccupied ? 'occupied' : undefined
-      });
     }
 
     const availableCount = slots.filter(s => s.available).length;
-    console.log(`[check-availability] Total: ${slots.length} | Disponíveis: ${availableCount}`);
-    console.log('='.repeat(60));
+    const blockedCount = slots.filter(s => !s.available).length;
+
+    console.log(`[check-availability] RESULTADO: ${slots.length} slots gerados | ${availableCount} disponíveis | ${blockedCount} bloqueados`);
+    console.log('='.repeat(70));
 
     return new Response(
       JSON.stringify({
         success: true,
         date,
         slots,
-        occupiedSlots: occupiedSlots.map(o => ({
-          hora: o.hora,
-          duracao: o.duracao,
-          status: o.status,
-          source: o.source
-        })),
+        occupiedSlots,
         businessHours: config
       } as AvailabilityResponse),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }

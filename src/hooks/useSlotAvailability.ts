@@ -3,10 +3,13 @@ import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 
 /**
- * HOOK DE DISPONIBILIDADE DE HORÁRIOS - V2 (BACKEND-FIRST)
+ * HOOK DE DISPONIBILIDADE DE HORÁRIOS - V3 (BACKEND-FIRST + FALLBACK CORRIGIDO)
  * 
  * Este hook SEMPRE consulta o backend (Edge Function) como
  * fonte única da verdade para disponibilidade.
+ * 
+ * REGRA DE DISPONIBILIDADE:
+ * próximo_horário_disponível = horário_fim_do_serviço + delay (10min)
  * 
  * FLUXO:
  * 1. Chama Edge Function check-availability
@@ -26,6 +29,8 @@ interface OccupiedSlot {
   duracao: number;
   status: string;
   source: 'agendamento' | 'pending_booking';
+  fim?: string;
+  fimComDelay?: string;
 }
 
 interface AvailabilityResponse {
@@ -37,6 +42,22 @@ interface AvailabilityResponse {
 }
 
 const SUPABASE_URL = 'https://djtpzvujzmrrslirzwun.supabase.co';
+
+// Constantes de configuração padrão
+const DEFAULT_DELAY_MINUTES = 10;
+const SLOT_INTERVAL = 10;
+const MINIMUM_ADVANCE_MINUTES = 60; // 1 hora de antecedência
+
+function timeToMinutes(timeStr: string): number {
+  const parts = timeStr.split(':').map(Number);
+  return parts[0] * 60 + parts[1];
+}
+
+function minutesToTime(minutes: number): string {
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+  return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
+}
 
 export function useSlotAvailability(
   selectedDate: Date | undefined,
@@ -57,6 +78,7 @@ export function useSlotAvailability(
    */
   const loadSlots = useCallback(async () => {
     if (!selectedDate || serviceDuration <= 0) {
+      console.log('[useSlotAvailability] Data ou duração inválida, limpando slots');
       setSlots([]);
       setOccupiedSlots([]);
       return;
@@ -104,13 +126,21 @@ export function useSlotAvailability(
         throw new Error(data.message || 'Erro ao verificar disponibilidade');
       }
 
+      const availableCount = data.slots.filter(s => s.available).length;
+      const blockedCount = data.slots.filter(s => !s.available).length;
+
       console.log(`[useSlotAvailability] RESPOSTA DO BACKEND:`);
-      console.log(`  → Slots: ${data.slots.length}`);
-      console.log(`  → Disponíveis: ${data.slots.filter(s => s.available).length}`);
+      console.log(`  → Total de slots: ${data.slots.length}`);
+      console.log(`  → Disponíveis: ${availableCount}`);
+      console.log(`  → Bloqueados: ${blockedCount}`);
       console.log(`  → Ocupados no DB: ${data.occupiedSlots.length}`);
-      data.occupiedSlots.forEach(os => {
-        console.log(`    → ${os.hora} | ${os.duracao}min | ${os.status} | ${os.source}`);
-      });
+      
+      if (data.occupiedSlots.length > 0) {
+        console.log('  → Detalhes dos ocupados:');
+        data.occupiedSlots.forEach(os => {
+          console.log(`     - ${os.hora} (${os.duracao}min) | ${os.status} | fim: ${os.fim || 'N/A'} | livre após: ${os.fimComDelay || 'N/A'}`);
+        });
+      }
       console.log('='.repeat(60));
 
       setSlots(data.slots);
@@ -121,11 +151,11 @@ export function useSlotAvailability(
         console.log('[useSlotAvailability] Requisição cancelada');
         return;
       }
-      console.error('[useSlotAvailability] ERRO:', err);
+      console.error('[useSlotAvailability] ERRO na Edge Function:', err);
       setError('Erro ao carregar horários');
       
       // Fallback: carregar direto do banco se Edge Function falhar
-      console.log('[useSlotAvailability] Tentando fallback direto do banco...');
+      console.log('[useSlotAvailability] Usando FALLBACK direto do banco...');
       await loadSlotsFromDatabase(dateStr);
     } finally {
       setLoading(false);
@@ -133,18 +163,52 @@ export function useSlotAvailability(
   }, [selectedDate, serviceDuration, excludeAppointmentId]);
 
   /**
-   * Fallback: carregar slots diretamente do banco
-   * Usado apenas se a Edge Function falhar
+   * Fallback CORRIGIDO: carregar slots diretamente do banco
+   * Usa as MESMAS regras do backend (intervalo de 10min, delay de 10min)
    */
   const loadSlotsFromDatabase = useCallback(async (dateStr: string) => {
     try {
+      console.log('[useSlotAvailability FALLBACK] Iniciando carregamento direto...');
+      
       const now = new Date();
       const todayStr = format(now, 'yyyy-MM-dd');
       const isToday = dateStr === todayStr;
       const currentMinutes = now.getHours() * 60 + now.getMinutes();
-      const minimumAdvanceMinutes = isToday ? currentMinutes + 60 : 0;
+      const minimumAdvanceMinutes = isToday ? currentMinutes + MINIMUM_ADVANCE_MINUTES : 0;
 
-      // Buscar agendamentos
+      // Buscar configuração do dia
+      const dateObj = new Date(dateStr + 'T12:00:00');
+      const dayOfWeek = dateObj.getDay();
+
+      const { data: configData } = await supabase
+        .from('configuracoes_horario')
+        .select('*')
+        .eq('dia_semana', dayOfWeek)
+        .maybeSingle();
+
+      const config = configData || {
+        aberto: dayOfWeek !== 0,
+        hora_abertura: '09:00',
+        hora_fechamento: dayOfWeek >= 3 && dayOfWeek <= 6 ? '21:00' : '20:00',
+        hora_almoco_inicio: '13:00',
+        hora_almoco_fim: '14:00',
+        delay_entre_servicos: DEFAULT_DELAY_MINUTES
+      };
+
+      if (!config.aberto) {
+        console.log('[useSlotAvailability FALLBACK] Dia fechado');
+        setSlots([]);
+        setOccupiedSlots([]);
+        return;
+      }
+
+      const OPEN_MINUTES = timeToMinutes(config.hora_abertura);
+      const CLOSE_MINUTES = timeToMinutes(config.hora_fechamento);
+      const LUNCH_START = config.hora_almoco_inicio ? timeToMinutes(config.hora_almoco_inicio) : null;
+      const LUNCH_END = config.hora_almoco_fim ? timeToMinutes(config.hora_almoco_fim) : null;
+      const DELAY_MINUTES = config.delay_entre_servicos || DEFAULT_DELAY_MINUTES;
+
+      // Buscar agendamentos com status bloqueante
       const { data: appointments, error: aptError } = await supabase
         .from('agendamentos')
         .select('id, hora, duracao, status')
@@ -153,81 +217,97 @@ export function useSlotAvailability(
 
       if (aptError) throw aptError;
 
-      // Buscar pending_bookings
+      // Buscar pending_bookings não expirados
       const { data: pendingBookings } = await supabase
         .from('pending_bookings')
-        .select('id, hora, duracao')
+        .select('id, hora, duracao, expires_at')
         .eq('data', dateStr)
         .gt('expires_at', now.toISOString());
 
-      const allOccupied = [
-        ...(appointments || []).map(apt => ({
-          hora: apt.hora,
-          duracao: apt.duracao,
-          status: apt.status,
-          source: 'agendamento' as const
-        })),
-        ...(pendingBookings || []).map(pb => ({
-          hora: pb.hora,
-          duracao: pb.duracao,
-          status: 'pending_booking',
-          source: 'pending_booking' as const
-        }))
+      // Processar slots ocupados
+      const allOccupied: OccupiedSlot[] = [
+        ...(appointments || []).map(apt => {
+          const startMinutes = timeToMinutes(apt.hora);
+          const endMinutes = startMinutes + apt.duracao;
+          return {
+            hora: apt.hora,
+            duracao: apt.duracao,
+            status: apt.status,
+            source: 'agendamento' as const,
+            fim: minutesToTime(endMinutes),
+            fimComDelay: minutesToTime(endMinutes + DELAY_MINUTES)
+          };
+        }),
+        ...(pendingBookings || []).map(pb => {
+          const startMinutes = timeToMinutes(pb.hora);
+          const endMinutes = startMinutes + pb.duracao;
+          return {
+            hora: pb.hora,
+            duracao: pb.duracao,
+            status: 'pending_booking',
+            source: 'pending_booking' as const,
+            fim: minutesToTime(endMinutes),
+            fimComDelay: minutesToTime(endMinutes + DELAY_MINUTES)
+          };
+        })
       ];
 
-      // Gerar slots
+      console.log(`[useSlotAvailability FALLBACK] ${allOccupied.length} slots ocupados encontrados`);
+
+      // Gerar slots a cada 10 minutos (igual ao backend)
       const generatedSlots: TimeSlot[] = [];
-      const OPEN_HOUR = 9;
-      const CLOSE_HOUR = 20;
-      const LUNCH_START = 13 * 60;
-      const LUNCH_END = 14 * 60;
 
-      for (let hour = OPEN_HOUR; hour < CLOSE_HOUR; hour++) {
-        for (let minute = 0; minute < 60; minute += 30) {
-          const timeStr = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
-          const slotStartMinutes = hour * 60 + minute;
-          const slotEndMinutes = slotStartMinutes + serviceDuration;
+      for (let slotStartMinutes = OPEN_MINUTES; slotStartMinutes < CLOSE_MINUTES; slotStartMinutes += SLOT_INTERVAL) {
+        const timeStr = minutesToTime(slotStartMinutes);
+        const slotEndMinutes = slotStartMinutes + serviceDuration;
 
-          if (slotEndMinutes > CLOSE_HOUR * 60) continue;
+        // 1. Verificar se cabe antes do fechamento
+        if (slotEndMinutes > CLOSE_MINUTES) continue;
 
-          const overlapsLunch = (
-            (slotStartMinutes >= LUNCH_START && slotStartMinutes < LUNCH_END) ||
-            (slotEndMinutes > LUNCH_START && slotEndMinutes <= LUNCH_END) ||
-            (slotStartMinutes < LUNCH_START && slotEndMinutes > LUNCH_END)
-          );
-          if (overlapsLunch) continue;
-
-          if (isToday && slotStartMinutes < minimumAdvanceMinutes) {
-            generatedSlots.push({ time: timeStr, available: false, blockedReason: 'minimum_advance' });
-            continue;
-          }
-
-          let isOccupied = false;
-          for (const occupied of allOccupied) {
-            const [occHour, occMinute] = occupied.hora.split(':').map(Number);
-            const occStartMinutes = occHour * 60 + occMinute;
-            const occEndMinutes = occStartMinutes + occupied.duracao;
-            const hasOverlap = slotStartMinutes < occEndMinutes && slotEndMinutes > occStartMinutes;
-            if (hasOverlap) {
-              isOccupied = true;
-              break;
-            }
-          }
-
-          generatedSlots.push({
-            time: timeStr,
-            available: !isOccupied,
-            blockedReason: isOccupied ? 'occupied' : undefined
-          });
+        // 2. Verificar almoço
+        if (LUNCH_START !== null && LUNCH_END !== null) {
+          if (slotStartMinutes >= LUNCH_START && slotStartMinutes < LUNCH_END) continue;
+          if (slotEndMinutes > LUNCH_START && slotEndMinutes <= LUNCH_END) continue;
+          if (slotStartMinutes < LUNCH_START && slotEndMinutes > LUNCH_END) continue;
         }
+
+        // 3. Verificar antecedência mínima
+        if (isToday && slotStartMinutes < minimumAdvanceMinutes) {
+          generatedSlots.push({ time: timeStr, available: false, blockedReason: 'minimum_advance' });
+          continue;
+        }
+
+        // 4. Verificar conflitos (MESMA LÓGICA DO BACKEND)
+        let isBlocked = false;
+        for (const occupied of allOccupied) {
+          const occStartMinutes = timeToMinutes(occupied.hora);
+          const occEndMinutes = occStartMinutes + occupied.duracao;
+          const occEndWithDelayMinutes = occEndMinutes + DELAY_MINUTES;
+
+          // Conflito: novo slot começa antes do fim+delay E termina depois do início
+          const hasConflict = (slotStartMinutes < occEndWithDelayMinutes) && (slotEndMinutes > occStartMinutes);
+
+          if (hasConflict) {
+            isBlocked = true;
+            break;
+          }
+        }
+
+        generatedSlots.push({
+          time: timeStr,
+          available: !isBlocked,
+          blockedReason: isBlocked ? 'occupied' : undefined
+        });
       }
+
+      const availableCount = generatedSlots.filter(s => s.available).length;
+      console.log(`[useSlotAvailability FALLBACK] ${generatedSlots.length} slots gerados | ${availableCount} disponíveis`);
 
       setSlots(generatedSlots);
       setOccupiedSlots(allOccupied);
-      console.log('[useSlotAvailability] Fallback concluído com sucesso');
 
     } catch (err) {
-      console.error('[useSlotAvailability] Erro no fallback:', err);
+      console.error('[useSlotAvailability FALLBACK] Erro:', err);
       setError('Erro ao carregar horários');
     }
   }, [serviceDuration]);
@@ -285,9 +365,8 @@ export function useSlotAvailability(
         }
       )
       .subscribe((status) => {
-        console.log(`[Realtime] Status do canal ${channelName}:`, status);
+        console.log(`[Realtime] Status do canal:`, status);
         if (status === 'SUBSCRIBED') {
-          console.log('[Realtime] Canal conectado, recarregando slots...');
           loadSlots();
         }
       });
@@ -296,7 +375,6 @@ export function useSlotAvailability(
 
     // Polling de backup (a cada 8 segundos)
     pollIntervalRef.current = setInterval(() => {
-      console.log('[Polling] Atualizando slots...');
       loadSlots();
     }, 8000);
 
@@ -336,14 +414,25 @@ export function useSlotAvailability(
     }
 
     const dateStr = format(selectedDate, 'yyyy-MM-dd');
-    const [hour, minute] = time.split(':').map(Number);
-    const slotStartMinutes = hour * 60 + minute;
+    const slotStartMinutes = timeToMinutes(time);
     const slotEndMinutes = slotStartMinutes + serviceDuration;
 
-    console.log(`[verifySlotAvailability] Verificando ${dateStr} ${time} (${slotStartMinutes}-${slotEndMinutes})`);
+    console.log(`[verifySlotAvailability] Verificando ${dateStr} ${time} (${minutesToTime(slotStartMinutes)}-${minutesToTime(slotEndMinutes)})`);
 
     try {
-      // Buscar TODOS os agendamentos do dia com status bloqueante
+      // Buscar configuração do dia para pegar o delay
+      const dateObj = new Date(dateStr + 'T12:00:00');
+      const dayOfWeek = dateObj.getDay();
+
+      const { data: configData } = await supabase
+        .from('configuracoes_horario')
+        .select('delay_entre_servicos')
+        .eq('dia_semana', dayOfWeek)
+        .maybeSingle();
+
+      const DELAY_MINUTES = configData?.delay_entre_servicos || DEFAULT_DELAY_MINUTES;
+
+      // Buscar agendamentos com status bloqueante
       let query = supabase
         .from('agendamentos')
         .select('id, hora, duracao, status')
@@ -363,13 +452,13 @@ export function useSlotAvailability(
 
       // Verificar conflitos com agendamentos
       for (const apt of appointments || []) {
-        const [aptHour, aptMinute] = apt.hora.split(':').map(Number);
-        const aptStartMinutes = aptHour * 60 + aptMinute;
+        const aptStartMinutes = timeToMinutes(apt.hora);
         const aptEndMinutes = aptStartMinutes + apt.duracao;
+        const aptEndWithDelayMinutes = aptEndMinutes + DELAY_MINUTES;
 
-        const hasOverlap = slotStartMinutes < aptEndMinutes && slotEndMinutes > aptStartMinutes;
+        const hasConflict = (slotStartMinutes < aptEndWithDelayMinutes) && (slotEndMinutes > aptStartMinutes);
 
-        if (hasOverlap) {
+        if (hasConflict) {
           console.log(`[verifySlotAvailability] ❌ CONFLITO com ${apt.hora} (${apt.status})`);
           return {
             available: false,
@@ -386,13 +475,13 @@ export function useSlotAvailability(
         .gt('expires_at', new Date().toISOString());
 
       for (const pb of pendingBookings || []) {
-        const [pbHour, pbMinute] = pb.hora.split(':').map(Number);
-        const pbStartMinutes = pbHour * 60 + pbMinute;
+        const pbStartMinutes = timeToMinutes(pb.hora);
         const pbEndMinutes = pbStartMinutes + pb.duracao;
+        const pbEndWithDelayMinutes = pbEndMinutes + DELAY_MINUTES;
 
-        const hasOverlap = slotStartMinutes < pbEndMinutes && slotEndMinutes > pbStartMinutes;
+        const hasConflict = (slotStartMinutes < pbEndWithDelayMinutes) && (slotEndMinutes > pbStartMinutes);
 
-        if (hasOverlap) {
+        if (hasConflict) {
           console.log(`[verifySlotAvailability] ❌ CONFLITO com pending_booking ${pb.hora}`);
           return {
             available: false,
