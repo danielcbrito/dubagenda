@@ -289,6 +289,56 @@ async function handlePaymentConfirmed(supabase: any, payload: AsaasWebhookEvent)
       // Delete pending booking
       await supabase.from('pending_bookings').delete().eq('id', pendingBooking.id);
 
+      // ============================================
+      // WEBHOOK INTEGRATION - Enviar eventos
+      // ============================================
+      try {
+        // Buscar dados do perfil do cliente
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('nome, telefone')
+          .eq('id', pendingBooking.user_id)
+          .single();
+
+        // Buscar nome do serviço
+        const { data: servico } = await supabase
+          .from('servicos')
+          .select('nome')
+          .eq('id', pendingBooking.servico_id)
+          .single();
+
+        // Enviar evento de pagamento realizado
+        await sendWebhookEvent(supabase, {
+          evento: 'pagamento_realizado',
+          agendamento_id: appointment.id,
+          cliente_id: pendingBooking.user_id,
+          cliente_nome: profile?.nome || 'Cliente',
+          cliente_telefone: profile?.telefone,
+          servico: servico?.nome || 'Serviço',
+          data: pendingBooking.data,
+          hora: pendingBooking.hora,
+          preco: pendingBooking.preco,
+          status: 'pago'
+        });
+
+        // Enviar evento de novo agendamento
+        await sendWebhookEvent(supabase, {
+          evento: 'novo_agendamento',
+          agendamento_id: appointment.id,
+          cliente_id: pendingBooking.user_id,
+          cliente_nome: profile?.nome || 'Cliente',
+          cliente_telefone: profile?.telefone,
+          servico: servico?.nome || 'Serviço',
+          data: pendingBooking.data,
+          hora: pendingBooking.hora,
+          preco: pendingBooking.preco,
+          status: 'pendente'
+        });
+      } catch (webhookError) {
+        console.error('Error sending webhook events:', webhookError);
+        // Não bloqueia o fluxo se webhook falhar
+      }
+
       console.log('Pending booking converted to appointment successfully');
       return;
     }
@@ -514,5 +564,42 @@ async function handleSubscriptionUpdated(supabase: any, payload: AsaasWebhookEve
 
   if (error) {
     console.error('Error updating subscription:', error);
+  }
+}
+
+// Helper function to send webhook events
+async function sendWebhookEvent(supabase: any, eventData: any): Promise<void> {
+  try {
+    // Buscar configuração do webhook
+    const { data: config } = await supabase
+      .from('webhook_config')
+      .select('webhook_url, ativo')
+      .single();
+
+    if (!config?.webhook_url || !config?.ativo) {
+      console.log('[sendWebhookEvent] Webhook não configurado ou inativo');
+      return;
+    }
+
+    const payload = {
+      ...eventData,
+      timestamp: new Date().toISOString()
+    };
+
+    console.log('[sendWebhookEvent] Enviando evento:', eventData.evento);
+
+    const response = await fetch(config.webhook_url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+
+    if (response.ok) {
+      console.log('[sendWebhookEvent] Evento enviado com sucesso');
+    } else {
+      console.error('[sendWebhookEvent] Erro ao enviar:', response.status);
+    }
+  } catch (error) {
+    console.error('[sendWebhookEvent] Erro:', error);
   }
 }

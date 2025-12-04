@@ -7,6 +7,7 @@ import { CheckCircle, XCircle, Calendar as CalendarIcon, Clock, User } from "luc
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { sendAgendamentoConfirmadoEvent, sendAgendamentoCanceladoEvent } from "@/lib/webhookService";
 
 interface PendingAppointment {
   id: string;
@@ -119,7 +120,7 @@ export function AdminConfirmacoesPendentes() {
           updated_at: new Date().toISOString()
         })
         .eq("id", appointmentId)
-        .select()
+        .select("*, user_id")
         .single();
 
       if (error) {
@@ -133,6 +134,17 @@ export function AdminConfirmacoesPendentes() {
         barbeiro_confirmou: data.barbeiro_confirmou,
         hora: data.hora,
         data: data.data
+      });
+
+      // Enviar evento para webhook
+      sendAgendamentoConfirmadoEvent({
+        agendamento_id: appointmentId,
+        cliente_id: data.user_id,
+        cliente_nome: appointmentToConfirm?.profile?.nome || "Cliente",
+        servico: appointmentToConfirm?.servico?.nome || "Serviço",
+        data: data.data,
+        hora: data.hora,
+        preco: data.preco
       });
       
       toast.success(
@@ -152,15 +164,30 @@ export function AdminConfirmacoesPendentes() {
 
   const handleReject = async (appointmentId: string) => {
     try {
-      const { error } = await supabase
+      const appointmentToReject = appointments.find(a => a.id === appointmentId);
+
+      const { data, error } = await supabase
         .from("agendamentos")
         .update({ 
           status: 'cancelled_by_admin' as any,
           visivel_para_usuario: false
         } as any)
-        .eq("id", appointmentId);
+        .eq("id", appointmentId)
+        .select("user_id")
+        .single();
 
       if (error) throw error;
+
+      // Enviar evento para webhook
+      sendAgendamentoCanceladoEvent({
+        agendamento_id: appointmentId,
+        cliente_id: data.user_id,
+        cliente_nome: appointmentToReject?.profile?.nome,
+        servico: appointmentToReject?.servico?.nome,
+        data: appointmentToReject?.data,
+        hora: appointmentToReject?.hora,
+        mensagem_barbeiro: "Agendamento recusado pelo barbeiro"
+      });
       
       toast.success("Agendamento recusado. Cliente será notificado.");
       
