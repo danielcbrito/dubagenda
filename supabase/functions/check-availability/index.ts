@@ -114,16 +114,31 @@ Deno.serve(async (req) => {
       console.log('[check-availability] Erro ao buscar config:', configError.message);
     }
 
-    const config: BusinessHoursConfig = configData || {
-      aberto: dayOfWeek !== 0,
+    // Se não encontrou config no banco, retornar erro para forçar configuração
+    if (!configData) {
+      console.warn(`[check-availability] ATENÇÃO: Nenhuma configuração encontrada para dia ${dayOfWeek}. Usando padrão de emergência.`);
+    }
+
+    // NUNCA usar valores hardcoded - sempre preferir dados do banco
+    const config: BusinessHoursConfig = configData ? {
+      aberto: configData.aberto,
+      hora_abertura: configData.hora_abertura,
+      hora_fechamento: configData.hora_fechamento,
+      hora_almoco_inicio: configData.hora_almoco_inicio,
+      hora_almoco_fim: configData.hora_almoco_fim,
+      delay_entre_servicos: configData.delay_entre_servicos || 10
+    } : {
+      // Fallback apenas se não houver dados no banco (emergência)
+      aberto: dayOfWeek !== 0, // Fechado domingo
       hora_abertura: '09:00',
-      hora_fechamento: dayOfWeek >= 3 && dayOfWeek <= 6 ? '21:00' : '20:00',
+      hora_fechamento: '21:00', // Padrão estendido para evitar bloqueios
       hora_almoco_inicio: '13:00',
       hora_almoco_fim: '14:00',
       delay_entre_servicos: 10
     };
 
-    console.log(`[check-availability] Config do dia ${dayOfWeek}: aberto=${config.aberto}, ${config.hora_abertura}-${config.hora_fechamento}`);
+    console.log(`[check-availability] Config do dia ${dayOfWeek}:`, JSON.stringify(config));
+    console.log(`[check-availability] Horário: ${config.hora_abertura} - ${config.hora_fechamento}`);
 
     if (!config.aberto) {
       return new Response(

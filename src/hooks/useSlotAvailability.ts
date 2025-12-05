@@ -267,14 +267,25 @@ export function useSlotAvailability(
         .eq('dia_semana', dayOfWeek)
         .maybeSingle();
 
-      const config = configData || {
-        aberto: dayOfWeek !== 0,
+      // NUNCA usar valores hardcoded - sempre preferir dados do banco
+      const config = configData ? {
+        aberto: configData.aberto,
+        hora_abertura: configData.hora_abertura,
+        hora_fechamento: configData.hora_fechamento,
+        hora_almoco_inicio: configData.hora_almoco_inicio,
+        hora_almoco_fim: configData.hora_almoco_fim,
+        delay_entre_servicos: configData.delay_entre_servicos || DEFAULT_DELAY_MINUTES
+      } : {
+        // Fallback apenas se não houver dados no banco (emergência)
+        aberto: dayOfWeek !== 0, // Fechado domingo
         hora_abertura: '09:00',
-        hora_fechamento: dayOfWeek >= 3 && dayOfWeek <= 6 ? '21:00' : '20:00',
+        hora_fechamento: '21:00', // Padrão estendido para evitar bloqueios
         hora_almoco_inicio: '13:00',
         hora_almoco_fim: '14:00',
         delay_entre_servicos: DEFAULT_DELAY_MINUTES
       };
+
+      console.log(`[useSlotAvailability FALLBACK] Config do dia ${dayOfWeek}: ${config.hora_abertura} - ${config.hora_fechamento}`);
 
       if (!config.aberto) {
         console.log('[useSlotAvailability FALLBACK] Dia fechado');
