@@ -6,7 +6,8 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 interface AgendaDiariaViewProps {
   date: Date;
@@ -14,17 +15,80 @@ interface AgendaDiariaViewProps {
   onCancelAppointment: (id: string) => void;
 }
 
+interface BusinessHoursConfig {
+  aberto: boolean;
+  hora_abertura: string;
+  hora_fechamento: string;
+  hora_almoco_inicio: string | null;
+  hora_almoco_fim: string | null;
+  delay_entre_servicos: number;
+}
+
+// Helper function: convert HH:MM to minutes
+function timeToMinutes(time: string): number {
+  const [hours, minutes] = time.split(':').map(Number);
+  return hours * 60 + minutes;
+}
+
 export function AgendaDiariaView({ date, appointments, onCancelAppointment }: AgendaDiariaViewProps) {
   const [clickedUnavailableSlot, setClickedUnavailableSlot] = useState<string | null>(null);
+  const [businessHours, setBusinessHours] = useState<BusinessHoursConfig | null>(null);
 
-  // Generate all time slots (9:00 to 20:00, every 30 minutes)
-  const timeSlots: string[] = [];
-  for (let hour = 9; hour <= 20; hour++) {
-    timeSlots.push(`${hour.toString().padStart(2, '0')}:00`);
-    if (hour < 20) {
-      timeSlots.push(`${hour.toString().padStart(2, '0')}:30`);
+  // Fetch business hours from database
+  useEffect(() => {
+    const fetchBusinessHours = async () => {
+      const dayOfWeek = date.getDay();
+      
+      const { data: configData, error } = await supabase
+        .from('configuracoes_horario')
+        .select('*')
+        .eq('dia_semana', dayOfWeek)
+        .maybeSingle();
+
+      if (error) {
+        console.error('[AgendaDiariaView] Erro ao buscar config:', error);
+      }
+
+      // Use database config or fallback
+      const config: BusinessHoursConfig = configData ? {
+        aberto: configData.aberto,
+        hora_abertura: configData.hora_abertura,
+        hora_fechamento: configData.hora_fechamento,
+        hora_almoco_inicio: configData.hora_almoco_inicio,
+        hora_almoco_fim: configData.hora_almoco_fim,
+        delay_entre_servicos: configData.delay_entre_servicos || 10
+      } : {
+        aberto: dayOfWeek !== 0,
+        hora_abertura: '09:00',
+        hora_fechamento: '21:00',
+        hora_almoco_inicio: '13:00',
+        hora_almoco_fim: '14:00',
+        delay_entre_servicos: 10
+      };
+
+      console.log(`[AgendaDiariaView] Config do dia ${dayOfWeek}: ${config.hora_abertura} - ${config.hora_fechamento}`);
+      setBusinessHours(config);
+    };
+
+    fetchBusinessHours();
+  }, [date]);
+
+  // Generate all time slots based on business hours (every 30 minutes)
+  const timeSlots = useMemo(() => {
+    if (!businessHours) return [];
+    
+    const slots: string[] = [];
+    const openMinutes = timeToMinutes(businessHours.hora_abertura);
+    const closeMinutes = timeToMinutes(businessHours.hora_fechamento);
+    
+    for (let minutes = openMinutes; minutes <= closeMinutes; minutes += 30) {
+      const hour = Math.floor(minutes / 60);
+      const min = minutes % 60;
+      slots.push(`${hour.toString().padStart(2, '0')}:${min.toString().padStart(2, '0')}`);
     }
-  }
+    
+    return slots;
+  }, [businessHours]);
 
   const getAppointmentForSlot = (slot: string) => {
     return appointments.find(apt => apt.hora === slot || apt.hora === slot + ":00");
@@ -32,9 +96,11 @@ export function AgendaDiariaView({ date, appointments, onCancelAppointment }: Ag
 
   // Check if a slot is blocked by another appointment's duration
   const isSlotBlockedByDuration = (slot: string): boolean => {
+    if (!businessHours) return false;
+    
     const [slotHour, slotMin] = slot.split(':').map(Number);
     const slotStart = slotHour * 60 + slotMin;
-    const bufferTime = 10;
+    const bufferTime = businessHours.delay_entre_servicos;
 
     for (const apt of appointments) {
       const [aptHour, aptMin] = apt.hora.split(':').map(Number);
@@ -50,10 +116,18 @@ export function AgendaDiariaView({ date, appointments, onCancelAppointment }: Ag
     return false;
   };
 
-  // Check if slot is during lunch break (13:00-14:00)
+  // Check if slot is during lunch break
   const isLunchBreak = (slot: string): boolean => {
-    const [hour] = slot.split(':').map(Number);
-    return hour === 13;
+    if (!businessHours || !businessHours.hora_almoco_inicio || !businessHours.hora_almoco_fim) {
+      return false;
+    }
+    
+    const [hour, min] = slot.split(':').map(Number);
+    const slotMinutes = hour * 60 + min;
+    const lunchStart = timeToMinutes(businessHours.hora_almoco_inicio);
+    const lunchEnd = timeToMinutes(businessHours.hora_almoco_fim);
+    
+    return slotMinutes >= lunchStart && slotMinutes < lunchEnd;
   };
 
   const getStatusConfig = (status: string) => {
@@ -95,11 +169,27 @@ export function AgendaDiariaView({ date, appointments, onCancelAppointment }: Ag
     };
   };
 
+  if (!businessHours) {
+    return (
+      <div className="flex items-center justify-center h-48">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
       <h3 className="font-semibold text-lg">
         {format(date, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })} - Visão Diária Completa
       </h3>
+      
+      {/* Horário de funcionamento */}
+      <p className="text-sm text-muted-foreground">
+        Horário: {businessHours.hora_abertura} às {businessHours.hora_fechamento}
+        {businessHours.hora_almoco_inicio && businessHours.hora_almoco_fim && 
+          ` • Almoço: ${businessHours.hora_almoco_inicio} às ${businessHours.hora_almoco_fim}`
+        }
+      </p>
 
       {/* Mensagem de slot indisponível */}
       {clickedUnavailableSlot && (

@@ -42,6 +42,17 @@ function validateCPF(cpf: string): boolean {
  * Verifica disponibilidade do horário de forma atômica
  * CRÍTICO: Evita race conditions e agendamentos duplicados
  */
+// Helper function: convert HH:MM to minutes
+function timeToMinutes(time: string): number {
+  const [hours, minutes] = time.split(':').map(Number);
+  return hours * 60 + minutes;
+}
+
+/**
+ * Verifica disponibilidade do horário de forma atômica
+ * CRÍTICO: Evita race conditions e agendamentos duplicados
+ * ATUALIZADO: Usa configurações do banco de dados em vez de valores hardcoded
+ */
 async function checkTimeSlotAvailability(
   supabase: any,
   data: string,
@@ -56,44 +67,82 @@ async function checkTimeSlotAvailability(
   const [startHour, startMinute] = hora.split(':').map(Number);
   const startTimeInMinutes = startHour * 60 + startMinute;
   const endTimeInMinutes = startTimeInMinutes + duracao;
-  // REMOVIDO buffer - usar duração EXATA para consistência com front-end
 
-  // Validate business hours
-  const openHour = 9 * 60;
-  const closeHour = 20 * 60;
-  const lunchStart = 13 * 60;
-  const lunchEnd = 14 * 60;
+  // Get day of week
+  const appointmentDate = new Date(data + 'T12:00:00');
+  const dayOfWeek = appointmentDate.getDay();
 
-  // Check business hours
-  if (startTimeInMinutes < openHour || endTimeInMinutes > closeHour) {
-    return { available: false, message: 'Horário fora do expediente (09:00-20:00).' };
+  // ============================================
+  // BUSCAR CONFIGURAÇÕES DE HORÁRIO DO BANCO
+  // ============================================
+  const { data: configData, error: configError } = await supabase
+    .from('configuracoes_horario')
+    .select('*')
+    .eq('dia_semana', dayOfWeek)
+    .maybeSingle();
+
+  if (configError) {
+    console.error('[checkTimeSlotAvailability] Erro ao buscar config:', configError.message);
   }
 
-  // Check lunch break
-  if (
-    (startTimeInMinutes >= lunchStart && startTimeInMinutes < lunchEnd) ||
-    (endTimeInMinutes > lunchStart && endTimeInMinutes <= lunchEnd) ||
-    (startTimeInMinutes < lunchStart && endTimeInMinutes > lunchEnd)
-  ) {
-    return { available: false, message: 'Horário de almoço (13:00-14:00).' };
+  // NUNCA usar valores hardcoded - sempre preferir dados do banco
+  const config = configData ? {
+    aberto: configData.aberto,
+    hora_abertura: configData.hora_abertura,
+    hora_fechamento: configData.hora_fechamento,
+    hora_almoco_inicio: configData.hora_almoco_inicio,
+    hora_almoco_fim: configData.hora_almoco_fim,
+    delay_entre_servicos: configData.delay_entre_servicos || 10
+  } : {
+    // Fallback de emergência
+    aberto: dayOfWeek !== 0,
+    hora_abertura: '09:00',
+    hora_fechamento: '21:00',
+    hora_almoco_inicio: '13:00',
+    hora_almoco_fim: '14:00',
+    delay_entre_servicos: 10
+  };
+
+  console.log(`[checkTimeSlotAvailability] Config dia ${dayOfWeek}: ${config.hora_abertura}-${config.hora_fechamento}`);
+
+  // Check if day is closed
+  if (!config.aberto) {
+    return { available: false, message: 'A barbearia não funciona neste dia.' };
   }
 
-  // Check Sunday
-  const appointmentDate = new Date(data + 'T00:00:00');
-  if (appointmentDate.getDay() === 0) {
-    return { available: false, message: 'A barbearia não funciona aos domingos.' };
+  // Get business hours from config
+  const OPEN_MINUTES = timeToMinutes(config.hora_abertura);
+  const CLOSE_MINUTES = timeToMinutes(config.hora_fechamento);
+  const LUNCH_START = config.hora_almoco_inicio ? timeToMinutes(config.hora_almoco_inicio) : null;
+  const LUNCH_END = config.hora_almoco_fim ? timeToMinutes(config.hora_almoco_fim) : null;
+
+  // Check business hours (DYNAMIC from database)
+  if (startTimeInMinutes < OPEN_MINUTES || endTimeInMinutes > CLOSE_MINUTES) {
+    return { available: false, message: `Horário fora do expediente (${config.hora_abertura}-${config.hora_fechamento}).` };
+  }
+
+  // Check lunch break (if configured)
+  if (LUNCH_START !== null && LUNCH_END !== null) {
+    if (
+      (startTimeInMinutes >= LUNCH_START && startTimeInMinutes < LUNCH_END) ||
+      (endTimeInMinutes > LUNCH_START && endTimeInMinutes <= LUNCH_END) ||
+      (startTimeInMinutes < LUNCH_START && endTimeInMinutes > LUNCH_END)
+    ) {
+      return { available: false, message: `Horário de almoço (${config.hora_almoco_inicio}-${config.hora_almoco_fim}).` };
+    }
   }
 
   // ============================================
   // VERIFICAÇÃO CRÍTICA: Conflitos
   // ============================================
+  const DELAY_MINUTES = config.delay_entre_servicos;
   
   // Check existing appointments - INCLUIR todos os status que bloqueiam (pending, confirmed, completed)
   let query = supabase
     .from('agendamentos')
     .select('id, hora, duracao, status')
     .eq('data', data)
-    .in('status', ['pending', 'confirmed', 'completed']); // CORRIGIDO: incluir completed
+    .in('status', ['pending', 'confirmed', 'completed']);
 
   if (excludeAppointmentId) {
     query = query.neq('id', excludeAppointmentId);
@@ -106,14 +155,15 @@ async function checkTimeSlotAvailability(
     return { available: false, message: 'Erro ao verificar disponibilidade.' };
   }
 
-  // Check conflicts
+  // Check conflicts with delay
   for (const apt of existingAppointments || []) {
     const [aptHour, aptMinute] = apt.hora.split(':').map(Number);
     const aptStart = aptHour * 60 + aptMinute;
-    const aptEnd = aptStart + apt.duracao; // Duração EXATA
+    const aptEnd = aptStart + apt.duracao;
+    const aptEndWithDelay = aptEnd + DELAY_MINUTES;
 
-    // Overlap: início1 < fim2 E fim1 > início2
-    const hasConflict = startTimeInMinutes < aptEnd && endTimeInMinutes > aptStart;
+    // Overlap: início1 < fim2+delay E fim1 > início2
+    const hasConflict = startTimeInMinutes < aptEndWithDelay && endTimeInMinutes > aptStart;
 
     if (hasConflict) {
       console.log('[checkTimeSlotAvailability] CONFLITO:', { 
@@ -138,10 +188,11 @@ async function checkTimeSlotAvailability(
   for (const pending of pendingBookings || []) {
     const [pendingHour, pendingMinute] = pending.hora.split(':').map(Number);
     const pendingStart = pendingHour * 60 + pendingMinute;
-    const pendingEnd = pendingStart + pending.duracao; // Duração EXATA
+    const pendingEnd = pendingStart + pending.duracao;
+    const pendingEndWithDelay = pendingEnd + DELAY_MINUTES;
 
-    // Overlap
-    const hasConflict = startTimeInMinutes < pendingEnd && endTimeInMinutes > pendingStart;
+    // Overlap with delay
+    const hasConflict = startTimeInMinutes < pendingEndWithDelay && endTimeInMinutes > pendingStart;
 
     if (hasConflict) {
       console.log('[checkTimeSlotAvailability] CONFLITO com pending:', pending.id);

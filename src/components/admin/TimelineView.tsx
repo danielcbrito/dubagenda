@@ -5,18 +5,35 @@ import { TimelineAppointment } from "./AdminAgenda";
 import { useMemo, useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 interface TimelineViewProps {
   appointments: TimelineAppointment[];
   loading: boolean;
-  selectedDate: Date; // Data selecionada na agenda
+  selectedDate: Date;
   onSelectAppointment: (appointment: TimelineAppointment) => void;
   onEmptySlotClick: (time: string) => void;
+}
+
+interface BusinessHoursConfig {
+  aberto: boolean;
+  hora_abertura: string;
+  hora_fechamento: string;
+  hora_almoco_inicio: string | null;
+  hora_almoco_fim: string | null;
+  delay_entre_servicos: number;
+}
+
+// Helper function: convert HH:MM to minutes
+function timeToMinutes(time: string): number {
+  const [hours, minutes] = time.split(':').map(Number);
+  return hours * 60 + minutes;
 }
 
 export function TimelineView({ appointments, loading, selectedDate, onSelectAppointment, onEmptySlotClick }: TimelineViewProps) {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [clickedUnavailableSlot, setClickedUnavailableSlot] = useState<string | null>(null);
+  const [businessHours, setBusinessHours] = useState<BusinessHoursConfig | null>(null);
 
   // Update current time every minute
   useEffect(() => {
@@ -26,17 +43,61 @@ export function TimelineView({ appointments, loading, selectedDate, onSelectAppo
     return () => clearInterval(interval);
   }, []);
 
-  // Generate time slots (9:00 to 20:00, every 10 minutes for precision)
-  const timeSlots = useMemo(() => {
-    const slots = [];
-    for (let hour = 9; hour <= 20; hour++) {
-      for (let minute = 0; minute < 60; minute += 10) {
-        if (hour === 20 && minute > 0) continue; // Stop at 20:00
-        slots.push(`${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`);
+  // Fetch business hours from database
+  useEffect(() => {
+    const fetchBusinessHours = async () => {
+      const dayOfWeek = selectedDate.getDay();
+      
+      const { data: configData, error } = await supabase
+        .from('configuracoes_horario')
+        .select('*')
+        .eq('dia_semana', dayOfWeek)
+        .maybeSingle();
+
+      if (error) {
+        console.error('[TimelineView] Erro ao buscar config:', error);
       }
+
+      // Use database config or fallback
+      const config: BusinessHoursConfig = configData ? {
+        aberto: configData.aberto,
+        hora_abertura: configData.hora_abertura,
+        hora_fechamento: configData.hora_fechamento,
+        hora_almoco_inicio: configData.hora_almoco_inicio,
+        hora_almoco_fim: configData.hora_almoco_fim,
+        delay_entre_servicos: configData.delay_entre_servicos || 10
+      } : {
+        aberto: dayOfWeek !== 0,
+        hora_abertura: '09:00',
+        hora_fechamento: '21:00',
+        hora_almoco_inicio: '13:00',
+        hora_almoco_fim: '14:00',
+        delay_entre_servicos: 10
+      };
+
+      console.log(`[TimelineView] Config do dia ${dayOfWeek}: ${config.hora_abertura} - ${config.hora_fechamento}`);
+      setBusinessHours(config);
+    };
+
+    fetchBusinessHours();
+  }, [selectedDate]);
+
+  // Generate time slots based on business hours (every 10 minutes for precision)
+  const timeSlots = useMemo(() => {
+    if (!businessHours) return [];
+    
+    const slots: string[] = [];
+    const openMinutes = timeToMinutes(businessHours.hora_abertura);
+    const closeMinutes = timeToMinutes(businessHours.hora_fechamento);
+    
+    for (let minutes = openMinutes; minutes <= closeMinutes; minutes += 10) {
+      const hour = Math.floor(minutes / 60);
+      const min = minutes % 60;
+      slots.push(`${hour.toString().padStart(2, '0')}:${min.toString().padStart(2, '0')}`);
     }
+    
     return slots;
-  }, []);
+  }, [businessHours]);
 
   // Get the appointment that starts at this slot
   const getAppointmentForSlot = (slot: string) => {
@@ -49,9 +110,11 @@ export function TimelineView({ appointments, loading, selectedDate, onSelectAppo
 
   // Check if a slot is blocked by another appointment's duration (overlap check)
   const isSlotBlockedByDuration = (slot: string): { blocked: boolean; blockingAppointment: TimelineAppointment | null; nextFreeTime: string | null } => {
+    if (!businessHours) return { blocked: false, blockingAppointment: null, nextFreeTime: null };
+    
     const [slotHour, slotMin] = slot.split(':').map(Number);
     const slotStart = slotHour * 60 + slotMin;
-    const DELAY_MINUTES = 10; // 10 minute buffer
+    const DELAY_MINUTES = businessHours.delay_entre_servicos;
 
     for (const apt of appointments) {
       const [aptHour, aptMin] = apt.hora.split(':').map(Number);
@@ -73,11 +136,18 @@ export function TimelineView({ appointments, loading, selectedDate, onSelectAppo
     return { blocked: false, blockingAppointment: null, nextFreeTime: null };
   };
 
-  // Check if slot is during lunch break (13:00-14:00)
+  // Check if slot is during lunch break
   const isLunchBreak = (slot: string): boolean => {
+    if (!businessHours || !businessHours.hora_almoco_inicio || !businessHours.hora_almoco_fim) {
+      return false;
+    }
+    
     const [hour, minute] = slot.split(':').map(Number);
     const slotMinutes = hour * 60 + minute;
-    return slotMinutes >= 13 * 60 && slotMinutes < 14 * 60;
+    const lunchStart = timeToMinutes(businessHours.hora_almoco_inicio);
+    const lunchEnd = timeToMinutes(businessHours.hora_almoco_fim);
+    
+    return slotMinutes >= lunchStart && slotMinutes < lunchEnd;
   };
 
   // Compara DATA + HORA completa para determinar status
@@ -145,7 +215,7 @@ export function TimelineView({ appointments, loading, selectedDate, onSelectAppo
     };
   };
 
-  if (loading) {
+  if (loading || !businessHours) {
     return (
       <div className="flex items-center justify-center h-96">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
