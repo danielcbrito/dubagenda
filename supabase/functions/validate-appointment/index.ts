@@ -13,14 +13,29 @@ interface AppointmentRequest {
   excludeAppointmentId?: string; // Para reagendamentos - excluir o agendamento atual
 }
 
+interface BusinessHoursConfig {
+  aberto: boolean;
+  hora_abertura: string;
+  hora_fechamento: string;
+  hora_almoco_inicio: string | null;
+  hora_almoco_fim: string | null;
+  delay_entre_servicos: number;
+}
+
+// Helper function: convert HH:MM to minutes
+function timeToMinutes(time: string): number {
+  const [hours, minutes] = time.split(':').map(Number);
+  return hours * 60 + minutes;
+}
+
 /**
  * Edge Function para validação ATÔMICA de disponibilidade de horário.
  * 
  * Esta função é CRÍTICA para evitar agendamentos duplicados.
  * Ela verifica:
- * 1. Horário de funcionamento (09:00-20:00)
- * 2. Horário de almoço (13:00-14:00)
- * 3. Dias de funcionamento (segunda a sábado)
+ * 1. Horário de funcionamento (DINÂMICO do banco de dados)
+ * 2. Horário de almoço (DINÂMICO do banco de dados)
+ * 3. Dias de funcionamento (DINÂMICO do banco de dados)
  * 4. Conflitos com agendamentos existentes (considerando duração + buffer)
  * 5. Conflitos com pending_bookings (reservas aguardando pagamento)
  */
@@ -38,14 +53,50 @@ Deno.serve(async (req) => {
     
     console.log('[validate-appointment] Iniciando validação:', { data, hora, duracao, userId, excludeAppointmentId });
 
-    // Parse the date and validate it's not Sunday
-    const appointmentDate = new Date(data + 'T00:00:00'); // Parse as local date
-    if (appointmentDate.getDay() === 0) {
-      console.log('[validate-appointment] Rejeitado: Domingo');
+    // Parse the date and get day of week
+    const appointmentDate = new Date(data + 'T12:00:00'); // Parse as local date
+    const dayOfWeek = appointmentDate.getDay();
+
+    // ============================================
+    // BUSCAR CONFIGURAÇÕES DE HORÁRIO DO BANCO
+    // ============================================
+    const { data: configData, error: configError } = await supabase
+      .from('configuracoes_horario')
+      .select('*')
+      .eq('dia_semana', dayOfWeek)
+      .maybeSingle();
+
+    if (configError) {
+      console.error('[validate-appointment] Erro ao buscar config:', configError.message);
+    }
+
+    // NUNCA usar valores hardcoded - sempre preferir dados do banco
+    const config: BusinessHoursConfig = configData ? {
+      aberto: configData.aberto,
+      hora_abertura: configData.hora_abertura,
+      hora_fechamento: configData.hora_fechamento,
+      hora_almoco_inicio: configData.hora_almoco_inicio,
+      hora_almoco_fim: configData.hora_almoco_fim,
+      delay_entre_servicos: configData.delay_entre_servicos || 10
+    } : {
+      // Fallback de emergência - mas isso não deveria acontecer
+      aberto: dayOfWeek !== 0,
+      hora_abertura: '09:00',
+      hora_fechamento: '21:00',
+      hora_almoco_inicio: '13:00',
+      hora_almoco_fim: '14:00',
+      delay_entre_servicos: 10
+    };
+
+    console.log(`[validate-appointment] Config do dia ${dayOfWeek}:`, JSON.stringify(config));
+
+    // Check if day is closed
+    if (!config.aberto) {
+      console.log('[validate-appointment] Rejeitado: Dia fechado');
       return new Response(
         JSON.stringify({ 
           valid: false, 
-          message: 'A barbearia não funciona aos domingos.' 
+          message: 'A barbearia não funciona neste dia.' 
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
       );
@@ -55,37 +106,41 @@ Deno.serve(async (req) => {
     const [startHour, startMinute] = hora.split(':').map(Number);
     const startTimeInMinutes = startHour * 60 + startMinute;
     const endTimeInMinutes = startTimeInMinutes + duracao;
-    // REMOVIDO buffer de 10 minutos - deve usar duração EXATA para consistência com front-end
 
-    // Block lunch break (13:00-14:00)
-    const lunchStart = 13 * 60; // 780 minutes
-    const lunchEnd = 14 * 60; // 840 minutes
-    
-    if (
-      (startTimeInMinutes >= lunchStart && startTimeInMinutes < lunchEnd) ||
-      (endTimeInMinutes > lunchStart && endTimeInMinutes <= lunchEnd) ||
-      (startTimeInMinutes < lunchStart && endTimeInMinutes > lunchEnd)
-    ) {
-      console.log('[validate-appointment] Rejeitado: Horário de almoço');
-      return new Response(
-        JSON.stringify({ 
-          valid: false, 
-          message: 'Horário indisponível. A barbearia está fechada para almoço entre 13:00 e 14:00.' 
-        }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
-      );
+    // Get business hours from config
+    const OPEN_MINUTES = timeToMinutes(config.hora_abertura);
+    const CLOSE_MINUTES = timeToMinutes(config.hora_fechamento);
+    const LUNCH_START = config.hora_almoco_inicio ? timeToMinutes(config.hora_almoco_inicio) : null;
+    const LUNCH_END = config.hora_almoco_fim ? timeToMinutes(config.hora_almoco_fim) : null;
+
+    // Block lunch break (if configured)
+    if (LUNCH_START !== null && LUNCH_END !== null) {
+      if (
+        (startTimeInMinutes >= LUNCH_START && startTimeInMinutes < LUNCH_END) ||
+        (endTimeInMinutes > LUNCH_START && endTimeInMinutes <= LUNCH_END) ||
+        (startTimeInMinutes < LUNCH_START && endTimeInMinutes > LUNCH_END)
+      ) {
+        console.log('[validate-appointment] Rejeitado: Horário de almoço');
+        return new Response(
+          JSON.stringify({ 
+            valid: false, 
+            message: `Horário indisponível. A barbearia está fechada para almoço entre ${config.hora_almoco_inicio} e ${config.hora_almoco_fim}.` 
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+        );
+      }
     }
 
-    // Validate business hours (09:00 - 20:00, Monday-Saturday)
-    const openHour = 9 * 60; // 540 minutes (09:00)
-    const closeHour = 20 * 60; // 1200 minutes (20:00)
-    
-    if (startTimeInMinutes < openHour || endTimeInMinutes > closeHour) {
-      console.log('[validate-appointment] Rejeitado: Fora do expediente');
+    // Validate business hours (DYNAMIC from database)
+    if (startTimeInMinutes < OPEN_MINUTES || endTimeInMinutes > CLOSE_MINUTES) {
+      console.log('[validate-appointment] Rejeitado: Fora do expediente', {
+        requested: `${startTimeInMinutes}-${endTimeInMinutes}`,
+        allowed: `${OPEN_MINUTES}-${CLOSE_MINUTES}`
+      });
       return new Response(
         JSON.stringify({ 
           valid: false, 
-          message: 'Horário fora do expediente. Funcionamento: Segunda a Sábado, 09:00 às 20:00 (exceto 13:00-14:00).' 
+          message: `Horário fora do expediente. Funcionamento: ${config.hora_abertura} às ${config.hora_fechamento}.` 
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
       );
@@ -119,13 +174,16 @@ Deno.serve(async (req) => {
     }
 
     // Check for time conflicts with existing appointments
+    const DELAY_MINUTES = config.delay_entre_servicos;
+    
     for (const apt of existingAppointments || []) {
       const [aptHour, aptMinute] = apt.hora.split(':').map(Number);
       const aptStart = aptHour * 60 + aptMinute;
-      const aptEnd = aptStart + apt.duracao; // Duração EXATA sem buffer
+      const aptEnd = aptStart + apt.duracao;
+      const aptEndWithDelay = aptEnd + DELAY_MINUTES;
 
-      // Check for overlap: dois intervalos se sobrepõem quando início1 < fim2 E fim1 > início2
-      const hasConflict = startTimeInMinutes < aptEnd && endTimeInMinutes > aptStart;
+      // Check for overlap: dois intervalos se sobrepõem quando início1 < fim2+delay E fim1 > início2
+      const hasConflict = startTimeInMinutes < aptEndWithDelay && endTimeInMinutes > aptStart;
 
       if (hasConflict) {
         console.log('[validate-appointment] CONFLITO com agendamento:', { 
@@ -164,10 +222,11 @@ Deno.serve(async (req) => {
     for (const pending of pendingBookings || []) {
       const [pendingHour, pendingMinute] = pending.hora.split(':').map(Number);
       const pendingStart = pendingHour * 60 + pendingMinute;
-      const pendingEnd = pendingStart + pending.duracao; // Duração EXATA
+      const pendingEnd = pendingStart + pending.duracao;
+      const pendingEndWithDelay = pendingEnd + DELAY_MINUTES;
 
-      // Overlap: início1 < fim2 E fim1 > início2
-      const hasConflict = startTimeInMinutes < pendingEnd && endTimeInMinutes > pendingStart;
+      // Overlap: início1 < fim2+delay E fim1 > início2
+      const hasConflict = startTimeInMinutes < pendingEndWithDelay && endTimeInMinutes > pendingStart;
 
       if (hasConflict) {
         console.log('[validate-appointment] CONFLITO com pending_booking:', { 
