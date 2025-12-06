@@ -68,10 +68,17 @@ const menuGroups = [
     items: [
       { title: "Horários", url: "/admin/horarios", icon: Clock },
       { title: "Tickets Suporte", url: "/admin/suporte", icon: HeadphonesIcon },
-      { title: "Config. Suporte", url: "/admin/suporte-config", icon: Settings },
-      { title: "APIs & Integrações", url: "/admin/apis", icon: Key },
-      { title: "Segurança", url: "/admin/seguranca", icon: ShieldCheck },
-      { title: "Dev Tools", url: "/admin/dev", icon: Code },
+      { 
+        title: "Config. Suporte", 
+        icon: Settings, 
+        hasSubmenu: true,
+        submenuItems: [
+          { title: "Configurações Gerais", url: "/admin/suporte-config" },
+          { title: "APIs & Integrações", url: "/admin/apis" },
+          { title: "Segurança", url: "/admin/seguranca" },
+          { title: "Dev Tools", url: "/admin/dev" },
+        ]
+      },
     ],
   },
 ];

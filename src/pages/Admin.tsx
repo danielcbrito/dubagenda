@@ -18,6 +18,7 @@ import { AdminConfiguracoes } from "@/components/admin/AdminConfiguracoes";
 import { AdminConfirmacoesPendentes } from "@/components/admin/AdminConfirmacoesPendentes";
 import { AdminDev } from "@/components/admin/AdminDev";
 import { AdminSuportePanel } from "@/components/admin/AdminSuportePanel";
+import { AdminSuporteConfig } from "@/components/admin/AdminSuporteConfig";
 import AdminHorarios from "@/components/admin/AdminHorarios";
 
 const Admin = () => {
@@ -73,6 +74,7 @@ const Admin = () => {
               <Route path="servicos/*" element={<AdminServicos />} />
               <Route path="promocoes" element={<AdminPromocoes />} />
               <Route path="suporte" element={<AdminSuportePanel />} />
+              <Route path="suporte-config" element={<AdminSuporteConfig />} />
               <Route path="configuracoes" element={<AdminConfiguracoes />} />
               <Route path="apis" element={<AdminAPIs />} />
               <Route path="seguranca" element={<AdminSeguranca />} />
