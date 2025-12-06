@@ -50,6 +50,7 @@ export const PremiumTimelineCard = memo(function PremiumTimelineCard({
   
   const payment = appointment.pagamentos?.[0];
   const isPaid = payment?.status === "paid";
+  const isPaidWithCredit = appointment.payment_method === 'credit' || appointment.observacoes?.includes('crédito do app');
 
   const getTimeStatusConfig = () => {
     switch (timeStatus) {
@@ -174,7 +175,12 @@ export const PremiumTimelineCard = memo(function PremiumTimelineCard({
 
             {/* Payment Status */}
             <div className="flex items-center gap-2">
-              {appointment.is_free ? (
+              {isPaidWithCredit ? (
+                <span className="px-2 py-0.5 text-[10px] font-medium rounded-md bg-gradient-to-r from-purple-500/20 to-violet-500/20 text-purple-400">
+                  <CreditCard className="w-3 h-3 inline mr-1" />
+                  CRÉDITO APP
+                </span>
+              ) : appointment.is_free ? (
                 <span className="px-2 py-0.5 text-[10px] font-medium rounded-md bg-gradient-to-r from-violet-500/20 to-pink-500/20 text-violet-400">
                   CORTESIA
                 </span>

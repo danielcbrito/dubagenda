@@ -315,6 +315,17 @@ const ClienteAgendar = () => {
       return;
     }
     
+    // Se créditos cobrem 100% do valor, pular step 4 (pagamento) e ir direto para confirmação
+    if (step === 3 && !isRescheduling) {
+      const totalPrice = getTotalPrice();
+      if (availableCredits >= totalPrice) {
+        console.log('[handleNextStep] Créditos cobrem 100%, pulando para confirmação');
+        setPaymentMethod('cash'); // Define como cash pois será pago com créditos
+        setStep(5); // Pula step 4 e vai direto para confirmação
+        return;
+      }
+    }
+    
     setStep(step + 1);
   };
 
@@ -523,6 +534,11 @@ const ClienteAgendar = () => {
       }
 
       // Create appointment directly (paid with credits)
+      const creditUsedAmount = Math.min(availableCredits, totalPrice);
+      const observacoesText = selectedServices.length > 1 
+        ? `Serviços: ${serviceNames}. Pago com crédito do app: R$ ${creditUsedAmount.toFixed(2)}`
+        : `Pago com crédito do app: R$ ${creditUsedAmount.toFixed(2)}`;
+
       const { data: appointment, error: aptError } = await supabase
         .from("agendamentos")
         .insert({
@@ -533,11 +549,11 @@ const ClienteAgendar = () => {
           duracao: totalDuration,
           preco: 0, // Fully paid with credits
           status: "pending",
-          observacoes: selectedServices.length > 1 ? `Serviços: ${serviceNames}` : undefined,
-          payment_method: 'cash', // Mark as cash since paid with credits
-          is_free: true, // Mark as free (using credits/redemption)
+          observacoes: observacoesText,
+          payment_method: 'credit', // Mark as credit payment
+          is_free: true, // Mark as free (using credits)
           remarcado_de: isRescheduling ? rescheduleAppointmentId : null,
-          barbeiro_confirmou: false, // Reset barber confirmation for rescheduled appointments
+          barbeiro_confirmou: false,
           cliente_confirmou: false,
         })
         .select()
@@ -587,45 +603,83 @@ const ClienteAgendar = () => {
   };
 
   const useCredits = async (amount: number, appointmentId: string) => {
-    if (!userId) return;
+    if (!userId || amount <= 0) return;
 
     try {
-      // Get available credits
+      // Get available credits ordered by creation date (oldest first)
       const { data: credits, error: fetchError } = await supabase
         .from("creditos")
         .select("*")
         .eq("user_id", userId)
         .eq("usado", false)
-        .is("expires_at", null)
-        .or(`expires_at.gt.${new Date().toISOString()}`)
         .order("created_at", { ascending: true });
 
       if (fetchError) throw fetchError;
 
-      let remaining = amount;
-      const creditIdsToUse: string[] = [];
+      // Filter valid credits (not expired)
+      const now = new Date().toISOString();
+      const validCredits = (credits || []).filter(c => 
+        !c.expires_at || new Date(c.expires_at) > new Date(now)
+      );
 
-      // Mark credits as used
-      for (const credit of credits || []) {
+      let remaining = amount;
+
+      // Process credits one by one
+      for (const credit of validCredits) {
         if (remaining <= 0) break;
         
-        creditIdsToUse.push(credit.id);
-        remaining -= credit.valor;
+        if (credit.valor <= remaining) {
+          // Use entire credit
+          const { error: updateError } = await supabase
+            .from("creditos")
+            .update({ 
+              usado: true,
+              agendamento_usado_id: appointmentId
+            })
+            .eq("id", credit.id);
+
+          if (updateError) throw updateError;
+          remaining -= credit.valor;
+          console.log(`[useCredits] Crédito ${credit.id} usado totalmente (R$ ${credit.valor})`);
+        } else {
+          // Partial use: update current credit to remaining value, create new credit for used amount
+          const usedAmount = remaining;
+          const leftoverAmount = credit.valor - usedAmount;
+
+          // Update original credit with leftover amount
+          const { error: updateError } = await supabase
+            .from("creditos")
+            .update({ 
+              valor: leftoverAmount
+            })
+            .eq("id", credit.id);
+
+          if (updateError) throw updateError;
+
+          // Create new credit record for the used amount (marked as used)
+          const { error: insertError } = await supabase
+            .from("creditos")
+            .insert({
+              user_id: userId,
+              valor: usedAmount,
+              origem: credit.origem,
+              usado: true,
+              agendamento_usado_id: appointmentId,
+              agendamento_origem_id: credit.agendamento_origem_id,
+              expires_at: credit.expires_at
+            });
+
+          if (insertError) throw insertError;
+          
+          console.log(`[useCredits] Crédito ${credit.id} usado parcialmente: R$ ${usedAmount} usado, R$ ${leftoverAmount} restante`);
+          remaining = 0;
+        }
       }
 
-      if (creditIdsToUse.length > 0) {
-        const { error: updateError } = await supabase
-          .from("creditos")
-          .update({ 
-            usado: true,
-            agendamento_usado_id: appointmentId
-          })
-          .in("id", creditIdsToUse);
-
-        if (updateError) throw updateError;
-      }
+      console.log(`[useCredits] Total de R$ ${amount} debitado com sucesso`);
     } catch (error) {
       console.error("Error using credits:", error);
+      throw error; // Re-throw to handle in caller
     }
   };
 
@@ -1191,15 +1245,48 @@ const ClienteAgendar = () => {
                 <div className="flex justify-between py-2 border-b border-border">
                   <span className="text-muted-foreground">Forma de Pagamento:</span>
                   <span className="font-semibold">
-                    {paymentMethod === 'pix' ? 'PIX' : paymentMethod === 'card' ? 'Cartão de Crédito' : 'Dinheiro (na barbearia)'}
+                    {availableCredits >= getTotalPrice() 
+                      ? 'Crédito do App' 
+                      : paymentMethod === 'pix' 
+                        ? 'PIX' 
+                        : paymentMethod === 'card' 
+                          ? 'Cartão de Crédito' 
+                          : 'Dinheiro (na barbearia)'
+                    }
                   </span>
                 </div>
-                <div className="flex justify-between items-center py-3 bg-primary/10 -m-6 mt-2 px-6 rounded-b-lg">
-                  <span className="font-semibold">Total:</span>
-                  <span className="text-2xl font-bold text-primary">
-                    R$ {getTotalPrice().toFixed(2)}
-                  </span>
-                </div>
+                
+                {/* Resumo de valores com créditos */}
+                {availableCredits > 0 ? (
+                  <div className="py-3 bg-primary/10 -m-6 mt-2 px-6 rounded-b-lg space-y-2">
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-muted-foreground">Valor do serviço:</span>
+                      <span>R$ {getTotalPrice().toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-sm text-green-600">
+                      <span>Créditos aplicados:</span>
+                      <span>- R$ {Math.min(availableCredits, getTotalPrice()).toFixed(2)}</span>
+                    </div>
+                    <div className="border-t border-border/50 pt-2 flex justify-between items-center">
+                      <span className="font-semibold">Valor a pagar:</span>
+                      <span className="text-2xl font-bold text-primary">
+                        R$ {Math.max(0, getTotalPrice() - availableCredits).toFixed(2)}
+                      </span>
+                    </div>
+                    {getTotalPrice() <= availableCredits && (
+                      <p className="text-xs text-green-600 text-center font-medium">
+                        Corte 100% coberto por créditos do app
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <div className="flex justify-between items-center py-3 bg-primary/10 -m-6 mt-2 px-6 rounded-b-lg">
+                    <span className="font-semibold">Total:</span>
+                    <span className="text-2xl font-bold text-primary">
+                      R$ {getTotalPrice().toFixed(2)}
+                    </span>
+                  </div>
+                )}
               </div>
             </Card>
 
@@ -1300,7 +1387,16 @@ const ClienteAgendar = () => {
               </Card>
             )}
 
-            {paymentMethod === 'pix' && (
+            {/* Message when paying with credits */}
+            {availableCredits >= getTotalPrice() && (
+              <Card className="p-4 bg-green-500/10 border-green-500/20">
+                <p className="text-sm text-center text-green-600 font-medium">
+                  Seu agendamento será pago usando seus créditos do app
+                </p>
+              </Card>
+            )}
+
+            {paymentMethod === 'pix' && availableCredits < getTotalPrice() && (
               <Card className="p-4 bg-primary/5 border-primary/20">
                 <p className="text-sm text-center">
                   Ao confirmar, o QR Code PIX será gerado para pagamento
@@ -1308,7 +1404,7 @@ const ClienteAgendar = () => {
               </Card>
             )}
 
-            {paymentMethod === 'cash' && (
+            {paymentMethod === 'cash' && availableCredits < getTotalPrice() && (
               <Card className="p-4 bg-primary/5 border-primary/20">
                 <p className="text-sm text-center">
                   Você pagará diretamente na barbearia no dia do atendimento
@@ -1325,7 +1421,14 @@ const ClienteAgendar = () => {
                   minHeight: '44px'
                 }}
               >
-                {processingPayment ? "Processando..." : paymentMethod === 'pix' ? "Gerar QR Code" : "Confirmar Agendamento"}
+                {processingPayment 
+                  ? "Processando..." 
+                  : availableCredits >= getTotalPrice()
+                    ? "Confirmar (usando créditos)"
+                    : paymentMethod === 'pix' 
+                      ? "Gerar QR Code" 
+                      : "Confirmar Agendamento"
+                }
               </Button>
             </div>
           </div>
