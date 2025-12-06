@@ -606,77 +606,33 @@ const ClienteAgendar = () => {
     if (!userId || amount <= 0) return;
 
     try {
-      // Get available credits ordered by creation date (oldest first)
-      const { data: credits, error: fetchError } = await supabase
-        .from("creditos")
-        .select("*")
-        .eq("user_id", userId)
-        .eq("usado", false)
-        .order("created_at", { ascending: true });
+      console.log(`[useCredits] Chamando função atômica para debitar R$ ${amount}`);
+      
+      // Usar função atômica do banco de dados para garantir transação segura
+      const { data, error } = await supabase.rpc('use_credits_atomic', {
+        p_user_id: userId,
+        p_appointment_id: appointmentId,
+        p_amount: amount
+      });
 
-      if (fetchError) throw fetchError;
-
-      // Filter valid credits (not expired)
-      const now = new Date().toISOString();
-      const validCredits = (credits || []).filter(c => 
-        !c.expires_at || new Date(c.expires_at) > new Date(now)
-      );
-
-      let remaining = amount;
-
-      // Process credits one by one
-      for (const credit of validCredits) {
-        if (remaining <= 0) break;
-        
-        if (credit.valor <= remaining) {
-          // Use entire credit
-          const { error: updateError } = await supabase
-            .from("creditos")
-            .update({ 
-              usado: true,
-              agendamento_usado_id: appointmentId
-            })
-            .eq("id", credit.id);
-
-          if (updateError) throw updateError;
-          remaining -= credit.valor;
-          console.log(`[useCredits] Crédito ${credit.id} usado totalmente (R$ ${credit.valor})`);
-        } else {
-          // Partial use: update current credit to remaining value, create new credit for used amount
-          const usedAmount = remaining;
-          const leftoverAmount = credit.valor - usedAmount;
-
-          // Update original credit with leftover amount
-          const { error: updateError } = await supabase
-            .from("creditos")
-            .update({ 
-              valor: leftoverAmount
-            })
-            .eq("id", credit.id);
-
-          if (updateError) throw updateError;
-
-          // Create new credit record for the used amount (marked as used)
-          const { error: insertError } = await supabase
-            .from("creditos")
-            .insert({
-              user_id: userId,
-              valor: usedAmount,
-              origem: credit.origem,
-              usado: true,
-              agendamento_usado_id: appointmentId,
-              agendamento_origem_id: credit.agendamento_origem_id,
-              expires_at: credit.expires_at
-            });
-
-          if (insertError) throw insertError;
-          
-          console.log(`[useCredits] Crédito ${credit.id} usado parcialmente: R$ ${usedAmount} usado, R$ ${leftoverAmount} restante`);
-          remaining = 0;
-        }
+      if (error) {
+        console.error('[useCredits] Erro na função atômica:', error);
+        throw error;
       }
 
-      console.log(`[useCredits] Total de R$ ${amount} debitado com sucesso`);
+      // Cast para tipo esperado
+      const result = data as { success: boolean; error?: string; used_amount?: number } | null;
+
+      if (!result?.success) {
+        console.error('[useCredits] Falha no débito:', result?.error);
+        throw new Error(result?.error || 'Erro ao debitar créditos');
+      }
+
+      console.log(`[useCredits] Débito atômico concluído: R$ ${result.used_amount} usado com sucesso`);
+      
+      // Atualizar saldo local imediatamente
+      setAvailableCredits(prev => Math.max(0, prev - amount));
+      
     } catch (error) {
       console.error("Error using credits:", error);
       throw error; // Re-throw to handle in caller

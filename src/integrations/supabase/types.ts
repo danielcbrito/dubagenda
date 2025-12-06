@@ -1414,6 +1414,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      use_credits_atomic: {
+        Args: { p_amount: number; p_appointment_id: string; p_user_id: string }
+        Returns: Json
+      }
     }
     Enums: {
       app_role: "admin" | "barber" | "cliente"
