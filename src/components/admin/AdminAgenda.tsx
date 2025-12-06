@@ -1,15 +1,15 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { format } from "date-fns";
+import { format, startOfWeek, addDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { motion } from "framer-motion";
-import { Calendar, LayoutGrid, List, Plus, X, Filter } from "lucide-react";
+import { LayoutGrid, List, Plus, X, Filter } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-import { PremiumCalendarHeader } from "./agenda/PremiumCalendarHeader";
+import { CompactWeekSelector } from "./agenda/CompactWeekSelector";
 import { PremiumTimeline } from "./agenda/PremiumTimeline";
-import { PremiumWeekView } from "./agenda/PremiumWeekView";
+import { EnhancedWeekView } from "./agenda/EnhancedWeekView";
 import { AppointmentDetailsSidebar } from "./AppointmentDetailsSidebar";
 import { ConfirmAttendanceModal } from "./ConfirmAttendanceModal";
 import { CancelAllAppointmentsModal } from "./CancelAllAppointmentsModal";
@@ -46,7 +46,7 @@ export function AdminAgenda() {
   const [cancelAllModalOpen, setCancelAllModalOpen] = useState(false);
   const [manualBookingModalOpen, setManualBookingModalOpen] = useState(false);
   const [selectedEmptySlot, setSelectedEmptySlot] = useState({ date: "", time: "" });
-  const [viewMode, setViewMode] = useState<ViewMode>("day");
+  const [viewMode, setViewMode] = useState<ViewMode>("week"); // Default to week view
   const [filterService, setFilterService] = useState<string>("all");
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [services, setServices] = useState<Array<{ id: string; nome: string }>>([]);
@@ -58,14 +58,19 @@ export function AdminAgenda() {
     loadServices();
   }, []);
 
+  // Load appointments for the entire week when in week view
   const loadAppointments = useCallback(async (selectedDate: Date, silent = false) => {
     try {
-      const dateStr = format(selectedDate, 'yyyy-MM-dd');
+      // Calculate week range
+      const weekStart = startOfWeek(selectedDate, { weekStartsOn: 1 });
+      const weekDates = Array.from({ length: 6 }, (_, i) => 
+        format(addDays(weekStart, i), 'yyyy-MM-dd')
+      );
       
       const { data, error } = await supabase
         .from("agendamentos")
         .select("*")
-        .eq("data", dateStr)
+        .in("data", weekDates)
         .eq("barbeiro_confirmou", true)
         .neq("status", "cancelled_by_admin")
         .neq("status", "cancelled_by_user")
@@ -192,10 +197,13 @@ export function AdminAgenda() {
     }
   };
 
-  const handleEmptySlotClick = (time: string) => {
-    const dateStr = format(date, 'yyyy-MM-dd');
+  const handleEmptySlotClick = (dateStr: string, time: string) => {
     setSelectedEmptySlot({ date: dateStr, time });
     setManualBookingModalOpen(true);
+  };
+
+  const handleTodayClick = () => {
+    setDate(new Date());
   };
 
   const filteredAppointments = appointments.filter(apt => {
@@ -205,29 +213,19 @@ export function AdminAgenda() {
   });
 
   return (
-    <div className="flex flex-col gap-6 animate-fade-in pb-16">
-      {/* Header */}
+    <div className="flex flex-col gap-5 animate-fade-in pb-16">
+      {/* Header Row: Title + Controls */}
       <div className="flex-shrink-0 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-wide">Agenda</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            {format(date, "EEEE, dd 'de' MMMM", { locale: ptBR })}
+            Gerencie seus agendamentos
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
           {/* View Mode Toggle */}
           <div className="flex items-center rounded-xl bg-white/5 p-1">
-            <button
-              onClick={() => setViewMode("day")}
-              className={cn(
-                "flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all",
-                viewMode === "day" ? "bg-primary text-white" : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              <List className="w-4 h-4" />
-              Dia
-            </button>
             <button
               onClick={() => setViewMode("week")}
               className={cn(
@@ -237,6 +235,16 @@ export function AdminAgenda() {
             >
               <LayoutGrid className="w-4 h-4" />
               Semana
+            </button>
+            <button
+              onClick={() => setViewMode("day")}
+              className={cn(
+                "flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all",
+                viewMode === "day" ? "bg-primary text-white" : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <List className="w-4 h-4" />
+              Dia
             </button>
           </div>
 
@@ -299,29 +307,30 @@ export function AdminAgenda() {
         </motion.div>
       )}
 
-      {/* Calendar Header */}
-      <PremiumCalendarHeader
+      {/* Compact Week Selector (replaces big calendar) */}
+      <CompactWeekSelector
         selectedDate={date}
-        onSelectDate={setDate}
-        appointments={allAppointments}
+        onDateChange={setDate}
+        onTodayClick={handleTodayClick}
       />
 
       {/* Main Content */}
       <div>
-        {viewMode === "day" ? (
-          <PremiumTimeline
-            appointments={filteredAppointments}
-            selectedDate={date}
-            onSelectAppointment={setSelectedAppointment}
-            onEmptySlotClick={handleEmptySlotClick}
-          />
-        ) : (
-          <PremiumWeekView
+        {viewMode === "week" ? (
+          <EnhancedWeekView
             selectedDate={date}
             appointments={filteredAppointments}
             allAppointments={allAppointments}
             onSelectDate={setDate}
             onSelectAppointment={setSelectedAppointment}
+            onEmptySlotClick={handleEmptySlotClick}
+          />
+        ) : (
+          <PremiumTimeline
+            appointments={filteredAppointments.filter(apt => apt.data === format(date, 'yyyy-MM-dd'))}
+            selectedDate={date}
+            onSelectAppointment={setSelectedAppointment}
+            onEmptySlotClick={(time) => handleEmptySlotClick(format(date, 'yyyy-MM-dd'), time)}
           />
         )}
       </div>
