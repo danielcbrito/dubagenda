@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Key, Webhook, Mail, MessageSquare, Bell } from "lucide-react";
 import { toast } from "sonner";
+import { AdminWebhook } from "./AdminWebhook";
 
 export function AdminAPIs() {
   return (
@@ -18,12 +19,17 @@ export function AdminAPIs() {
       </div>
 
       {/* Tabs */}
-      <Tabs defaultValue="payment" className="w-full">
+      <Tabs defaultValue="webhooks" className="w-full">
         <TabsList className="bg-secondary/50 border border-border/50">
+          <TabsTrigger value="webhooks">Webhook</TabsTrigger>
           <TabsTrigger value="payment">Pagamentos</TabsTrigger>
           <TabsTrigger value="communication">Comunicação</TabsTrigger>
-          <TabsTrigger value="webhooks">Webhooks</TabsTrigger>
         </TabsList>
+
+        {/* Webhooks - Usando componente dedicado */}
+        <TabsContent value="webhooks" className="space-y-6 mt-6">
+          <AdminWebhook />
+        </TabsContent>
 
         {/* Payment APIs */}
         <TabsContent value="payment" className="space-y-6 mt-6">
@@ -193,54 +199,6 @@ export function AdminAPIs() {
               </div>
 
               <Button className="bg-gradient-titanium hover:scale-[1.02] transition-all">
-                Salvar Configurações
-              </Button>
-            </div>
-          </Card>
-        </TabsContent>
-
-        {/* Webhooks */}
-        <TabsContent value="webhooks" className="space-y-6 mt-6">
-          <Card className="card-glass p-6">
-            <div className="flex items-center gap-4 mb-6">
-              <div className="w-12 h-12 rounded-xl bg-gradient-primary flex items-center justify-center shadow-glow-red">
-                <Webhook className="w-6 h-6" />
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold">Webhooks do Sistema</h3>
-                <p className="text-xs text-muted-foreground">URLs para notificações automáticas</p>
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="webhook-appointments">Webhook de Agendamentos</Label>
-                <Input
-                  id="webhook-appointments"
-                  placeholder="https://api.exemplo.com/webhooks/appointments"
-                  className="input-premium mt-2"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="webhook-confirmations">Webhook de Confirmações</Label>
-                <Input
-                  id="webhook-confirmations"
-                  placeholder="https://api.exemplo.com/webhooks/confirmations"
-                  className="input-premium mt-2"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="webhook-payments">Webhook de Pagamentos</Label>
-                <Input
-                  id="webhook-payments"
-                  placeholder="https://api.exemplo.com/webhooks/payments"
-                  className="input-premium mt-2"
-                />
-              </div>
-
-              <Button className="bg-gradient-primary shadow-glow-red hover:scale-[1.02] transition-all">
                 Salvar Configurações
               </Button>
             </div>
