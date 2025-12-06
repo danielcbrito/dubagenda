@@ -1,6 +1,31 @@
 import { supabase } from "@/integrations/supabase/client";
 
 /**
+ * Formata o número de telefone no padrão WhatsApp: NUMERO@s.whatsapp.net
+ * - Remove tudo que não for número
+ * - Adiciona DDI 55 se não tiver
+ * - Nunca coloca +
+ * - Sempre termina com @s.whatsapp.net
+ */
+function formatPhoneForWhatsApp(phone: string | null | undefined): string {
+  if (!phone) return '';
+  
+  // Remove tudo que não for número
+  let cleaned = phone.replace(/\D/g, '');
+  
+  // Se o número estiver vazio após limpeza, retorna vazio
+  if (!cleaned) return '';
+  
+  // Se não começar com 55 (DDI Brasil), adiciona
+  if (!cleaned.startsWith('55')) {
+    cleaned = '55' + cleaned;
+  }
+  
+  // Retorna no formato WhatsApp
+  return `${cleaned}@s.whatsapp.net`;
+}
+
+/**
  * Interface completa para dados de evento de webhook
  * Contém TODOS os dados relevantes para integração externa (WhatsApp, n8n, etc.)
  */
@@ -36,6 +61,7 @@ interface WebhookEventData {
   cliente_id?: string;
   cliente_nome?: string;
   cliente_telefone?: string;
+  cliente_telefone_whatsapp?: string; // Formato: NUMERO@s.whatsapp.net
   cliente_email?: string;
   cliente_cpf?: string;
 
@@ -52,10 +78,12 @@ interface WebhookEventData {
 
 /**
  * Função auxiliar para buscar dados completos do cliente
+ * Retorna telefone normal E telefone formatado para WhatsApp
  */
 async function getClienteCompleto(clienteId: string): Promise<{
   nome: string;
   telefone: string | null;
+  telefone_whatsapp: string;
   email: string | null;
   cpf: string | null;
 }> {
@@ -78,15 +106,18 @@ async function getClienteCompleto(clienteId: string): Promise<{
       // Ignorar erro de auth
     }
 
+    const telefone = profile?.telefone || null;
+
     return {
       nome: profile?.nome || 'Cliente',
-      telefone: profile?.telefone || null,
+      telefone: telefone,
+      telefone_whatsapp: formatPhoneForWhatsApp(telefone),
       email: email,
       cpf: profile?.cpf || null,
     };
   } catch (error) {
     console.error('[webhookService] Erro ao buscar cliente:', error);
-    return { nome: 'Cliente', telefone: null, email: null, cpf: null };
+    return { nome: 'Cliente', telefone: null, telefone_whatsapp: '', email: null, cpf: null };
   }
 }
 
@@ -221,6 +252,7 @@ export async function sendNovoAgendamentoEvent(data: {
     cliente_id: data.cliente_id,
     cliente_nome: cliente.nome,
     cliente_telefone: cliente.telefone || data.cliente_telefone,
+    cliente_telefone_whatsapp: cliente.telefone_whatsapp || formatPhoneForWhatsApp(data.cliente_telefone),
     cliente_email: cliente.email || data.cliente_email,
     cliente_cpf: cliente.cpf,
     
@@ -264,6 +296,7 @@ export async function sendAgendamentoConfirmadoEvent(data: {
     cliente_id: data.cliente_id,
     cliente_nome: cliente.nome,
     cliente_telefone: cliente.telefone,
+    cliente_telefone_whatsapp: cliente.telefone_whatsapp,
     cliente_email: cliente.email,
     
     barbeiro_id: barbeiro.id || data.barbeiro_id,
@@ -305,6 +338,7 @@ export async function sendAgendamentoCanceladoEvent(data: {
     cliente_id: data.cliente_id,
     cliente_nome: cliente.nome,
     cliente_telefone: cliente.telefone,
+    cliente_telefone_whatsapp: cliente.telefone_whatsapp,
     cliente_email: cliente.email,
     
     mensagem_barbeiro: data.mensagem_barbeiro,
@@ -351,6 +385,7 @@ export async function sendRemarcacaoSolicitadaEvent(data: {
     cliente_id: data.cliente_id,
     cliente_nome: cliente.nome,
     cliente_telefone: cliente.telefone,
+    cliente_telefone_whatsapp: cliente.telefone_whatsapp,
     cliente_email: cliente.email,
     
     barbeiro_id: barbeiro.id || data.barbeiro_id,
@@ -392,6 +427,7 @@ export async function sendRemarcacaoConcluidaEvent(data: {
     cliente_id: data.cliente_id,
     cliente_nome: cliente.nome,
     cliente_telefone: cliente.telefone,
+    cliente_telefone_whatsapp: cliente.telefone_whatsapp,
     cliente_email: cliente.email,
     
     detalhes: {
@@ -431,6 +467,7 @@ export async function sendAtendimentoIniciadoEvent(data: {
     cliente_id: data.cliente_id,
     cliente_nome: cliente.nome,
     cliente_telefone: cliente.telefone,
+    cliente_telefone_whatsapp: cliente.telefone_whatsapp,
     cliente_email: cliente.email,
     
     barbeiro_id: barbeiro.id || data.barbeiro_id,
@@ -472,6 +509,7 @@ export async function sendAtendimentoFinalizadoEvent(data: {
     cliente_id: data.cliente_id,
     cliente_nome: cliente.nome,
     cliente_telefone: cliente.telefone,
+    cliente_telefone_whatsapp: cliente.telefone_whatsapp,
     cliente_email: cliente.email,
     
     barbeiro_id: barbeiro.id || data.barbeiro_id,
@@ -530,6 +568,7 @@ export async function sendPagamentoRealizadoEvent(data: {
     cliente_id: data.cliente_id,
     cliente_nome: cliente.nome,
     cliente_telefone: cliente.telefone,
+    cliente_telefone_whatsapp: cliente.telefone_whatsapp,
     cliente_email: cliente.email,
   });
 }
@@ -567,6 +606,7 @@ export async function sendPagamentoCreditosEvent(data: {
     cliente_id: data.cliente_id,
     cliente_nome: cliente.nome,
     cliente_telefone: cliente.telefone,
+    cliente_telefone_whatsapp: cliente.telefone_whatsapp,
     cliente_email: cliente.email,
   });
 }
@@ -594,6 +634,7 @@ export async function sendCreditoAdicionadoEvent(data: {
     cliente_id: data.cliente_id,
     cliente_nome: cliente.nome,
     cliente_telefone: cliente.telefone,
+    cliente_telefone_whatsapp: cliente.telefone_whatsapp,
     cliente_email: cliente.email,
     
     saldo_creditos_restante: saldoCreditos,
@@ -625,6 +666,7 @@ export async function sendCreditoUsadoEvent(data: {
     cliente_id: data.cliente_id,
     cliente_nome: cliente.nome,
     cliente_telefone: cliente.telefone,
+    cliente_telefone_whatsapp: cliente.telefone_whatsapp,
     cliente_email: cliente.email,
     
     valor_pago_creditos: data.valor_usado,
@@ -652,6 +694,7 @@ export async function sendCreditoEstornadoEvent(data: {
     cliente_id: data.cliente_id,
     cliente_nome: cliente.nome,
     cliente_telefone: cliente.telefone,
+    cliente_telefone_whatsapp: cliente.telefone_whatsapp,
     cliente_email: cliente.email,
     
     saldo_creditos_restante: saldoCreditos,
@@ -681,6 +724,7 @@ export async function sendClienteCriadoEvent(data: {
     cliente_id: data.cliente_id,
     cliente_nome: data.cliente_nome,
     cliente_telefone: data.cliente_telefone,
+    cliente_telefone_whatsapp: formatPhoneForWhatsApp(data.cliente_telefone),
     cliente_email: data.cliente_email,
   });
 }
@@ -701,6 +745,7 @@ export async function sendClienteAtualizadoEvent(data: {
     cliente_id: data.cliente_id,
     cliente_nome: cliente.nome,
     cliente_telefone: cliente.telefone,
+    cliente_telefone_whatsapp: cliente.telefone_whatsapp,
     cliente_email: cliente.email,
     
     detalhes: {
@@ -738,6 +783,7 @@ export async function sendClienteAguardandoEvent(data: {
     cliente_id: data.cliente_id,
     cliente_nome: cliente.nome,
     cliente_telefone: cliente.telefone,
+    cliente_telefone_whatsapp: cliente.telefone_whatsapp,
     cliente_email: cliente.email,
   });
 }
@@ -767,6 +813,7 @@ export async function sendClienteNaoCompareceuEvent(data: {
     cliente_id: data.cliente_id,
     cliente_nome: cliente.nome,
     cliente_telefone: cliente.telefone,
+    cliente_telefone_whatsapp: cliente.telefone_whatsapp,
     cliente_email: cliente.email,
   });
 }
@@ -798,6 +845,7 @@ export async function sendStatusAlteradoEvent(data: {
     cliente_id: data.cliente_id,
     cliente_nome: cliente.nome,
     cliente_telefone: cliente.telefone,
+    cliente_telefone_whatsapp: cliente.telefone_whatsapp,
     cliente_email: cliente.email,
     
     detalhes: {
@@ -837,6 +885,7 @@ export async function sendHorarioAtualizadoEvent(data: {
     cliente_id: data.cliente_id,
     cliente_nome: cliente.nome,
     cliente_telefone: cliente.telefone,
+    cliente_telefone_whatsapp: cliente.telefone_whatsapp,
     cliente_email: cliente.email,
     
     detalhes: {

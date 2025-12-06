@@ -6,6 +6,31 @@ const corsHeaders = {
 };
 
 /**
+ * Formata o número de telefone no padrão WhatsApp: NUMERO@s.whatsapp.net
+ * - Remove tudo que não for número
+ * - Adiciona DDI 55 se não tiver
+ * - Nunca coloca +
+ * - Sempre termina com @s.whatsapp.net
+ */
+function formatPhoneForWhatsApp(phone: string | null | undefined): string {
+  if (!phone) return '';
+  
+  // Remove tudo que não for número
+  let cleaned = phone.replace(/\D/g, '');
+  
+  // Se o número estiver vazio após limpeza, retorna vazio
+  if (!cleaned) return '';
+  
+  // Se não começar com 55 (DDI Brasil), adiciona
+  if (!cleaned.startsWith('55')) {
+    cleaned = '55' + cleaned;
+  }
+  
+  // Retorna no formato WhatsApp
+  return `${cleaned}@s.whatsapp.net`;
+}
+
+/**
  * Interface completa para payload de webhook
  * Contém TODOS os dados relevantes para integração externa
  */
@@ -41,6 +66,7 @@ interface WebhookEventPayload {
   cliente_id?: string;
   cliente_nome?: string;
   cliente_telefone?: string;
+  cliente_telefone_whatsapp?: string; // Formato: NUMERO@s.whatsapp.net
   cliente_email?: string;
   cliente_cpf?: string;
 
@@ -94,7 +120,7 @@ Deno.serve(async (req) => {
     }
 
     // Garantir timestamp e evento_id
-    const eventPayload = {
+    const eventPayload: WebhookEventPayload = {
       ...payload,
       evento_id: payload.evento_id || crypto.randomUUID(),
       timestamp: payload.timestamp || new Date().toISOString()
@@ -117,6 +143,16 @@ Deno.serve(async (req) => {
       } catch (e) {
         console.warn('[send-webhook-event] Não foi possível buscar dados do cliente:', e);
       }
+    }
+
+    // SEMPRE garantir que cliente_telefone_whatsapp esteja formatado corretamente
+    if (eventPayload.cliente_telefone && !eventPayload.cliente_telefone_whatsapp) {
+      eventPayload.cliente_telefone_whatsapp = formatPhoneForWhatsApp(eventPayload.cliente_telefone);
+    }
+    
+    // Se já veio um cliente_telefone_whatsapp mas não está no formato correto, reformatar
+    if (eventPayload.cliente_telefone_whatsapp && !eventPayload.cliente_telefone_whatsapp.endsWith('@s.whatsapp.net')) {
+      eventPayload.cliente_telefone_whatsapp = formatPhoneForWhatsApp(eventPayload.cliente_telefone_whatsapp);
     }
 
     // Se temos barbeiro_id mas falta nome, buscar
@@ -172,6 +208,7 @@ Deno.serve(async (req) => {
     }
 
     console.log('[send-webhook-event] Enviando para:', config.webhook_url);
+    console.log('[send-webhook-event] Telefone WhatsApp:', eventPayload.cliente_telefone_whatsapp);
     console.log('[send-webhook-event] Payload completo:', JSON.stringify(eventPayload, null, 2));
 
     // Enviar evento para o webhook
@@ -197,6 +234,7 @@ Deno.serve(async (req) => {
           evento_id: eventPayload.evento_id,
           cliente_id: payload.cliente_id,
           cliente_telefone: eventPayload.cliente_telefone,
+          cliente_telefone_whatsapp: eventPayload.cliente_telefone_whatsapp,
           status_code: webhookResponse.status,
           error: errorText,
           webhook_url: config.webhook_url.substring(0, 50) + '...'
@@ -221,7 +259,8 @@ Deno.serve(async (req) => {
         evento_id: eventPayload.evento_id,
         agendamento_id: payload.agendamento_id,
         cliente_id: payload.cliente_id,
-        cliente_telefone: eventPayload.cliente_telefone
+        cliente_telefone: eventPayload.cliente_telefone,
+        cliente_telefone_whatsapp: eventPayload.cliente_telefone_whatsapp
       }
     });
 
