@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { TimelineAppointment } from "../AdminAgenda";
 import { supabase } from "@/integrations/supabase/client";
-import { Scissors, User, Clock } from "lucide-react";
+import { Scissors, User, Clock, CreditCard } from "lucide-react";
 
 interface EnhancedWeekViewProps {
   selectedDate: Date;
@@ -314,8 +314,14 @@ export function EnhancedWeekView({
                               </div>
                             </div>
                           </div>
-                          <div className="text-[8px] text-white/60 tabular-nums">
-                            {apt.hora} • {apt.servico?.duracao_minutos}min
+                          <div className="flex items-center gap-1 text-[8px] text-white/60 tabular-nums">
+                            <span>{apt.hora} • {apt.servico?.duracao_minutos}min</span>
+                            {(apt.payment_method === 'credit' || apt.observacoes?.includes('crédito do app')) && (
+                              <span className="flex items-center gap-0.5 px-1 py-0.5 bg-purple-500/30 rounded text-purple-200">
+                                <CreditCard className="w-2 h-2" />
+                                Crédito
+                              </span>
+                            )}
                           </div>
                         </div>
                       </motion.div>
@@ -329,7 +335,7 @@ export function EnhancedWeekView({
       </div>
 
       {/* Legend */}
-      <div className="flex items-center justify-center gap-6 px-4 py-3 border-t border-white/10 bg-black/20">
+      <div className="flex items-center justify-center gap-4 px-4 py-3 border-t border-white/10 bg-black/20 flex-wrap">
         <div className="flex items-center gap-2">
           <div className="w-2 h-2 rounded-full bg-emerald-500" />
           <span className="text-[10px] text-muted-foreground font-medium">Confirmado</span>
@@ -345,6 +351,10 @@ export function EnhancedWeekView({
         <div className="flex items-center gap-2">
           <div className="w-3 h-2 rounded bg-amber-500/20" />
           <span className="text-[10px] text-muted-foreground font-medium">Almoço</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <CreditCard className="w-3 h-3 text-purple-400" />
+          <span className="text-[10px] text-muted-foreground font-medium">Crédito App</span>
         </div>
       </div>
     </div>

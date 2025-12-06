@@ -227,11 +227,12 @@ export function AppointmentDetailsSidebar({ appointment, open, onClose, onUpdate
             </div>
             <div className="pl-6 space-y-3">
               <div className="flex flex-col gap-2">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <Badge variant="outline" className="text-xs">
                     {paymentMethod === 'pix' && 'PIX'}
                     {paymentMethod === 'card' && 'Cartão'}
                     {paymentMethod === 'cash' && 'Dinheiro'}
+                    {paymentMethod === 'credit' && 'Crédito do App'}
                   </Badge>
                   <Badge variant={isPrepaid ? "default" : "outline"} className={isPrepaid ? "bg-green-500 text-xs" : "text-xs"}>
                     {isPrepaid ? 'Pago Antecipadamente' : 'Pagar na Barbearia'}
@@ -242,7 +243,22 @@ export function AppointmentDetailsSidebar({ appointment, open, onClose, onUpdate
                 </p>
               </div>
 
-              {appointment.is_free && (
+              {/* Indicador de pagamento com crédito do app */}
+              {(paymentMethod === 'credit' || appointment.observacoes?.includes('crédito do app')) && (
+                <div className="bg-purple-500/10 border border-purple-500/20 p-3 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <CreditCard className="w-4 h-4 text-purple-500" />
+                    <p className="text-sm text-purple-700 dark:text-purple-400 font-semibold">
+                      Pago com Crédito do App
+                    </p>
+                  </div>
+                  <p className="text-xs text-purple-600 dark:text-purple-300 mt-1">
+                    Cliente usou créditos disponíveis na carteira
+                  </p>
+                </div>
+              )}
+
+              {appointment.is_free && !paymentMethod?.includes('credit') && !appointment.observacoes?.includes('crédito') && (
                 <div className="bg-green-500/10 border border-green-500/20 p-2 rounded">
                   <p className="text-xs text-green-700 dark:text-green-400 font-medium">
                     Usando Corte Grátis de Fidelidade
@@ -250,7 +266,7 @@ export function AppointmentDetailsSidebar({ appointment, open, onClose, onUpdate
                 </div>
               )}
 
-              {!isPrepaid && appointment.status !== 'completed' && (
+              {!isPrepaid && appointment.status !== 'completed' && !paymentMethod?.includes('credit') && !appointment.observacoes?.includes('crédito') && (
                 <div className="bg-yellow-500/10 border border-yellow-500/20 p-2 rounded">
                   <p className="text-xs text-yellow-700 dark:text-yellow-400">
                     Confirme o pagamento ao finalizar o atendimento
