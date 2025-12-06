@@ -23,6 +23,7 @@ interface AdminRescheduleModalProps {
   serviceName: string;
   currentDate: string;
   currentTime: string;
+  appointmentPrice?: number;
   onSuccess: () => void;
 }
 
@@ -96,6 +97,14 @@ export function AdminRescheduleModal({
 
         toast.success("Solicitação de remarcação enviada ao cliente");
       } else if (action === "cancel") {
+        // Verificar se havia pagamento confirmado
+        const { data: paymentData } = await supabase
+          .from("pagamentos")
+          .select("id, valor, status")
+          .eq("agendamento_id", appointmentId)
+          .eq("status", "paid")
+          .maybeSingle();
+
         // Cancelar definitivamente
         const { error: updateError } = await supabase
           .from("agendamentos")
@@ -107,6 +116,25 @@ export function AdminRescheduleModal({
           .eq("id", appointmentId);
 
         if (updateError) throw updateError;
+
+        // Se havia pagamento, criar crédito para o usuário
+        if (paymentData) {
+          const { error: creditError } = await supabase
+            .from("creditos")
+            .insert({
+              user_id: userId,
+              valor: paymentData.valor,
+              origem: "cancelamento",
+              agendamento_origem_id: appointmentId,
+            });
+
+          if (creditError) {
+            console.error("Erro ao criar crédito:", creditError);
+            toast.error("Agendamento cancelado, mas houve erro ao criar crédito. Contate o suporte.");
+          } else {
+            toast.success(`Crédito de R$ ${paymentData.valor.toFixed(2)} adicionado à carteira do cliente`);
+          }
+        }
 
         // Criar notificação para o usuário
         const { error: notifError } = await supabase
