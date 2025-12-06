@@ -1,18 +1,20 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { TimelineView } from "./TimelineView";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { motion } from "framer-motion";
+import { Calendar, LayoutGrid, List, Plus, X, Filter } from "lucide-react";
+import { cn } from "@/lib/utils";
+
+import { PremiumCalendarHeader } from "./agenda/PremiumCalendarHeader";
+import { PremiumTimeline } from "./agenda/PremiumTimeline";
+import { PremiumWeekView } from "./agenda/PremiumWeekView";
 import { AppointmentDetailsSidebar } from "./AppointmentDetailsSidebar";
 import { ConfirmAttendanceModal } from "./ConfirmAttendanceModal";
 import { CancelAllAppointmentsModal } from "./CancelAllAppointmentsModal";
 import { ManualBookingModal } from "./ManualBookingModal";
-import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, Filter } from "lucide-react";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
 
 export interface TimelineAppointment {
   id: string;
@@ -33,138 +35,145 @@ export interface TimelineAppointment {
   pagamentos: Array<{ metodo: string; status: string; valor: number }>;
 }
 
+type ViewMode = "day" | "week";
+
 export function AdminAgenda() {
   const [date, setDate] = useState<Date>(new Date());
   const [appointments, setAppointments] = useState<TimelineAppointment[]>([]);
+  const [allAppointments, setAllAppointments] = useState<Array<{ data: string; status: string }>>([]);
   const [selectedAppointment, setSelectedAppointment] = useState<TimelineAppointment | null>(null);
-  const [loading, setLoading] = useState(false);
   const [confirmModalAppointment, setConfirmModalAppointment] = useState<TimelineAppointment | null>(null);
   const [cancelAllModalOpen, setCancelAllModalOpen] = useState(false);
   const [manualBookingModalOpen, setManualBookingModalOpen] = useState(false);
   const [selectedEmptySlot, setSelectedEmptySlot] = useState({ date: "", time: "" });
-  
-  // Filters
+  const [viewMode, setViewMode] = useState<ViewMode>("day");
   const [filterService, setFilterService] = useState<string>("all");
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [services, setServices] = useState<Array<{ id: string; nome: string }>>([]);
+  const [showFilters, setShowFilters] = useState(false);
+  
+  const isInitialLoad = useRef(true);
 
   useEffect(() => {
     loadServices();
   }, []);
 
+  const loadAppointments = useCallback(async (selectedDate: Date, silent = false) => {
+    try {
+      const dateStr = format(selectedDate, 'yyyy-MM-dd');
+      
+      const { data, error } = await supabase
+        .from("agendamentos")
+        .select("*")
+        .eq("data", dateStr)
+        .eq("barbeiro_confirmou", true)
+        .neq("status", "cancelled_by_admin")
+        .neq("status", "cancelled_by_user")
+        .order("hora", { ascending: true });
+
+      if (error) throw error;
+
+      const appointmentsWithDetails = await Promise.all(
+        (data || []).map(async (apt) => {
+          const [profileRes, servicoRes, pagamentosRes] = await Promise.all([
+            supabase.from("profiles").select("nome, cpf").eq("id", apt.user_id).maybeSingle(),
+            supabase.from("servicos").select("nome, duracao_minutos").eq("id", apt.servico_id).maybeSingle(),
+            supabase.from("pagamentos").select("metodo, status, valor").eq("agendamento_id", apt.id)
+          ]);
+
+          return {
+            ...apt,
+            profile: profileRes.data || null,
+            servico: servicoRes.data || null,
+            pagamentos: pagamentosRes.data || [],
+          };
+        })
+      );
+
+      setAppointments(appointmentsWithDetails);
+      if (isInitialLoad.current) {
+        isInitialLoad.current = false;
+      }
+    } catch (error) {
+      console.error("Error loading appointments:", error);
+      if (!silent) toast.error("Erro ao carregar agendamentos");
+    }
+  }, []);
+
+  // Load all appointments for calendar indicators
+  const loadAllAppointments = useCallback(async () => {
+    try {
+      const { data, error } = await supabase
+        .from("agendamentos")
+        .select("data, status")
+        .eq("barbeiro_confirmou", true)
+        .neq("status", "cancelled_by_admin")
+        .neq("status", "cancelled_by_user");
+
+      if (error) throw error;
+      setAllAppointments(data || []);
+    } catch (error) {
+      console.error("Error loading all appointments:", error);
+    }
+  }, []);
+
   useEffect(() => {
     loadAppointments(date);
+    loadAllAppointments();
 
-    // Real-time subscription com múltiplos tratamentos
+    // Real-time subscription - silent updates
     const channel = supabase
-      .channel('admin-agenda-timeline')
+      .channel('admin-agenda-premium')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'agendamentos' }, (payload) => {
-        console.log('📢 Mudança no agendamento:', payload);
-        
-        const oldData = payload.old as any;
-        const newData = payload.new as any;
-        
-        // Recarregar sempre que houver mudança
-        loadAppointments(date);
+        // Silent reload without toast spam
+        loadAppointments(date, true);
+        loadAllAppointments();
         
         if (payload.eventType === 'INSERT') {
-          console.log("➕ INSERT detectado:", newData);
-          toast.success("🔔 Novo agendamento recebido!");
-        } else if (payload.eventType === 'UPDATE') {
-          console.log("🔄 UPDATE detectado:", { 
-            old: { barbeiro_confirmou: oldData?.barbeiro_confirmou, status: oldData?.status },
-            new: { barbeiro_confirmou: newData?.barbeiro_confirmou, status: newData?.status }
-          });
-          
-          // Detectar quando barbeiro confirma
-          if (oldData?.barbeiro_confirmou === false && newData?.barbeiro_confirmou === true) {
-            console.log("🎉 CONFIRMAÇÃO DETECTADA! Agendamento será adicionado à agenda");
-            console.log("📍 Detalhes:", {
-              id: newData.id,
-              data: newData.data,
-              hora: newData.hora,
-              status: newData.status,
-              barbeiro_confirmou: newData.barbeiro_confirmou
-            });
-            
-            toast.success("✅ Agendamento aprovado! Atualizando agenda...");
-            
-            // Múltiplos reloads para garantir sincronização
-            loadAppointments(date);
-            setTimeout(() => {
-              console.log("🔄 Reload extra após confirmação");
-              loadAppointments(date);
-            }, 500);
-            setTimeout(() => {
-              console.log("🔄 Reload final após confirmação");
-              loadAppointments(date);
-            }, 1500);
-          }
-          
-          // Detectar cancelamento pelo admin (cancelamento em massa ou individual)
-          if (oldData?.status !== 'cancelled_by_admin' && newData?.status === 'cancelled_by_admin') {
-            console.log("🚫 Agendamento cancelado pelo administrador");
-            // Recarregar imediatamente para remover da lista
-            loadAppointments(date);
-          }
-          
-          if (newData.status === 'cancelled_by_user') {
-            toast.info("ℹ️ Cliente cancelou um agendamento");
-          }
-        } else if (payload.eventType === 'DELETE') {
-          console.log("🗑️ Agendamento removido");
-          loadAppointments(date);
+          toast.success("Novo agendamento recebido!");
         }
       })
       .subscribe();
 
-    // Polling de backup a cada 15 segundos
+    // Silent polling every 15 seconds
     const pollingInterval = setInterval(() => {
-      loadAppointments(date);
+      loadAppointments(date, true);
     }, 15000);
 
     return () => {
       supabase.removeChannel(channel);
       clearInterval(pollingInterval);
     };
-  }, [date]);
+  }, [date, loadAppointments, loadAllAppointments]);
 
-  // Check for appointments that need confirmation (when service duration ends)
+  // Check for appointments that need confirmation
   useEffect(() => {
     const checkAppointmentCompletion = () => {
       const now = new Date();
       const currentDateStr = format(now, 'yyyy-MM-dd');
       const selectedDateStr = format(date, 'yyyy-MM-dd');
       
-      // Only check for today's appointments
       if (currentDateStr !== selectedDateStr) return;
 
       appointments.forEach(apt => {
-        // Skip if already completed, cancelled, or no-show
         if (apt.status === 'completed' || apt.status === 'cancelled_by_admin' || 
             apt.status === 'cancelled_by_user' || apt.status === 'no_show') {
           return;
         }
 
-        // Calculate end time
         const [hours, minutes] = apt.hora.split(':').map(Number);
         const aptStart = new Date(now);
         aptStart.setHours(hours, minutes, 0, 0);
-        
         const aptEnd = new Date(aptStart.getTime() + (apt.servico?.duracao_minutos || 30) * 60000);
         
-        // If current time is past end time (with 1 minute tolerance)
         if (now >= aptEnd && now.getTime() - aptEnd.getTime() < 120000) {
-          // Show confirmation modal
           setConfirmModalAppointment(apt);
         }
       });
     };
 
-    // Check every minute
     const interval = setInterval(checkAppointmentCompletion, 60000);
-    checkAppointmentCompletion(); // Check immediately
-
+    checkAppointmentCompletion();
     return () => clearInterval(interval);
   }, [appointments, date]);
 
@@ -183,89 +192,6 @@ export function AdminAgenda() {
     }
   };
 
-  const loadAppointments = async (selectedDate: Date) => {
-    setLoading(true);
-    try {
-      const dateStr = format(selectedDate, 'yyyy-MM-dd'); // Format without timezone conversion
-      
-      console.log(`🔍 Carregando agendamentos para ${dateStr}`);
-      console.log(`📋 Filtros: barbeiro_confirmou=true, status NOT IN (cancelled_by_admin, cancelled_by_user)`);
-      
-      let query = supabase
-        .from("agendamentos")
-        .select("*")
-        .eq("data", dateStr)
-        .eq("barbeiro_confirmou", true)
-        .neq("status", "cancelled_by_admin")
-        .neq("status", "cancelled_by_user")
-        .order("hora", { ascending: true });
-
-      const { data, error } = await query;
-
-      if (error) {
-        console.error("❌ Erro na query:", error);
-        throw error;
-      }
-      
-      console.log(`📊 Encontrados ${data?.length || 0} agendamentos confirmados`);
-      
-      if (data && data.length > 0) {
-        console.log("📝 IDs dos agendamentos:", data.map(a => a.id));
-        console.log("⏰ Horários:", data.map(a => a.hora));
-        console.log("✅ Status confirmação barbeiro:", data.map(a => a.barbeiro_confirmou));
-        console.log("📌 Status:", data.map(a => a.status));
-      }
-
-      const appointmentsWithDetails = await Promise.all(
-        (data || []).map(async (apt) => {
-          const { data: profile } = await supabase
-            .from("profiles")
-            .select("nome, cpf")
-            .eq("id", apt.user_id)
-            .maybeSingle();
-
-          const { data: servico } = await supabase
-            .from("servicos")
-            .select("nome, duracao_minutos")
-            .eq("id", apt.servico_id)
-            .maybeSingle();
-
-          const { data: pagamentos } = await supabase
-            .from("pagamentos")
-            .select("metodo, status, valor")
-            .eq("agendamento_id", apt.id);
-
-          return {
-            ...apt,
-            profile: profile || null,
-            servico: servico || null,
-            pagamentos: pagamentos || [],
-          };
-        })
-      );
-
-      setAppointments(appointmentsWithDetails);
-      
-      if (appointmentsWithDetails.length > 0) {
-        console.log("✅ Agendamentos processados e exibindo na agenda:");
-        appointmentsWithDetails.forEach(a => {
-          console.log(`  - ${a.hora}: ${a.servico?.nome || 'Sem serviço'} - ${a.profile?.nome || 'Sem cliente'} (${a.status})`);
-        });
-      } else {
-        console.log("⚠️ Nenhum agendamento encontrado para exibir");
-      }
-    } catch (error) {
-      console.error("❌ Erro ao carregar agendamentos:", error);
-      toast.error("Erro ao carregar agendamentos");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleGoToToday = () => {
-    setDate(new Date());
-  };
-
   const handleEmptySlotClick = (time: string) => {
     const dateStr = format(date, 'yyyy-MM-dd');
     setSelectedEmptySlot({ date: dateStr, time });
@@ -279,51 +205,76 @@ export function AdminAgenda() {
   });
 
   return (
-    <div className="h-full flex flex-col gap-4">
-      {/* Header with filters */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div className="h-full flex flex-col gap-6 animate-fade-in">
+      {/* Header */}
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Agenda do Dia</h1>
+          <h1 className="text-2xl font-bold tracking-wide">Agenda</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            {format(date, "EEEE, dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+            {format(date, "EEEE, dd 'de' MMMM", { locale: ptBR })}
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <Button onClick={handleGoToToday} variant="outline" size="sm">
-            Hoje
-          </Button>
-
-          {filteredAppointments.length > 0 && (
-            <Button
-              onClick={() => setCancelAllModalOpen(true)}
-              variant="destructive"
-              size="sm"
+          {/* View Mode Toggle */}
+          <div className="flex items-center rounded-xl bg-white/5 p-1">
+            <button
+              onClick={() => setViewMode("day")}
+              className={cn(
+                "flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all",
+                viewMode === "day" ? "bg-primary text-white" : "text-muted-foreground hover:text-foreground"
+              )}
             >
+              <List className="w-4 h-4" />
+              Dia
+            </button>
+            <button
+              onClick={() => setViewMode("week")}
+              className={cn(
+                "flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all",
+                viewMode === "week" ? "bg-primary text-white" : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <LayoutGrid className="w-4 h-4" />
+              Semana
+            </button>
+          </div>
+
+          {/* Filters Toggle */}
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            className={cn(
+              "flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium transition-all",
+              showFilters ? "bg-primary/10 text-primary" : "bg-white/5 text-muted-foreground hover:bg-white/10"
+            )}
+          >
+            <Filter className="w-4 h-4" />
+            Filtros
+          </button>
+
+          {/* Cancel All */}
+          {filteredAppointments.length > 0 && (
+            <button
+              onClick={() => setCancelAllModalOpen(true)}
+              className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-all"
+            >
+              <X className="w-4 h-4" />
               Cancelar Todos
-            </Button>
+            </button>
           )}
+        </div>
+      </div>
 
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="outline" size="sm">
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                Selecionar Data
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="end">
-              <Calendar
-                mode="single"
-                selected={date}
-                onSelect={(newDate) => newDate && setDate(newDate)}
-                locale={ptBR}
-              />
-            </PopoverContent>
-          </Popover>
-
+      {/* Filters Panel */}
+      {showFilters && (
+        <motion.div
+          initial={{ height: 0, opacity: 0 }}
+          animate={{ height: "auto", opacity: 1 }}
+          exit={{ height: 0, opacity: 0 }}
+          className="flex flex-wrap gap-3 p-4 rounded-xl bg-white/[0.02] border border-white/5"
+        >
           <Select value={filterService} onValueChange={setFilterService}>
-            <SelectTrigger className="w-[180px]">
-              <Filter className="mr-2 h-4 w-4" />
+            <SelectTrigger className="w-[180px] bg-white/5 border-white/10">
               <SelectValue placeholder="Serviço" />
             </SelectTrigger>
             <SelectContent>
@@ -335,7 +286,7 @@ export function AdminAgenda() {
           </Select>
 
           <Select value={filterStatus} onValueChange={setFilterStatus}>
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger className="w-[180px] bg-white/5 border-white/10">
               <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>
@@ -343,24 +294,39 @@ export function AdminAgenda() {
               <SelectItem value="pending">Pendente</SelectItem>
               <SelectItem value="confirmed">Confirmado</SelectItem>
               <SelectItem value="completed">Concluído</SelectItem>
-              <SelectItem value="cancelled_by_user">Cancelado</SelectItem>
             </SelectContent>
           </Select>
-        </div>
+        </motion.div>
+      )}
+
+      {/* Calendar Header */}
+      <PremiumCalendarHeader
+        selectedDate={date}
+        onSelectDate={setDate}
+        appointments={allAppointments}
+      />
+
+      {/* Main Content */}
+      <div className="flex-1 overflow-auto pb-8">
+        {viewMode === "day" ? (
+          <PremiumTimeline
+            appointments={filteredAppointments}
+            selectedDate={date}
+            onSelectAppointment={setSelectedAppointment}
+            onEmptySlotClick={handleEmptySlotClick}
+          />
+        ) : (
+          <PremiumWeekView
+            selectedDate={date}
+            appointments={filteredAppointments}
+            allAppointments={allAppointments}
+            onSelectDate={setDate}
+            onSelectAppointment={setSelectedAppointment}
+          />
+        )}
       </div>
 
-      {/* Timeline */}
-      <div className="flex-1 overflow-auto">
-        <TimelineView 
-          appointments={filteredAppointments}
-          loading={loading}
-          selectedDate={date}
-          onSelectAppointment={setSelectedAppointment}
-          onEmptySlotClick={handleEmptySlotClick}
-        />
-      </div>
-
-      {/* Details Sidebar */}
+      {/* Modals */}
       <AppointmentDetailsSidebar
         appointment={selectedAppointment}
         open={!!selectedAppointment}
@@ -368,7 +334,6 @@ export function AdminAgenda() {
         onUpdate={() => loadAppointments(date)}
       />
 
-      {/* Confirm Attendance Modal */}
       <ConfirmAttendanceModal
         appointment={confirmModalAppointment}
         open={!!confirmModalAppointment}
@@ -376,7 +341,6 @@ export function AdminAgenda() {
         onUpdate={() => loadAppointments(date)}
       />
 
-      {/* Cancel All Appointments Modal */}
       <CancelAllAppointmentsModal
         open={cancelAllModalOpen}
         onOpenChange={setCancelAllModalOpen}
@@ -385,7 +349,6 @@ export function AdminAgenda() {
         onSuccess={() => loadAppointments(date)}
       />
 
-      {/* Manual Booking Modal */}
       <ManualBookingModal
         open={manualBookingModalOpen}
         onOpenChange={setManualBookingModalOpen}
