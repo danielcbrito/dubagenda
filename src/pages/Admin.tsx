@@ -53,8 +53,8 @@ const Admin = () => {
     <SidebarProvider>
       <div className="h-screen flex w-full bg-background overflow-hidden">
         <AdminSidebar />
-        <main className="flex-1 p-6 overflow-hidden">
-          <div className="h-full scrollable-content">
+        <main className="flex-1 p-6 overflow-y-auto overflow-x-hidden">
+          <div className="min-h-full">
           <Suspense fallback={
             <div className="flex items-center justify-center h-screen">
               <div className="text-center">
