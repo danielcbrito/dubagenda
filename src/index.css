@@ -564,9 +564,9 @@ div[style*="Edit with Lovable"],
   z-index: -9999 !important;
 }
 
-/* 🔒 STRATEGIC SCROLL SYSTEM - Internal scroll only */
+/* 🔒 STRATEGIC SCROLL SYSTEM - Conditional scroll lock */
 
-/* Lock body scroll on full-screen views (chat, home, etc.) */
+/* Lock body scroll ONLY when lock-scroll class is explicitly added */
 html.lock-scroll,
 body.lock-scroll {
   overflow: hidden !important;
@@ -576,14 +576,14 @@ body.lock-scroll {
   touch-action: none !important;
 }
 
+/* Default: allow normal scrolling on all pages */
 html {
-  overflow: hidden !important;
-  height: 100vh !important;
-  width: 100% !important;
+  height: 100%;
+  width: 100%;
 }
 
 body {
-  overflow: hidden !important;
+  min-height: 100%;
 }
 
 /* Internal scrollable areas - premium thin scrollbar */
