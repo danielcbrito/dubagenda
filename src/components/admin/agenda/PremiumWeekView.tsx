@@ -10,7 +10,7 @@ import { Scissors } from "lucide-react";
 interface PremiumWeekViewProps {
   selectedDate: Date;
   appointments: TimelineAppointment[];
-  allAppointments: TimelineAppointment[];
+  allAppointments: Array<{ data: string; status: string }>;
   onSelectDate: (date: Date) => void;
   onSelectAppointment: (appointment: TimelineAppointment) => void;
 }
@@ -100,10 +100,10 @@ export function PremiumWeekView({
     return slots;
   }, [businessHours]);
 
-  // Get appointments for a specific day
+  // Get appointments for a specific day (uses full appointments, not calendar indicators)
   const getAppointmentsForDay = (day: Date) => {
     const dateStr = format(day, "yyyy-MM-dd");
-    return allAppointments.filter(apt => apt.data === dateStr);
+    return appointments.filter(apt => apt.data === dateStr);
   };
 
   // Calculate appointment position and height
