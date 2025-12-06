@@ -81,8 +81,10 @@ export function AppointmentCard({
   const canCancel = (appointment.status === "pending" || appointment.status === "confirmed") && !isAwaitingBarberApproval && !rescheduleRequested;
   const needsConfirmation = appointment.status === "completed" && !appointment.cliente_confirmou && onConfirm;
 
-  const payment = payments.find(p => p.agendamento_id === appointment.id);
-  const isPaid = payment?.status === "paid";
+  // Verificar pagamento tanto no array de pagamentos externos quanto no próprio agendamento
+  const externalPayment = payments.find(p => p.agendamento_id === appointment.id);
+  const inlinePayment = appointment.pagamentos?.find(p => p.status === "paid");
+  const isPaid = externalPayment?.status === "paid" || !!inlinePayment;
   const amount = appointment.preco || 0;
 
   // Extrair motivo do cancelamento das observações

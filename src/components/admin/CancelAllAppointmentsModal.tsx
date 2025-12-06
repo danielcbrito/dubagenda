@@ -43,14 +43,16 @@ export function CancelAllAppointmentsModal({
     try {
       const dateStr = format(date, 'yyyy-MM-dd'); // Format without timezone conversion
 
-      // Buscar todos os agendamentos confirmados do dia
+      // Buscar todos os agendamentos confirmados do dia COM pagamentos
       const { data: appointments, error: fetchError } = await supabase
         .from("agendamentos")
         .select(`
           id, 
           user_id,
           hora,
-          servicos!inner(nome)
+          preco,
+          servicos!inner(nome),
+          pagamentos(id, status, valor)
         `)
         .eq("data", dateStr)
         .eq("barbeiro_confirmou", true)
@@ -86,14 +88,45 @@ export function CancelAllAppointmentsModal({
         throw new Error(`Erro ao cancelar agendamentos: ${updateError.message}`);
       }
 
+      // Criar créditos para agendamentos com pagamento confirmado
+      const creditosPromises = appointments
+        .filter(apt => apt.pagamentos?.some((p: any) => p.status === 'paid'))
+        .map(apt => {
+          const paidPayment = apt.pagamentos?.find((p: any) => p.status === 'paid');
+          return supabase.from("creditos").insert({
+            user_id: apt.user_id,
+            valor: paidPayment?.valor || apt.preco || 0,
+            origem: "cancelamento",
+            agendamento_origem_id: apt.id,
+          });
+        });
+
+      if (creditosPromises.length > 0) {
+        const creditosResults = await Promise.allSettled(creditosPromises);
+        const failedCredits = creditosResults.filter(r => r.status === 'rejected');
+        if (failedCredits.length > 0) {
+          console.error("Alguns créditos falharam:", failedCredits);
+          toast.warning(`${creditosPromises.length - failedCredits.length} crédito(s) gerado(s), ${failedCredits.length} falhou(aram)`);
+        } else {
+          toast.success(`${creditosPromises.length} crédito(s) gerado(s) para clientes com pagamento confirmado`);
+        }
+      }
+
       // Criar notificações para todos os usuários afetados
       const notificacoesPromises = appointments.map(apt => {
         const serviceName = apt.servicos?.nome || "Serviço";
+        const hasPaidPayment = apt.pagamentos?.some((p: any) => p.status === 'paid');
+        const paidAmount = apt.pagamentos?.find((p: any) => p.status === 'paid')?.valor;
+        
+        const creditMessage = hasPaidPayment 
+          ? ` O valor de R$ ${paidAmount?.toFixed(2)} foi adicionado como crédito na sua carteira.`
+          : "";
+        
         return supabase.from("notificacoes").insert({
           user_id: apt.user_id,
           tipo: "cancelamento_massa",
           titulo: "Agendamento Cancelado",
-          mensagem: `Seu agendamento de ${serviceName} às ${apt.hora} foi cancelado. Motivo: ${reason}. Você pode reagendar quando quiser.`,
+          mensagem: `Seu agendamento de ${serviceName} às ${apt.hora} foi cancelado. Motivo: ${reason}.${creditMessage} Você pode reagendar quando quiser.`,
           agendamento_id: apt.id,
           lida: false,
         });
