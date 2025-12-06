@@ -250,6 +250,8 @@ export function AppointmentCard({
         isPaid={isPaid}
         amount={amount}
         userId={userId || ""}
+        paymentMethod={(appointment as any).payment_method}
+        observacoes={appointment.observacoes}
         onSuccess={() => {
           setCancelModalOpen(false);
           onCancel?.();
