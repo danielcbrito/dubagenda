@@ -205,7 +205,7 @@ export function AdminAgenda() {
   });
 
   return (
-    <div className="flex flex-col gap-6 animate-fade-in min-h-0">
+    <div className="flex flex-col gap-6 animate-fade-in pb-16">
       {/* Header */}
       <div className="flex-shrink-0 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div>
@@ -307,7 +307,7 @@ export function AdminAgenda() {
       />
 
       {/* Main Content */}
-      <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden pb-8 touch-pan-y">
+      <div>
         {viewMode === "day" ? (
           <PremiumTimeline
             appointments={filteredAppointments}
