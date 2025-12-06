@@ -234,59 +234,122 @@ export function AdminWebhook() {
               <Info className="w-5 h-5 text-blue-500" />
             </div>
             <div>
-              <CardTitle className="text-base">Eventos Enviados</CardTitle>
+              <CardTitle className="text-base">Todos os Eventos Enviados</CardTitle>
               <CardDescription>
-                O sistema enviará os seguintes eventos para seu webhook
+                Este webhook único recebe TODOS os eventos do sistema em tempo real
               </CardDescription>
             </div>
           </div>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <EventCard 
-              evento="novo_agendamento" 
-              desc="Quando um cliente cria um novo agendamento" 
-            />
-            <EventCard 
-              evento="agendamento_confirmado" 
-              desc="Quando o barbeiro confirma um agendamento" 
-            />
-            <EventCard 
-              evento="pagamento_realizado" 
-              desc="Quando um pagamento é confirmado" 
-            />
-            <EventCard 
-              evento="agendamento_cancelado" 
-              desc="Quando um agendamento é cancelado" 
-            />
-            <EventCard 
-              evento="remarcacao_solicitada" 
-              desc="Quando o barbeiro solicita remarcação" 
-            />
-            <EventCard 
-              evento="remarcacao_concluida" 
-              desc="Quando o cliente conclui a remarcação" 
-            />
+          {/* Eventos de Agendamento */}
+          <div className="mb-4">
+            <h4 className="text-sm font-semibold text-primary mb-2">Agendamentos</h4>
+            <div className="grid gap-2 sm:grid-cols-2">
+              <EventCard evento="agendamento_criado" desc="Cliente criou novo agendamento" />
+              <EventCard evento="agendamento_confirmado" desc="Barbeiro confirmou agendamento" />
+              <EventCard evento="agendamento_cancelado" desc="Agendamento cancelado" />
+              <EventCard evento="remarcacao_solicitada" desc="Barbeiro solicitou remarcação" />
+              <EventCard evento="remarcacao_concluida" desc="Cliente concluiu remarcação" />
+              <EventCard evento="horario_atualizado" desc="Horário do agendamento alterado" />
+            </div>
           </div>
 
+          {/* Eventos de Atendimento */}
+          <div className="mb-4">
+            <h4 className="text-sm font-semibold text-primary mb-2">Atendimento</h4>
+            <div className="grid gap-2 sm:grid-cols-2">
+              <EventCard evento="atendimento_iniciado" desc="Barbeiro iniciou atendimento" />
+              <EventCard evento="atendimento_finalizado" desc="Atendimento concluído" />
+              <EventCard evento="cliente_aguardando" desc="Cliente aguardando atendimento" />
+              <EventCard evento="cliente_nao_compareceu" desc="Cliente não compareceu (no-show)" />
+              <EventCard evento="status_alterado" desc="Status do agendamento alterado" />
+            </div>
+          </div>
+
+          {/* Eventos de Pagamento */}
+          <div className="mb-4">
+            <h4 className="text-sm font-semibold text-primary mb-2">Pagamentos</h4>
+            <div className="grid gap-2 sm:grid-cols-2">
+              <EventCard evento="pagamento_realizado" desc="Pagamento confirmado" />
+              <EventCard evento="pagamento_parcial_credito" desc="Pagamento parcial com créditos" />
+              <EventCard evento="pagamento_creditos" desc="Pago integralmente com créditos" />
+            </div>
+          </div>
+
+          {/* Eventos de Créditos */}
+          <div className="mb-4">
+            <h4 className="text-sm font-semibold text-primary mb-2">Créditos</h4>
+            <div className="grid gap-2 sm:grid-cols-2">
+              <EventCard evento="credito_adicionado" desc="Crédito adicionado à carteira" />
+              <EventCard evento="credito_usado" desc="Cliente usou créditos" />
+              <EventCard evento="credito_estornado" desc="Crédito devolvido (cancelamento)" />
+            </div>
+          </div>
+
+          {/* Eventos de Cliente */}
+          <div className="mb-4">
+            <h4 className="text-sm font-semibold text-primary mb-2">Clientes</h4>
+            <div className="grid gap-2 sm:grid-cols-2">
+              <EventCard evento="cliente_criado" desc="Novo cliente cadastrado" />
+              <EventCard evento="cliente_atualizado" desc="Dados do cliente atualizados" />
+            </div>
+          </div>
+
+          {/* Formato do Payload */}
           <div className="mt-4 p-4 rounded-lg bg-muted/30">
-            <p className="text-sm font-medium mb-2">Formato do Payload:</p>
-            <pre className="text-xs text-muted-foreground overflow-x-auto">
+            <p className="text-sm font-medium mb-2">Formato do Payload Completo:</p>
+            <pre className="text-xs text-muted-foreground overflow-x-auto whitespace-pre-wrap">
 {`{
-  "evento": "tipo_do_evento",
+  // Identificação do evento
+  "evento": "agendamento_criado",
+  "evento_id": "uuid-unico-do-evento",
+  "descricao": "Cliente criou um novo agendamento",
+  "timestamp": "2025-12-06T10:00:00Z",
+
+  // Dados do agendamento
   "agendamento_id": "uuid",
-  "cliente_id": "uuid",
-  "cliente_nome": "Nome do Cliente",
-  "cliente_telefone": "11999999999",
-  "servico": "Nome do Serviço",
-  "data": "2025-12-04",
+  "data": "2025-12-06",
   "hora": "10:00",
-  "preco": 50.00,
-  "status": "status_atual",
-  "mensagem_barbeiro": "...",
-  "timestamp": "2025-12-04T10:00:00Z"
+  "duracao_minutos": 30,
+  "status": "pendente",
+  "tipo_agendamento": "normal",
+
+  // Dados do serviço
+  "servico": "Corte + Barba",
+  "servico_id": "uuid",
+
+  // Dados financeiros
+  "valor_total": 50.00,
+  "valor_pago_app": 25.00,
+  "valor_pago_creditos": 25.00,
+  "metodo_pagamento": "pix",
+  "saldo_creditos_restante": 15.00,
+
+  // Dados COMPLETOS do cliente
+  "cliente_id": "uuid",
+  "cliente_nome": "João Silva",
+  "cliente_telefone": "11999999999",
+  "cliente_email": "joao@email.com",
+  "cliente_cpf": "12345678900",
+
+  // Dados do barbeiro
+  "barbeiro_id": "uuid",
+  "barbeiro_nome": "Carlos",
+
+  // Detalhes extras (quando aplicável)
+  "mensagem_barbeiro": "Mensagem do barbeiro",
+  "motivo": "Motivo do cancelamento",
+  "detalhes": { ... }
 }`}
             </pre>
+          </div>
+
+          <div className="mt-4 p-3 rounded-lg bg-green-500/10 border border-green-500/20">
+            <p className="text-xs text-green-400">
+              <strong>Importante:</strong> Todos os eventos incluem dados completos do cliente 
+              (nome, telefone, email) e são enviados em tempo real para integração com WhatsApp e outras automações.
+            </p>
           </div>
         </CardContent>
       </Card>
@@ -296,9 +359,9 @@ export function AdminWebhook() {
 
 function EventCard({ evento, desc }: { evento: string; desc: string }) {
   return (
-    <div className="p-3 rounded-lg bg-muted/20 border border-border/30">
+    <div className="p-2 rounded-lg bg-muted/20 border border-border/30">
       <code className="text-xs font-mono text-primary">{evento}</code>
-      <p className="text-xs text-muted-foreground mt-1">{desc}</p>
+      <p className="text-xs text-muted-foreground mt-0.5">{desc}</p>
     </div>
   );
 }
