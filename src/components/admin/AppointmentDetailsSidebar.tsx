@@ -105,12 +105,12 @@ export function AppointmentDetailsSidebar({ appointment, open, onClose, onUpdate
     setLoading(true);
 
     try {
+      // NÃO definir ponto_liberado aqui - a trigger award_loyalty_point cuida disso
       const { error } = await supabase
         .from("agendamentos")
         .update({ 
           status: 'completed' as any,
-          barbeiro_confirmou: true,
-          ponto_liberado: true
+          barbeiro_confirmou: true
         } as any)
         .eq("id", appointment.id);
 
