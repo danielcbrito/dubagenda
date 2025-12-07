@@ -62,11 +62,16 @@ const EmailVerification = () => {
     setIsResending(true);
 
     try {
+      // Use production URL for email redirects (never localhost)
+      const productionUrl = window.location.origin.includes('localhost') 
+        ? 'https://djtpzvujzmrrslirzwun.lovable.app'
+        : window.location.origin;
+
       const { error } = await supabase.auth.resend({
         type: 'signup',
         email: userEmail,
         options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`
+          emailRedirectTo: `${productionUrl}/auth/callback`
         }
       });
 
