@@ -27,10 +27,15 @@ const ForgotPassword = () => {
     try {
       const validated = emailSchema.parse({ email });
 
+      // Use production URL for email redirects (never localhost)
+      const productionUrl = window.location.origin.includes('localhost') 
+        ? 'https://djtpzvujzmrrslirzwun.lovable.app'
+        : window.location.origin;
+
       const { error } = await supabase.auth.resetPasswordForEmail(
         validated.email,
         {
-          redirectTo: `${window.location.origin}/resetar-senha`,
+          redirectTo: `${productionUrl}/resetar-senha`,
         }
       );
 

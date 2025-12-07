@@ -133,6 +133,11 @@ const Auth = () => {
     try {
       const validated = signupSchema.parse(formData);
 
+      // Use production URL for email redirects (never localhost)
+      const productionUrl = window.location.origin.includes('localhost') 
+        ? 'https://djtpzvujzmrrslirzwun.lovable.app'
+        : window.location.origin;
+
       const { data, error } = await supabase.auth.signUp({
         email: validated.email,
         password: validated.senha,
@@ -142,7 +147,7 @@ const Auth = () => {
             cpf: validated.cpf,
             telefone: validated.telefone,
           },
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
+          emailRedirectTo: `${productionUrl}/auth/callback`,
         },
       });
 
