@@ -232,29 +232,32 @@ export function AdminCortes() {
               Novo Corte
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-md glass-card border-border">
+          <DialogContent className="max-w-md">
             <DialogHeader>
-              <DialogTitle className="text-xl font-bold">
-                {editingServico ? "Editar Corte" : "Novo Corte"}
+              <DialogTitle className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center">
+                  <Scissors className="w-5 h-5 text-primary" />
+                </div>
+                <span>{editingServico ? "Editar Corte" : "Novo Corte"}</span>
               </DialogTitle>
             </DialogHeader>
 
-            <form onSubmit={handleSubmit} className="space-y-5 pt-2">
+            <form onSubmit={handleSubmit} className="space-y-5 py-2">
               <div className="space-y-2">
-                <Label htmlFor="nome" className="text-sm font-medium">Nome *</Label>
+                <Label htmlFor="nome" className="text-sm font-medium text-muted-foreground">Nome *</Label>
                 <Input
                   id="nome"
                   value={formData.nome}
                   onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
                   placeholder="Ex: Corte Social"
-                  className="input-glass"
+                  className="h-11 bg-white/[0.03] border-white/[0.08] rounded-xl focus:border-primary focus:ring-1 focus:ring-primary/50 transition-all"
                   required
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="preco" className="text-sm font-medium">Preço (R$) *</Label>
+                  <Label htmlFor="preco" className="text-sm font-medium text-muted-foreground">Preço (R$) *</Label>
                   <Input
                     id="preco"
                     type="number"
@@ -262,53 +265,61 @@ export function AdminCortes() {
                     value={formData.preco}
                     onChange={(e) => setFormData({ ...formData, preco: e.target.value })}
                     placeholder="50.00"
-                    className="input-glass"
+                    className="h-11 bg-white/[0.03] border-white/[0.08] rounded-xl focus:border-primary focus:ring-1 focus:ring-primary/50 transition-all"
                     required
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="duracao" className="text-sm font-medium">Duração (min) *</Label>
+                  <Label htmlFor="duracao" className="text-sm font-medium text-muted-foreground">Duração (min) *</Label>
                   <Input
                     id="duracao"
                     type="number"
                     value={formData.duracao_minutos}
                     onChange={(e) => setFormData({ ...formData, duracao_minutos: e.target.value })}
                     placeholder="30"
-                    className="input-glass"
+                    className="h-11 bg-white/[0.03] border-white/[0.08] rounded-xl focus:border-primary focus:ring-1 focus:ring-primary/50 transition-all"
                     required
                   />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="descricao" className="text-sm font-medium">Descrição</Label>
+                <Label htmlFor="descricao" className="text-sm font-medium text-muted-foreground">Descrição</Label>
                 <Textarea
                   id="descricao"
                   value={formData.descricao}
                   onChange={(e) => setFormData({ ...formData, descricao: e.target.value })}
                   placeholder="Descrição do corte"
                   rows={3}
-                  className="input-glass resize-none"
+                  className="bg-white/[0.03] border-white/[0.08] rounded-xl resize-none focus:border-primary focus:ring-1 focus:ring-primary/50 transition-all"
                 />
               </div>
 
-              <div className="flex items-center gap-3 p-3 rounded-xl bg-secondary/30 border border-border/50">
+              <div className="flex items-center gap-3 p-4 rounded-xl bg-white/[0.03] border border-white/[0.08]">
                 <Switch
                   id="ativo"
                   checked={formData.ativo}
                   onCheckedChange={(checked) => setFormData({ ...formData, ativo: checked })}
                 />
-                <Label htmlFor="ativo" className="text-sm font-medium cursor-pointer">
+                <Label htmlFor="ativo" className="text-sm font-medium cursor-pointer text-foreground">
                   Corte ativo e disponível para agendamento
                 </Label>
               </div>
 
-              <div className="flex gap-3 pt-2">
-                <Button type="button" variant="outline" onClick={handleCloseDialog} className="flex-1">
+              <div className="flex gap-3 pt-4">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={handleCloseDialog} 
+                  className="flex-1 h-11 rounded-xl bg-white/[0.03] border-white/[0.08] hover:bg-white/[0.06] hover:border-white/[0.12] font-medium"
+                >
                   Cancelar
                 </Button>
-                <Button type="submit" className="flex-1 btn-neon">
+                <Button 
+                  type="submit" 
+                  className="flex-1 h-11 rounded-xl bg-primary hover:bg-primary/90 font-semibold shadow-[0_0_20px_rgba(255,59,59,0.3)] transition-all hover:shadow-[0_0_30px_rgba(255,59,59,0.4)]"
+                >
                   {editingServico ? "Atualizar" : "Criar"}
                 </Button>
               </div>

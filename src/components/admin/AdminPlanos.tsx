@@ -252,39 +252,43 @@ export function AdminPlanos() {
               Novo Plano
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-lg glass-card border-border max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-lg">
             <DialogHeader>
-              <DialogTitle className="text-xl font-bold">
-                {editingPlano ? "Editar Plano" : "Criar Novo Plano"}
+              <DialogTitle className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center">
+                  <Crown className="w-5 h-5 text-primary" />
+                </div>
+                <span>{editingPlano ? "Editar Plano" : "Criar Novo Plano"}</span>
               </DialogTitle>
             </DialogHeader>
-            <div className="space-y-5 pt-2">
+            
+            <div className="space-y-5 py-2">
               <div className="space-y-2">
-                <Label htmlFor="nome" className="text-sm font-medium">Nome do Plano *</Label>
+                <Label htmlFor="nome" className="text-sm font-medium text-muted-foreground">Nome do Plano *</Label>
                 <Input
                   id="nome"
                   placeholder="Ex: Plano Premium"
                   value={newPlano.nome}
                   onChange={(e) => setNewPlano({ ...newPlano, nome: e.target.value })}
-                  className="input-glass"
+                  className="h-11 bg-white/[0.03] border-white/[0.08] rounded-xl focus:border-primary focus:ring-1 focus:ring-primary/50 transition-all"
                 />
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="descricao" className="text-sm font-medium">Descrição</Label>
+                <Label htmlFor="descricao" className="text-sm font-medium text-muted-foreground">Descrição</Label>
                 <Textarea
                   id="descricao"
                   placeholder="Descrição do plano..."
                   value={newPlano.descricao}
                   onChange={(e) => setNewPlano({ ...newPlano, descricao: e.target.value })}
-                  className="input-glass resize-none"
+                  className="bg-white/[0.03] border-white/[0.08] rounded-xl resize-none focus:border-primary focus:ring-1 focus:ring-primary/50 transition-all"
                   rows={3}
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="preco" className="text-sm font-medium">Preço Mensal (R$) *</Label>
+                  <Label htmlFor="preco" className="text-sm font-medium text-muted-foreground">Preço Mensal (R$) *</Label>
                   <Input
                     id="preco"
                     type="number"
@@ -293,12 +297,12 @@ export function AdminPlanos() {
                     placeholder="0.00"
                     value={newPlano.preco_mensal || ""}
                     onChange={(e) => setNewPlano({ ...newPlano, preco_mensal: parseFloat(e.target.value) || 0 })}
-                    className="input-glass"
+                    className="h-11 bg-white/[0.03] border-white/[0.08] rounded-xl focus:border-primary focus:ring-1 focus:ring-primary/50 transition-all"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="limite" className="text-sm font-medium">Limite/Mês</Label>
+                  <Label htmlFor="limite" className="text-sm font-medium text-muted-foreground">Limite/Mês</Label>
                   <Input
                     id="limite"
                     type="number"
@@ -306,39 +310,45 @@ export function AdminPlanos() {
                     placeholder="4"
                     value={newPlano.limite_agendamentos_mes || ""}
                     onChange={(e) => setNewPlano({ ...newPlano, limite_agendamentos_mes: parseInt(e.target.value) || 4 })}
-                    className="input-glass"
+                    className="h-11 bg-white/[0.03] border-white/[0.08] rounded-xl focus:border-primary focus:ring-1 focus:ring-primary/50 transition-all"
                   />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="prioridade" className="text-sm font-medium">Prioridade (maior = destaque)</Label>
+                <Label htmlFor="prioridade" className="text-sm font-medium text-muted-foreground">Prioridade (maior = destaque)</Label>
                 <Input
                   id="prioridade"
                   type="number"
                   placeholder="0"
                   value={newPlano.prioridade_agendamento || ""}
                   onChange={(e) => setNewPlano({ ...newPlano, prioridade_agendamento: parseInt(e.target.value) || 0 })}
-                  className="input-glass"
+                  className="h-11 bg-white/[0.03] border-white/[0.08] rounded-xl focus:border-primary focus:ring-1 focus:ring-primary/50 transition-all"
                 />
               </div>
 
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <Label className="text-sm font-medium">Benefícios</Label>
-                  <Button type="button" size="sm" variant="outline" onClick={addBeneficio} className="h-8 text-xs">
+                  <Label className="text-sm font-medium text-muted-foreground">Benefícios</Label>
+                  <Button 
+                    type="button" 
+                    size="sm" 
+                    variant="outline" 
+                    onClick={addBeneficio} 
+                    className="h-8 text-xs rounded-lg bg-white/[0.03] border-white/[0.08] hover:bg-white/[0.06] hover:border-white/[0.12]"
+                  >
                     <Plus className="w-3 h-3 mr-1" />
                     Adicionar
                   </Button>
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-2 max-h-32 overflow-y-auto scrollbar-none pr-1">
                   {newPlano.beneficios_json.map((beneficio, index) => (
                     <div key={index} className="flex gap-2">
                       <Input
                         placeholder={`Benefício ${index + 1}`}
                         value={beneficio}
                         onChange={(e) => updateBeneficio(index, e.target.value)}
-                        className="input-glass"
+                        className="h-10 bg-white/[0.03] border-white/[0.08] rounded-xl focus:border-primary focus:ring-1 focus:ring-primary/50 transition-all"
                       />
                       {newPlano.beneficios_json.length > 1 && (
                         <Button 
@@ -346,7 +356,7 @@ export function AdminPlanos() {
                           size="icon" 
                           variant="ghost" 
                           onClick={() => removeBeneficio(index)}
-                          className="h-10 w-10 hover:bg-destructive/10 hover:text-destructive"
+                          className="h-10 w-10 rounded-lg hover:bg-destructive/20 hover:text-destructive transition-colors"
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>
@@ -356,11 +366,19 @@ export function AdminPlanos() {
                 </div>
               </div>
 
-              <div className="flex gap-3 pt-2">
-                <Button type="button" variant="outline" onClick={handleCloseDialog} className="flex-1">
+              <div className="flex gap-3 pt-4">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={handleCloseDialog} 
+                  className="flex-1 h-11 rounded-xl bg-white/[0.03] border-white/[0.08] hover:bg-white/[0.06] hover:border-white/[0.12] font-medium"
+                >
                   Cancelar
                 </Button>
-                <Button onClick={handleSubmit} className="flex-1 btn-neon">
+                <Button 
+                  onClick={handleSubmit} 
+                  className="flex-1 h-11 rounded-xl bg-primary hover:bg-primary/90 font-semibold shadow-[0_0_20px_rgba(255,59,59,0.3)] transition-all hover:shadow-[0_0_30px_rgba(255,59,59,0.4)]"
+                >
                   {editingPlano ? "Atualizar" : "Criar"}
                 </Button>
               </div>
