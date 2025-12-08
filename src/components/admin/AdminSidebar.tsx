@@ -142,60 +142,92 @@ export function AdminSidebar() {
   return (
     <Sidebar 
       className={cn(
-        "sidebar-premium border-r-0 overflow-y-auto transition-all duration-300 ease-out",
+        "group/sidebar relative overflow-y-auto transition-all duration-500 ease-out",
+        "bg-gradient-to-b from-[rgba(30,30,34,0.85)] via-[rgba(38,38,44,0.8)] to-[rgba(30,30,34,0.85)]",
+        "backdrop-blur-[16px]",
+        "shadow-[0_8px_32px_rgba(0,0,0,0.4),0_2px_8px_rgba(0,0,0,0.2)]",
+        "border-r-0",
+        // Reflexo diagonal premium
+        "before:absolute before:inset-0 before:bg-gradient-to-br before:from-white/[0.08] before:via-transparent before:to-transparent before:pointer-events-none",
+        // Brilho sutil na borda
+        "after:absolute after:inset-y-0 after:right-0 after:w-px after:bg-gradient-to-b after:from-transparent after:via-white/[0.1] after:to-transparent after:pointer-events-none",
         isCollapsed ? "w-[72px]" : "w-[280px]"
       )}
     >
-      {/* Header */}
-      <SidebarHeader className="border-b border-border/30 py-4 px-4">
+      {/* Header Premium */}
+      <SidebarHeader className="relative py-5 px-4">
         <div className="flex items-center justify-between">
           {!isCollapsed && (
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 group">
               <div className="relative">
-                <img src={logoDub} alt="DUB" className="w-10 h-10 object-contain" />
-                <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-background" />
+                <div className="absolute inset-0 bg-primary/20 rounded-full blur-lg opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                <img 
+                  src={logoDub} 
+                  alt="DUB" 
+                  className="w-11 h-11 object-contain relative z-10 drop-shadow-[0_0_8px_rgba(255,59,59,0.3)] transition-transform duration-300 group-hover:scale-105" 
+                />
+                <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-emerald-500 rounded-full border-2 border-[#1E1E22] shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
               </div>
               <div className="flex flex-col">
-                <span className="font-bold text-base tracking-wide text-foreground">DUB</span>
-                <span className="text-[10px] text-muted-foreground tracking-wider uppercase">Admin Panel</span>
+                <span className="font-bold text-lg tracking-wider text-foreground drop-shadow-[0_0_10px_rgba(255,255,255,0.1)]">
+                  DUB
+                </span>
+                <span className="text-[10px] text-muted-foreground/70 tracking-[0.2em] uppercase font-medium">
+                  Admin Panel
+                </span>
               </div>
             </div>
           )}
           {isCollapsed && (
-            <div className="mx-auto relative">
-              <img src={logoDub} alt="DUB" className="w-10 h-10 object-contain" />
-              <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-background" />
+            <div className="mx-auto relative group">
+              <div className="absolute inset-0 bg-primary/20 rounded-full blur-lg opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+              <img 
+                src={logoDub} 
+                alt="DUB" 
+                className="w-11 h-11 object-contain relative z-10 drop-shadow-[0_0_8px_rgba(255,59,59,0.3)] transition-transform duration-300 group-hover:scale-105" 
+              />
+              <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-emerald-500 rounded-full border-2 border-[#1E1E22] shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
             </div>
           )}
         </div>
       </SidebarHeader>
 
-      {/* Toggle Button */}
+      {/* Toggle Button Premium */}
       <button
         onClick={() => setIsCollapsed(!isCollapsed)}
         className={cn(
-          "absolute top-20 -right-3 z-50 w-6 h-6 rounded-full",
-          "bg-primary text-primary-foreground",
+          "absolute top-[72px] -right-3 z-50 w-7 h-7 rounded-full",
+          "bg-gradient-to-br from-primary via-primary to-primary/80",
+          "text-primary-foreground",
           "flex items-center justify-center",
-          "shadow-lg hover:scale-110 transition-transform",
-          "border-2 border-background"
+          "shadow-[0_4px_20px_rgba(255,59,59,0.4),0_0_30px_rgba(255,59,59,0.2)]",
+          "hover:shadow-[0_4px_25px_rgba(255,59,59,0.6),0_0_40px_rgba(255,59,59,0.3)]",
+          "hover:scale-110 active:scale-95",
+          "transition-all duration-300 ease-out",
+          "border border-white/20"
         )}
         title={isCollapsed ? "Expandir" : "Recolher"}
       >
-        {isCollapsed ? <ChevronRight className="h-3.5 w-3.5" /> : <ChevronLeft className="h-3.5 w-3.5" />}
+        {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
       </button>
 
       <SidebarContent className="px-3 py-4" style={{ overflowX: 'hidden' }}>
-        {menuGroups.map((group) => (
-          <SidebarGroup key={group.label} className="mb-4">
+        {menuGroups.map((group, groupIndex) => (
+          <SidebarGroup 
+            key={group.label} 
+            className="mb-5"
+            style={{ animationDelay: `${groupIndex * 50}ms` }}
+          >
             {!isCollapsed && (
-              <SidebarGroupLabel className="text-[10px] font-bold tracking-[0.15em] text-muted-foreground/50 px-3 mb-2 uppercase">
+              <SidebarGroupLabel className="text-[10px] font-bold tracking-[0.2em] text-muted-foreground/40 px-3 mb-2.5 uppercase flex items-center gap-2">
+                <span className="w-4 h-px bg-gradient-to-r from-primary/30 to-transparent" />
                 {group.label}
+                <span className="flex-1 h-px bg-gradient-to-r from-transparent via-white/5 to-transparent" />
               </SidebarGroupLabel>
             )}
             <SidebarGroupContent>
-              <SidebarMenu className="space-y-1">
-                {group.items.map((item) => {
+              <SidebarMenu className="space-y-1.5">
+                {group.items.map((item, itemIndex) => {
                   const isActive = isItemActive(item);
                   const Icon = item.icon;
                   const hasBadge = item.badge && item.url === "/admin/confirmacoes-pendentes" && pendingCount > 0;
@@ -209,20 +241,31 @@ export function AdminSidebar() {
                           <CollapsibleTrigger asChild>
                             <SidebarMenuButton 
                               className={cn(
-                                "sidebar-menu-item h-11",
-                                isActive && "active",
+                                "relative h-12 rounded-xl flex items-center gap-3 px-4",
+                                "text-muted-foreground/90 hover:text-foreground",
+                                "bg-transparent hover:bg-white/[0.04]",
+                                "transition-all duration-300 ease-out",
+                                "group/item",
+                                isActive && "text-foreground bg-white/[0.06]",
                                 isCollapsed && "justify-center px-0"
                               )}
                               title={isCollapsed ? item.title : undefined}
                             >
-                              <Icon className={cn("w-5 h-5 flex-shrink-0", isActive && "text-primary")} />
+                              {/* Glow no hover */}
+                              <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-primary/0 via-primary/5 to-primary/0 opacity-0 group-hover/item:opacity-100 transition-opacity duration-300" />
+                              
+                              <Icon className={cn(
+                                "w-5 h-5 flex-shrink-0 relative z-10 transition-all duration-300",
+                                "group-hover/item:drop-shadow-[0_0_8px_rgba(255,59,59,0.4)]",
+                                isActive && "text-primary drop-shadow-[0_0_8px_rgba(255,59,59,0.5)]"
+                              )} />
                               {!isCollapsed && (
                                 <>
-                                  <span className="flex-1 text-sm font-medium">{item.title}</span>
+                                  <span className="flex-1 text-sm font-medium relative z-10">{item.title}</span>
                                   <ChevronDown
                                     className={cn(
-                                      "w-4 h-4 transition-transform duration-200 text-muted-foreground",
-                                      isOpen && 'rotate-180'
+                                      "w-4 h-4 transition-all duration-300 text-muted-foreground/50 relative z-10",
+                                      isOpen && 'rotate-180 text-primary/70'
                                     )}
                                   />
                                 </>
@@ -230,7 +273,7 @@ export function AdminSidebar() {
                             </SidebarMenuButton>
                           </CollapsibleTrigger>
                           {!isCollapsed && (
-                            <CollapsibleContent className="pl-6 mt-1 space-y-0.5">
+                            <CollapsibleContent className="pl-7 mt-1.5 space-y-1">
                               {item.submenuItems?.map((subItem: any) => {
                                 const subIsActive = location.pathname === subItem.url;
                                 return (
@@ -242,15 +285,17 @@ export function AdminSidebar() {
                                     <NavLink
                                       to={subItem.url}
                                       className={cn(
-                                        "flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm transition-all",
+                                        "relative flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm transition-all duration-300 group/sub",
                                         subIsActive 
-                                          ? 'text-primary font-semibold bg-primary/10 border border-primary/20' 
-                                          : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50'
+                                          ? 'text-primary font-semibold bg-primary/10' 
+                                          : 'text-muted-foreground/70 hover:text-foreground hover:bg-white/[0.03]'
                                       )}
                                     >
                                       <div className={cn(
-                                        "w-1.5 h-1.5 rounded-full transition-colors",
-                                        subIsActive ? 'bg-primary shadow-[0_0_8px_rgba(255,59,59,0.5)]' : 'bg-muted-foreground/50'
+                                        "w-1.5 h-1.5 rounded-full transition-all duration-300",
+                                        subIsActive 
+                                          ? 'bg-primary shadow-[0_0_10px_rgba(255,59,59,0.6)]' 
+                                          : 'bg-muted-foreground/30 group-hover/sub:bg-primary/50'
                                       )} />
                                       {subItem.title}
                                     </NavLink>
@@ -273,37 +318,61 @@ export function AdminSidebar() {
                             target="_blank"
                             rel="noopener noreferrer"
                             className={cn(
-                              "sidebar-menu-item h-11",
-                              isActive && 'active',
+                              "relative h-12 rounded-xl flex items-center gap-3 px-4",
+                              "text-muted-foreground/90 hover:text-foreground",
+                              "bg-transparent hover:bg-white/[0.04]",
+                              "transition-all duration-300 ease-out",
+                              "group/item",
+                              isActive && "text-foreground bg-white/[0.06]",
                               isCollapsed && "justify-center px-0"
                             )}
                             title={isCollapsed ? item.title : undefined}
                           >
-                            <Icon className={cn("w-5 h-5 flex-shrink-0", isActive && "text-primary")} />
-                            {!isCollapsed && <span className="flex-1 text-sm font-medium">{item.title}</span>}
+                            <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-primary/0 via-primary/5 to-primary/0 opacity-0 group-hover/item:opacity-100 transition-opacity duration-300" />
+                            <Icon className={cn(
+                              "w-5 h-5 flex-shrink-0 relative z-10 transition-all duration-300",
+                              "group-hover/item:drop-shadow-[0_0_8px_rgba(255,59,59,0.4)]",
+                              isActive && "text-primary drop-shadow-[0_0_8px_rgba(255,59,59,0.5)]"
+                            )} />
+                            {!isCollapsed && <span className="flex-1 text-sm font-medium relative z-10">{item.title}</span>}
                           </a>
                         ) : (
                           <NavLink 
                             to={item.url} 
                             end={item.end}
                             className={cn(
-                              "sidebar-menu-item h-11",
-                              isActive && 'active',
+                              "relative h-12 rounded-xl flex items-center gap-3 px-4",
+                              "text-muted-foreground/90 hover:text-foreground",
+                              "bg-transparent hover:bg-white/[0.04]",
+                              "transition-all duration-300 ease-out",
+                              "group/item",
+                              isActive && "text-foreground bg-white/[0.06]",
                               isCollapsed && "justify-center px-0"
                             )}
                             title={isCollapsed ? item.title : undefined}
                           >
-                            <Icon className={cn("w-5 h-5 flex-shrink-0", isActive && "text-primary")} />
-                            {!isCollapsed && <span className="flex-1 text-sm font-medium">{item.title}</span>}
+                            {/* Indicador ativo lateral */}
+                            {isActive && (
+                              <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 rounded-r-full bg-primary shadow-[0_0_12px_rgba(255,59,59,0.6)]" />
+                            )}
+                            
+                            <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-primary/0 via-primary/5 to-primary/0 opacity-0 group-hover/item:opacity-100 transition-opacity duration-300" />
+                            
+                            <Icon className={cn(
+                              "w-5 h-5 flex-shrink-0 relative z-10 transition-all duration-300",
+                              "group-hover/item:drop-shadow-[0_0_8px_rgba(255,59,59,0.4)]",
+                              isActive && "text-primary drop-shadow-[0_0_8px_rgba(255,59,59,0.5)]"
+                            )} />
+                            {!isCollapsed && <span className="flex-1 text-sm font-medium relative z-10">{item.title}</span>}
                             {hasBadge && !isCollapsed && (
                               <Badge 
-                                className="ml-auto text-[10px] h-5 px-2 bg-primary/20 text-primary border border-primary/30 animate-pulse"
+                                className="ml-auto text-[10px] h-5 px-2.5 bg-primary/15 text-primary border-0 shadow-[0_0_12px_rgba(255,59,59,0.3)] animate-pulse relative z-10"
                               >
                                 {pendingCount > 9 ? "9+" : pendingCount}
                               </Badge>
                             )}
                             {hasBadge && isCollapsed && (
-                              <span className="absolute top-1 right-1 w-2 h-2 bg-primary rounded-full animate-pulse" />
+                              <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-primary rounded-full animate-pulse shadow-[0_0_8px_rgba(255,59,59,0.6)]" />
                             )}
                           </NavLink>
                         )}
@@ -317,21 +386,25 @@ export function AdminSidebar() {
         ))}
       </SidebarContent>
 
-      <SidebarFooter className="border-t border-border/30 p-4">
+      <SidebarFooter className="relative p-4">
+        {/* Separador gradiente sutil */}
+        <div className="absolute top-0 left-4 right-4 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+        
         <button
           onClick={handleLogout}
           className={cn(
-            "flex items-center w-full px-4 py-3 rounded-xl",
-            "text-muted-foreground hover:text-destructive",
-            "bg-transparent hover:bg-destructive/10",
-            "border border-transparent hover:border-destructive/20",
-            "transition-all duration-200",
+            "relative flex items-center w-full px-4 py-3.5 rounded-xl",
+            "text-muted-foreground/70 hover:text-red-400",
+            "bg-transparent hover:bg-red-500/10",
+            "transition-all duration-300 ease-out",
+            "group/logout",
             isCollapsed ? 'justify-center' : 'gap-3'
           )}
           title={isCollapsed ? "Sair" : undefined}
         >
-          <LogOut className="w-5 h-5 flex-shrink-0" />
-          {!isCollapsed && <span className="text-sm font-medium">Sair do Sistema</span>}
+          <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-red-500/0 via-red-500/5 to-red-500/0 opacity-0 group-hover/logout:opacity-100 transition-opacity duration-300" />
+          <LogOut className="w-5 h-5 flex-shrink-0 relative z-10 transition-all duration-300 group-hover/logout:drop-shadow-[0_0_8px_rgba(239,68,68,0.5)]" />
+          {!isCollapsed && <span className="text-sm font-medium relative z-10">Sair do Sistema</span>}
         </button>
       </SidebarFooter>
     </Sidebar>
