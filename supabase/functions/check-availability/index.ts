@@ -103,39 +103,64 @@ Deno.serve(async (req) => {
     const dateObj = new Date(date + 'T12:00:00');
     const dayOfWeek = dateObj.getDay();
 
-    // Buscar configurações do dia
-    const { data: configData, error: configError } = await supabase
-      .from('configuracoes_horario')
+    // PRIMEIRO: Verificar se existe exceção de horário para esta data específica
+    const { data: excecaoData, error: excecaoError } = await supabase
+      .from('horarios_excepcionais')
       .select('*')
-      .eq('dia_semana', dayOfWeek)
+      .eq('data', date)
       .maybeSingle();
 
-    if (configError) {
-      console.log('[check-availability] Erro ao buscar config:', configError.message);
+    if (excecaoError) {
+      console.log('[check-availability] Erro ao buscar exceção:', excecaoError.message);
     }
 
-    // Se não encontrou config no banco, retornar erro para forçar configuração
-    if (!configData) {
-      console.warn(`[check-availability] ATENÇÃO: Nenhuma configuração encontrada para dia ${dayOfWeek}. Usando padrão de emergência.`);
-    }
+    // Se existe exceção para esta data, usar ela em vez da configuração padrão
+    let config: BusinessHoursConfig;
 
-    // NUNCA usar valores hardcoded - sempre preferir dados do banco
-    const config: BusinessHoursConfig = configData ? {
-      aberto: configData.aberto,
-      hora_abertura: configData.hora_abertura,
-      hora_fechamento: configData.hora_fechamento,
-      hora_almoco_inicio: configData.hora_almoco_inicio,
-      hora_almoco_fim: configData.hora_almoco_fim,
-      delay_entre_servicos: configData.delay_entre_servicos || 10
-    } : {
-      // Fallback apenas se não houver dados no banco (emergência)
-      aberto: dayOfWeek !== 0, // Fechado domingo
-      hora_abertura: '09:00',
-      hora_fechamento: '21:00', // Padrão estendido para evitar bloqueios
-      hora_almoco_inicio: '13:00',
-      hora_almoco_fim: '14:00',
-      delay_entre_servicos: 10
-    };
+    if (excecaoData) {
+      console.log(`[check-availability] EXCEÇÃO ENCONTRADA para ${date}:`, JSON.stringify(excecaoData));
+      config = {
+        aberto: excecaoData.aberto,
+        hora_abertura: excecaoData.hora_abertura || '09:00',
+        hora_fechamento: excecaoData.hora_fechamento || '20:00',
+        hora_almoco_inicio: excecaoData.hora_almoco_inicio,
+        hora_almoco_fim: excecaoData.hora_almoco_fim,
+        delay_entre_servicos: 10 // Usar delay padrão para exceções
+      };
+    } else {
+      // Buscar configurações padrão do dia da semana
+      const { data: configData, error: configError } = await supabase
+        .from('configuracoes_horario')
+        .select('*')
+        .eq('dia_semana', dayOfWeek)
+        .maybeSingle();
+
+      if (configError) {
+        console.log('[check-availability] Erro ao buscar config:', configError.message);
+      }
+
+      if (!configData) {
+        console.warn(`[check-availability] ATENÇÃO: Nenhuma configuração encontrada para dia ${dayOfWeek}. Usando padrão de emergência.`);
+      }
+
+      // NUNCA usar valores hardcoded - sempre preferir dados do banco
+      config = configData ? {
+        aberto: configData.aberto,
+        hora_abertura: configData.hora_abertura,
+        hora_fechamento: configData.hora_fechamento,
+        hora_almoco_inicio: configData.hora_almoco_inicio,
+        hora_almoco_fim: configData.hora_almoco_fim,
+        delay_entre_servicos: configData.delay_entre_servicos || 10
+      } : {
+        // Fallback apenas se não houver dados no banco (emergência)
+        aberto: dayOfWeek !== 0, // Fechado domingo
+        hora_abertura: '09:00',
+        hora_fechamento: '21:00', // Padrão estendido para evitar bloqueios
+        hora_almoco_inicio: '13:00',
+        hora_almoco_fim: '14:00',
+        delay_entre_servicos: 10
+      };
+    }
 
     console.log(`[check-availability] Config do dia ${dayOfWeek}:`, JSON.stringify(config));
     console.log(`[check-availability] Horário: ${config.hora_abertura} - ${config.hora_fechamento}`);
