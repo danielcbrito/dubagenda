@@ -52,10 +52,32 @@ const Admin = () => {
 
   return (
     <SidebarProvider>
-      <div className="flex min-h-screen w-full bg-background">
+      <div className="relative flex h-screen w-full overflow-hidden bg-[#0E0E11]">
+        {/* Efeitos de luz premium no fundo */}
+        <div className="pointer-events-none fixed inset-0 z-0">
+          {/* Luz vermelha principal - canto superior direito */}
+          <div className="absolute -top-32 -right-32 w-[500px] h-[500px] bg-primary/15 rounded-full blur-[120px] animate-pulse" style={{ animationDuration: '4s' }} />
+          
+          {/* Luz vermelha secundária - canto inferior esquerdo */}
+          <div className="absolute -bottom-48 -left-48 w-[400px] h-[400px] bg-primary/10 rounded-full blur-[100px] animate-pulse" style={{ animationDuration: '6s', animationDelay: '2s' }} />
+          
+          {/* Pontinhos de luz vermelha dispersos */}
+          <div className="absolute top-[20%] left-[30%] w-2 h-2 bg-primary/40 rounded-full blur-sm animate-pulse" style={{ animationDuration: '3s' }} />
+          <div className="absolute top-[40%] right-[25%] w-1.5 h-1.5 bg-primary/30 rounded-full blur-sm animate-pulse" style={{ animationDuration: '4s', animationDelay: '1s' }} />
+          <div className="absolute bottom-[30%] left-[45%] w-2.5 h-2.5 bg-primary/35 rounded-full blur-sm animate-pulse" style={{ animationDuration: '5s', animationDelay: '0.5s' }} />
+          <div className="absolute top-[60%] right-[40%] w-1 h-1 bg-primary/25 rounded-full blur-sm animate-pulse" style={{ animationDuration: '3.5s', animationDelay: '2s' }} />
+          <div className="absolute bottom-[15%] right-[15%] w-2 h-2 bg-primary/30 rounded-full blur-sm animate-pulse" style={{ animationDuration: '4.5s', animationDelay: '1.5s' }} />
+          
+          {/* Gradiente sutil de profundidade */}
+          <div className="absolute inset-0 bg-gradient-to-br from-transparent via-transparent to-black/20" />
+        </div>
+        
+        {/* Sidebar fixa à esquerda */}
         <AdminSidebar />
-        <main className="flex-1 flex flex-col min-h-0 overflow-hidden transition-all duration-300">
-          <div className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-slim">
+        
+        {/* Conteúdo principal */}
+        <main className="relative z-10 flex-1 flex flex-col h-screen overflow-hidden transition-all duration-300">
+          <div className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-none">
             <div className="p-6 lg:p-8 max-w-[1600px] mx-auto">
               <Suspense fallback={
                 <div className="flex items-center justify-center min-h-[60vh]">

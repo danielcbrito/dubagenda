@@ -113,6 +113,16 @@ All colors MUST be HSL. */
     @apply border-border;
   }
 
+  /* 🔒 Esconde scrollbar mantendo funcionalidade */
+  .scrollbar-none {
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE/Edge */
+  }
+  
+  .scrollbar-none::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, Opera */
+  }
+
 body {
     @apply bg-background text-foreground antialiased;
     font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
