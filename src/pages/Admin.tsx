@@ -52,36 +52,38 @@ const Admin = () => {
 
   return (
     <SidebarProvider>
-      <div className="flex h-screen w-full bg-background">
+      <div className="flex min-h-screen w-full bg-background">
         <AdminSidebar />
-        <main className="flex-1 flex flex-col min-h-0 overflow-hidden">
-          <div className="flex-1 overflow-y-auto overflow-x-hidden p-6">
-          <Suspense fallback={
-            <div className="flex items-center justify-center h-screen">
-              <div className="text-center">
-                <Loader2 className="w-12 h-12 animate-spin text-primary mx-auto mb-4" />
-                <p className="text-muted-foreground">Carregando...</p>
-              </div>
+        <main className="flex-1 flex flex-col min-h-0 overflow-hidden transition-all duration-300">
+          <div className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-slim">
+            <div className="p-6 lg:p-8 max-w-[1600px] mx-auto">
+              <Suspense fallback={
+                <div className="flex items-center justify-center min-h-[60vh]">
+                  <div className="text-center space-y-4">
+                    <div className="w-12 h-12 rounded-full border-2 border-primary border-t-transparent animate-spin mx-auto" />
+                    <p className="text-muted-foreground text-sm">Carregando...</p>
+                  </div>
+                </div>
+              }>
+                <Routes>
+                  <Route index element={<AdminDashboard />} />
+                  <Route path="agenda" element={<AdminAgenda />} />
+                  <Route path="confirmacoes-pendentes" element={<AdminConfirmacoesPendentes />} />
+                  <Route path="clientes" element={<AdminClientes />} />
+                  <Route path="financeiro" element={<AdminFinanceiro />} />
+                  <Route path="relatorios" element={<AdminRelatorios />} />
+                  <Route path="servicos/*" element={<AdminServicos />} />
+                  <Route path="promocoes" element={<AdminPromocoes />} />
+                  <Route path="suporte" element={<AdminSuportePanel />} />
+                  <Route path="suporte-config" element={<AdminSuporteConfig />} />
+                  <Route path="configuracoes" element={<AdminConfiguracoes />} />
+                  <Route path="apis" element={<AdminAPIs />} />
+                  <Route path="seguranca" element={<AdminSeguranca />} />
+                  <Route path="horarios" element={<AdminHorarios />} />
+                  <Route path="dev" element={<AdminDev />} />
+                </Routes>
+              </Suspense>
             </div>
-          }>
-            <Routes>
-              <Route index element={<AdminDashboard />} />
-              <Route path="agenda" element={<AdminAgenda />} />
-              <Route path="confirmacoes-pendentes" element={<AdminConfirmacoesPendentes />} />
-              <Route path="clientes" element={<AdminClientes />} />
-              <Route path="financeiro" element={<AdminFinanceiro />} />
-              <Route path="relatorios" element={<AdminRelatorios />} />
-              <Route path="servicos/*" element={<AdminServicos />} />
-              <Route path="promocoes" element={<AdminPromocoes />} />
-              <Route path="suporte" element={<AdminSuportePanel />} />
-              <Route path="suporte-config" element={<AdminSuporteConfig />} />
-              <Route path="configuracoes" element={<AdminConfiguracoes />} />
-              <Route path="apis" element={<AdminAPIs />} />
-              <Route path="seguranca" element={<AdminSeguranca />} />
-              <Route path="horarios" element={<AdminHorarios />} />
-              <Route path="dev" element={<AdminDev />} />
-            </Routes>
-          </Suspense>
           </div>
         </main>
       </div>

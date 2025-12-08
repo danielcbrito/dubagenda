@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
-import { Calendar, DollarSign, Users, TrendingUp, Scissors, Clock } from "lucide-react";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { Calendar, DollarSign, Users, TrendingUp, Scissors, Clock, ArrowUpRight, ArrowDownRight } from "lucide-react";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from "recharts";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 
 interface Stats {
   todayAppointments: number;
@@ -25,6 +26,68 @@ interface RecentAppointment {
   servico: { nome: string } | null;
 }
 
+const StatCard = ({ 
+  title, 
+  value, 
+  subtitle, 
+  icon: Icon, 
+  trend, 
+  trendValue,
+  variant = "default" 
+}: {
+  title: string;
+  value: string | number;
+  subtitle: string;
+  icon: any;
+  trend?: "up" | "down";
+  trendValue?: string;
+  variant?: "default" | "gold" | "warning" | "danger";
+}) => {
+  const iconBgClass = {
+    default: "bg-gradient-primary shadow-glow-red",
+    gold: "bg-gradient-gold shadow-glow-gold",
+    warning: "bg-gradient-to-br from-amber-500 to-orange-600",
+    danger: "bg-gradient-to-br from-red-500 to-rose-600",
+  }[variant];
+
+  const valueColorClass = {
+    default: "text-foreground",
+    gold: "text-gold",
+    warning: "text-amber-400",
+    danger: "text-orange-400",
+  }[variant];
+
+  return (
+    <div className="stat-card hover-elevate group">
+      <div className="flex items-start justify-between">
+        <div className="space-y-3">
+          <p className="text-[11px] text-muted-foreground tracking-[0.15em] uppercase font-semibold">
+            {title}
+          </p>
+          <p className={cn("text-4xl font-bold tracking-tight", valueColorClass)}>
+            {value}
+          </p>
+          <div className="flex items-center gap-2">
+            <p className="text-sm text-muted-foreground">{subtitle}</p>
+            {trend && trendValue && (
+              <span className={cn(
+                "flex items-center gap-0.5 text-xs font-semibold px-2 py-0.5 rounded-full",
+                trend === "up" ? "bg-green-500/15 text-green-400" : "bg-red-500/15 text-red-400"
+              )}>
+                {trend === "up" ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
+                {trendValue}
+              </span>
+            )}
+          </div>
+        </div>
+        <div className={cn("stat-card-icon", iconBgClass)}>
+          <Icon className="w-6 h-6 text-white" strokeWidth={2} />
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export function AdminDashboard() {
   const [stats, setStats] = useState<Stats>({
     todayAppointments: 0,
@@ -41,7 +104,6 @@ export function AdminDashboard() {
   useEffect(() => {
     loadDashboardData();
     
-    // Real-time subscriptions
     const appointmentsChannel = supabase
       .channel('dashboard-appointments')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'agendamentos' }, () => {
@@ -64,16 +126,14 @@ export function AdminDashboard() {
 
   const loadDashboardData = async () => {
     try {
-      const today = format(new Date(), 'yyyy-MM-dd'); // Format without timezone conversion
+      const today = format(new Date(), 'yyyy-MM-dd');
       const firstDayOfMonth = format(new Date(new Date().getFullYear(), new Date().getMonth(), 1), 'yyyy-MM-dd');
 
-      // Today's appointments
       const { count: todayCount } = await supabase
         .from("agendamentos")
         .select("*", { count: "exact", head: true })
         .eq("data", today);
 
-      // Month revenue
       const { data: monthPayments } = await supabase
         .from("pagamentos")
         .select("valor")
@@ -82,32 +142,27 @@ export function AdminDashboard() {
 
       const monthRevenue = monthPayments?.reduce((sum, p) => sum + Number(p.valor), 0) || 0;
 
-      // Active clients
       const { count: clientsCount } = await supabase
         .from("profiles")
         .select("*", { count: "exact", head: true })
         .eq("blocked", false);
 
-      // Pending payments
       const { count: pendingCount } = await supabase
         .from("pagamentos")
         .select("*", { count: "exact", head: true })
         .eq("status", "pending");
 
-      // Total cuts this month
       const { count: cutsCount } = await supabase
         .from("agendamentos")
         .select("*", { count: "exact", head: true })
         .gte("data", firstDayOfMonth)
         .in("status", ["confirmed", "completed"]);
 
-      // Pending appointments
       const { count: pendingAppointments } = await supabase
         .from("agendamentos")
         .select("*", { count: "exact", head: true })
         .eq("status", "pending");
 
-      // Recent appointments
       const { data: appointments } = await supabase
         .from("agendamentos")
         .select("id, data, hora, status, preco, user_id, servico_id")
@@ -115,7 +170,6 @@ export function AdminDashboard() {
         .order("hora", { ascending: false })
         .limit(5);
 
-      // Get profile and service details for appointments
       const appointmentsWithDetails = await Promise.all(
         (appointments || []).map(async (apt) => {
           const { data: profile } = await supabase
@@ -138,7 +192,6 @@ export function AdminDashboard() {
         })
       );
 
-      // Revenue chart data (last 6 months)
       const monthsData = [];
       for (let i = 5; i >= 0; i--) {
         const date = new Date();
@@ -170,7 +223,6 @@ export function AdminDashboard() {
       });
 
       setRecentAppointments(appointmentsWithDetails);
-      
       setRevenueData(monthsData);
       setLoading(false);
     } catch (error) {
@@ -180,25 +232,22 @@ export function AdminDashboard() {
   };
 
   const getStatusBadge = (status: string) => {
-    const badges = {
-      pending: "bg-yellow-500/20 text-yellow-300 border-yellow-500/30",
-      confirmed: "bg-green-500/20 text-green-300 border-green-500/30",
-      completed: "bg-blue-500/20 text-blue-300 border-blue-500/30",
-      cancelled_by_admin: "bg-red-500/20 text-red-300 border-red-500/30",
-      cancelled_by_user: "bg-red-500/20 text-red-300 border-red-500/30",
-      no_show: "bg-gray-500/20 text-gray-300 border-gray-500/30",
+    const config = {
+      pending: { bg: "bg-amber-500/15", text: "text-amber-400", border: "border-amber-500/30", label: "Pendente" },
+      confirmed: { bg: "bg-green-500/15", text: "text-green-400", border: "border-green-500/30", label: "Confirmado" },
+      completed: { bg: "bg-blue-500/15", text: "text-blue-400", border: "border-blue-500/30", label: "Concluído" },
+      cancelled_by_admin: { bg: "bg-red-500/15", text: "text-red-400", border: "border-red-500/30", label: "Cancelado" },
+      cancelled_by_user: { bg: "bg-red-500/15", text: "text-red-400", border: "border-red-500/30", label: "Cancelado" },
+      no_show: { bg: "bg-gray-500/15", text: "text-gray-400", border: "border-gray-500/30", label: "Não Compareceu" },
     };
-    const labels = {
-      pending: "Pendente",
-      confirmed: "Confirmado",
-      completed: "Concluído",
-      cancelled_by_admin: "Cancelado",
-      cancelled_by_user: "Cancelado",
-      no_show: "Não Compareceu",
-    };
+    const statusConfig = config[status as keyof typeof config] || config.pending;
+    
     return (
-      <span className={`px-2 py-1 rounded-full text-xs border ${badges[status as keyof typeof badges] || badges.pending}`}>
-        {labels[status as keyof typeof labels] || status}
+      <span className={cn(
+        "px-3 py-1.5 rounded-full text-xs font-semibold border",
+        statusConfig.bg, statusConfig.text, statusConfig.border
+      )}>
+        {statusConfig.label}
       </span>
     );
   };
@@ -206,9 +255,9 @@ export function AdminDashboard() {
   if (loading) {
     return (
       <div className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {[1, 2, 3, 4, 5, 6].map(i => (
-            <Skeleton key={i} className="h-32" />
+            <Skeleton key={i} className="h-36 rounded-2xl" />
           ))}
         </div>
       </div>
@@ -218,179 +267,175 @@ export function AdminDashboard() {
   return (
     <div className="space-y-8 animate-fade-in">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold tracking-widest mb-2">DASHBOARD</h1>
-        <p className="text-muted-foreground text-sm tracking-wide">Visão geral do seu negócio premium</p>
-      </div>
-
-      {/* Stats Grid Ultra Premium */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="stat-card hover-elevate glow-red">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs text-muted-foreground tracking-widest uppercase mb-2">Hoje</p>
-              <p className="text-4xl font-bold tracking-wide">{stats.todayAppointments}</p>
-              <p className="text-sm text-muted-foreground mt-1">Agendamentos</p>
-            </div>
-            <div className="stat-card-icon">
-              <Calendar className="w-6 h-6 text-primary-foreground" strokeWidth={2.5} />
-            </div>
-          </div>
-        </div>
-
-        <div className="stat-card hover-elevate glow-red">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs text-muted-foreground tracking-widest uppercase mb-2">Mês</p>
-              <p className="text-4xl font-bold tracking-wide">
-                {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(stats.monthRevenue)}
-              </p>
-              <p className="text-sm text-muted-foreground mt-1">Receita</p>
-            </div>
-            <div className="stat-card-icon gold">
-              <DollarSign className="w-6 h-6 text-gold-foreground" strokeWidth={2.5} />
-            </div>
-          </div>
-        </div>
-
-        <div className="stat-card hover-elevate glow-red">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs text-muted-foreground tracking-widest uppercase mb-2">Total</p>
-              <p className="text-4xl font-bold tracking-wide">{stats.activeClients}</p>
-              <p className="text-sm text-muted-foreground mt-1">Clientes Ativos</p>
-            </div>
-            <div className="stat-card-icon">
-              <Users className="w-6 h-6 text-primary-foreground" strokeWidth={2.5} />
-            </div>
-          </div>
-        </div>
-
-        <div className="stat-card hover-elevate glow-red">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs text-muted-foreground tracking-widest uppercase mb-2">Pendente</p>
-              <p className="text-4xl font-bold tracking-wide text-yellow-400">{stats.pendingPayments}</p>
-              <p className="text-sm text-muted-foreground mt-1">Pagamentos</p>
-            </div>
-            <div className="stat-card-icon" style={{background: 'linear-gradient(135deg, hsl(45 100% 51%), hsl(38 100% 50%))'}}>
-              <TrendingUp className="w-6 h-6 text-gold-foreground" strokeWidth={2.5} />
-            </div>
-          </div>
-        </div>
-
-        <div className="stat-card hover-elevate glow-red">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs text-muted-foreground tracking-widest uppercase mb-2">Mês</p>
-              <p className="text-4xl font-bold tracking-wide">{stats.totalCutsMonth}</p>
-              <p className="text-sm text-muted-foreground mt-1">Cortes Realizados</p>
-            </div>
-            <div className="stat-card-icon">
-              <Scissors className="w-6 h-6 text-primary-foreground" strokeWidth={2.5} />
-            </div>
-          </div>
-        </div>
-
-        <div className="stat-card hover-elevate glow-red">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs text-muted-foreground tracking-widest uppercase mb-2">Aguardando</p>
-              <p className="text-4xl font-bold tracking-wide text-orange-400">{stats.pendingAppointments}</p>
-              <p className="text-sm text-muted-foreground mt-1">Confirmações</p>
-            </div>
-            <div className="stat-card-icon">
-              <Clock className="w-6 h-6 text-primary-foreground" strokeWidth={2.5} />
-            </div>
-          </div>
+      <div className="flex items-end justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight mb-1">Dashboard</h1>
+          <p className="text-muted-foreground text-sm">Visão geral do seu negócio • {format(new Date(), "dd 'de' MMMM, yyyy")}</p>
         </div>
       </div>
 
-      {/* Revenue Chart Premium */}
-      <div className="card-glass p-8 hover-elevate">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 rounded-lg bg-gradient-primary flex items-center justify-center shadow-glow-red">
-            <TrendingUp className="w-5 h-5 text-primary-foreground" strokeWidth={2.5} />
-          </div>
-          <div>
-            <h3 className="font-bold text-xl tracking-wide">Evolução de Receita</h3>
-            <p className="text-xs text-muted-foreground tracking-wide">Últimos 6 meses</p>
-          </div>
-        </div>
-        <ResponsiveContainer width="100%" height={300}>
-          <LineChart data={revenueData}>
-            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
-            <XAxis 
-              dataKey="month" 
-              stroke="hsl(var(--muted-foreground))" 
-              style={{ fontSize: '12px', fontWeight: 600 }}
-            />
-            <YAxis 
-              stroke="hsl(var(--muted-foreground))" 
-              style={{ fontSize: '12px', fontWeight: 600 }}
-            />
-            <Tooltip 
-              contentStyle={{ 
-                backgroundColor: 'hsl(var(--card))',
-                border: '1px solid hsl(var(--border))',
-                borderRadius: '12px',
-                backdropFilter: 'blur(12px)',
-                padding: '12px',
-                boxShadow: 'var(--shadow-premium)',
-              }}
-              labelStyle={{ color: 'hsl(var(--foreground))', fontWeight: 600 }}
-            />
-            <Line 
-              type="monotone" 
-              dataKey="receita" 
-              stroke="hsl(var(--primary))" 
-              strokeWidth={3}
-              dot={{ fill: 'hsl(var(--primary))', r: 6, strokeWidth: 2, stroke: 'hsl(var(--background))' }}
-              activeDot={{ r: 8, fill: 'hsl(var(--primary))', filter: 'drop-shadow(0 0 8px hsl(var(--primary)))' }}
-            />
-          </LineChart>
-        </ResponsiveContainer>
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        <StatCard
+          title="Hoje"
+          value={stats.todayAppointments}
+          subtitle="Agendamentos"
+          icon={Calendar}
+          trend="up"
+          trendValue="+12%"
+        />
+        <StatCard
+          title="Receita do Mês"
+          value={new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(stats.monthRevenue)}
+          subtitle="Faturamento"
+          icon={DollarSign}
+          variant="gold"
+          trend="up"
+          trendValue="+8%"
+        />
+        <StatCard
+          title="Clientes"
+          value={stats.activeClients}
+          subtitle="Ativos"
+          icon={Users}
+        />
+        <StatCard
+          title="Pagamentos"
+          value={stats.pendingPayments}
+          subtitle="Pendentes"
+          icon={TrendingUp}
+          variant="warning"
+        />
+        <StatCard
+          title="Cortes do Mês"
+          value={stats.totalCutsMonth}
+          subtitle="Realizados"
+          icon={Scissors}
+        />
+        <StatCard
+          title="Confirmações"
+          value={stats.pendingAppointments}
+          subtitle="Aguardando"
+          icon={Clock}
+          variant="danger"
+        />
       </div>
 
-      {/* Recent Appointments Premium */}
-      <div className="card-glass p-8 hover-elevate">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 rounded-lg bg-gradient-primary flex items-center justify-center shadow-glow-red">
-            <Calendar className="w-5 h-5 text-primary-foreground" strokeWidth={2.5} />
+      {/* Charts Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Revenue Chart */}
+        <Card className="glass-card p-6 hover-elevate">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-10 h-10 rounded-xl bg-gradient-primary flex items-center justify-center shadow-glow-red">
+              <TrendingUp className="w-5 h-5 text-white" strokeWidth={2} />
+            </div>
+            <div>
+              <h3 className="font-bold text-lg">Evolução de Receita</h3>
+              <p className="text-xs text-muted-foreground">Últimos 6 meses</p>
+            </div>
           </div>
-          <div>
-            <h3 className="font-bold text-xl tracking-wide">Agendamentos Recentes</h3>
-            <p className="text-xs text-muted-foreground tracking-wide">Últimas movimentações</p>
+          <ResponsiveContainer width="100%" height={280}>
+            <AreaChart data={revenueData}>
+              <defs>
+                <linearGradient id="colorReceita" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3}/>
+                  <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/>
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} vertical={false} />
+              <XAxis 
+                dataKey="month" 
+                stroke="hsl(var(--muted-foreground))" 
+                style={{ fontSize: '11px', fontWeight: 500 }}
+                tickLine={false}
+                axisLine={false}
+              />
+              <YAxis 
+                stroke="hsl(var(--muted-foreground))" 
+                style={{ fontSize: '11px', fontWeight: 500 }}
+                tickLine={false}
+                axisLine={false}
+                tickFormatter={(value) => `R$${value/1000}k`}
+              />
+              <Tooltip 
+                contentStyle={{ 
+                  backgroundColor: 'hsl(var(--card))',
+                  border: '1px solid hsl(var(--border))',
+                  borderRadius: '12px',
+                  backdropFilter: 'blur(12px)',
+                  padding: '12px 16px',
+                  boxShadow: 'var(--shadow-premium)',
+                }}
+                labelStyle={{ color: 'hsl(var(--foreground))', fontWeight: 600, marginBottom: 4 }}
+                formatter={(value: number) => [new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value), 'Receita']}
+              />
+              <Area 
+                type="monotone" 
+                dataKey="receita" 
+                stroke="hsl(var(--primary))" 
+                strokeWidth={3}
+                fill="url(#colorReceita)"
+                dot={{ fill: 'hsl(var(--primary))', r: 4, strokeWidth: 2, stroke: 'hsl(var(--background))' }}
+                activeDot={{ r: 6, fill: 'hsl(var(--primary))', filter: 'drop-shadow(0 0 8px hsl(var(--primary)))' }}
+              />
+            </AreaChart>
+          </ResponsiveContainer>
+        </Card>
+
+        {/* Recent Appointments */}
+        <Card className="glass-card p-6 hover-elevate">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-10 h-10 rounded-xl bg-gradient-primary flex items-center justify-center shadow-glow-red">
+              <Calendar className="w-5 h-5 text-white" strokeWidth={2} />
+            </div>
+            <div>
+              <h3 className="font-bold text-lg">Agendamentos Recentes</h3>
+              <p className="text-xs text-muted-foreground">Últimas movimentações</p>
+            </div>
           </div>
-        </div>
-        <div className="space-y-3">
-          {recentAppointments.map((apt) => (
-            <div
-              key={apt.id}
-              className="flex items-center justify-between p-5 rounded-xl bg-secondary/30 hover:bg-secondary/50 border border-border/30 hover:border-border-glow transition-all hover-elevate"
-            >
-              <div className="flex-1">
-                <p className="font-semibold text-base tracking-wide">{apt.profile?.nome || "Cliente"}</p>
-                <p className="text-sm text-muted-foreground mt-1 tracking-wide">
-                  {apt.servico?.nome || "Serviço"} • {new Date(`${apt.data}T12:00:00`).toLocaleDateString('pt-BR')} às {apt.hora}
-                </p>
+          <div className="space-y-3">
+            {recentAppointments.map((apt, index) => (
+              <div
+                key={apt.id}
+                className={cn(
+                  "flex items-center justify-between p-4 rounded-xl",
+                  "bg-secondary/40 hover:bg-secondary/60",
+                  "border border-border/30 hover:border-border/50",
+                  "transition-all duration-200 hover:-translate-y-0.5",
+                  "animate-fade-in"
+                )}
+                style={{ animationDelay: `${index * 50}ms` }}
+              >
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-full bg-primary/15 flex items-center justify-center border border-primary/20">
+                    <span className="text-sm font-bold text-primary">
+                      {apt.profile?.nome?.charAt(0) || "?"}
+                    </span>
+                  </div>
+                  <div>
+                    <p className="font-semibold text-sm">{apt.profile?.nome || "Cliente"}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {apt.servico?.nome || "Serviço"} • {new Date(`${apt.data}T12:00:00`).toLocaleDateString('pt-BR')} às {apt.hora}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-4">
+                  <span className="font-bold text-sm price-gold">
+                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(apt.preco))}
+                  </span>
+                  {getStatusBadge(apt.status)}
+                </div>
               </div>
-              <div className="flex items-center gap-4">
-                <span className="font-bold text-lg tracking-wide text-primary">
-                  {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(apt.preco))}
-                </span>
-                {getStatusBadge(apt.status)}
+            ))}
+            
+            {recentAppointments.length === 0 && (
+              <div className="text-center py-12">
+                <Calendar className="w-16 h-16 mx-auto mb-4 text-muted-foreground/20" strokeWidth={1} />
+                <p className="text-muted-foreground text-sm">Nenhum agendamento recente</p>
               </div>
-            </div>
-          ))}
-          
-          {recentAppointments.length === 0 && (
-            <div className="text-center py-12">
-              <Calendar className="w-16 h-16 mx-auto mb-4 text-muted-foreground/30" strokeWidth={1.5} />
-              <p className="text-muted-foreground tracking-wide">Nenhum agendamento recente</p>
-            </div>
-          )}
-        </div>
+            )}
+          </div>
+        </Card>
       </div>
     </div>
   );
