@@ -11,6 +11,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { ErrorBoundary } from "./ErrorBoundary";
+import { cn } from "@/lib/utils";
 
 interface ManualBookingModalProps {
   open: boolean;
@@ -287,35 +288,45 @@ export function ManualBookingModal({ open, onOpenChange, date, time, onSuccess }
   return (
     <ErrorBoundary>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-lg">
-        <DialogHeader className="space-y-3 pb-4">
-          <DialogTitle className="flex items-center gap-2">
-            <Calendar className="h-5 w-5 text-primary" />
-            Criar Encaixe Manual
+        <DialogContent className="max-w-[480px]">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center">
+              <Calendar className="h-5 w-5 text-primary" />
+            </div>
+            <span>Criar Encaixe Manual</span>
           </DialogTitle>
-          <DialogDescription className="flex items-center gap-2 text-xs">
-            <Calendar className="h-3.5 w-3.5" />
+          <DialogDescription className="flex items-center gap-2 text-sm">
+            <Calendar className="h-4 w-4" />
             {new Date(`${date}T12:00:00`).toLocaleDateString("pt-BR", { 
               weekday: 'short', 
               day: '2-digit', 
               month: 'short'
             })}
-            <span className="mx-1">•</span>
-            <Clock className="h-3.5 w-3.5" />
+            <span className="text-muted-foreground/50">•</span>
+            <Clock className="h-4 w-4" />
             {time}
           </DialogDescription>
         </DialogHeader>
 
-        {/* Stepper */}
-        <div className="flex items-center justify-center gap-2 pb-4">
+        {/* Premium Stepper */}
+        <div className="flex items-center justify-center gap-1 py-4">
           {[1, 2, 3].map((s) => (
             <div key={s} className="flex items-center">
-              <div className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-semibold transition-colors ${
-                step >= s ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
-              }`}>
+              <div className={cn(
+                "flex items-center justify-center w-9 h-9 rounded-full text-sm font-bold transition-all duration-300",
+                step >= s 
+                  ? 'bg-primary text-primary-foreground shadow-[0_0_20px_rgba(255,59,59,0.4)]' 
+                  : 'bg-white/[0.05] text-muted-foreground border border-white/[0.08]'
+              )}>
                 {step > s ? <Check className="h-4 w-4" /> : s}
               </div>
-              {s < 3 && <div className={`w-12 h-0.5 ${step > s ? 'bg-primary' : 'bg-muted'}`} />}
+              {s < 3 && (
+                <div className={cn(
+                  "w-10 h-0.5 mx-1 transition-all duration-300 rounded-full",
+                  step > s ? 'bg-primary' : 'bg-white/[0.08]'
+                )} />
+              )}
             </div>
           ))}
         </div>
