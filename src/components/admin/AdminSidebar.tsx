@@ -142,15 +142,15 @@ export function AdminSidebar() {
   return (
     <Sidebar 
       className={cn(
-        "group/sidebar relative overflow-y-auto transition-all duration-500 ease-out",
-        "bg-gradient-to-b from-[rgba(30,30,34,0.85)] via-[rgba(38,38,44,0.8)] to-[rgba(30,30,34,0.85)]",
-        "backdrop-blur-[16px]",
-        "shadow-[0_8px_32px_rgba(0,0,0,0.4),0_2px_8px_rgba(0,0,0,0.2)]",
+        "group/sidebar relative h-screen flex-shrink-0 transition-all duration-500 ease-out",
+        "bg-gradient-to-b from-[rgba(30,30,34,0.95)] via-[rgba(38,38,44,0.92)] to-[rgba(30,30,34,0.95)]",
+        "backdrop-blur-[18px]",
+        "shadow-[0_8px_32px_rgba(0,0,0,0.5),0_2px_8px_rgba(0,0,0,0.3)]",
         "border-r-0",
         // Reflexo diagonal premium
-        "before:absolute before:inset-0 before:bg-gradient-to-br before:from-white/[0.08] before:via-transparent before:to-transparent before:pointer-events-none",
-        // Brilho sutil na borda
-        "after:absolute after:inset-y-0 after:right-0 after:w-px after:bg-gradient-to-b after:from-transparent after:via-white/[0.1] after:to-transparent after:pointer-events-none",
+        "before:absolute before:inset-0 before:bg-gradient-to-br before:from-white/[0.06] before:via-transparent before:to-transparent before:pointer-events-none before:z-10",
+        // Brilho sutil na borda direita
+        "after:absolute after:inset-y-0 after:right-0 after:w-px after:bg-gradient-to-b after:from-transparent after:via-white/[0.08] after:to-transparent after:pointer-events-none",
         isCollapsed ? "w-[72px]" : "w-[280px]"
       )}
     >
@@ -211,7 +211,7 @@ export function AdminSidebar() {
         {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
       </button>
 
-      <SidebarContent className="px-3 py-4" style={{ overflowX: 'hidden' }}>
+      <SidebarContent className="flex-1 px-3 py-4 overflow-y-auto overflow-x-hidden scrollbar-none">
         {menuGroups.map((group, groupIndex) => (
           <SidebarGroup 
             key={group.label} 
