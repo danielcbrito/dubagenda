@@ -2,7 +2,6 @@ import { useEffect, Suspense } from "react";
 import { useNavigate, Routes, Route } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { SidebarProvider } from "@/components/ui/sidebar";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
 import { Loader2 } from "lucide-react";
 import { AdminDashboard } from "@/components/admin/AdminDashboard";
@@ -51,8 +50,7 @@ const Admin = () => {
   };
 
   return (
-    <SidebarProvider>
-      <div className="relative flex h-screen w-full overflow-hidden bg-[#0E0E11]">
+    <div className="relative flex h-screen w-full overflow-hidden bg-[#0E0E11]">
         {/* Efeitos de luz premium no fundo */}
         <div className="pointer-events-none fixed inset-0 z-0">
           {/* Luz vermelha principal - canto superior direito */}
@@ -107,9 +105,8 @@ const Admin = () => {
               </Suspense>
             </div>
           </div>
-        </main>
-      </div>
-    </SidebarProvider>
+      </main>
+    </div>
   );
 };
 
