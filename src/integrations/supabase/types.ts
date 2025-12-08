@@ -543,6 +543,45 @@ export type Database = {
           },
         ]
       }
+      horarios_excepcionais: {
+        Row: {
+          aberto: boolean
+          created_at: string | null
+          data: string
+          hora_abertura: string | null
+          hora_almoco_fim: string | null
+          hora_almoco_inicio: string | null
+          hora_fechamento: string | null
+          id: string
+          motivo: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          aberto?: boolean
+          created_at?: string | null
+          data: string
+          hora_abertura?: string | null
+          hora_almoco_fim?: string | null
+          hora_almoco_inicio?: string | null
+          hora_fechamento?: string | null
+          id?: string
+          motivo?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          aberto?: boolean
+          created_at?: string | null
+          data?: string
+          hora_abertura?: string | null
+          hora_almoco_fim?: string | null
+          hora_almoco_inicio?: string | null
+          hora_fechamento?: string | null
+          id?: string
+          motivo?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       informacoes_aplicativo: {
         Row: {
           ativo: boolean | null
