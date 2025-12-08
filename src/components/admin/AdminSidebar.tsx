@@ -1,4 +1,4 @@
-import { Home, Calendar, Users, DollarSign, FileText, Gift, Settings, LogOut, CheckCircle, Scissors, Code, Menu, ChevronDown, ChevronRight, ShieldCheck, Key, HeadphonesIcon, Clock } from "lucide-react";
+import { Home, Calendar, Users, DollarSign, FileText, Gift, Settings, LogOut, CheckCircle, Scissors, Code, ChevronDown, ChevronRight, ChevronLeft, HeadphonesIcon, Clock, BarChart3, CreditCard, Layers } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -24,6 +24,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import { cn } from "@/lib/utils";
 
 // 🎨 Grupos organizados premium com gavetas
 const menuGroups = [
@@ -33,33 +34,26 @@ const menuGroups = [
       { title: "Visão Geral", url: "/admin", icon: Home, end: true },
     ],
   },
-    {
-      label: "Atendimento",
-      items: [
-        { title: "Agenda", url: "/agenda-fullscreen", icon: Calendar, openInNewTab: true },
-        { title: "Confirmações", url: "/admin/confirmacoes-pendentes", icon: CheckCircle, badge: true },
-      ],
-    },
+  {
+    label: "Atendimento",
+    items: [
+      { title: "Agenda", url: "/agenda-fullscreen", icon: Calendar, openInNewTab: true },
+      { title: "Confirmações", url: "/admin/confirmacoes-pendentes", icon: CheckCircle, badge: true },
+    ],
+  },
   {
     label: "Pagamentos",
     items: [
       { title: "Clientes", url: "/admin/clientes", icon: Users },
-      { title: "Financeiro", url: "/admin/financeiro", icon: DollarSign },
-      { title: "Relatórios", url: "/admin/relatorios", icon: FileText },
+      { title: "Financeiro", url: "/admin/financeiro", icon: CreditCard },
+      { title: "Relatórios", url: "/admin/relatorios", icon: BarChart3 },
     ],
   },
   {
-    label: "Administração",
+    label: "Serviços",
     items: [
-      { 
-        title: "Serviços", 
-        icon: Scissors, 
-        hasSubmenu: true,
-        submenuItems: [
-          { title: "Cortes", url: "/admin/servicos/cortes" },
-          { title: "Planos", url: "/admin/servicos/planos" },
-        ]
-      },
+      { title: "Cortes", url: "/admin/servicos/cortes", icon: Scissors },
+      { title: "Planos", url: "/admin/servicos/planos", icon: Layers },
       { title: "Promoções", url: "/admin/promocoes", icon: Gift },
     ],
   },
@@ -67,14 +61,14 @@ const menuGroups = [
     label: "Sistema",
     items: [
       { title: "Horários", url: "/admin/horarios", icon: Clock },
-      { title: "Tickets Suporte", url: "/admin/suporte", icon: HeadphonesIcon },
+      { title: "Suporte", url: "/admin/suporte", icon: HeadphonesIcon },
       { 
-        title: "Config. Suporte", 
+        title: "Configurações", 
         icon: Settings, 
         hasSubmenu: true,
         submenuItems: [
-          { title: "Configurações Gerais", url: "/admin/suporte-config" },
-          { title: "APIs & Integrações", url: "/admin/apis" },
+          { title: "Geral", url: "/admin/suporte-config" },
+          { title: "APIs", url: "/admin/apis" },
           { title: "Segurança", url: "/admin/seguranca" },
           { title: "Dev Tools", url: "/admin/dev" },
         ]
@@ -88,9 +82,7 @@ export function AdminSidebar() {
   const navigate = useNavigate();
   const [pendingCount, setPendingCount] = useState(0);
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [openMenus, setOpenMenus] = useState<Record<string, boolean>>({
-    'Atendimento': true, // Default open
-  });
+  const [openMenus, setOpenMenus] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     const loadPendingCount = async () => {
@@ -149,51 +141,60 @@ export function AdminSidebar() {
 
   return (
     <Sidebar 
-      className="sidebar-glass border-r-0 overflow-y-auto"
-      style={{ 
-        width: isCollapsed ? '64px' : '260px',
-        transition: 'width 250ms cubic-bezier(0.4, 0, 0.2, 1)',
-        scrollbarWidth: 'none',
-        msOverflowStyle: 'none',
-        WebkitOverflowScrolling: 'touch'
-      }}
+      className={cn(
+        "sidebar-premium border-r-0 overflow-y-auto transition-all duration-300 ease-out",
+        isCollapsed ? "w-[72px]" : "w-[280px]"
+      )}
     >
-      <SidebarHeader className="border-b border-border/50 py-3 px-3">
+      {/* Header */}
+      <SidebarHeader className="border-b border-border/30 py-4 px-4">
         <div className="flex items-center justify-between">
           {!isCollapsed && (
-            <div className="flex items-center gap-2">
-              <img src={logoDub} alt="DUB" className="w-8 h-8 object-contain" />
+            <div className="flex items-center gap-3">
+              <div className="relative">
+                <img src={logoDub} alt="DUB" className="w-10 h-10 object-contain" />
+                <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-background" />
+              </div>
               <div className="flex flex-col">
-                <span className="font-semibold text-sm tracking-wide text-primary">DUB</span>
-                <span className="text-[9px] text-muted-foreground">Admin Panel</span>
+                <span className="font-bold text-base tracking-wide text-foreground">DUB</span>
+                <span className="text-[10px] text-muted-foreground tracking-wider uppercase">Admin Panel</span>
               </div>
             </div>
           )}
           {isCollapsed && (
-            <img src={logoDub} alt="DUB" className="w-8 h-8 object-contain mx-auto" />
+            <div className="mx-auto relative">
+              <img src={logoDub} alt="DUB" className="w-10 h-10 object-contain" />
+              <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-background" />
+            </div>
           )}
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setIsCollapsed(!isCollapsed)}
-            className="h-8 w-8 hover:bg-secondary/50 shrink-0"
-            title={isCollapsed ? "Expandir" : "Recolher"}
-          >
-            {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
-          </Button>
         </div>
       </SidebarHeader>
 
-      <SidebarContent className="px-2 py-3" style={{ overflowX: 'hidden' }}>
+      {/* Toggle Button */}
+      <button
+        onClick={() => setIsCollapsed(!isCollapsed)}
+        className={cn(
+          "absolute top-20 -right-3 z-50 w-6 h-6 rounded-full",
+          "bg-primary text-primary-foreground",
+          "flex items-center justify-center",
+          "shadow-lg hover:scale-110 transition-transform",
+          "border-2 border-background"
+        )}
+        title={isCollapsed ? "Expandir" : "Recolher"}
+      >
+        {isCollapsed ? <ChevronRight className="h-3.5 w-3.5" /> : <ChevronLeft className="h-3.5 w-3.5" />}
+      </button>
+
+      <SidebarContent className="px-3 py-4" style={{ overflowX: 'hidden' }}>
         {menuGroups.map((group) => (
-          <SidebarGroup key={group.label} className="mb-3">
+          <SidebarGroup key={group.label} className="mb-4">
             {!isCollapsed && (
-              <SidebarGroupLabel className="text-[10px] font-semibold tracking-wider text-muted-foreground/60 px-3 mb-1.5">
+              <SidebarGroupLabel className="text-[10px] font-bold tracking-[0.15em] text-muted-foreground/50 px-3 mb-2 uppercase">
                 {group.label}
               </SidebarGroupLabel>
             )}
             <SidebarGroupContent>
-              <SidebarMenu className="space-y-0.5">
+              <SidebarMenu className="space-y-1">
                 {group.items.map((item) => {
                   const isActive = isItemActive(item);
                   const Icon = item.icon;
@@ -207,24 +208,29 @@ export function AdminSidebar() {
                         <SidebarMenuItem>
                           <CollapsibleTrigger asChild>
                             <SidebarMenuButton 
-                              className={`sidebar-menu-item h-10 ${isActive ? 'active' : ''}`}
+                              className={cn(
+                                "sidebar-menu-item h-11",
+                                isActive && "active",
+                                isCollapsed && "justify-center px-0"
+                              )}
                               title={isCollapsed ? item.title : undefined}
                             >
-                              <Icon className="w-5 h-5 flex-shrink-0" />
+                              <Icon className={cn("w-5 h-5 flex-shrink-0", isActive && "text-primary")} />
                               {!isCollapsed && (
                                 <>
-                                  <span className="flex-1 text-sm">{item.title}</span>
+                                  <span className="flex-1 text-sm font-medium">{item.title}</span>
                                   <ChevronDown
-                                    className={`w-3.5 h-3.5 transition-transform duration-200 ${
-                                      isOpen ? 'rotate-180' : ''
-                                    }`}
+                                    className={cn(
+                                      "w-4 h-4 transition-transform duration-200 text-muted-foreground",
+                                      isOpen && 'rotate-180'
+                                    )}
                                   />
                                 </>
                               )}
                             </SidebarMenuButton>
                           </CollapsibleTrigger>
                           {!isCollapsed && (
-                            <CollapsibleContent className="pl-5 mt-0.5 space-y-0.5">
+                            <CollapsibleContent className="pl-6 mt-1 space-y-0.5">
                               {item.submenuItems?.map((subItem: any) => {
                                 const subIsActive = location.pathname === subItem.url;
                                 return (
@@ -235,15 +241,17 @@ export function AdminSidebar() {
                                   >
                                     <NavLink
                                       to={subItem.url}
-                                      className={`flex items-center gap-3 px-4 py-2 rounded-lg text-xs transition-all ${
+                                      className={cn(
+                                        "flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm transition-all",
                                         subIsActive 
-                                          ? 'text-primary font-semibold bg-primary/10' 
+                                          ? 'text-primary font-semibold bg-primary/10 border border-primary/20' 
                                           : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50'
-                                      }`}
+                                      )}
                                     >
-                                      <div className={`w-1.5 h-1.5 rounded-full ${
-                                        subIsActive ? 'bg-primary' : 'bg-muted-foreground'
-                                      }`} />
+                                      <div className={cn(
+                                        "w-1.5 h-1.5 rounded-full transition-colors",
+                                        subIsActive ? 'bg-primary shadow-[0_0_8px_rgba(255,59,59,0.5)]' : 'bg-muted-foreground/50'
+                                      )} />
                                       {subItem.title}
                                     </NavLink>
                                   </SidebarMenuButton>
@@ -264,28 +272,38 @@ export function AdminSidebar() {
                             href={item.url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className={`sidebar-menu-item h-10 ${isActive ? 'active' : ''}`}
+                            className={cn(
+                              "sidebar-menu-item h-11",
+                              isActive && 'active',
+                              isCollapsed && "justify-center px-0"
+                            )}
                             title={isCollapsed ? item.title : undefined}
                           >
-                            <Icon className="w-5 h-5 flex-shrink-0" />
-                            {!isCollapsed && <span className="flex-1 text-sm">{item.title}</span>}
+                            <Icon className={cn("w-5 h-5 flex-shrink-0", isActive && "text-primary")} />
+                            {!isCollapsed && <span className="flex-1 text-sm font-medium">{item.title}</span>}
                           </a>
                         ) : (
                           <NavLink 
                             to={item.url} 
                             end={item.end}
-                            className={`sidebar-menu-item h-10 ${isActive ? 'active' : ''}`}
+                            className={cn(
+                              "sidebar-menu-item h-11",
+                              isActive && 'active',
+                              isCollapsed && "justify-center px-0"
+                            )}
                             title={isCollapsed ? item.title : undefined}
                           >
-                            <Icon className="w-5 h-5 flex-shrink-0" />
-                            {!isCollapsed && <span className="flex-1 text-sm">{item.title}</span>}
+                            <Icon className={cn("w-5 h-5 flex-shrink-0", isActive && "text-primary")} />
+                            {!isCollapsed && <span className="flex-1 text-sm font-medium">{item.title}</span>}
                             {hasBadge && !isCollapsed && (
                               <Badge 
-                                variant="destructive" 
-                                className="ml-auto text-[10px] h-4 px-1.5"
+                                className="ml-auto text-[10px] h-5 px-2 bg-primary/20 text-primary border border-primary/30 animate-pulse"
                               >
                                 {pendingCount > 9 ? "9+" : pendingCount}
                               </Badge>
+                            )}
+                            {hasBadge && isCollapsed && (
+                              <span className="absolute top-1 right-1 w-2 h-2 bg-primary rounded-full animate-pulse" />
                             )}
                           </NavLink>
                         )}
@@ -299,16 +317,21 @@ export function AdminSidebar() {
         ))}
       </SidebarContent>
 
-      <SidebarFooter className="border-t border-border/50 p-3">
+      <SidebarFooter className="border-t border-border/30 p-4">
         <button
           onClick={handleLogout}
-          className={`flex items-center w-full px-3 py-2.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all ${
+          className={cn(
+            "flex items-center w-full px-4 py-3 rounded-xl",
+            "text-muted-foreground hover:text-destructive",
+            "bg-transparent hover:bg-destructive/10",
+            "border border-transparent hover:border-destructive/20",
+            "transition-all duration-200",
             isCollapsed ? 'justify-center' : 'gap-3'
-          }`}
+          )}
           title={isCollapsed ? "Sair" : undefined}
         >
           <LogOut className="w-5 h-5 flex-shrink-0" />
-          {!isCollapsed && <span className="text-sm font-medium">Sair</span>}
+          {!isCollapsed && <span className="text-sm font-medium">Sair do Sistema</span>}
         </button>
       </SidebarFooter>
     </Sidebar>

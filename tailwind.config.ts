@@ -22,6 +22,7 @@ export default {
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
         background: "hsl(var(--background))",
+        'background-elevated': "hsl(var(--background-elevated))",
         foreground: "hsl(var(--foreground))",
         primary: {
           DEFAULT: "hsl(var(--primary))",
@@ -35,6 +36,10 @@ export default {
         destructive: {
           DEFAULT: "hsl(var(--destructive))",
           foreground: "hsl(var(--destructive-foreground))",
+        },
+        success: {
+          DEFAULT: "hsl(var(--success))",
+          foreground: "hsl(var(--success-foreground))",
         },
         muted: {
           DEFAULT: "hsl(var(--muted))",
@@ -50,6 +55,7 @@ export default {
         },
         card: {
           DEFAULT: "hsl(var(--card))",
+          elevated: "hsl(var(--card-elevated))",
           foreground: "hsl(var(--card-foreground))",
         },
         gold: {

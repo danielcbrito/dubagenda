@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import { Loader2, Plus, Trash2, Pencil, AlertTriangle } from "lucide-react";
+import { Loader2, Plus, Scissors, Clock, MoreVertical, Pencil, Trash2, AlertTriangle } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -25,6 +25,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { cn } from "@/lib/utils";
 
 interface Servico {
   id: string;
@@ -164,9 +171,7 @@ export function AdminCortes() {
         .eq("id", servico.id);
 
       if (error) throw error;
-      toast.success(
-        servico.ativo ? "Corte desativado" : "Corte ativado"
-      );
+      toast.success(servico.ativo ? "Corte desativado" : "Corte ativado");
     } catch (error: any) {
       toast.error("Erro ao atualizar status: " + error.message);
     }
@@ -210,101 +215,100 @@ export function AdminCortes() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fade-in">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Cortes</h1>
-          <p className="text-muted-foreground">
-            Gerencie os serviços de corte oferecidos
+          <h1 className="text-3xl font-bold tracking-tight mb-1">Cortes</h1>
+          <p className="text-muted-foreground text-sm">
+            Gerencie os serviços de corte • {servicos.length} serviços
           </p>
         </div>
 
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
-            <Button onClick={() => handleOpenDialog()}>
-              <Plus className="w-4 h-4 mr-2" />
+            <Button onClick={() => handleOpenDialog()} className="btn-neon gap-2">
+              <Plus className="w-4 h-4" />
               Novo Corte
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-md">
+          <DialogContent className="max-w-md glass-card border-border">
             <DialogHeader>
-              <DialogTitle>
+              <DialogTitle className="text-xl font-bold">
                 {editingServico ? "Editar Corte" : "Novo Corte"}
               </DialogTitle>
             </DialogHeader>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <Label htmlFor="nome">Nome *</Label>
+            <form onSubmit={handleSubmit} className="space-y-5 pt-2">
+              <div className="space-y-2">
+                <Label htmlFor="nome" className="text-sm font-medium">Nome *</Label>
                 <Input
                   id="nome"
                   value={formData.nome}
-                  onChange={(e) =>
-                    setFormData({ ...formData, nome: e.target.value })
-                  }
+                  onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
                   placeholder="Ex: Corte Social"
+                  className="input-glass"
                   required
                 />
               </div>
 
-              <div>
-                <Label htmlFor="preco">Preço (R$) *</Label>
-                <Input
-                  id="preco"
-                  type="number"
-                  step="0.01"
-                  value={formData.preco}
-                  onChange={(e) =>
-                    setFormData({ ...formData, preco: e.target.value })
-                  }
-                  placeholder="50.00"
-                  required
-                />
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="preco" className="text-sm font-medium">Preço (R$) *</Label>
+                  <Input
+                    id="preco"
+                    type="number"
+                    step="0.01"
+                    value={formData.preco}
+                    onChange={(e) => setFormData({ ...formData, preco: e.target.value })}
+                    placeholder="50.00"
+                    className="input-glass"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="duracao" className="text-sm font-medium">Duração (min) *</Label>
+                  <Input
+                    id="duracao"
+                    type="number"
+                    value={formData.duracao_minutos}
+                    onChange={(e) => setFormData({ ...formData, duracao_minutos: e.target.value })}
+                    placeholder="30"
+                    className="input-glass"
+                    required
+                  />
+                </div>
               </div>
 
-              <div>
-                <Label htmlFor="duracao">Duração (minutos) *</Label>
-                <Input
-                  id="duracao"
-                  type="number"
-                  value={formData.duracao_minutos}
-                  onChange={(e) =>
-                    setFormData({ ...formData, duracao_minutos: e.target.value })
-                  }
-                  placeholder="30"
-                  required
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="descricao">Descrição</Label>
+              <div className="space-y-2">
+                <Label htmlFor="descricao" className="text-sm font-medium">Descrição</Label>
                 <Textarea
                   id="descricao"
                   value={formData.descricao}
-                  onChange={(e) =>
-                    setFormData({ ...formData, descricao: e.target.value })
-                  }
+                  onChange={(e) => setFormData({ ...formData, descricao: e.target.value })}
                   placeholder="Descrição do corte"
                   rows={3}
+                  className="input-glass resize-none"
                 />
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-3 p-3 rounded-xl bg-secondary/30 border border-border/50">
                 <Switch
                   id="ativo"
                   checked={formData.ativo}
-                  onCheckedChange={(checked) =>
-                    setFormData({ ...formData, ativo: checked })
-                  }
+                  onCheckedChange={(checked) => setFormData({ ...formData, ativo: checked })}
                 />
-                <Label htmlFor="ativo">Corte ativo</Label>
+                <Label htmlFor="ativo" className="text-sm font-medium cursor-pointer">
+                  Corte ativo e disponível para agendamento
+                </Label>
               </div>
 
-              <div className="flex gap-2 pt-4">
+              <div className="flex gap-3 pt-2">
                 <Button type="button" variant="outline" onClick={handleCloseDialog} className="flex-1">
                   Cancelar
                 </Button>
-                <Button type="submit" className="flex-1">
+                <Button type="submit" className="flex-1 btn-neon">
                   {editingServico ? "Atualizar" : "Criar"}
                 </Button>
               </div>
@@ -313,57 +317,75 @@ export function AdminCortes() {
         </Dialog>
       </div>
 
+      {/* Grid de serviços */}
       {servicos.length === 0 ? (
-        <Card className="p-8 text-center">
-          <p className="text-muted-foreground">
-            Nenhum corte cadastrado ainda
-          </p>
+        <Card className="glass-card p-12 text-center">
+          <Scissors className="w-16 h-16 text-muted-foreground/20 mx-auto mb-4" strokeWidth={1} />
+          <p className="text-muted-foreground">Nenhum corte cadastrado ainda</p>
         </Card>
       ) : (
-        <div className="grid gap-4">
-          {servicos.map((servico) => (
-            <Card key={servico.id} className="p-6">
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex-1 space-y-1">
-                  <div className="flex items-center gap-3">
-                    <h3 className="text-lg font-semibold text-foreground">
-                      {servico.nome}
-                    </h3>
-                    <span className="text-lg font-bold text-primary">
-                      R$ {servico.preco.toFixed(2)}
-                    </span>
-                  </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          {servicos.map((servico, index) => (
+            <Card 
+              key={servico.id} 
+              className={cn(
+                "glass-card p-5 hover-elevate animate-fade-in",
+                !servico.ativo && "opacity-60"
+              )}
+              style={{ animationDelay: `${index * 50}ms` }}
+            >
+              <div className="flex items-start justify-between mb-4">
+                <div className="w-12 h-12 rounded-xl bg-gradient-primary flex items-center justify-center shadow-glow-red">
+                  <Scissors className="w-5 h-5 text-white" />
+                </div>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                      <MoreVertical className="w-4 h-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-40">
+                    <DropdownMenuItem onClick={() => handleOpenDialog(servico)} className="gap-2">
+                      <Pencil className="w-4 h-4" />
+                      Editar
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleOpenDeleteDialog(servico)} className="gap-2 text-destructive">
+                      <Trash2 className="w-4 h-4" />
+                      Excluir
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
 
+              <div className="space-y-3">
+                <div>
+                  <h3 className="text-lg font-bold text-foreground mb-1">{servico.nome}</h3>
                   {servico.descricao && (
-                    <p className="text-sm text-muted-foreground">
-                      {servico.descricao}
-                    </p>
+                    <p className="text-sm text-muted-foreground line-clamp-2">{servico.descricao}</p>
                   )}
-
-                  <p className="text-sm text-muted-foreground">
-                    Duração: {servico.duracao_minutos} minutos
-                  </p>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center justify-between pt-2 border-t border-border/30">
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Clock className="w-4 h-4" />
+                    <span className="text-sm">{servico.duracao_minutos} min</span>
+                  </div>
+                  <span className="text-xl font-bold price-gold">
+                    R$ {servico.preco.toFixed(2)}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between pt-2">
+                  <span className={cn(
+                    "status-tag",
+                    servico.ativo ? "active" : "blocked"
+                  )}>
+                    {servico.ativo ? "Ativo" : "Inativo"}
+                  </span>
                   <Switch
                     checked={servico.ativo}
                     onCheckedChange={() => handleToggleAtivo(servico)}
                   />
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleOpenDialog(servico)}
-                  >
-                    <Pencil className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleOpenDeleteDialog(servico)}
-                  >
-                    <Trash2 className="w-4 h-4 text-destructive" />
-                  </Button>
                 </div>
               </div>
             </Card>
@@ -371,18 +393,18 @@ export function AdminCortes() {
         </div>
       )}
 
-      {/* Delete Confirmation Dialog */}
+      {/* Delete Confirmation */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
+        <AlertDialogContent className="glass-card border-border">
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
               <AlertTriangle className="w-5 h-5 text-destructive" />
-              Tem certeza que deseja remover este corte?
+              Confirmar exclusão
             </AlertDialogTitle>
             <AlertDialogDescription className="text-base">
               {servicoToDelete && (
                 <>
-                  O corte "<strong>{servicoToDelete.nome}</strong>" será removido permanentemente. Esta ação não pode ser desfeita.
+                  O corte "<strong>{servicoToDelete.nome}</strong>" será removido permanentemente.
                 </>
               )}
             </AlertDialogDescription>

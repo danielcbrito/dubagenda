@@ -15,10 +15,17 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
-import { Plus, Sparkles, Trash2, Pencil, AlertTriangle } from "lucide-react";
+import { Plus, Sparkles, MoreVertical, Trash2, Pencil, AlertTriangle, Check, Crown } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
 
 interface Plano {
   id: string;
@@ -71,7 +78,6 @@ export function AdminPlanos() {
 
       if (error) throw error;
       
-      // Normalize beneficios_json to always be string array
       const normalizedData = (data || []).map(plano => ({
         ...plano,
         beneficios_json: Array.isArray(plano.beneficios_json) 
@@ -164,7 +170,6 @@ export function AdminPlanos() {
 
   const handleTogglePlano = async (id: string, currentStatus: boolean) => {
     try {
-      // Update optimistically for instant UI feedback
       setPlanos(prev => prev.map(p => p.id === id ? { ...p, ativo: !currentStatus } : p));
       
       const { error } = await supabase
@@ -173,7 +178,6 @@ export function AdminPlanos() {
         .eq("id", id);
 
       if (error) {
-        // Revert on error
         setPlanos(prev => prev.map(p => p.id === id ? { ...p, ativo: currentStatus } : p));
         throw error;
       }
@@ -232,44 +236,55 @@ export function AdminPlanos() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fade-in">
+      {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Planos de Assinatura</h1>
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight mb-1">Planos</h1>
+          <p className="text-muted-foreground text-sm">
+            Gerencie os planos de assinatura • {planos.length} planos
+          </p>
+        </div>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
-            <Button onClick={() => handleOpenDialog()}>
-              <Plus className="w-4 h-4 mr-2" />
+            <Button onClick={() => handleOpenDialog()} className="btn-neon gap-2">
+              <Plus className="w-4 h-4" />
               Novo Plano
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-lg glass-card border-border max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>{editingPlano ? "Editar Plano" : "Criar Novo Plano"}</DialogTitle>
+              <DialogTitle className="text-xl font-bold">
+                {editingPlano ? "Editar Plano" : "Criar Novo Plano"}
+              </DialogTitle>
             </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div>
-                <Label htmlFor="nome">Nome do Plano *</Label>
+            <div className="space-y-5 pt-2">
+              <div className="space-y-2">
+                <Label htmlFor="nome" className="text-sm font-medium">Nome do Plano *</Label>
                 <Input
                   id="nome"
-                  placeholder="Ex: Plano Corte Premium"
+                  placeholder="Ex: Plano Premium"
                   value={newPlano.nome}
                   onChange={(e) => setNewPlano({ ...newPlano, nome: e.target.value })}
+                  className="input-glass"
                 />
               </div>
               
-              <div>
-                <Label htmlFor="descricao">Descrição</Label>
+              <div className="space-y-2">
+                <Label htmlFor="descricao" className="text-sm font-medium">Descrição</Label>
                 <Textarea
                   id="descricao"
                   placeholder="Descrição do plano..."
                   value={newPlano.descricao}
                   onChange={(e) => setNewPlano({ ...newPlano, descricao: e.target.value })}
+                  className="input-glass resize-none"
+                  rows={3}
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="preco">Preço Mensal (R$) *</Label>
+                <div className="space-y-2">
+                  <Label htmlFor="preco" className="text-sm font-medium">Preço Mensal (R$) *</Label>
                   <Input
                     id="preco"
                     type="number"
@@ -278,11 +293,12 @@ export function AdminPlanos() {
                     placeholder="0.00"
                     value={newPlano.preco_mensal || ""}
                     onChange={(e) => setNewPlano({ ...newPlano, preco_mensal: parseFloat(e.target.value) || 0 })}
+                    className="input-glass"
                   />
                 </div>
 
-                <div>
-                  <Label htmlFor="limite">Limite de Agendamentos/Mês</Label>
+                <div className="space-y-2">
+                  <Label htmlFor="limite" className="text-sm font-medium">Limite/Mês</Label>
                   <Input
                     id="limite"
                     type="number"
@@ -290,25 +306,27 @@ export function AdminPlanos() {
                     placeholder="4"
                     value={newPlano.limite_agendamentos_mes || ""}
                     onChange={(e) => setNewPlano({ ...newPlano, limite_agendamentos_mes: parseInt(e.target.value) || 4 })}
+                    className="input-glass"
                   />
                 </div>
               </div>
 
-              <div>
-                <Label htmlFor="prioridade">Prioridade (maior = mais destaque)</Label>
+              <div className="space-y-2">
+                <Label htmlFor="prioridade" className="text-sm font-medium">Prioridade (maior = destaque)</Label>
                 <Input
                   id="prioridade"
                   type="number"
                   placeholder="0"
                   value={newPlano.prioridade_agendamento || ""}
                   onChange={(e) => setNewPlano({ ...newPlano, prioridade_agendamento: parseInt(e.target.value) || 0 })}
+                  className="input-glass"
                 />
               </div>
 
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <Label>Benefícios</Label>
-                  <Button type="button" size="sm" variant="outline" onClick={addBeneficio}>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm font-medium">Benefícios</Label>
+                  <Button type="button" size="sm" variant="outline" onClick={addBeneficio} className="h-8 text-xs">
                     <Plus className="w-3 h-3 mr-1" />
                     Adicionar
                   </Button>
@@ -320,6 +338,7 @@ export function AdminPlanos() {
                         placeholder={`Benefício ${index + 1}`}
                         value={beneficio}
                         onChange={(e) => updateBeneficio(index, e.target.value)}
+                        className="input-glass"
                       />
                       {newPlano.beneficios_json.length > 1 && (
                         <Button 
@@ -327,6 +346,7 @@ export function AdminPlanos() {
                           size="icon" 
                           variant="ghost" 
                           onClick={() => removeBeneficio(index)}
+                          className="h-10 w-10 hover:bg-destructive/10 hover:text-destructive"
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>
@@ -336,11 +356,11 @@ export function AdminPlanos() {
                 </div>
               </div>
 
-              <div className="flex gap-2 pt-4">
+              <div className="flex gap-3 pt-2">
                 <Button type="button" variant="outline" onClick={handleCloseDialog} className="flex-1">
                   Cancelar
                 </Button>
-                <Button onClick={handleSubmit} className="flex-1">
+                <Button onClick={handleSubmit} className="flex-1 btn-neon">
                   {editingPlano ? "Atualizar" : "Criar"}
                 </Button>
               </div>
@@ -349,70 +369,108 @@ export function AdminPlanos() {
         </Dialog>
       </div>
 
+      {/* Grid de Planos */}
       {loading ? (
-        <div className="text-center py-8 text-muted-foreground">
-          Carregando planos...
+        <div className="flex items-center justify-center py-16">
+          <div className="w-10 h-10 rounded-full border-2 border-primary border-t-transparent animate-spin" />
         </div>
       ) : planos.length === 0 ? (
-        <Card className="p-12 text-center">
-          <Sparkles className="w-12 h-12 mx-auto mb-3 text-muted-foreground opacity-50" />
+        <Card className="glass-card p-12 text-center">
+          <Sparkles className="w-16 h-16 text-muted-foreground/20 mx-auto mb-4" strokeWidth={1} />
           <p className="text-muted-foreground">Nenhum plano criado ainda</p>
         </Card>
       ) : (
-        <div className="grid gap-4">
-          {planos.map((plano) => (
-            <Card key={plano.id} className="p-6">
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-2">
-                    <h3 className="text-lg font-bold">{plano.nome}</h3>
-                    <span className="text-xl font-bold text-primary">
-                      R$ {plano.preco_mensal.toFixed(2)}/mês
-                    </span>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          {planos.map((plano, index) => (
+            <Card 
+              key={plano.id} 
+              className={cn(
+                "glass-card p-6 hover-elevate animate-fade-in relative overflow-hidden",
+                !plano.ativo && "opacity-60",
+                plano.prioridade_agendamento && plano.prioridade_agendamento > 0 && "border-gold/30"
+              )}
+              style={{ animationDelay: `${index * 50}ms` }}
+            >
+              {/* Badge Premium */}
+              {plano.prioridade_agendamento && plano.prioridade_agendamento > 0 && (
+                <div className="absolute top-4 right-4">
+                  <div className="w-8 h-8 rounded-full bg-gradient-gold flex items-center justify-center shadow-glow-gold">
+                    <Crown className="w-4 h-4 text-gold-foreground" />
                   </div>
-                  
+                </div>
+              )}
+
+              <div className="space-y-4">
+                {/* Header */}
+                <div className="pr-10">
+                  <h3 className="text-xl font-bold text-foreground mb-1">{plano.nome}</h3>
                   {plano.descricao && (
-                    <p className="text-sm text-muted-foreground mb-3">{plano.descricao}</p>
-                  )}
-
-                  <div className="flex flex-wrap gap-2 text-xs text-muted-foreground mb-3">
-                    {plano.limite_agendamentos_mes && (
-                      <span>📅 {plano.limite_agendamentos_mes} agendamentos/mês</span>
-                    )}
-                    <span>⭐ Prioridade: {plano.prioridade_agendamento || 0}</span>
-                  </div>
-
-                  {plano.beneficios_json && plano.beneficios_json.length > 0 && (
-                    <div className="mt-3">
-                      <p className="text-xs font-semibold mb-2">Benefícios:</p>
-                      <ul className="text-xs text-muted-foreground space-y-1">
-                        {plano.beneficios_json.map((beneficio, index) => (
-                          <li key={index}>✓ {beneficio}</li>
-                        ))}
-                      </ul>
-                    </div>
+                    <p className="text-sm text-muted-foreground line-clamp-2">{plano.descricao}</p>
                   )}
                 </div>
 
-                <div className="flex items-center gap-2">
-                  <Switch
-                    checked={plano.ativo}
-                    onCheckedChange={() => handleTogglePlano(plano.id, plano.ativo)}
-                  />
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleOpenDialog(plano)}
-                  >
-                    <Pencil className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleOpenDeleteDialog(plano)}
-                  >
-                    <Trash2 className="w-4 h-4 text-destructive" />
-                  </Button>
+                {/* Preço */}
+                <div className="py-4 border-y border-border/30">
+                  <span className="text-3xl font-bold price-gold">
+                    R$ {plano.preco_mensal.toFixed(2)}
+                  </span>
+                  <span className="text-muted-foreground text-sm">/mês</span>
+                </div>
+
+                {/* Info */}
+                <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
+                  {plano.limite_agendamentos_mes && (
+                    <span className="flex items-center gap-1 px-2 py-1 rounded-md bg-secondary/50">
+                      📅 {plano.limite_agendamentos_mes} agendamentos/mês
+                    </span>
+                  )}
+                </div>
+
+                {/* Benefícios */}
+                {plano.beneficios_json && plano.beneficios_json.length > 0 && (
+                  <ul className="space-y-2">
+                    {plano.beneficios_json.slice(0, 4).map((beneficio, i) => (
+                      <li key={i} className="flex items-start gap-2 text-sm">
+                        <Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                        <span className="text-muted-foreground">{beneficio}</span>
+                      </li>
+                    ))}
+                    {plano.beneficios_json.length > 4 && (
+                      <li className="text-xs text-muted-foreground pl-6">
+                        +{plano.beneficios_json.length - 4} mais benefícios
+                      </li>
+                    )}
+                  </ul>
+                )}
+
+                {/* Footer */}
+                <div className="flex items-center justify-between pt-3 border-t border-border/30">
+                  <div className="flex items-center gap-3">
+                    <span className={cn("status-tag", plano.ativo ? "active" : "blocked")}>
+                      {plano.ativo ? "Ativo" : "Inativo"}
+                    </span>
+                    <Switch
+                      checked={plano.ativo}
+                      onCheckedChange={() => handleTogglePlano(plano.id, plano.ativo)}
+                    />
+                  </div>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <MoreVertical className="w-4 h-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-40">
+                      <DropdownMenuItem onClick={() => handleOpenDialog(plano)} className="gap-2">
+                        <Pencil className="w-4 h-4" />
+                        Editar
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleOpenDeleteDialog(plano)} className="gap-2 text-destructive">
+                        <Trash2 className="w-4 h-4" />
+                        Excluir
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               </div>
             </Card>
@@ -420,18 +478,18 @@ export function AdminPlanos() {
         </div>
       )}
 
-      {/* Delete Confirmation Dialog */}
+      {/* Delete Confirmation */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
+        <AlertDialogContent className="glass-card border-border">
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
               <AlertTriangle className="w-5 h-5 text-destructive" />
-              Tem certeza que deseja remover este plano?
+              Confirmar exclusão
             </AlertDialogTitle>
             <AlertDialogDescription className="text-base">
               {planoToDelete && (
                 <>
-                  O plano "<strong>{planoToDelete.nome}</strong>" será removido permanentemente. Esta ação não pode ser desfeita.
+                  O plano "<strong>{planoToDelete.nome}</strong>" será removido permanentemente.
                 </>
               )}
             </AlertDialogDescription>
