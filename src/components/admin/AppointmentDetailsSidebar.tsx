@@ -115,6 +115,23 @@ export function AppointmentDetailsSidebar({ appointment, open, onClose, onUpdate
         .eq("id", appointment.id);
 
       if (error) throw error;
+
+      // Criar notificação para o cliente
+      const { error: notifError } = await supabase
+        .from("notificacoes")
+        .insert({
+          user_id: appointment.user_id,
+          agendamento_id: appointment.id,
+          titulo: "Atendimento Concluído ✓",
+          mensagem: `Seu atendimento de ${appointment.servico?.nome || 'serviço'} foi finalizado. Obrigado pela preferência!`,
+          tipo: "geral",
+          lida: false
+        });
+
+      if (notifError) {
+        console.error("Erro ao criar notificação:", notifError);
+      }
+
       toast.success("Atendimento finalizado");
       onUpdate();
       onClose();

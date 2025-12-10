@@ -38,6 +38,22 @@ export function ConfirmAttendanceModal({ appointment, open, onClose, onUpdate }:
 
       if (error) throw error;
 
+      // Criar notificação para o cliente
+      const { error: notifError } = await supabase
+        .from("notificacoes")
+        .insert({
+          user_id: appointment.user_id,
+          agendamento_id: appointment.id,
+          titulo: "Atendimento Concluído ✓",
+          mensagem: `Seu atendimento de ${appointment.servico?.nome || 'serviço'} foi finalizado. Obrigado pela preferência!`,
+          tipo: "geral",
+          lida: false
+        });
+
+      if (notifError) {
+        console.error("Error creating notification:", notifError);
+      }
+
       toast.success("Atendimento confirmado com sucesso. Ponto de fidelidade liberado.");
       onUpdate();
       onClose();
