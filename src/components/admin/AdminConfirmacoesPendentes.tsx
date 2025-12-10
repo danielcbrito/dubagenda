@@ -146,6 +146,22 @@ export function AdminConfirmacoesPendentes() {
         hora: data.hora,
         preco: data.preco
       });
+
+      // Criar notificação para o cliente
+      const { error: notifError } = await supabase
+        .from("notificacoes")
+        .insert({
+          user_id: data.user_id,
+          agendamento_id: appointmentId,
+          titulo: "Agendamento Confirmado ✓",
+          mensagem: `Seu agendamento para ${appointmentToConfirm?.servico?.nome || 'serviço'} no dia ${data.data.split('-').reverse().slice(0,2).join('/')} às ${data.hora.substring(0,5)} foi confirmado pelo barbeiro. Te esperamos!`,
+          tipo: "geral",
+          lida: false
+        });
+
+      if (notifError) {
+        console.error("Erro ao criar notificação:", notifError);
+      }
       
       toast.success(
         `✅ Agendamento aprovado! Agora aparecerá na agenda: ${appointmentToConfirm?.servico?.nome || 'Serviço'} às ${appointmentToConfirm?.hora || ''}`
