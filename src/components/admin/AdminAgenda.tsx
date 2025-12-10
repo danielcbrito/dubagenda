@@ -151,16 +151,17 @@ export function AdminAgenda() {
     };
   }, [date, loadAppointments, loadAllAppointments]);
 
-  // Check for appointments that need confirmation
+  // Check for appointments that need confirmation - ONLY for TODAY's appointments
   useEffect(() => {
     const checkAppointmentCompletion = () => {
       const now = new Date();
       const currentDateStr = format(now, 'yyyy-MM-dd');
-      const selectedDateStr = format(date, 'yyyy-MM-dd');
       
-      if (currentDateStr !== selectedDateStr) return;
+      // Only check appointments from TODAY
+      const todaysAppointments = appointments.filter(apt => apt.data === currentDateStr);
 
-      appointments.forEach(apt => {
+      todaysAppointments.forEach(apt => {
+        // Skip if already completed or cancelled
         if (apt.status === 'completed' || apt.status === 'cancelled_by_admin' || 
             apt.status === 'cancelled_by_user' || apt.status === 'no_show') {
           return;
@@ -171,6 +172,7 @@ export function AdminAgenda() {
         aptStart.setHours(hours, minutes, 0, 0);
         const aptEnd = new Date(aptStart.getTime() + (apt.servico?.duracao_minutos || 30) * 60000);
         
+        // Only show confirmation modal within 2 minutes after appointment end
         if (now >= aptEnd && now.getTime() - aptEnd.getTime() < 120000) {
           setConfirmModalAppointment(apt);
         }
@@ -180,7 +182,7 @@ export function AdminAgenda() {
     const interval = setInterval(checkAppointmentCompletion, 60000);
     checkAppointmentCompletion();
     return () => clearInterval(interval);
-  }, [appointments, date]);
+  }, [appointments]);
 
   const loadServices = async () => {
     try {
