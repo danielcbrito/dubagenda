@@ -6,9 +6,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
-import { Clock, Save, Calendar, Coffee, Timer } from 'lucide-react';
+import { Clock, Save, Calendar, Coffee, Timer, Palmtree } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import HorariosExcepcionais from './HorariosExcepcionais';
+import VacationMode from './VacationMode';
 
 interface HorarioConfig {
   id: string;
@@ -126,7 +127,7 @@ export default function AdminHorarios() {
 
       {/* Tabs */}
       <Tabs defaultValue="padrao" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2 max-w-md">
+        <TabsList className="grid w-full grid-cols-3 max-w-lg">
           <TabsTrigger value="padrao" className="gap-2">
             <Calendar className="h-4 w-4" />
             Horários Padrão
@@ -134,6 +135,10 @@ export default function AdminHorarios() {
           <TabsTrigger value="excecoes" className="gap-2">
             <Clock className="h-4 w-4" />
             Exceções
+          </TabsTrigger>
+          <TabsTrigger value="ferias" className="gap-2">
+            <Palmtree className="h-4 w-4" />
+            Férias
           </TabsTrigger>
         </TabsList>
 
@@ -278,6 +283,11 @@ export default function AdminHorarios() {
         {/* Tab: Exceções */}
         <TabsContent value="excecoes">
           <HorariosExcepcionais />
+        </TabsContent>
+
+        {/* Tab: Férias */}
+        <TabsContent value="ferias">
+          <VacationMode />
         </TabsContent>
       </Tabs>
     </div>
