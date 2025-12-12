@@ -71,9 +71,7 @@ export function AdminAgenda() {
         .from("agendamentos")
         .select("*")
         .in("data", weekDates)
-        .eq("barbeiro_confirmou", true)
-        .neq("status", "cancelled_by_admin")
-        .neq("status", "cancelled_by_user")
+        .in("status", ["pending", "confirmed", "completed"])
         .order("hora", { ascending: true });
 
       if (error) throw error;
@@ -111,9 +109,7 @@ export function AdminAgenda() {
       const { data, error } = await supabase
         .from("agendamentos")
         .select("data, status")
-        .eq("barbeiro_confirmou", true)
-        .neq("status", "cancelled_by_admin")
-        .neq("status", "cancelled_by_user");
+        .in("status", ["pending", "confirmed", "completed"]);
 
       if (error) throw error;
       setAllAppointments(data || []);
