@@ -19,7 +19,8 @@ import { WalletSheet } from "@/components/WalletSheet";
 import { AnnouncementDialog } from "@/components/AnnouncementDialog";
 import { CancelledAppointmentBanner } from "@/components/CancelledAppointmentBanner";
 import { AnnouncementModal } from "@/components/AnnouncementModal";
-import { SupportChatBubble } from "@/components/support/SupportChatBubble";
+import { BottomNavigation } from "@/components/BottomNavigation";
+import { AppointmentHistorySheet } from "@/components/AppointmentHistorySheet";
 
 interface Appointment {
   id: string;
@@ -58,6 +59,7 @@ const Cliente = () => {
   const [subscribeSheetOpen, setSubscribeSheetOpen] = useState(false);
   const [profileSheetOpen, setProfileSheetOpen] = useState(false);
   const [walletSheetOpen, setWalletSheetOpen] = useState(false);
+  const [historySheetOpen, setHistorySheetOpen] = useState(false);
   const [availableCredits, setAvailableCredits] = useState(0);
   const [payments, setPayments] = useState<any[]>([]);
   const [recentCancellations, setRecentCancellations] = useState<Appointment[]>([]);
@@ -341,35 +343,35 @@ const Cliente = () => {
         }}
       />
 
-      {/* Transparent Navbar with Blur - Compact */}
-      <div className="z-50 backdrop-blur-xl bg-background/30 border-b border-border/20 flex-shrink-0">
-        <div className="max-w-4xl mx-auto px-3 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <img src={logoDub} alt="DUB" className="w-8 h-8" />
+      {/* Clean Top Bar - Logo, Name, Notifications, Menu */}
+      <div className="z-50 flex-shrink-0">
+        <div className="max-w-4xl mx-auto px-4 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <img src={logoDub} alt="DUB" className="w-10 h-10 drop-shadow-lg" />
             <div>
-              <h1 className="font-bold text-xs">Barbearia DUB</h1>
-              <p className="text-[9px] text-muted-foreground">{profile?.nome || user?.email}</p>
+              <h1 className="font-bold text-sm tracking-wide">Barbearia DUB</h1>
+              <p className="text-[10px] text-muted-foreground">{profile?.nome || user?.email}</p>
             </div>
           </div>
           
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-2">
             {user && <NotificationBell userId={user.id} />}
             <Button
               variant="ghost" 
               size="icon"
               onClick={() => setDrawerOpen(true)}
-              className="h-8 w-8 hover:bg-primary/10 transition-all duration-300"
+              className="h-9 w-9 hover:bg-primary/10 transition-all duration-300 rounded-full"
             >
-              <MoreVertical className="w-4 h-4" />
+              <MoreVertical className="w-5 h-5" />
             </Button>
           </div>
         </div>
       </div>
 
-      {/* Scrollable content area */}
+      {/* Scrollable content area - with padding for bottom nav */}
       <div className="flex-1 overflow-hidden relative z-10">
-        <div className="h-full scrollable-content">
-          <div className="max-w-4xl mx-auto px-3 py-4 space-y-4">
+        <div className="h-full scrollable-content pb-24">
+          <div className="max-w-4xl mx-auto px-4 py-4 space-y-4">
             {/* 💎 Premium Points Card - Compact */}
             <Card className="card-glass overflow-hidden border border-gold/20 shadow-glow-gold hover:scale-[1.01] transition-all duration-500">
               <div 
@@ -558,8 +560,21 @@ const Cliente = () => {
       {/* Announcement Dialog */}
       <AnnouncementDialog />
 
-      {/* Bolinha de chat de suporte */}
-      <SupportChatBubble />
+      {/* History Sheet */}
+      <AppointmentHistorySheet
+        open={historySheetOpen}
+        onOpenChange={setHistorySheetOpen}
+        userId={user?.id}
+      />
+
+      {/* Bottom Navigation Bar */}
+      <BottomNavigation
+        onProfileClick={() => setProfileSheetOpen(true)}
+        onPlansClick={() => setPlansSheetOpen(true)}
+        onPointsClick={() => setPointsModalOpen(true)}
+        onWalletClick={() => setWalletSheetOpen(true)}
+        onHistoryClick={() => setHistorySheetOpen(true)}
+      />
     </div>
   );
 };
