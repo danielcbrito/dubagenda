@@ -27,6 +27,7 @@ export function ConfirmAttendanceModal({ appointment, open, onClose, onUpdate }:
   const handleConfirmAttendance = async () => {
     setLoading(true);
     try {
+      // Atualizar status do agendamento
       const { error } = await supabase
         .from("agendamentos")
         .update({ 
@@ -37,6 +38,39 @@ export function ConfirmAttendanceModal({ appointment, open, onClose, onUpdate }:
         .eq("id", appointment.id);
 
       if (error) throw error;
+
+      // Se ainda não tem pagamento "paid", criar/atualizar como pago
+      if (!isPrepaid) {
+        // Verificar se já existe pagamento para este agendamento
+        const { data: existingPayment } = await supabase
+          .from("pagamentos")
+          .select("id")
+          .eq("agendamento_id", appointment.id)
+          .single();
+
+        if (existingPayment) {
+          // Atualizar pagamento existente para paid
+          await supabase
+            .from("pagamentos")
+            .update({ 
+              status: 'paid' as any,
+              data_pagamento: new Date().toISOString()
+            })
+            .eq("id", existingPayment.id);
+        } else {
+          // Criar novo registro de pagamento como paid
+          await supabase
+            .from("pagamentos")
+            .insert({
+              user_id: appointment.user_id,
+              agendamento_id: appointment.id,
+              valor: appointment.preco,
+              metodo: (paymentMethod === 'pix' || paymentMethod === 'card' ? paymentMethod : 'cash') as any,
+              status: 'paid' as any,
+              data_pagamento: new Date().toISOString()
+            });
+        }
+      }
 
       // Criar notificação para o cliente
       const { error: notifError } = await supabase

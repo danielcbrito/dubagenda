@@ -134,13 +134,41 @@ export function AdminDashboard() {
         .select("*", { count: "exact", head: true })
         .eq("data", today);
 
+      // Receita do mês: pagamentos confirmados (paid) + agendamentos completed (pagar na barbearia)
       const { data: monthPayments } = await supabase
         .from("pagamentos")
         .select("valor")
         .gte("created_at", firstDayOfMonth)
         .eq("status", "paid");
 
-      const monthRevenue = monthPayments?.reduce((sum, p) => sum + Number(p.valor), 0) || 0;
+      const paidRevenue = monthPayments?.reduce((sum, p) => sum + Number(p.valor), 0) || 0;
+
+      // Agendamentos completed sem pagamento registrado como paid (pagos na barbearia)
+      const { data: completedAppointments } = await supabase
+        .from("agendamentos")
+        .select("id, preco")
+        .gte("data", firstDayOfMonth)
+        .eq("status", "completed");
+
+      // Verificar quais já têm pagamento paid para não contar duplicado
+      let additionalRevenue = 0;
+      if (completedAppointments && completedAppointments.length > 0) {
+        const aptIds = completedAppointments.map(a => a.id);
+        const { data: paidAptPayments } = await supabase
+          .from("pagamentos")
+          .select("agendamento_id")
+          .in("agendamento_id", aptIds)
+          .eq("status", "paid");
+        
+        const paidAptIds = new Set(paidAptPayments?.map(p => p.agendamento_id) || []);
+        
+        // Somar apenas agendamentos completed que não têm pagamento paid registrado
+        additionalRevenue = completedAppointments
+          .filter(apt => !paidAptIds.has(apt.id))
+          .reduce((sum, apt) => sum + Number(apt.preco), 0);
+      }
+
+      const monthRevenue = paidRevenue + additionalRevenue;
 
       const { count: clientsCount } = await supabase
         .from("profiles")
@@ -192,24 +220,38 @@ export function AdminDashboard() {
         })
       );
 
-      const monthsData = [];
-      for (let i = 5; i >= 0; i--) {
+      // Gráfico por DIAS (últimos 14 dias)
+      const daysData = [];
+      for (let i = 13; i >= 0; i--) {
         const date = new Date();
-        date.setMonth(date.getMonth() - i);
-        const firstDay = new Date(date.getFullYear(), date.getMonth(), 1).toISOString();
-        const lastDay = new Date(date.getFullYear(), date.getMonth() + 1, 0).toISOString();
+        date.setDate(date.getDate() - i);
+        const dayStr = format(date, 'yyyy-MM-dd');
 
-        const { data: monthData } = await supabase
+        // Pagamentos paid do dia
+        const { data: dayPayments } = await supabase
           .from("pagamentos")
-          .select("valor")
-          .gte("created_at", firstDay)
-          .lte("created_at", lastDay)
+          .select("valor, agendamento_id")
+          .gte("created_at", `${dayStr}T00:00:00`)
+          .lte("created_at", `${dayStr}T23:59:59`)
           .eq("status", "paid");
 
-        const total = monthData?.reduce((sum, p) => sum + Number(p.valor), 0) || 0;
-        monthsData.push({
-          month: date.toLocaleDateString('pt-BR', { month: 'short' }),
-          receita: total
+        const paidTotal = dayPayments?.reduce((sum, p) => sum + Number(p.valor), 0) || 0;
+        const paidAptIds = new Set(dayPayments?.map(p => p.agendamento_id).filter(Boolean) || []);
+
+        // Agendamentos completed do dia sem pagamento paid (pagos na barbearia)
+        const { data: dayCompleted } = await supabase
+          .from("agendamentos")
+          .select("id, preco")
+          .eq("data", dayStr)
+          .eq("status", "completed");
+
+        const additionalTotal = (dayCompleted || [])
+          .filter(apt => !paidAptIds.has(apt.id))
+          .reduce((sum, apt) => sum + Number(apt.preco), 0);
+
+        daysData.push({
+          day: format(date, 'dd/MM'),
+          receita: paidTotal + additionalTotal
         });
       }
 
@@ -223,7 +265,7 @@ export function AdminDashboard() {
       });
 
       setRecentAppointments(appointmentsWithDetails);
-      setRevenueData(monthsData);
+      setRevenueData(daysData);
       setLoading(false);
     } catch (error) {
       console.error("Error loading dashboard:", error);
@@ -331,7 +373,7 @@ export function AdminDashboard() {
             </div>
             <div>
               <h3 className="font-bold text-lg">Evolução de Receita</h3>
-              <p className="text-xs text-muted-foreground">Últimos 6 meses</p>
+              <p className="text-xs text-muted-foreground">Últimos 14 dias</p>
             </div>
           </div>
           <ResponsiveContainer width="100%" height={280}>
@@ -344,11 +386,12 @@ export function AdminDashboard() {
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} vertical={false} />
               <XAxis 
-                dataKey="month" 
+                dataKey="day" 
                 stroke="hsl(var(--muted-foreground))" 
-                style={{ fontSize: '11px', fontWeight: 500 }}
+                style={{ fontSize: '10px', fontWeight: 500 }}
                 tickLine={false}
                 axisLine={false}
+                interval={1}
               />
               <YAxis 
                 stroke="hsl(var(--muted-foreground))" 
