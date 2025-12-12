@@ -73,10 +73,11 @@ export function AdminSidebar() {
 
   useEffect(() => {
     const loadPendingCount = async () => {
+      // Deve usar a mesma lógica da tela de confirmações: apenas status 'pending' e barbeiro_confirmou = false
       const { count } = await supabase
         .from('agendamentos')
         .select('*', { count: 'exact', head: true })
-        .in('status', ['pending', 'confirmed'])
+        .eq('status', 'pending')
         .eq('barbeiro_confirmou', false);
       
       setPendingCount(count || 0);
