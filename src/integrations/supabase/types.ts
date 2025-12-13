@@ -1391,6 +1391,8 @@ export type Database = {
           id: string
           updated_at: string | null
           webhook_url: string | null
+          whatsapp_ativo: boolean | null
+          whatsapp_webhook_url: string | null
         }
         Insert: {
           ativo?: boolean | null
@@ -1398,6 +1400,8 @@ export type Database = {
           id?: string
           updated_at?: string | null
           webhook_url?: string | null
+          whatsapp_ativo?: boolean | null
+          whatsapp_webhook_url?: string | null
         }
         Update: {
           ativo?: boolean | null
@@ -1405,6 +1409,8 @@ export type Database = {
           id?: string
           updated_at?: string | null
           webhook_url?: string | null
+          whatsapp_ativo?: boolean | null
+          whatsapp_webhook_url?: string | null
         }
         Relationships: []
       }

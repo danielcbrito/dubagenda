@@ -7,14 +7,17 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2, Webhook, Send, CheckCircle2, XCircle, Info } from "lucide-react";
+import { Loader2, Webhook, Send, CheckCircle2, XCircle, Info, MessageCircle } from "lucide-react";
 
 export function AdminWebhook() {
   const [webhookUrl, setWebhookUrl] = useState("");
   const [ativo, setAtivo] = useState(true);
+  const [whatsappWebhookUrl, setWhatsappWebhookUrl] = useState("");
+  const [whatsappAtivo, setWhatsappAtivo] = useState(true);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
+  const [testingWhatsapp, setTestingWhatsapp] = useState(false);
   const [configId, setConfigId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -35,6 +38,8 @@ export function AdminWebhook() {
       if (data) {
         setWebhookUrl(data.webhook_url || "");
         setAtivo(data.ativo ?? true);
+        setWhatsappWebhookUrl(data.whatsapp_webhook_url || "");
+        setWhatsappAtivo(data.whatsapp_ativo ?? true);
         setConfigId(data.id);
       }
     } catch (error) {
@@ -57,7 +62,11 @@ export function AdminWebhook() {
 
   const handleSave = async () => {
     if (webhookUrl && !isValidUrl(webhookUrl)) {
-      toast.error("URL inválida. Verifique o formato.");
+      toast.error("URL do webhook principal inválida. Verifique o formato.");
+      return;
+    }
+    if (whatsappWebhookUrl && !isValidUrl(whatsappWebhookUrl)) {
+      toast.error("URL do webhook WhatsApp inválida. Verifique o formato.");
       return;
     }
 
@@ -68,7 +77,9 @@ export function AdminWebhook() {
           .from('webhook_config')
           .update({ 
             webhook_url: webhookUrl || null, 
-            ativo 
+            ativo,
+            whatsapp_webhook_url: whatsappWebhookUrl || null,
+            whatsapp_ativo: whatsappAtivo,
           })
           .eq('id', configId);
 
@@ -78,7 +89,9 @@ export function AdminWebhook() {
           .from('webhook_config')
           .insert({ 
             webhook_url: webhookUrl || null, 
-            ativo 
+            ativo,
+            whatsapp_webhook_url: whatsappWebhookUrl || null,
+            whatsapp_ativo: whatsappAtivo,
           })
           .select()
           .single();
@@ -133,6 +146,46 @@ export function AdminWebhook() {
     }
   };
 
+  const handleTestWhatsapp = async () => {
+    if (!whatsappWebhookUrl) {
+      toast.error("Configure uma URL de webhook WhatsApp primeiro");
+      return;
+    }
+
+    if (!isValidUrl(whatsappWebhookUrl)) {
+      toast.error("URL inválida. Verifique o formato.");
+      return;
+    }
+
+    setTestingWhatsapp(true);
+    try {
+      // Enviar um evento de teste para o webhook de WhatsApp
+      const response = await fetch(whatsappWebhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          evento: "verificacao_cadastro",
+          cliente_nome: "Teste Sistema",
+          telefone: "5511999999999@s.whatsapp.net",
+          codigo: "123456",
+          timestamp: new Date().toISOString(),
+          _teste: true,
+        }),
+      });
+
+      if (response.ok) {
+        toast.success("Webhook WhatsApp testado com sucesso!");
+      } else {
+        toast.error(`Falha ao testar webhook: HTTP ${response.status}`);
+      }
+    } catch (error) {
+      console.error('Erro ao testar webhook WhatsApp:', error);
+      toast.error("Erro ao testar webhook. Verifique a URL e tente novamente.");
+    } finally {
+      setTestingWhatsapp(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8">
@@ -143,6 +196,96 @@ export function AdminWebhook() {
 
   return (
     <div className="space-y-6">
+      {/* Card de Webhook WhatsApp (Dedicado) */}
+      <Card className="border-green-500/30 bg-green-500/5 backdrop-blur-sm">
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-green-500/20">
+              <MessageCircle className="w-5 h-5 text-green-500" />
+            </div>
+            <div>
+              <CardTitle className="text-green-400">Webhook WhatsApp (Verificação)</CardTitle>
+              <CardDescription>
+                Webhook dedicado para enviar códigos de verificação de cadastro via WhatsApp
+              </CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* URL do Webhook WhatsApp */}
+          <div className="space-y-2">
+            <Label htmlFor="whatsapp-webhook-url" className="text-green-300">URL do Webhook WhatsApp</Label>
+            <Input
+              id="whatsapp-webhook-url"
+              type="url"
+              placeholder="https://seu-n8n.app.n8n.cloud/webhook/whatsapp-verification"
+              value={whatsappWebhookUrl}
+              onChange={(e) => setWhatsappWebhookUrl(e.target.value)}
+              className={`border-green-500/30 focus:border-green-500 ${!isValidUrl(whatsappWebhookUrl) ? "border-destructive" : ""}`}
+            />
+            {whatsappWebhookUrl && !isValidUrl(whatsappWebhookUrl) && (
+              <p className="text-sm text-destructive">URL inválida</p>
+            )}
+            <p className="text-sm text-green-400/70">
+              Este webhook recebe APENAS os eventos de verificação de cadastro para envio via WhatsApp
+            </p>
+          </div>
+
+          {/* Status WhatsApp */}
+          <div className="flex items-center justify-between p-4 rounded-lg bg-green-500/10">
+            <div className="flex items-center gap-3">
+              <Switch
+                id="whatsapp-webhook-ativo"
+                checked={whatsappAtivo}
+                onCheckedChange={setWhatsappAtivo}
+              />
+              <Label htmlFor="whatsapp-webhook-ativo" className="cursor-pointer text-green-300">
+                Webhook WhatsApp Ativo
+              </Label>
+            </div>
+            <Badge variant={whatsappAtivo && whatsappWebhookUrl ? "default" : "secondary"} className={whatsappAtivo && whatsappWebhookUrl ? "bg-green-600" : ""}>
+              {whatsappAtivo && whatsappWebhookUrl ? (
+                <><CheckCircle2 className="w-3 h-3 mr-1" /> Ativo</>
+              ) : (
+                <><XCircle className="w-3 h-3 mr-1" /> Inativo</>
+              )}
+            </Badge>
+          </div>
+
+          {/* Botão Testar WhatsApp */}
+          <Button 
+            variant="outline" 
+            onClick={handleTestWhatsapp}
+            disabled={testingWhatsapp || !whatsappWebhookUrl}
+            className="border-green-500/30 text-green-400 hover:bg-green-500/10"
+          >
+            {testingWhatsapp ? (
+              <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Testando...</>
+            ) : (
+              <><Send className="w-4 h-4 mr-2" /> Testar Webhook WhatsApp</>
+            )}
+          </Button>
+
+          {/* Formato do Payload WhatsApp */}
+          <div className="p-4 rounded-lg bg-green-500/10 border border-green-500/20">
+            <p className="text-sm font-medium mb-2 text-green-400">Formato do Payload:</p>
+            <pre className="text-xs text-green-300/80 overflow-x-auto whitespace-pre-wrap">
+{`{
+  "evento": "verificacao_cadastro",
+  "cliente_nome": "João Silva",
+  "telefone": "5511999999999@s.whatsapp.net",
+  "codigo": "483920",
+  "timestamp": "2025-12-06T10:00:00Z"
+}`}
+            </pre>
+            <p className="text-xs text-green-400/80 mt-2">
+              <strong>Nota:</strong> Configure o n8n para receber este payload e enviar a mensagem via WhatsApp.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Card de Webhook Principal (Eventos Gerais) */}
       <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
         <CardHeader>
           <div className="flex items-center gap-3">
@@ -150,9 +293,9 @@ export function AdminWebhook() {
               <Webhook className="w-5 h-5 text-primary" />
             </div>
             <div>
-              <CardTitle>Configuração de Webhook</CardTitle>
+              <CardTitle>Webhook Principal (Eventos Gerais)</CardTitle>
               <CardDescription>
-                Configure a URL do webhook para receber eventos do sistema em tempo real
+                Configure a URL do webhook para receber todos os eventos do sistema em tempo real
               </CardDescription>
             </div>
           </div>
@@ -208,7 +351,7 @@ export function AdminWebhook() {
               {saving ? (
                 <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Salvando...</>
               ) : (
-                "Salvar Configuração"
+                "Salvar Todas as Configurações"
               )}
             </Button>
             <Button 
@@ -234,9 +377,9 @@ export function AdminWebhook() {
               <Info className="w-5 h-5 text-blue-500" />
             </div>
             <div>
-              <CardTitle className="text-base">Todos os Eventos Enviados</CardTitle>
+              <CardTitle className="text-base">Eventos do Webhook Principal</CardTitle>
               <CardDescription>
-                Este webhook único recebe TODOS os eventos do sistema em tempo real
+                O webhook principal recebe TODOS os eventos do sistema (exceto verificação WhatsApp)
               </CardDescription>
             </div>
           </div>
@@ -287,14 +430,6 @@ export function AdminWebhook() {
             </div>
           </div>
 
-          {/* Eventos de Verificação */}
-          <div className="mb-4">
-            <h4 className="text-sm font-semibold text-green-500 mb-2">Verificação WhatsApp</h4>
-            <div className="grid gap-2 sm:grid-cols-2">
-              <EventCard evento="verificacao_cadastro" desc="Enviar código de verificação para WhatsApp" />
-            </div>
-          </div>
-
           {/* Eventos de Cliente */}
           <div className="mb-4">
             <h4 className="text-sm font-semibold text-primary mb-2">Clientes</h4>
@@ -326,28 +461,10 @@ export function AdminWebhook() {
             </pre>
           </div>
 
-          {/* Formato do Payload - Verificação WhatsApp */}
-          <div className="mt-4 p-4 rounded-lg bg-green-500/10 border border-green-500/20">
-            <p className="text-sm font-medium mb-2 text-green-400">Formato do Payload (Verificação WhatsApp):</p>
-            <pre className="text-xs text-green-300/80 overflow-x-auto whitespace-pre-wrap">
-{`{
-  "evento": "verificacao_cadastro",
-  "cliente_nome": "João Silva",
-  "telefone": "5511999999999@s.whatsapp.net",
-  "codigo": "483920",
-  "timestamp": "2025-12-06T10:00:00Z"
-}`}
-            </pre>
-            <p className="text-xs text-green-400/80 mt-2">
-              <strong>Nota:</strong> O telefone sempre está no formato WhatsApp (55 + DDD + número + @s.whatsapp.net).
-              Use este payload para enviar o código de verificação via n8n para o WhatsApp do cliente.
-            </p>
-          </div>
-
           <div className="mt-4 p-3 rounded-lg bg-primary/10 border border-primary/20">
             <p className="text-xs text-primary">
-              <strong>Importante:</strong> Configure este webhook no seu n8n para receber todos os eventos do sistema.
-              O evento "verificacao_cadastro" é usado para confirmar novos cadastros via WhatsApp.
+              <strong>Importante:</strong> O webhook WhatsApp (verde) é usado APENAS para verificação de cadastro.
+              O webhook principal (vermelho) recebe todos os outros eventos do sistema.
             </p>
           </div>
         </CardContent>

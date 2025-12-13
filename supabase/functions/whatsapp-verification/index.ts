@@ -83,13 +83,19 @@ serve(async (req) => {
         );
       }
 
-      // Buscar configuração do webhook
+      // Buscar configuração do webhook DEDICADO para WhatsApp
       const { data: webhookConfig } = await supabase
         .from('webhook_config')
-        .select('webhook_url, ativo')
+        .select('whatsapp_webhook_url, whatsapp_ativo, webhook_url, ativo')
         .single();
 
-      if (!webhookConfig?.webhook_url || !webhookConfig.ativo) {
+      // Priorizar webhook dedicado para WhatsApp, senão usar o padrão
+      const webhookUrl = webhookConfig?.whatsapp_webhook_url || webhookConfig?.webhook_url;
+      const webhookAtivo = webhookConfig?.whatsapp_webhook_url 
+        ? webhookConfig?.whatsapp_ativo 
+        : webhookConfig?.ativo;
+
+      if (!webhookUrl || !webhookAtivo) {
         console.warn('[whatsapp-verification] Webhook não configurado ou inativo');
         // Retorna sucesso mesmo sem webhook (para testes)
         return new Response(
@@ -111,7 +117,7 @@ serve(async (req) => {
         timestamp: new Date().toISOString(),
       };
 
-      console.log('[whatsapp-verification] Enviando para webhook:', webhookConfig.webhook_url);
+      console.log('[whatsapp-verification] Enviando para webhook:', webhookUrl);
 
       // Enviar para webhook com retry
       let webhookSuccess = false;
@@ -119,7 +125,7 @@ serve(async (req) => {
 
       for (let attempt = 0; attempt < 3; attempt++) {
         try {
-          const response = await fetch(webhookConfig.webhook_url, {
+          const response = await fetch(webhookUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(webhookPayload),
@@ -340,13 +346,19 @@ serve(async (req) => {
         );
       }
 
-      // Buscar configuração do webhook
-      const { data: webhookConfig } = await supabase
+      // Buscar configuração do webhook DEDICADO para WhatsApp
+      const { data: webhookConfigResend } = await supabase
         .from('webhook_config')
-        .select('webhook_url, ativo')
+        .select('whatsapp_webhook_url, whatsapp_ativo, webhook_url, ativo')
         .single();
 
-      if (!webhookConfig?.webhook_url || !webhookConfig.ativo) {
+      // Priorizar webhook dedicado para WhatsApp
+      const resendWebhookUrl = webhookConfigResend?.whatsapp_webhook_url || webhookConfigResend?.webhook_url;
+      const resendWebhookAtivo = webhookConfigResend?.whatsapp_webhook_url 
+        ? webhookConfigResend?.whatsapp_ativo 
+        : webhookConfigResend?.ativo;
+
+      if (!resendWebhookUrl || !resendWebhookAtivo) {
         return new Response(
           JSON.stringify({ 
             success: true, 
@@ -366,7 +378,7 @@ serve(async (req) => {
       };
 
       try {
-        await fetch(webhookConfig.webhook_url, {
+        await fetch(resendWebhookUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(webhookPayload),
