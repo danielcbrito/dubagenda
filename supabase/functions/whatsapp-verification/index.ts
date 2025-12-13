@@ -1,6 +1,9 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 
+// Declaração para evitar erro de tipos; disponível em runtime no ambiente Edge
+declare const EdgeRuntime: { waitUntil(promise: Promise<unknown>): void };
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -25,7 +28,7 @@ function generateCode(): string {
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -95,83 +98,68 @@ serve(async (req) => {
         ? webhookConfig?.whatsapp_ativo 
         : webhookConfig?.ativo;
 
-      if (!webhookUrl || !webhookAtivo) {
-        console.warn('[whatsapp-verification] Webhook não configurado ou inativo');
-        // Retorna sucesso mesmo sem webhook (para testes)
-        return new Response(
-          JSON.stringify({ 
-            success: true, 
-            message: "Código gerado (webhook não configurado)",
-            code_for_testing: code // REMOVER EM PRODUÇÃO
-          }),
-          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-
       // Preparar mensagem pronta para WhatsApp (limpa, sem emojis, sem acentos)
       const mensagemWhatsApp = `Ola ${user_name || "Cliente"}, seu codigo de verificacao e ${code}. Expira em 5 minutos. Nao compartilhe.`;
 
-      // Preparar payload para webhook
-      const webhookPayload = {
-        evento: "verificacao_cadastro",
-        cliente_nome: user_name || "Cliente",
-        telefone: formatPhoneForWhatsApp(phone),
-        codigo: code,
-        mensagem: mensagemWhatsApp,
-        timestamp: new Date().toISOString(),
-      };
+      if (webhookUrl && webhookAtivo) {
+        const webhookPayload = {
+          evento: "verificacao_cadastro",
+          cliente_nome: user_name || "Cliente",
+          telefone: formatPhoneForWhatsApp(phone),
+          codigo: code,
+          mensagem: mensagemWhatsApp,
+          timestamp: new Date().toISOString(),
+        };
 
-      console.log('[whatsapp-verification] Enviando para webhook:', webhookUrl);
+        console.log('[whatsapp-verification] Enfileirando envio para webhook:', webhookUrl);
 
-      // Enviar para webhook com retry
-      let webhookSuccess = false;
-      let lastError = null;
+        // Enviar para webhook em background para não travar o usuário
+        EdgeRuntime.waitUntil((async () => {
+          let webhookSuccess = false;
+          let lastError: string | null = null;
 
-      for (let attempt = 0; attempt < 3; attempt++) {
-        try {
-          const response = await fetch(webhookUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(webhookPayload),
-          });
+          try {
+            const response = await fetch(webhookUrl, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(webhookPayload),
+            });
 
-          if (response.ok) {
-            webhookSuccess = true;
-            console.log('[whatsapp-verification] Webhook enviado com sucesso');
-            break;
-          } else {
-            lastError = `HTTP ${response.status}: ${await response.text()}`;
-            console.warn(`[whatsapp-verification] Tentativa ${attempt + 1} falhou:`, lastError);
+            if (response.ok) {
+              webhookSuccess = true;
+              console.log('[whatsapp-verification] Webhook enviado com sucesso');
+            } else {
+              lastError = `HTTP ${response.status}: ${await response.text()}`;
+              console.warn('[whatsapp-verification] Falha ao enviar webhook:', lastError);
+            }
+          } catch (err: unknown) {
+            lastError = err instanceof Error ? err.message : String(err);
+            console.warn('[whatsapp-verification] Erro ao enviar webhook:', lastError);
           }
-        } catch (err: unknown) {
-          lastError = err instanceof Error ? err.message : String(err);
-          console.warn(`[whatsapp-verification] Tentativa ${attempt + 1} erro:`, lastError);
-        }
 
-        // Aguardar antes de retry
-        if (attempt < 2) {
-          await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)));
-        }
+          // Log do resultado
+          try {
+            await supabase.from('system_logs').insert({
+              level: webhookSuccess ? 'info' : 'warn',
+              category: 'whatsapp_verification',
+              message: webhookSuccess 
+                ? 'Código de verificação enviado via webhook' 
+                : 'Falha ao enviar código via webhook',
+              details: { user_id, phone, webhook_success: webhookSuccess, error: lastError },
+              user_id,
+            });
+          } catch (logErr) {
+            console.error('[whatsapp-verification] Erro ao registrar log:', logErr);
+          }
+        })());
+      } else {
+        console.warn('[whatsapp-verification] Webhook não configurado ou inativo');
       }
-
-      // Log do resultado
-      await supabase.from('system_logs').insert({
-        level: webhookSuccess ? 'info' : 'warn',
-        category: 'whatsapp_verification',
-        message: webhookSuccess 
-          ? 'Código de verificação enviado via webhook' 
-          : 'Falha ao enviar código via webhook',
-        details: { user_id, phone, webhook_success: webhookSuccess, error: lastError },
-        user_id,
-      });
 
       return new Response(
         JSON.stringify({ 
           success: true, 
-          webhook_sent: webhookSuccess,
-          message: webhookSuccess 
-            ? "Código enviado para seu WhatsApp" 
-            : "Código gerado, mas houve problema ao enviar via WhatsApp"
+          message: "Código enviado para seu WhatsApp" 
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
