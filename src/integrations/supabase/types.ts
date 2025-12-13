@@ -1435,6 +1435,48 @@ export type Database = {
         }
         Relationships: []
       }
+      whatsapp_verification_codes: {
+        Row: {
+          attempts: number | null
+          code: string
+          created_at: string
+          expires_at: string
+          id: string
+          phone: string
+          user_cpf: string | null
+          user_email: string | null
+          user_id: string
+          user_name: string | null
+          verified_at: string | null
+        }
+        Insert: {
+          attempts?: number | null
+          code: string
+          created_at?: string
+          expires_at: string
+          id?: string
+          phone: string
+          user_cpf?: string | null
+          user_email?: string | null
+          user_id: string
+          user_name?: string | null
+          verified_at?: string | null
+        }
+        Update: {
+          attempts?: number | null
+          code?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          phone?: string
+          user_cpf?: string | null
+          user_email?: string | null
+          user_id?: string
+          user_name?: string | null
+          verified_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -1442,6 +1484,7 @@ export type Database = {
     Functions: {
       auto_hide_old_cancelled_appointments: { Args: never; Returns: undefined }
       clean_expired_pending_bookings: { Args: never; Returns: undefined }
+      clean_expired_verification_codes: { Args: never; Returns: undefined }
       get_user_available_credits: {
         Args: { p_user_id: string }
         Returns: number
