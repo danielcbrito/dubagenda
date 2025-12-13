@@ -2,16 +2,18 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ShieldCheck, Key, Activity, AlertTriangle } from "lucide-react";
+import { ShieldCheck, Key, Activity, AlertTriangle, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 export function AdminSeguranca() {
   const [oldPassword, setOldPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleChangePassword = () => {
+  const handleChangePassword = async () => {
     if (newPassword !== confirmPassword) {
       toast.error("As senhas não coincidem");
       return;
@@ -21,10 +23,27 @@ export function AdminSeguranca() {
       return;
     }
     
-    toast.success("Senha alterada com sucesso");
-    setOldPassword("");
-    setNewPassword("");
-    setConfirmPassword("");
+    setIsLoading(true);
+    
+    try {
+      const { error } = await supabase.auth.updateUser({ 
+        password: newPassword 
+      });
+      
+      if (error) {
+        toast.error("Erro ao alterar senha: " + error.message);
+        return;
+      }
+      
+      toast.success("Senha alterada com sucesso");
+      setOldPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+    } catch (err) {
+      toast.error("Erro inesperado ao alterar senha");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -88,9 +107,17 @@ export function AdminSeguranca() {
 
           <Button 
             onClick={handleChangePassword}
-            className="bg-gradient-primary shadow-glow-red hover:scale-[1.02] transition-all"
+            disabled={isLoading || !newPassword || !confirmPassword}
+            className="bg-gradient-primary shadow-glow-red hover:scale-[1.02] transition-all disabled:opacity-50"
           >
-            Alterar Senha
+            {isLoading ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Alterando...
+              </>
+            ) : (
+              "Alterar Senha"
+            )}
           </Button>
         </div>
       </Card>
