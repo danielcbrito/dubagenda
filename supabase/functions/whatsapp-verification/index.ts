@@ -108,8 +108,8 @@ serve(async (req) => {
         );
       }
 
-      // Preparar mensagem pronta para WhatsApp (sem quebras de linha)
-      const mensagemWhatsApp = `🔐 Barbearia DUB | Olá, ${user_name || "Cliente"}! Seu código de verificação é: *${code}* ⚠️ Expira em 5 min. 🔒 Não compartilhe.`;
+      // Preparar mensagem pronta para WhatsApp (limpa, sem emojis, sem acentos)
+      const mensagemWhatsApp = `Ola ${user_name || "Cliente"}, seu codigo de verificacao e ${code}. Expira em 5 minutos. Nao compartilhe.`;
 
       // Preparar payload para webhook
       const webhookPayload = {
@@ -372,8 +372,8 @@ serve(async (req) => {
         );
       }
 
-      // Preparar mensagem pronta para WhatsApp (sem quebras de linha)
-      const resendMensagemWhatsApp = `🔐 Barbearia DUB | Olá, ${lastCode.user_name || "Cliente"}! Seu código de verificação é: *${newCode}* ⚠️ Expira em 5 min. 🔒 Não compartilhe.`;
+      // Preparar mensagem pronta para WhatsApp (limpa, sem emojis, sem acentos)
+      const resendMensagemWhatsApp = `Ola ${lastCode.user_name || "Cliente"}, seu codigo de verificacao e ${newCode}. Expira em 5 minutos. Nao compartilhe.`;
 
       // Enviar para webhook
       const webhookPayload = {

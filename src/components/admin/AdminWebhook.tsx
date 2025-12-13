@@ -272,10 +272,10 @@ export function AdminWebhook() {
             <pre className="text-xs text-green-300/80 overflow-x-auto whitespace-pre-wrap">
 {`{
   "evento": "verificacao_cadastro",
-  "cliente_nome": "João Silva",
+  "cliente_nome": "Joao Silva",
   "telefone": "5511999999999@s.whatsapp.net",
   "codigo": "483920",
-  "mensagem": "🔐 Barbearia DUB | Olá, João! Seu código de verificação é: *483920* ⚠️ Expira em 5 min. 🔒 Não compartilhe.",
+  "mensagem": "Ola Joao, seu codigo de verificacao e 483920. Expira em 5 minutos. Nao compartilhe.",
   "timestamp": "2025-12-06T10:00:00Z"
 }`}
             </pre>
