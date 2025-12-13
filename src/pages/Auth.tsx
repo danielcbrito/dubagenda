@@ -168,28 +168,17 @@ const Auth = () => {
       }
 
       if (data.user) {
-        // Gerar código de verificação via WhatsApp
-        const { data: verificationData, error: verificationError } = await supabase.functions.invoke('whatsapp-verification', {
-          body: {
-            action: 'generate',
-            user_id: data.user.id,
-            phone: validated.telefone,
-            user_name: validated.nome,
-            user_email: validated.email,
-            user_cpf: validated.cpf,
-          }
+        // Redirecionar para tela de escolha de verificação (Email ou WhatsApp)
+        const params = new URLSearchParams({
+          user_id: data.user.id,
+          phone: validated.telefone,
+          email: validated.email,
+          nome: validated.nome,
+          cpf: validated.cpf,
         });
-
-        if (verificationError) {
-          console.error("Erro ao gerar código:", verificationError);
-          toast.error("Erro ao enviar código de verificação. Tente novamente.");
-          return;
-        }
-
-        // Redirecionar para tela de verificação WhatsApp
-        const phoneEncoded = encodeURIComponent(validated.telefone);
-        navigate(`/verificar-whatsapp?user_id=${data.user.id}&phone=${phoneEncoded}`);
-        toast.success("Código de verificação enviado para seu WhatsApp!");
+        
+        navigate(`/escolher-verificacao?${params.toString()}`);
+        toast.success("Cadastro realizado! Agora escolha como confirmar.");
       }
     } catch (error) {
       if (error instanceof z.ZodError) {
