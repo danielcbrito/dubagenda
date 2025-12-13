@@ -108,17 +108,8 @@ serve(async (req) => {
         );
       }
 
-      // Preparar mensagem pronta para copiar e colar no WhatsApp
-      const mensagemWhatsApp = `🔐 *Barbearia DUB - Verificação de Cadastro*
-
-Olá, ${user_name || "Cliente"}!
-
-Seu código de verificação é: *${code}*
-
-⚠️ Este código expira em 5 minutos.
-🔒 Para sua segurança, não compartilhe este código com ninguém.
-
-Se você não solicitou este código, ignore esta mensagem.`;
+      // Preparar mensagem pronta para WhatsApp (sem quebras de linha)
+      const mensagemWhatsApp = `🔐 Barbearia DUB | Olá, ${user_name || "Cliente"}! Seu código de verificação é: *${code}* ⚠️ Expira em 5 min. 🔒 Não compartilhe.`;
 
       // Preparar payload para webhook
       const webhookPayload = {
@@ -381,17 +372,8 @@ Se você não solicitou este código, ignore esta mensagem.`;
         );
       }
 
-      // Preparar mensagem pronta para copiar e colar no WhatsApp
-      const resendMensagemWhatsApp = `🔐 *Barbearia DUB - Verificação de Cadastro*
-
-Olá, ${lastCode.user_name || "Cliente"}!
-
-Seu código de verificação é: *${newCode}*
-
-⚠️ Este código expira em 5 minutos.
-🔒 Para sua segurança, não compartilhe este código com ninguém.
-
-Se você não solicitou este código, ignore esta mensagem.`;
+      // Preparar mensagem pronta para WhatsApp (sem quebras de linha)
+      const resendMensagemWhatsApp = `🔐 Barbearia DUB | Olá, ${lastCode.user_name || "Cliente"}! Seu código de verificação é: *${newCode}* ⚠️ Expira em 5 min. 🔒 Não compartilhe.`;
 
       // Enviar para webhook
       const webhookPayload = {
