@@ -8,6 +8,7 @@ import Auth from "./pages/Auth";
 import AuthCallback from "./pages/AuthCallback";
 import EmailVerification from "./pages/EmailVerification";
 import VerificarWhatsApp from "./pages/VerificarWhatsApp";
+import EscolherVerificacao from "./pages/EscolherVerificacao";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import Cliente from "./pages/Cliente";
@@ -32,6 +33,7 @@ const App = () => (
           <Route path="/auth/callback" element={<AuthCallback />} />
           <Route path="/verificar-email" element={<EmailVerification />} />
           <Route path="/verificar-whatsapp" element={<VerificarWhatsApp />} />
+          <Route path="/escolher-verificacao" element={<EscolherVerificacao />} />
           <Route path="/esqueci-senha" element={<ForgotPassword />} />
           <Route path="/resetar-senha" element={<ResetPassword />} />
           <Route path="/cliente" element={<Cliente />} />
