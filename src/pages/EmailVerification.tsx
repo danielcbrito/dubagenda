@@ -63,29 +63,52 @@ const EmailVerification = () => {
 
     try {
       // Use production URL for email redirects (never localhost)
-      const productionUrl = window.location.origin.includes('localhost') 
-        ? 'https://djtpzvujzmrrslirzwun.lovable.app'
+      const productionUrl = window.location.origin.includes("localhost")
+        ? "https://djtpzvujzmrrslirzwun.lovable.app"
         : window.location.origin;
 
+      console.log("[EmailVerification] Resend requested for:", userEmail);
+
       const { error } = await supabase.auth.resend({
-        type: 'signup',
+        type: "signup",
         email: userEmail,
         options: {
-          emailRedirectTo: `${productionUrl}/auth/callback`
-        }
+          emailRedirectTo: `${productionUrl}/auth/callback`,
+        },
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error("[EmailVerification] Error resending email:", error);
+
+        const message = error.message || "Erro ao reenviar email. Tente novamente.";
+
+        if (message.includes("only request this after")) {
+          toast.error(
+            "Você acabou de solicitar um email. Aguarde alguns minutos antes de tentar novamente."
+          );
+        } else if (message.toLowerCase().includes("rate limit")) {
+          toast.error(
+            "Muitas tentativas de reenvio. Aguarde alguns minutos e tente novamente."
+          );
+        } else if (message.toLowerCase().includes("email not found")) {
+          toast.error(
+            "Não encontramos este email. Verifique se digitou corretamente ou faça o cadastro novamente."
+          );
+        } else {
+          toast.error("Erro ao reenviar email. Tente novamente em alguns instantes.");
+        }
+
+        return;
+      }
 
       toast.success("Email de confirmação reenviado com sucesso!");
     } catch (error: any) {
-      console.error("Error resending email:", error);
-      toast.error("Erro ao reenviar email. Tente novamente.");
+      console.error("[EmailVerification] Unexpected error:", error);
+      toast.error("Erro inesperado ao reenviar email. Tente novamente.");
     } finally {
       setIsResending(false);
     }
   };
-
   const handleBackToLogin = () => {
     localStorage.removeItem("pendingVerificationEmail");
     navigate("/auth?mode=login");
