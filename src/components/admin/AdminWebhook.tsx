@@ -275,11 +275,12 @@ export function AdminWebhook() {
   "cliente_nome": "João Silva",
   "telefone": "5511999999999@s.whatsapp.net",
   "codigo": "483920",
+  "mensagem": "🔐 *Barbearia DUB - Verificação*\\n\\nOlá, João!\\n\\nSeu código: *483920*\\n\\n⚠️ Expira em 5 min.\\n🔒 Não compartilhe.",
   "timestamp": "2025-12-06T10:00:00Z"
 }`}
             </pre>
             <p className="text-xs text-green-400/80 mt-2">
-              <strong>Nota:</strong> Configure o n8n para receber este payload e enviar a mensagem via WhatsApp.
+              <strong>Dica:</strong> Use o campo <code className="bg-green-500/20 px-1 rounded">mensagem</code> diretamente no n8n para enviar a mensagem pronta para o cliente!
             </p>
           </div>
         </CardContent>
