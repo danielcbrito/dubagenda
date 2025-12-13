@@ -252,19 +252,32 @@ export function AdminWebhook() {
             </Badge>
           </div>
 
-          {/* Botão Testar WhatsApp */}
-          <Button 
-            variant="outline" 
-            onClick={handleTestWhatsapp}
-            disabled={testingWhatsapp || !whatsappWebhookUrl}
-            className="border-green-500/30 text-green-400 hover:bg-green-500/10"
-          >
-            {testingWhatsapp ? (
-              <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Testando...</>
-            ) : (
-              <><Send className="w-4 h-4 mr-2" /> Testar Webhook WhatsApp</>
-            )}
-          </Button>
+          {/* Botões WhatsApp */}
+          <div className="flex gap-3">
+            <Button 
+              onClick={handleSave} 
+              disabled={saving}
+              className="flex-1 bg-green-600 hover:bg-green-700"
+            >
+              {saving ? (
+                <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Salvando...</>
+              ) : (
+                "Salvar Webhook WhatsApp"
+              )}
+            </Button>
+            <Button 
+              variant="outline" 
+              onClick={handleTestWhatsapp}
+              disabled={testingWhatsapp || !whatsappWebhookUrl}
+              className="border-green-500/30 text-green-400 hover:bg-green-500/10"
+            >
+              {testingWhatsapp ? (
+                <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Testando...</>
+              ) : (
+                <><Send className="w-4 h-4 mr-2" /> Testar</>
+              )}
+            </Button>
+          </div>
 
           {/* Formato do Payload WhatsApp */}
           <div className="p-4 rounded-lg bg-green-500/10 border border-green-500/20">
