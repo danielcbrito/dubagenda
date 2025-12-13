@@ -136,9 +136,28 @@ export function AdminClientes() {
     }
   };
 
-  const openDeleteDialog = (client: Client) => {
+  const openDeleteDialog = async (client: Client) => {
     setClientToDelete(client);
     setDeleteDialogOpen(true);
+    
+    // Buscar e-mail do auth.users via verificação de WhatsApp (que armazena o email)
+    if (!client.email) {
+      try {
+        const { data, error } = await supabase
+          .from('whatsapp_verification_codes')
+          .select('user_email')
+          .eq('user_id', client.id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        
+        if (!error && data?.user_email) {
+          setClientToDelete(prev => prev ? { ...prev, email: data.user_email } : null);
+        }
+      } catch (e) {
+        console.log('Could not fetch email:', e);
+      }
+    }
   };
 
   const filteredClients = clients.filter(client =>
