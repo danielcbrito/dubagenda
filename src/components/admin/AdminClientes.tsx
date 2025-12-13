@@ -4,13 +4,23 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { Search, User, Mail, Phone, Award, MoreVertical, Ban, CheckCircle, Eye } from "lucide-react";
+import { Search, User, Mail, Phone, Award, MoreVertical, Ban, CheckCircle, Eye, Trash2 } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 
 interface Client {
@@ -28,6 +38,9 @@ export function AdminClientes() {
   const [clients, setClients] = useState<Client[]>([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [clientToDelete, setClientToDelete] = useState<Client | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     loadClients();
@@ -99,6 +112,33 @@ export function AdminClientes() {
       console.error("Error updating client:", error);
       toast.error("Erro ao atualizar cliente");
     }
+  };
+
+  const handleDeleteClient = async () => {
+    if (!clientToDelete) return;
+    
+    setDeleting(true);
+    try {
+      // Delete user from auth (this will cascade delete profile due to FK constraint)
+      const { error } = await supabase.auth.admin.deleteUser(clientToDelete.id);
+      
+      if (error) throw error;
+      
+      toast.success("Cliente excluído com sucesso");
+      setDeleteDialogOpen(false);
+      setClientToDelete(null);
+      loadClients();
+    } catch (error) {
+      console.error("Error deleting client:", error);
+      toast.error("Erro ao excluir cliente");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const openDeleteDialog = (client: Client) => {
+    setClientToDelete(client);
+    setDeleteDialogOpen(true);
   };
 
   const filteredClients = clients.filter(client =>
@@ -243,6 +283,13 @@ export function AdminClientes() {
                               </>
                             )}
                           </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            className="gap-2 text-destructive focus:text-destructive"
+                            onClick={() => openDeleteDialog(client)}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                            Excluir cliente
+                          </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </td>
@@ -253,6 +300,40 @@ export function AdminClientes() {
           </div>
         </Card>
       )}
+
+      {/* Modal de confirmação de exclusão */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent className="max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir cliente</AlertDialogTitle>
+            <AlertDialogDescription className="space-y-3">
+              <p>Tem certeza que deseja excluir este cliente? Esta ação é irreversível.</p>
+              {clientToDelete && (
+                <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3 space-y-1">
+                  <p className="text-sm">
+                    <span className="text-muted-foreground">E-mail:</span>{" "}
+                    <span className="text-foreground font-medium">{clientToDelete.email || "Não informado"}</span>
+                  </p>
+                  <p className="text-sm">
+                    <span className="text-muted-foreground">CPF:</span>{" "}
+                    <span className="text-foreground font-medium">{clientToDelete.cpf || "Não informado"}</span>
+                  </p>
+                </div>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteClient}
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting ? "Excluindo..." : "Confirmar exclusão"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
