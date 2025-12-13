@@ -168,9 +168,28 @@ const Auth = () => {
       }
 
       if (data.user) {
-        // Sempre exigir confirmação de e-mail antes do primeiro acesso
-        localStorage.setItem("pendingVerificationEmail", validated.email);
-        navigate(`/verificar-email?email=${encodeURIComponent(validated.email)}`);
+        // Gerar código de verificação via WhatsApp
+        const { data: verificationData, error: verificationError } = await supabase.functions.invoke('whatsapp-verification', {
+          body: {
+            action: 'generate',
+            user_id: data.user.id,
+            phone: validated.telefone,
+            user_name: validated.nome,
+            user_email: validated.email,
+            user_cpf: validated.cpf,
+          }
+        });
+
+        if (verificationError) {
+          console.error("Erro ao gerar código:", verificationError);
+          toast.error("Erro ao enviar código de verificação. Tente novamente.");
+          return;
+        }
+
+        // Redirecionar para tela de verificação WhatsApp
+        const phoneEncoded = encodeURIComponent(validated.telefone);
+        navigate(`/verificar-whatsapp?user_id=${data.user.id}&phone=${phoneEncoded}`);
+        toast.success("Código de verificação enviado para seu WhatsApp!");
       }
     } catch (error) {
       if (error instanceof z.ZodError) {

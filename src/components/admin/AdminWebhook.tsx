@@ -287,6 +287,14 @@ export function AdminWebhook() {
             </div>
           </div>
 
+          {/* Eventos de Verificação */}
+          <div className="mb-4">
+            <h4 className="text-sm font-semibold text-green-500 mb-2">Verificação WhatsApp</h4>
+            <div className="grid gap-2 sm:grid-cols-2">
+              <EventCard evento="verificacao_cadastro" desc="Enviar código de verificação para WhatsApp" />
+            </div>
+          </div>
+
           {/* Eventos de Cliente */}
           <div className="mb-4">
             <h4 className="text-sm font-semibold text-primary mb-2">Clientes</h4>
@@ -296,59 +304,50 @@ export function AdminWebhook() {
             </div>
           </div>
 
-          {/* Formato do Payload */}
+          {/* Formato do Payload - Agendamentos */}
           <div className="mt-4 p-4 rounded-lg bg-muted/30">
-            <p className="text-sm font-medium mb-2">Formato do Payload Completo:</p>
+            <p className="text-sm font-medium mb-2">Formato do Payload (Agendamentos):</p>
             <pre className="text-xs text-muted-foreground overflow-x-auto whitespace-pre-wrap">
 {`{
-  // Identificação do evento
   "evento": "agendamento_criado",
   "evento_id": "uuid-unico-do-evento",
-  "descricao": "Cliente criou um novo agendamento",
   "timestamp": "2025-12-06T10:00:00Z",
-
-  // Dados do agendamento
   "agendamento_id": "uuid",
   "data": "2025-12-06",
   "hora": "10:00",
-  "duracao_minutos": 30,
-  "status": "pendente",
-  "tipo_agendamento": "normal",
-
-  // Dados do serviço
   "servico": "Corte + Barba",
-  "servico_id": "uuid",
-
-  // Dados financeiros
   "valor_total": 50.00,
-  "valor_pago_app": 25.00,
-  "valor_pago_creditos": 25.00,
-  "metodo_pagamento": "pix",
-  "saldo_creditos_restante": 15.00,
-
-  // Dados COMPLETOS do cliente
   "cliente_id": "uuid",
   "cliente_nome": "João Silva",
   "cliente_telefone": "11999999999",
   "cliente_email": "joao@email.com",
-  "cliente_cpf": "12345678900",
-
-  // Dados do barbeiro
-  "barbeiro_id": "uuid",
-  "barbeiro_nome": "Carlos",
-
-  // Detalhes extras (quando aplicável)
-  "mensagem_barbeiro": "Mensagem do barbeiro",
-  "motivo": "Motivo do cancelamento",
-  "detalhes": { ... }
+  "barbeiro_nome": "Carlos"
 }`}
             </pre>
           </div>
 
-          <div className="mt-4 p-3 rounded-lg bg-green-500/10 border border-green-500/20">
-            <p className="text-xs text-green-400">
-              <strong>Importante:</strong> Todos os eventos incluem dados completos do cliente 
-              (nome, telefone, email) e são enviados em tempo real para integração com WhatsApp e outras automações.
+          {/* Formato do Payload - Verificação WhatsApp */}
+          <div className="mt-4 p-4 rounded-lg bg-green-500/10 border border-green-500/20">
+            <p className="text-sm font-medium mb-2 text-green-400">Formato do Payload (Verificação WhatsApp):</p>
+            <pre className="text-xs text-green-300/80 overflow-x-auto whitespace-pre-wrap">
+{`{
+  "evento": "verificacao_cadastro",
+  "cliente_nome": "João Silva",
+  "telefone": "5511999999999@s.whatsapp.net",
+  "codigo": "483920",
+  "timestamp": "2025-12-06T10:00:00Z"
+}`}
+            </pre>
+            <p className="text-xs text-green-400/80 mt-2">
+              <strong>Nota:</strong> O telefone sempre está no formato WhatsApp (55 + DDD + número + @s.whatsapp.net).
+              Use este payload para enviar o código de verificação via n8n para o WhatsApp do cliente.
+            </p>
+          </div>
+
+          <div className="mt-4 p-3 rounded-lg bg-primary/10 border border-primary/20">
+            <p className="text-xs text-primary">
+              <strong>Importante:</strong> Configure este webhook no seu n8n para receber todos os eventos do sistema.
+              O evento "verificacao_cadastro" é usado para confirmar novos cadastros via WhatsApp.
             </p>
           </div>
         </CardContent>
