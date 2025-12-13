@@ -61,13 +61,27 @@ export function AdminClientes() {
     try {
       const { data: profiles, error: profilesError } = await supabase
         .from("profiles")
-        .select("id, nome, cpf, blocked, created_at")
+        .select("id, nome, cpf, blocked, created_at, telefone")
         .order("created_at", { ascending: false });
 
       if (profilesError) throw profilesError;
 
-      const { data: usersData } = await supabase.auth.admin.listUsers();
-      const users = usersData?.users || [];
+      // Buscar emails via Edge Function (usa service_role)
+      const { data: session } = await supabase.auth.getSession();
+      let usersMap: Record<string, { email?: string }> = {};
+      
+      if (session?.session?.access_token) {
+        try {
+          const response = await supabase.functions.invoke('manage-clients', {
+            body: { action: 'list' }
+          });
+          if (response.data?.users) {
+            usersMap = response.data.users;
+          }
+        } catch (e) {
+          console.log('Could not fetch users from edge function:', e);
+        }
+      }
       
       const { data: pontos } = await supabase
         .from("pontos")
@@ -78,13 +92,13 @@ export function AdminClientes() {
         .select("user_id");
 
       const clientsData = profiles?.map(profile => {
-        const user = users?.find(u => u.id === profile.id);
+        const userData = usersMap[profile.id];
         const userPoints = pontos?.find(p => p.user_id === profile.id);
         const userAppointments = appointments?.filter(a => a.user_id === profile.id);
 
         return {
           ...profile,
-          email: user?.email || null,
+          email: userData?.email || null,
           pontos: userPoints?.pontos || 0,
           total_agendamentos: userAppointments?.length || 0,
         };
@@ -119,10 +133,13 @@ export function AdminClientes() {
     
     setDeleting(true);
     try {
-      // Delete user from auth (this will cascade delete profile due to FK constraint)
-      const { error } = await supabase.auth.admin.deleteUser(clientToDelete.id);
+      // Deletar via Edge Function (usa service_role)
+      const { data, error } = await supabase.functions.invoke('manage-clients', {
+        body: { action: 'delete', userId: clientToDelete.id }
+      });
       
       if (error) throw error;
+      if (data?.error) throw new Error(data.error);
       
       toast.success("Cliente excluído com sucesso");
       setDeleteDialogOpen(false);
@@ -140,19 +157,15 @@ export function AdminClientes() {
     setClientToDelete(client);
     setDeleteDialogOpen(true);
     
-    // Buscar e-mail do auth.users via verificação de WhatsApp (que armazena o email)
+    // Buscar e-mail via Edge Function se não tiver
     if (!client.email) {
       try {
-        const { data, error } = await supabase
-          .from('whatsapp_verification_codes')
-          .select('user_email')
-          .eq('user_id', client.id)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
+        const { data, error } = await supabase.functions.invoke('manage-clients', {
+          body: { action: 'get-email', userId: client.id }
+        });
         
-        if (!error && data?.user_email) {
-          setClientToDelete(prev => prev ? { ...prev, email: data.user_email } : null);
+        if (!error && data?.email) {
+          setClientToDelete(prev => prev ? { ...prev, email: data.email } : null);
         }
       } catch (e) {
         console.log('Could not fetch email:', e);
