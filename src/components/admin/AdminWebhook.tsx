@@ -275,7 +275,7 @@ export function AdminWebhook() {
   "cliente_nome": "João Silva",
   "telefone": "5511999999999@s.whatsapp.net",
   "codigo": "483920",
-  "mensagem": "🔐 *Barbearia DUB - Verificação*\\n\\nOlá, João!\\n\\nSeu código: *483920*\\n\\n⚠️ Expira em 5 min.\\n🔒 Não compartilhe.",
+  "mensagem": "🔐 Barbearia DUB | Olá, João! Seu código de verificação é: *483920* ⚠️ Expira em 5 min. 🔒 Não compartilhe.",
   "timestamp": "2025-12-06T10:00:00Z"
 }`}
             </pre>
