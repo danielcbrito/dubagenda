@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import logoDub from "@/assets/logo-dub.png";
-import { Loader2, MessageCircle, RefreshCw, CheckCircle2, XCircle } from "lucide-react";
+import whatsappLogo from "@/assets/whatsapp-logo.png";
+import { Loader2, RefreshCw, CheckCircle2, XCircle } from "lucide-react";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 
 const VerificarWhatsApp = () => {
@@ -207,7 +208,7 @@ const VerificarWhatsApp = () => {
                 </div>
               ) : (
                 <div className="w-20 h-20 rounded-full bg-green-500/10 flex items-center justify-center">
-                  <MessageCircle className="w-10 h-10 text-green-500" />
+                  <img src={whatsappLogo} alt="WhatsApp" className="w-12 h-12 object-contain" />
                 </div>
               )}
             </div>
