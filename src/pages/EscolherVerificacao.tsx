@@ -119,92 +119,92 @@ const EscolherVerificacao = () => {
   };
 
   return (
-    <div className="min-h-screen relative flex items-center justify-center overflow-hidden px-4" style={{ background: '#000000' }}>
+    <div className="min-h-screen min-h-[100dvh] relative flex items-center justify-center overflow-hidden px-3 sm:px-4 py-6" style={{ background: '#000000' }}>
       {/* Ambient background lights */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/5 rounded-full blur-[120px] animate-pulse" style={{ animationDuration: '4s' }} />
-        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-green-500/5 rounded-full blur-[120px] animate-pulse" style={{ animationDuration: '6s', animationDelay: '2s' }} />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/3 rounded-full blur-[150px]" />
+        <div className="absolute top-1/4 left-1/4 w-48 sm:w-96 h-48 sm:h-96 bg-primary/5 rounded-full blur-[80px] sm:blur-[120px] animate-pulse" style={{ animationDuration: '4s' }} />
+        <div className="absolute bottom-1/4 right-1/4 w-48 sm:w-96 h-48 sm:h-96 bg-green-500/5 rounded-full blur-[80px] sm:blur-[120px] animate-pulse" style={{ animationDuration: '6s', animationDelay: '2s' }} />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] sm:w-[600px] h-[300px] sm:h-[600px] bg-primary/3 rounded-full blur-[100px] sm:blur-[150px]" />
       </div>
 
       {/* Content */}
-      <div className="relative z-10 w-full max-w-[520px] animate-fade-in">
+      <div className="relative z-10 w-full max-w-[480px] lg:max-w-[520px] animate-fade-in">
         
         {/* Logo */}
-        <div className="flex justify-center mb-8 animate-scale-in">
+        <div className="flex justify-center mb-6 sm:mb-8 animate-scale-in">
           <div className="relative">
             <div className="absolute inset-0 bg-primary/20 blur-xl rounded-full" />
-            <img src={logoDub} alt="DUB" className="relative w-16 h-16 object-contain drop-shadow-2xl" />
+            <img src={logoDub} alt="DUB" className="relative w-12 h-12 sm:w-16 sm:h-16 object-contain drop-shadow-2xl" />
           </div>
         </div>
 
         {/* Card Principal */}
         <div className="relative group">
-          <div className="absolute -inset-[1px] bg-gradient-to-b from-primary/20 via-primary/5 to-transparent rounded-2xl blur-sm opacity-60" />
+          <div className="absolute -inset-[1px] bg-gradient-to-b from-primary/20 via-primary/5 to-transparent rounded-xl sm:rounded-2xl blur-sm opacity-60" />
           
           <div 
-            className="relative bg-gradient-to-b from-white/[0.07] to-white/[0.02] rounded-2xl p-8 md:p-10 border border-white/10 shadow-2xl overflow-hidden"
+            className="relative bg-gradient-to-b from-white/[0.07] to-white/[0.02] rounded-xl sm:rounded-2xl p-5 sm:p-8 lg:p-10 border border-white/10 shadow-2xl overflow-hidden"
             style={{ backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)' }}
           >
             <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/30 to-transparent" />
 
             {/* Ícone */}
-            <div className="flex justify-center mb-6">
-              <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center">
-                <CheckCircle2 className="w-10 h-10 text-primary" />
+            <div className="flex justify-center mb-4 sm:mb-6">
+              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-primary/10 flex items-center justify-center">
+                <CheckCircle2 className="w-8 h-8 sm:w-10 sm:h-10 text-primary" />
               </div>
             </div>
 
             {/* Título */}
-            <h1 className="text-2xl font-semibold text-white text-center mb-2">
+            <h1 className="text-xl sm:text-2xl font-semibold text-white text-center mb-2">
               Confirme seu Cadastro
             </h1>
 
             {/* Subtítulo */}
-            <p className="text-white/60 text-center mb-8 text-sm">
+            <p className="text-white/60 text-center mb-5 sm:mb-8 text-xs sm:text-sm px-2">
               Escolha como deseja confirmar seu cadastro na Barbearia DUB
             </p>
 
             {/* Opções de Verificação */}
-            <div className="space-y-4">
+            <div className="space-y-3 sm:space-y-4">
               
               {/* Opção WhatsApp */}
               <button
                 onClick={handleWhatsApp}
                 disabled={isLoadingWhatsApp || isLoadingEmail}
-                className="w-full group relative overflow-hidden rounded-xl border border-green-500/20 bg-green-500/5 p-5 text-left transition-all hover:border-green-500/40 hover:bg-green-500/10 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full group relative overflow-hidden rounded-lg sm:rounded-xl border border-green-500/20 bg-green-500/5 p-4 sm:p-5 text-left transition-all hover:border-green-500/40 hover:bg-green-500/10 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <div className="flex items-start gap-4">
-                  <div className="flex-shrink-0 w-12 h-12 rounded-full bg-green-500/20 flex items-center justify-center">
+                <div className="flex items-start gap-3 sm:gap-4">
+                  <div className="flex-shrink-0 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-green-500/20 flex items-center justify-center">
                     {isLoadingWhatsApp ? (
-                      <Loader2 className="w-6 h-6 text-green-500 animate-spin" />
+                      <Loader2 className="w-5 h-5 sm:w-6 sm:h-6 text-green-500 animate-spin" />
                     ) : (
-                      <img src={whatsappLogo} alt="WhatsApp" className="w-7 h-7 object-contain" />
+                      <img src={whatsappLogo} alt="WhatsApp" className="w-6 h-6 sm:w-7 sm:h-7 object-contain" />
                     )}
                   </div>
-                  <div className="flex-1">
-                    <h3 className="text-lg font-semibold text-white mb-1">
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-base sm:text-lg font-semibold text-white mb-0.5 sm:mb-1">
                       Confirmar pelo WhatsApp
                     </h3>
-                    <p className="text-sm text-white/60">
+                    <p className="text-xs sm:text-sm text-white/60">
                       Receba um código de 6 dígitos no seu WhatsApp
                     </p>
                     {phone && (
-                      <p className="text-sm text-green-400 font-medium mt-2">
+                      <p className="text-xs sm:text-sm text-green-400 font-medium mt-1.5 sm:mt-2 truncate">
                         {formatPhoneDisplay(phone)}
                       </p>
                     )}
                   </div>
                 </div>
-                <div className="absolute right-5 top-1/2 -translate-y-1/2 text-white/30 group-hover:text-green-400 transition-colors">
+                <div className="absolute right-3 sm:right-5 top-1/2 -translate-y-1/2 text-white/30 group-hover:text-green-400 transition-colors text-lg sm:text-xl">
                   →
                 </div>
               </button>
 
               {/* Divisor */}
-              <div className="flex items-center gap-4 py-2">
+              <div className="flex items-center gap-3 sm:gap-4 py-1.5 sm:py-2">
                 <div className="flex-1 h-px bg-white/10" />
-                <span className="text-white/40 text-sm">ou</span>
+                <span className="text-white/40 text-xs sm:text-sm">ou</span>
                 <div className="flex-1 h-px bg-white/10" />
               </div>
 
@@ -212,36 +212,36 @@ const EscolherVerificacao = () => {
               <button
                 onClick={handleEmail}
                 disabled={isLoadingEmail || isLoadingWhatsApp || emailSent}
-                className="w-full group relative overflow-hidden rounded-xl border border-primary/20 bg-primary/5 p-5 text-left transition-all hover:border-primary/40 hover:bg-primary/10 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full group relative overflow-hidden rounded-lg sm:rounded-xl border border-primary/20 bg-primary/5 p-4 sm:p-5 text-left transition-all hover:border-primary/40 hover:bg-primary/10 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <div className="flex items-start gap-4">
-                  <div className="flex-shrink-0 w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center">
+                <div className="flex items-start gap-3 sm:gap-4">
+                  <div className="flex-shrink-0 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-primary/20 flex items-center justify-center">
                     {isLoadingEmail ? (
-                      <Loader2 className="w-6 h-6 text-primary animate-spin" />
+                      <Loader2 className="w-5 h-5 sm:w-6 sm:h-6 text-primary animate-spin" />
                     ) : emailSent ? (
-                      <CheckCircle2 className="w-6 h-6 text-primary" />
+                      <CheckCircle2 className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
                     ) : (
-                      <Mail className="w-6 h-6 text-primary" />
+                      <Mail className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
                     )}
                   </div>
-                  <div className="flex-1">
-                    <h3 className="text-lg font-semibold text-white mb-1">
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-base sm:text-lg font-semibold text-white mb-0.5 sm:mb-1">
                       {emailSent ? "Email Enviado!" : "Confirmar por Email"}
                     </h3>
-                    <p className="text-sm text-white/60">
+                    <p className="text-xs sm:text-sm text-white/60">
                       {emailSent 
                         ? "Verifique sua caixa de entrada e spam" 
                         : "Receba um link de confirmação no seu email"}
                     </p>
                     {email && (
-                      <p className="text-sm text-primary font-medium mt-2">
+                      <p className="text-xs sm:text-sm text-primary font-medium mt-1.5 sm:mt-2 truncate">
                         {email}
                       </p>
                     )}
                   </div>
                 </div>
                 {!emailSent && (
-                  <div className="absolute right-5 top-1/2 -translate-y-1/2 text-white/30 group-hover:text-primary transition-colors">
+                  <div className="absolute right-3 sm:right-5 top-1/2 -translate-y-1/2 text-white/30 group-hover:text-primary transition-colors text-lg sm:text-xl">
                     →
                   </div>
                 )}
@@ -250,18 +250,18 @@ const EscolherVerificacao = () => {
 
             {/* Info adicional para email */}
             {emailSent && (
-              <div className="mt-6 p-4 rounded-lg bg-primary/10 border border-primary/20">
-                <p className="text-sm text-primary text-center">
-                  Clique no link que enviamos para <strong>{email}</strong> para ativar sua conta.
+              <div className="mt-4 sm:mt-6 p-3 sm:p-4 rounded-lg bg-primary/10 border border-primary/20">
+                <p className="text-xs sm:text-sm text-primary text-center">
+                  Clique no link que enviamos para <strong className="break-all">{email}</strong> para ativar sua conta.
                 </p>
               </div>
             )}
 
             {/* Voltar */}
-            <div className="mt-8 text-center">
+            <div className="mt-5 sm:mt-8 text-center">
               <button
                 onClick={() => navigate("/auth?mode=signup")}
-                className="text-sm text-white/50 hover:text-white/90 transition-colors duration-300"
+                className="text-xs sm:text-sm text-white/50 hover:text-white/90 transition-colors duration-300"
               >
                 ← Voltar para o cadastro
               </button>
@@ -270,8 +270,8 @@ const EscolherVerificacao = () => {
         </div>
 
         {/* Info */}
-        <div className="mt-6 text-center">
-          <p className="text-white/40 text-xs">
+        <div className="mt-4 sm:mt-6 text-center px-4">
+          <p className="text-white/40 text-[10px] sm:text-xs">
             A verificação é necessária para sua segurança.
           </p>
         </div>
