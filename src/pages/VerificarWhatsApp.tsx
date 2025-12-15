@@ -167,54 +167,54 @@ const VerificarWhatsApp = () => {
   }, [userId, navigate]);
 
   return (
-    <div className="min-h-screen relative flex items-center justify-center overflow-hidden px-4" style={{ background: '#000000' }}>
+    <div className="min-h-screen min-h-[100dvh] relative flex items-center justify-center overflow-hidden px-3 sm:px-4 py-6" style={{ background: '#000000' }}>
       {/* Ambient background lights */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-green-500/5 rounded-full blur-[120px] animate-pulse" style={{ animationDuration: '4s' }} />
-        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-primary/5 rounded-full blur-[120px] animate-pulse" style={{ animationDuration: '6s', animationDelay: '2s' }} />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-green-500/3 rounded-full blur-[150px]" />
+        <div className="absolute top-1/4 left-1/4 w-48 sm:w-96 h-48 sm:h-96 bg-green-500/5 rounded-full blur-[80px] sm:blur-[120px] animate-pulse" style={{ animationDuration: '4s' }} />
+        <div className="absolute bottom-1/4 right-1/4 w-48 sm:w-96 h-48 sm:h-96 bg-primary/5 rounded-full blur-[80px] sm:blur-[120px] animate-pulse" style={{ animationDuration: '6s', animationDelay: '2s' }} />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] sm:w-[600px] h-[300px] sm:h-[600px] bg-green-500/3 rounded-full blur-[100px] sm:blur-[150px]" />
       </div>
 
       {/* Content */}
-      <div className="relative z-10 w-full max-w-[480px] animate-fade-in">
+      <div className="relative z-10 w-full max-w-[440px] lg:max-w-[480px] animate-fade-in">
         
         {/* Logo */}
-        <div className="flex justify-center mb-8 animate-scale-in">
+        <div className="flex justify-center mb-6 sm:mb-8 animate-scale-in">
           <div className="relative">
             <div className="absolute inset-0 bg-green-500/20 blur-xl rounded-full" />
-            <img src={logoDub} alt="DUB" className="relative w-16 h-16 object-contain drop-shadow-2xl" />
+            <img src={logoDub} alt="DUB" className="relative w-12 h-12 sm:w-16 sm:h-16 object-contain drop-shadow-2xl" />
           </div>
         </div>
 
         {/* Card Principal */}
         <div className="relative group">
-          <div className="absolute -inset-[1px] bg-gradient-to-b from-green-500/20 via-green-500/5 to-transparent rounded-2xl blur-sm opacity-60" />
+          <div className="absolute -inset-[1px] bg-gradient-to-b from-green-500/20 via-green-500/5 to-transparent rounded-xl sm:rounded-2xl blur-sm opacity-60" />
           
           <div 
-            className="relative bg-gradient-to-b from-white/[0.07] to-white/[0.02] rounded-2xl p-8 md:p-10 border border-white/10 shadow-2xl overflow-hidden"
+            className="relative bg-gradient-to-b from-white/[0.07] to-white/[0.02] rounded-xl sm:rounded-2xl p-5 sm:p-8 lg:p-10 border border-white/10 shadow-2xl overflow-hidden"
             style={{ backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)' }}
           >
             <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-green-500/30 to-transparent" />
 
             {/* Status Icon */}
-            <div className="flex justify-center mb-6">
+            <div className="flex justify-center mb-4 sm:mb-6">
               {verificationStatus === 'success' ? (
-                <div className="w-20 h-20 rounded-full bg-green-500/20 flex items-center justify-center animate-scale-in">
-                  <CheckCircle2 className="w-10 h-10 text-green-500" />
+                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-green-500/20 flex items-center justify-center animate-scale-in">
+                  <CheckCircle2 className="w-8 h-8 sm:w-10 sm:h-10 text-green-500" />
                 </div>
               ) : verificationStatus === 'error' ? (
-                <div className="w-20 h-20 rounded-full bg-destructive/20 flex items-center justify-center animate-scale-in">
-                  <XCircle className="w-10 h-10 text-destructive" />
+                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-destructive/20 flex items-center justify-center animate-scale-in">
+                  <XCircle className="w-8 h-8 sm:w-10 sm:h-10 text-destructive" />
                 </div>
               ) : (
-                <div className="w-20 h-20 rounded-full bg-green-500/10 flex items-center justify-center">
-                  <img src={whatsappLogo} alt="WhatsApp" className="w-12 h-12 object-contain" />
+                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-green-500/10 flex items-center justify-center">
+                  <img src={whatsappLogo} alt="WhatsApp" className="w-10 h-10 sm:w-12 sm:h-12 object-contain" />
                 </div>
               )}
             </div>
 
             {/* Título */}
-            <h1 className="text-2xl font-semibold text-white text-center mb-2">
+            <h1 className="text-xl sm:text-2xl font-semibold text-white text-center mb-2">
               {verificationStatus === 'success' 
                 ? "Cadastro Confirmado!" 
                 : verificationStatus === 'error'
@@ -223,7 +223,7 @@ const VerificarWhatsApp = () => {
             </h1>
 
             {/* Subtítulo */}
-            <p className="text-white/60 text-center mb-8 text-sm">
+            <p className="text-white/60 text-center mb-5 sm:mb-8 text-xs sm:text-sm px-2">
               {verificationStatus === 'success' 
                 ? "Você será redirecionado para o login..." 
                 : verificationStatus === 'error'
@@ -243,26 +243,26 @@ const VerificarWhatsApp = () => {
             {verificationStatus === 'pending' && (
               <>
                 {/* Timer de validade */}
-                <div className="flex justify-center mb-6">
-                  <div className={`px-4 py-2 rounded-full ${timeRemaining <= 60 ? 'bg-destructive/20 text-destructive' : 'bg-white/5 text-white/60'} text-sm font-medium`}>
+                <div className="flex justify-center mb-4 sm:mb-6">
+                  <div className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-full ${timeRemaining <= 60 ? 'bg-destructive/20 text-destructive' : 'bg-white/5 text-white/60'} text-xs sm:text-sm font-medium`}>
                     Código expira em {formatTime(timeRemaining)}
                   </div>
                 </div>
 
-                {/* Input OTP */}
-                <div className="flex justify-center mb-8">
+                {/* Input OTP - Responsivo */}
+                <div className="flex justify-center mb-5 sm:mb-8">
                   <InputOTP
                     maxLength={6}
                     value={code}
                     onChange={setCode}
                     disabled={isLoading}
                   >
-                    <InputOTPGroup className="gap-2 md:gap-3">
+                    <InputOTPGroup className="gap-1.5 sm:gap-2 md:gap-3">
                       {[0, 1, 2, 3, 4, 5].map((index) => (
                         <InputOTPSlot
                           key={index}
                           index={index}
-                          className="w-12 h-14 md:w-14 md:h-16 text-xl md:text-2xl font-bold bg-white/5 border-white/20 text-white rounded-xl focus:border-green-500 focus:ring-green-500/20"
+                          className="w-10 h-12 sm:w-12 sm:h-14 md:w-14 md:h-16 text-lg sm:text-xl md:text-2xl font-bold bg-white/5 border-white/20 text-white rounded-lg sm:rounded-xl focus:border-green-500 focus:ring-green-500/20"
                         />
                       ))}
                     </InputOTPGroup>
@@ -273,7 +273,7 @@ const VerificarWhatsApp = () => {
                 <Button
                   onClick={handleVerify}
                   disabled={code.length !== 6 || isLoading}
-                  className="w-full h-12 bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-400 text-white font-semibold rounded-xl transition-all duration-300 shadow-lg shadow-green-500/25 hover:shadow-xl hover:shadow-green-500/40 hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed mb-4"
+                  className="w-full h-11 sm:h-12 bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-400 text-white font-semibold rounded-lg sm:rounded-xl transition-all duration-300 shadow-lg shadow-green-500/25 hover:shadow-xl hover:shadow-green-500/40 hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed mb-3 sm:mb-4 text-sm sm:text-base"
                 >
                   {isLoading ? (
                     <>
@@ -287,25 +287,25 @@ const VerificarWhatsApp = () => {
 
                 {/* Reenviar */}
                 <div className="text-center">
-                  <p className="text-white/50 text-sm mb-2">Não recebeu o código?</p>
+                  <p className="text-white/50 text-xs sm:text-sm mb-1.5 sm:mb-2">Não recebeu o código?</p>
                   <button
                     onClick={handleResend}
                     disabled={cooldown > 0 || isResending}
-                    className="inline-flex items-center gap-2 text-green-400 hover:text-green-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
+                    className="inline-flex items-center gap-1.5 sm:gap-2 text-green-400 hover:text-green-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-xs sm:text-sm font-medium"
                   >
                     {isResending ? (
                       <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <Loader2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-spin" />
                         Reenviando...
                       </>
                     ) : cooldown > 0 ? (
                       <>
-                        <RefreshCw className="w-4 h-4" />
+                        <RefreshCw className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                         Aguarde {cooldown}s
                       </>
                     ) : (
                       <>
-                        <RefreshCw className="w-4 h-4" />
+                        <RefreshCw className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                         Reenviar código
                       </>
                     )}
@@ -315,10 +315,10 @@ const VerificarWhatsApp = () => {
             )}
 
             {/* Voltar */}
-            <div className="mt-6 text-center">
+            <div className="mt-5 sm:mt-6 text-center">
               <button
                 onClick={() => navigate("/auth?mode=signup")}
-                className="text-sm text-white/50 hover:text-white/90 transition-colors duration-300"
+                className="text-xs sm:text-sm text-white/50 hover:text-white/90 transition-colors duration-300"
               >
                 ← Voltar para o cadastro
               </button>
@@ -327,8 +327,8 @@ const VerificarWhatsApp = () => {
         </div>
 
         {/* Info WhatsApp */}
-        <div className="mt-6 text-center">
-          <p className="text-white/40 text-xs">
+        <div className="mt-4 sm:mt-6 text-center px-4">
+          <p className="text-white/40 text-[10px] sm:text-xs">
             Verifique sua caixa de mensagens no WhatsApp.<br />
             O código expira em 5 minutos.
           </p>
