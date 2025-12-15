@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import logoDub from "@/assets/logo-dub.png";
-import { Loader2, Mail, MessageCircle, CheckCircle2 } from "lucide-react";
+import whatsappLogo from "@/assets/whatsapp-logo.png";
+import { Loader2, Mail, CheckCircle2 } from "lucide-react";
 
 const EscolherVerificacao = () => {
   const navigate = useNavigate();
@@ -178,7 +179,7 @@ const EscolherVerificacao = () => {
                     {isLoadingWhatsApp ? (
                       <Loader2 className="w-6 h-6 text-green-500 animate-spin" />
                     ) : (
-                      <MessageCircle className="w-6 h-6 text-green-500" />
+                      <img src={whatsappLogo} alt="WhatsApp" className="w-7 h-7 object-contain" />
                     )}
                   </div>
                   <div className="flex-1">
