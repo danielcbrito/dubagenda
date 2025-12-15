@@ -172,6 +172,7 @@ export function AppointmentDetailsSidebar({ appointment, open, onClose, onUpdate
   const isPrepaid = payment?.status === 'paid';
   const canComplete = appointment.status !== 'completed' && appointment.status !== 'cancelled_by_admin';
   const canCancel = appointment.status !== 'completed' && appointment.status !== 'cancelled_by_admin' && appointment.status !== 'cancelled_by_user';
+  const isPlanAppointment = (appointment as any).tipo_agendamento === 'plano' || appointment.payment_method === 'plano';
 
   return (
     <Sheet open={open} onOpenChange={onClose}>
@@ -245,20 +246,43 @@ export function AppointmentDetailsSidebar({ appointment, open, onClose, onUpdate
             <div className="pl-6 space-y-3">
               <div className="flex flex-col gap-2">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <Badge variant="outline" className="text-xs">
-                    {paymentMethod === 'pix' && 'PIX'}
-                    {paymentMethod === 'card' && 'Cartão'}
-                    {paymentMethod === 'cash' && 'Dinheiro'}
-                    {paymentMethod === 'credit' && 'Crédito do App'}
-                  </Badge>
-                  <Badge variant={isPrepaid ? "default" : "outline"} className={isPrepaid ? "bg-green-500 text-xs" : "text-xs"}>
-                    {isPrepaid ? 'Pago Antecipadamente' : 'Pagar na Barbearia'}
-                  </Badge>
+                  {isPlanAppointment ? (
+                    <Badge className="bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-xs">
+                      📋 Assinante - PLANO
+                    </Badge>
+                  ) : (
+                    <>
+                      <Badge variant="outline" className="text-xs">
+                        {paymentMethod === 'pix' && 'PIX'}
+                        {paymentMethod === 'card' && 'Cartão'}
+                        {paymentMethod === 'cash' && 'Dinheiro'}
+                        {paymentMethod === 'credit' && 'Crédito do App'}
+                      </Badge>
+                      <Badge variant={isPrepaid ? "default" : "outline"} className={isPrepaid ? "bg-green-500 text-xs" : "text-xs"}>
+                        {isPrepaid ? 'Pago Antecipadamente' : 'Pagar na Barbearia'}
+                      </Badge>
+                    </>
+                  )}
                 </div>
                 <p className="text-sm font-medium">
-                  Valor: R$ {appointment.preco.toFixed(2)}
+                  Valor: {isPlanAppointment ? 'Incluído no Plano' : `R$ ${appointment.preco.toFixed(2)}`}
                 </p>
               </div>
+
+              {/* Indicador de agendamento via plano */}
+              {isPlanAppointment && (
+                <div className="bg-emerald-500/10 border border-emerald-500/20 p-3 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg">📋</span>
+                    <p className="text-sm text-emerald-700 dark:text-emerald-400 font-semibold">
+                      Agendamento via Plano de Assinatura
+                    </p>
+                  </div>
+                  <p className="text-xs text-emerald-600 dark:text-emerald-300 mt-1">
+                    Cliente é assinante - não há cobrança adicional
+                  </p>
+                </div>
+              )}
 
               {/* Indicador de pagamento com crédito do app */}
               {(paymentMethod === 'credit' || appointment.observacoes?.includes('crédito do app')) && (

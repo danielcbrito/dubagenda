@@ -30,6 +30,7 @@ export interface TimelineAppointment {
   servico_id: string;
   is_free: boolean | null;
   payment_method: string | null;
+  tipo_agendamento: string | null; // NOVO: tipo do agendamento (plano, normal, etc)
   profile: { nome: string; cpf?: string } | null;
   servico: { nome: string; duracao_minutos: number } | null;
   pagamentos: Array<{ metodo: string; status: string; valor: number }>;

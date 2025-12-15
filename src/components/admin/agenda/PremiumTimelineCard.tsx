@@ -51,6 +51,7 @@ export const PremiumTimelineCard = memo(function PremiumTimelineCard({
   const payment = appointment.pagamentos?.[0];
   const isPaid = payment?.status === "paid";
   const isPaidWithCredit = appointment.payment_method === 'credit' || appointment.observacoes?.includes('crédito do app');
+  const isPlanAppointment = appointment.tipo_agendamento === 'plano' || appointment.payment_method === 'plano';
 
   const getTimeStatusConfig = () => {
     switch (timeStatus) {
@@ -175,7 +176,11 @@ export const PremiumTimelineCard = memo(function PremiumTimelineCard({
 
             {/* Payment Status */}
             <div className="flex items-center gap-2">
-              {isPaidWithCredit ? (
+              {isPlanAppointment ? (
+                <span className="px-2 py-0.5 text-[10px] font-bold rounded-md bg-gradient-to-r from-emerald-500/20 to-teal-500/20 text-emerald-400 border border-emerald-500/30">
+                  📋 PLANO
+                </span>
+              ) : isPaidWithCredit ? (
                 <span className="px-2 py-0.5 text-[10px] font-medium rounded-md bg-gradient-to-r from-purple-500/20 to-violet-500/20 text-purple-400">
                   <CreditCard className="w-3 h-3 inline mr-1" />
                   CRÉDITO APP

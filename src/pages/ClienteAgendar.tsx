@@ -21,6 +21,17 @@ interface Service {
   preco: number;
 }
 
+// Interface para assinatura ativa
+interface ActiveSubscription {
+  id: string;
+  plano_id: string;
+  plano_nome: string;
+  limite_agendamentos_mes: number;
+  agendamentos_usados: number;
+  next_billing_date: string;
+  status: string;
+}
+
 const ClienteAgendar = () => {
   const navigate = useNavigate();
   const [services, setServices] = useState<Service[]>([]);
@@ -48,6 +59,10 @@ const ClienteAgendar = () => {
   const [rescheduleAppointmentId, setRescheduleAppointmentId] = useState<string | null>(null);
   const [unavailableMessage, setUnavailableMessage] = useState<string | null>(null);
   const servicesListRef = useRef<HTMLDivElement | null>(null);
+  
+  // NOVO: Estado para assinatura ativa do usuário
+  const [activeSubscription, setActiveSubscription] = useState<ActiveSubscription | null>(null);
+  const [subscriptionBlocked, setSubscriptionBlocked] = useState(false);
 
   // Calcular duração total dos serviços selecionados
   const totalDuration = selectedServices.reduce((sum, s) => sum + s.duracao_minutos, 0);
@@ -67,6 +82,7 @@ const ClienteAgendar = () => {
   useEffect(() => {
     loadServices();
     loadUserCredits();
+    loadActiveSubscription(); // NOVO: Carregar assinatura ativa
     
     // Check if resuming payment from pending booking
     const resumeBookingId = sessionStorage.getItem('resumePendingBookingId');
@@ -197,6 +213,85 @@ const ClienteAgendar = () => {
     }
   };
 
+  // NOVO: Carregar assinatura ativa do usuário
+  const loadActiveSubscription = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      // Buscar assinatura ativa com dados do plano
+      const { data: subscription, error } = await supabase
+        .from("assinaturas")
+        .select(`
+          id,
+          plano_id,
+          next_billing_date,
+          status,
+          plano:planos(nome, limite_agendamentos_mes)
+        `)
+        .eq("user_id", session.user.id)
+        .eq("status", "active")
+        .maybeSingle();
+
+      if (error) {
+        console.error("Error loading subscription:", error);
+        return;
+      }
+
+      if (subscription && subscription.plano) {
+        // Verificar se plano está vencido (bloquear se passou da data de vencimento)
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const billingDate = new Date(subscription.next_billing_date + 'T12:00:00');
+        billingDate.setHours(0, 0, 0, 0);
+        
+        const isOverdue = today > billingDate;
+
+        if (isOverdue) {
+          console.log('[loadActiveSubscription] Plano vencido em:', subscription.next_billing_date);
+          setSubscriptionBlocked(true);
+          toast.error("Seu plano está vencido. Regularize o pagamento para continuar agendando.");
+          return;
+        }
+
+        // Contar agendamentos do mês atual
+        const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+        const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+        
+        const { data: monthAppointments, error: countError } = await supabase
+          .from("agendamentos")
+          .select("id")
+          .eq("user_id", session.user.id)
+          .eq("tipo_agendamento", "plano")
+          .gte("data", format(startOfMonth, 'yyyy-MM-dd'))
+          .lte("data", format(endOfMonth, 'yyyy-MM-dd'))
+          .not("status", "in", "('cancelled_by_user','cancelled_by_admin')");
+
+        const usedCount = countError ? 0 : (monthAppointments?.length || 0);
+        const planoData = subscription.plano as any;
+
+        setActiveSubscription({
+          id: subscription.id,
+          plano_id: subscription.plano_id,
+          plano_nome: planoData.nome,
+          limite_agendamentos_mes: planoData.limite_agendamentos_mes,
+          agendamentos_usados: usedCount,
+          next_billing_date: subscription.next_billing_date,
+          status: subscription.status
+        });
+
+        console.log('[loadActiveSubscription] Assinatura ativa encontrada:', {
+          plano: planoData.nome,
+          limite: planoData.limite_agendamentos_mes,
+          usados: usedCount,
+          vencimento: subscription.next_billing_date
+        });
+      }
+    } catch (error) {
+      console.error("Error loading active subscription:", error);
+    }
+  };
+
   const loadPendingBookingDetails = async (bookingId: string) => {
     try {
       const { data: booking, error } = await supabase
@@ -315,6 +410,18 @@ const ClienteAgendar = () => {
       return;
     }
     
+    // NOVO: Se tem assinatura ativa, pular pagamento e ir direto para confirmação
+    if (step === 3 && !isRescheduling && activeSubscription) {
+      // Verificar se ainda tem agendamentos disponíveis no plano
+      if (activeSubscription.agendamentos_usados >= activeSubscription.limite_agendamentos_mes) {
+        toast.error(`Você já usou todos os ${activeSubscription.limite_agendamentos_mes} agendamentos do seu plano este mês.`);
+        return;
+      }
+      console.log('[handleNextStep] Usuário tem plano ativo, pulando pagamento');
+      setStep(5); // Pula step 4 e vai direto para confirmação
+      return;
+    }
+    
     // Se créditos cobrem 100% do valor, pular step 4 (pagamento) e ir direto para confirmação
     if (step === 3 && !isRescheduling) {
       const totalPrice = getTotalPrice();
@@ -334,6 +441,12 @@ const ClienteAgendar = () => {
   const handlePayment = async () => {
     if (!selectedDate || !selectedTime || selectedServices.length === 0) {
       toast.error("Dados do agendamento inválidos");
+      return;
+    }
+
+    // NOVO: Se tem assinatura ativa, criar agendamento com plano (sem pagamento)
+    if (activeSubscription && !isRescheduling) {
+      await createAppointmentWithPlan();
       return;
     }
 
@@ -596,6 +709,113 @@ const ClienteAgendar = () => {
       navigate("/cliente");
     } catch (error: any) {
       console.error('Error creating appointment with credits:', error);
+      toast.error("Erro ao criar agendamento: " + (error.message || "Erro desconhecido"));
+    } finally {
+      setProcessingPayment(false);
+    }
+  };
+
+  // NOVO: Criar agendamento usando o plano (sem pagamento)
+  const createAppointmentWithPlan = async () => {
+    if (!activeSubscription) {
+      toast.error("Assinatura não encontrada");
+      return;
+    }
+
+    setProcessingPayment(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error("Você precisa estar logado");
+        navigate("/auth");
+        return;
+      }
+
+      const totalDuration = selectedServices.reduce((sum, s) => sum + s.duracao_minutos, 0);
+      const serviceNames = selectedServices.map(s => s.nome).join(", ");
+      const mainService = selectedServices[0];
+      const dateStr = format(selectedDate!, 'yyyy-MM-dd');
+
+      // Verificar disponibilidade antes de criar
+      console.log('[createAppointmentWithPlan] Validando disponibilidade...');
+      const { data: validation, error: validationError } = await supabase.functions.invoke('validate-appointment', {
+        body: {
+          data: dateStr,
+          hora: selectedTime,
+          duracao: totalDuration,
+          userId: session.user.id
+        }
+      });
+
+      if (validationError) {
+        console.error('[createAppointmentWithPlan] Erro na validação:', validationError);
+        toast.error("Erro ao verificar disponibilidade. Tente novamente.");
+        return;
+      }
+
+      if (!validation?.valid) {
+        console.log('[createAppointmentWithPlan] Horário INDISPONÍVEL:', validation?.message);
+        toast.error(validation?.message || "Horário indisponível. Escolha outro horário.");
+        setStep(3);
+        refreshSlots();
+        return;
+      }
+
+      console.log('[createAppointmentWithPlan] Criando agendamento com plano:', activeSubscription.plano_nome);
+
+      // Criar agendamento marcado como "plano"
+      const { data: appointment, error: aptError } = await supabase
+        .from("agendamentos")
+        .insert({
+          user_id: session.user.id,
+          servico_id: mainService.id,
+          data: dateStr,
+          hora: selectedTime,
+          duracao: totalDuration,
+          preco: 0, // Sem custo - coberto pelo plano
+          status: "pending",
+          observacoes: selectedServices.length > 1 
+            ? `Serviços: ${serviceNames}. Agendamento via ${activeSubscription.plano_nome}` 
+            : `Agendamento via ${activeSubscription.plano_nome}`,
+          payment_method: 'plano', // Marcar como pagamento via plano
+          tipo_agendamento: 'plano', // Tipo especial para contagem
+          is_free: true,
+          barbeiro_confirmou: false,
+          cliente_confirmou: false,
+        })
+        .select()
+        .single();
+
+      if (aptError) throw aptError;
+
+      // Criar registro de pagamento como "pago" (via plano)
+      await supabase
+        .from("pagamentos")
+        .insert({
+          user_id: session.user.id,
+          agendamento_id: appointment.id,
+          metodo: "cash",
+          valor: 0,
+          status: "paid",
+        });
+
+      // Enviar evento de novo agendamento
+      const { data: profile } = await supabase.from('profiles').select('nome, telefone').eq('id', session.user.id).single();
+      sendNovoAgendamentoEvent({
+        agendamento_id: appointment.id,
+        cliente_id: session.user.id,
+        cliente_nome: profile?.nome || session.user.email || 'Cliente',
+        cliente_telefone: profile?.telefone,
+        servico: serviceNames,
+        data: dateStr,
+        hora: selectedTime,
+        preco: 0
+      });
+
+      toast.success(`Agendamento criado! Usando seu ${activeSubscription.plano_nome}.`);
+      navigate("/cliente");
+    } catch (error: any) {
+      console.error('Error creating appointment with plan:', error);
       toast.error("Erro ao criar agendamento: " + (error.message || "Erro desconhecido"));
     } finally {
       setProcessingPayment(false);
