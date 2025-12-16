@@ -1,17 +1,14 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
-import { Calendar, DollarSign, Users, TrendingUp, Scissors, Clock, ArrowUpRight, ArrowDownRight } from "lucide-react";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from "recharts";
+import { Calendar, Users, Scissors, Clock } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 
 interface Stats {
   todayAppointments: number;
-  monthRevenue: number;
   activeClients: number;
-  pendingPayments: number;
   totalCutsMonth: number;
   pendingAppointments: number;
 }
@@ -21,7 +18,6 @@ interface RecentAppointment {
   data: string;
   hora: string;
   status: string;
-  preco: number;
   profile: { nome: string } | null;
   servico: { nome: string } | null;
 }
@@ -31,30 +27,24 @@ const StatCard = ({
   value, 
   subtitle, 
   icon: Icon, 
-  trend, 
-  trendValue,
   variant = "default" 
 }: {
   title: string;
   value: string | number;
   subtitle: string;
   icon: any;
-  trend?: "up" | "down";
-  trendValue?: string;
-  variant?: "default" | "gold" | "warning" | "danger";
+  variant?: "default" | "gold" | "warning";
 }) => {
   const iconBgClass = {
     default: "bg-gradient-primary shadow-glow-red",
     gold: "bg-gradient-gold shadow-glow-gold",
     warning: "bg-gradient-to-br from-amber-500 to-orange-600",
-    danger: "bg-gradient-to-br from-red-500 to-rose-600",
   }[variant];
 
   const valueColorClass = {
     default: "text-foreground",
     gold: "text-gold",
     warning: "text-amber-400",
-    danger: "text-orange-400",
   }[variant];
 
   return (
@@ -67,18 +57,7 @@ const StatCard = ({
           <p className={cn("text-4xl font-bold tracking-tight", valueColorClass)}>
             {value}
           </p>
-          <div className="flex items-center gap-2">
-            <p className="text-sm text-muted-foreground">{subtitle}</p>
-            {trend && trendValue && (
-              <span className={cn(
-                "flex items-center gap-0.5 text-xs font-semibold px-2 py-0.5 rounded-full",
-                trend === "up" ? "bg-green-500/15 text-green-400" : "bg-red-500/15 text-red-400"
-              )}>
-                {trend === "up" ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
-                {trendValue}
-              </span>
-            )}
-          </div>
+          <p className="text-sm text-muted-foreground">{subtitle}</p>
         </div>
         <div className={cn("stat-card-icon", iconBgClass)}>
           <Icon className="w-6 h-6 text-white" strokeWidth={2} />
@@ -91,14 +70,11 @@ const StatCard = ({
 export function AdminDashboard() {
   const [stats, setStats] = useState<Stats>({
     todayAppointments: 0,
-    monthRevenue: 0,
     activeClients: 0,
-    pendingPayments: 0,
     totalCutsMonth: 0,
     pendingAppointments: 0,
   });
   const [recentAppointments, setRecentAppointments] = useState<RecentAppointment[]>([]);
-  const [revenueData, setRevenueData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -111,16 +87,8 @@ export function AdminDashboard() {
       })
       .subscribe();
 
-    const paymentsChannel = supabase
-      .channel('dashboard-payments')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'pagamentos' }, () => {
-        loadDashboardData();
-      })
-      .subscribe();
-
     return () => {
       supabase.removeChannel(appointmentsChannel);
-      supabase.removeChannel(paymentsChannel);
     };
   }, []);
 
@@ -129,71 +97,35 @@ export function AdminDashboard() {
       const today = format(new Date(), 'yyyy-MM-dd');
       const firstDayOfMonth = format(new Date(new Date().getFullYear(), new Date().getMonth(), 1), 'yyyy-MM-dd');
 
+      // Agendamentos de hoje
       const { count: todayCount } = await supabase
         .from("agendamentos")
         .select("*", { count: "exact", head: true })
         .eq("data", today);
 
-      // Receita do mês: pagamentos confirmados (paid) + agendamentos completed (pagar na barbearia)
-      const { data: monthPayments } = await supabase
-        .from("pagamentos")
-        .select("valor")
-        .gte("created_at", firstDayOfMonth)
-        .eq("status", "paid");
-
-      const paidRevenue = monthPayments?.reduce((sum, p) => sum + Number(p.valor), 0) || 0;
-
-      // Agendamentos completed sem pagamento registrado como paid (pagos na barbearia)
-      const { data: completedAppointments } = await supabase
-        .from("agendamentos")
-        .select("id, preco")
-        .gte("data", firstDayOfMonth)
-        .eq("status", "completed");
-
-      // Verificar quais já têm pagamento paid para não contar duplicado
-      let additionalRevenue = 0;
-      if (completedAppointments && completedAppointments.length > 0) {
-        const aptIds = completedAppointments.map(a => a.id);
-        const { data: paidAptPayments } = await supabase
-          .from("pagamentos")
-          .select("agendamento_id")
-          .in("agendamento_id", aptIds)
-          .eq("status", "paid");
-        
-        const paidAptIds = new Set(paidAptPayments?.map(p => p.agendamento_id) || []);
-        
-        // Somar apenas agendamentos completed que não têm pagamento paid registrado
-        additionalRevenue = completedAppointments
-          .filter(apt => !paidAptIds.has(apt.id))
-          .reduce((sum, apt) => sum + Number(apt.preco), 0);
-      }
-
-      const monthRevenue = paidRevenue + additionalRevenue;
-
+      // Clientes ativos
       const { count: clientsCount } = await supabase
         .from("profiles")
         .select("*", { count: "exact", head: true })
         .eq("blocked", false);
 
-      const { count: pendingCount } = await supabase
-        .from("pagamentos")
-        .select("*", { count: "exact", head: true })
-        .eq("status", "pending");
-
+      // Cortes do mês (confirmados + completados)
       const { count: cutsCount } = await supabase
         .from("agendamentos")
         .select("*", { count: "exact", head: true })
         .gte("data", firstDayOfMonth)
         .in("status", ["confirmed", "completed"]);
 
+      // Confirmações pendentes
       const { count: pendingAppointments } = await supabase
         .from("agendamentos")
         .select("*", { count: "exact", head: true })
         .eq("status", "pending");
 
+      // Agendamentos recentes (sem preco)
       const { data: appointments } = await supabase
         .from("agendamentos")
-        .select("id, data, hora, status, preco, user_id, servico_id")
+        .select("id, data, hora, status, user_id, servico_id")
         .order("data", { ascending: false })
         .order("hora", { ascending: false })
         .limit(5);
@@ -220,52 +152,14 @@ export function AdminDashboard() {
         })
       );
 
-      // Gráfico por DIAS (últimos 14 dias)
-      const daysData = [];
-      for (let i = 13; i >= 0; i--) {
-        const date = new Date();
-        date.setDate(date.getDate() - i);
-        const dayStr = format(date, 'yyyy-MM-dd');
-
-        // Pagamentos paid do dia
-        const { data: dayPayments } = await supabase
-          .from("pagamentos")
-          .select("valor, agendamento_id")
-          .gte("created_at", `${dayStr}T00:00:00`)
-          .lte("created_at", `${dayStr}T23:59:59`)
-          .eq("status", "paid");
-
-        const paidTotal = dayPayments?.reduce((sum, p) => sum + Number(p.valor), 0) || 0;
-        const paidAptIds = new Set(dayPayments?.map(p => p.agendamento_id).filter(Boolean) || []);
-
-        // Agendamentos completed do dia sem pagamento paid (pagos na barbearia)
-        const { data: dayCompleted } = await supabase
-          .from("agendamentos")
-          .select("id, preco")
-          .eq("data", dayStr)
-          .eq("status", "completed");
-
-        const additionalTotal = (dayCompleted || [])
-          .filter(apt => !paidAptIds.has(apt.id))
-          .reduce((sum, apt) => sum + Number(apt.preco), 0);
-
-        daysData.push({
-          day: format(date, 'dd/MM'),
-          receita: paidTotal + additionalTotal
-        });
-      }
-
       setStats({
         todayAppointments: todayCount || 0,
-        monthRevenue,
         activeClients: clientsCount || 0,
-        pendingPayments: pendingCount || 0,
         totalCutsMonth: cutsCount || 0,
         pendingAppointments: pendingAppointments || 0,
       });
 
       setRecentAppointments(appointmentsWithDetails);
-      setRevenueData(daysData);
       setLoading(false);
     } catch (error) {
       console.error("Error loading dashboard:", error);
@@ -297,8 +191,8 @@ export function AdminDashboard() {
   if (loading) {
     return (
       <div className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {[1, 2, 3, 4, 5, 6].map(i => (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+          {[1, 2, 3, 4].map(i => (
             <Skeleton key={i} className="h-36 rounded-2xl" />
           ))}
         </div>
@@ -316,24 +210,13 @@ export function AdminDashboard() {
         </div>
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+      {/* Stats Grid - 4 cards organizados */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
         <StatCard
           title="Hoje"
           value={stats.todayAppointments}
           subtitle="Agendamentos"
           icon={Calendar}
-          trend="up"
-          trendValue="+12%"
-        />
-        <StatCard
-          title="Receita do Mês"
-          value={new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(stats.monthRevenue)}
-          subtitle="Faturamento"
-          icon={DollarSign}
-          variant="gold"
-          trend="up"
-          trendValue="+8%"
         />
         <StatCard
           title="Clientes"
@@ -342,144 +225,72 @@ export function AdminDashboard() {
           icon={Users}
         />
         <StatCard
-          title="Pagamentos"
-          value={stats.pendingPayments}
-          subtitle="Pendentes"
-          icon={TrendingUp}
-          variant="warning"
-        />
-        <StatCard
           title="Cortes do Mês"
           value={stats.totalCutsMonth}
           subtitle="Realizados"
           icon={Scissors}
+          variant="gold"
         />
         <StatCard
           title="Confirmações"
           value={stats.pendingAppointments}
           subtitle="Aguardando"
           icon={Clock}
-          variant="danger"
+          variant="warning"
         />
       </div>
 
-      {/* Charts Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Revenue Chart */}
-        <Card className="glass-card p-6 hover-elevate">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 rounded-xl bg-gradient-primary flex items-center justify-center shadow-glow-red">
-              <TrendingUp className="w-5 h-5 text-white" strokeWidth={2} />
-            </div>
-            <div>
-              <h3 className="font-bold text-lg">Evolução de Receita</h3>
-              <p className="text-xs text-muted-foreground">Últimos 14 dias</p>
-            </div>
+      {/* Recent Appointments - Full Width */}
+      <Card className="glass-card p-6 hover-elevate">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-10 h-10 rounded-xl bg-gradient-primary flex items-center justify-center shadow-glow-red">
+            <Calendar className="w-5 h-5 text-white" strokeWidth={2} />
           </div>
-          <ResponsiveContainer width="100%" height={280}>
-            <AreaChart data={revenueData}>
-              <defs>
-                <linearGradient id="colorReceita" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3}/>
-                  <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/>
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} vertical={false} />
-              <XAxis 
-                dataKey="day" 
-                stroke="hsl(var(--muted-foreground))" 
-                style={{ fontSize: '10px', fontWeight: 500 }}
-                tickLine={false}
-                axisLine={false}
-                interval={1}
-              />
-              <YAxis 
-                stroke="hsl(var(--muted-foreground))" 
-                style={{ fontSize: '11px', fontWeight: 500 }}
-                tickLine={false}
-                axisLine={false}
-                tickFormatter={(value) => `R$${value/1000}k`}
-              />
-              <Tooltip 
-                contentStyle={{ 
-                  backgroundColor: 'hsl(var(--card))',
-                  border: '1px solid hsl(var(--border))',
-                  borderRadius: '12px',
-                  backdropFilter: 'blur(12px)',
-                  padding: '12px 16px',
-                  boxShadow: 'var(--shadow-premium)',
-                }}
-                labelStyle={{ color: 'hsl(var(--foreground))', fontWeight: 600, marginBottom: 4 }}
-                formatter={(value: number) => [new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value), 'Receita']}
-              />
-              <Area 
-                type="monotone" 
-                dataKey="receita" 
-                stroke="hsl(var(--primary))" 
-                strokeWidth={3}
-                fill="url(#colorReceita)"
-                dot={{ fill: 'hsl(var(--primary))', r: 4, strokeWidth: 2, stroke: 'hsl(var(--background))' }}
-                activeDot={{ r: 6, fill: 'hsl(var(--primary))', filter: 'drop-shadow(0 0 8px hsl(var(--primary)))' }}
-              />
-            </AreaChart>
-          </ResponsiveContainer>
-        </Card>
-
-        {/* Recent Appointments */}
-        <Card className="glass-card p-6 hover-elevate">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 rounded-xl bg-gradient-primary flex items-center justify-center shadow-glow-red">
-              <Calendar className="w-5 h-5 text-white" strokeWidth={2} />
-            </div>
-            <div>
-              <h3 className="font-bold text-lg">Agendamentos Recentes</h3>
-              <p className="text-xs text-muted-foreground">Últimas movimentações</p>
-            </div>
+          <div>
+            <h3 className="font-bold text-lg">Agendamentos Recentes</h3>
+            <p className="text-xs text-muted-foreground">Últimas movimentações</p>
           </div>
-          <div className="space-y-3">
-            {recentAppointments.map((apt, index) => (
-              <div
-                key={apt.id}
-                className={cn(
-                  "flex items-center justify-between p-4 rounded-xl",
-                  "bg-secondary/40 hover:bg-secondary/60",
-                  "border border-border/30 hover:border-border/50",
-                  "transition-all duration-200 hover:-translate-y-0.5",
-                  "animate-fade-in"
-                )}
-                style={{ animationDelay: `${index * 50}ms` }}
-              >
-                <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-full bg-primary/15 flex items-center justify-center border border-primary/20">
-                    <span className="text-sm font-bold text-primary">
-                      {apt.profile?.nome?.charAt(0) || "?"}
-                    </span>
-                  </div>
-                  <div>
-                    <p className="font-semibold text-sm">{apt.profile?.nome || "Cliente"}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {apt.servico?.nome || "Serviço"} • {new Date(`${apt.data}T12:00:00`).toLocaleDateString('pt-BR')} às {apt.hora}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-4">
-                  <span className="font-bold text-sm price-gold">
-                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(apt.preco))}
+        </div>
+        <div className="space-y-3">
+          {recentAppointments.map((apt, index) => (
+            <div
+              key={apt.id}
+              className={cn(
+                "flex items-center justify-between p-4 rounded-xl",
+                "bg-secondary/40 hover:bg-secondary/60",
+                "border border-border/30 hover:border-border/50",
+                "transition-all duration-200 hover:-translate-y-0.5",
+                "animate-fade-in"
+              )}
+              style={{ animationDelay: `${index * 50}ms` }}
+            >
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-full bg-primary/15 flex items-center justify-center border border-primary/20">
+                  <span className="text-sm font-bold text-primary">
+                    {apt.profile?.nome?.charAt(0) || "?"}
                   </span>
-                  {getStatusBadge(apt.status)}
+                </div>
+                <div>
+                  <p className="font-semibold text-sm">{apt.profile?.nome || "Cliente"}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {apt.servico?.nome || "Serviço"} • {new Date(`${apt.data}T12:00:00`).toLocaleDateString('pt-BR')} às {apt.hora}
+                  </p>
                 </div>
               </div>
-            ))}
-            
-            {recentAppointments.length === 0 && (
-              <div className="text-center py-12">
-                <Calendar className="w-16 h-16 mx-auto mb-4 text-muted-foreground/20" strokeWidth={1} />
-                <p className="text-muted-foreground text-sm">Nenhum agendamento recente</p>
+              <div className="flex items-center gap-4">
+                {getStatusBadge(apt.status)}
               </div>
-            )}
-          </div>
-        </Card>
-      </div>
+            </div>
+          ))}
+          
+          {recentAppointments.length === 0 && (
+            <div className="text-center py-12">
+              <Calendar className="w-12 h-12 text-muted-foreground/30 mx-auto mb-3" />
+              <p className="text-muted-foreground">Nenhum agendamento recente</p>
+            </div>
+          )}
+        </div>
+      </Card>
     </div>
   );
 }
