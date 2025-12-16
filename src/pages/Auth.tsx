@@ -7,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { z } from "zod";
 import logoDub from "@/assets/logo-dub.png";
-import { Loader2 } from "lucide-react";
+import { Loader2, Eye, EyeOff } from "lucide-react";
 import { validateCPF, formatCPF, formatPhone, validatePhone } from "@/lib/validators";
 import { SupportChatBubble } from "@/components/support/SupportChatBubble";
 
@@ -47,6 +47,7 @@ const Auth = () => {
   });
   const [cpfError, setCpfError] = useState("");
   const [telefoneError, setTelefoneError] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
     // Check if coming back from email verification
@@ -365,16 +366,29 @@ const Auth = () => {
                     </button>
                   )}
                 </div>
-                <Input
-                  id="senha"
-                  name="senha"
-                  type="password"
-                  required
-                  value={formData.senha}
-                  onChange={handleInputChange}
-                  className="h-12 bg-white/5 border-white/10 text-white placeholder:text-white/40 focus:border-primary/50 focus:ring-primary/20 rounded-xl transition-all"
-                  placeholder="Mínimo 6 caracteres"
-                />
+                <div className="relative">
+                  <Input
+                    id="senha"
+                    name="senha"
+                    type={showPassword ? "text" : "password"}
+                    required
+                    value={formData.senha}
+                    onChange={handleInputChange}
+                    className="h-12 bg-white/5 border-white/10 text-white placeholder:text-white/40 focus:border-primary/50 focus:ring-primary/20 rounded-xl transition-all pr-12"
+                    placeholder="Mínimo 6 caracteres"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-white/50 hover:text-white/90 transition-colors"
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-5 w-5" />
+                    ) : (
+                      <Eye className="h-5 w-5" />
+                    )}
+                  </button>
+                </div>
               </div>
 
               <Button 
