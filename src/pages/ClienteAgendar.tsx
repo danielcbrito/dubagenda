@@ -30,6 +30,8 @@ interface ActiveSubscription {
   agendamentos_usados: number;
   next_billing_date: string;
   status: string;
+  servico_id: string | null;
+  servico: Service | null;
 }
 
 const ClienteAgendar = () => {
@@ -80,27 +82,54 @@ const ClienteAgendar = () => {
   );
 
   useEffect(() => {
-    loadServices();
-    loadUserCredits();
-    loadActiveSubscription(); // NOVO: Carregar assinatura ativa
+    const initializeBooking = async () => {
+      await loadServices();
+      loadUserCredits();
+      
+      // NOVO: Carregar assinatura ativa e configurar fluxo do assinante
+      const subscription = await loadActiveSubscription();
+      
+      // Check if resuming payment from pending booking
+      const resumeBookingId = sessionStorage.getItem('resumePendingBookingId');
+      if (resumeBookingId) {
+        setResumePendingBookingId(resumeBookingId);
+        sessionStorage.removeItem('resumePendingBookingId');
+        loadPendingBookingDetails(resumeBookingId);
+        return; // Sair aqui pois já tem fluxo próprio
+      }
+      
+      // Check if rescheduling an existing appointment
+      const isReschedulingSession = sessionStorage.getItem('isRescheduling');
+      const appointmentId = sessionStorage.getItem('rescheduleAppointmentId');
+      
+      if (isReschedulingSession === 'true' && appointmentId) {
+        setIsRescheduling(true);
+        setRescheduleAppointmentId(appointmentId);
+        loadAppointmentForReschedule(appointmentId);
+        return; // Sair aqui pois já tem fluxo próprio
+      }
+      
+      // NOVO: Se usuário é assinante com serviço vinculado, pré-selecionar e pular step 1
+      if (subscription && subscription.servico) {
+        // Verificar se ainda tem agendamentos disponíveis no plano
+        const restantes = subscription.limite_agendamentos_mes - subscription.agendamentos_usados;
+        
+        if (restantes <= 0) {
+          // Limite atingido - mostrar mensagem mas permitir agendar serviços pagos
+          console.log('[initializeBooking] Limite do plano atingido! Usuário deve escolher serviço manualmente.');
+          toast.info(`Você já usou seus ${subscription.limite_agendamentos_mes} agendamentos do plano este mês. Você pode agendar serviços avulsos.`);
+          // Não pré-seleciona nada, deixa escolher manualmente
+          return;
+        }
+        
+        console.log('[initializeBooking] Assinante detectado! Pré-selecionando serviço:', subscription.servico.nome);
+        setSelectedServices([subscription.servico]);
+        setStep(2); // Ir direto para seleção de data
+        toast.info(`${subscription.plano_nome} - ${restantes} agendamento${restantes > 1 ? 's' : ''} restante${restantes > 1 ? 's' : ''}`);
+      }
+    };
     
-    // Check if resuming payment from pending booking
-    const resumeBookingId = sessionStorage.getItem('resumePendingBookingId');
-    if (resumeBookingId) {
-      setResumePendingBookingId(resumeBookingId);
-      sessionStorage.removeItem('resumePendingBookingId');
-      loadPendingBookingDetails(resumeBookingId);
-    }
-    
-    // Check if rescheduling an existing appointment
-    const isReschedulingSession = sessionStorage.getItem('isRescheduling');
-    const appointmentId = sessionStorage.getItem('rescheduleAppointmentId');
-    
-    if (isReschedulingSession === 'true' && appointmentId) {
-      setIsRescheduling(true);
-      setRescheduleAppointmentId(appointmentId);
-      loadAppointmentForReschedule(appointmentId);
-    }
+    initializeBooking();
   }, []);
 
   // Lock body scroll and set dynamic viewport height for mobile
@@ -214,12 +243,12 @@ const ClienteAgendar = () => {
   };
 
   // NOVO: Carregar assinatura ativa do usuário
-  const loadActiveSubscription = async () => {
+  const loadActiveSubscription = async (): Promise<ActiveSubscription | null> => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
+      if (!session) return null;
 
-      // Buscar assinatura ativa com dados do plano
+      // Buscar assinatura ativa com dados do plano e serviço vinculado
       const { data: subscription, error } = await supabase
         .from("assinaturas")
         .select(`
@@ -227,7 +256,7 @@ const ClienteAgendar = () => {
           plano_id,
           next_billing_date,
           status,
-          plano:planos(nome, limite_agendamentos_mes)
+          plano:planos(nome, limite_agendamentos_mes, servico_id)
         `)
         .eq("user_id", session.user.id)
         .eq("status", "active")
@@ -235,7 +264,7 @@ const ClienteAgendar = () => {
 
       if (error) {
         console.error("Error loading subscription:", error);
-        return;
+        return null;
       }
 
       if (subscription && subscription.plano) {
@@ -251,7 +280,7 @@ const ClienteAgendar = () => {
           console.log('[loadActiveSubscription] Plano vencido em:', subscription.next_billing_date);
           setSubscriptionBlocked(true);
           toast.error("Seu plano está vencido. Regularize o pagamento para continuar agendando.");
-          return;
+          return null;
         }
 
         // Contar agendamentos do mês atual
@@ -270,25 +299,49 @@ const ClienteAgendar = () => {
         const usedCount = countError ? 0 : (monthAppointments?.length || 0);
         const planoData = subscription.plano as any;
 
-        setActiveSubscription({
+        // Buscar dados completos do serviço vinculado ao plano
+        let servicoVinculado: Service | null = null;
+        if (planoData.servico_id) {
+          const { data: servicoData } = await supabase
+            .from("servicos")
+            .select("id, nome, descricao, duracao_minutos, preco")
+            .eq("id", planoData.servico_id)
+            .single();
+          
+          if (servicoData) {
+            servicoVinculado = servicoData;
+          }
+        }
+
+        const activeSubscriptionData: ActiveSubscription = {
           id: subscription.id,
           plano_id: subscription.plano_id,
           plano_nome: planoData.nome,
           limite_agendamentos_mes: planoData.limite_agendamentos_mes,
           agendamentos_usados: usedCount,
           next_billing_date: subscription.next_billing_date,
-          status: subscription.status
-        });
+          status: subscription.status,
+          servico_id: planoData.servico_id || null,
+          servico: servicoVinculado
+        };
+
+        setActiveSubscription(activeSubscriptionData);
 
         console.log('[loadActiveSubscription] Assinatura ativa encontrada:', {
           plano: planoData.nome,
           limite: planoData.limite_agendamentos_mes,
           usados: usedCount,
-          vencimento: subscription.next_billing_date
+          vencimento: subscription.next_billing_date,
+          servico: servicoVinculado?.nome || 'Não vinculado'
         });
+
+        return activeSubscriptionData;
       }
+      
+      return null;
     } catch (error) {
       console.error("Error loading active subscription:", error);
+      return null;
     }
   };
 
@@ -1154,12 +1207,43 @@ const ClienteAgendar = () => {
           <div className="scrollable-content p-4 md:p-6">
             <div className="space-y-4 max-w-4xl mx-auto">
               <div>
-                <h3 className="text-sm font-semibold mb-1">Etapa 2 de 5</h3>
+                <h3 className="text-sm font-semibold mb-1">Etapa {activeSubscription?.servico ? '1' : '2'} de {activeSubscription?.servico ? '4' : '5'}</h3>
                 <h2 className="text-xl font-bold mb-3 responsive-title">Escolha a Data</h2>
                 <p className="text-sm text-muted-foreground mb-4 responsive-text">
                   Selecione o dia desejado para o atendimento
                 </p>
               </div>
+
+              {/* NOVO: Card do Plano para Assinantes */}
+              {activeSubscription?.servico && (
+                <div className="glass-card p-4 border border-green-500/30 bg-green-500/5">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center">
+                        <Check className="w-5 h-5 text-green-500" />
+                      </div>
+                      <div>
+                        <p className="font-semibold text-green-400">{activeSubscription.plano_nome}</p>
+                        <p className="text-sm text-muted-foreground">
+                          Serviço: <span className="text-foreground font-medium">{activeSubscription.servico.nome}</span>
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-2xl font-bold text-green-400">
+                        {activeSubscription.limite_agendamentos_mes - activeSubscription.agendamentos_usados}
+                      </p>
+                      <p className="text-xs text-muted-foreground">restantes</p>
+                    </div>
+                  </div>
+                  <div className="mt-3 pt-3 border-t border-white/5">
+                    <div className="flex justify-between text-xs text-muted-foreground">
+                      <span>Usados este mês: {activeSubscription.agendamentos_usados}/{activeSubscription.limite_agendamentos_mes}</span>
+                      <span className="text-green-400">R$ 0,00</span>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <Card className="p-4 card-premium flex justify-center">
                 <Calendar

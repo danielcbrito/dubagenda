@@ -936,6 +936,7 @@ export type Database = {
           nome: string
           preco_mensal: number
           prioridade_agendamento: number | null
+          servico_id: string | null
           updated_at: string | null
         }
         Insert: {
@@ -948,6 +949,7 @@ export type Database = {
           nome: string
           preco_mensal: number
           prioridade_agendamento?: number | null
+          servico_id?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -960,9 +962,18 @@ export type Database = {
           nome?: string
           preco_mensal?: number
           prioridade_agendamento?: number | null
+          servico_id?: string | null
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "planos_servico_id_fkey"
+            columns: ["servico_id"]
+            isOneToOne: false
+            referencedRelation: "servicos"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       pontos: {
         Row: {
