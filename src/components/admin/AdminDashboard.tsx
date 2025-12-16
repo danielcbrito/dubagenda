@@ -1,16 +1,23 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
-import { Calendar, Users, Scissors, Clock } from "lucide-react";
+import { Calendar, Users, Scissors, Clock, TrendingUp } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { format } from "date-fns";
+import { format, subDays, startOfDay } from "date-fns";
 import { cn } from "@/lib/utils";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
 interface Stats {
   todayAppointments: number;
   activeClients: number;
   totalCutsMonth: number;
   pendingAppointments: number;
+}
+
+interface DailyRevenue {
+  date: string;
+  label: string;
+  receita: number;
 }
 
 interface RecentAppointment {
@@ -75,6 +82,7 @@ export function AdminDashboard() {
     pendingAppointments: 0,
   });
   const [recentAppointments, setRecentAppointments] = useState<RecentAppointment[]>([]);
+  const [dailyRevenue, setDailyRevenue] = useState<DailyRevenue[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -152,6 +160,28 @@ export function AdminDashboard() {
         })
       );
 
+      // Carregar receita dos últimos 14 dias
+      const revenueData: DailyRevenue[] = [];
+      for (let i = 13; i >= 0; i--) {
+        const date = subDays(new Date(), i);
+        const dateStr = format(date, 'yyyy-MM-dd');
+        
+        // Buscar agendamentos completados naquele dia
+        const { data: dayAppointments } = await supabase
+          .from("agendamentos")
+          .select("preco")
+          .eq("data", dateStr)
+          .eq("status", "completed");
+
+        const dayRevenue = (dayAppointments || []).reduce((sum, apt) => sum + (apt.preco || 0), 0);
+        
+        revenueData.push({
+          date: dateStr,
+          label: format(date, 'dd/MM'),
+          receita: dayRevenue,
+        });
+      }
+
       setStats({
         todayAppointments: todayCount || 0,
         activeClients: clientsCount || 0,
@@ -160,6 +190,7 @@ export function AdminDashboard() {
       });
 
       setRecentAppointments(appointmentsWithDetails);
+      setDailyRevenue(revenueData);
       setLoading(false);
     } catch (error) {
       console.error("Error loading dashboard:", error);
@@ -239,6 +270,52 @@ export function AdminDashboard() {
           variant="warning"
         />
       </div>
+
+      {/* Gráfico de Evolução de Receita */}
+      <Card className="glass-card p-6 hover-elevate">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-10 h-10 rounded-xl bg-gradient-gold flex items-center justify-center shadow-glow-gold">
+            <TrendingUp className="w-5 h-5 text-white" strokeWidth={2} />
+          </div>
+          <div>
+            <h3 className="font-bold text-lg">Evolução de Receita</h3>
+            <p className="text-xs text-muted-foreground">Últimos 14 dias</p>
+          </div>
+        </div>
+        <ResponsiveContainer width="100%" height={280}>
+          <LineChart data={dailyRevenue}>
+            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
+            <XAxis 
+              dataKey="label" 
+              stroke="hsl(var(--muted-foreground))" 
+              fontSize={12}
+              tickLine={false}
+            />
+            <YAxis 
+              stroke="hsl(var(--muted-foreground))" 
+              fontSize={12}
+              tickLine={false}
+              tickFormatter={(value) => `R$${value}`}
+            />
+            <Tooltip
+              contentStyle={{
+                backgroundColor: 'hsl(var(--card))',
+                border: '1px solid hsl(var(--border))',
+                borderRadius: '8px',
+              }}
+              formatter={(value: number) => [`R$ ${value.toFixed(2)}`, 'Receita']}
+            />
+            <Line 
+              type="monotone" 
+              dataKey="receita" 
+              stroke="hsl(var(--primary))" 
+              strokeWidth={3}
+              dot={{ fill: 'hsl(var(--primary))', strokeWidth: 2 }}
+              activeDot={{ r: 6, fill: 'hsl(var(--primary))' }}
+            />
+          </LineChart>
+        </ResponsiveContainer>
+      </Card>
 
       {/* Recent Appointments - Full Width */}
       <Card className="glass-card p-6 hover-elevate">

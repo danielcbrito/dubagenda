@@ -48,6 +48,21 @@ interface AsaasFinancialData {
   timestamp: string;
 }
 
+interface LocalRevenue {
+  receitaMes: number;
+  receitaApp: number;
+  receitaBarbearia: number;
+  receitaCredito: number;
+  receitaPlano: number;
+}
+
+interface DailyChartData {
+  date: string;
+  label: string;
+  receita: number;
+  taxas: number;
+}
+
 const COLORS = ['hsl(var(--primary))', 'hsl(var(--secondary))', 'hsl(var(--accent))', 'hsl(var(--muted))'];
 const CACHE_KEY = 'asaas_financial_cache';
 const CACHE_DURATION = 90000; // 90 seconds
@@ -59,12 +74,97 @@ export function AdminFinanceiro() {
   });
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<AsaasFinancialData | null>(null);
+  const [localRevenue, setLocalRevenue] = useState<LocalRevenue>({
+    receitaMes: 0,
+    receitaApp: 0,
+    receitaBarbearia: 0,
+    receitaCredito: 0,
+    receitaPlano: 0,
+  });
+  const [dailyChartData, setDailyChartData] = useState<DailyChartData[]>([]);
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [csvData, setCsvData] = useState<any[]>([]);
 
   useEffect(() => {
     loadFinancialData();
+    loadLocalRevenue();
   }, [dateRange]);
+
+  const loadLocalRevenue = async () => {
+    try {
+      const fromDate = format(dateRange.from, "yyyy-MM-dd");
+      const toDate = format(dateRange.to, "yyyy-MM-dd");
+
+      // Buscar agendamentos completados no período
+      const { data: appointments } = await supabase
+        .from("agendamentos")
+        .select("preco, payment_method, data")
+        .gte("data", fromDate)
+        .lte("data", toDate)
+        .eq("status", "completed");
+
+      let receitaApp = 0;
+      let receitaBarbearia = 0;
+      let receitaCredito = 0;
+      let receitaPlano = 0;
+
+      (appointments || []).forEach((apt) => {
+        const preco = apt.preco || 0;
+        switch (apt.payment_method) {
+          case 'pix':
+          case 'card':
+            receitaApp += preco;
+            break;
+          case 'barbearia':
+          case 'cash':
+            receitaBarbearia += preco;
+            break;
+          case 'credit':
+          case 'credito':
+            receitaCredito += preco;
+            break;
+          case 'plano':
+            receitaPlano += preco;
+            break;
+          default:
+            receitaBarbearia += preco;
+        }
+      });
+
+      const receitaMes = receitaApp + receitaBarbearia + receitaCredito + receitaPlano;
+
+      // Carregar dados diários para o gráfico de linhas
+      const chartData: DailyChartData[] = [];
+      const daysInRange = Math.min(14, Math.ceil((dateRange.to.getTime() - dateRange.from.getTime()) / (1000 * 60 * 60 * 24)) + 1);
+      
+      for (let i = daysInRange - 1; i >= 0; i--) {
+        const date = new Date(dateRange.to);
+        date.setDate(date.getDate() - i);
+        const dateStr = format(date, 'yyyy-MM-dd');
+        
+        const dayAppointments = (appointments || []).filter(apt => apt.data === dateStr);
+        const dayRevenue = dayAppointments.reduce((sum, apt) => sum + (apt.preco || 0), 0);
+        
+        chartData.push({
+          date: dateStr,
+          label: format(date, 'dd/MM'),
+          receita: dayRevenue,
+          taxas: 0, // Será preenchido com dados do Asaas
+        });
+      }
+
+      setLocalRevenue({
+        receitaMes,
+        receitaApp,
+        receitaBarbearia,
+        receitaCredito,
+        receitaPlano,
+      });
+      setDailyChartData(chartData);
+    } catch (error) {
+      console.error("Error loading local revenue:", error);
+    }
+  };
 
   const getCachedData = (): AsaasFinancialData | null => {
     try {
@@ -214,8 +314,12 @@ export function AdminFinanceiro() {
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Financeiro - Sincronizado com Asaas</h1>
+        <div>
+          <h1 className="text-2xl font-bold">Controle Financeiro</h1>
+          <p className="text-sm text-muted-foreground">Visão completa das receitas e taxas</p>
+        </div>
         <div className="flex gap-2">
           <Popover>
             <PopoverTrigger asChild>
@@ -237,137 +341,210 @@ export function AdminFinanceiro() {
               />
             </PopoverContent>
           </Popover>
-          <Button variant="outline" onClick={() => loadFinancialData(true)}>
+          <Button variant="outline" onClick={() => { loadFinancialData(true); loadLocalRevenue(); }}>
             <RefreshCw className="w-4 h-4 mr-2" />
             Atualizar
           </Button>
           <Button onClick={handleExportCSV}>
             <Download className="w-4 h-4 mr-2" />
-            Exportar CSV
+            Exportar
           </Button>
         </div>
       </div>
 
+      {/* Cards principais - Resumo Financeiro */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
+        <Card className="glass-card">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Receita do Mês</CardTitle>
+            <TrendingUp className="h-4 w-4 text-green-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-500">
+              R$ {localRevenue.receitaMes.toFixed(2)}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Total de todos os canais
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="glass-card">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Saldo Disponível</CardTitle>
-            <Wallet className="h-4 w-4 text-muted-foreground" />
+            <Wallet className="h-4 w-4 text-blue-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">R$ {data.stats.balance.balance.toFixed(2)}</div>
+            <div className="text-2xl font-bold text-blue-500">
+              R$ {data.stats.balance.balance.toFixed(2)}
+            </div>
             <p className="text-xs text-muted-foreground mt-1">
-              Futuro: R$ {data.stats.balance.futureBalance.toFixed(2)}
+              Disponível para saque
             </p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Receita Bruta</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">R$ {data.stats.payments.totalPaid.toFixed(2)}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              {data.transactions.length} transações
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
+        <Card className="glass-card">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Taxas Asaas</CardTitle>
-            <TrendingDown className="h-4 w-4 text-muted-foreground" />
+            <TrendingDown className="h-4 w-4 text-red-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">R$ {data.stats.fees.totalFees.toFixed(2)}</div>
+            <div className="text-2xl font-bold text-red-500">
+              R$ {data.stats.fees.totalFees.toFixed(2)}
+            </div>
             <p className="text-xs text-muted-foreground mt-1">
               PIX: R$ {data.stats.fees.pixFees.toFixed(2)} | Cartão: R$ {data.stats.fees.creditCardFees.toFixed(2)}
             </p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="glass-card">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Lucro Líquido</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
+            <DollarSign className="h-4 w-4 text-gold" />
           </CardHeader>
           <CardContent>
-            <div className={cn("text-2xl font-bold", netProfit >= 0 ? "text-green-600" : "text-red-600")}>
+            <div className={cn("text-2xl font-bold", netProfit >= 0 ? "text-gold" : "text-red-500")}>
               R$ {netProfit.toFixed(2)}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              Receita - Taxas
+              Receita App - Taxas
             </p>
           </CardContent>
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Cobranças Criadas</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">R$ {data.stats.payments.totalCreated.toFixed(2)}</div>
+      {/* Cards de origem da receita */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <Card className="glass-card border-green-500/20">
+          <CardContent className="pt-4">
+            <p className="text-xs text-muted-foreground">Pago no App</p>
+            <p className="text-xl font-bold text-green-500">R$ {localRevenue.receitaApp.toFixed(2)}</p>
           </CardContent>
         </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Cobranças Atrasadas</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-orange-600">R$ {data.stats.payments.totalOverdue.toFixed(2)}</div>
+        <Card className="glass-card border-amber-500/20">
+          <CardContent className="pt-4">
+            <p className="text-xs text-muted-foreground">Pago na Barbearia</p>
+            <p className="text-xl font-bold text-amber-500">R$ {localRevenue.receitaBarbearia.toFixed(2)}</p>
           </CardContent>
         </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Estornos</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">R$ {data.stats.payments.totalRefunded.toFixed(2)}</div>
+        <Card className="glass-card border-purple-500/20">
+          <CardContent className="pt-4">
+            <p className="text-xs text-muted-foreground">Crédito App</p>
+            <p className="text-xl font-bold text-purple-500">R$ {localRevenue.receitaCredito.toFixed(2)}</p>
+          </CardContent>
+        </Card>
+        <Card className="glass-card border-blue-500/20">
+          <CardContent className="pt-4">
+            <p className="text-xs text-muted-foreground">Planos</p>
+            <p className="text-xl font-bold text-blue-500">R$ {localRevenue.receitaPlano.toFixed(2)}</p>
           </CardContent>
         </Card>
       </div>
 
-      <Tabs defaultValue="overview" className="space-y-4">
+      {/* Gráfico de linhas - Evolução diária */}
+      <Card className="glass-card">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <TrendingUp className="w-5 h-5 text-primary" />
+            Evolução de Receita
+          </CardTitle>
+          <p className="text-sm text-muted-foreground">Receita diária do período selecionado</p>
+        </CardHeader>
+        <CardContent>
+          <ResponsiveContainer width="100%" height={300}>
+            <LineChart data={dailyChartData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
+              <XAxis 
+                dataKey="label" 
+                stroke="hsl(var(--muted-foreground))" 
+                fontSize={12}
+                tickLine={false}
+              />
+              <YAxis 
+                stroke="hsl(var(--muted-foreground))" 
+                fontSize={12}
+                tickLine={false}
+                tickFormatter={(value) => `R$${value}`}
+              />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: 'hsl(var(--card))',
+                  border: '1px solid hsl(var(--border))',
+                  borderRadius: '8px',
+                }}
+                formatter={(value: number) => [`R$ ${value.toFixed(2)}`, 'Receita']}
+              />
+              <Line 
+                type="monotone" 
+                dataKey="receita" 
+                stroke="hsl(var(--primary))" 
+                strokeWidth={3}
+                dot={{ fill: 'hsl(var(--primary))', strokeWidth: 2 }}
+                activeDot={{ r: 6, fill: 'hsl(var(--primary))' }}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        </CardContent>
+      </Card>
+
+      <Tabs defaultValue="transactions" className="space-y-4">
         <TabsList>
-          <TabsTrigger value="overview">Visão Geral</TabsTrigger>
-          <TabsTrigger value="methods">Formas de Pagamento</TabsTrigger>
-          <TabsTrigger value="transactions">Transações</TabsTrigger>
+          <TabsTrigger value="transactions">Transações Asaas</TabsTrigger>
+          <TabsTrigger value="methods">Por Forma de Pagamento</TabsTrigger>
           <TabsTrigger value="import">Importar CSV</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="overview" className="space-y-4">
-          <Card>
+        <TabsContent value="transactions" className="space-y-4">
+          <Card className="glass-card">
             <CardHeader>
-              <CardTitle>Evolução de Receitas vs Taxas</CardTitle>
+              <CardTitle>Histórico de Transações</CardTitle>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={[
-                  { name: 'Receita Bruta', value: data.stats.payments.totalPaid },
-                  { name: 'Taxas', value: data.stats.fees.totalFees },
-                  { name: 'Lucro Líquido', value: netProfit },
-                ]}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" />
-                  <YAxis />
-                  <Tooltip />
-                  <Bar dataKey="value" fill="hsl(var(--primary))" />
-                </BarChart>
-              </ResponsiveContainer>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-border/50">
+                      <th className="text-left p-3 font-medium">Data</th>
+                      <th className="text-left p-3 font-medium">Descrição</th>
+                      <th className="text-right p-3 font-medium">Valor</th>
+                      <th className="text-right p-3 font-medium">Taxa</th>
+                      <th className="text-right p-3 font-medium">Líquido</th>
+                      <th className="text-left p-3 font-medium">Método</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.transactions.map((t) => (
+                      <tr key={t.id} className="border-b border-border/30 hover:bg-secondary/30 transition-colors">
+                        <td className="p-3">{format(new Date(t.date), 'dd/MM/yyyy')}</td>
+                        <td className="p-3">{t.description}</td>
+                        <td className="text-right p-3 font-medium">R$ {t.value.toFixed(2)}</td>
+                        <td className="text-right p-3 text-red-500">-R$ {t.fee.toFixed(2)}</td>
+                        <td className="text-right p-3 text-green-500 font-medium">R$ {t.netValue.toFixed(2)}</td>
+                        <td className="p-3">
+                          <span className="px-2 py-1 rounded-full text-xs bg-secondary">
+                            {t.billingType}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {data.transactions.length === 0 && (
+                  <div className="text-center py-8 text-muted-foreground">
+                    Nenhuma transação no período
+                  </div>
+                )}
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
 
         <TabsContent value="methods" className="space-y-4">
-          <Card>
+          <Card className="glass-card">
             <CardHeader>
-              <CardTitle>Receitas por Forma de Pagamento</CardTitle>
+              <CardTitle>Receitas por Forma de Pagamento (Asaas)</CardTitle>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>
@@ -378,7 +555,7 @@ export function AdminFinanceiro() {
                     nameKey="method"
                     cx="50%"
                     cy="50%"
-                    outerRadius={80}
+                    outerRadius={100}
                     label={(entry) => `${entry.method}: R$ ${entry.value.toFixed(2)}`}
                   >
                     {paymentMethodsData.map((entry, index) => (
@@ -392,46 +569,8 @@ export function AdminFinanceiro() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="transactions" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Histórico de Transações</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b">
-                      <th className="text-left p-2">Data</th>
-                      <th className="text-left p-2">Descrição</th>
-                      <th className="text-right p-2">Valor Bruto</th>
-                      <th className="text-right p-2">Taxa</th>
-                      <th className="text-right p-2">Líquido</th>
-                      <th className="text-left p-2">Status</th>
-                      <th className="text-left p-2">Método</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {data.transactions.map((t) => (
-                      <tr key={t.id} className="border-b">
-                        <td className="p-2">{format(new Date(t.date), 'dd/MM/yyyy')}</td>
-                        <td className="p-2">{t.description}</td>
-                        <td className="text-right p-2">R$ {t.value.toFixed(2)}</td>
-                        <td className="text-right p-2 text-red-600">R$ {t.fee.toFixed(2)}</td>
-                        <td className="text-right p-2 text-green-600">R$ {t.netValue.toFixed(2)}</td>
-                        <td className="p-2">{t.status}</td>
-                        <td className="p-2">{t.billingType}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
         <TabsContent value="import" className="space-y-4">
-          <Card>
+          <Card className="glass-card">
             <CardHeader>
               <CardTitle>Importar Extrato CSV do Asaas</CardTitle>
             </CardHeader>
@@ -451,11 +590,11 @@ export function AdminFinanceiro() {
               
               {csvData.length > 0 && (
                 <div className="overflow-x-auto">
-                  <table className="w-full text-sm border">
+                  <table className="w-full text-sm border border-border/30 rounded-lg">
                     <thead>
-                      <tr className="bg-muted">
+                      <tr className="bg-secondary/50">
                         {Object.keys(csvData[0]).map((header) => (
-                          <th key={header} className="text-left p-2 border">
+                          <th key={header} className="text-left p-2 border-b border-border/30">
                             {header}
                           </th>
                         ))}
@@ -463,9 +602,9 @@ export function AdminFinanceiro() {
                     </thead>
                     <tbody>
                       {csvData.slice(0, 50).map((row, index) => (
-                        <tr key={index} className="border-b">
+                        <tr key={index} className="border-b border-border/20">
                           {Object.values(row).map((value: any, i) => (
-                            <td key={i} className="p-2 border">
+                            <td key={i} className="p-2">
                               {value}
                             </td>
                           ))}
@@ -486,7 +625,7 @@ export function AdminFinanceiro() {
       </Tabs>
 
       <div className="text-xs text-muted-foreground text-right">
-        Última atualização: {format(new Date(data.timestamp), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+        Última atualização Asaas: {format(new Date(data.timestamp), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
       </div>
     </div>
   );
