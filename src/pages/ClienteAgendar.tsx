@@ -138,7 +138,7 @@ const ClienteAgendar = () => {
           console.log('[initializeBooking] Assinante detectado! Pré-selecionando serviço:', subscription.servico.nome);
           setSelectedServices([subscription.servico]);
           setStep(2); // Ir direto para seleção de data
-          toast.info(`${subscription.plano_nome} - ${restantes} agendamento${restantes > 1 ? 's' : ''} restante${restantes > 1 ? 's' : ''}`);
+          // Removido toast de "Plano" - usuário já sabe que tem plano
           return;
         }
 
