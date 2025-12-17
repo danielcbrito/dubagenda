@@ -66,6 +66,27 @@ const ClienteAgendar = () => {
   const [activeSubscription, setActiveSubscription] = useState<ActiveSubscription | null>(null);
   const [subscriptionBlocked, setSubscriptionBlocked] = useState(false);
 
+  /**
+   * PLANO: o agendamento só é tratado como "via plano" quando:
+   * - existe assinatura ativa com serviço vinculado
+   * - o usuário está agendando exatamente o serviço do plano (sem extras)
+   * - ainda não atingiu o limite mensal
+   *
+   * Isso corrige o bug de cair no fluxo de pagamento indevidamente e também
+   * evita que o plano seja aplicado em serviços fora da cobertura.
+   */
+  const isPlanEligible =
+    !isRescheduling &&
+    !!activeSubscription?.servico &&
+    selectedServices.length === 1 &&
+    selectedServices[0]?.id === activeSubscription.servico.id &&
+    activeSubscription.agendamentos_usados < activeSubscription.limite_agendamentos_mes;
+
+  // Guard extra: se por qualquer motivo cair na etapa de pagamento, pular para confirmação do plano
+  useEffect(() => {
+    if (step === 4 && isPlanEligible) setStep(5);
+  }, [step, isPlanEligible]);
+
   // Calcular duração total dos serviços selecionados
   const totalDuration = selectedServices.reduce((sum, s) => sum + s.duracao_minutos, 0);
 
@@ -83,13 +104,10 @@ const ClienteAgendar = () => {
 
   useEffect(() => {
     const initializeBooking = async () => {
-      await loadServices();
-      loadUserCredits();
-      
-      // NOVO: Carregar assinatura ativa e configurar fluxo do assinante
-      const subscription = await loadActiveSubscription();
-      
-      // Check if resuming payment from pending booking
+      // Carregar dados essenciais primeiro (evita "flash" da lista de serviços para assinantes)
+      await loadUserCredits();
+
+      // Fluxos especiais têm prioridade (pagamento pendente / remarcação)
       const resumeBookingId = sessionStorage.getItem('resumePendingBookingId');
       if (resumeBookingId) {
         setResumePendingBookingId(resumeBookingId);
@@ -97,40 +115,44 @@ const ClienteAgendar = () => {
         loadPendingBookingDetails(resumeBookingId);
         return; // Sair aqui pois já tem fluxo próprio
       }
-      
-      // Check if rescheduling an existing appointment
+
       const isReschedulingSession = sessionStorage.getItem('isRescheduling');
       const appointmentId = sessionStorage.getItem('rescheduleAppointmentId');
-      
+
       if (isReschedulingSession === 'true' && appointmentId) {
         setIsRescheduling(true);
         setRescheduleAppointmentId(appointmentId);
         loadAppointmentForReschedule(appointmentId);
         return; // Sair aqui pois já tem fluxo próprio
       }
-      
-      // NOVO: Se usuário é assinante com serviço vinculado, pré-selecionar e pular step 1
-      if (subscription && subscription.servico) {
-        // Verificar se ainda tem agendamentos disponíveis no plano
+
+      // Assinatura ativa (se existir)
+      const subscription = await loadActiveSubscription();
+
+      // Se usuário é assinante com serviço vinculado e ainda tem uso do plano,
+      // pré-selecionar e pular step 1 sem carregar lista de serviços (UX mais limpa)
+      if (subscription?.servico) {
         const restantes = subscription.limite_agendamentos_mes - subscription.agendamentos_usados;
-        
-        if (restantes <= 0) {
-          // Limite atingido - mostrar mensagem mas permitir agendar serviços pagos
-          console.log('[initializeBooking] Limite do plano atingido! Usuário deve escolher serviço manualmente.');
-          toast.info(`Você já usou seus ${subscription.limite_agendamentos_mes} agendamentos do plano este mês. Você pode agendar serviços avulsos.`);
-          // Não pré-seleciona nada, deixa escolher manualmente
+
+        if (restantes > 0) {
+          console.log('[initializeBooking] Assinante detectado! Pré-selecionando serviço:', subscription.servico.nome);
+          setSelectedServices([subscription.servico]);
+          setStep(2); // Ir direto para seleção de data
+          toast.info(`${subscription.plano_nome} - ${restantes} agendamento${restantes > 1 ? 's' : ''} restante${restantes > 1 ? 's' : ''}`);
           return;
         }
-        
-        console.log('[initializeBooking] Assinante detectado! Pré-selecionando serviço:', subscription.servico.nome);
-        setSelectedServices([subscription.servico]);
-        setStep(2); // Ir direto para seleção de data
-        toast.info(`${subscription.plano_nome} - ${restantes} agendamento${restantes > 1 ? 's' : ''} restante${restantes > 1 ? 's' : ''}`);
+
+        // Limite atingido - permitir agendar serviços avulsos
+        console.log('[initializeBooking] Limite do plano atingido! Usuário pode agendar serviços avulsos.');
+        toast.info(`Você já usou seus ${subscription.limite_agendamentos_mes} agendamentos do plano este mês. Você pode agendar serviços avulsos.`);
       }
+
+      await loadServices();
     };
-    
+
     initializeBooking();
   }, []);
+
 
   // Lock body scroll and set dynamic viewport height for mobile
   useEffect(() => {
@@ -463,17 +485,25 @@ const ClienteAgendar = () => {
       return;
     }
     
-    // NOVO: Se tem assinatura ativa, pular pagamento e ir direto para confirmação
-    if (step === 3 && !isRescheduling && activeSubscription) {
-      // Verificar se ainda tem agendamentos disponíveis no plano
-      if (activeSubscription.agendamentos_usados >= activeSubscription.limite_agendamentos_mes) {
-        toast.error(`Você já usou todos os ${activeSubscription.limite_agendamentos_mes} agendamentos do seu plano este mês.`);
-        return;
-      }
-      console.log('[handleNextStep] Usuário tem plano ativo, pulando pagamento');
-      setStep(5); // Pula step 4 e vai direto para confirmação
+    // PLANO: só pular pagamento quando o agendamento é elegível (serviço do plano + dentro do limite)
+    if (step === 3 && isPlanEligible) {
+      console.log('[handleNextStep] Agendamento via PLANO elegível, pulando pagamento');
+      setStep(5);
       return;
     }
+
+    // Se o usuário escolheu o serviço do plano mas já atingiu o limite, segue fluxo avulso (pagamento)
+    if (
+      step === 3 &&
+      !isRescheduling &&
+      activeSubscription?.servico &&
+      selectedServices.length === 1 &&
+      selectedServices[0]?.id === activeSubscription.servico.id &&
+      activeSubscription.agendamentos_usados >= activeSubscription.limite_agendamentos_mes
+    ) {
+      toast.info(`Limite do plano atingido. Este agendamento será considerado avulso.`);
+    }
+
     
     // Se créditos cobrem 100% do valor, pular step 4 (pagamento) e ir direto para confirmação
     if (step === 3 && !isRescheduling) {
@@ -497,11 +527,12 @@ const ClienteAgendar = () => {
       return;
     }
 
-    // NOVO: Se tem assinatura ativa, criar agendamento com plano (sem pagamento)
-    if (activeSubscription && !isRescheduling) {
+    // PLANO: criar agendamento com plano (sem pagamento) apenas quando elegível
+    if (isPlanEligible) {
       await createAppointmentWithPlan();
       return;
     }
+
 
     const totalPrice = getTotalPrice();
     const finalPrice = Math.max(0, totalPrice - availableCredits);
@@ -1283,7 +1314,7 @@ const ClienteAgendar = () => {
           <div className="scrollable-content p-4 md:p-6">
             <div className="space-y-4 max-w-4xl mx-auto">
               <div>
-                <h3 className="text-sm font-semibold mb-1">Etapa 3 de 5</h3>
+                <h3 className="text-sm font-semibold mb-1">Etapa {activeSubscription?.servico ? '2' : '3'} de {activeSubscription?.servico ? '4' : '5'}</h3>
                 <h2 className="text-xl font-bold mb-3 responsive-title">Escolha o Horário</h2>
                 <p className="text-sm text-muted-foreground mb-4 responsive-text">
                   Horários disponíveis para {selectedDate?.toLocaleDateString('pt-BR')}
@@ -1515,7 +1546,7 @@ const ClienteAgendar = () => {
           <div className="scrollable-content p-4 md:p-6">
             <div className="space-y-4 max-w-4xl mx-auto">
               <div>
-                <h3 className="text-sm font-semibold mb-1">Etapa 5 de 5</h3>
+                <h3 className="text-sm font-semibold mb-1">Etapa {isPlanEligible ? '3' : '5'} de {isPlanEligible ? '4' : '5'}</h3>
                 <h2 className="text-xl font-bold mb-3 responsive-title">
                   {paymentMethod === 'card' ? 'Dados do Cartão' : 'Confirmar Agendamento'}
                 </h2>
@@ -1546,13 +1577,15 @@ const ClienteAgendar = () => {
                 <div className="flex justify-between py-2 border-b border-border">
                   <span className="text-muted-foreground">Forma de Pagamento:</span>
                   <span className="font-semibold">
-                    {availableCredits >= getTotalPrice() 
-                      ? 'Crédito do App' 
-                      : paymentMethod === 'pix' 
-                        ? 'PIX' 
-                        : paymentMethod === 'card' 
-                          ? 'Cartão de Crédito' 
-                          : 'Dinheiro (na barbearia)'
+                    {isPlanEligible
+                      ? `Plano (${activeSubscription?.plano_nome})`
+                      : availableCredits >= getTotalPrice()
+                        ? 'Crédito do App'
+                        : paymentMethod === 'pix'
+                          ? 'PIX'
+                          : paymentMethod === 'card'
+                            ? 'Cartão de Crédito'
+                            : 'Dinheiro (na barbearia)'
                     }
                   </span>
                 </div>
@@ -1689,7 +1722,7 @@ const ClienteAgendar = () => {
             )}
 
             {/* Message when paying with credits */}
-            {availableCredits >= getTotalPrice() && (
+            {!isPlanEligible && availableCredits >= getTotalPrice() && (
               <Card className="p-4 bg-green-500/10 border-green-500/20">
                 <p className="text-sm text-center text-green-600 font-medium">
                   Seu agendamento será pago usando seus créditos do app
@@ -1697,7 +1730,15 @@ const ClienteAgendar = () => {
               </Card>
             )}
 
-            {paymentMethod === 'pix' && availableCredits < getTotalPrice() && (
+            {isPlanEligible && (
+              <Card className="p-4 bg-green-500/10 border-green-500/20">
+                <p className="text-sm text-center text-green-600 font-medium">
+                  Este agendamento será registrado como PLANO. Nenhum pagamento será solicitado.
+                </p>
+              </Card>
+            )}
+
+            {!isPlanEligible && paymentMethod === 'pix' && availableCredits < getTotalPrice() && (
               <Card className="p-4 bg-primary/5 border-primary/20">
                 <p className="text-sm text-center">
                   Ao confirmar, o QR Code PIX será gerado para pagamento
@@ -1705,7 +1746,7 @@ const ClienteAgendar = () => {
               </Card>
             )}
 
-            {paymentMethod === 'cash' && availableCredits < getTotalPrice() && (
+            {!isPlanEligible && paymentMethod === 'cash' && availableCredits < getTotalPrice() && (
               <Card className="p-4 bg-primary/5 border-primary/20">
                 <p className="text-sm text-center">
                   Você pagará diretamente na barbearia no dia do atendimento
@@ -1724,11 +1765,13 @@ const ClienteAgendar = () => {
               >
                 {processingPayment 
                   ? "Processando..." 
-                  : availableCredits >= getTotalPrice()
-                    ? "Confirmar (usando créditos)"
-                    : paymentMethod === 'pix' 
-                      ? "Gerar QR Code" 
-                      : "Confirmar Agendamento"
+                  : isPlanEligible
+                    ? "Finalizar (usando PLANO)"
+                    : availableCredits >= getTotalPrice()
+                      ? "Confirmar (usando créditos)"
+                      : paymentMethod === 'pix' 
+                        ? "Gerar QR Code" 
+                        : "Confirmar Agendamento"
                 }
               </Button>
             </div>
