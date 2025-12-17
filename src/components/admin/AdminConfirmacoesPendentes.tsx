@@ -19,6 +19,7 @@ interface PendingAppointment {
   barbeiro_confirmou: boolean;
   payment_method: string | null;
   remarcado_de: string | null;
+  tipo_agendamento: string | null;
   profile: { nome: string } | null;
   servico: { nome: string } | null;
   payment: { metodo: string; status: string } | null;
@@ -54,7 +55,7 @@ export function AdminConfirmacoesPendentes() {
     try {
       const { data, error } = await supabase
         .from("agendamentos")
-        .select("id, data, hora, status, preco, cliente_confirmou, barbeiro_confirmou, user_id, servico_id, payment_method, remarcado_de")
+        .select("id, data, hora, status, preco, cliente_confirmou, barbeiro_confirmou, user_id, servico_id, payment_method, remarcado_de, tipo_agendamento")
         .eq("status", "pending")
         .eq("barbeiro_confirmou", false)
         .order("data", { ascending: true })
@@ -238,9 +239,25 @@ export function AdminConfirmacoesPendentes() {
           {appointments.map((apt) => {
             const paymentMethod = apt.payment?.metodo || apt.payment_method || 'cash';
             const isPrepaid = apt.payment?.status === 'paid';
+            const isPlano = apt.tipo_agendamento === 'plano' || apt.payment_method === 'plano';
+            const isCredit = apt.payment_method === 'credit';
+            
+            // Determinar cor da borda baseado no método de pagamento
+            // Amarelo/Laranja = Pagar na barbearia
+            // Verde = Já pagou (PIX/Cartão)
+            // Roxo = Crédito do app
+            // Azul = Plano
+            let borderColor = 'border-l-yellow-500'; // Default: pagar na barbearia
+            if (isPlano) {
+              borderColor = 'border-l-blue-500';
+            } else if (isCredit) {
+              borderColor = 'border-l-purple-500';
+            } else if (isPrepaid) {
+              borderColor = 'border-l-green-500';
+            }
             
             return (
-              <Card key={apt.id} className="p-6 border-l-4 border-l-yellow-500">
+              <Card key={apt.id} className={`p-6 border-l-4 ${borderColor}`}>
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-2">
@@ -270,27 +287,44 @@ export function AdminConfirmacoesPendentes() {
                       </span>
                     </div>
 
-                    {/* Forma de Pagamento */}
+                    {/* Forma de Pagamento - Cores: Amarelo=Barbearia, Verde=Pago, Roxo=Crédito, Azul=Plano */}
                     <div className="flex flex-wrap gap-2 mb-3">
                       <Badge variant="outline" className="text-xs">
                         Valor: R$ {apt.preco.toFixed(2)}
                       </Badge>
                       
-                      {paymentMethod === 'pix' && (
-                        <Badge variant="outline" className={isPrepaid ? "bg-green-500/10 text-green-700 border-green-500/20" : "bg-yellow-500/10 text-yellow-700 border-yellow-500/20"}>
-                          PIX {isPrepaid ? '(Pago)' : '(Pendente)'}
+                      {/* PLANO - Azul */}
+                      {isPlano && (
+                        <Badge variant="outline" className="bg-blue-500/10 text-blue-700 border-blue-500/20 font-semibold">
+                          🎫 PLANO
                         </Badge>
                       )}
                       
-                      {paymentMethod === 'card' && (
-                        <Badge variant="outline" className={isPrepaid ? "bg-green-500/10 text-green-700 border-green-500/20" : "bg-yellow-500/10 text-yellow-700 border-yellow-500/20"}>
-                          Cartão {isPrepaid ? '(Pago)' : '(Pendente)'}
+                      {/* CRÉDITO APP - Roxo */}
+                      {isCredit && !isPlano && (
+                        <Badge variant="outline" className="bg-purple-500/10 text-purple-700 border-purple-500/20 font-semibold">
+                          💳 CRÉDITO APP
                         </Badge>
                       )}
                       
-                      {paymentMethod === 'cash' && (
-                        <Badge variant="outline" className="bg-blue-500/10 text-blue-700 border-blue-500/20">
-                          Pagar na Barbearia
+                      {/* PIX/CARTÃO PAGO - Verde */}
+                      {(paymentMethod === 'pix' || paymentMethod === 'card') && isPrepaid && !isPlano && !isCredit && (
+                        <Badge variant="outline" className="bg-green-500/10 text-green-700 border-green-500/20 font-semibold">
+                          ✓ PAGO NO APP
+                        </Badge>
+                      )}
+                      
+                      {/* PIX/CARTÃO PENDENTE - Amarelo */}
+                      {(paymentMethod === 'pix' || paymentMethod === 'card') && !isPrepaid && !isPlano && !isCredit && (
+                        <Badge variant="outline" className="bg-yellow-500/10 text-yellow-700 border-yellow-500/20">
+                          Pagamento Pendente
+                        </Badge>
+                      )}
+                      
+                      {/* PAGAR NA BARBEARIA - Amarelo */}
+                      {(paymentMethod === 'cash' || paymentMethod === 'barbearia') && !isPlano && !isCredit && (
+                        <Badge variant="outline" className="bg-yellow-500/10 text-yellow-700 border-yellow-500/20 font-semibold">
+                          💰 PAGAR NA BARBEARIA
                         </Badge>
                       )}
                     </div>
