@@ -1096,7 +1096,16 @@ const ClienteAgendar = () => {
             <Button 
               variant="ghost" 
               size="icon" 
-              onClick={() => step === 1 ? navigate("/cliente") : setStep(step - 1)} 
+              onClick={() => {
+                // Assinante com serviço vinculado: step 2 volta para /cliente (não para step 1 de preços)
+                if (activeSubscription?.servico && step === 2) {
+                  navigate("/cliente");
+                } else if (step === 1) {
+                  navigate("/cliente");
+                } else {
+                  setStep(step - 1);
+                }
+              }}
               className="h-10 w-10 rounded-full hover:bg-white/10 transition-all duration-300"
             >
               <ArrowLeft className="w-5 h-5" />
