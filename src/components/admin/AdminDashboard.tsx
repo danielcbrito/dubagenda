@@ -105,11 +105,12 @@ export function AdminDashboard() {
       const today = format(new Date(), 'yyyy-MM-dd');
       const firstDayOfMonth = format(new Date(new Date().getFullYear(), new Date().getMonth(), 1), 'yyyy-MM-dd');
 
-      // Agendamentos de hoje
+      // Agendamentos de hoje (apenas confirmados/pendentes - sem cancelados)
       const { count: todayCount } = await supabase
         .from("agendamentos")
         .select("*", { count: "exact", head: true })
-        .eq("data", today);
+        .eq("data", today)
+        .in("status", ["pending", "confirmed", "completed"]);
 
       // Clientes ativos
       const { count: clientsCount } = await supabase
@@ -117,12 +118,12 @@ export function AdminDashboard() {
         .select("*", { count: "exact", head: true })
         .eq("blocked", false);
 
-      // Cortes do mês (confirmados + completados)
+      // Cortes do mês - APENAS finalizados (completed) pelo barbeiro
       const { count: cutsCount } = await supabase
         .from("agendamentos")
         .select("*", { count: "exact", head: true })
         .gte("data", firstDayOfMonth)
-        .in("status", ["confirmed", "completed"]);
+        .eq("status", "completed");
 
       // Confirmações pendentes
       const { count: pendingAppointments } = await supabase
