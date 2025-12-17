@@ -65,6 +65,10 @@ const ClienteAgendar = () => {
   // NOVO: Estado para assinatura ativa do usuário
   const [activeSubscription, setActiveSubscription] = useState<ActiveSubscription | null>(null);
   const [subscriptionBlocked, setSubscriptionBlocked] = useState(false);
+  
+  // NOVO: Estado para resgates disponíveis (corte grátis do programa de fidelidade)
+  const [availableRedemptions, setAvailableRedemptions] = useState<{ id: string; promocao_id: string }[]>([]);
+  const [useRedemption, setUseRedemption] = useState(false);
 
   /**
    * PLANO: o agendamento só é tratado como "via plano" quando:
@@ -106,6 +110,7 @@ const ClienteAgendar = () => {
     const initializeBooking = async () => {
       // Carregar dados essenciais primeiro (evita "flash" da lista de serviços para assinantes)
       await loadUserCredits();
+      await loadAvailableRedemptions(); // Carregar resgates disponíveis
 
       // Fluxos especiais têm prioridade (pagamento pendente / remarcação)
       const resumeBookingId = sessionStorage.getItem('resumePendingBookingId');
@@ -261,6 +266,28 @@ const ClienteAgendar = () => {
       setAvailableCredits(creditsData || 0);
     } catch (error) {
       console.error("Error loading credits:", error);
+    }
+  };
+
+  // NOVO: Carregar resgates disponíveis (corte grátis do programa de fidelidade)
+  const loadAvailableRedemptions = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      const { data: redemptions, error } = await supabase
+        .from("resgates")
+        .select("id, promocao_id")
+        .eq("user_id", session.user.id)
+        .eq("status", "available")
+        .is("used_at", null);
+
+      if (error) throw error;
+      
+      setAvailableRedemptions(redemptions || []);
+      console.log('[loadAvailableRedemptions] Resgates disponíveis:', redemptions?.length || 0);
+    } catch (error) {
+      console.error("Error loading redemptions:", error);
     }
   };
 
@@ -534,8 +561,14 @@ const ClienteAgendar = () => {
     }
 
 
-    const totalPrice = getTotalPrice();
+    const totalPrice = getTotalPrice(); // Já considera desconto do resgate
     const finalPrice = Math.max(0, totalPrice - availableCredits);
+
+    // Se resgate cobriu 100% do corte e não há valor a pagar, criar agendamento direto
+    if (totalPrice === 0 && useRedemption) {
+      await createAppointmentWithRedemption();
+      return;
+    }
 
     // If fully covered by credits, create appointment directly
     if (finalPrice === 0) {
@@ -618,6 +651,11 @@ const ClienteAgendar = () => {
         await useCredits(Math.min(availableCredits, totalPrice), data.appointmentId);
       }
 
+      // Marcar resgate como usado (se aplicável)
+      if (useRedemption && data.appointmentId) {
+        await markRedemptionAsUsed(data.appointmentId);
+      }
+
       // Handle response based on payment method
       if (paymentMethod === 'cash') {
         // Clear rescheduling session data
@@ -637,7 +675,7 @@ const ClienteAgendar = () => {
           preco: finalPrice
         });
         
-        toast.success("Agendamento criado! Pague na barbearia.");
+        toast.success("Agendamento criado!" + (useRedemption ? " Corte grátis resgatado! Pague o restante na barbearia." : " Pague na barbearia."));
         navigate("/cliente");
       } else if (paymentMethod === 'pix' && data.asaasPayment?.pixQrCode) {
         setPixQrCode(data.asaasPayment.pixQrCode.encodedImage);
@@ -669,6 +707,82 @@ const ClienteAgendar = () => {
       } else {
         toast.error("Erro ao processar pagamento: " + (error.message || "Erro desconhecido"));
       }
+    } finally {
+      setProcessingPayment(false);
+    }
+  };
+
+  // NOVO: Criar agendamento usando resgate (corte grátis do programa de fidelidade)
+  const createAppointmentWithRedemption = async () => {
+    setProcessingPayment(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error("Você precisa estar logado");
+        navigate("/auth");
+        return;
+      }
+
+      const totalDuration = selectedServices.reduce((sum, s) => sum + s.duracao_minutos, 0);
+      const serviceNames = selectedServices.map(s => s.nome).join(", ");
+      const mainService = selectedServices[0];
+      const dateStr = format(selectedDate!, 'yyyy-MM-dd');
+
+      // Validar disponibilidade
+      const { data: validation, error: validationError } = await supabase.functions.invoke('validate-appointment', {
+        body: { data: dateStr, hora: selectedTime, duracao: totalDuration, userId: session.user.id }
+      });
+
+      if (validationError || !validation?.valid) {
+        toast.error(validation?.message || "Horário indisponível. Escolha outro.");
+        setStep(3);
+        refreshSlots();
+        return;
+      }
+
+      // Criar agendamento grátis (resgate)
+      const { data: appointment, error: aptError } = await supabase
+        .from("agendamentos")
+        .insert({
+          user_id: session.user.id,
+          servico_id: mainService.id,
+          data: dateStr,
+          hora: selectedTime,
+          duracao: totalDuration,
+          preco: 0,
+          status: "pending",
+          observacoes: `Corte grátis - Resgate do programa de fidelidade. ${selectedServices.length > 1 ? 'Serviços: ' + serviceNames : ''}`,
+          payment_method: 'resgate',
+          is_free: true,
+          barbeiro_confirmou: false,
+          cliente_confirmou: false,
+        })
+        .select()
+        .single();
+
+      if (aptError) throw aptError;
+
+      // Marcar resgate como usado
+      await markRedemptionAsUsed(appointment.id);
+
+      // Enviar evento
+      const { data: profile } = await supabase.from('profiles').select('nome, telefone').eq('id', session.user.id).single();
+      sendNovoAgendamentoEvent({
+        agendamento_id: appointment.id,
+        cliente_id: session.user.id,
+        cliente_nome: profile?.nome || 'Cliente',
+        cliente_telefone: profile?.telefone,
+        servico: serviceNames,
+        data: dateStr,
+        hora: selectedTime,
+        preco: 0
+      });
+
+      toast.success("🎁 Corte grátis resgatado com sucesso!");
+      navigate("/cliente");
+    } catch (error: any) {
+      console.error('Error creating appointment with redemption:', error);
+      toast.error("Erro ao criar agendamento: " + (error.message || "Erro desconhecido"));
     } finally {
       setProcessingPayment(false);
     }
@@ -772,6 +886,11 @@ const ClienteAgendar = () => {
       // Use credits
       await useCredits(totalPrice, appointment.id);
 
+      // Marcar resgate como usado (se aplicável)
+      if (useRedemption) {
+        await markRedemptionAsUsed(appointment.id);
+      }
+
       // Clear rescheduling session data
       sessionStorage.removeItem('isRescheduling');
       sessionStorage.removeItem('rescheduleAppointmentId');
@@ -789,7 +908,7 @@ const ClienteAgendar = () => {
         preco: 0
       });
 
-      toast.success("Agendamento criado! Créditos aplicados com sucesso.");
+      toast.success("Agendamento criado! " + (useRedemption ? "Corte grátis resgatado!" : "Créditos aplicados com sucesso."));
       navigate("/cliente");
     } catch (error: any) {
       console.error('Error creating appointment with credits:', error);
@@ -943,6 +1062,31 @@ const ClienteAgendar = () => {
     }
   };
 
+  // NOVO: Marcar resgate como usado
+  const markRedemptionAsUsed = async (appointmentId: string) => {
+    if (!useRedemption || availableRedemptions.length === 0) return;
+    
+    const redemptionToUse = availableRedemptions[0];
+    try {
+      const { error } = await supabase
+        .from("resgates")
+        .update({
+          status: "used",
+          used_at: new Date().toISOString(),
+          appointment_id: appointmentId
+        })
+        .eq("id", redemptionToUse.id);
+
+      if (error) throw error;
+      
+      console.log('[markRedemptionAsUsed] Resgate usado:', redemptionToUse.id);
+      setAvailableRedemptions(prev => prev.filter(r => r.id !== redemptionToUse.id));
+      setUseRedemption(false);
+    } catch (error) {
+      console.error("Error marking redemption as used:", error);
+    }
+  };
+
   const handleRescheduleUpdate = async () => {
     if (!rescheduleAppointmentId || !selectedDate || !selectedTime) {
       toast.error("Dados incompletos para remarcação");
@@ -1037,9 +1181,31 @@ const ClienteAgendar = () => {
     return selectedServices.reduce((sum, s) => sum + s.duracao_minutos, 0);
   };
 
-  const getTotalPrice = () => {
-    return selectedServices.reduce((sum, s) => sum + s.preco, 0);
+  // Verifica se algum serviço selecionado é um "Corte" (para aplicar desconto do resgate)
+  const getCorteService = () => {
+    return selectedServices.find(s => 
+      s.nome.toLowerCase().includes('corte') && 
+      !s.nome.toLowerCase().includes('barba')
+    );
   };
+
+  // Calcula o desconto do resgate (valor do corte)
+  const getRedemptionDiscount = () => {
+    if (!useRedemption || availableRedemptions.length === 0) return 0;
+    const corteService = getCorteService();
+    if (!corteService) return 0;
+    return corteService.preco;
+  };
+
+  const getTotalPrice = () => {
+    const baseTotal = selectedServices.reduce((sum, s) => sum + s.preco, 0);
+    // Aplicar desconto do resgate (corte grátis) se ativo
+    const redemptionDiscount = getRedemptionDiscount();
+    return Math.max(0, baseTotal - redemptionDiscount);
+  };
+
+  // Verifica se o usuário pode usar resgate (tem serviço de corte selecionado)
+  const canUseRedemption = availableRedemptions.length > 0 && !!getCorteService();
 
   const progressValue = (step / 6) * 100;
 
@@ -1494,45 +1660,85 @@ const ClienteAgendar = () => {
               </Card>
             </div>
 
+            {/* Banner de Resgate Disponível */}
+            {canUseRedemption && (
+              <Card 
+                className={`p-4 cursor-pointer transition-all ${
+                  useRedemption 
+                    ? "border-green-500 bg-green-500/10 ring-2 ring-green-500" 
+                    : "border-amber-500/50 bg-amber-500/10 hover:border-green-500/50"
+                }`}
+                onClick={() => setUseRedemption(!useRedemption)}
+              >
+                <div className="flex items-center gap-3">
+                  <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                    useRedemption ? 'border-green-500' : 'border-amber-500'
+                  }`}>
+                    {useRedemption && (
+                      <Check className="w-3 h-3 text-green-500" />
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="font-semibold text-amber-700 dark:text-amber-400">
+                      🎁 Corte Grátis Disponível!
+                    </h4>
+                    <p className="text-xs text-muted-foreground">
+                      Você tem {availableRedemptions.length} resgate{availableRedemptions.length > 1 ? 's' : ''} do programa de fidelidade. 
+                      {useRedemption ? ' (Aplicado!)' : ' Clique para usar.'}
+                    </p>
+                  </div>
+                </div>
+              </Card>
+            )}
+
             <Card className="p-4 bg-primary/5 border-primary/20">
               <div className="space-y-3">
+                {/* Preço original */}
                 <div className="flex justify-between items-center text-sm">
                   <span className="text-muted-foreground">Valor do serviço:</span>
-                  <span className="font-semibold">R$ {getTotalPrice().toFixed(2)}</span>
+                  <span className={`font-semibold ${useRedemption && getCorteService() ? 'line-through text-muted-foreground' : ''}`}>
+                    R$ {selectedServices.reduce((sum, s) => sum + s.preco, 0).toFixed(2)}
+                  </span>
                 </div>
 
-                {availableCredits > 0 && (
-                  <>
-                    <div className="flex justify-between items-center text-sm">
-                      <span className="text-green-600">Créditos aplicados:</span>
-                      <span className="font-semibold text-green-600">
-                        - R$ {Math.min(availableCredits, getTotalPrice()).toFixed(2)}
-                      </span>
-                    </div>
-                    <div className="border-t border-border/50 pt-2">
-                      <div className="flex justify-between items-center">
-                        <span className="font-semibold">Valor a pagar:</span>
-                        <span className="text-2xl font-bold text-primary">
-                          R$ {Math.max(0, getTotalPrice() - availableCredits).toFixed(2)}
-                        </span>
-                      </div>
-                      {getTotalPrice() <= availableCredits && (
-                        <p className="text-xs text-green-600 mt-2 text-center">
-                          🎉 Seu corte está 100% coberto por créditos!
-                        </p>
-                      )}
-                    </div>
-                  </>
-                )}
-
-                {availableCredits === 0 && (
-                  <div className="flex justify-between items-center">
-                    <span className="font-semibold">Valor Total:</span>
-                    <span className="text-2xl font-bold text-primary">
-                      R$ {getTotalPrice().toFixed(2)}
+                {/* Desconto do resgate */}
+                {useRedemption && getRedemptionDiscount() > 0 && (
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-green-600">🎁 Corte grátis (resgate):</span>
+                    <span className="font-semibold text-green-600">
+                      - R$ {getRedemptionDiscount().toFixed(2)}
                     </span>
                   </div>
                 )}
+
+                {/* Créditos */}
+                {availableCredits > 0 && getTotalPrice() > 0 && (
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-green-600">Créditos aplicados:</span>
+                    <span className="font-semibold text-green-600">
+                      - R$ {Math.min(availableCredits, getTotalPrice()).toFixed(2)}
+                    </span>
+                  </div>
+                )}
+
+                <div className="border-t border-border/50 pt-2">
+                  <div className="flex justify-between items-center">
+                    <span className="font-semibold">Valor a pagar:</span>
+                    <span className="text-2xl font-bold text-primary">
+                      R$ {Math.max(0, getTotalPrice() - availableCredits).toFixed(2)}
+                    </span>
+                  </div>
+                  {getTotalPrice() === 0 && useRedemption && (
+                    <p className="text-xs text-green-600 mt-2 text-center">
+                      🎉 Seu corte está 100% coberto pelo resgate de fidelidade!
+                    </p>
+                  )}
+                  {getTotalPrice() > 0 && getTotalPrice() <= availableCredits && (
+                    <p className="text-xs text-green-600 mt-2 text-center">
+                      🎉 Valor restante coberto por créditos!
+                    </p>
+                  )}
+                </div>
               </div>
             </Card>
 
