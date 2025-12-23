@@ -188,7 +188,8 @@ export function MobileManualBookingModal({
           available: !isLunch && !hasConflict
         });
 
-        current = addMinutes(current, 30);
+        // Intervalos de 10 em 10 minutos igual ao app do cliente
+        current = addMinutes(current, 10);
       }
 
       setAvailableSlots(slots);
