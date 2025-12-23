@@ -484,23 +484,34 @@ export function AdminMobileAgenda({ onAppointmentClick, onAddClick }: AdminMobil
             </AnimatePresence>
           </div>
         )}
-      </div>
+        </div>
+      )}
 
       {/* FAB para adicionar */}
-      {onAddClick && (
-        <button
-          onClick={() => onAddClick(format(selectedDate, 'yyyy-MM-dd'), '09:00')}
-          className={cn(
-            "fixed bottom-24 right-4 z-30 w-14 h-14 rounded-full",
-            "bg-gradient-to-br from-primary to-primary/80",
-            "flex items-center justify-center",
-            "shadow-glow-red",
-            "active:scale-95 transition-transform"
-          )}
-        >
-          <Plus className="w-6 h-6 text-primary-foreground" />
-        </button>
-      )}
+      <button
+        onClick={() => {
+          setSelectedSlotTime("09:00");
+          setManualBookingOpen(true);
+        }}
+        className={cn(
+          "fixed bottom-24 right-4 z-30 w-14 h-14 rounded-full",
+          "bg-gradient-to-br from-primary to-primary/80",
+          "flex items-center justify-center",
+          "shadow-glow-red",
+          "active:scale-95 transition-transform"
+        )}
+      >
+        <Plus className="w-6 h-6 text-primary-foreground" />
+      </button>
+
+      {/* Modal de Encaixe Manual */}
+      <MobileManualBookingModal
+        open={manualBookingOpen}
+        onOpenChange={setManualBookingOpen}
+        date={format(selectedDate, 'yyyy-MM-dd')}
+        initialTime={selectedSlotTime}
+        onSuccess={() => loadAppointments(selectedDate)}
+      />
     </div>
   );
 }
