@@ -15,13 +15,19 @@ import {
   Plus,
   RefreshCw,
   CreditCard,
-  Crown
+  Crown,
+  List,
+  LayoutGrid
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
+import { MobileDayTimeline } from "./MobileDayTimeline";
+import { MobileManualBookingModal } from "./MobileManualBookingModal";
+
+type ViewMode = "list" | "timeline";
 
 interface MobileAppointment {
   id: string;
@@ -36,6 +42,7 @@ interface MobileAppointment {
   tipo_agendamento: string | null;
   user_id: string;
   servico_id: string;
+  duracao: number;
   profile: { nome: string; telefone?: string } | null;
   servico: { nome: string; duracao_minutos: number } | null;
 }
@@ -91,6 +98,9 @@ export function AdminMobileAgenda({ onAppointmentClick, onAddClick }: AdminMobil
   const [appointments, setAppointments] = useState<MobileAppointment[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewMode>("list");
+  const [manualBookingOpen, setManualBookingOpen] = useState(false);
+  const [selectedSlotTime, setSelectedSlotTime] = useState("09:00");
 
   // Gerar dias da semana para o seletor horizontal
   const weekDays = Array.from({ length: 7 }, (_, i) => {
@@ -273,60 +283,97 @@ export function AdminMobileAgenda({ onAppointmentClick, onAddClick }: AdminMobil
           </div>
         </ScrollArea>
 
-        {/* Resumo rápido */}
-        <div className="flex gap-2 mt-2">
-          <div className="flex-1 flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-500/10 border border-amber-500/20">
-            <div className="w-2 h-2 rounded-full bg-amber-500" />
-            <span className="text-xs font-medium text-amber-400">{pendingCount} pendentes</span>
+        {/* Resumo + Toggle View */}
+        <div className="flex items-center gap-2 mt-2">
+          <div className="flex-1 flex gap-2">
+            <div className="flex-1 flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/20">
+              <div className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+              <span className="text-[10px] font-medium text-amber-400">{pendingCount}</span>
+            </div>
+            <div className="flex-1 flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-sky-500/10 border border-sky-500/20">
+              <div className="w-1.5 h-1.5 rounded-full bg-sky-500" />
+              <span className="text-[10px] font-medium text-sky-400">{confirmedCount}</span>
+            </div>
+            <div className="flex-1 flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+              <span className="text-[10px] font-medium text-emerald-400">{completedCount}</span>
+            </div>
           </div>
-          <div className="flex-1 flex items-center gap-2 px-3 py-2 rounded-lg bg-sky-500/10 border border-sky-500/20">
-            <div className="w-2 h-2 rounded-full bg-sky-500" />
-            <span className="text-xs font-medium text-sky-400">{confirmedCount} confirmados</span>
-          </div>
-          <div className="flex-1 flex items-center gap-2 px-3 py-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
-            <div className="w-2 h-2 rounded-full bg-emerald-500" />
-            <span className="text-xs font-medium text-emerald-400">{completedCount} feitos</span>
+          
+          {/* Toggle View Mode */}
+          <div className="flex rounded-lg bg-secondary/30 p-1">
+            <button
+              onClick={() => setViewMode("list")}
+              className={cn(
+                "w-8 h-8 rounded-md flex items-center justify-center transition-all",
+                viewMode === "list" ? "bg-primary text-primary-foreground" : "text-muted-foreground"
+              )}
+            >
+              <List className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => setViewMode("timeline")}
+              className={cn(
+                "w-8 h-8 rounded-md flex items-center justify-center transition-all",
+                viewMode === "timeline" ? "bg-primary text-primary-foreground" : "text-muted-foreground"
+              )}
+            >
+              <LayoutGrid className="w-4 h-4" />
+            </button>
           </div>
         </div>
       </div>
 
-      {/* Lista de agendamentos */}
-      <div className="flex-1 overflow-y-auto px-4 py-4">
-        {loading ? (
-          <div className="flex items-center justify-center h-40">
-            <div className="w-10 h-10 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-          </div>
-        ) : appointments.length === 0 ? (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="flex flex-col items-center justify-center h-40 text-center"
-          >
-            <Calendar className="w-12 h-12 text-muted-foreground/30 mb-3" />
-            <p className="text-muted-foreground font-medium">Nenhum agendamento</p>
-            <p className="text-sm text-muted-foreground/70">
-              {isToday(selectedDate) ? "Dia livre hoje!" : "Sem compromissos neste dia"}
-            </p>
-            {onAddClick && (
+      {/* Conteúdo baseado no modo de visualização */}
+      {viewMode === "timeline" ? (
+        <div className="flex-1 overflow-hidden">
+          <MobileDayTimeline
+            selectedDate={selectedDate}
+            onSlotClick={(time) => {
+              setSelectedSlotTime(time);
+              setManualBookingOpen(true);
+            }}
+            onAppointmentClick={(apt) => onAppointmentClick?.(apt as any)}
+          />
+        </div>
+      ) : (
+        <div className="flex-1 overflow-y-auto px-4 py-4">
+          {loading ? (
+            <div className="flex items-center justify-center h-40">
+              <div className="w-10 h-10 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+            </div>
+          ) : appointments.length === 0 ? (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex flex-col items-center justify-center h-40 text-center"
+            >
+              <Calendar className="w-12 h-12 text-muted-foreground/30 mb-3" />
+              <p className="text-muted-foreground font-medium">Nenhum agendamento</p>
+              <p className="text-sm text-muted-foreground/70">
+                {isToday(selectedDate) ? "Dia livre hoje!" : "Sem compromissos neste dia"}
+              </p>
               <button
-                onClick={() => onAddClick(format(selectedDate, 'yyyy-MM-dd'), '09:00')}
+                onClick={() => {
+                  setSelectedSlotTime("09:00");
+                  setManualBookingOpen(true);
+                }}
                 className="mt-4 flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium active:scale-95 transition-transform"
               >
                 <Plus className="w-4 h-4" />
                 Adicionar horário
               </button>
-            )}
-          </motion.div>
-        ) : (
-          <div className="space-y-3">
-            <AnimatePresence mode="popLayout">
-              {appointments.map((apt, index) => {
-                const statusConfig = getStatusConfig(apt.status, apt.barbeiro_confirmou);
-                const serviceGradient = getServiceColor(apt.servico?.nome);
-                const StatusIcon = statusConfig.icon;
-                const isPlan = apt.tipo_agendamento === 'plano';
-                const isFree = apt.is_free;
-                const isCredit = apt.payment_method === 'credit' || apt.observacoes?.includes('crédito');
+            </motion.div>
+          ) : (
+            <div className="space-y-3">
+              <AnimatePresence mode="popLayout">
+                {appointments.map((apt, index) => {
+                  const statusConfig = getStatusConfig(apt.status, apt.barbeiro_confirmou);
+                  const serviceGradient = getServiceColor(apt.servico?.nome);
+                  const StatusIcon = statusConfig.icon;
+                  const isPlan = apt.tipo_agendamento === 'plano';
+                  const isFree = apt.is_free;
+                  const isCredit = apt.payment_method === 'credit' || apt.observacoes?.includes('crédito');
 
                 return (
                   <motion.div
