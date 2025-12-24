@@ -297,64 +297,66 @@ export function MobileManualBookingModal({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-50 bg-background/95 backdrop-blur-md"
+        className="fixed inset-0 z-50 bg-background/95 backdrop-blur-md flex flex-col overflow-hidden"
       >
-        {/* Header */}
-        <div className="sticky top-0 z-10 bg-background/80 backdrop-blur-xl border-b border-border/30 px-4 py-4 safe-area-inset-top">
-          <div className="flex items-center justify-between">
-            <button
-              onClick={() => step > 1 ? setStep(step - 1) : onOpenChange(false)}
-              className="w-10 h-10 rounded-xl bg-secondary/50 flex items-center justify-center active:scale-95 transition-transform"
-            >
-              {step > 1 ? <ChevronLeft className="w-5 h-5" /> : <X className="w-5 h-5" />}
-            </button>
-            
-            <div className="text-center">
-              <h2 className="font-bold text-lg">Encaixar Cliente</h2>
-              <p className="text-xs text-muted-foreground">
-                {format(new Date(date + "T12:00:00"), "d 'de' MMMM", { locale: ptBR })}
-              </p>
+        {/* Scroll Container (evita scroll no fundo e permite rolar em qualquer área do modal) */}
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain pb-24">
+          {/* Header */}
+          <div className="sticky top-0 z-10 bg-background/80 backdrop-blur-xl border-b border-border/30 px-4 py-4 safe-area-inset-top">
+            <div className="flex items-center justify-between">
+              <button
+                onClick={() => step > 1 ? setStep(step - 1) : onOpenChange(false)}
+                className="w-10 h-10 rounded-xl bg-secondary/50 flex items-center justify-center active:scale-95 transition-transform"
+              >
+                {step > 1 ? <ChevronLeft className="w-5 h-5" /> : <X className="w-5 h-5" />}
+              </button>
+              
+              <div className="text-center">
+                <h2 className="font-bold text-lg">Encaixar Cliente</h2>
+                <p className="text-xs text-muted-foreground">
+                  {format(new Date(date + "T12:00:00"), "d 'de' MMMM", { locale: ptBR })}
+                </p>
+              </div>
+              
+              <div className="w-10" />
             </div>
-            
-            <div className="w-10" />
-          </div>
 
-          {/* Progress Steps */}
-          <div className="flex items-center justify-center gap-2 mt-4">
-            {[1, 2, 3, 4].map((s) => (
-              <div key={s} className="flex items-center">
-                <div className={cn(
-                  "w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-all",
-                  step >= s 
-                    ? "bg-primary text-primary-foreground" 
-                    : "bg-secondary/50 text-muted-foreground"
-                )}>
-                  {step > s ? <Check className="w-4 h-4" /> : s}
-                </div>
-                {s < 4 && (
+            {/* Progress Steps */}
+            <div className="flex items-center justify-center gap-2 mt-4">
+              {[1, 2, 3, 4].map((s) => (
+                <div key={s} className="flex items-center">
                   <div className={cn(
-                    "w-8 h-0.5 mx-1 rounded-full transition-all",
-                    step > s ? "bg-primary" : "bg-secondary/50"
-                  )} />
-                )}
-              </div>
-            ))}
+                    "w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-all",
+                    step >= s 
+                      ? "bg-primary text-primary-foreground" 
+                      : "bg-secondary/50 text-muted-foreground"
+                  )}>
+                    {step > s ? <Check className="w-4 h-4" /> : s}
+                  </div>
+                  {s < 4 && (
+                    <div className={cn(
+                      "w-8 h-0.5 mx-1 rounded-full transition-all",
+                      step > s ? "bg-primary" : "bg-secondary/50"
+                    )} />
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
 
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto pb-24">
-          {/* Step 1: Serviço */}
-          {step === 1 && (
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="p-4 space-y-4"
-            >
-              <div className="text-center pb-2">
-                <h3 className="font-semibold text-lg">Qual serviço?</h3>
-                <p className="text-sm text-muted-foreground">Selecione o tipo de atendimento</p>
-              </div>
+          {/* Content */}
+          <div>
+            {/* Step 1: Serviço */}
+            {step === 1 && (
+              <motion.div
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="p-4 space-y-4"
+              >
+                <div className="text-center pb-2">
+                  <h3 className="font-semibold text-lg">Qual serviço?</h3>
+                  <p className="text-sm text-muted-foreground">Selecione o tipo de atendimento</p>
+                </div>
 
               <div className="space-y-2">
                 {services.map((service) => (
@@ -618,8 +620,7 @@ export function MobileManualBookingModal({
                   </div>
                 )}
               </div>
-            </motion.div>
-          )}
+          </div>
         </div>
 
         {/* Footer */}
