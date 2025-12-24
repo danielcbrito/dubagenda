@@ -288,7 +288,7 @@ export function ManualBookingModal({ open, onOpenChange, date, time, onSuccess }
   return (
     <ErrorBoundary>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-[480px] max-h-[90vh] flex flex-col overflow-hidden">
+        <DialogContent className="max-w-[480px] max-h-[85vh] flex flex-col" onPointerDownOutside={(e) => e.preventDefault()}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center">
@@ -331,7 +331,7 @@ export function ManualBookingModal({ open, onOpenChange, date, time, onSuccess }
           ))}
         </div>
 
-        <div className="space-y-4 min-h-[320px] flex-1 overflow-y-auto pr-1">
+        <div className="space-y-4 min-h-0 flex-1 overflow-y-auto overscroll-contain pr-2 -mr-2">
           {/* Step 1: Cliente */}
           {step === 1 && (
             <div className="space-y-4">

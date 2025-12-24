@@ -51,10 +51,11 @@ const DialogContent = React.forwardRef<
         "data-[state=open]:animate-in data-[state=closed]:animate-out",
         "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
         "data-[state=closed]:zoom-out-[0.98] data-[state=open]:zoom-in-[0.98]",
-        // Responsive max height with scroll
-        "max-h-[85vh] overflow-y-auto scrollbar-none",
+        // Responsive max height - NO overflow here to allow internal scroll isolation
+        "max-h-[85vh] overflow-hidden",
         className,
       )}
+      onWheel={(e) => e.stopPropagation()}
       {...props}
     >
       {/* Premium top light reflection */}
