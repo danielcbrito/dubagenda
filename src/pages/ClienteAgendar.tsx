@@ -1484,86 +1484,134 @@ const ClienteAgendar = () => {
           </div>
         )}
 
-        {/* Step 3: Select Time */}
+        {/* Step 3: Select Time - Premium Design */}
         {step === 3 && (
           <div className="scrollable-content p-4 md:p-6">
-            <div className="space-y-4 max-w-4xl mx-auto">
-              <div>
-                <h3 className="text-sm font-semibold mb-1">Etapa {activeSubscription?.servico ? '2' : '3'} de {activeSubscription?.servico ? '4' : '5'}</h3>
-                <h2 className="text-xl font-bold mb-3 responsive-title">Escolha o Horário</h2>
-                <p className="text-sm text-muted-foreground mb-4 responsive-text">
-                  Horários disponíveis para {selectedDate?.toLocaleDateString('pt-BR')}
+            <div className="space-y-6 max-w-4xl mx-auto">
+              {/* Premium Header */}
+              <div className="text-center">
+                <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-primary/20 mb-4 shadow-[0_0_30px_rgba(255,59,59,0.3)]">
+                  <Clock className="w-7 h-7 text-primary" />
+                </div>
+                <h3 className="text-sm font-semibold mb-1 text-muted-foreground">
+                  Etapa {activeSubscription?.servico ? '2' : '3'} de {activeSubscription?.servico ? '4' : '5'}
+                </h3>
+                <h2 className="text-2xl font-bold mb-2 responsive-title">Escolha o Horário</h2>
+                <p className="text-sm text-muted-foreground responsive-text">
+                  {selectedDate?.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' })}
                 </p>
               </div>
 
               {loadingSlots ? (
-                <Card className="p-8 text-center">
-                  <div className="animate-pulse space-y-3">
-                    <div className="h-4 bg-muted/20 rounded w-3/4 mx-auto"></div>
-                    <div className="h-4 bg-muted/20 rounded w-1/2 mx-auto"></div>
-                    <p className="text-sm text-muted-foreground mt-4">Carregando horários...</p>
+                <Card className="glass-card p-8 text-center">
+                  <div className="animate-pulse space-y-4">
+                    <div className="w-12 h-12 rounded-full bg-primary/20 mx-auto flex items-center justify-center">
+                      <Clock className="w-6 h-6 text-primary animate-spin" />
+                    </div>
+                    <p className="text-sm text-muted-foreground">Carregando horários disponíveis...</p>
                   </div>
                 </Card>
               ) : availableSlots.filter(slot => slot.available).length === 0 ? (
-                <Card className="p-8 text-center">
-                  <p className="text-muted-foreground">
-                    😔 Agenda cheia neste dia. Tente outra data.
+                <Card className="glass-card p-8 text-center">
+                  <div className="text-4xl mb-4">😔</div>
+                  <p className="text-muted-foreground font-medium mb-4">
+                    Agenda cheia neste dia.
                   </p>
                   <Button
                     onClick={() => setStep(2)}
                     variant="outline"
-                    className="mt-4"
+                    className="gap-2"
                   >
+                    <ArrowLeft className="w-4 h-4" />
                     Escolher outra data
                   </Button>
                 </Card>
               ) : (
                 <>
-                  <div className="grid grid-cols-3 gap-2">
-                    {availableSlots.map((slot) => (
-                      <Button
-                        key={slot.time}
-                        variant={selectedTime === slot.time ? "default" : "outline"}
-                        onClick={() => {
-                          if (slot.available) {
-                            setSelectedTime(slot.time);
-                            setUnavailableMessage(null);
-                          } else {
-                            // Mensagem específica baseada no motivo do bloqueio
-                            if (slot.blockedReason === 'minimum_advance') {
-                              setUnavailableMessage("Este horário não pode ser agendado. É necessário 1 hora de antecedência.");
+                  {/* Premium Time Slots Grid */}
+                  <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-2">
+                    {availableSlots.map((slot) => {
+                      const isSelected = selectedTime === slot.time;
+                      const isUnavailable = !slot.available;
+                      
+                      return (
+                        <button
+                          key={slot.time}
+                          onClick={() => {
+                            if (slot.available) {
+                              setSelectedTime(slot.time);
+                              setUnavailableMessage(null);
                             } else {
-                              setUnavailableMessage("Este horário já foi agendado.");
+                              if (slot.blockedReason === 'minimum_advance') {
+                                setUnavailableMessage("É necessário 1 hora de antecedência.");
+                              } else {
+                                setUnavailableMessage("Este horário já foi agendado.");
+                              }
                             }
-                          }
-                        }}
-                        className={cn(
-                          "h-11 responsive-button transition-all",
-                          !slot.available && "opacity-30 cursor-not-allowed bg-muted/20 border-muted/30 text-muted-foreground/50 hover:bg-muted/20 hover:text-muted-foreground/50",
-                          slot.available && selectedTime !== slot.time && "hover:border-primary/50"
-                        )}
-                      >
-                        {slot.time}
-                      </Button>
-                    ))}
+                          }}
+                          disabled={isUnavailable}
+                          className={cn(
+                            "relative h-12 rounded-xl font-semibold text-sm transition-all duration-300",
+                            isUnavailable && "opacity-30 cursor-not-allowed bg-white/[0.02] border border-white/[0.05] text-muted-foreground/50",
+                            !isUnavailable && !isSelected && "bg-white/[0.05] border border-white/[0.08] hover:bg-white/[0.08] hover:border-primary/30 hover:shadow-[0_0_15px_rgba(255,59,59,0.15)]",
+                            isSelected && "bg-primary text-primary-foreground border-0 shadow-[0_0_25px_rgba(255,59,59,0.5)]"
+                          )}
+                        >
+                          {isSelected && (
+                            <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-white/20 to-transparent" />
+                          )}
+                          <span className="relative">{slot.time}</span>
+                        </button>
+                      );
+                    })}
                   </div>
 
                   {unavailableMessage && (
-                    <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-center">
+                    <div className="p-4 rounded-xl bg-destructive/10 border border-destructive/20 text-center animate-fade-in">
                       <p className="text-sm text-destructive font-medium">{unavailableMessage}</p>
                     </div>
                   )}
 
+                  {/* Selected Time Preview */}
+                  {selectedTime && (
+                    <div className="glass-card p-4 border border-primary/20 bg-primary/5 animate-fade-in">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
+                            <Check className="w-5 h-5 text-primary" />
+                          </div>
+                          <div>
+                            <p className="font-semibold">Horário selecionado</p>
+                            <p className="text-sm text-muted-foreground">
+                              {selectedDate?.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })} às {selectedTime}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-2xl font-bold text-primary">{selectedTime}</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Premium CTA Button */}
                   <Button
                     onClick={handleNextStep}
                     disabled={!selectedTime}
-                    className="w-full touch-target font-semibold responsive-button"
+                    className="relative w-full h-14 font-bold text-base tracking-wide overflow-hidden group ripple"
                     style={{
-                      background: 'linear-gradient(135deg, hsl(0 64% 52%), hsl(0 64% 42%))',
-                      minHeight: '44px'
+                      background: selectedTime 
+                        ? 'linear-gradient(135deg, hsl(0 64% 52%), hsl(0 64% 42%))' 
+                        : 'rgba(255,255,255,0.05)',
+                      boxShadow: selectedTime 
+                        ? '0 8px 24px rgba(212, 49, 49, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1)' 
+                        : 'none'
                     }}
                   >
-                    Continuar
+                    {selectedTime && (
+                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
+                    )}
+                    <span className="relative">Continuar</span>
                   </Button>
                 </>
               )}
