@@ -84,11 +84,27 @@ export function MobileManualBookingModal({
     }
   }, [open, initialTime]);
 
+  // Trava o scroll do fundo (agenda) quando o modal estiver aberto
+  useEffect(() => {
+    if (!open) return;
+
+    const prevBodyOverflow = document.body.style.overflow;
+    const prevHtmlOverflow = document.documentElement.style.overflow;
+
+    document.body.style.overflow = "hidden";
+    document.documentElement.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = prevBodyOverflow;
+      document.documentElement.style.overflow = prevHtmlOverflow;
+    };
+  }, [open]);
+
   useEffect(() => {
     if (open && selectedService) {
       loadAvailableSlots();
     }
-  }, [selectedService, date]);
+  }, [open, selectedService, date]);
 
   const resetForm = () => {
     setStep(1);
@@ -620,8 +636,10 @@ export function MobileManualBookingModal({
                   </div>
                 )}
               </div>
-          </div>
+            </motion.div>
+          )}
         </div>
+      </div>
 
         {/* Footer */}
         <div className="fixed bottom-0 left-0 right-0 p-4 bg-background/80 backdrop-blur-xl border-t border-border/30 safe-area-inset-bottom">
