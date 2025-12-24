@@ -13,7 +13,7 @@ import { EnhancedWeekView } from "./agenda/EnhancedWeekView";
 import { AppointmentDetailsSidebar } from "./AppointmentDetailsSidebar";
 import { ConfirmAttendanceModal } from "./ConfirmAttendanceModal";
 import { CancelAllAppointmentsModal } from "./CancelAllAppointmentsModal";
-import { ManualBookingModal } from "./ManualBookingModal";
+import { MobileManualBookingModal } from "./mobile/MobileManualBookingModal";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export interface TimelineAppointment {
@@ -212,7 +212,7 @@ export function AdminAgenda() {
   });
 
   return (
-    <div className="flex flex-col gap-5 animate-fade-in pb-16">
+    <div className="flex flex-col gap-5 animate-fade-in pb-16 relative">
       {/* Header Row: Title + Controls */}
       <div className="flex-shrink-0 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div>
@@ -334,6 +334,29 @@ export function AdminAgenda() {
         )}
       </div>
 
+      {/* FAB - Botão flutuante para adicionar agendamento (igual ao mobile) */}
+      <motion.button
+        initial={{ scale: 0, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ delay: 0.3, type: "spring", stiffness: 200 }}
+        onClick={() => {
+          setSelectedEmptySlot({ date: format(date, 'yyyy-MM-dd'), time: "" });
+          setManualBookingModalOpen(true);
+        }}
+        className={cn(
+          "fixed bottom-8 right-8 z-50",
+          "w-14 h-14 rounded-full",
+          "bg-gradient-to-br from-primary to-primary/80",
+          "flex items-center justify-center",
+          "shadow-2xl shadow-primary/30",
+          "hover:scale-110 active:scale-95",
+          "transition-transform duration-200",
+          "border border-white/10"
+        )}
+      >
+        <Plus className="w-6 h-6 text-white" />
+      </motion.button>
+
       {/* Modals */}
       <AppointmentDetailsSidebar
         appointment={selectedAppointment}
@@ -357,11 +380,12 @@ export function AdminAgenda() {
         onSuccess={() => loadAppointments(date)}
       />
 
-      <ManualBookingModal
+      {/* Modal de agendamento manual com mesmo design do mobile */}
+      <MobileManualBookingModal
         open={manualBookingModalOpen}
         onOpenChange={setManualBookingModalOpen}
         date={selectedEmptySlot.date}
-        time={selectedEmptySlot.time}
+        initialTime={selectedEmptySlot.time}
         onSuccess={() => loadAppointments(date)}
       />
     </div>

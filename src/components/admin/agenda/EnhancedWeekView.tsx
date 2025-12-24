@@ -29,24 +29,27 @@ function timeToMinutes(time: string): number {
   return hours * 60 + minutes;
 }
 
-const getServiceColor = (serviceName: string | undefined) => {
-  if (!serviceName) return { bg: "bg-zinc-600", border: "border-zinc-500" };
-  
-  const name = serviceName.toLowerCase();
-  if (name.includes("corte")) return { bg: "bg-sky-600", border: "border-sky-400" };
-  if (name.includes("barba")) return { bg: "bg-amber-600", border: "border-amber-400" };
-  if (name.includes("combo")) return { bg: "bg-violet-600", border: "border-violet-400" };
-  if (name.includes("sobrancelha")) return { bg: "bg-rose-600", border: "border-rose-400" };
-  return { bg: "bg-primary", border: "border-primary" };
-};
-
-const getStatusIndicator = (status: string) => {
-  switch (status) {
-    case "confirmed": return { color: "bg-emerald-500", label: "Confirmado" };
-    case "pending": return { color: "bg-amber-500", label: "Pendente" };
-    case "completed": return { color: "bg-sky-500", label: "Concluído" };
-    default: return { color: "bg-zinc-500", label: status };
+// Cores baseadas no status igual ao mobile (verde = completed, azul = confirmed, amarelo = pending)
+const getStatusConfig = (status: string, barbeiroConfirmou: boolean | null) => {
+  if (status === "completed") {
+    return { 
+      gradient: "from-emerald-600 to-emerald-700",
+      color: "bg-emerald-500", 
+      label: "Concluído"
+    };
   }
+  if (status === "confirmed" || barbeiroConfirmou) {
+    return { 
+      gradient: "from-sky-600 to-blue-700",
+      color: "bg-sky-500", 
+      label: "Confirmado"
+    };
+  }
+  return { 
+    gradient: "from-amber-600 to-orange-700",
+    color: "bg-amber-500", 
+    label: "Pendente"
+  };
 };
 
 export function EnhancedWeekView({ 
@@ -203,8 +206,8 @@ export function EnhancedWeekView({
         })}
       </div>
 
-      {/* Time grid - scrollable */}
-      <div className="relative overflow-y-auto" style={{ maxHeight: "calc(100vh - 280px)" }}>
+      {/* Time grid - expandido sem scroll interno */}
+      <div className="relative">
         <div className="relative grid grid-cols-[70px_repeat(6,1fr)]" style={{ minHeight: `${timeSlots.length * 50}px` }}>
           {/* Time labels column */}
           <div className="relative border-r border-white/10 bg-black/20">
@@ -268,11 +271,10 @@ export function EnhancedWeekView({
                   );
                 })}
 
-                {/* Appointments overlay */}
+                {/* Appointments overlay - cores iguais ao mobile */}
                 <div className="absolute inset-0 pointer-events-none">
                   {dayAppointments.map((apt, aptIdx) => {
-                    const colors = getServiceColor(apt.servico?.nome);
-                    const status = getStatusIndicator(apt.status);
+                    const statusConfig = getStatusConfig(apt.status, apt.barbeiro_confirmou);
                     
                     return (
                       <motion.div
@@ -285,39 +287,34 @@ export function EnhancedWeekView({
                           onSelectAppointment(apt);
                         }}
                         className={cn(
-                          "absolute left-1 right-1 rounded-lg cursor-pointer pointer-events-auto",
-                          "transition-all duration-200 hover:scale-[1.02] hover:z-20 hover:shadow-lg",
-                          "overflow-hidden border-l-3",
-                          colors.bg,
-                          colors.border
+                          "absolute left-1 right-1 rounded-xl cursor-pointer pointer-events-auto",
+                          "transition-all duration-200 hover:scale-[1.02] hover:z-20 hover:shadow-xl",
+                          "overflow-hidden border border-white/10",
+                          `bg-gradient-to-br ${statusConfig.gradient}`
                         )}
-                        style={{
-                          ...getAppointmentStyle(apt),
-                          borderLeftWidth: '3px'
-                        }}
+                        style={getAppointmentStyle(apt)}
                       >
-                        <div className="p-1.5 h-full flex flex-col justify-between">
-                          <div className="flex items-start gap-1">
-                            <div className={cn("w-1.5 h-1.5 rounded-full mt-1 shrink-0", status.color)} />
+                        <div className="p-2 h-full flex flex-col justify-between">
+                          <div className="flex items-start gap-1.5">
                             <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-1">
+                              <div className="flex items-center gap-1.5">
                                 <Scissors className="w-3 h-3 text-white/80 shrink-0" />
-                                <span className="text-[10px] font-bold text-white truncate">
+                                <span className="text-[11px] font-bold text-white truncate">
                                   {apt.servico?.nome}
                                 </span>
                               </div>
                               <div className="flex items-center gap-1 mt-0.5">
                                 <User className="w-2.5 h-2.5 text-white/60 shrink-0" />
-                                <span className="text-[9px] text-white/80 truncate">
+                                <span className="text-[10px] text-white/80 truncate">
                                   {apt.profile?.nome}
                                 </span>
                               </div>
                             </div>
                           </div>
-                          <div className="flex items-center gap-1 text-[8px] text-white/60 tabular-nums">
+                          <div className="flex items-center justify-between text-[9px] text-white/70 tabular-nums mt-auto">
                             <span>{apt.hora} • {apt.servico?.duracao_minutos}min</span>
                             {(apt.payment_method === 'credit' || apt.observacoes?.includes('crédito do app')) && (
-                              <span className="flex items-center gap-0.5 px-1 py-0.5 bg-purple-500/30 rounded text-purple-200">
+                              <span className="flex items-center gap-0.5 px-1.5 py-0.5 bg-white/20 rounded-full text-white text-[8px]">
                                 <CreditCard className="w-2 h-2" />
                                 Crédito
                               </span>
