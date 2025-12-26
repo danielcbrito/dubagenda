@@ -34,40 +34,56 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Initialize Supabase client with service role for admin operations
+    // Initialize Supabase clients
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
-    
-    // Create client with anon key for auth verification
-    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey);
-    // Create client with service role for database operations
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Verify authentication
-    const authHeader = req.headers.get('Authorization');
+    // Verify authentication (use anon key + forward Authorization header)
+    const authHeader = req.headers.get('authorization') ?? req.headers.get('Authorization');
     if (!authHeader) {
-      console.log('Missing authorization header');
+      console.log('[get-asaas-financial-data] Missing authorization header');
       return new Response(
         JSON.stringify({ error: 'Missing authorization header' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const token = authHeader.replace('Bearer ', '');
-    
-    // Use the auth client to verify the token
-    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser(token);
+    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
+      global: {
+        headers: {
+          Authorization: authHeader,
+        },
+      },
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+        detectSessionInUrl: false,
+      },
+    });
+
+    const supabase = createClient(supabaseUrl, supabaseServiceKey, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+        detectSessionInUrl: false,
+      },
+    });
+
+    const {
+      data: { user },
+      error: authError,
+    } = await supabaseAuth.auth.getUser();
 
     if (authError || !user) {
-      console.log('Auth error:', authError?.message || 'No user found');
+      console.log('[get-asaas-financial-data] Auth error:', authError?.message || 'No user');
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log('User authenticated:', user.id);
+    console.log('[get-asaas-financial-data] User authenticated:', user.id);
 
     // Verify admin role
     const { data: roles } = await supabase
