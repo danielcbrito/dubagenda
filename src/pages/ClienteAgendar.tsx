@@ -2152,16 +2152,43 @@ const ClienteAgendar = () => {
                     Abra o app do seu banco e escaneie o código abaixo para pagar
                   </p>
                   
-                  <div className="flex justify-center bg-white p-6 rounded-lg border-2 border-border">
-                    <img 
-                      src={`data:image/png;base64,${pixQrCode}`} 
-                      alt="QR Code PIX" 
-                      className="w-64 h-64" 
-                    />
+                  {/* QR Code com visual premium - sem fundo branco */}
+                  <div className="flex justify-center">
+                    <div 
+                      className="relative p-4 rounded-2xl"
+                      style={{
+                        background: 'linear-gradient(145deg, rgba(255,255,255,0.95), rgba(248,248,248,0.98))',
+                        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255,255,255,0.5)',
+                      }}
+                    >
+                      {/* Borda decorativa com gradiente */}
+                      <div 
+                        className="absolute inset-0 rounded-2xl opacity-30"
+                        style={{
+                          background: 'linear-gradient(135deg, hsl(0 64% 52%), hsl(0 64% 42%))',
+                          padding: '2px',
+                          mask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
+                          maskComposite: 'exclude',
+                          WebkitMaskComposite: 'xor',
+                        }}
+                      />
+                      <img 
+                        src={`data:image/png;base64,${pixQrCode}`} 
+                        alt="QR Code PIX" 
+                        className="w-56 h-56 md:w-64 md:h-64 relative z-10"
+                        style={{
+                          filter: 'contrast(1.1)',
+                        }}
+                      />
+                    </div>
                   </div>
 
-                  <div className="animate-pulse text-sm text-muted-foreground py-2">
-                    ⏳ Aguardando confirmação do pagamento...
+                  {/* Indicador de aguardando sem emoji */}
+                  <div className="flex items-center justify-center gap-2 py-3">
+                    <div className="w-2 h-2 bg-primary rounded-full animate-pulse" />
+                    <span className="text-sm text-muted-foreground animate-pulse">
+                      Aguardando confirmação do pagamento...
+                    </span>
                   </div>
 
                   {pixPayload && (
