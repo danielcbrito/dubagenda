@@ -98,18 +98,44 @@ export function AdminFinanceiro() {
       // Buscar agendamentos completados no período
       const { data: appointments } = await supabase
         .from("agendamentos")
-        .select("preco, payment_method, data")
+        .select("id, preco, payment_method, data, servico_id")
         .gte("data", fromDate)
         .lte("data", toDate)
         .eq("status", "completed");
 
+      // Buscar serviços para pegar preço real quando preco é 0 (plano/crédito)
+      const { data: servicos } = await supabase
+        .from("servicos")
+        .select("id, preco");
+
+      const servicoPrecoMap = new Map((servicos || []).map(s => [s.id, s.preco]));
+
+      // Buscar pagamentos de assinaturas (planos) no período
+      const { data: subscriptionPayments } = await supabase
+        .from("pagamentos")
+        .select("valor, data_pagamento, created_at")
+        .not("assinatura_id", "is", null)
+        .eq("status", "paid")
+        .gte("created_at", `${fromDate}T00:00:00`)
+        .lte("created_at", `${toDate}T23:59:59`);
+
+      // Buscar créditos usados em agendamentos do período
+      const appointmentIds = (appointments || []).map(a => a.id);
+      const { data: usedCredits } = await supabase
+        .from("creditos")
+        .select("valor, agendamento_usado_id")
+        .eq("usado", true)
+        .in("agendamento_usado_id", appointmentIds.length > 0 ? appointmentIds : ['none']);
+
       let receitaApp = 0;
       let receitaBarbearia = 0;
       let receitaCredito = 0;
-      let receitaPlano = 0;
+      let receitaPlanoAgendamentos = 0; // Valor dos serviços usados via plano
 
       (appointments || []).forEach((apt) => {
         const preco = apt.preco || 0;
+        const precoServico = servicoPrecoMap.get(apt.servico_id) || preco;
+        
         switch (apt.payment_method) {
           case 'pix':
           case 'card':
@@ -121,16 +147,29 @@ export function AdminFinanceiro() {
             break;
           case 'credit':
           case 'credito':
-            receitaCredito += preco;
+            // Para crédito, o valor real usado vem da tabela creditos
+            const creditUsed = (usedCredits || []).find(c => c.agendamento_usado_id === apt.id);
+            if (creditUsed) {
+              receitaCredito += creditUsed.valor;
+            } else {
+              receitaCredito += precoServico; // Fallback para preço do serviço
+            }
             break;
           case 'plano':
-            receitaPlano += preco;
+            // Agendamentos de plano: contabilizar o valor do serviço prestado
+            receitaPlanoAgendamentos += precoServico;
             break;
           default:
-            receitaBarbearia += preco;
+            if (preco > 0) {
+              receitaBarbearia += preco;
+            }
         }
       });
 
+      // Receita de planos = pagamentos de assinaturas recebidos no período
+      const receitaPlano = (subscriptionPayments || []).reduce((sum, p) => sum + (p.valor || 0), 0);
+
+      // Receita total considera: App + Barbearia + Crédito + Planos pagos
       const receitaMes = receitaApp + receitaBarbearia + receitaCredito + receitaPlano;
 
       // Carregar dados diários para o gráfico de linhas
@@ -143,13 +182,34 @@ export function AdminFinanceiro() {
         const dateStr = format(date, 'yyyy-MM-dd');
         
         const dayAppointments = (appointments || []).filter(apt => apt.data === dateStr);
-        const dayRevenue = dayAppointments.reduce((sum, apt) => sum + (apt.preco || 0), 0);
+        let dayRevenue = 0;
+        
+        dayAppointments.forEach(apt => {
+          const preco = apt.preco || 0;
+          const precoServico = servicoPrecoMap.get(apt.servico_id) || preco;
+          
+          if (apt.payment_method === 'credit' || apt.payment_method === 'credito') {
+            const creditUsed = (usedCredits || []).find(c => c.agendamento_usado_id === apt.id);
+            dayRevenue += creditUsed?.valor || precoServico;
+          } else if (apt.payment_method === 'plano') {
+            // Para planos, não adicionar aqui pois a receita vem dos pagamentos de assinatura
+          } else {
+            dayRevenue += preco;
+          }
+        });
+        
+        // Adicionar pagamentos de assinatura do dia
+        const daySubscriptionPayments = (subscriptionPayments || []).filter(p => {
+          const paymentDate = p.data_pagamento || p.created_at;
+          return paymentDate && paymentDate.startsWith(dateStr);
+        });
+        dayRevenue += daySubscriptionPayments.reduce((sum, p) => sum + (p.valor || 0), 0);
         
         chartData.push({
           date: dateStr,
           label: format(date, 'dd/MM'),
           receita: dayRevenue,
-          taxas: 0, // Será preenchido com dados do Asaas
+          taxas: 0,
         });
       }
 
