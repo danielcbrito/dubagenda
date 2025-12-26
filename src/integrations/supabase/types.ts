@@ -777,6 +777,7 @@ export type Database = {
       }
       pending_bookings: {
         Row: {
+          asaas_payment_id: string | null
           barbeiro_id: string | null
           created_at: string | null
           data: string
@@ -787,11 +788,14 @@ export type Database = {
           observacoes: string | null
           payment_intent_id: string | null
           payment_method: string | null
+          pix_payload: string | null
+          pix_qr_code: string | null
           preco: number
           servico_id: string
           user_id: string
         }
         Insert: {
+          asaas_payment_id?: string | null
           barbeiro_id?: string | null
           created_at?: string | null
           data: string
@@ -802,11 +806,14 @@ export type Database = {
           observacoes?: string | null
           payment_intent_id?: string | null
           payment_method?: string | null
+          pix_payload?: string | null
+          pix_qr_code?: string | null
           preco: number
           servico_id: string
           user_id: string
         }
         Update: {
+          asaas_payment_id?: string | null
           barbeiro_id?: string | null
           created_at?: string | null
           data?: string
@@ -817,6 +824,8 @@ export type Database = {
           observacoes?: string | null
           payment_intent_id?: string | null
           payment_method?: string | null
+          pix_payload?: string | null
+          pix_qr_code?: string | null
           preco?: number
           servico_id?: string
           user_id?: string

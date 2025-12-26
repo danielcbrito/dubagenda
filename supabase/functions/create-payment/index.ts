@@ -681,7 +681,7 @@ serve(async (req) => {
       console.log('Card payment completed, appointment created (awaiting barber approval):', appointment.id);
     }
 
-    // For PIX, fetch the QR Code
+    // For PIX, fetch the QR Code and SAVE it to pending_bookings for later retrieval
     let pixQrCodeData = undefined;
     if (metodo === 'pix' && asaasPaymentResult.id) {
       try {
@@ -696,6 +696,22 @@ serve(async (req) => {
         if (qrCodeResponse.ok) {
           pixQrCodeData = await qrCodeResponse.json();
           console.log('PIX QR Code fetched successfully');
+          
+          // SALVAR QR Code no pending_booking para recuperação posterior
+          const { error: updateError } = await supabase
+            .from('pending_bookings')
+            .update({
+              pix_qr_code: pixQrCodeData.encodedImage,
+              pix_payload: pixQrCodeData.payload,
+              asaas_payment_id: asaasPaymentResult.id
+            })
+            .eq('id', pendingBooking.id);
+          
+          if (updateError) {
+            console.error('Error saving PIX QR code to pending_booking:', updateError);
+          } else {
+            console.log('PIX QR Code saved to pending_booking:', pendingBooking.id);
+          }
         } else {
           console.error('Failed to fetch PIX QR Code:', await qrCodeResponse.text());
         }

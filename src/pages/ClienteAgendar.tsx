@@ -407,7 +407,8 @@ const ClienteAgendar = () => {
 
       if (error) throw error;
       if (!booking) {
-        toast.error("Reserva não encontrada");
+        toast.error("Reserva não encontrada ou expirada");
+        navigate("/cliente");
         return;
       }
 
@@ -415,11 +416,25 @@ const ClienteAgendar = () => {
       setSelectedServices([booking.servico]);
       setSelectedDate(new Date(`${booking.data}T12:00:00`));
       setSelectedTime(booking.hora);
-      setStep(4); // Go directly to payment
-      toast.info("Continue o pagamento do seu agendamento");
+      setPendingBookingId(booking.id);
+
+      // Se já existe QR Code PIX salvo, ir direto para a tela do QR Code
+      if (booking.pix_qr_code && booking.pix_payload) {
+        console.log('[loadPendingBookingDetails] QR Code PIX encontrado, exibindo...');
+        setPixQrCode(booking.pix_qr_code);
+        setPixPayload(booking.pix_payload);
+        setPaymentMethod('pix');
+        setStep(6); // Ir direto para tela do QR Code
+        toast.info("Continue o pagamento do seu agendamento PIX");
+      } else {
+        // Sem QR Code salvo, ir para seleção de pagamento
+        setStep(4);
+        toast.info("Continue o pagamento do seu agendamento");
+      }
     } catch (error) {
       console.error("Error loading pending booking:", error);
       toast.error("Erro ao carregar reserva");
+      navigate("/cliente");
     }
   };
 
