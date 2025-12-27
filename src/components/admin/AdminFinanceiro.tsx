@@ -5,13 +5,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
-import { Download, Calendar as CalendarIcon, DollarSign, TrendingUp, TrendingDown, Wallet, Upload, RefreshCw } from "lucide-react";
+import { Download, Calendar as CalendarIcon, DollarSign, TrendingUp, TrendingDown, Wallet, Upload, RefreshCw, FileText, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { format, startOfMonth, endOfMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from "recharts";
+import { MonthlyReportsSheet } from "./MonthlyReportsSheet";
 
 interface AsaasFinancialData {
   stats: {
@@ -84,6 +85,7 @@ export function AdminFinanceiro() {
   const [dailyChartData, setDailyChartData] = useState<DailyChartData[]>([]);
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [csvData, setCsvData] = useState<any[]>([]);
+  const [generatingReport, setGeneratingReport] = useState(false);
 
   useEffect(() => {
     loadFinancialData();
@@ -119,18 +121,20 @@ export function AdminFinanceiro() {
         .gte("created_at", `${fromDate}T00:00:00`)
         .lte("created_at", `${toDate}T23:59:59`);
 
-      // Buscar créditos usados em agendamentos do período
-      const appointmentIds = (appointments || []).map(a => a.id);
+      // Buscar créditos usados no período pela data de criação do crédito (quando foi usado)
       const { data: usedCredits } = await supabase
         .from("creditos")
         .select("valor, agendamento_usado_id")
         .eq("usado", true)
-        .in("agendamento_usado_id", appointmentIds.length > 0 ? appointmentIds : ['none']);
+        .gte("created_at", `${fromDate}T00:00:00`)
+        .lte("created_at", `${toDate}T23:59:59`);
 
       let receitaApp = 0;
       let receitaBarbearia = 0;
-      let receitaCredito = 0;
       let receitaPlanoAgendamentos = 0; // Valor dos serviços usados via plano
+
+      // Calcular receita de créditos diretamente da tabela creditos
+      const receitaCredito = (usedCredits || []).reduce((sum, c) => sum + (c.valor || 0), 0);
 
       (appointments || []).forEach((apt) => {
         const preco = apt.preco || 0;
@@ -147,13 +151,7 @@ export function AdminFinanceiro() {
             break;
           case 'credit':
           case 'credito':
-            // Para crédito, o valor real usado vem da tabela creditos
-            const creditUsed = (usedCredits || []).find(c => c.agendamento_usado_id === apt.id);
-            if (creditUsed) {
-              receitaCredito += creditUsed.valor;
-            } else {
-              receitaCredito += precoServico; // Fallback para preço do serviço
-            }
+            // Créditos já são contabilizados acima da tabela creditos
             break;
           case 'plano':
             // Agendamentos de plano: contabilizar o valor do serviço prestado
@@ -328,6 +326,99 @@ export function AdminFinanceiro() {
     reader.readAsText(file);
   };
 
+  const handleGenerateMonthlyReport = async () => {
+    setGeneratingReport(true);
+    try {
+      const mes = dateRange.from.getMonth() + 1;
+      const ano = dateRange.from.getFullYear();
+
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error('Não autenticado');
+      }
+
+      toast.loading('Gerando relatório mensal com IA...', { id: 'report' });
+
+      const response = await supabase.functions.invoke('generate-monthly-report', {
+        body: { mes, ano },
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+
+      if (response.error) {
+        throw response.error;
+      }
+
+      toast.success(`Relatório de ${format(dateRange.from, 'MMMM/yyyy', { locale: ptBR })} gerado com sucesso!`, { id: 'report' });
+      
+      // Baixar o relatório
+      const report = response.data.report;
+      downloadReportAsText(report);
+
+    } catch (error: any) {
+      console.error('Error generating report:', error);
+      toast.error(error.message || 'Erro ao gerar relatório', { id: 'report' });
+    } finally {
+      setGeneratingReport(false);
+    }
+  };
+
+  const downloadReportAsText = (report: any) => {
+    const meses = [
+      'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+      'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+    ];
+
+    const content = `
+═══════════════════════════════════════════════════════════════
+              RELATÓRIO MENSAL - ${meses[report.mes - 1].toUpperCase()} ${report.ano}
+═══════════════════════════════════════════════════════════════
+
+📊 RESUMO FINANCEIRO
+────────────────────────────────────────────────────────────────
+Receita Total:           R$ ${Number(report.receita_total).toFixed(2)}
+  ├─ App (PIX/Cartão):   R$ ${Number(report.receita_app).toFixed(2)}
+  ├─ Barbearia:          R$ ${Number(report.receita_barbearia).toFixed(2)}
+  ├─ Créditos:           R$ ${Number(report.receita_credito).toFixed(2)}
+  └─ Planos:             R$ ${Number(report.receita_plano).toFixed(2)}
+
+Taxas de Gateway:        R$ ${Number(report.taxas_asaas).toFixed(2)}
+Lucro Líquido:           R$ ${Number(report.lucro_liquido).toFixed(2)}
+
+📅 AGENDAMENTOS
+────────────────────────────────────────────────────────────────
+Total:                   ${report.total_agendamentos}
+Concluídos:              ${report.agendamentos_completados}
+Cancelados:              ${report.agendamentos_cancelados}
+No-shows:                ${report.agendamentos_no_show}
+Taxa de Sucesso:         ${report.total_agendamentos > 0 ? ((report.agendamentos_completados / report.total_agendamentos) * 100).toFixed(1) : 0}%
+
+📈 COMPARATIVO COM MÊS ANTERIOR
+────────────────────────────────────────────────────────────────
+Variação Receita:        ${Number(report.variacao_receita_percentual) > 0 ? '+' : ''}${report.variacao_receita_percentual}%
+Variação Agendamentos:   ${Number(report.variacao_agendamentos_percentual) > 0 ? '+' : ''}${report.variacao_agendamentos_percentual}%
+
+${report.resumo_ia ? `
+🤖 ANÁLISE INTELIGENTE
+────────────────────────────────────────────────────────────────
+${report.resumo_ia}
+` : ''}
+
+═══════════════════════════════════════════════════════════════
+Relatório gerado em: ${format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+═══════════════════════════════════════════════════════════════
+    `.trim();
+
+    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `relatorio_${meses[report.mes - 1].toLowerCase()}_${report.ano}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const handleExportCSV = () => {
     if (!data) return;
 
@@ -352,7 +443,7 @@ export function AdminFinanceiro() {
     a.href = url;
     a.download = `financeiro_asaas_${format(dateRange.from, "yyyy-MM-dd")}_${format(dateRange.to, "yyyy-MM-dd")}.csv`;
     a.click();
-    toast.success("Relatório exportado com sucesso");
+    toast.success("CSV exportado com sucesso");
   };
 
   if (loading || !data) {
@@ -405,9 +496,19 @@ export function AdminFinanceiro() {
             <RefreshCw className="w-4 h-4 mr-2" />
             Atualizar
           </Button>
-          <Button onClick={handleExportCSV}>
-            <Download className="w-4 h-4 mr-2" />
-            Exportar
+          <MonthlyReportsSheet>
+            <Button variant="outline">
+              <FileText className="w-4 h-4 mr-2" />
+              Relatórios
+            </Button>
+          </MonthlyReportsSheet>
+          <Button onClick={handleGenerateMonthlyReport} disabled={generatingReport}>
+            {generatingReport ? (
+              <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+            ) : (
+              <Sparkles className="w-4 h-4 mr-2" />
+            )}
+            Exportar Relatório
           </Button>
         </div>
       </div>
