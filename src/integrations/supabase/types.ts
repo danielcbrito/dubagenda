@@ -1106,6 +1106,81 @@ export type Database = {
         }
         Relationships: []
       }
+      relatorios_mensais: {
+        Row: {
+          agendamentos_cancelados: number
+          agendamentos_completados: number
+          agendamentos_no_show: number
+          ano: number
+          arquivo_pdf_url: string | null
+          created_at: string
+          gerado_automaticamente: boolean
+          id: string
+          insights_ia: Json | null
+          lucro_liquido: number
+          mes: number
+          receita_app: number
+          receita_barbearia: number
+          receita_credito: number
+          receita_plano: number
+          receita_total: number
+          resumo_ia: string | null
+          taxas_asaas: number
+          total_agendamentos: number
+          updated_at: string
+          variacao_agendamentos_percentual: number | null
+          variacao_receita_percentual: number | null
+        }
+        Insert: {
+          agendamentos_cancelados?: number
+          agendamentos_completados?: number
+          agendamentos_no_show?: number
+          ano: number
+          arquivo_pdf_url?: string | null
+          created_at?: string
+          gerado_automaticamente?: boolean
+          id?: string
+          insights_ia?: Json | null
+          lucro_liquido?: number
+          mes: number
+          receita_app?: number
+          receita_barbearia?: number
+          receita_credito?: number
+          receita_plano?: number
+          receita_total?: number
+          resumo_ia?: string | null
+          taxas_asaas?: number
+          total_agendamentos?: number
+          updated_at?: string
+          variacao_agendamentos_percentual?: number | null
+          variacao_receita_percentual?: number | null
+        }
+        Update: {
+          agendamentos_cancelados?: number
+          agendamentos_completados?: number
+          agendamentos_no_show?: number
+          ano?: number
+          arquivo_pdf_url?: string | null
+          created_at?: string
+          gerado_automaticamente?: boolean
+          id?: string
+          insights_ia?: Json | null
+          lucro_liquido?: number
+          mes?: number
+          receita_app?: number
+          receita_barbearia?: number
+          receita_credito?: number
+          receita_plano?: number
+          receita_total?: number
+          resumo_ia?: string | null
+          taxas_asaas?: number
+          total_agendamentos?: number
+          updated_at?: string
+          variacao_agendamentos_percentual?: number | null
+          variacao_receita_percentual?: number | null
+        }
+        Relationships: []
+      }
       resgates: {
         Row: {
           appointment_id: string | null
