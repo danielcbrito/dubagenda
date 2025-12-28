@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -12,7 +13,6 @@ import { format, startOfMonth, endOfMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from "recharts";
-import { MonthlyReportsSheet } from "./MonthlyReportsSheet";
 
 interface AsaasFinancialData {
   stats: {
@@ -69,6 +69,7 @@ const CACHE_KEY = 'asaas_financial_cache';
 const CACHE_DURATION = 90000; // 90 seconds
 
 export function AdminFinanceiro() {
+  const navigate = useNavigate();
   const [dateRange, setDateRange] = useState<{ from: Date; to: Date }>({
     from: startOfMonth(new Date()),
     to: endOfMonth(new Date()),
@@ -352,9 +353,9 @@ export function AdminFinanceiro() {
 
       toast.success(`Relatório de ${format(dateRange.from, 'MMMM/yyyy', { locale: ptBR })} gerado com sucesso!`, { id: 'report' });
       
-      // Baixar o relatório
+      // Navegar para página de relatórios com o ID do relatório gerado
       const report = response.data.report;
-      downloadReportAsText(report);
+      navigate(`/admin/relatorios-mensais?id=${report.id}`);
 
     } catch (error: any) {
       console.error('Error generating report:', error);
@@ -496,12 +497,10 @@ Relatório gerado em: ${format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: p
             <RefreshCw className="w-4 h-4 mr-2" />
             Atualizar
           </Button>
-          <MonthlyReportsSheet>
-            <Button variant="outline">
-              <FileText className="w-4 h-4 mr-2" />
-              Relatórios
-            </Button>
-          </MonthlyReportsSheet>
+          <Button variant="outline" onClick={() => navigate('/admin/relatorios-mensais')}>
+            <FileText className="w-4 h-4 mr-2" />
+            Relatórios
+          </Button>
           <Button onClick={handleGenerateMonthlyReport} disabled={generatingReport}>
             {generatingReport ? (
               <RefreshCw className="w-4 h-4 mr-2 animate-spin" />

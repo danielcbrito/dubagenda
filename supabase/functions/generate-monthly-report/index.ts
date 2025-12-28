@@ -72,10 +72,10 @@ serve(async (req) => {
 
     console.log(`Gerando relatório para ${mes}/${ano}: ${startDate} a ${endDate}`);
 
-    // Buscar agendamentos do período
+    // Buscar TODOS os agendamentos do período (sem filtro de status)
     const { data: appointments } = await supabase
       .from('agendamentos')
-      .select('id, preco, payment_method, data, status, servico_id')
+      .select('id, preco, payment_method, data, status, servico_id, is_free')
       .gte('data', startDate)
       .lte('data', endDate);
 
@@ -103,14 +103,17 @@ serve(async (req) => {
       .gte('created_at', `${startDate}T00:00:00`)
       .lte('created_at', `${endDate}T23:59:59`);
 
-    // Calcular métricas
+    // Calcular métricas - contando TUDO
     let receitaApp = 0;
     let receitaBarbearia = 0;
     let receitaCredito = 0;
     let totalAgendamentos = appointments?.length || 0;
     let completados = 0;
+    let confirmados = 0;
+    let pendentes = 0;
     let cancelados = 0;
     let noShow = 0;
+    let cortesGratis = 0;
 
     const creditoMap = new Map((usedCredits || []).map(c => [c.agendamento_usado_id, c.valor]));
 
@@ -118,8 +121,34 @@ serve(async (req) => {
       const preco = apt.preco || 0;
       const precoServico = servicoMap.get(apt.servico_id)?.preco || preco;
 
-      if (apt.status === 'completed') {
-        completados++;
+      // Contar por status
+      switch (apt.status) {
+        case 'completed':
+          completados++;
+          break;
+        case 'confirmed':
+          confirmados++;
+          break;
+        case 'pending':
+          pendentes++;
+          break;
+        case 'cancelled_by_user':
+        case 'cancelled_by_admin':
+          cancelados++;
+          break;
+        case 'no_show':
+          noShow++;
+          break;
+      }
+
+      // Contar cortes grátis
+      if (apt.is_free) {
+        cortesGratis++;
+      }
+
+      // Calcular receita apenas para agendamentos não cancelados e não no-show
+      const statusValido = apt.status === 'completed' || apt.status === 'confirmed' || apt.status === 'pending';
+      if (statusValido && !apt.is_free) {
         switch (apt.payment_method) {
           case 'pix':
           case 'card':
@@ -134,13 +163,19 @@ serve(async (req) => {
             const creditUsed = creditoMap.get(apt.id);
             receitaCredito += creditUsed || precoServico;
             break;
+          case 'plano':
+            // Planos são contabilizados separadamente via pagamentos
+            break;
+          default:
+            if (preco > 0) {
+              receitaBarbearia += preco;
+            }
         }
-      } else if (apt.status === 'cancelled_by_user' || apt.status === 'cancelled_by_admin') {
-        cancelados++;
-      } else if (apt.status === 'no_show') {
-        noShow++;
       }
     });
+
+    // Total de cortes feitos = completados + confirmados (não cancelados)
+    const cortesFeitosMes = completados + confirmados;
 
     const receitaPlano = (planPayments || []).reduce((sum, p) => sum + (p.valor || 0), 0);
     const receitaTotal = receitaApp + receitaBarbearia + receitaCredito + receitaPlano;
@@ -194,6 +229,14 @@ serve(async (req) => {
         const prompt = `Você é um analista financeiro de uma barbearia. Analise os dados do mês ${mes}/${ano} e gere um resumo executivo profissional em português brasileiro.
 
 Dados do mês:
+- Total de Agendamentos no Mês: ${totalAgendamentos}
+- Cortes Realizados (Confirmados + Concluídos): ${cortesFeitosMes}
+- Cortes Concluídos: ${completados}
+- Cortes Confirmados (aguardando): ${confirmados}
+- Pendentes: ${pendentes}
+- Cancelados: ${cancelados}
+- No-shows: ${noShow}
+- Cortes Grátis (Fidelidade): ${cortesGratis}
 - Receita Total: R$ ${receitaTotal.toFixed(2)}
 - Receita via App (PIX/Cartão): R$ ${receitaApp.toFixed(2)}
 - Receita em Dinheiro (Barbearia): R$ ${receitaBarbearia.toFixed(2)}
@@ -201,15 +244,11 @@ Dados do mês:
 - Receita de Planos/Assinaturas: R$ ${receitaPlano.toFixed(2)}
 - Taxas de Gateway: R$ ${taxasEstimadas.toFixed(2)}
 - Lucro Líquido: R$ ${lucroLiquido.toFixed(2)}
-- Total de Agendamentos: ${totalAgendamentos}
-- Concluídos: ${completados}
-- Cancelados: ${cancelados}
-- No-shows: ${noShow}
 - Variação Receita vs Mês Anterior: ${variacaoReceita.toFixed(1)}%
 - Variação Agendamentos vs Mês Anterior: ${variacaoAgendamentos.toFixed(1)}%
 
 Gere um resumo executivo de 3-4 parágrafos destacando:
-1. Visão geral do desempenho do mês
+1. Visão geral do desempenho do mês com números exatos
 2. Principais fontes de receita e tendências
 3. Taxa de sucesso dos agendamentos
 4. Recomendações para melhorar resultados`;
