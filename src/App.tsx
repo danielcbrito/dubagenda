@@ -15,6 +15,7 @@ import Cliente from "./pages/Cliente";
 import ClienteAgendar from "./pages/ClienteAgendar";
 import ClienteAssinar from "./pages/ClienteAssinar";
 import Admin from "./pages/Admin";
+import AdminRelatoriosMensais from "./pages/AdminRelatoriosMensais";
 import AgendaFullScreen from "./pages/AgendaFullScreen";
 import SupportChat from "./pages/SupportChat";
 import NotFound from "./pages/NotFound";
@@ -41,6 +42,7 @@ const App = () => (
           <Route path="/cliente/assinar" element={<ClienteAssinar />} />
           <Route path="/suporte" element={<SupportChat />} />
           <Route path="/agenda-fullscreen" element={<AgendaFullScreen />} />
+          <Route path="/admin/relatorios-mensais" element={<AdminRelatoriosMensais />} />
           <Route path="/admin/*" element={<Admin />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
