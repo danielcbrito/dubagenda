@@ -1,4 +1,4 @@
-import { X, Home, Calendar, DollarSign, Clock, LogOut, CheckCircle, Gift, Scissors, ChevronRight, BarChart3, Settings, User } from "lucide-react";
+import { X, Home, Calendar, DollarSign, Clock, LogOut, CheckCircle, ChevronRight, BarChart3, User } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -28,13 +28,6 @@ const menuSections = [
       { title: "Visão Geral", url: "/barbeiro", icon: Home, end: true },
       { title: "Agenda", url: "/agenda-fullscreen", icon: Calendar, external: true },
       { title: "Confirmações", url: "/barbeiro/confirmacoes", icon: CheckCircle, badge: true },
-    ],
-  },
-  {
-    label: "Serviços",
-    items: [
-      { title: "Cortes", url: "/barbeiro/servicos", icon: Scissors },
-      { title: "Promoções", url: "/barbeiro/promocoes", icon: Gift },
     ],
   },
   {
