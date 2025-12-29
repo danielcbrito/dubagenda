@@ -37,34 +37,61 @@ serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Verificar autenticação
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      throw new Error('Unauthorized');
+    // Parse body
+    const body = await req.json();
+    const { mes: inputMes, ano: inputAno, auto_generate } = body;
+
+    // Se for geração automática (chamada pelo cron), não precisa de autenticação
+    // O cron chama no primeiro dia do mês para gerar o relatório do mês anterior
+    if (!auto_generate) {
+      // Verificar autenticação para chamadas manuais
+      const authHeader = req.headers.get('Authorization');
+      if (!authHeader) {
+        throw new Error('Unauthorized');
+      }
+
+      const supabaseAnon = Deno.env.get('SUPABASE_ANON_KEY')!;
+      const authClient = createClient(supabaseUrl, supabaseAnon, {
+        global: { headers: { Authorization: authHeader } }
+      });
+      
+      const { data: { user }, error: authError } = await authClient.auth.getUser();
+      if (authError || !user) {
+        throw new Error('Unauthorized');
+      }
+
+      // Verificar se é admin
+      const { data: roles } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id)
+        .eq('role', 'admin');
+
+      if (!roles || roles.length === 0) {
+        throw new Error('Forbidden: Admin access required');
+      }
     }
 
-    const supabaseAnon = Deno.env.get('SUPABASE_ANON_KEY')!;
-    const authClient = createClient(supabaseUrl, supabaseAnon, {
-      global: { headers: { Authorization: authHeader } }
-    });
-    
-    const { data: { user }, error: authError } = await authClient.auth.getUser();
-    if (authError || !user) {
-      throw new Error('Unauthorized');
+    // Se for auto_generate, calcular mês anterior
+    let mes: number;
+    let ano: number;
+
+    if (auto_generate) {
+      const now = new Date();
+      // Mês anterior
+      const prevMonth = now.getMonth(); // 0-11, mas se estivermos em Janeiro, isso será 0
+      if (prevMonth === 0) {
+        mes = 12;
+        ano = now.getFullYear() - 1;
+      } else {
+        mes = prevMonth; // getMonth retorna 0-11, então se estamos em fevereiro (1), queremos janeiro (1)
+        ano = now.getFullYear();
+      }
+      console.log(`[AUTO] Gerando relatório automático do mês anterior: ${mes}/${ano}`);
+    } else {
+      mes = inputMes;
+      ano = inputAno;
     }
-
-    // Verificar se é admin
-    const { data: roles } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', user.id)
-      .eq('role', 'admin');
-
-    if (!roles || roles.length === 0) {
-      throw new Error('Forbidden: Admin access required');
-    }
-
-    const { mes, ano } = await req.json();
     
     // Calcular datas do período
     const startDate = `${ano}-${String(mes).padStart(2, '0')}-01`;
