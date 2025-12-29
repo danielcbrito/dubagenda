@@ -140,7 +140,6 @@ serve(async (req) => {
     // Calcular métricas - contando TUDO
     let receitaApp = 0;
     let receitaBarbearia = 0;
-    let receitaCredito = 0;
     let totalAgendamentos = appointments?.length || 0;
     let completados = 0;
     let confirmados = 0;
@@ -149,11 +148,13 @@ serve(async (req) => {
     let noShow = 0;
     let cortesGratis = 0;
 
-    const creditoMap = new Map((usedCredits || []).map(c => [c.agendamento_usado_id, c.valor]));
+    // Calcular receita de créditos diretamente da tabela creditos (igual ao dashboard)
+    const receitaCredito = (usedCredits || []).reduce((sum, c) => sum + (c.valor || 0), 0);
+
+    console.log(`Créditos usados no período: ${(usedCredits || []).length}, total: R$ ${receitaCredito.toFixed(2)}`);
 
     (appointments || []).forEach(apt => {
       const preco = apt.preco || 0;
-      const precoServico = servicoMap.get(apt.servico_id)?.preco || preco;
 
       // Contar por status
       switch (apt.status) {
@@ -180,9 +181,9 @@ serve(async (req) => {
         cortesGratis++;
       }
 
-      // Calcular receita apenas para agendamentos não cancelados e não no-show
-      const statusValido = apt.status === 'completed' || apt.status === 'confirmed' || apt.status === 'pending';
-      if (statusValido && !apt.is_free) {
+      // Calcular receita apenas para agendamentos COMPLETADOS (igual ao dashboard)
+      // O dashboard usa status === 'completed', então vamos manter consistência
+      if (apt.status === 'completed' && !apt.is_free) {
         switch (apt.payment_method) {
           case 'pix':
           case 'card':
@@ -194,8 +195,7 @@ serve(async (req) => {
             break;
           case 'credit':
           case 'credito':
-            const creditUsed = creditoMap.get(apt.id);
-            receitaCredito += creditUsed || precoServico;
+            // Créditos já são contabilizados acima da tabela creditos
             break;
           case 'plano':
             // Planos são contabilizados separadamente via pagamentos
@@ -208,11 +208,19 @@ serve(async (req) => {
       }
     });
 
-    // Total de cortes feitos = completados + confirmados (não cancelados)
-    const cortesFeitosMes = completados + confirmados;
+    // Total de cortes feitos = completados (para consistência com receita)
+    const cortesFeitosMes = completados;
 
-    const receitaPlano = (planPayments || []).reduce((sum, p) => sum + (p.valor || 0), 0);
+    // **BUG FIX**: Usar filteredPlanPayments em vez de planPayments
+    const receitaPlano = filteredPlanPayments.reduce((sum, p) => sum + (p.valor || 0), 0);
+    
+    console.log(`Receita App: R$ ${receitaApp.toFixed(2)}`);
+    console.log(`Receita Barbearia: R$ ${receitaBarbearia.toFixed(2)}`);
+    console.log(`Receita Crédito: R$ ${receitaCredito.toFixed(2)}`);
+    console.log(`Receita Plano: R$ ${receitaPlano.toFixed(2)}`);
+    
     const receitaTotal = receitaApp + receitaBarbearia + receitaCredito + receitaPlano;
+    console.log(`Receita Total: R$ ${receitaTotal.toFixed(2)}`);
 
     // Buscar mês anterior para comparação
     const mesAnterior = mes === 1 ? 12 : mes - 1;
