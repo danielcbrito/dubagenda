@@ -87,52 +87,24 @@ export function AdminFinanceiro() {
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [csvData, setCsvData] = useState<any[]>([]);
   const [generatingReport, setGeneratingReport] = useState(false);
-  const [adminBarbeiroId, setAdminBarbeiroId] = useState<string | null>(null);
-
-  useEffect(() => {
-    // Buscar o barbeiro_id do admin (usuário logado)
-    const loadAdminBarbeiroId = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data: barbeiro } = await supabase
-          .from('barbeiros')
-          .select('id')
-          .eq('user_id', user.id)
-          .single();
-        
-        if (barbeiro) {
-          setAdminBarbeiroId(barbeiro.id);
-        }
-      }
-    };
-    loadAdminBarbeiroId();
-  }, []);
 
   useEffect(() => {
     loadFinancialData();
     loadLocalRevenue();
-  }, [dateRange, adminBarbeiroId]);
+  }, [dateRange]);
 
   const loadLocalRevenue = async () => {
     try {
       const fromDate = format(dateRange.from, "yyyy-MM-dd");
       const toDate = format(dateRange.to, "yyyy-MM-dd");
 
-      // Buscar agendamentos completados no período - FILTRAR POR BARBEIRO DO ADMIN
-      let appointmentsQuery = supabase
+      // Buscar agendamentos completados no período (todos os barbeiros)
+      const { data: appointments } = await supabase
         .from("agendamentos")
-        .select("id, preco, payment_method, data, servico_id, barbeiro_id")
+        .select("id, preco, payment_method, data, servico_id")
         .gte("data", fromDate)
         .lte("data", toDate)
         .eq("status", "completed");
-
-      // Filtrar apenas agendamentos do barbeiro admin se ele existir
-      if (adminBarbeiroId) {
-        appointmentsQuery = appointmentsQuery.eq("barbeiro_id", adminBarbeiroId);
-      }
-
-      const { data: appointments } = await appointmentsQuery;
-
       // Buscar serviços para pegar preço real quando preco é 0 (plano/crédito)
       const { data: servicos } = await supabase
         .from("servicos")
