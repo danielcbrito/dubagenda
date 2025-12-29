@@ -56,8 +56,9 @@ serve(async (req) => {
       authUrl.searchParams.set('response_type', 'code');
       authUrl.searchParams.set('scope', scopes);
       authUrl.searchParams.set('access_type', 'offline');
-      authUrl.searchParams.set('prompt', 'consent');
+      authUrl.searchParams.set('prompt', 'consent select_account'); // Força seleção de conta
       authUrl.searchParams.set('state', barbeiroId); // Passa o ID do barbeiro no state
+      authUrl.searchParams.set('include_granted_scopes', 'true');
 
       console.log(`[google-calendar-auth] Generated auth URL for barbeiro ${barbeiroId}`);
 
