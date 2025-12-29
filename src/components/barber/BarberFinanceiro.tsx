@@ -18,9 +18,16 @@ import {
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 interface BarberFinanceiroProps {
   barbeiroId: string;
+}
+
+interface DailyChartData {
+  date: string;
+  label: string;
+  receita: number;
 }
 
 export function BarberFinanceiro({ barbeiroId }: BarberFinanceiroProps) {
@@ -33,10 +40,11 @@ export function BarberFinanceiro({ barbeiroId }: BarberFinanceiroProps) {
     avgTicket: 0,
     commission: 0,
     commissionPct: 0,
-    pendingCommission: 0, // Comissão ainda não paga
-    paidCommission: 0 // Comissão já paga
+    pendingCommission: 0,
+    paidCommission: 0
   });
   const [appointments, setAppointments] = useState<any[]>([]);
+  const [dailyChartData, setDailyChartData] = useState<DailyChartData[]>([]);
   const [requestingPayment, setRequestingPayment] = useState(false);
 
   // Gerar opções de meses
@@ -102,6 +110,22 @@ export function BarberFinanceiro({ barbeiroId }: BarberFinanceiroProps) {
         ? totalRevenue / appointmentsData.length 
         : 0;
 
+      // Calcular dados diários para o gráfico
+      const chartData: DailyChartData[] = [];
+      const daysInMonth = new Date(year, month, 0).getDate();
+      
+      for (let day = 1; day <= daysInMonth; day++) {
+        const dateStr = format(new Date(year, month - 1, day), 'yyyy-MM-dd');
+        const dayAppointments = (appointmentsData || []).filter(apt => apt.data === dateStr);
+        const dayRevenue = dayAppointments.reduce((sum, apt) => sum + (apt.preco || 0), 0);
+        
+        chartData.push({
+          date: dateStr,
+          label: format(new Date(year, month - 1, day), 'dd'),
+          receita: dayRevenue * (commissionPct / 100) // Mostrar comissão do dia
+        });
+      }
+
       setStats({
         totalRevenue,
         totalAppointments: appointmentsData?.length || 0,
@@ -114,6 +138,7 @@ export function BarberFinanceiro({ barbeiroId }: BarberFinanceiroProps) {
       });
 
       setAppointments(appointmentsData || []);
+      setDailyChartData(chartData);
     } catch (error) {
       console.error('Erro ao carregar financeiro:', error);
     } finally {
@@ -141,7 +166,7 @@ export function BarberFinanceiro({ barbeiroId }: BarberFinanceiroProps) {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Meu Financeiro</h1>
-          <p className="text-muted-foreground">Acompanhe seus ganhos</p>
+          <p className="text-muted-foreground">Acompanhe seus ganhos e comissões</p>
         </div>
         
         <Select value={selectedMonth} onValueChange={setSelectedMonth}>
@@ -256,6 +281,51 @@ export function BarberFinanceiro({ barbeiroId }: BarberFinanceiroProps) {
         </Card>
       </div>
 
+      {/* Gráfico de Evolução da Comissão */}
+      <Card className="bg-card/50 border-border/50">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <TrendingUp className="h-5 w-5 text-primary" />
+            Evolução da Comissão
+          </CardTitle>
+          <p className="text-sm text-muted-foreground">Comissão diária do mês selecionado</p>
+        </CardHeader>
+        <CardContent>
+          <ResponsiveContainer width="100%" height={300}>
+            <LineChart data={dailyChartData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
+              <XAxis 
+                dataKey="label" 
+                stroke="hsl(var(--muted-foreground))" 
+                fontSize={12}
+                tickLine={false}
+              />
+              <YAxis 
+                stroke="hsl(var(--muted-foreground))" 
+                fontSize={12}
+                tickLine={false}
+                tickFormatter={(value) => `R$${value}`}
+              />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: 'hsl(var(--card))',
+                  border: '1px solid hsl(var(--border))',
+                  borderRadius: '8px',
+                }}
+                formatter={(value: number) => [`R$ ${value.toFixed(2)}`, 'Comissão']}
+              />
+              <Line 
+                type="monotone" 
+                dataKey="receita" 
+                stroke="hsl(var(--primary))" 
+                strokeWidth={3}
+                dot={{ fill: 'hsl(var(--primary))', strokeWidth: 2 }}
+                activeDot={{ r: 6, fill: 'hsl(var(--primary))' }}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        </CardContent>
+      </Card>
 
       {/* Lista de atendimentos */}
       <Card className="bg-card/50 border-border/50">
