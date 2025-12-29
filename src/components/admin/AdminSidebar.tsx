@@ -1,4 +1,4 @@
-import { Home, Calendar, Users, DollarSign, FileText, Gift, Settings, LogOut, CheckCircle, Scissors, Code, ChevronDown, ChevronRight, ChevronLeft, HeadphonesIcon, Clock, BarChart3, CreditCard, Layers, UserCog } from "lucide-react";
+import { Home, Calendar, Users, DollarSign, FileText, Gift, Settings, LogOut, CheckCircle, Scissors, Code, ChevronDown, ChevronRight, ChevronLeft, HeadphonesIcon, Clock, BarChart3, CreditCard, Layers, UserCog, UserCircle } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -19,6 +19,7 @@ const menuGroups = [
     label: "Dashboard",
     items: [
       { title: "Visão Geral", url: "/admin", icon: Home, end: true },
+      { title: "Meu Perfil", url: "/admin/perfil", icon: UserCircle },
     ],
   },
   {
