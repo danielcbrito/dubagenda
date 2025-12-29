@@ -23,12 +23,10 @@ import { AdminSuportePanel } from "@/components/admin/AdminSuportePanel";
 import { AdminSuporteConfig } from "@/components/admin/AdminSuporteConfig";
 import AdminHorarios from "@/components/admin/AdminHorarios";
 import AdminBarbeiros from "@/components/admin/AdminBarbeiros";
-import { AdminPerfil } from "@/components/admin/AdminPerfil";
 
 // Mapeamento de rotas para títulos
 const routeTitles: Record<string, string> = {
   "/admin": "Visão Geral",
-  "/admin/perfil": "Meu Perfil",
   "/admin/agenda": "Agenda",
   "/admin/confirmacoes-pendentes": "Confirmações",
   "/admin/barbeiros": "Barbeiros",
@@ -172,7 +170,6 @@ const Admin = () => {
             <Suspense fallback={<LoadingFallback />}>
               <Routes>
                 <Route index element={<AdminDashboard />} />
-                <Route path="perfil" element={<AdminPerfil />} />
                 <Route path="agenda" element={<AdminAgenda />} />
                 <Route path="confirmacoes-pendentes" element={<AdminConfirmacoesPendentes />} />
                 <Route path="barbeiros" element={<AdminBarbeiros />} />
@@ -234,7 +231,6 @@ const Admin = () => {
               <Suspense fallback={<LoadingFallback />}>
                 <Routes>
                   <Route index element={<AdminDashboard />} />
-                  <Route path="perfil" element={<AdminPerfil />} />
                   <Route path="agenda" element={<AdminAgenda />} />
                   <Route path="confirmacoes-pendentes" element={<AdminConfirmacoesPendentes />} />
                   <Route path="barbeiros" element={<AdminBarbeiros />} />
