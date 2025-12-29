@@ -25,6 +25,17 @@ interface MonthlyReportData {
   variacao_agendamentos_percentual: number;
 }
 
+interface BarberPayroll {
+  barbeiro_id: string;
+  barbeiro_nome: string;
+  total_atendimentos: number;
+  receita_gerada: number;
+  comissao_pct: number;
+  comissao_valor: number;
+  comissao_paga: number;
+  comissao_pendente: number;
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -102,9 +113,22 @@ serve(async (req) => {
     // Buscar TODOS os agendamentos do período (sem filtro de status)
     const { data: appointments } = await supabase
       .from('agendamentos')
-      .select('id, preco, payment_method, data, status, servico_id, is_free')
+      .select('id, preco, payment_method, data, status, servico_id, is_free, barbeiro_id')
       .gte('data', startDate)
       .lte('data', endDate);
+
+    // Buscar todos os barbeiros
+    const { data: barbeiros } = await supabase
+      .from('barbeiros')
+      .select('id, apelido, comissao_pct')
+      .eq('ativo', true);
+
+    // Buscar comissões já pagas no período
+    const { data: comissoesPagas } = await supabase
+      .from('comissoes')
+      .select('barbeiro_id, valor, pago')
+      .gte('created_at', `${startDate}T00:00:00`)
+      .lte('created_at', `${endDate}T23:59:59`);
 
     // Buscar serviços
     const { data: servicos } = await supabase
@@ -222,6 +246,41 @@ serve(async (req) => {
     const receitaTotal = receitaApp + receitaBarbearia + receitaCredito + receitaPlano;
     console.log(`Receita Total: R$ ${receitaTotal.toFixed(2)}`);
 
+    // ===== CALCULAR FOLHA DE PAGAMENTO DOS BARBEIROS =====
+    const barberPayroll: BarberPayroll[] = [];
+    
+    for (const barbeiro of (barbeiros || [])) {
+      // Agendamentos completados deste barbeiro
+      const barberAppointments = (appointments || []).filter(
+        apt => apt.barbeiro_id === barbeiro.id && apt.status === 'completed' && !apt.is_free
+      );
+      
+      const receitaGerada = barberAppointments.reduce((sum, apt) => sum + (apt.preco || 0), 0);
+      const comissaoPct = barbeiro.comissao_pct || 30;
+      const comissaoValor = receitaGerada * (comissaoPct / 100);
+      
+      // Comissões já pagas
+      const comissoesPagasBarbeiro = (comissoesPagas || [])
+        .filter(c => c.barbeiro_id === barbeiro.id && c.pago)
+        .reduce((sum, c) => sum + (c.valor || 0), 0);
+      
+      barberPayroll.push({
+        barbeiro_id: barbeiro.id,
+        barbeiro_nome: barbeiro.apelido,
+        total_atendimentos: barberAppointments.length,
+        receita_gerada: receitaGerada,
+        comissao_pct: comissaoPct,
+        comissao_valor: comissaoValor,
+        comissao_paga: comissoesPagasBarbeiro,
+        comissao_pendente: Math.max(0, comissaoValor - comissoesPagasBarbeiro)
+      });
+    }
+
+    // Total a pagar para todos os barbeiros
+    const totalComissoesPendentes = barberPayroll.reduce((sum, b) => sum + b.comissao_pendente, 0);
+    
+    console.log(`Folha de pagamento: ${barberPayroll.length} barbeiros, total pendente: R$ ${totalComissoesPendentes.toFixed(2)}`);
+
     // Buscar mês anterior para comparação
     const mesAnterior = mes === 1 ? 12 : mes - 1;
     const anoAnterior = mes === 1 ? ano - 1 : ano;
@@ -242,7 +301,7 @@ serve(async (req) => {
 
     // Estimar taxas Asaas (aproximadamente 2.5% para PIX e 5% para cartão)
     const taxasEstimadas = receitaApp * 0.03; // Média de 3%
-    const lucroLiquido = receitaTotal - taxasEstimadas;
+    const lucroLiquido = receitaTotal - taxasEstimadas - totalComissoesPendentes; // Desconta comissões
 
     const reportData: MonthlyReportData = {
       mes,
@@ -268,6 +327,11 @@ serve(async (req) => {
 
     if (openaiKey) {
       try {
+        // Preparar texto da folha de pagamento para a IA
+        const folhaPagamentoTexto = barberPayroll.map(b => 
+          `  • ${b.barbeiro_nome}: ${b.total_atendimentos} atendimentos, R$ ${b.receita_gerada.toFixed(2)} gerado, comissão (${b.comissao_pct}%): R$ ${b.comissao_pendente.toFixed(2)} pendente`
+        ).join('\n');
+
         const prompt = `Você é um analista financeiro de uma barbearia. Analise os dados do mês ${mes}/${ano} e gere um resumo executivo profissional em português brasileiro.
 
 Dados do mês:
@@ -285,15 +349,20 @@ Dados do mês:
 - Créditos Utilizados: R$ ${receitaCredito.toFixed(2)}
 - Receita de Planos/Assinaturas: R$ ${receitaPlano.toFixed(2)}
 - Taxas de Gateway: R$ ${taxasEstimadas.toFixed(2)}
-- Lucro Líquido: R$ ${lucroLiquido.toFixed(2)}
+- Total Comissões a Pagar: R$ ${totalComissoesPendentes.toFixed(2)}
+- Lucro Líquido (após taxas e comissões): R$ ${lucroLiquido.toFixed(2)}
 - Variação Receita vs Mês Anterior: ${variacaoReceita.toFixed(1)}%
 - Variação Agendamentos vs Mês Anterior: ${variacaoAgendamentos.toFixed(1)}%
 
-Gere um resumo executivo de 3-4 parágrafos destacando:
+Folha de Pagamento dos Barbeiros:
+${folhaPagamentoTexto || '  Nenhum barbeiro registrado'}
+
+Gere um resumo executivo de 4-5 parágrafos destacando:
 1. Visão geral do desempenho do mês com números exatos
 2. Principais fontes de receita e tendências
 3. Taxa de sucesso dos agendamentos
-4. Recomendações para melhorar resultados`;
+4. Folha de pagamento - quanto pagar para cada barbeiro
+5. Recomendações para melhorar resultados`;
 
         const response = await fetch('https://api.openai.com/v1/chat/completions', {
           method: 'POST',
@@ -313,12 +382,14 @@ Gere um resumo executivo de 3-4 parágrafos destacando:
           const aiData = await response.json();
           resumoIA = aiData.choices?.[0]?.message?.content || '';
           
-          // Gerar insights estruturados
+          // Gerar insights estruturados incluindo folha de pagamento
           insightsIA = {
             taxaConversao: totalAgendamentos > 0 ? ((completados / totalAgendamentos) * 100).toFixed(1) : 0,
             ticketMedio: completados > 0 ? (receitaTotal / completados).toFixed(2) : 0,
             principalCanal: receitaApp > receitaBarbearia ? 'App' : 'Barbearia',
             tendencia: variacaoReceita > 0 ? 'crescimento' : variacaoReceita < 0 ? 'queda' : 'estável',
+            folhaPagamento: barberPayroll,
+            totalComissoesPendentes: totalComissoesPendentes,
           };
         }
       } catch (aiError) {
@@ -326,6 +397,13 @@ Gere um resumo executivo de 3-4 parágrafos destacando:
         resumoIA = `Relatório mensal de ${mes}/${ano}: Receita total de R$ ${receitaTotal.toFixed(2)} com ${completados} atendimentos concluídos.`;
       }
     } else {
+      // Gerar resumo com folha de pagamento
+      let folhaPagamentoTexto = '\n\n💼 **Folha de Pagamento:**\n';
+      barberPayroll.forEach(b => {
+        folhaPagamentoTexto += `• ${b.barbeiro_nome}: ${b.total_atendimentos} cortes, R$ ${b.receita_gerada.toFixed(0)} gerados → Comissão: R$ ${b.comissao_pendente.toFixed(0)} (${b.comissao_pct}%)\n`;
+      });
+      folhaPagamentoTexto += `\n**Total a Pagar:** R$ ${totalComissoesPendentes.toFixed(2)}`;
+
       resumoIA = `📊 **Relatório Financeiro - ${mes}/${ano}**\n\n` +
         `💰 **Receita Total:** R$ ${receitaTotal.toFixed(2)}\n` +
         `• App (PIX/Cartão): R$ ${receitaApp.toFixed(2)}\n` +
@@ -336,13 +414,16 @@ Gere um resumo executivo de 3-4 parágrafos destacando:
         `• Concluídos: ${completados}\n` +
         `• Cancelados: ${cancelados}\n` +
         `• No-shows: ${noShow}\n\n` +
-        `📈 **Variação:** ${variacaoReceita > 0 ? '+' : ''}${variacaoReceita.toFixed(1)}% vs mês anterior`;
+        `📈 **Variação:** ${variacaoReceita > 0 ? '+' : ''}${variacaoReceita.toFixed(1)}% vs mês anterior` +
+        folhaPagamentoTexto;
       
       insightsIA = {
         taxaConversao: totalAgendamentos > 0 ? ((completados / totalAgendamentos) * 100).toFixed(1) : 0,
         ticketMedio: completados > 0 ? (receitaTotal / completados).toFixed(2) : 0,
         principalCanal: receitaApp > receitaBarbearia ? 'App' : 'Barbearia',
         tendencia: variacaoReceita > 0 ? 'crescimento' : variacaoReceita < 0 ? 'queda' : 'estável',
+        folhaPagamento: barberPayroll,
+        totalComissoesPendentes: totalComissoesPendentes,
       };
     }
 

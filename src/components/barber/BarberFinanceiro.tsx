@@ -11,8 +11,13 @@ import {
   TrendingUp, 
   Calendar,
   Scissors,
-  Percent
+  Percent,
+  Wallet,
+  FileText,
+  CheckCircle2
 } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { toast } from 'sonner';
 
 interface BarberFinanceiroProps {
   barbeiroId: string;
@@ -27,9 +32,12 @@ export function BarberFinanceiro({ barbeiroId }: BarberFinanceiroProps) {
     completedAppointments: 0,
     avgTicket: 0,
     commission: 0,
-    commissionPct: 0
+    commissionPct: 0,
+    pendingCommission: 0, // Comissão ainda não paga
+    paidCommission: 0 // Comissão já paga
   });
   const [appointments, setAppointments] = useState<any[]>([]);
+  const [requestingPayment, setRequestingPayment] = useState(false);
 
   // Gerar opções de meses
   const monthOptions = Array.from({ length: 6 }, (_, i) => {
@@ -74,9 +82,22 @@ export function BarberFinanceiro({ barbeiroId }: BarberFinanceiroProps) {
         .eq('id', barbeiroId)
         .single();
 
+      // Buscar comissões já pagas do período
+      const { data: comissoesData } = await supabase
+        .from('comissoes')
+        .select('valor, pago')
+        .eq('barbeiro_id', barbeiroId)
+        .gte('created_at', `${startDate}T00:00:00`)
+        .lte('created_at', `${endDate}T23:59:59`);
+
+      const paidCommission = (comissoesData || [])
+        .filter(c => c.pago)
+        .reduce((sum, c) => sum + (c.valor || 0), 0);
+
       const commissionPct = barbeiroData?.comissao_pct || 30;
       const totalRevenue = (appointmentsData || []).reduce((sum, a) => sum + (a.preco || 0), 0);
       const commission = totalRevenue * (commissionPct / 100);
+      const pendingCommission = commission - paidCommission;
       const avgTicket = appointmentsData && appointmentsData.length > 0 
         ? totalRevenue / appointmentsData.length 
         : 0;
@@ -87,7 +108,9 @@ export function BarberFinanceiro({ barbeiroId }: BarberFinanceiroProps) {
         completedAppointments: appointmentsData?.length || 0,
         avgTicket,
         commission,
-        commissionPct
+        commissionPct,
+        pendingCommission: Math.max(0, pendingCommission),
+        paidCommission
       });
 
       setAppointments(appointmentsData || []);
@@ -135,6 +158,44 @@ export function BarberFinanceiro({ barbeiroId }: BarberFinanceiroProps) {
         </Select>
       </div>
 
+      {/* Comissão a Receber - Card destacado */}
+      <Card className="bg-gradient-to-r from-primary/10 to-primary/5 border-primary/30">
+        <CardContent className="pt-6">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div className="flex items-center gap-4">
+              <div className="h-14 w-14 rounded-xl bg-primary/20 flex items-center justify-center">
+                <Wallet className="h-7 w-7 text-primary" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Comissão a Receber</p>
+                <p className="text-3xl font-bold text-primary">R$ {stats.pendingCommission.toFixed(2)}</p>
+                <div className="flex items-center gap-2 mt-1">
+                  <Badge variant="outline" className="text-xs">
+                    {stats.commissionPct}% de comissão
+                  </Badge>
+                  {stats.paidCommission > 0 && (
+                    <Badge variant="secondary" className="text-xs">
+                      <CheckCircle2 className="h-3 w-3 mr-1" />
+                      R$ {stats.paidCommission.toFixed(0)} já pago
+                    </Badge>
+                  )}
+                </div>
+              </div>
+            </div>
+            <Button 
+              onClick={() => {
+                toast.info('Solicitação de pagamento enviada para a barbearia!');
+              }}
+              disabled={stats.pendingCommission <= 0 || requestingPayment}
+              className="w-full sm:w-auto"
+            >
+              <FileText className="h-4 w-4 mr-2" />
+              Solicitar Pagamento
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card className="bg-card/50 border-border/50">
@@ -144,7 +205,7 @@ export function BarberFinanceiro({ barbeiroId }: BarberFinanceiroProps) {
                 <DollarSign className="h-6 w-6 text-green-500" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Receita Total</p>
+                <p className="text-sm text-muted-foreground">Receita Gerada</p>
                 <p className="text-2xl font-bold">R$ {stats.totalRevenue.toFixed(0)}</p>
               </div>
             </div>
@@ -158,7 +219,7 @@ export function BarberFinanceiro({ barbeiroId }: BarberFinanceiroProps) {
                 <Percent className="h-6 w-6 text-primary" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Minha Comissão</p>
+                <p className="text-sm text-muted-foreground">Comissão Total</p>
                 <p className="text-2xl font-bold text-primary">R$ {stats.commission.toFixed(0)}</p>
                 <p className="text-xs text-muted-foreground">{stats.commissionPct}%</p>
               </div>
@@ -194,6 +255,7 @@ export function BarberFinanceiro({ barbeiroId }: BarberFinanceiroProps) {
           </CardContent>
         </Card>
       </div>
+
 
       {/* Lista de atendimentos */}
       <Card className="bg-card/50 border-border/50">
