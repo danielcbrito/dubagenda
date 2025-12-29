@@ -27,7 +27,6 @@ interface Barbeiro {
   apelido: string;
   email: string | null;
   telefone: string | null;
-  comissao_pct: number | null;
   ativo: boolean | null;
   setup_completed: boolean | null;
   google_calendar_connected: boolean | null;
