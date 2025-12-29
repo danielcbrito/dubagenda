@@ -34,7 +34,16 @@ import {
   CreditCard,
   Wallet,
   Star,
-  Clock
+  Clock,
+  CheckCircle2,
+  XCircle,
+  AlertTriangle,
+  Eye,
+  Scissors,
+  Banknote,
+  Smartphone,
+  Gift,
+  X
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -79,6 +88,7 @@ export default function AdminRelatoriosMensais() {
   const [searchTerm, setSearchTerm] = useState("");
   const [yearFilter, setYearFilter] = useState<string>("");
   const [selectedReport, setSelectedReport] = useState<MonthlyReport | null>(null);
+  const [viewMode, setViewMode] = useState<'list' | 'detail'>('list');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [reportToDelete, setReportToDelete] = useState<MonthlyReport | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -92,6 +102,7 @@ export default function AdminRelatoriosMensais() {
       const report = reports.find(r => r.id === selectedId);
       if (report) {
         setSelectedReport(report);
+        setViewMode('detail');
       }
     }
   }, [selectedId, reports]);
@@ -132,6 +143,7 @@ export default function AdminRelatoriosMensais() {
       
       if (selectedReport?.id === reportToDelete.id) {
         setSelectedReport(null);
+        setViewMode('list');
         navigate('/admin/relatorios-mensais', { replace: true });
       }
     } catch (error) {
@@ -142,6 +154,18 @@ export default function AdminRelatoriosMensais() {
       setDeleteDialogOpen(false);
       setReportToDelete(null);
     }
+  };
+
+  const openReportDetail = (report: MonthlyReport) => {
+    setSelectedReport(report);
+    setViewMode('detail');
+    navigate(`/admin/relatorios-mensais?id=${report.id}`, { replace: true });
+  };
+
+  const closeReportDetail = () => {
+    setSelectedReport(null);
+    setViewMode('list');
+    navigate('/admin/relatorios-mensais', { replace: true });
   };
 
   const downloadReport = (report: MonthlyReport) => {
@@ -200,10 +224,11 @@ Sistema de Gestão - Barbearia
     toast.success('Relatório baixado com sucesso!');
   };
 
-  const getTrendIcon = (value: number) => {
-    if (value > 0) return <TrendingUp className="w-4 h-4 text-green-500" />;
-    if (value < 0) return <TrendingDown className="w-4 h-4 text-red-500" />;
-    return <Minus className="w-4 h-4 text-muted-foreground" />;
+  const getTrendIcon = (value: number, size: "sm" | "lg" = "sm") => {
+    const sizeClass = size === "lg" ? "w-6 h-6" : "w-5 h-5";
+    if (value > 0) return <TrendingUp className={`${sizeClass} text-green-500`} />;
+    if (value < 0) return <TrendingDown className={`${sizeClass} text-red-500`} />;
+    return <Minus className={`${sizeClass} text-muted-foreground`} />;
   };
 
   const getTrendColor = (value: number) => {
@@ -230,13 +255,412 @@ Sistema de Gestão - Barbearia
     return (
       <div className="min-h-screen bg-[#0E0E11] flex items-center justify-center">
         <div className="text-center space-y-4">
-          <RefreshCw className="w-8 h-8 animate-spin mx-auto text-primary" />
-          <p className="text-muted-foreground">Carregando relatórios...</p>
+          <RefreshCw className="w-10 h-10 animate-spin mx-auto text-primary" />
+          <p className="text-lg text-muted-foreground">Carregando relatórios...</p>
         </div>
       </div>
     );
   }
 
+  // ========== VISUALIZAÇÃO DETALHADA DO RELATÓRIO ==========
+  if (viewMode === 'detail' && selectedReport) {
+    const taxaSucesso = selectedReport.total_agendamentos > 0 
+      ? ((selectedReport.agendamentos_completados / selectedReport.total_agendamentos) * 100).toFixed(1) 
+      : "0";
+
+    return (
+      <div className="min-h-screen bg-[#0E0E11] relative overflow-hidden">
+        {/* Efeitos de luz premium */}
+        <div className="pointer-events-none fixed inset-0 z-0">
+          <div className="absolute -top-32 -right-32 w-[600px] h-[600px] bg-primary/20 rounded-full blur-[150px] animate-pulse" style={{ animationDuration: '4s' }} />
+          <div className="absolute -bottom-48 -left-48 w-[500px] h-[500px] bg-primary/15 rounded-full blur-[120px] animate-pulse" style={{ animationDuration: '6s', animationDelay: '2s' }} />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[400px] bg-primary/5 rounded-full blur-[200px]" />
+        </div>
+
+        <div className="relative z-10">
+          {/* Header Fixo */}
+          <motion.header 
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="sticky top-0 z-50 bg-[#0E0E11]/80 backdrop-blur-xl border-b border-border/30"
+          >
+            <div className="max-w-7xl mx-auto px-4 md:px-8 py-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <Button 
+                    variant="ghost" 
+                    size="icon"
+                    onClick={closeReportDetail}
+                    className="shrink-0 hover:bg-muted/50"
+                  >
+                    <ArrowLeft className="w-5 h-5" />
+                  </Button>
+                  <div>
+                    <h1 className="text-xl md:text-2xl font-bold text-foreground">
+                      Relatório de {meses[selectedReport.mes - 1]} {selectedReport.ano}
+                    </h1>
+                    <p className="text-sm text-muted-foreground">
+                      Gerado em {format(new Date(selectedReport.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => downloadReport(selectedReport)}
+                    className="gap-2 hidden sm:flex"
+                  >
+                    <Download className="w-4 h-4" />
+                    Baixar Relatório
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => downloadReport(selectedReport)}
+                    className="sm:hidden"
+                  >
+                    <Download className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => {
+                      setReportToDelete(selectedReport);
+                      setDeleteDialogOpen(true);
+                    }}
+                    className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </motion.header>
+
+          {/* Conteúdo Principal */}
+          <main className="max-w-7xl mx-auto px-4 md:px-8 py-8 space-y-8">
+            {/* Hero Section - Métricas Principais */}
+            <motion.section 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+            >
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {/* Receita Total */}
+                <Card className="relative overflow-hidden bg-gradient-to-br from-green-500/20 via-green-500/10 to-transparent border-green-500/30 group hover:border-green-500/50 transition-all">
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-green-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+                  <CardContent className="p-6 relative">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-14 h-14 rounded-2xl bg-green-500/20 flex items-center justify-center">
+                        <DollarSign className="w-7 h-7 text-green-500" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Receita Total</p>
+                        <div className={`flex items-center gap-2 ${getTrendColor(selectedReport.variacao_receita_percentual)}`}>
+                          {getTrendIcon(selectedReport.variacao_receita_percentual)}
+                          <span className="text-sm font-medium">
+                            {selectedReport.variacao_receita_percentual > 0 ? '+' : ''}{selectedReport.variacao_receita_percentual}% vs mês anterior
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    <p className="text-4xl md:text-5xl font-bold text-green-500 tracking-tight">
+                      R$ {selectedReport.receita_total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </p>
+                  </CardContent>
+                </Card>
+
+                {/* Total Agendamentos */}
+                <Card className="relative overflow-hidden bg-gradient-to-br from-blue-500/20 via-blue-500/10 to-transparent border-blue-500/30 group hover:border-blue-500/50 transition-all">
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+                  <CardContent className="p-6 relative">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-14 h-14 rounded-2xl bg-blue-500/20 flex items-center justify-center">
+                        <Scissors className="w-7 h-7 text-blue-500" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Agendamentos</p>
+                        <div className={`flex items-center gap-2 ${getTrendColor(selectedReport.variacao_agendamentos_percentual)}`}>
+                          {getTrendIcon(selectedReport.variacao_agendamentos_percentual)}
+                          <span className="text-sm font-medium">
+                            {selectedReport.variacao_agendamentos_percentual > 0 ? '+' : ''}{selectedReport.variacao_agendamentos_percentual}% vs mês anterior
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    <p className="text-4xl md:text-5xl font-bold text-blue-500 tracking-tight">
+                      {selectedReport.total_agendamentos}
+                    </p>
+                  </CardContent>
+                </Card>
+
+                {/* Lucro Líquido */}
+                <Card className="relative overflow-hidden bg-gradient-to-br from-purple-500/20 via-purple-500/10 to-transparent border-purple-500/30 group hover:border-purple-500/50 transition-all">
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+                  <CardContent className="p-6 relative">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-14 h-14 rounded-2xl bg-purple-500/20 flex items-center justify-center">
+                        <BarChart3 className="w-7 h-7 text-purple-500" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Lucro Líquido</p>
+                        <p className="text-sm text-muted-foreground">
+                          Após taxas de gateway
+                        </p>
+                      </div>
+                    </div>
+                    <p className="text-4xl md:text-5xl font-bold text-purple-500 tracking-tight">
+                      R$ {selectedReport.lucro_liquido.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </p>
+                  </CardContent>
+                </Card>
+
+                {/* Taxa de Sucesso */}
+                <Card className="relative overflow-hidden bg-gradient-to-br from-amber-500/20 via-amber-500/10 to-transparent border-amber-500/30 group hover:border-amber-500/50 transition-all">
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+                  <CardContent className="p-6 relative">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-14 h-14 rounded-2xl bg-amber-500/20 flex items-center justify-center">
+                        <Star className="w-7 h-7 text-amber-500" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Taxa de Sucesso</p>
+                        <p className="text-sm text-muted-foreground">
+                          Concluídos / Total
+                        </p>
+                      </div>
+                    </div>
+                    <p className="text-4xl md:text-5xl font-bold text-amber-500 tracking-tight">
+                      {taxaSucesso}%
+                    </p>
+                  </CardContent>
+                </Card>
+              </div>
+            </motion.section>
+
+            {/* Seção: Origem da Receita */}
+            <motion.section 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+            >
+              <Card className="bg-card/50 backdrop-blur-xl border-border/50 overflow-hidden">
+                <CardHeader className="border-b border-border/30 bg-muted/20">
+                  <CardTitle className="text-xl flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center">
+                      <Wallet className="w-5 h-5 text-primary" />
+                    </div>
+                    Origem da Receita
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 divide-y md:divide-y-0 md:divide-x divide-border/30">
+                    {/* App */}
+                    <div className="p-6 hover:bg-muted/20 transition-colors">
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="w-12 h-12 rounded-xl bg-green-500/20 flex items-center justify-center">
+                          <Smartphone className="w-6 h-6 text-green-500" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-muted-foreground">App (PIX/Cartão)</p>
+                          <p className="text-xs text-muted-foreground/70">Pagamentos online</p>
+                        </div>
+                      </div>
+                      <p className="text-3xl font-bold text-green-500">
+                        R$ {selectedReport.receita_app.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </p>
+                    </div>
+
+                    {/* Barbearia */}
+                    <div className="p-6 hover:bg-muted/20 transition-colors">
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="w-12 h-12 rounded-xl bg-amber-500/20 flex items-center justify-center">
+                          <Banknote className="w-6 h-6 text-amber-500" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-muted-foreground">Barbearia (Dinheiro)</p>
+                          <p className="text-xs text-muted-foreground/70">Pagamentos presenciais</p>
+                        </div>
+                      </div>
+                      <p className="text-3xl font-bold text-amber-500">
+                        R$ {selectedReport.receita_barbearia.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </p>
+                    </div>
+
+                    {/* Créditos */}
+                    <div className="p-6 hover:bg-muted/20 transition-colors">
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="w-12 h-12 rounded-xl bg-purple-500/20 flex items-center justify-center">
+                          <CreditCard className="w-6 h-6 text-purple-500" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-muted-foreground">Créditos</p>
+                          <p className="text-xs text-muted-foreground/70">Créditos utilizados</p>
+                        </div>
+                      </div>
+                      <p className="text-3xl font-bold text-purple-500">
+                        R$ {selectedReport.receita_credito.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </p>
+                    </div>
+
+                    {/* Planos */}
+                    <div className="p-6 hover:bg-muted/20 transition-colors">
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="w-12 h-12 rounded-xl bg-cyan-500/20 flex items-center justify-center">
+                          <Gift className="w-6 h-6 text-cyan-500" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-muted-foreground">Planos/Assinaturas</p>
+                          <p className="text-xs text-muted-foreground/70">Mensalidades</p>
+                        </div>
+                      </div>
+                      <p className="text-3xl font-bold text-cyan-500">
+                        R$ {selectedReport.receita_plano.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Taxas */}
+                  <div className="border-t border-border/30 p-6 bg-red-500/5">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-lg bg-red-500/20 flex items-center justify-center">
+                          <AlertTriangle className="w-5 h-5 text-red-500" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-foreground">Taxas de Gateway (Asaas)</p>
+                          <p className="text-sm text-muted-foreground">Descontado automaticamente</p>
+                        </div>
+                      </div>
+                      <p className="text-2xl font-bold text-red-500">
+                        - R$ {selectedReport.taxas_asaas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.section>
+
+            {/* Seção: Estatísticas de Agendamentos */}
+            <motion.section 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+            >
+              <Card className="bg-card/50 backdrop-blur-xl border-border/50 overflow-hidden">
+                <CardHeader className="border-b border-border/30 bg-muted/20">
+                  <CardTitle className="text-xl flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center">
+                      <Calendar className="w-5 h-5 text-primary" />
+                    </div>
+                    Estatísticas de Agendamentos
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-6">
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+                    {/* Total */}
+                    <div className="relative overflow-hidden p-6 rounded-2xl bg-muted/30 border border-border/30 group hover:border-primary/30 transition-all">
+                      <div className="absolute top-0 right-0 w-20 h-20 bg-primary/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2" />
+                      <div className="relative">
+                        <div className="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center mb-4">
+                          <Users className="w-6 h-6 text-primary" />
+                        </div>
+                        <p className="text-4xl md:text-5xl font-bold text-foreground mb-2">
+                          {selectedReport.total_agendamentos}
+                        </p>
+                        <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+                          Total do Mês
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Concluídos */}
+                    <div className="relative overflow-hidden p-6 rounded-2xl bg-green-500/10 border border-green-500/30 group hover:border-green-500/50 transition-all">
+                      <div className="absolute top-0 right-0 w-20 h-20 bg-green-500/10 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2" />
+                      <div className="relative">
+                        <div className="w-12 h-12 rounded-xl bg-green-500/20 flex items-center justify-center mb-4">
+                          <CheckCircle2 className="w-6 h-6 text-green-500" />
+                        </div>
+                        <p className="text-4xl md:text-5xl font-bold text-green-500 mb-2">
+                          {selectedReport.agendamentos_completados}
+                        </p>
+                        <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+                          Concluídos
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Cancelados */}
+                    <div className="relative overflow-hidden p-6 rounded-2xl bg-red-500/10 border border-red-500/30 group hover:border-red-500/50 transition-all">
+                      <div className="absolute top-0 right-0 w-20 h-20 bg-red-500/10 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2" />
+                      <div className="relative">
+                        <div className="w-12 h-12 rounded-xl bg-red-500/20 flex items-center justify-center mb-4">
+                          <XCircle className="w-6 h-6 text-red-500" />
+                        </div>
+                        <p className="text-4xl md:text-5xl font-bold text-red-500 mb-2">
+                          {selectedReport.agendamentos_cancelados}
+                        </p>
+                        <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+                          Cancelados
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* No-shows */}
+                    <div className="relative overflow-hidden p-6 rounded-2xl bg-amber-500/10 border border-amber-500/30 group hover:border-amber-500/50 transition-all">
+                      <div className="absolute top-0 right-0 w-20 h-20 bg-amber-500/10 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2" />
+                      <div className="relative">
+                        <div className="w-12 h-12 rounded-xl bg-amber-500/20 flex items-center justify-center mb-4">
+                          <AlertTriangle className="w-6 h-6 text-amber-500" />
+                        </div>
+                        <p className="text-4xl md:text-5xl font-bold text-amber-500 mb-2">
+                          {selectedReport.agendamentos_no_show}
+                        </p>
+                        <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+                          No-shows
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.section>
+
+            {/* Seção: Análise IA */}
+            {selectedReport.resumo_ia && (
+              <motion.section 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4 }}
+              >
+                <Card className="bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border-primary/30 overflow-hidden">
+                  <CardHeader className="border-b border-primary/20 bg-primary/5">
+                    <CardTitle className="text-xl flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center">
+                        <Sparkles className="w-5 h-5 text-primary" />
+                      </div>
+                      Análise Inteligente
+                      <Badge variant="outline" className="ml-2 bg-primary/10 text-primary border-primary/20">
+                        IA
+                      </Badge>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-6">
+                    <p className="text-lg text-foreground/90 whitespace-pre-wrap leading-relaxed">
+                      {selectedReport.resumo_ia}
+                    </p>
+                  </CardContent>
+                </Card>
+              </motion.section>
+            )}
+          </main>
+        </div>
+      </div>
+    );
+  }
+
+  // ========== LISTA DE RELATÓRIOS ==========
   return (
     <div className="min-h-screen bg-[#0E0E11] relative overflow-hidden">
       {/* Efeitos de luz premium */}
@@ -260,379 +684,173 @@ Sistema de Gestão - Barbearia
           >
             <ArrowLeft className="w-5 h-5" />
           </Button>
-          <div>
+          <div className="flex-1">
             <h1 className="text-2xl md:text-3xl font-bold text-foreground flex items-center gap-3">
               <FileText className="w-8 h-8 text-primary" />
               Relatórios Mensais
             </h1>
             <p className="text-sm text-muted-foreground mt-1">
-              Histórico completo de todos os relatórios gerados
+              Selecione um mês para visualizar o relatório completo
             </p>
           </div>
+          <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 text-base px-4 py-2">
+            {reports.length} {reports.length === 1 ? 'relatório' : 'relatórios'}
+          </Badge>
         </motion.div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Lista de Relatórios */}
-          <motion.div 
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.1 }}
-            className="lg:col-span-5"
+        {/* Filtros */}
+        <motion.div 
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="flex flex-col sm:flex-row gap-4 mb-8"
+        >
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+            <Input
+              placeholder="Buscar por mês ou ano..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-12 h-12 bg-card/50 border-border/50 text-base"
+            />
+          </div>
+          <select
+            value={yearFilter}
+            onChange={(e) => setYearFilter(e.target.value)}
+            className="h-12 px-4 rounded-lg bg-card/50 border border-border/50 text-base focus:outline-none focus:ring-2 focus:ring-primary/50 min-w-[150px]"
           >
-            <Card className="bg-card/50 backdrop-blur-xl border-border/50">
-              <CardHeader className="pb-4">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg">Todos os Relatórios</CardTitle>
-                  <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
-                    {filteredReports.length} {filteredReports.length === 1 ? 'relatório' : 'relatórios'}
-                  </Badge>
-                </div>
-                
-                {/* Barra de busca e filtros */}
-                <div className="flex gap-2 mt-4">
-                  <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Buscar por mês ou ano..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-9 bg-background/50 border-border/50"
-                    />
-                  </div>
-                  <select
-                    value={yearFilter}
-                    onChange={(e) => setYearFilter(e.target.value)}
-                    className="px-3 py-2 rounded-md bg-background/50 border border-border/50 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-                  >
-                    <option value="">Todos os anos</option>
-                    {uniqueYears.map(year => (
-                      <option key={year} value={year}>{year}</option>
-                    ))}
-                  </select>
-                </div>
-              </CardHeader>
+            <option value="">Todos os anos</option>
+            {uniqueYears.map(year => (
+              <option key={year} value={year}>{year}</option>
+            ))}
+          </select>
+        </motion.div>
 
-              <CardContent className="p-0">
-                <ScrollArea className="h-[calc(100vh-320px)]">
-                  {filteredReports.length === 0 ? (
-                    <div className="text-center py-12 px-4">
-                      <FileText className="w-12 h-12 mx-auto text-muted-foreground/50 mb-4" />
-                      <p className="text-muted-foreground">Nenhum relatório encontrado</p>
-                      {searchTerm && (
-                        <p className="text-sm text-muted-foreground/70 mt-2">
-                          Tente buscar por outro termo
-                        </p>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="divide-y divide-border/30">
-                      {filteredReports.map((report, index) => (
-                        <motion.div
-                          key={report.id}
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: index * 0.05 }}
-                          onClick={() => {
-                            setSelectedReport(report);
-                            navigate(`/admin/relatorios-mensais?id=${report.id}`, { replace: true });
-                          }}
-                          className={`p-4 cursor-pointer transition-all hover:bg-muted/30 group ${
-                            selectedReport?.id === report.id ? 'bg-primary/10 border-l-2 border-l-primary' : ''
-                          }`}
-                        >
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                              <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-                                selectedReport?.id === report.id 
-                                  ? 'bg-primary text-primary-foreground' 
-                                  : 'bg-primary/10'
-                              }`}>
-                                <Calendar className={`w-5 h-5 ${selectedReport?.id === report.id ? '' : 'text-primary'}`} />
-                              </div>
-                              <div>
-                                <p className="font-semibold text-foreground">
-                                  {meses[report.mes - 1]} {report.ano}
-                                </p>
-                                <p className="text-sm text-muted-foreground">
-                                  {report.total_agendamentos} agendamentos • R$ {report.receita_total.toFixed(2)}
-                                </p>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-3">
-                              <div className="text-right hidden sm:block">
-                                <div className={`flex items-center gap-1 justify-end ${getTrendColor(report.variacao_receita_percentual)}`}>
-                                  {getTrendIcon(report.variacao_receita_percentual)}
-                                  <span className="text-sm font-medium">
-                                    {report.variacao_receita_percentual > 0 ? '+' : ''}{report.variacao_receita_percentual}%
-                                  </span>
-                                </div>
-                              </div>
-                              <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-foreground transition-colors" />
-                            </div>
-                          </div>
-                        </motion.div>
-                      ))}
-                    </div>
-                  )}
-                </ScrollArea>
-              </CardContent>
-            </Card>
+        {/* Grid de Relatórios */}
+        {filteredReports.length === 0 ? (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="text-center py-20"
+          >
+            <FileText className="w-20 h-20 mx-auto text-muted-foreground/30 mb-6" />
+            <h3 className="text-xl font-medium text-muted-foreground mb-2">
+              Nenhum relatório encontrado
+            </h3>
+            {searchTerm && (
+              <p className="text-muted-foreground/70">
+                Tente buscar por outro termo
+              </p>
+            )}
           </motion.div>
-
-          {/* Detalhes do Relatório */}
-          <motion.div 
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.2 }}
-            className="lg:col-span-7"
-          >
-            <AnimatePresence mode="wait">
-              {selectedReport ? (
-                <motion.div
-                  key={selectedReport.id}
-                  initial={{ opacity: 0, scale: 0.98 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.98 }}
-                  transition={{ duration: 0.2 }}
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredReports.map((report, index) => (
+              <motion.div
+                key={report.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.05 }}
+              >
+                <Card 
+                  className="bg-card/50 backdrop-blur-xl border-border/50 overflow-hidden cursor-pointer group hover:border-primary/50 hover:shadow-lg hover:shadow-primary/5 transition-all"
+                  onClick={() => openReportDetail(report)}
                 >
-                  <Card className="bg-card/50 backdrop-blur-xl border-border/50 overflow-hidden">
-                    {/* Header do relatório */}
-                    <div className="bg-gradient-to-r from-primary/20 via-primary/10 to-transparent p-6 border-b border-border/30">
-                      <div className="flex items-center justify-between">
+                  {/* Header colorido */}
+                  <div className="bg-gradient-to-r from-primary/20 via-primary/10 to-transparent p-6 border-b border-border/30">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <div className="w-14 h-14 rounded-2xl bg-primary/20 flex items-center justify-center group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+                          <Calendar className="w-7 h-7 text-primary group-hover:text-primary-foreground" />
+                        </div>
                         <div>
-                          <h2 className="text-2xl font-bold text-foreground">
-                            {meses[selectedReport.mes - 1]} {selectedReport.ano}
-                          </h2>
-                          <p className="text-sm text-muted-foreground mt-1">
-                            Gerado em {format(new Date(selectedReport.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-                          </p>
+                          <h3 className="text-xl font-bold text-foreground">
+                            {meses[report.mes - 1]}
+                          </h3>
+                          <p className="text-sm text-muted-foreground">{report.ano}</p>
                         </div>
-                        <div className="flex gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => downloadReport(selectedReport)}
-                            className="gap-2"
-                          >
-                            <Download className="w-4 h-4" />
-                            Baixar
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              setReportToDelete(selectedReport);
-                              setDeleteDialogOpen(true);
-                            }}
-                            className="gap-2 text-destructive hover:text-destructive hover:bg-destructive/10"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                            Excluir
-                          </Button>
-                        </div>
+                      </div>
+                      <div className={`flex items-center gap-2 ${getTrendColor(report.variacao_receita_percentual)}`}>
+                        {getTrendIcon(report.variacao_receita_percentual, "lg")}
+                        <span className="text-lg font-bold">
+                          {report.variacao_receita_percentual > 0 ? '+' : ''}{report.variacao_receita_percentual}%
+                        </span>
                       </div>
                     </div>
+                  </div>
 
-                    <ScrollArea className="h-[calc(100vh-400px)]">
-                      <div className="p-6 space-y-6">
-                        {/* Cards de métricas principais */}
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                          <Card className="bg-gradient-to-br from-green-500/10 to-green-500/5 border-green-500/20">
-                            <CardContent className="p-4">
-                              <div className="flex items-center gap-2 text-green-500 mb-2">
-                                <DollarSign className="w-4 h-4" />
-                                <span className="text-xs font-medium uppercase">Receita Total</span>
-                              </div>
-                              <p className="text-2xl font-bold text-green-500">
-                                R$ {selectedReport.receita_total.toFixed(2)}
-                              </p>
-                              <div className={`flex items-center gap-1 mt-1 ${getTrendColor(selectedReport.variacao_receita_percentual)}`}>
-                                {getTrendIcon(selectedReport.variacao_receita_percentual)}
-                                <span className="text-xs">
-                                  {selectedReport.variacao_receita_percentual > 0 ? '+' : ''}{selectedReport.variacao_receita_percentual}%
-                                </span>
-                              </div>
-                            </CardContent>
-                          </Card>
-
-                          <Card className="bg-gradient-to-br from-blue-500/10 to-blue-500/5 border-blue-500/20">
-                            <CardContent className="p-4">
-                              <div className="flex items-center gap-2 text-blue-500 mb-2">
-                                <Users className="w-4 h-4" />
-                                <span className="text-xs font-medium uppercase">Agendamentos</span>
-                              </div>
-                              <p className="text-2xl font-bold text-blue-500">
-                                {selectedReport.total_agendamentos}
-                              </p>
-                              <p className="text-xs text-muted-foreground mt-1">
-                                {selectedReport.agendamentos_completados} concluídos
-                              </p>
-                            </CardContent>
-                          </Card>
-
-                          <Card className="bg-gradient-to-br from-purple-500/10 to-purple-500/5 border-purple-500/20">
-                            <CardContent className="p-4">
-                              <div className="flex items-center gap-2 text-purple-500 mb-2">
-                                <BarChart3 className="w-4 h-4" />
-                                <span className="text-xs font-medium uppercase">Lucro Líquido</span>
-                              </div>
-                              <p className="text-2xl font-bold text-purple-500">
-                                R$ {selectedReport.lucro_liquido.toFixed(2)}
-                              </p>
-                              <p className="text-xs text-muted-foreground mt-1">
-                                -R$ {selectedReport.taxas_asaas.toFixed(2)} taxas
-                              </p>
-                            </CardContent>
-                          </Card>
-
-                          <Card className="bg-gradient-to-br from-amber-500/10 to-amber-500/5 border-amber-500/20">
-                            <CardContent className="p-4">
-                              <div className="flex items-center gap-2 text-amber-500 mb-2">
-                                <Star className="w-4 h-4" />
-                                <span className="text-xs font-medium uppercase">Taxa Sucesso</span>
-                              </div>
-                              <p className="text-2xl font-bold text-amber-500">
-                                {selectedReport.total_agendamentos > 0 
-                                  ? ((selectedReport.agendamentos_completados / selectedReport.total_agendamentos) * 100).toFixed(1) 
-                                  : 0}%
-                              </p>
-                              <p className="text-xs text-muted-foreground mt-1">
-                                {selectedReport.agendamentos_cancelados} cancelados
-                              </p>
-                            </CardContent>
-                          </Card>
-                        </div>
-
-                        {/* Origem da Receita */}
-                        <Card className="bg-background/30 border-border/30">
-                          <CardHeader className="pb-3">
-                            <CardTitle className="text-base flex items-center gap-2">
-                              <Wallet className="w-4 h-4 text-primary" />
-                              Origem da Receita
-                            </CardTitle>
-                          </CardHeader>
-                          <CardContent className="space-y-3">
-                            <div className="flex items-center justify-between py-2 border-b border-border/20">
-                              <div className="flex items-center gap-3">
-                                <div className="w-3 h-3 rounded-full bg-green-500" />
-                                <span className="text-sm text-muted-foreground">App (PIX/Cartão)</span>
-                              </div>
-                              <span className="font-semibold text-green-500">R$ {selectedReport.receita_app.toFixed(2)}</span>
-                            </div>
-                            <div className="flex items-center justify-between py-2 border-b border-border/20">
-                              <div className="flex items-center gap-3">
-                                <div className="w-3 h-3 rounded-full bg-amber-500" />
-                                <span className="text-sm text-muted-foreground">Barbearia (Dinheiro)</span>
-                              </div>
-                              <span className="font-semibold text-amber-500">R$ {selectedReport.receita_barbearia.toFixed(2)}</span>
-                            </div>
-                            <div className="flex items-center justify-between py-2 border-b border-border/20">
-                              <div className="flex items-center gap-3">
-                                <div className="w-3 h-3 rounded-full bg-purple-500" />
-                                <span className="text-sm text-muted-foreground">Créditos</span>
-                              </div>
-                              <span className="font-semibold text-purple-500">R$ {selectedReport.receita_credito.toFixed(2)}</span>
-                            </div>
-                            <div className="flex items-center justify-between py-2">
-                              <div className="flex items-center gap-3">
-                                <div className="w-3 h-3 rounded-full bg-cyan-500" />
-                                <span className="text-sm text-muted-foreground">Planos/Assinaturas</span>
-                              </div>
-                              <span className="font-semibold text-cyan-500">R$ {selectedReport.receita_plano.toFixed(2)}</span>
-                            </div>
-                          </CardContent>
-                        </Card>
-
-                        {/* Estatísticas de Agendamentos */}
-                        <Card className="bg-background/30 border-border/30">
-                          <CardHeader className="pb-3">
-                            <CardTitle className="text-base flex items-center gap-2">
-                              <Clock className="w-4 h-4 text-primary" />
-                              Estatísticas de Agendamentos
-                            </CardTitle>
-                          </CardHeader>
-                          <CardContent>
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                              <div className="text-center p-3 rounded-lg bg-muted/20">
-                                <p className="text-2xl font-bold text-foreground">{selectedReport.total_agendamentos}</p>
-                                <p className="text-xs text-muted-foreground">Total</p>
-                              </div>
-                              <div className="text-center p-3 rounded-lg bg-green-500/10">
-                                <p className="text-2xl font-bold text-green-500">{selectedReport.agendamentos_completados}</p>
-                                <p className="text-xs text-muted-foreground">Concluídos</p>
-                              </div>
-                              <div className="text-center p-3 rounded-lg bg-red-500/10">
-                                <p className="text-2xl font-bold text-red-500">{selectedReport.agendamentos_cancelados}</p>
-                                <p className="text-xs text-muted-foreground">Cancelados</p>
-                              </div>
-                              <div className="text-center p-3 rounded-lg bg-amber-500/10">
-                                <p className="text-2xl font-bold text-amber-500">{selectedReport.agendamentos_no_show}</p>
-                                <p className="text-xs text-muted-foreground">No-shows</p>
-                              </div>
-                            </div>
-                          </CardContent>
-                        </Card>
-
-                        {/* Análise IA */}
-                        {selectedReport.resumo_ia && (
-                          <Card className="bg-gradient-to-br from-primary/5 to-transparent border-primary/20">
-                            <CardHeader className="pb-3">
-                              <CardTitle className="text-base flex items-center gap-2">
-                                <Sparkles className="w-4 h-4 text-primary" />
-                                Análise Inteligente
-                              </CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                              <p className="text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed">
-                                {selectedReport.resumo_ia}
-                              </p>
-                            </CardContent>
-                          </Card>
-                        )}
+                  {/* Conteúdo */}
+                  <CardContent className="p-6">
+                    <div className="space-y-4">
+                      {/* Receita */}
+                      <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground">Receita Total</span>
+                        <span className="text-2xl font-bold text-green-500">
+                          R$ {report.receita_total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        </span>
                       </div>
-                    </ScrollArea>
-                  </Card>
-                </motion.div>
-              ) : (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="h-full flex items-center justify-center"
-                >
-                  <Card className="bg-card/30 backdrop-blur-xl border-border/30 p-12 text-center">
-                    <FileText className="w-16 h-16 mx-auto text-muted-foreground/30 mb-4" />
-                    <h3 className="text-lg font-medium text-muted-foreground">
-                      Selecione um relatório
-                    </h3>
-                    <p className="text-sm text-muted-foreground/70 mt-2">
-                      Clique em um relatório da lista para ver os detalhes
-                    </p>
-                  </Card>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </motion.div>
-        </div>
+
+                      {/* Agendamentos */}
+                      <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground">Agendamentos</span>
+                        <span className="text-xl font-semibold text-foreground">
+                          {report.total_agendamentos}
+                        </span>
+                      </div>
+
+                      {/* Detalhes pequenos */}
+                      <div className="pt-4 border-t border-border/30 flex items-center justify-between text-sm">
+                        <div className="flex items-center gap-4">
+                          <span className="flex items-center gap-1 text-green-500">
+                            <CheckCircle2 className="w-4 h-4" />
+                            {report.agendamentos_completados}
+                          </span>
+                          <span className="flex items-center gap-1 text-red-500">
+                            <XCircle className="w-4 h-4" />
+                            {report.agendamentos_cancelados}
+                          </span>
+                        </div>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="gap-2 text-primary hover:text-primary"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openReportDetail(report);
+                          }}
+                        >
+                          <Eye className="w-4 h-4" />
+                          Ver detalhes
+                          <ChevronRight className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Dialog de confirmação de exclusão */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent className="bg-card border-border">
           <AlertDialogHeader>
-            <AlertDialogTitle>Excluir Relatório?</AlertDialogTitle>
-            <AlertDialogDescription>
+            <AlertDialogTitle className="text-xl">Excluir Relatório?</AlertDialogTitle>
+            <AlertDialogDescription className="text-base">
               Você está prestes a excluir o relatório de{' '}
-              <strong>{reportToDelete ? `${meses[reportToDelete.mes - 1]}/${reportToDelete.ano}` : ''}</strong>.
+              <strong className="text-foreground">{reportToDelete ? `${meses[reportToDelete.mes - 1]}/${reportToDelete.ano}` : ''}</strong>.
               <br /><br />
               Esta ação não pode ser desfeita.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel disabled={deleting} className="h-11">Cancelar</AlertDialogCancel>
             <AlertDialogAction 
               onClick={handleDeleteReport}
               disabled={deleting}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 h-11"
             >
               {deleting ? (
                 <>
