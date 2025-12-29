@@ -22,12 +22,14 @@ import { AdminDev } from "@/components/admin/AdminDev";
 import { AdminSuportePanel } from "@/components/admin/AdminSuportePanel";
 import { AdminSuporteConfig } from "@/components/admin/AdminSuporteConfig";
 import AdminHorarios from "@/components/admin/AdminHorarios";
+import AdminBarbeiros from "@/components/admin/AdminBarbeiros";
 
 // Mapeamento de rotas para títulos
 const routeTitles: Record<string, string> = {
   "/admin": "Visão Geral",
   "/admin/agenda": "Agenda",
   "/admin/confirmacoes-pendentes": "Confirmações",
+  "/admin/barbeiros": "Barbeiros",
   "/admin/clientes": "Clientes",
   "/admin/financeiro": "Financeiro",
   "/admin/relatorios": "Relatórios",
@@ -170,6 +172,7 @@ const Admin = () => {
                 <Route index element={<AdminDashboard />} />
                 <Route path="agenda" element={<AdminAgenda />} />
                 <Route path="confirmacoes-pendentes" element={<AdminConfirmacoesPendentes />} />
+                <Route path="barbeiros" element={<AdminBarbeiros />} />
                 <Route path="clientes" element={<AdminClientes />} />
                 <Route path="financeiro" element={<AdminFinanceiro />} />
                 <Route path="relatorios" element={<AdminRelatorios />} />
@@ -230,6 +233,7 @@ const Admin = () => {
                   <Route index element={<AdminDashboard />} />
                   <Route path="agenda" element={<AdminAgenda />} />
                   <Route path="confirmacoes-pendentes" element={<AdminConfirmacoesPendentes />} />
+                  <Route path="barbeiros" element={<AdminBarbeiros />} />
                   <Route path="clientes" element={<AdminClientes />} />
                   <Route path="financeiro" element={<AdminFinanceiro />} />
                   <Route path="relatorios" element={<AdminRelatorios />} />
