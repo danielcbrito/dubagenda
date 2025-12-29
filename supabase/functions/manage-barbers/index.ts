@@ -5,19 +5,40 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-interface CreateBarberRequest {
-  action: 'create' | 'update' | 'delete' | 'list';
+type Action = 'create' | 'update' | 'delete' | 'list';
+
+interface BarberRequest {
+  action: Action;
   email?: string;
   password?: string;
   nome?: string;
   telefone?: string;
   apelido?: string;
-  comissao_pct?: number;
   barbeiro_id?: string;
   ativo?: boolean;
 }
 
+/**
+ * Helper para respostas JSON.
+ *
+ * Importante: para o front não cair no erro genérico “Edge Function returned a non-2xx status code”,
+ * esta função sempre responde com HTTP 200 e controla erros via { success: false, error }.
+ */
+function json(payload: unknown) {
+  return new Response(JSON.stringify(payload), {
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    status: 200,
+  });
+}
+
+function getBearerToken(authHeader: string | null) {
+  if (!authHeader) return null;
+  const token = authHeader.replace(/^Bearer\s+/i, '').trim();
+  return token.length ? token : null;
+}
+
 Deno.serve(async (req) => {
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -25,99 +46,94 @@ Deno.serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
-    
+
     // Client com service role para operações admin
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
       auth: {
         autoRefreshToken: false,
-        persistSession: false
-      }
+        persistSession: false,
+      },
     });
 
-    // Verificar autenticação do chamador
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      return new Response(
-        JSON.stringify({ success: false, error: 'Não autorizado' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
-      );
+    // Autenticação do chamador
+    const token = getBearerToken(req.headers.get('Authorization'));
+    if (!token) {
+      return json({ success: false, error: 'Usuário não autenticado' });
     }
 
-    // Extrair o token JWT
-    const token = authHeader.replace('Bearer ', '');
-    
-    // Verificar usuário usando o token diretamente com service role
-    const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(token);
-    
+    const {
+      data: { user },
+      error: userError,
+    } = await supabaseAdmin.auth.getUser(token);
+
     if (userError || !user) {
-      console.error('Auth error:', userError);
-      return new Response(
-        JSON.stringify({ success: false, error: 'Usuário não autenticado' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
-      );
+      console.error('[manage-barbers] auth.getUser error:', userError);
+      return json({ success: false, error: 'Usuário não autenticado' });
     }
 
     // Verificar role admin
-    const { data: roleData } = await supabaseAdmin
+    const { data: roleData, error: roleError } = await supabaseAdmin
       .from('user_roles')
       .select('role')
       .eq('user_id', user.id)
       .eq('role', 'admin')
-      .single();
+      .maybeSingle();
 
-    if (!roleData) {
-      return new Response(
-        JSON.stringify({ success: false, error: 'Apenas administradores podem gerenciar barbeiros' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 403 }
-      );
+    if (roleError) {
+      console.error('[manage-barbers] role check error:', roleError);
+      return json({ success: false, error: 'Erro ao validar permissões' });
     }
 
-    const body: CreateBarberRequest = await req.json();
+    if (!roleData) {
+      return json({ success: false, error: 'Apenas administradores podem gerenciar barbeiros' });
+    }
+
+    const body = (await req.json().catch(() => null)) as BarberRequest | null;
+    if (!body?.action) {
+      return json({ success: false, error: 'Ação inválida' });
+    }
 
     switch (body.action) {
       case 'create': {
         if (!body.email || !body.password || !body.nome || !body.apelido) {
-          return new Response(
-            JSON.stringify({ success: false, error: 'Email, senha, nome e apelido são obrigatórios' }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-          );
+          return json({
+            success: false,
+            error: 'Email, senha, nome e apelido são obrigatórios',
+          });
         }
 
         // Verificar se email já existe em barbeiros
-        const { data: existingBarber } = await supabaseAdmin
+        const { data: existingBarber, error: existingError } = await supabaseAdmin
           .from('barbeiros')
           .select('id')
           .eq('email', body.email)
-          .single();
+          .maybeSingle();
 
-        if (existingBarber) {
-          return new Response(
-            JSON.stringify({ success: false, error: 'Já existe um barbeiro com este email' }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-          );
+        if (existingError) {
+          console.error('[manage-barbers] existing barber check error:', existingError);
+          return json({ success: false, error: 'Erro ao validar barbeiro existente' });
         }
 
-        // Criar registro de barbeiro (sem user_id ainda - será preenchido quando o barbeiro fizer login)
+        if (existingBarber) {
+          return json({ success: false, error: 'Já existe um barbeiro com este email' });
+        }
+
+        // Criar registro de barbeiro
         const { data: barber, error: barberError } = await supabaseAdmin
           .from('barbeiros')
           .insert({
             apelido: body.apelido,
             email: body.email,
-            telefone: body.telefone,
-            comissao_pct: body.comissao_pct || 30,
+            telefone: body.telefone ?? null,
             ativo: true,
-            setup_completed: false
+            setup_completed: false,
           })
           .select()
           .single();
 
-        if (barberError) {
-          console.error('Error creating barber record:', barberError);
-          return new Response(
-            JSON.stringify({ success: false, error: 'Erro ao criar registro do barbeiro' }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
-          );
+        if (barberError || !barber) {
+          console.error('[manage-barbers] error creating barber record:', barberError);
+          return json({ success: false, error: 'Erro ao criar registro do barbeiro' });
         }
 
         // Criar usuário no auth
@@ -127,68 +143,75 @@ Deno.serve(async (req) => {
           email_confirm: true,
           user_metadata: {
             nome: body.nome,
-            telefone: body.telefone
-          }
+            telefone: body.telefone ?? null,
+          },
         });
 
-        if (authError) {
+        if (authError || !authUser?.user) {
           // Rollback - deletar barbeiro criado
           await supabaseAdmin.from('barbeiros').delete().eq('id', barber.id);
-          
-          console.error('Error creating auth user:', authError);
-          
-          // Mensagem mais amigável para email duplicado
-          let errorMessage = authError.message;
-          if (authError.message.includes('already been registered') || authError.message.includes('email_exists')) {
+
+          console.error('[manage-barbers] Error creating auth user:', authError);
+
+          let errorMessage = authError?.message ?? 'Erro ao criar usuário';
+          if (
+            errorMessage.includes('already been registered') ||
+            errorMessage.includes('email_exists')
+          ) {
             errorMessage = 'Já existe uma conta com este email. Use outro email ou recupere a senha.';
           }
-          
-          return new Response(
-            JSON.stringify({ success: false, error: errorMessage }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-          );
+
+          return json({ success: false, error: errorMessage });
         }
 
-        // O trigger handle_new_user vai associar automaticamente o user_id ao barbeiro
-        // e criar a role 'barber' - mas vamos garantir aqui também
-        
         // Atualizar barbeiro com user_id
-        await supabaseAdmin
+        const { error: linkError } = await supabaseAdmin
           .from('barbeiros')
           .update({ user_id: authUser.user.id })
           .eq('id', barber.id);
 
-        console.log(`Barbeiro criado com sucesso: ${body.apelido} (${body.email})`);
+        if (linkError) {
+          console.error('[manage-barbers] error linking barber to user:', linkError);
+        }
 
-        return new Response(
-          JSON.stringify({ 
-            success: true, 
-            data: {
-              barbeiro_id: barber.id,
-              user_id: authUser.user.id,
-              email: body.email,
-              apelido: body.apelido
-            },
-            message: 'Barbeiro criado com sucesso!'
-          }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
-        );
+        // Garantir role barber (não depende de trigger)
+        const { error: roleInsertError } = await supabaseAdmin
+          .from('user_roles')
+          .insert({ user_id: authUser.user.id, role: 'barber' })
+          .select()
+          .maybeSingle();
+
+        if (roleInsertError) {
+          // Não bloqueia o fluxo; apenas loga.
+          console.error('[manage-barbers] error inserting barber role:', roleInsertError);
+        }
+
+        console.log(`[manage-barbers] Barbeiro criado: ${body.apelido} (${body.email})`);
+
+        return json({
+          success: true,
+          data: {
+            barbeiro_id: barber.id,
+            user_id: authUser.user.id,
+            email: body.email,
+            apelido: body.apelido,
+          },
+          message: 'Barbeiro criado com sucesso!',
+        });
       }
 
       case 'update': {
         if (!body.barbeiro_id) {
-          return new Response(
-            JSON.stringify({ success: false, error: 'ID do barbeiro é obrigatório' }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-          );
+          return json({ success: false, error: 'ID do barbeiro é obrigatório' });
         }
 
-        const updateData: Record<string, unknown> = {};
-        if (body.apelido) updateData.apelido = body.apelido;
-        if (body.telefone) updateData.telefone = body.telefone;
-        if (body.comissao_pct !== undefined) updateData.comissao_pct = body.comissao_pct;
-        if (body.ativo !== undefined) updateData.ativo = body.ativo;
-        updateData.updated_at = new Date().toISOString();
+        const updateData: Record<string, unknown> = {
+          updated_at: new Date().toISOString(),
+        };
+
+        if (typeof body.apelido === 'string') updateData.apelido = body.apelido;
+        if (typeof body.telefone === 'string') updateData.telefone = body.telefone;
+        if (typeof body.ativo === 'boolean') updateData.ativo = body.ativo;
 
         const { error: updateError } = await supabaseAdmin
           .from('barbeiros')
@@ -196,108 +219,87 @@ Deno.serve(async (req) => {
           .eq('id', body.barbeiro_id);
 
         if (updateError) {
-          return new Response(
-            JSON.stringify({ success: false, error: 'Erro ao atualizar barbeiro' }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
-          );
+          console.error('[manage-barbers] update error:', updateError);
+          return json({ success: false, error: 'Erro ao atualizar barbeiro' });
         }
 
-        return new Response(
-          JSON.stringify({ success: true, message: 'Barbeiro atualizado com sucesso!' }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
-        );
+        return json({ success: true, message: 'Barbeiro atualizado com sucesso!' });
       }
 
       case 'delete': {
         if (!body.barbeiro_id) {
-          return new Response(
-            JSON.stringify({ success: false, error: 'ID do barbeiro é obrigatório' }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-          );
+          return json({ success: false, error: 'ID do barbeiro é obrigatório' });
         }
 
         // Buscar barbeiro para pegar user_id
-        const { data: barber } = await supabaseAdmin
+        const { data: barber, error: fetchError } = await supabaseAdmin
           .from('barbeiros')
           .select('user_id')
           .eq('id', body.barbeiro_id)
-          .single();
+          .maybeSingle();
+
+        if (fetchError) {
+          console.error('[manage-barbers] delete fetch error:', fetchError);
+        }
 
         // Deletar usuário auth se existir
         if (barber?.user_id) {
-          await supabaseAdmin.auth.admin.deleteUser(barber.user_id);
+          const { error: delUserError } = await supabaseAdmin.auth.admin.deleteUser(barber.user_id);
+          if (delUserError) {
+            console.error('[manage-barbers] delete auth user error:', delUserError);
+          }
         }
 
-        // Deletar barbeiro (cascade vai deletar horários)
+        // Deletar barbeiro
         const { error: deleteError } = await supabaseAdmin
           .from('barbeiros')
           .delete()
           .eq('id', body.barbeiro_id);
 
         if (deleteError) {
-          return new Response(
-            JSON.stringify({ success: false, error: 'Erro ao deletar barbeiro' }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
-          );
+          console.error('[manage-barbers] delete barber error:', deleteError);
+          return json({ success: false, error: 'Erro ao deletar barbeiro' });
         }
 
-        return new Response(
-          JSON.stringify({ success: true, message: 'Barbeiro removido com sucesso!' }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
-        );
+        return json({ success: true, message: 'Barbeiro removido com sucesso!' });
       }
 
       case 'list': {
-        // Buscar barbeiros primeiro
         const { data: barbers, error: listError } = await supabaseAdmin
           .from('barbeiros')
           .select('*')
           .order('apelido');
 
         if (listError) {
-          console.error('Error listing barbers:', listError);
-          return new Response(
-            JSON.stringify({ success: false, error: 'Erro ao listar barbeiros' }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
-          );
+          console.error('[manage-barbers] list error:', listError);
+          return json({ success: false, error: 'Erro ao listar barbeiros' });
         }
 
-        // Enriquecer com dados do profile se existir user_id
-        const enrichedBarbers = await Promise.all(
-          (barbers || []).map(async (barber) => {
-            if (barber.user_id) {
-              const { data: profile } = await supabaseAdmin
-                .from('profiles')
-                .select('nome, telefone')
-                .eq('id', barber.user_id)
-                .single();
-              return { ...barber, profiles: profile };
-            }
-            return { ...barber, profiles: null };
+        const enriched = await Promise.all(
+          (barbers ?? []).map(async (barber) => {
+            if (!barber.user_id) return { ...barber, profiles: null };
+
+            const { data: profile } = await supabaseAdmin
+              .from('profiles')
+              .select('nome, telefone')
+              .eq('id', barber.user_id)
+              .maybeSingle();
+
+            return { ...barber, profiles: profile ?? null };
           })
         );
 
-        return new Response(
-          JSON.stringify({ success: true, data: enrichedBarbers }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
-        );
+        return json({ success: true, data: enriched });
       }
 
       default:
-        return new Response(
-          JSON.stringify({ success: false, error: 'Ação inválida' }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-        );
+        return json({ success: false, error: 'Ação inválida' });
     }
-
   } catch (error) {
-    console.error('Error in manage-barbers:', error);
-    return new Response(
-      JSON.stringify({ 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Erro desconhecido' 
-      }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
-    );
+    console.error('[manage-barbers] unexpected error:', error);
+    return json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Erro desconhecido',
+    });
   }
 });
