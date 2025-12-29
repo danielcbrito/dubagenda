@@ -12,6 +12,7 @@ import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import { useSlotAvailability } from "@/hooks/useSlotAvailability";
 import { sendNovoAgendamentoEvent, sendRemarcacaoConcluidaEvent } from "@/lib/webhookService";
+import { BarberSelection } from "@/components/booking/BarberSelection";
 
 interface Service {
   id: string;
@@ -34,6 +35,12 @@ interface ActiveSubscription {
   servico: Service | null;
 }
 
+interface Barbeiro {
+  id: string;
+  apelido: string;
+  foto_url: string | null;
+}
+
 const ClienteAgendar = () => {
   const navigate = useNavigate();
   const [services, setServices] = useState<Service[]>([]);
@@ -42,6 +49,10 @@ const ClienteAgendar = () => {
   const [selectedTime, setSelectedTime] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState(1);
+  
+  // NOVO: Estado para seleção de barbeiro
+  const [barbeiros, setBarbeiros] = useState<Barbeiro[]>([]);
+  const [selectedBarbeiroId, setSelectedBarbeiroId] = useState<string | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<'pix' | 'card' | 'cash'>('pix');
   const [processingPayment, setProcessingPayment] = useState(false);
   const [pixQrCode, setPixQrCode] = useState<string | null>(null);
@@ -108,6 +119,9 @@ const ClienteAgendar = () => {
 
   useEffect(() => {
     const initializeBooking = async () => {
+      // Carregar barbeiros disponíveis primeiro
+      await loadBarbeiros();
+      
       // Carregar dados essenciais primeiro (evita "flash" da lista de serviços para assinantes)
       await loadUserCredits();
       await loadAvailableRedemptions(); // Carregar resgates disponíveis
@@ -135,15 +149,14 @@ const ClienteAgendar = () => {
       const subscription = await loadActiveSubscription();
 
       // Se usuário é assinante com serviço vinculado e ainda tem uso do plano,
-      // pré-selecionar e pular step 1 sem carregar lista de serviços (UX mais limpa)
+      // pré-selecionar serviço (mas ainda precisa escolher barbeiro no step 1)
       if (subscription?.servico) {
         const restantes = subscription.limite_agendamentos_mes - subscription.agendamentos_usados;
 
         if (restantes > 0) {
           console.log('[initializeBooking] Assinante detectado! Pré-selecionando serviço:', subscription.servico.nome);
           setSelectedServices([subscription.servico]);
-          setStep(2); // Ir direto para seleção de data
-          // Removido toast de "Plano" - usuário já sabe que tem plano
+          // Mantém no step 1 para escolher barbeiro primeiro
           return;
         }
 
@@ -157,6 +170,17 @@ const ClienteAgendar = () => {
 
     initializeBooking();
   }, []);
+  
+  // Carregar barbeiros ativos
+  const loadBarbeiros = async () => {
+    const { data } = await supabase
+      .from("barbeiros")
+      .select("id, apelido, foto_url")
+      .eq("ativo", true)
+      .order("apelido");
+    
+    setBarbeiros(data || []);
+  };
 
 
   // Lock body scroll and set dynamic viewport height for mobile
@@ -482,21 +506,28 @@ const ClienteAgendar = () => {
   };
 
   const handleNextStep = async () => {
-    if (step === 1 && selectedServices.length === 0) {
+    // Step 1: Seleção de barbeiro
+    if (step === 1 && !selectedBarbeiroId) {
+      toast.error("Selecione um barbeiro");
+      return;
+    }
+    
+    // Step 2: Seleção de serviço
+    if (step === 2 && selectedServices.length === 0) {
       toast.error("Selecione pelo menos um serviço");
       return;
     }
-    if (step === 2 && !selectedDate) {
+    if (step === 3 && !selectedDate) {
       toast.error("Selecione uma data");
       return;
     }
-    if (step === 3 && !selectedTime) {
+    if (step === 4 && !selectedTime) {
       toast.error("Selecione um horário");
       return;
     }
     
-    // VALIDAÇÃO CRÍTICA: Verificar disponibilidade do slot ANTES de avançar do step 3
-    if (step === 3 && selectedDate && selectedTime) {
+    // VALIDAÇÃO CRÍTICA: Verificar disponibilidade do slot ANTES de avançar do step 4 (horário)
+    if (step === 4 && selectedDate && selectedTime) {
       setLoading(true);
       try {
         // Usar o hook para verificar disponibilidade (double-check direto no banco)
@@ -521,22 +552,22 @@ const ClienteAgendar = () => {
       }
     }
     
-    // If rescheduling and in step 3 (time selection), skip to confirmation
-    if (isRescheduling && step === 3) {
-      setStep(5); // Go to confirmation step for reschedule
+    // If rescheduling and in step 4 (time selection), skip to confirmation
+    if (isRescheduling && step === 4) {
+      setStep(6); // Go to confirmation step for reschedule
       return;
     }
     
     // PLANO: só pular pagamento quando o agendamento é elegível (serviço do plano + dentro do limite)
-    if (step === 3 && isPlanEligible) {
+    if (step === 4 && isPlanEligible) {
       console.log('[handleNextStep] Agendamento via PLANO elegível, pulando pagamento');
-      setStep(5);
+      setStep(6);
       return;
     }
 
     // Se o usuário escolheu o serviço do plano mas já atingiu o limite, segue fluxo avulso (pagamento)
     if (
-      step === 3 &&
+      step === 4 &&
       !isRescheduling &&
       activeSubscription?.servico &&
       selectedServices.length === 1 &&
@@ -547,13 +578,13 @@ const ClienteAgendar = () => {
     }
 
     
-    // Se créditos cobrem 100% do valor, pular step 4 (pagamento) e ir direto para confirmação
-    if (step === 3 && !isRescheduling) {
+    // Se créditos cobrem 100% do valor, pular step 5 (pagamento) e ir direto para confirmação
+    if (step === 4 && !isRescheduling) {
       const totalPrice = getTotalPrice();
       if (availableCredits >= totalPrice) {
         console.log('[handleNextStep] Créditos cobrem 100%, pulando para confirmação');
         setPaymentMethod('cash'); // Define como cash pois será pago com créditos
-        setStep(5); // Pula step 4 e vai direto para confirmação
+        setStep(6); // Pula step 5 e vai direto para confirmação
         return;
       }
     }
@@ -1308,15 +1339,52 @@ const ClienteAgendar = () => {
 
       <div className="flex-1 overflow-hidden">
         <div className="h-full max-w-4xl mx-auto flex flex-col">
-          {/* Step 1: Select Services */}
+          {/* Step 1: Select Barber */}
           {step === 1 && (
+            <div className="services-list flex-1 p-4 md:p-6">
+              <div className="space-y-3 mb-4">
+                <div>
+                  <h3 className="text-sm font-semibold mb-1 text-muted-foreground">Etapa 1 de 6</h3>
+                  <h2 className="text-xl md:text-2xl font-bold mb-2 responsive-title">Escolha seu Barbeiro</h2>
+                  <p className="text-sm text-muted-foreground responsive-text">
+                    Selecione o profissional de sua preferência
+                  </p>
+                </div>
+              </div>
+              
+              <BarberSelection 
+                barbeiros={barbeiros}
+                selectedBarbeiroId={selectedBarbeiroId}
+                onSelect={(id) => setSelectedBarbeiroId(id)}
+              />
+              
+              {selectedBarbeiroId && (
+                <div className="mt-6">
+                  <Button
+                    onClick={handleNextStep}
+                    className="relative w-full h-14 font-bold text-base tracking-wide overflow-hidden group ripple"
+                    style={{
+                      background: 'linear-gradient(135deg, hsl(0 64% 52%), hsl(0 64% 42%))',
+                      boxShadow: '0 8px 24px rgba(212, 49, 49, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1)'
+                    }}
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
+                    <span className="relative">Continuar</span>
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Step 2: Select Services */}
+          {step === 2 && (
             <>
               {/* Services List - Scrollable Container */}
               <div ref={servicesListRef} className="services-list flex-1 p-4 md:p-6">
 
                 <div className="space-y-3 mb-4">
                   <div>
-                    <h3 className="text-sm font-semibold mb-1 text-muted-foreground">Etapa 1 de 5</h3>
+                    <h3 className="text-sm font-semibold mb-1 text-muted-foreground">Etapa 2 de 6</h3>
                     <h2 className="text-xl md:text-2xl font-bold mb-2 responsive-title">Escolha os Serviços</h2>
                     <p className="text-sm text-muted-foreground responsive-text">
                       Selecione um ou mais serviços
@@ -1406,7 +1474,7 @@ const ClienteAgendar = () => {
 
                     {/* Premium CTA Button */}
                     <Button
-                      onClick={() => setStep(2)}
+                      onClick={() => setStep(3)}
                       className="relative w-full h-14 font-bold text-base tracking-wide overflow-hidden group ripple"
                       style={{
                         background: 'linear-gradient(135deg, hsl(0 64% 52%), hsl(0 64% 42%))',
@@ -1423,8 +1491,8 @@ const ClienteAgendar = () => {
             </>
           )}
 
-        {/* Step 2: Select Date */}
-        {step === 2 && (
+        {/* Step 3: Select Date */}
+        {step === 3 && (
           <div className="scrollable-content p-4 md:p-6">
             <div className="space-y-4 max-w-4xl mx-auto">
               <div>
