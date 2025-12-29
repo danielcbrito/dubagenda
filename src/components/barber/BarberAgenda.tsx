@@ -1,280 +1,353 @@
-import { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Calendar } from '@/components/ui/calendar';
-import { Skeleton } from '@/components/ui/skeleton';
-import { supabase } from '@/integrations/supabase/client';
-import { format, addDays, subDays } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
-import { toast } from 'sonner';
-import { 
-  ChevronLeft, 
-  ChevronRight, 
-  Calendar as CalendarIcon,
-  Clock,
-  User,
-  Check,
-  X
-} from 'lucide-react';
+import { useState, useEffect, useCallback, useRef } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { format, startOfWeek, addDays } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { motion } from "framer-motion";
+import { LayoutGrid, List, Plus, Filter } from "lucide-react";
+import { cn } from "@/lib/utils";
+
+import { CompactWeekSelector } from "@/components/admin/agenda/CompactWeekSelector";
+import { PremiumTimeline } from "@/components/admin/agenda/PremiumTimeline";
+import { EnhancedWeekView } from "@/components/admin/agenda/EnhancedWeekView";
+import { AppointmentDetailsSidebar } from "@/components/admin/AppointmentDetailsSidebar";
+import { ConfirmAttendanceModal } from "@/components/admin/ConfirmAttendanceModal";
+import { MobileManualBookingModal } from "@/components/admin/mobile/MobileManualBookingModal";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import type { TimelineAppointment } from "@/components/admin/AdminAgenda";
 
 interface BarberAgendaProps {
   barbeiroId: string;
 }
 
+type ViewMode = "day" | "week";
+
 export function BarberAgenda({ barbeiroId }: BarberAgendaProps) {
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const [appointments, setAppointments] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [date, setDate] = useState<Date>(new Date());
+  const [appointments, setAppointments] = useState<TimelineAppointment[]>([]);
+  const [allAppointments, setAllAppointments] = useState<Array<{ data: string; status: string }>>([]);
+  const [selectedAppointment, setSelectedAppointment] = useState<TimelineAppointment | null>(null);
+  const [confirmModalAppointment, setConfirmModalAppointment] = useState<TimelineAppointment | null>(null);
+  const [manualBookingModalOpen, setManualBookingModalOpen] = useState(false);
+  const [selectedEmptySlot, setSelectedEmptySlot] = useState({ date: "", time: "" });
+  const [viewMode, setViewMode] = useState<ViewMode>("week");
+  const [filterService, setFilterService] = useState<string>("all");
+  const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [services, setServices] = useState<Array<{ id: string; nome: string }>>([]);
+  const [showFilters, setShowFilters] = useState(false);
+  
+  const isInitialLoad = useRef(true);
 
   useEffect(() => {
-    loadAppointments();
-  }, [selectedDate, barbeiroId]);
+    loadServices();
+  }, []);
 
-  const loadAppointments = async () => {
-    setLoading(true);
+  const loadAppointments = useCallback(async (selectedDate: Date, silent = false) => {
     try {
-      const dateStr = format(selectedDate, 'yyyy-MM-dd');
+      const weekStart = startOfWeek(selectedDate, { weekStartsOn: 1 });
+      const weekDates = Array.from({ length: 6 }, (_, i) => 
+        format(addDays(weekStart, i), 'yyyy-MM-dd')
+      );
       
       const { data, error } = await supabase
-        .from('agendamentos')
-        .select(`
-          *,
-          profiles:user_id (nome, telefone),
-          servicos:servico_id (nome, preco, duracao_minutos)
-        `)
-        .eq('barbeiro_id', barbeiroId)
-        .eq('data', dateStr)
-        .not('status', 'in', '("cancelled_by_user","cancelled_by_admin","excluido")')
-        .order('hora');
+        .from("agendamentos")
+        .select("*")
+        .eq("barbeiro_id", barbeiroId)
+        .in("data", weekDates)
+        .in("status", ["pending", "confirmed", "completed"])
+        .order("hora", { ascending: true });
 
       if (error) throw error;
-      setAppointments(data || []);
-    } catch (error) {
-      console.error('Erro ao carregar agenda:', error);
-      toast.error('Erro ao carregar agenda');
-    } finally {
-      setLoading(false);
-    }
-  };
 
-  const handleConfirm = async (appointmentId: string) => {
-    try {
-      const { error } = await supabase
-        .from('agendamentos')
-        .update({ 
-          barbeiro_confirmou: true,
-          status: 'confirmed'
+      const appointmentsWithDetails = await Promise.all(
+        (data || []).map(async (apt) => {
+          const [profileRes, servicoRes, pagamentosRes] = await Promise.all([
+            supabase.from("profiles").select("nome, cpf").eq("id", apt.user_id).maybeSingle(),
+            supabase.from("servicos").select("nome, duracao_minutos").eq("id", apt.servico_id).maybeSingle(),
+            supabase.from("pagamentos").select("metodo, status, valor").eq("agendamento_id", apt.id)
+          ]);
+
+          return {
+            ...apt,
+            profile: profileRes.data || null,
+            servico: servicoRes.data || null,
+            pagamentos: pagamentosRes.data || [],
+          };
         })
-        .eq('id', appointmentId);
+      );
 
-      if (error) throw error;
-      toast.success('Agendamento confirmado!');
-      loadAppointments();
+      setAppointments(appointmentsWithDetails);
+      if (isInitialLoad.current) {
+        isInitialLoad.current = false;
+      }
     } catch (error) {
-      toast.error('Erro ao confirmar agendamento');
+      console.error("Error loading appointments:", error);
+      if (!silent) toast.error("Erro ao carregar agendamentos");
     }
-  };
+  }, [barbeiroId]);
 
-  const handleComplete = async (appointmentId: string) => {
+  const loadAllAppointments = useCallback(async () => {
     try {
-      const { error } = await supabase
-        .from('agendamentos')
-        .update({ status: 'completed' })
-        .eq('id', appointmentId);
+      const { data, error } = await supabase
+        .from("agendamentos")
+        .select("data, status")
+        .eq("barbeiro_id", barbeiroId)
+        .in("status", ["pending", "confirmed", "completed"]);
 
       if (error) throw error;
-      toast.success('Atendimento concluído!');
-      loadAppointments();
+      setAllAppointments(data || []);
     } catch (error) {
-      toast.error('Erro ao concluir atendimento');
+      console.error("Error loading all appointments:", error);
     }
-  };
+  }, [barbeiroId]);
 
-  const handleNoShow = async (appointmentId: string) => {
+  useEffect(() => {
+    loadAppointments(date);
+    loadAllAppointments();
+
+    const channel = supabase
+      .channel('barber-agenda-premium')
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'agendamentos',
+        filter: `barbeiro_id=eq.${barbeiroId}`
+      }, (payload) => {
+        loadAppointments(date, true);
+        loadAllAppointments();
+        
+        if (payload.eventType === 'INSERT') {
+          toast.success("Novo agendamento recebido!");
+        }
+      })
+      .subscribe();
+
+    const pollingInterval = setInterval(() => {
+      loadAppointments(date, true);
+    }, 15000);
+
+    return () => {
+      supabase.removeChannel(channel);
+      clearInterval(pollingInterval);
+    };
+  }, [date, loadAppointments, loadAllAppointments, barbeiroId]);
+
+  useEffect(() => {
+    const checkAppointmentCompletion = () => {
+      const now = new Date();
+      const currentDateStr = format(now, 'yyyy-MM-dd');
+      
+      const todaysAppointments = appointments.filter(apt => apt.data === currentDateStr);
+
+      todaysAppointments.forEach(apt => {
+        if (apt.status === 'completed' || apt.status === 'cancelled_by_admin' || 
+            apt.status === 'cancelled_by_user' || apt.status === 'no_show') {
+          return;
+        }
+
+        const [hours, minutes] = apt.hora.split(':').map(Number);
+        const aptStart = new Date(now);
+        aptStart.setHours(hours, minutes, 0, 0);
+        const aptEnd = new Date(aptStart.getTime() + (apt.servico?.duracao_minutos || 30) * 60000);
+        
+        if (now >= aptEnd && now.getTime() - aptEnd.getTime() < 120000) {
+          setConfirmModalAppointment(apt);
+        }
+      });
+    };
+
+    const interval = setInterval(checkAppointmentCompletion, 60000);
+    checkAppointmentCompletion();
+    return () => clearInterval(interval);
+  }, [appointments]);
+
+  const loadServices = async () => {
     try {
-      const { error } = await supabase
-        .from('agendamentos')
-        .update({ status: 'no_show' })
-        .eq('id', appointmentId);
+      const { data, error } = await supabase
+        .from("servicos")
+        .select("id, nome")
+        .eq("ativo", true)
+        .order("nome");
 
       if (error) throw error;
-      toast.success('Marcado como não compareceu');
-      loadAppointments();
+      setServices(data || []);
     } catch (error) {
-      toast.error('Erro ao atualizar status');
+      console.error("Error loading services:", error);
     }
   };
 
-  const getStatusBadge = (apt: any) => {
-    if (apt.status === 'completed') {
-      return <Badge className="bg-green-500/20 text-green-400">Concluído</Badge>;
-    }
-    if (apt.status === 'confirmed') {
-      return <Badge className="bg-blue-500/20 text-blue-400">Confirmado</Badge>;
-    }
-    if (apt.status === 'no_show') {
-      return <Badge className="bg-red-500/20 text-red-400">Não compareceu</Badge>;
-    }
-    if (apt.status === 'pending') {
-      return <Badge className="bg-yellow-500/20 text-yellow-400">Pendente</Badge>;
-    }
-    return <Badge variant="secondary">{apt.status}</Badge>;
+  const handleEmptySlotClick = (dateStr: string, time: string) => {
+    setSelectedEmptySlot({ date: dateStr, time });
+    setManualBookingModalOpen(true);
   };
+
+  const handleTodayClick = () => {
+    setDate(new Date());
+  };
+
+  const filteredAppointments = appointments.filter(apt => {
+    if (filterService !== "all" && apt.servico_id !== filterService) return false;
+    if (filterStatus !== "all" && apt.status !== filterStatus) return false;
+    return true;
+  });
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <div className="flex flex-col gap-5 animate-fade-in pb-16 relative">
+      {/* Header Row: Title + Controls */}
+      <div className="flex-shrink-0 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Minha Agenda</h1>
-          <p className="text-muted-foreground">Gerencie seus agendamentos</p>
+          <h1 className="text-2xl font-bold tracking-wide">Minha Agenda</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Gerencie seus agendamentos
+          </p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          {/* View Mode Toggle */}
+          <div className="flex items-center rounded-xl bg-white/5 p-1">
+            <button
+              onClick={() => setViewMode("week")}
+              className={cn(
+                "flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all",
+                viewMode === "week" ? "bg-primary text-white" : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <LayoutGrid className="w-4 h-4" />
+              Semana
+            </button>
+            <button
+              onClick={() => setViewMode("day")}
+              className={cn(
+                "flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all",
+                viewMode === "day" ? "bg-primary text-white" : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <List className="w-4 h-4" />
+              Dia
+            </button>
+          </div>
+
+          {/* Filters Toggle */}
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            className={cn(
+              "flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium transition-all",
+              showFilters ? "bg-primary/10 text-primary" : "bg-white/5 text-muted-foreground hover:bg-white/10"
+            )}
+          >
+            <Filter className="w-4 h-4" />
+            Filtros
+          </button>
         </div>
       </div>
 
-      {/* Date Navigation */}
-      <Card className="bg-card/50 border-border/50">
-        <CardContent className="p-4">
-          <div className="flex items-center justify-between">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setSelectedDate(subDays(selectedDate, 1))}
-            >
-              <ChevronLeft className="h-5 w-5" />
-            </Button>
-            
-            <div className="text-center">
-              <p className="text-lg font-bold text-foreground">
-                {format(selectedDate, "EEEE", { locale: ptBR })}
-              </p>
-              <p className="text-sm text-muted-foreground">
-                {format(selectedDate, "d 'de' MMMM 'de' yyyy", { locale: ptBR })}
-              </p>
-            </div>
-            
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setSelectedDate(addDays(selectedDate, 1))}
-            >
-              <ChevronRight className="h-5 w-5" />
-            </Button>
-          </div>
-          
-          <div className="flex justify-center mt-4">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setSelectedDate(new Date())}
-            >
-              Hoje
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Appointments List */}
-      <Card className="bg-card/50 border-border/50">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <CalendarIcon className="h-5 w-5 text-primary" />
-            Agendamentos ({appointments.length})
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <div className="space-y-4">
-              {[1, 2, 3].map(i => (
-                <Skeleton key={i} className="h-24 rounded-lg" />
+      {/* Filters Panel */}
+      {showFilters && (
+        <motion.div
+          initial={{ height: 0, opacity: 0 }}
+          animate={{ height: "auto", opacity: 1 }}
+          exit={{ height: 0, opacity: 0 }}
+          className="flex flex-wrap gap-3 p-4 rounded-xl bg-white/[0.02] border border-white/5"
+        >
+          <Select value={filterService} onValueChange={setFilterService}>
+            <SelectTrigger className="w-[180px] bg-white/5 border-white/10">
+              <SelectValue placeholder="Serviço" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os serviços</SelectItem>
+              {services.map(s => (
+                <SelectItem key={s.id} value={s.id}>{s.nome}</SelectItem>
               ))}
-            </div>
-          ) : appointments.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">
-              <CalendarIcon className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>Nenhum agendamento para este dia</p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {appointments.map((apt) => (
-                <div 
-                  key={apt.id}
-                  className="p-4 rounded-lg bg-background/50 border border-border/30 space-y-3"
-                >
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-4">
-                      <div className="text-center min-w-[60px] p-2 rounded-lg bg-primary/10">
-                        <p className="text-lg font-bold text-primary">
-                          {apt.hora?.substring(0, 5)}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {apt.duracao}min
-                        </p>
-                      </div>
-                      <div>
-                        <p className="font-medium text-foreground flex items-center gap-2">
-                          <User className="h-4 w-4" />
-                          {apt.profiles?.nome || 'Cliente'}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          {apt.servicos?.nome}
-                        </p>
-                        {apt.profiles?.telefone && (
-                          <p className="text-xs text-muted-foreground">
-                            {apt.profiles.telefone}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-lg font-bold text-primary">
-                        R$ {apt.preco?.toFixed(0)}
-                      </p>
-                      {getStatusBadge(apt)}
-                    </div>
-                  </div>
+            </SelectContent>
+          </Select>
 
-                  {/* Actions */}
-                  {apt.status === 'pending' && !apt.barbeiro_confirmou && (
-                    <div className="flex gap-2 pt-2 border-t border-border/30">
-                      <Button
-                        size="sm"
-                        className="flex-1 gap-2"
-                        onClick={() => handleConfirm(apt.id)}
-                      >
-                        <Check className="h-4 w-4" />
-                        Confirmar
-                      </Button>
-                    </div>
-                  )}
+          <Select value={filterStatus} onValueChange={setFilterStatus}>
+            <SelectTrigger className="w-[180px] bg-white/5 border-white/10">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os status</SelectItem>
+              <SelectItem value="pending">Pendente</SelectItem>
+              <SelectItem value="confirmed">Confirmado</SelectItem>
+              <SelectItem value="completed">Concluído</SelectItem>
+            </SelectContent>
+          </Select>
+        </motion.div>
+      )}
 
-                  {(apt.status === 'confirmed' || apt.status === 'pending') && apt.barbeiro_confirmou && (
-                    <div className="flex gap-2 pt-2 border-t border-border/30">
-                      <Button
-                        size="sm"
-                        className="flex-1 gap-2 bg-green-600 hover:bg-green-700"
-                        onClick={() => handleComplete(apt.id)}
-                      >
-                        <Check className="h-4 w-4" />
-                        Concluir
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="gap-2 text-red-400 hover:text-red-300"
-                        onClick={() => handleNoShow(apt.id)}
-                      >
-                        <X className="h-4 w-4" />
-                        Não veio
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      {/* Compact Week Selector */}
+      <CompactWeekSelector
+        selectedDate={date}
+        onDateChange={setDate}
+        onTodayClick={handleTodayClick}
+      />
+
+      {/* Main Content */}
+      <div>
+        {viewMode === "week" ? (
+          <EnhancedWeekView
+            selectedDate={date}
+            appointments={filteredAppointments}
+            allAppointments={allAppointments}
+            onSelectDate={setDate}
+            onSelectAppointment={setSelectedAppointment}
+            onEmptySlotClick={handleEmptySlotClick}
+          />
+        ) : (
+          <PremiumTimeline
+            appointments={filteredAppointments.filter(apt => apt.data === format(date, 'yyyy-MM-dd'))}
+            selectedDate={date}
+            onSelectAppointment={setSelectedAppointment}
+            onEmptySlotClick={(time) => handleEmptySlotClick(format(date, 'yyyy-MM-dd'), time)}
+          />
+        )}
+      </div>
+
+      {/* FAB */}
+      <motion.button
+        initial={{ scale: 0, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ delay: 0.3, type: "spring", stiffness: 200 }}
+        onClick={() => {
+          setSelectedEmptySlot({ date: format(date, 'yyyy-MM-dd'), time: "" });
+          setManualBookingModalOpen(true);
+        }}
+        className={cn(
+          "fixed bottom-8 right-8 z-50",
+          "w-14 h-14 rounded-full",
+          "bg-gradient-to-br from-primary to-primary/80",
+          "flex items-center justify-center",
+          "shadow-2xl shadow-primary/30",
+          "hover:scale-110 active:scale-95",
+          "transition-transform duration-200",
+          "border border-white/10"
+        )}
+      >
+        <Plus className="w-6 h-6 text-white" />
+      </motion.button>
+
+      {/* Modals */}
+      <AppointmentDetailsSidebar
+        appointment={selectedAppointment}
+        open={!!selectedAppointment}
+        onClose={() => setSelectedAppointment(null)}
+        onUpdate={() => loadAppointments(date)}
+      />
+
+      <ConfirmAttendanceModal
+        appointment={confirmModalAppointment}
+        open={!!confirmModalAppointment}
+        onClose={() => setConfirmModalAppointment(null)}
+        onUpdate={() => loadAppointments(date)}
+      />
+
+      <MobileManualBookingModal
+        open={manualBookingModalOpen}
+        onOpenChange={setManualBookingModalOpen}
+        date={selectedEmptySlot.date}
+        initialTime={selectedEmptySlot.time}
+        onSuccess={() => loadAppointments(date)}
+      />
     </div>
   );
 }
