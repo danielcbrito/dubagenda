@@ -39,6 +39,7 @@ const menuGroups = [
     label: "Pagamentos",
     items: [
       { title: "Financeiro", url: "/admin/financeiro", icon: CreditCard },
+      { title: "Financeiro Geral", url: "/admin/financeiro-geral", icon: DollarSign },
       { title: "Relatórios", url: "/admin/relatorios", icon: BarChart3 },
     ],
   },

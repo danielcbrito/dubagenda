@@ -1,4 +1,4 @@
-import { Home, Calendar, DollarSign, Clock, LogOut, CheckCircle, Gift, Scissors, ChevronLeft, ChevronRight, ChevronDown, BarChart3, Settings, UserCog } from "lucide-react";
+import { Home, Calendar, DollarSign, Clock, LogOut, CheckCircle, ChevronLeft, ChevronRight, ChevronDown, BarChart3, Settings } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -37,13 +37,6 @@ const menuGroups = [
     items: [
       { title: "Agenda", url: "/agenda-fullscreen", icon: Calendar, openInNewTab: true },
       { title: "Confirmações", url: "/barbeiro/confirmacoes", icon: CheckCircle, badge: true },
-    ],
-  },
-  {
-    label: "Serviços",
-    items: [
-      { title: "Cortes", url: "/barbeiro/servicos", icon: Scissors },
-      { title: "Promoções", url: "/barbeiro/promocoes", icon: Gift },
     ],
   },
   {

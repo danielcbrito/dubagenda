@@ -11,6 +11,7 @@ import { AdminDashboard } from "@/components/admin/AdminDashboard";
 import { AdminAgenda } from "@/components/admin/AdminAgenda";
 import { AdminClientes } from "@/components/admin/AdminClientes";
 import { AdminFinanceiro } from "@/components/admin/AdminFinanceiro";
+import { AdminFinanceiroGeral } from "@/components/admin/AdminFinanceiroGeral";
 import { AdminRelatorios } from "@/components/admin/AdminRelatorios";
 import { AdminPromocoes } from "@/components/admin/AdminPromocoes";
 import { AdminServicos } from "@/components/admin/AdminServicos";
@@ -34,6 +35,7 @@ const routeTitles: Record<string, string> = {
   "/admin/barbeiros": "Barbeiros",
   "/admin/clientes": "Clientes",
   "/admin/financeiro": "Financeiro",
+  "/admin/financeiro-geral": "Financeiro Geral",
   "/admin/relatorios": "Relatórios",
   "/admin/servicos/cortes": "Cortes",
   "/admin/servicos/planos": "Planos",
@@ -178,6 +180,7 @@ const Admin = () => {
                 <Route path="barbeiros" element={<AdminBarbeiros />} />
                 <Route path="clientes" element={<AdminClientes />} />
                 <Route path="financeiro" element={<AdminFinanceiro />} />
+                <Route path="financeiro-geral" element={<AdminFinanceiroGeral />} />
                 <Route path="relatorios" element={<AdminRelatorios />} />
                 <Route path="servicos/*" element={<AdminServicos />} />
                 <Route path="promocoes" element={<AdminPromocoes />} />
@@ -240,6 +243,7 @@ const Admin = () => {
                   <Route path="barbeiros" element={<AdminBarbeiros />} />
                   <Route path="clientes" element={<AdminClientes />} />
                   <Route path="financeiro" element={<AdminFinanceiro />} />
+                  <Route path="financeiro-geral" element={<AdminFinanceiroGeral />} />
                   <Route path="relatorios" element={<AdminRelatorios />} />
                   <Route path="servicos/*" element={<AdminServicos />} />
                   <Route path="promocoes" element={<AdminPromocoes />} />
