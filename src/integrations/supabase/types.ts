@@ -328,7 +328,16 @@ export type Database = {
           ativo: boolean | null
           comissao_pct: number | null
           created_at: string | null
+          email: string | null
+          foto_url: string | null
+          google_calendar_connected: boolean | null
+          google_client_id: string | null
+          google_client_secret: string | null
+          google_refresh_token: string | null
           id: string
+          setup_completed: boolean | null
+          telefone: string | null
+          updated_at: string | null
           user_id: string | null
         }
         Insert: {
@@ -336,7 +345,16 @@ export type Database = {
           ativo?: boolean | null
           comissao_pct?: number | null
           created_at?: string | null
+          email?: string | null
+          foto_url?: string | null
+          google_calendar_connected?: boolean | null
+          google_client_id?: string | null
+          google_client_secret?: string | null
+          google_refresh_token?: string | null
           id?: string
+          setup_completed?: boolean | null
+          telefone?: string | null
+          updated_at?: string | null
           user_id?: string | null
         }
         Update: {
@@ -344,7 +362,16 @@ export type Database = {
           ativo?: boolean | null
           comissao_pct?: number | null
           created_at?: string | null
+          email?: string | null
+          foto_url?: string | null
+          google_calendar_connected?: boolean | null
+          google_client_id?: string | null
+          google_client_secret?: string | null
+          google_refresh_token?: string | null
           id?: string
+          setup_completed?: boolean | null
+          telefone?: string | null
+          updated_at?: string | null
           user_id?: string | null
         }
         Relationships: []
@@ -432,6 +459,56 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      configuracoes_horario_barbeiro: {
+        Row: {
+          aberto: boolean | null
+          barbeiro_id: string
+          created_at: string | null
+          delay_entre_servicos: number | null
+          dia_semana: number
+          hora_abertura: string | null
+          hora_almoco_fim: string | null
+          hora_almoco_inicio: string | null
+          hora_fechamento: string | null
+          id: string
+          updated_at: string | null
+        }
+        Insert: {
+          aberto?: boolean | null
+          barbeiro_id: string
+          created_at?: string | null
+          delay_entre_servicos?: number | null
+          dia_semana: number
+          hora_abertura?: string | null
+          hora_almoco_fim?: string | null
+          hora_almoco_inicio?: string | null
+          hora_fechamento?: string | null
+          id?: string
+          updated_at?: string | null
+        }
+        Update: {
+          aberto?: boolean | null
+          barbeiro_id?: string
+          created_at?: string | null
+          delay_entre_servicos?: number | null
+          dia_semana?: number
+          hora_abertura?: string | null
+          hora_almoco_fim?: string | null
+          hora_almoco_inicio?: string | null
+          hora_fechamento?: string | null
+          id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "configuracoes_horario_barbeiro_barbeiro_id_fkey"
+            columns: ["barbeiro_id"]
+            isOneToOne: false
+            referencedRelation: "barbeiros"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       creditos: {
         Row: {
@@ -581,6 +658,56 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      horarios_excepcionais_barbeiro: {
+        Row: {
+          aberto: boolean | null
+          barbeiro_id: string
+          created_at: string | null
+          data: string
+          hora_abertura: string | null
+          hora_almoco_fim: string | null
+          hora_almoco_inicio: string | null
+          hora_fechamento: string | null
+          id: string
+          motivo: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          aberto?: boolean | null
+          barbeiro_id: string
+          created_at?: string | null
+          data: string
+          hora_abertura?: string | null
+          hora_almoco_fim?: string | null
+          hora_almoco_inicio?: string | null
+          hora_fechamento?: string | null
+          id?: string
+          motivo?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          aberto?: boolean | null
+          barbeiro_id?: string
+          created_at?: string | null
+          data?: string
+          hora_abertura?: string | null
+          hora_almoco_fim?: string | null
+          hora_almoco_inicio?: string | null
+          hora_fechamento?: string | null
+          id?: string
+          motivo?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "horarios_excepcionais_barbeiro_barbeiro_id_fkey"
+            columns: ["barbeiro_id"]
+            isOneToOne: false
+            referencedRelation: "barbeiros"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       informacoes_aplicativo: {
         Row: {
@@ -1586,6 +1713,17 @@ export type Database = {
       auto_hide_old_cancelled_appointments: { Args: never; Returns: undefined }
       clean_expired_pending_bookings: { Args: never; Returns: undefined }
       clean_expired_verification_codes: { Args: never; Returns: undefined }
+      create_barber_with_user: {
+        Args: {
+          p_apelido: string
+          p_comissao_pct?: number
+          p_email: string
+          p_nome: string
+          p_password: string
+          p_telefone: string
+        }
+        Returns: Json
+      }
       get_user_available_credits: {
         Args: { p_user_id: string }
         Returns: number
@@ -1596,6 +1734,10 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      initialize_barber_hours: {
+        Args: { p_barbeiro_id: string }
+        Returns: undefined
       }
       use_credits_atomic: {
         Args: { p_amount: number; p_appointment_id: string; p_user_id: string }
