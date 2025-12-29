@@ -30,7 +30,6 @@ const menuSections = [
       { title: "Clientes", url: "/admin/clientes", icon: Users },
       { title: "Financeiro", url: "/admin/financeiro", icon: CreditCard },
       { title: "Financeiro Geral", url: "/admin/financeiro-geral", icon: Building2 },
-      { title: "Relatórios", url: "/admin/relatorios", icon: BarChart3 },
     ],
   },
   {
