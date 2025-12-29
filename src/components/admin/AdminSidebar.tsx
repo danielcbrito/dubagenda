@@ -19,7 +19,6 @@ const menuGroups = [
     label: "Dashboard",
     items: [
       { title: "Visão Geral", url: "/admin", icon: Home, end: true },
-      { title: "Meu Perfil", url: "/admin/perfil", icon: UserCircle },
     ],
   },
   {
@@ -61,6 +60,7 @@ const menuGroups = [
         icon: Settings, 
         hasSubmenu: true,
         submenuItems: [
+          { title: "Meu Perfil", url: "/admin/perfil" },
           { title: "Geral", url: "/admin/suporte-config" },
           { title: "APIs", url: "/admin/apis" },
           { title: "Segurança", url: "/admin/seguranca" },
