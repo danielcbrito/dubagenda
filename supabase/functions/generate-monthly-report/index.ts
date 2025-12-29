@@ -121,14 +121,21 @@ serve(async (req) => {
       .gte('created_at', `${startDate}T00:00:00`)
       .lte('created_at', `${endDate}T23:59:59`);
 
-    // Buscar pagamentos de planos
+    // Buscar pagamentos de planos (assinaturas) - buscar por data_pagamento OU created_at
     const { data: planPayments } = await supabase
       .from('pagamentos')
-      .select('valor')
+      .select('valor, data_pagamento, created_at, assinatura_id')
       .not('assinatura_id', 'is', null)
-      .eq('status', 'paid')
-      .gte('created_at', `${startDate}T00:00:00`)
-      .lte('created_at', `${endDate}T23:59:59`);
+      .eq('status', 'paid');
+
+    // Filtrar pagamentos de planos pelo período corretamente
+    const filteredPlanPayments = (planPayments || []).filter(p => {
+      const paymentDate = p.data_pagamento || p.created_at?.split('T')[0];
+      if (!paymentDate) return false;
+      return paymentDate >= startDate && paymentDate <= endDate;
+    });
+
+    console.log(`Pagamentos de planos encontrados no período: ${filteredPlanPayments.length}`);
 
     // Calcular métricas - contando TUDO
     let receitaApp = 0;
