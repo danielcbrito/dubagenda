@@ -44,13 +44,14 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Verificar se é admin
-    const supabaseUser = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { Authorization: authHeader } }
-    });
+    // Extrair o token JWT
+    const token = authHeader.replace('Bearer ', '');
     
-    const { data: { user }, error: userError } = await supabaseUser.auth.getUser();
+    // Verificar usuário usando o token diretamente com service role
+    const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(token);
+    
     if (userError || !user) {
+      console.error('Auth error:', userError);
       return new Response(
         JSON.stringify({ success: false, error: 'Usuário não autenticado' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
