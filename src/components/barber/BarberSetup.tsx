@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
@@ -7,7 +8,9 @@ import {
   CheckCircle2, 
   Calendar,
   ArrowRight,
-  Sparkles
+  Sparkles,
+  Loader2,
+  ExternalLink
 } from 'lucide-react';
 
 interface BarberSetupProps {
@@ -16,8 +19,81 @@ interface BarberSetupProps {
 }
 
 export function BarberSetup({ barbeiroId, onComplete }: BarberSetupProps) {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [connectingGoogle, setConnectingGoogle] = useState(false);
+  const [googleConnected, setGoogleConnected] = useState(false);
+  const [connectedEmail, setConnectedEmail] = useState('');
+
+  // Processar código OAuth do Google quando retornar
+  useEffect(() => {
+    const code = searchParams.get('code');
+    const state = searchParams.get('state'); // Contém o barbeiroId
+    
+    if (code) {
+      handleGoogleCallback(code);
+      // Limpar os params da URL
+      setSearchParams({});
+    }
+  }, [searchParams]);
+
+  const handleGoogleCallback = async (code: string) => {
+    setConnectingGoogle(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('google-calendar-auth', {
+        body: {
+          action: 'exchange_code',
+          barbeiroId,
+          code,
+          redirectUri: `${window.location.origin}/barbeiro/setup`
+        }
+      });
+
+      if (error || !data?.success) {
+        toast.error(data?.error || 'Erro ao conectar Google Calendar');
+        return;
+      }
+
+      setGoogleConnected(true);
+      setConnectedEmail(data.email || '');
+      toast.success('Google Calendar conectado com sucesso!');
+      
+      // Avançar para próximo passo
+      setStep(2);
+    } catch (err) {
+      console.error('Google callback error:', err);
+      toast.error('Erro inesperado ao conectar');
+    } finally {
+      setConnectingGoogle(false);
+    }
+  };
+
+  const handleConnectGoogleCalendar = async () => {
+    setConnectingGoogle(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('google-calendar-auth', {
+        body: {
+          action: 'get_auth_url',
+          barbeiroId,
+          redirectUri: `${window.location.origin}/barbeiro/setup`
+        }
+      });
+
+      if (error || !data?.success) {
+        toast.error(data?.error || 'Erro ao iniciar conexão');
+        setConnectingGoogle(false);
+        return;
+      }
+
+      // Redirecionar para a página de autorização do Google
+      window.location.href = data.authUrl;
+    } catch (err) {
+      console.error('Google auth error:', err);
+      toast.error('Erro inesperado ao conectar');
+      setConnectingGoogle(false);
+    }
+  };
 
   const handleSkipGoogleCalendar = async () => {
     setLoading(true);
@@ -39,12 +115,6 @@ export function BarberSetup({ barbeiroId, onComplete }: BarberSetupProps) {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleConnectGoogleCalendar = () => {
-    // Por enquanto, apenas pular - a integração do Google Calendar pode ser implementada depois
-    toast.info('Integração com Google Calendar em breve!');
-    handleSkipGoogleCalendar();
   };
 
   const handleCompleteSetup = async () => {
@@ -97,27 +167,59 @@ export function BarberSetup({ barbeiroId, onComplete }: BarberSetupProps) {
                 </div>
 
                 <p className="text-sm text-muted-foreground">
-                  Ao conectar seu Google Calendar, seus agendamentos aparecerão automaticamente no seu calendário pessoal.
+                  Ao conectar seu Google Calendar, seus agendamentos aparecerão automaticamente no seu calendário pessoal e você será notificado de novos cortes.
                 </p>
 
-                <div className="flex gap-3">
-                  <Button 
-                    className="flex-1 gap-2"
-                    onClick={handleConnectGoogleCalendar}
-                    disabled={loading}
-                  >
-                    <Calendar className="h-4 w-4" />
-                    Conectar
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    onClick={() => setStep(2)}
-                    disabled={loading}
-                  >
-                    Pular
-                  </Button>
-                </div>
+                {googleConnected ? (
+                  <div className="p-4 rounded-lg bg-green-500/10 border border-green-500/30">
+                    <div className="flex items-center gap-2 text-green-500">
+                      <CheckCircle2 className="h-5 w-5" />
+                      <span className="font-medium">Conectado!</span>
+                    </div>
+                    {connectedEmail && (
+                      <p className="text-sm text-muted-foreground mt-1">{connectedEmail}</p>
+                    )}
+                  </div>
+                ) : (
+                  <div className="flex gap-3">
+                    <Button 
+                      className="flex-1 gap-2"
+                      onClick={handleConnectGoogleCalendar}
+                      disabled={connectingGoogle || loading}
+                    >
+                      {connectingGoogle ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Conectando...
+                        </>
+                      ) : (
+                        <>
+                          <Calendar className="h-4 w-4" />
+                          Conectar
+                          <ExternalLink className="h-3 w-3" />
+                        </>
+                      )}
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      onClick={() => setStep(2)}
+                      disabled={connectingGoogle || loading}
+                    >
+                      Pular
+                    </Button>
+                  </div>
+                )}
               </div>
+
+              {googleConnected && (
+                <Button 
+                  className="w-full gap-2"
+                  onClick={() => setStep(2)}
+                >
+                  Continuar
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+              )}
             </div>
           )}
 
@@ -138,17 +240,23 @@ export function BarberSetup({ barbeiroId, onComplete }: BarberSetupProps) {
 
                 <ul className="text-left space-y-3 py-4">
                   <li className="flex items-center gap-3 text-sm text-muted-foreground">
-                    <CheckCircle2 className="h-4 w-4 text-green-500" />
+                    <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
                     Ver e gerenciar seus agendamentos
                   </li>
                   <li className="flex items-center gap-3 text-sm text-muted-foreground">
-                    <CheckCircle2 className="h-4 w-4 text-green-500" />
-                    Acompanhar seu financeiro
+                    <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
+                    Acompanhar seu financeiro e comissões
                   </li>
                   <li className="flex items-center gap-3 text-sm text-muted-foreground">
-                    <CheckCircle2 className="h-4 w-4 text-green-500" />
+                    <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
                     Configurar seus horários de trabalho
                   </li>
+                  {googleConnected && (
+                    <li className="flex items-center gap-3 text-sm text-muted-foreground">
+                      <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
+                      Receber agendamentos no Google Calendar
+                    </li>
+                  )}
                 </ul>
 
                 <Button 
@@ -156,8 +264,17 @@ export function BarberSetup({ barbeiroId, onComplete }: BarberSetupProps) {
                   onClick={handleCompleteSetup}
                   disabled={loading}
                 >
-                  Começar a usar
-                  <ArrowRight className="h-4 w-4" />
+                  {loading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Finalizando...
+                    </>
+                  ) : (
+                    <>
+                      Começar a usar
+                      <ArrowRight className="h-4 w-4" />
+                    </>
+                  )}
                 </Button>
               </div>
             </div>
