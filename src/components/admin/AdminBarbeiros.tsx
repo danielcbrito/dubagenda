@@ -16,11 +16,9 @@ import {
   Edit2, 
   Trash2, 
   Mail, 
-  Phone, 
-  Percent,
+  Phone,
   CheckCircle2,
   XCircle,
-  Calendar,
   Scissors
 } from 'lucide-react';
 
@@ -48,14 +46,13 @@ export default function AdminBarbeiros() {
   const [editingBarbeiro, setEditingBarbeiro] = useState<Barbeiro | null>(null);
   const [saving, setSaving] = useState(false);
 
-  // Form state
+  // Form state (sem comissão - cada barbeiro tem sua própria parte financeira)
   const [formData, setFormData] = useState({
     nome: '',
     apelido: '',
     email: '',
     telefone: '',
-    password: '',
-    comissao_pct: 30
+    password: ''
   });
 
   useEffect(() => {
@@ -109,8 +106,7 @@ export default function AdminBarbeiros() {
             action: 'update',
             barbeiro_id: editingBarbeiro.id,
             apelido: formData.apelido,
-            telefone: formData.telefone,
-            comissao_pct: formData.comissao_pct
+            telefone: formData.telefone
           }
         });
 
@@ -127,8 +123,7 @@ export default function AdminBarbeiros() {
             apelido: formData.apelido,
             email: formData.email,
             telefone: formData.telefone,
-            password: formData.password,
-            comissao_pct: formData.comissao_pct
+            password: formData.password
           }
         });
 
@@ -196,8 +191,7 @@ export default function AdminBarbeiros() {
       apelido: '',
       email: '',
       telefone: '',
-      password: '',
-      comissao_pct: 30
+      password: ''
     });
     setEditingBarbeiro(null);
   };
@@ -209,8 +203,7 @@ export default function AdminBarbeiros() {
       apelido: barbeiro.apelido,
       email: barbeiro.email || '',
       telefone: barbeiro.telefone || barbeiro.profiles?.telefone || '',
-      password: '',
-      comissao_pct: barbeiro.comissao_pct || 30
+      password: ''
     });
     setDialogOpen(true);
   };
@@ -323,19 +316,6 @@ export default function AdminBarbeiros() {
                   />
                 </div>
               )}
-
-              <div className="space-y-2">
-                <Label htmlFor="comissao">Comissão (%)</Label>
-                <Input
-                  id="comissao"
-                  type="number"
-                  min="0"
-                  max="100"
-                  placeholder="30"
-                  value={formData.comissao_pct}
-                  onChange={(e) => setFormData({ ...formData, comissao_pct: Number(e.target.value) })}
-                />
-              </div>
             </div>
 
             <DialogFooter>
@@ -411,12 +391,6 @@ export default function AdminBarbeiros() {
                     <span>{barbeiro.telefone || barbeiro.profiles?.telefone}</span>
                   </div>
                 )}
-
-                {/* Comissão */}
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Percent className="h-4 w-4" />
-                  <span>Comissão: {barbeiro.comissao_pct || 0}%</span>
-                </div>
 
                 {/* Status de Configuração */}
                 <div className="flex items-center gap-4 pt-2 border-t">

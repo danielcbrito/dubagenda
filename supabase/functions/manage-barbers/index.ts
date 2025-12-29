@@ -135,9 +135,16 @@ Deno.serve(async (req) => {
           await supabaseAdmin.from('barbeiros').delete().eq('id', barber.id);
           
           console.error('Error creating auth user:', authError);
+          
+          // Mensagem mais amigável para email duplicado
+          let errorMessage = authError.message;
+          if (authError.message.includes('already been registered') || authError.message.includes('email_exists')) {
+            errorMessage = 'Já existe uma conta com este email. Use outro email ou recupere a senha.';
+          }
+          
           return new Response(
-            JSON.stringify({ success: false, error: `Erro ao criar usuário: ${authError.message}` }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+            JSON.stringify({ success: false, error: errorMessage }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
           );
         }
 
@@ -240,23 +247,37 @@ Deno.serve(async (req) => {
       }
 
       case 'list': {
+        // Buscar barbeiros primeiro
         const { data: barbers, error: listError } = await supabaseAdmin
           .from('barbeiros')
-          .select(`
-            *,
-            profiles:user_id (nome, telefone)
-          `)
+          .select('*')
           .order('apelido');
 
         if (listError) {
+          console.error('Error listing barbers:', listError);
           return new Response(
             JSON.stringify({ success: false, error: 'Erro ao listar barbeiros' }),
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
           );
         }
 
+        // Enriquecer com dados do profile se existir user_id
+        const enrichedBarbers = await Promise.all(
+          (barbers || []).map(async (barber) => {
+            if (barber.user_id) {
+              const { data: profile } = await supabaseAdmin
+                .from('profiles')
+                .select('nome, telefone')
+                .eq('id', barber.user_id)
+                .single();
+              return { ...barber, profiles: profile };
+            }
+            return { ...barber, profiles: null };
+          })
+        );
+
         return new Response(
-          JSON.stringify({ success: true, data: barbers }),
+          JSON.stringify({ success: true, data: enrichedBarbers }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
         );
       }
