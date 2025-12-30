@@ -650,7 +650,7 @@ const ClienteAgendar = () => {
       const mainService = selectedServices[0];
       const bookingData = {
         servico_id: mainService.id,
-        barbeiro_id: null,
+        barbeiro_id: selectedBarbeiroId, // Associar ao barbeiro selecionado
         data: format(selectedDate, 'yyyy-MM-dd'), // Format without timezone conversion
         hora: selectedTime,
         duracao: totalDuration,
@@ -794,6 +794,7 @@ const ClienteAgendar = () => {
         .insert({
           user_id: session.user.id,
           servico_id: mainService.id,
+          barbeiro_id: selectedBarbeiroId, // Associar ao barbeiro selecionado
           data: dateStr,
           hora: selectedTime,
           duracao: totalDuration,
@@ -903,6 +904,7 @@ const ClienteAgendar = () => {
         .insert({
           user_id: session.user.id,
           servico_id: mainService.id,
+          barbeiro_id: selectedBarbeiroId, // Associar ao barbeiro selecionado
           data: dateStr,
           hora: selectedTime,
           duracao: totalDuration,
@@ -1020,6 +1022,7 @@ const ClienteAgendar = () => {
         .insert({
           user_id: session.user.id,
           servico_id: mainService.id,
+          barbeiro_id: selectedBarbeiroId, // Associar ao barbeiro selecionado
           data: dateStr,
           hora: selectedTime,
           duracao: totalDuration,
@@ -1189,6 +1192,7 @@ const ClienteAgendar = () => {
           data: dateStr,
           hora: selectedTime,
           duracao: totalDuration,
+          barbeiro_id: selectedBarbeiroId, // Atualizar barbeiro se mudou
           status: 'pending', // Reset to pending
           barbeiro_confirmou: false, // Volta para confirmação do barbeiro
           cliente_confirmou: false, // Volta para confirmação do cliente
