@@ -12,7 +12,9 @@
  * REGRA DE DISPONIBILIDADE:
  * próximo_horário_disponível = horário_fim_do_serviço + delay (10min)
  * 
- * Exemplo: Serviço 18:30 (30min) → termina 19:00 + 10min delay = próximo às 19:10
+ * IMPORTANTE: Cada barbeiro tem sua própria agenda!
+ * - Se barbeiroId for passado, usa configuracoes_horario_barbeiro e horarios_excepcionais_barbeiro
+ * - Senão, usa configuracoes_horario e horarios_excepcionais (agenda central)
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.80.0';
@@ -38,7 +40,7 @@ interface AvailabilityRequest {
   date: string;
   duration: number;
   excludeAppointmentId?: string;
-  barbeiroId?: string; // NOVO: Filtrar por barbeiro específico
+  barbeiroId?: string; // Filtrar por barbeiro específico
 }
 
 interface TimeSlot {
@@ -52,8 +54,8 @@ interface OccupiedSlotInfo {
   duracao: number;
   status: string;
   source: 'agendamento' | 'pending_booking';
-  fim: string; // hora de término
-  fimComDelay: string; // hora de término + delay
+  fim: string;
+  fimComDelay: string;
 }
 
 interface AvailabilityResponse {
@@ -66,7 +68,6 @@ interface AvailabilityResponse {
 }
 
 function timeToMinutes(timeStr: string): number {
-  // Handle both "HH:MM" and "HH:MM:SS" formats
   const parts = timeStr.split(':').map(Number);
   return parts[0] * 60 + parts[1];
 }
@@ -92,7 +93,7 @@ Deno.serve(async (req) => {
 
     console.log('='.repeat(70));
     console.log('[check-availability] INICIANDO VERIFICAÇÃO');
-    console.log(`[check-availability] Data: ${date} | Duração solicitada: ${duration}min | Barbeiro: ${barbeiroId || 'TODOS'}`);
+    console.log(`[check-availability] Data: ${date} | Duração: ${duration}min | Barbeiro: ${barbeiroId || 'CENTRAL'}`);
 
     if (!date || !duration || duration <= 0) {
       return new Response(
@@ -104,67 +105,123 @@ Deno.serve(async (req) => {
     const dateObj = new Date(date + 'T12:00:00');
     const dayOfWeek = dateObj.getDay();
 
-    // PRIMEIRO: Verificar se existe exceção de horário para esta data específica
-    const { data: excecaoData, error: excecaoError } = await supabase
-      .from('horarios_excepcionais')
-      .select('*')
-      .eq('data', date)
-      .maybeSingle();
-
-    if (excecaoError) {
-      console.log('[check-availability] Erro ao buscar exceção:', excecaoError.message);
-    }
-
-    // Se existe exceção para esta data, usar ela em vez da configuração padrão
     let config: BusinessHoursConfig;
 
-    if (excecaoData) {
-      console.log(`[check-availability] EXCEÇÃO ENCONTRADA para ${date}:`, JSON.stringify(excecaoData));
-      config = {
-        aberto: excecaoData.aberto,
-        hora_abertura: excecaoData.hora_abertura || '09:00',
-        hora_fechamento: excecaoData.hora_fechamento || '20:00',
-        hora_almoco_inicio: excecaoData.hora_almoco_inicio,
-        hora_almoco_fim: excecaoData.hora_almoco_fim,
-        delay_entre_servicos: 10 // Usar delay padrão para exceções
-      };
-    } else {
-      // Buscar configurações padrão do dia da semana
-      const { data: configData, error: configError } = await supabase
-        .from('configuracoes_horario')
+    // ============================================
+    // BUSCAR HORÁRIOS DO BARBEIRO (se especificado)
+    // ============================================
+    if (barbeiroId) {
+      console.log(`[check-availability] Buscando horários do barbeiro ${barbeiroId}`);
+      
+      // Primeiro: verificar se existe exceção para esta data específica
+      const { data: excecaoBarbeiro } = await supabase
+        .from('horarios_excepcionais_barbeiro')
         .select('*')
-        .eq('dia_semana', dayOfWeek)
+        .eq('barbeiro_id', barbeiroId)
+        .eq('data', date)
         .maybeSingle();
 
-      if (configError) {
-        console.log('[check-availability] Erro ao buscar config:', configError.message);
-      }
+      if (excecaoBarbeiro) {
+        console.log(`[check-availability] EXCEÇÃO do barbeiro encontrada para ${date}`);
+        config = {
+          aberto: excecaoBarbeiro.aberto ?? false,
+          hora_abertura: excecaoBarbeiro.hora_abertura || '09:00',
+          hora_fechamento: excecaoBarbeiro.hora_fechamento || '18:00',
+          hora_almoco_inicio: excecaoBarbeiro.hora_almoco_inicio,
+          hora_almoco_fim: excecaoBarbeiro.hora_almoco_fim,
+          delay_entre_servicos: 10
+        };
+      } else {
+        // Buscar configuração padrão do barbeiro para o dia da semana
+        const { data: configBarbeiro } = await supabase
+          .from('configuracoes_horario_barbeiro')
+          .select('*')
+          .eq('barbeiro_id', barbeiroId)
+          .eq('dia_semana', dayOfWeek)
+          .maybeSingle();
 
-      if (!configData) {
-        console.warn(`[check-availability] ATENÇÃO: Nenhuma configuração encontrada para dia ${dayOfWeek}. Usando padrão de emergência.`);
-      }
+        if (configBarbeiro) {
+          console.log(`[check-availability] Config do barbeiro para dia ${dayOfWeek} encontrada`);
+          config = {
+            aberto: configBarbeiro.aberto ?? true,
+            hora_abertura: configBarbeiro.hora_abertura || '09:00',
+            hora_fechamento: configBarbeiro.hora_fechamento || '18:00',
+            hora_almoco_inicio: configBarbeiro.hora_almoco_inicio,
+            hora_almoco_fim: configBarbeiro.hora_almoco_fim,
+            delay_entre_servicos: configBarbeiro.delay_entre_servicos || 10
+          };
+        } else {
+          // Fallback: usar config global se barbeiro não tem config própria
+          console.log(`[check-availability] Barbeiro sem config, usando config global`);
+          const { data: configGlobal } = await supabase
+            .from('configuracoes_horario')
+            .select('*')
+            .eq('dia_semana', dayOfWeek)
+            .maybeSingle();
 
-      // NUNCA usar valores hardcoded - sempre preferir dados do banco
-      config = configData ? {
-        aberto: configData.aberto,
-        hora_abertura: configData.hora_abertura,
-        hora_fechamento: configData.hora_fechamento,
-        hora_almoco_inicio: configData.hora_almoco_inicio,
-        hora_almoco_fim: configData.hora_almoco_fim,
-        delay_entre_servicos: configData.delay_entre_servicos || 10
-      } : {
-        // Fallback apenas se não houver dados no banco (emergência)
-        aberto: dayOfWeek !== 0, // Fechado domingo
-        hora_abertura: '09:00',
-        hora_fechamento: '21:00', // Padrão estendido para evitar bloqueios
-        hora_almoco_inicio: '13:00',
-        hora_almoco_fim: '14:00',
-        delay_entre_servicos: 10
-      };
+          config = configGlobal ? {
+            aberto: configGlobal.aberto,
+            hora_abertura: configGlobal.hora_abertura,
+            hora_fechamento: configGlobal.hora_fechamento,
+            hora_almoco_inicio: configGlobal.hora_almoco_inicio,
+            hora_almoco_fim: configGlobal.hora_almoco_fim,
+            delay_entre_servicos: configGlobal.delay_entre_servicos || 10
+          } : {
+            aberto: dayOfWeek !== 0,
+            hora_abertura: '09:00',
+            hora_fechamento: '18:00',
+            hora_almoco_inicio: '12:00',
+            hora_almoco_fim: '13:00',
+            delay_entre_servicos: 10
+          };
+        }
+      }
+    } else {
+      // ============================================
+      // AGENDA CENTRAL (sem barbeiro específico)
+      // ============================================
+      const { data: excecaoData } = await supabase
+        .from('horarios_excepcionais')
+        .select('*')
+        .eq('data', date)
+        .maybeSingle();
+
+      if (excecaoData) {
+        console.log(`[check-availability] EXCEÇÃO CENTRAL encontrada para ${date}`);
+        config = {
+          aberto: excecaoData.aberto,
+          hora_abertura: excecaoData.hora_abertura || '09:00',
+          hora_fechamento: excecaoData.hora_fechamento || '20:00',
+          hora_almoco_inicio: excecaoData.hora_almoco_inicio,
+          hora_almoco_fim: excecaoData.hora_almoco_fim,
+          delay_entre_servicos: 10
+        };
+      } else {
+        const { data: configData } = await supabase
+          .from('configuracoes_horario')
+          .select('*')
+          .eq('dia_semana', dayOfWeek)
+          .maybeSingle();
+
+        config = configData ? {
+          aberto: configData.aberto,
+          hora_abertura: configData.hora_abertura,
+          hora_fechamento: configData.hora_fechamento,
+          hora_almoco_inicio: configData.hora_almoco_inicio,
+          hora_almoco_fim: configData.hora_almoco_fim,
+          delay_entre_servicos: configData.delay_entre_servicos || 10
+        } : {
+          aberto: dayOfWeek !== 0,
+          hora_abertura: '09:00',
+          hora_fechamento: '21:00',
+          hora_almoco_inicio: '13:00',
+          hora_almoco_fim: '14:00',
+          delay_entre_servicos: 10
+        };
+      }
     }
 
-    console.log(`[check-availability] Config do dia ${dayOfWeek}:`, JSON.stringify(config));
-    console.log(`[check-availability] Horário: ${config.hora_abertura} - ${config.hora_fechamento}`);
+    console.log(`[check-availability] Config final:`, JSON.stringify(config));
 
     if (!config.aberto) {
       return new Response(
@@ -182,9 +239,11 @@ Deno.serve(async (req) => {
     const LUNCH_END = config.hora_almoco_fim ? timeToMinutes(config.hora_almoco_fim) : null;
     const DELAY_MINUTES = config.delay_entre_servicos || 10;
 
-    console.log(`[check-availability] Horário: ${minutesToTime(OPEN_MINUTES)}-${minutesToTime(CLOSE_MINUTES)} | Almoço: ${LUNCH_START ? minutesToTime(LUNCH_START) : 'N/A'}-${LUNCH_END ? minutesToTime(LUNCH_END) : 'N/A'} | Delay: ${DELAY_MINUTES}min`);
+    console.log(`[check-availability] Horário: ${minutesToTime(OPEN_MINUTES)}-${minutesToTime(CLOSE_MINUTES)} | Delay: ${DELAY_MINUTES}min`);
 
-    // Buscar agendamentos com status bloqueante - FILTRAR POR BARBEIRO SE ESPECIFICADO
+    // ============================================
+    // BUSCAR AGENDAMENTOS - FILTRAR POR BARBEIRO
+    // ============================================
     let appointmentsQuery = supabase
       .from('agendamentos')
       .select('id, hora, duracao, status, barbeiro_id')
@@ -195,7 +254,7 @@ Deno.serve(async (req) => {
       appointmentsQuery = appointmentsQuery.neq('id', excludeAppointmentId);
     }
 
-    // NOVO: Filtrar por barbeiro específico se barbeiroId foi passado
+    // CRÍTICO: Filtrar por barbeiro específico
     if (barbeiroId) {
       appointmentsQuery = appointmentsQuery.eq('barbeiro_id', barbeiroId);
     }
@@ -210,7 +269,9 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Buscar pending bookings não expirados - FILTRAR POR BARBEIRO SE ESPECIFICADO
+    // ============================================
+    // BUSCAR PENDING BOOKINGS - FILTRAR POR BARBEIRO
+    // ============================================
     const now = new Date();
     let pendingQuery = supabase
       .from('pending_bookings')
@@ -218,7 +279,7 @@ Deno.serve(async (req) => {
       .eq('data', date)
       .gt('expires_at', now.toISOString());
 
-    // NOVO: Filtrar por barbeiro específico se barbeiroId foi passado
+    // CRÍTICO: Filtrar por barbeiro específico
     if (barbeiroId) {
       pendingQuery = pendingQuery.eq('barbeiro_id', barbeiroId);
     }
@@ -229,10 +290,10 @@ Deno.serve(async (req) => {
       console.log('[check-availability] Aviso ao buscar pending:', pbError.message);
     }
 
-    console.log(`[check-availability] Agendamentos encontrados: ${appointments?.length || 0}`);
-    console.log(`[check-availability] Pending bookings encontrados: ${pendingBookings?.length || 0}`);
+    console.log(`[check-availability] Agendamentos do barbeiro: ${appointments?.length || 0}`);
+    console.log(`[check-availability] Pending bookings do barbeiro: ${pendingBookings?.length || 0}`);
 
-    // Processar todos os slots ocupados com cálculo correto de fim + delay
+    // Processar slots ocupados
     const occupiedSlots: OccupiedSlotInfo[] = [];
 
     for (const apt of appointments || []) {
@@ -249,7 +310,7 @@ Deno.serve(async (req) => {
         fimComDelay: minutesToTime(endWithDelayMinutes)
       };
       occupiedSlots.push(info);
-      console.log(`[check-availability] → Agendamento: ${apt.hora} (${apt.duracao}min) | Fim: ${info.fim} | Livre após: ${info.fimComDelay}`);
+      console.log(`[check-availability] → Agendamento: ${apt.hora} (${apt.duracao}min) | Livre após: ${info.fimComDelay}`);
     }
 
     for (const pb of pendingBookings || []) {
@@ -266,7 +327,7 @@ Deno.serve(async (req) => {
         fimComDelay: minutesToTime(endWithDelayMinutes)
       };
       occupiedSlots.push(info);
-      console.log(`[check-availability] → Pending: ${pb.hora} (${pb.duracao}min) | Fim: ${info.fim} | Livre após: ${info.fimComDelay}`);
+      console.log(`[check-availability] → Pending: ${pb.hora} (${pb.duracao}min) | Livre após: ${info.fimComDelay}`);
     }
 
     // Calcular horário mínimo (1h de antecedência para hoje)
@@ -289,20 +350,17 @@ Deno.serve(async (req) => {
 
       // 1. Verificar se o serviço cabe antes do fechamento
       if (slotEndMinutes > CLOSE_MINUTES) {
-        continue; // Slot ignorado - não cabe
+        continue;
       }
 
-      // 2. Verificar almoço - slot não pode começar durante o almoço nem o serviço terminar durante
+      // 2. Verificar almoço
       if (LUNCH_START !== null && LUNCH_END !== null) {
-        // Slot começa durante almoço?
         if (slotStartMinutes >= LUNCH_START && slotStartMinutes < LUNCH_END) {
           continue;
         }
-        // Serviço terminaria durante o almoço?
         if (slotEndMinutes > LUNCH_START && slotEndMinutes <= LUNCH_END) {
           continue;
         }
-        // Serviço atravessa todo o almoço?
         if (slotStartMinutes < LUNCH_START && slotEndMinutes > LUNCH_END) {
           continue;
         }
@@ -315,26 +373,17 @@ Deno.serve(async (req) => {
       }
 
       // 4. Verificar conflitos com slots ocupados
-      // REGRA: Um novo slot pode ser agendado se:
-      //   - slotStart >= fimComDelay de TODOS os agendamentos existentes que começam ANTES do slotEnd
-      //   - slotEnd <= início de QUALQUER agendamento existente
       let isBlocked = false;
-      let blockReason = '';
 
       for (const occupied of occupiedSlots) {
         const occStartMinutes = timeToMinutes(occupied.hora);
         const occEndMinutes = occStartMinutes + occupied.duracao;
         const occEndWithDelayMinutes = occEndMinutes + DELAY_MINUTES;
 
-        // Verificar sobreposição considerando delay
-        // Conflito existe se:
-        // - O novo slot começa ANTES do fim do existente + delay
-        // - E o novo slot termina DEPOIS do início do existente
         const hasConflict = (slotStartMinutes < occEndWithDelayMinutes) && (slotEndMinutes > occStartMinutes);
 
         if (hasConflict) {
           isBlocked = true;
-          blockReason = `Conflito com ${occupied.hora} (${occupied.duracao}min) - livre após ${occupied.fimComDelay}`;
           break;
         }
       }
@@ -349,7 +398,7 @@ Deno.serve(async (req) => {
     const availableCount = slots.filter(s => s.available).length;
     const blockedCount = slots.filter(s => !s.available).length;
 
-    console.log(`[check-availability] RESULTADO: ${slots.length} slots gerados | ${availableCount} disponíveis | ${blockedCount} bloqueados`);
+    console.log(`[check-availability] RESULTADO: ${slots.length} slots | ${availableCount} disponíveis | ${blockedCount} bloqueados`);
     console.log('='.repeat(70));
 
     return new Response(
