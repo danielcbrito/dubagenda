@@ -31,6 +31,13 @@ interface MobileManualBookingModalProps {
   date: string;
   initialTime: string;
   onSuccess: () => void;
+  barbeiroId?: string; // Barbeiro pré-selecionado (opcional)
+}
+
+interface Barbeiro {
+  id: string;
+  apelido: string;
+  foto_url: string | null;
 }
 
 interface Service {
@@ -56,12 +63,14 @@ export function MobileManualBookingModal({
   onOpenChange, 
   date, 
   initialTime, 
-  onSuccess 
+  onSuccess,
+  barbeiroId: initialBarbeiroId
 }: MobileManualBookingModalProps) {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [services, setServices] = useState<Service[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
+  const [barbeiros, setBarbeiros] = useState<Barbeiro[]>([]);
   const [availableSlots, setAvailableSlots] = useState<TimeSlot[]>([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
   
@@ -70,6 +79,7 @@ export function MobileManualBookingModal({
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [manualClientName, setManualClientName] = useState("");
   const [selectedService, setSelectedService] = useState<Service | null>(null);
+  const [selectedBarbeiroId, setSelectedBarbeiroId] = useState<string | null>(initialBarbeiroId || null);
   const [observations, setObservations] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [validationError, setValidationError] = useState("");
@@ -81,8 +91,11 @@ export function MobileManualBookingModal({
       loadInitialData();
       setSelectedTime(initialTime);
       resetForm();
+      if (initialBarbeiroId) {
+        setSelectedBarbeiroId(initialBarbeiroId);
+      }
     }
-  }, [open, initialTime]);
+  }, [open, initialTime, initialBarbeiroId]);
 
   // Trava o scroll do fundo (agenda) quando o modal estiver aberto
   useEffect(() => {
@@ -111,6 +124,7 @@ export function MobileManualBookingModal({
     setSelectedClient(null);
     setManualClientName("");
     setSelectedService(null);
+    setSelectedBarbeiroId(initialBarbeiroId || null);
     setObservations("");
     setSearchQuery("");
     setValidationError("");
@@ -118,13 +132,15 @@ export function MobileManualBookingModal({
 
   const loadInitialData = async () => {
     try {
-      const [servicesRes, clientsRes] = await Promise.all([
+      const [servicesRes, clientsRes, barbeirosRes] = await Promise.all([
         supabase.from("servicos").select("id, nome, duracao_minutos, preco").eq("ativo", true).order("nome"),
-        supabase.from("profiles").select("id, nome, telefone").order("nome")
+        supabase.from("profiles").select("id, nome, telefone").order("nome"),
+        supabase.from("barbeiros").select("id, apelido, foto_url").eq("ativo", true).order("apelido")
       ]);
 
       setServices(servicesRes.data || []);
       setClients(clientsRes.data || []);
+      setBarbeiros(barbeirosRes.data || []);
     } catch (error) {
       console.error("Error loading data:", error);
       toast.error("Erro ao carregar dados");
@@ -223,16 +239,23 @@ export function MobileManualBookingModal({
     setLoading(true);
     setValidationError("");
 
+    if (!selectedBarbeiroId) {
+      setValidationError("Selecione um barbeiro.");
+      setLoading(false);
+      isSubmittingRef.current = false;
+      return;
+    }
+
     try {
-      // Validar horário via edge function
-      // NOTA: Para encaixes manuais do admin/barbeiro, não filtramos por barbeiro específico
-      // pois eles têm visão geral. Se precisar filtrar, adicione barbeiroId aqui.
+      // Validar horário via edge function - AGORA COM BARBEIRO
+      console.log('[MobileManualBooking] Validando para barbeiro:', selectedBarbeiroId);
       const { data: validation, error: validationError } = await supabase.functions.invoke('validate-appointment', {
         body: {
           data: date,
           hora: selectedTime,
           duracao: selectedService?.duracao_minutos || 30,
-          userId: 'manual-booking'
+          userId: 'manual-booking',
+          barbeiroId: selectedBarbeiroId // Validar na agenda do barbeiro específico
         }
       });
 
@@ -262,12 +285,14 @@ export function MobileManualBookingModal({
 
       if (!clientId || !selectedService) throw new Error("Dados incompletos");
 
-      // Criar agendamento
+      // Criar agendamento - AGORA COM BARBEIRO_ID
+      console.log('[MobileManualBooking] Criando para barbeiro:', selectedBarbeiroId);
       const { error: appointmentError } = await supabase
         .from("agendamentos")
         .insert({
           user_id: clientId,
           servico_id: selectedService.id,
+          barbeiro_id: selectedBarbeiroId, // Associar ao barbeiro selecionado
           data: date,
           hora: selectedTime + ":00",
           duracao: selectedService.duracao_minutos,
@@ -305,7 +330,9 @@ export function MobileManualBookingModal({
 
   const canProceedStep1 = selectedService !== null;
   const canProceedStep2 = selectedTime !== "";
-  const canProceedStep3 = selectedClient || manualClientName.trim();
+  const canProceedStep3 = selectedBarbeiroId !== null;
+  const canProceedStep4 = selectedClient || manualClientName.trim();
+  const selectedBarbeiroData = barbeiros.find((b) => b.id === selectedBarbeiroId);
 
   if (!open) return null;
 
