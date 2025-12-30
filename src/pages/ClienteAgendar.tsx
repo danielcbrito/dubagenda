@@ -99,13 +99,14 @@ const ClienteAgendar = () => {
 
   // Guard extra: se por qualquer motivo cair na etapa de pagamento, pular para confirmação do plano
   useEffect(() => {
-    if (step === 4 && isPlanEligible) setStep(5);
+    if (step === 5 && isPlanEligible) setStep(6);
   }, [step, isPlanEligible]);
 
   // Calcular duração total dos serviços selecionados
   const totalDuration = selectedServices.reduce((sum, s) => sum + s.duracao_minutos, 0);
 
   // NOVO HOOK: Gerencia toda a lógica de disponibilidade de slots
+  // Agora passa barbeiroId para filtrar a agenda do barbeiro específico
   const { 
     slots: availableSlots, 
     loading: loadingSlots, 
@@ -114,7 +115,8 @@ const ClienteAgendar = () => {
   } = useSlotAvailability(
     selectedDate, 
     totalDuration,
-    isRescheduling ? rescheduleAppointmentId : null
+    isRescheduling ? rescheduleAppointmentId : null,
+    selectedBarbeiroId // Passa o barbeiro selecionado para filtrar agenda
   );
 
   useEffect(() => {
@@ -230,7 +232,7 @@ const ClienteAgendar = () => {
 
   // Poll for payment confirmation when showing PIX QR Code
   useEffect(() => {
-    if (step === 6 && pixQrCode && pendingBookingId && !paymentConfirmed) {
+    if (step === 7 && pixQrCode && pendingBookingId && !paymentConfirmed) {
       const pollInterval = setInterval(async () => {
         try {
           // Check if pending booking still exists
@@ -552,16 +554,16 @@ const ClienteAgendar = () => {
       }
     }
     
-    // If rescheduling and in step 4 (time selection), skip to confirmation
+    // If rescheduling and in step 4 (time selection), skip to confirmation (step 7)
     if (isRescheduling && step === 4) {
-      setStep(6); // Go to confirmation step for reschedule
+      setStep(7); // Go to confirmation step for reschedule
       return;
     }
     
     // PLANO: só pular pagamento quando o agendamento é elegível (serviço do plano + dentro do limite)
     if (step === 4 && isPlanEligible) {
       console.log('[handleNextStep] Agendamento via PLANO elegível, pulando pagamento');
-      setStep(6);
+      setStep(7);
       return;
     }
 
@@ -578,13 +580,13 @@ const ClienteAgendar = () => {
     }
 
     
-    // Se créditos cobrem 100% do valor, pular step 5 (pagamento) e ir direto para confirmação
+    // Se créditos cobrem 100% do valor, pular step 5/6 (pagamento) e ir direto para confirmação
     if (step === 4 && !isRescheduling) {
       const totalPrice = getTotalPrice();
       if (availableCredits >= totalPrice) {
         console.log('[handleNextStep] Créditos cobrem 100%, pulando para confirmação');
         setPaymentMethod('cash'); // Define como cash pois será pago com créditos
-        setStep(6); // Pula step 5 e vai direto para confirmação
+        setStep(7); // Pula pagamento e vai direto para confirmação
         return;
       }
     }
@@ -1496,7 +1498,7 @@ const ClienteAgendar = () => {
           <div className="scrollable-content p-4 md:p-6">
             <div className="space-y-4 max-w-4xl mx-auto">
               <div>
-                <h3 className="text-sm font-semibold mb-1">Etapa {activeSubscription?.servico ? '1' : '2'} de {activeSubscription?.servico ? '4' : '5'}</h3>
+                <h3 className="text-sm font-semibold mb-1">Etapa 3 de 6</h3>
                 <h2 className="text-xl font-bold mb-3 responsive-title">Escolha a Data</h2>
                 <p className="text-sm text-muted-foreground mb-4 responsive-text">
                   Selecione o dia desejado para o atendimento
@@ -1553,11 +1555,13 @@ const ClienteAgendar = () => {
               </Card>
 
               <Button
-                onClick={handleNextStep}
+                onClick={() => setStep(4)}
                 disabled={!selectedDate}
                 className="w-full touch-target font-semibold responsive-button"
                 style={{
-                  background: 'linear-gradient(135deg, hsl(0 64% 52%), hsl(0 64% 42%))',
+                  background: selectedDate 
+                    ? 'linear-gradient(135deg, hsl(0 64% 52%), hsl(0 64% 42%))'
+                    : 'rgba(255,255,255,0.05)',
                   minHeight: '44px'
                 }}
               >
@@ -1567,8 +1571,8 @@ const ClienteAgendar = () => {
           </div>
         )}
 
-        {/* Step 3: Select Time - Premium Design */}
-        {step === 3 && (
+        {/* Step 4: Select Time - Premium Design */}
+        {step === 4 && (
           <div className="scrollable-content p-4 md:p-6">
             <div className="space-y-6 max-w-4xl mx-auto">
               {/* Premium Header */}
@@ -1577,7 +1581,7 @@ const ClienteAgendar = () => {
                   <Clock className="w-7 h-7 text-primary" />
                 </div>
                 <h3 className="text-sm font-semibold mb-1 text-muted-foreground">
-                  Etapa {activeSubscription?.servico ? '2' : '3'} de {activeSubscription?.servico ? '4' : '5'}
+                  Etapa 4 de 6
                 </h3>
                 <h2 className="text-2xl font-bold mb-2 responsive-title">Escolha o Horário</h2>
                 <p className="text-sm text-muted-foreground responsive-text">
@@ -1601,7 +1605,7 @@ const ClienteAgendar = () => {
                     Agenda cheia neste dia.
                   </p>
                   <Button
-                    onClick={() => setStep(2)}
+                    onClick={() => setStep(3)}
                     variant="outline"
                     className="gap-2"
                   >
@@ -1702,12 +1706,12 @@ const ClienteAgendar = () => {
           </div>
         )}
 
-        {/* Step 4: Payment Method */}
-        {step === 4 && !isRescheduling && (
+        {/* Step 5: Payment Method */}
+        {step === 5 && !isRescheduling && (
           <div className="scrollable-content p-4 md:p-6">
             <div className="space-y-4 max-w-4xl mx-auto">
               <div>
-                <h3 className="text-sm font-semibold mb-1">Etapa 4 de 5</h3>
+                <h3 className="text-sm font-semibold mb-1">Etapa 5 de 6</h3>
                 <h2 className="text-xl font-bold mb-3 responsive-title">Forma de Pagamento</h2>
                 <p className="text-sm text-muted-foreground mb-4 responsive-text">
                   Escolha como deseja pagar
@@ -1874,7 +1878,7 @@ const ClienteAgendar = () => {
             </Card>
 
               <Button
-                onClick={() => setStep(5)}
+                onClick={() => setStep(6)}
                 className="w-full touch-target font-semibold responsive-button"
                 style={{
                   background: 'linear-gradient(135deg, hsl(0 64% 52%), hsl(0 64% 42%))',
@@ -1887,12 +1891,12 @@ const ClienteAgendar = () => {
           </div>
         )}
 
-        {/* Step 5: Review and Card Details (if card) or Confirm */}
-        {step === 5 && !isRescheduling && (
+        {/* Step 6: Review and Card Details (if card) or Confirm */}
+        {step === 6 && !isRescheduling && (
           <div className="scrollable-content p-4 md:p-6">
             <div className="space-y-4 max-w-4xl mx-auto">
               <div>
-                <h3 className="text-sm font-semibold mb-1">Etapa {isPlanEligible ? '3' : '5'} de {isPlanEligible ? '4' : '5'}</h3>
+                <h3 className="text-sm font-semibold mb-1">Etapa 6 de 6</h3>
                 <h2 className="text-xl font-bold mb-3 responsive-title">
                   {paymentMethod === 'card' ? 'Dados do Cartão' : 'Confirmar Agendamento'}
                 </h2>
