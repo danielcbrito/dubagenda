@@ -135,6 +135,8 @@ export function ManualBookingModal({ open, onOpenChange, date, time, onSuccess }
 
     try {
       // Usar edge function para validação atômica
+      // NOTA: Para encaixes manuais do admin, não filtramos por barbeiro específico
+      // pois o admin tem visão geral. Se quiser filtrar, adicione barbeiroId aqui.
       console.log('[ManualBooking] Validando horário via edge function...');
       const { data: validation, error: validationError } = await supabase.functions.invoke('validate-appointment', {
         body: {

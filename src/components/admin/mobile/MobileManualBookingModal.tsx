@@ -225,6 +225,8 @@ export function MobileManualBookingModal({
 
     try {
       // Validar horário via edge function
+      // NOTA: Para encaixes manuais do admin/barbeiro, não filtramos por barbeiro específico
+      // pois eles têm visão geral. Se precisar filtrar, adicione barbeiroId aqui.
       const { data: validation, error: validationError } = await supabase.functions.invoke('validate-appointment', {
         body: {
           data: date,
