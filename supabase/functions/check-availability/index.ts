@@ -38,6 +38,7 @@ interface AvailabilityRequest {
   date: string;
   duration: number;
   excludeAppointmentId?: string;
+  barbeiroId?: string; // NOVO: Filtrar por barbeiro específico
 }
 
 interface TimeSlot {
@@ -87,11 +88,11 @@ Deno.serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     const body: AvailabilityRequest = await req.json();
-    const { date, duration, excludeAppointmentId } = body;
+    const { date, duration, excludeAppointmentId, barbeiroId } = body;
 
     console.log('='.repeat(70));
     console.log('[check-availability] INICIANDO VERIFICAÇÃO');
-    console.log(`[check-availability] Data: ${date} | Duração solicitada: ${duration}min`);
+    console.log(`[check-availability] Data: ${date} | Duração solicitada: ${duration}min | Barbeiro: ${barbeiroId || 'TODOS'}`);
 
     if (!date || !duration || duration <= 0) {
       return new Response(
@@ -183,15 +184,20 @@ Deno.serve(async (req) => {
 
     console.log(`[check-availability] Horário: ${minutesToTime(OPEN_MINUTES)}-${minutesToTime(CLOSE_MINUTES)} | Almoço: ${LUNCH_START ? minutesToTime(LUNCH_START) : 'N/A'}-${LUNCH_END ? minutesToTime(LUNCH_END) : 'N/A'} | Delay: ${DELAY_MINUTES}min`);
 
-    // Buscar agendamentos com status bloqueante
+    // Buscar agendamentos com status bloqueante - FILTRAR POR BARBEIRO SE ESPECIFICADO
     let appointmentsQuery = supabase
       .from('agendamentos')
-      .select('id, hora, duracao, status')
+      .select('id, hora, duracao, status, barbeiro_id')
       .eq('data', date)
       .in('status', BLOCKING_STATUSES);
 
     if (excludeAppointmentId) {
       appointmentsQuery = appointmentsQuery.neq('id', excludeAppointmentId);
+    }
+
+    // NOVO: Filtrar por barbeiro específico se barbeiroId foi passado
+    if (barbeiroId) {
+      appointmentsQuery = appointmentsQuery.eq('barbeiro_id', barbeiroId);
     }
 
     const { data: appointments, error: aptError } = await appointmentsQuery;
@@ -204,13 +210,20 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Buscar pending bookings não expirados
+    // Buscar pending bookings não expirados - FILTRAR POR BARBEIRO SE ESPECIFICADO
     const now = new Date();
-    const { data: pendingBookings, error: pbError } = await supabase
+    let pendingQuery = supabase
       .from('pending_bookings')
-      .select('id, hora, duracao, expires_at')
+      .select('id, hora, duracao, expires_at, barbeiro_id')
       .eq('data', date)
       .gt('expires_at', now.toISOString());
+
+    // NOVO: Filtrar por barbeiro específico se barbeiroId foi passado
+    if (barbeiroId) {
+      pendingQuery = pendingQuery.eq('barbeiro_id', barbeiroId);
+    }
+
+    const { data: pendingBookings, error: pbError } = await pendingQuery;
 
     if (pbError) {
       console.log('[check-availability] Aviso ao buscar pending:', pbError.message);

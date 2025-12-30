@@ -125,7 +125,8 @@ function applyPartialUpdate(existingSlots: TimeSlot[], newSlots: TimeSlot[]): Ti
 export function useSlotAvailability(
   selectedDate: Date | undefined,
   serviceDuration: number,
-  excludeAppointmentId?: string | null
+  excludeAppointmentId?: string | null,
+  barbeiroId?: string | null // NOVO: Filtrar por barbeiro específico
 ) {
   const [slots, setSlots] = useState<TimeSlot[]>([]);
   const [loading, setLoading] = useState(false);
@@ -178,7 +179,8 @@ export function useSlotAvailability(
           body: JSON.stringify({
             date: dateStr,
             duration: serviceDuration,
-            excludeAppointmentId: excludeAppointmentId || undefined
+            excludeAppointmentId: excludeAppointmentId || undefined,
+            barbeiroId: barbeiroId || undefined // NOVO: Filtrar por barbeiro
           }),
           signal: abortControllerRef.current.signal
         }
@@ -240,7 +242,7 @@ export function useSlotAvailability(
     } finally {
       setLoading(false);
     }
-  }, [selectedDate, serviceDuration, excludeAppointmentId]);
+  }, [selectedDate, serviceDuration, excludeAppointmentId, barbeiroId]);
 
   /**
    * Fallback CORRIGIDO: carregar slots diretamente do banco
@@ -301,21 +303,35 @@ export function useSlotAvailability(
       const LUNCH_END = config.hora_almoco_fim ? timeToMinutes(config.hora_almoco_fim) : null;
       const DELAY_MINUTES = config.delay_entre_servicos || DEFAULT_DELAY_MINUTES;
 
-      // Buscar agendamentos com status bloqueante
-      const { data: appointments, error: aptError } = await supabase
+      // Buscar agendamentos com status bloqueante - FILTRAR POR BARBEIRO SE ESPECIFICADO
+      let appointmentsQuery = supabase
         .from('agendamentos')
-        .select('id, hora, duracao, status')
+        .select('id, hora, duracao, status, barbeiro_id')
         .eq('data', dateStr)
         .in('status', ['pending', 'confirmed', 'completed']);
 
+      // Filtrar por barbeiro se especificado
+      if (barbeiroId) {
+        appointmentsQuery = appointmentsQuery.eq('barbeiro_id', barbeiroId);
+      }
+
+      const { data: appointments, error: aptError } = await appointmentsQuery;
+
       if (aptError) throw aptError;
 
-      // Buscar pending_bookings não expirados
-      const { data: pendingBookings } = await supabase
+      // Buscar pending_bookings não expirados - FILTRAR POR BARBEIRO SE ESPECIFICADO
+      let pendingQuery = supabase
         .from('pending_bookings')
-        .select('id, hora, duracao, expires_at')
+        .select('id, hora, duracao, expires_at, barbeiro_id')
         .eq('data', dateStr)
         .gt('expires_at', now.toISOString());
+
+      // Filtrar por barbeiro se especificado
+      if (barbeiroId) {
+        pendingQuery = pendingQuery.eq('barbeiro_id', barbeiroId);
+      }
+
+      const { data: pendingBookings } = await pendingQuery;
 
       // Processar slots ocupados
       const allOccupied: OccupiedSlot[] = [
