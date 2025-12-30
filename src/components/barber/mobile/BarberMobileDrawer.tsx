@@ -1,4 +1,4 @@
-import { X, Home, Calendar, DollarSign, Clock, LogOut, CheckCircle, ChevronRight, BarChart3, User } from "lucide-react";
+import { X, Home, Calendar, DollarSign, Clock, LogOut, CheckCircle, ChevronRight, User } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -34,7 +34,6 @@ const menuSections = [
     label: "Financeiro",
     items: [
       { title: "Meu Financeiro", url: "/barbeiro/financeiro", icon: DollarSign },
-      { title: "Relatórios", url: "/barbeiro/relatorios", icon: BarChart3 },
     ],
   },
   {

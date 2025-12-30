@@ -1,4 +1,4 @@
-import { Home, Calendar, DollarSign, Clock, LogOut, CheckCircle, ChevronLeft, ChevronRight, ChevronDown, BarChart3, Settings } from "lucide-react";
+import { Home, Calendar, DollarSign, Clock, LogOut, CheckCircle, ChevronLeft, ChevronRight, ChevronDown, Settings } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -43,7 +43,6 @@ const menuGroups = [
     label: "Financeiro",
     items: [
       { title: "Meu Financeiro", url: "/barbeiro/financeiro", icon: DollarSign },
-      { title: "Relatórios", url: "/barbeiro/relatorios", icon: BarChart3 },
     ],
   },
   {
