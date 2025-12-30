@@ -1,4 +1,4 @@
-import { X, Home, Calendar, Users, DollarSign, Gift, Settings, LogOut, CheckCircle, Scissors, Code, ChevronRight, HeadphonesIcon, Clock, BarChart3, CreditCard, Layers, Shield, Zap, Building2, UserCog } from "lucide-react";
+import { X, Home, Calendar, Users, Gift, Settings, LogOut, CheckCircle, Scissors, Code, ChevronRight, HeadphonesIcon, Clock, CreditCard, Layers, Shield, Zap, UserCog } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -29,7 +29,6 @@ const menuSections = [
       { title: "Barbeiros", url: "/admin/barbeiros", icon: UserCog },
       { title: "Clientes", url: "/admin/clientes", icon: Users },
       { title: "Financeiro", url: "/admin/financeiro", icon: CreditCard },
-      { title: "Financeiro Geral", url: "/admin/financeiro-geral", icon: Building2 },
     ],
   },
   {
