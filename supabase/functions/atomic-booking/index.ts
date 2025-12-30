@@ -23,6 +23,7 @@ interface BookingRequest {
   preco: number;
   paymentMethod?: string;
   observacoes?: string;
+  barbeiroId?: string; // Barbeiro específico para verificar/salvar
 }
 
 Deno.serve(async (req) => {
@@ -36,10 +37,10 @@ Deno.serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     const body: BookingRequest = await req.json();
-    const { date, time, duration, userId, servicoId, preco, paymentMethod, observacoes } = body;
+    const { date, time, duration, userId, servicoId, preco, paymentMethod, observacoes, barbeiroId } = body;
 
     console.log('='.repeat(60));
-    console.log(`[atomic-booking] Data: ${date} | Hora: ${time} | Duração: ${duration}min`);
+    console.log(`[atomic-booking] Data: ${date} | Hora: ${time} | Duração: ${duration}min | Barbeiro: ${barbeiroId || 'CENTRAL'}`);
 
     if (!date || !time || !duration || !userId || !servicoId) {
       return new Response(
@@ -48,36 +49,65 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Buscar configurações do dia
+    // Buscar configurações do dia - POR BARBEIRO se especificado
     const dateObj = new Date(date + 'T12:00:00');
     const dayOfWeek = dateObj.getDay();
 
-    const { data: configData } = await supabase
-      .from('configuracoes_horario')
-      .select('delay_entre_servicos')
-      .eq('dia_semana', dayOfWeek)
-      .single();
+    let DELAY_MINUTES = 10;
 
-    const DELAY_MINUTES = configData?.delay_entre_servicos || 10;
+    if (barbeiroId) {
+      // Buscar config do barbeiro específico
+      const { data: configBarbeiro } = await supabase
+        .from('configuracoes_horario_barbeiro')
+        .select('delay_entre_servicos')
+        .eq('barbeiro_id', barbeiroId)
+        .eq('dia_semana', dayOfWeek)
+        .maybeSingle();
+
+      DELAY_MINUTES = configBarbeiro?.delay_entre_servicos || 10;
+    } else {
+      // Config global
+      const { data: configData } = await supabase
+        .from('configuracoes_horario')
+        .select('delay_entre_servicos')
+        .eq('dia_semana', dayOfWeek)
+        .maybeSingle();
+
+      DELAY_MINUTES = configData?.delay_entre_servicos || 10;
+    }
 
     const [hour, minute] = time.split(':').map(Number);
     const slotStartMinutes = hour * 60 + minute;
     const slotEndMinutes = slotStartMinutes + duration;
 
-    // Verificar agendamentos existentes
-    const { data: existingAppointments } = await supabase
+    // Verificar agendamentos existentes - FILTRAR POR BARBEIRO
+    let appointmentsQuery = supabase
       .from('agendamentos')
       .select('id, hora, duracao, status')
       .eq('data', date)
       .in('status', BLOCKING_STATUSES);
 
-    // Verificar pending_bookings
+    if (barbeiroId) {
+      appointmentsQuery = appointmentsQuery.eq('barbeiro_id', barbeiroId);
+    }
+
+    const { data: existingAppointments } = await appointmentsQuery;
+
+    // Verificar pending_bookings - FILTRAR POR BARBEIRO
     const now = new Date();
-    const { data: pendingBookings } = await supabase
+    let pendingQuery = supabase
       .from('pending_bookings')
       .select('id, hora, duracao')
       .eq('data', date)
       .gt('expires_at', now.toISOString());
+
+    if (barbeiroId) {
+      pendingQuery = pendingQuery.eq('barbeiro_id', barbeiroId);
+    }
+
+    const { data: pendingBookings } = await pendingQuery;
+
+    console.log(`[atomic-booking] Agendamentos do barbeiro: ${existingAppointments?.length || 0} | Pending: ${pendingBookings?.length || 0}`);
 
     // Verificar conflitos usando a REGRA CORRETA:
     // Próximo horário livre = fim do serviço + delay
@@ -127,7 +157,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Criar pending_booking
+    // Criar pending_booking - INCLUIR barbeiro_id
     const expiresAt = new Date(now.getTime() + 30 * 60 * 1000);
 
     const { data: newBooking, error: insertError } = await supabase
@@ -141,7 +171,8 @@ Deno.serve(async (req) => {
         preco: preco,
         payment_method: paymentMethod || 'pix',
         observacoes: observacoes || null,
-        expires_at: expiresAt.toISOString()
+        expires_at: expiresAt.toISOString(),
+        barbeiro_id: barbeiroId || null // CRÍTICO: Salvar barbeiro_id
       })
       .select('id')
       .single();
