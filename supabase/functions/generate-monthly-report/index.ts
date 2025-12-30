@@ -25,17 +25,6 @@ interface MonthlyReportData {
   variacao_agendamentos_percentual: number;
 }
 
-interface BarberPayroll {
-  barbeiro_id: string;
-  barbeiro_nome: string;
-  total_atendimentos: number;
-  receita_gerada: number;
-  comissao_pct: number;
-  comissao_valor: number;
-  comissao_paga: number;
-  comissao_pendente: number;
-}
-
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -48,61 +37,34 @@ serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Parse body
-    const body = await req.json();
-    const { mes: inputMes, ano: inputAno, auto_generate } = body;
-
-    // Se for geração automática (chamada pelo cron), não precisa de autenticação
-    // O cron chama no primeiro dia do mês para gerar o relatório do mês anterior
-    if (!auto_generate) {
-      // Verificar autenticação para chamadas manuais
-      const authHeader = req.headers.get('Authorization');
-      if (!authHeader) {
-        throw new Error('Unauthorized');
-      }
-
-      const supabaseAnon = Deno.env.get('SUPABASE_ANON_KEY')!;
-      const authClient = createClient(supabaseUrl, supabaseAnon, {
-        global: { headers: { Authorization: authHeader } }
-      });
-      
-      const { data: { user }, error: authError } = await authClient.auth.getUser();
-      if (authError || !user) {
-        throw new Error('Unauthorized');
-      }
-
-      // Verificar se é admin
-      const { data: roles } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', user.id)
-        .eq('role', 'admin');
-
-      if (!roles || roles.length === 0) {
-        throw new Error('Forbidden: Admin access required');
-      }
+    // Verificar autenticação
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      throw new Error('Unauthorized');
     }
 
-    // Se for auto_generate, calcular mês anterior
-    let mes: number;
-    let ano: number;
-
-    if (auto_generate) {
-      const now = new Date();
-      // Mês anterior
-      const prevMonth = now.getMonth(); // 0-11, mas se estivermos em Janeiro, isso será 0
-      if (prevMonth === 0) {
-        mes = 12;
-        ano = now.getFullYear() - 1;
-      } else {
-        mes = prevMonth; // getMonth retorna 0-11, então se estamos em fevereiro (1), queremos janeiro (1)
-        ano = now.getFullYear();
-      }
-      console.log(`[AUTO] Gerando relatório automático do mês anterior: ${mes}/${ano}`);
-    } else {
-      mes = inputMes;
-      ano = inputAno;
+    const supabaseAnon = Deno.env.get('SUPABASE_ANON_KEY')!;
+    const authClient = createClient(supabaseUrl, supabaseAnon, {
+      global: { headers: { Authorization: authHeader } }
+    });
+    
+    const { data: { user }, error: authError } = await authClient.auth.getUser();
+    if (authError || !user) {
+      throw new Error('Unauthorized');
     }
+
+    // Verificar se é admin
+    const { data: roles } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', user.id)
+      .eq('role', 'admin');
+
+    if (!roles || roles.length === 0) {
+      throw new Error('Forbidden: Admin access required');
+    }
+
+    const { mes, ano } = await req.json();
     
     // Calcular datas do período
     const startDate = `${ano}-${String(mes).padStart(2, '0')}-01`;
@@ -113,22 +75,9 @@ serve(async (req) => {
     // Buscar TODOS os agendamentos do período (sem filtro de status)
     const { data: appointments } = await supabase
       .from('agendamentos')
-      .select('id, preco, payment_method, data, status, servico_id, is_free, barbeiro_id')
+      .select('id, preco, payment_method, data, status, servico_id, is_free')
       .gte('data', startDate)
       .lte('data', endDate);
-
-    // Buscar todos os barbeiros
-    const { data: barbeiros } = await supabase
-      .from('barbeiros')
-      .select('id, apelido, comissao_pct')
-      .eq('ativo', true);
-
-    // Buscar comissões já pagas no período
-    const { data: comissoesPagas } = await supabase
-      .from('comissoes')
-      .select('barbeiro_id, valor, pago')
-      .gte('created_at', `${startDate}T00:00:00`)
-      .lte('created_at', `${endDate}T23:59:59`);
 
     // Buscar serviços
     const { data: servicos } = await supabase
@@ -145,25 +94,19 @@ serve(async (req) => {
       .gte('created_at', `${startDate}T00:00:00`)
       .lte('created_at', `${endDate}T23:59:59`);
 
-    // Buscar pagamentos de planos (assinaturas) - buscar por data_pagamento OU created_at
+    // Buscar pagamentos de planos
     const { data: planPayments } = await supabase
       .from('pagamentos')
-      .select('valor, data_pagamento, created_at, assinatura_id')
+      .select('valor')
       .not('assinatura_id', 'is', null)
-      .eq('status', 'paid');
-
-    // Filtrar pagamentos de planos pelo período corretamente
-    const filteredPlanPayments = (planPayments || []).filter(p => {
-      const paymentDate = p.data_pagamento || p.created_at?.split('T')[0];
-      if (!paymentDate) return false;
-      return paymentDate >= startDate && paymentDate <= endDate;
-    });
-
-    console.log(`Pagamentos de planos encontrados no período: ${filteredPlanPayments.length}`);
+      .eq('status', 'paid')
+      .gte('created_at', `${startDate}T00:00:00`)
+      .lte('created_at', `${endDate}T23:59:59`);
 
     // Calcular métricas - contando TUDO
     let receitaApp = 0;
     let receitaBarbearia = 0;
+    let receitaCredito = 0;
     let totalAgendamentos = appointments?.length || 0;
     let completados = 0;
     let confirmados = 0;
@@ -172,13 +115,11 @@ serve(async (req) => {
     let noShow = 0;
     let cortesGratis = 0;
 
-    // Calcular receita de créditos diretamente da tabela creditos (igual ao dashboard)
-    const receitaCredito = (usedCredits || []).reduce((sum, c) => sum + (c.valor || 0), 0);
-
-    console.log(`Créditos usados no período: ${(usedCredits || []).length}, total: R$ ${receitaCredito.toFixed(2)}`);
+    const creditoMap = new Map((usedCredits || []).map(c => [c.agendamento_usado_id, c.valor]));
 
     (appointments || []).forEach(apt => {
       const preco = apt.preco || 0;
+      const precoServico = servicoMap.get(apt.servico_id)?.preco || preco;
 
       // Contar por status
       switch (apt.status) {
@@ -205,9 +146,9 @@ serve(async (req) => {
         cortesGratis++;
       }
 
-      // Calcular receita apenas para agendamentos COMPLETADOS (igual ao dashboard)
-      // O dashboard usa status === 'completed', então vamos manter consistência
-      if (apt.status === 'completed' && !apt.is_free) {
+      // Calcular receita apenas para agendamentos não cancelados e não no-show
+      const statusValido = apt.status === 'completed' || apt.status === 'confirmed' || apt.status === 'pending';
+      if (statusValido && !apt.is_free) {
         switch (apt.payment_method) {
           case 'pix':
           case 'card':
@@ -219,7 +160,8 @@ serve(async (req) => {
             break;
           case 'credit':
           case 'credito':
-            // Créditos já são contabilizados acima da tabela creditos
+            const creditUsed = creditoMap.get(apt.id);
+            receitaCredito += creditUsed || precoServico;
             break;
           case 'plano':
             // Planos são contabilizados separadamente via pagamentos
@@ -232,54 +174,11 @@ serve(async (req) => {
       }
     });
 
-    // Total de cortes feitos = completados (para consistência com receita)
-    const cortesFeitosMes = completados;
+    // Total de cortes feitos = completados + confirmados (não cancelados)
+    const cortesFeitosMes = completados + confirmados;
 
-    // **BUG FIX**: Usar filteredPlanPayments em vez de planPayments
-    const receitaPlano = filteredPlanPayments.reduce((sum, p) => sum + (p.valor || 0), 0);
-    
-    console.log(`Receita App: R$ ${receitaApp.toFixed(2)}`);
-    console.log(`Receita Barbearia: R$ ${receitaBarbearia.toFixed(2)}`);
-    console.log(`Receita Crédito: R$ ${receitaCredito.toFixed(2)}`);
-    console.log(`Receita Plano: R$ ${receitaPlano.toFixed(2)}`);
-    
+    const receitaPlano = (planPayments || []).reduce((sum, p) => sum + (p.valor || 0), 0);
     const receitaTotal = receitaApp + receitaBarbearia + receitaCredito + receitaPlano;
-    console.log(`Receita Total: R$ ${receitaTotal.toFixed(2)}`);
-
-    // ===== CALCULAR FOLHA DE PAGAMENTO DOS BARBEIROS =====
-    const barberPayroll: BarberPayroll[] = [];
-    
-    for (const barbeiro of (barbeiros || [])) {
-      // Agendamentos completados deste barbeiro
-      const barberAppointments = (appointments || []).filter(
-        apt => apt.barbeiro_id === barbeiro.id && apt.status === 'completed' && !apt.is_free
-      );
-      
-      const receitaGerada = barberAppointments.reduce((sum, apt) => sum + (apt.preco || 0), 0);
-      const comissaoPct = barbeiro.comissao_pct || 30;
-      const comissaoValor = receitaGerada * (comissaoPct / 100);
-      
-      // Comissões já pagas
-      const comissoesPagasBarbeiro = (comissoesPagas || [])
-        .filter(c => c.barbeiro_id === barbeiro.id && c.pago)
-        .reduce((sum, c) => sum + (c.valor || 0), 0);
-      
-      barberPayroll.push({
-        barbeiro_id: barbeiro.id,
-        barbeiro_nome: barbeiro.apelido,
-        total_atendimentos: barberAppointments.length,
-        receita_gerada: receitaGerada,
-        comissao_pct: comissaoPct,
-        comissao_valor: comissaoValor,
-        comissao_paga: comissoesPagasBarbeiro,
-        comissao_pendente: Math.max(0, comissaoValor - comissoesPagasBarbeiro)
-      });
-    }
-
-    // Total a pagar para todos os barbeiros
-    const totalComissoesPendentes = barberPayroll.reduce((sum, b) => sum + b.comissao_pendente, 0);
-    
-    console.log(`Folha de pagamento: ${barberPayroll.length} barbeiros, total pendente: R$ ${totalComissoesPendentes.toFixed(2)}`);
 
     // Buscar mês anterior para comparação
     const mesAnterior = mes === 1 ? 12 : mes - 1;
@@ -301,7 +200,7 @@ serve(async (req) => {
 
     // Estimar taxas Asaas (aproximadamente 2.5% para PIX e 5% para cartão)
     const taxasEstimadas = receitaApp * 0.03; // Média de 3%
-    const lucroLiquido = receitaTotal - taxasEstimadas - totalComissoesPendentes; // Desconta comissões
+    const lucroLiquido = receitaTotal - taxasEstimadas;
 
     const reportData: MonthlyReportData = {
       mes,
@@ -327,11 +226,6 @@ serve(async (req) => {
 
     if (openaiKey) {
       try {
-        // Preparar texto da folha de pagamento para a IA
-        const folhaPagamentoTexto = barberPayroll.map(b => 
-          `  • ${b.barbeiro_nome}: ${b.total_atendimentos} atendimentos, R$ ${b.receita_gerada.toFixed(2)} gerado, comissão (${b.comissao_pct}%): R$ ${b.comissao_pendente.toFixed(2)} pendente`
-        ).join('\n');
-
         const prompt = `Você é um analista financeiro de uma barbearia. Analise os dados do mês ${mes}/${ano} e gere um resumo executivo profissional em português brasileiro.
 
 Dados do mês:
@@ -349,20 +243,15 @@ Dados do mês:
 - Créditos Utilizados: R$ ${receitaCredito.toFixed(2)}
 - Receita de Planos/Assinaturas: R$ ${receitaPlano.toFixed(2)}
 - Taxas de Gateway: R$ ${taxasEstimadas.toFixed(2)}
-- Total Comissões a Pagar: R$ ${totalComissoesPendentes.toFixed(2)}
-- Lucro Líquido (após taxas e comissões): R$ ${lucroLiquido.toFixed(2)}
+- Lucro Líquido: R$ ${lucroLiquido.toFixed(2)}
 - Variação Receita vs Mês Anterior: ${variacaoReceita.toFixed(1)}%
 - Variação Agendamentos vs Mês Anterior: ${variacaoAgendamentos.toFixed(1)}%
 
-Folha de Pagamento dos Barbeiros:
-${folhaPagamentoTexto || '  Nenhum barbeiro registrado'}
-
-Gere um resumo executivo de 4-5 parágrafos destacando:
+Gere um resumo executivo de 3-4 parágrafos destacando:
 1. Visão geral do desempenho do mês com números exatos
 2. Principais fontes de receita e tendências
 3. Taxa de sucesso dos agendamentos
-4. Folha de pagamento - quanto pagar para cada barbeiro
-5. Recomendações para melhorar resultados`;
+4. Recomendações para melhorar resultados`;
 
         const response = await fetch('https://api.openai.com/v1/chat/completions', {
           method: 'POST',
@@ -382,14 +271,12 @@ Gere um resumo executivo de 4-5 parágrafos destacando:
           const aiData = await response.json();
           resumoIA = aiData.choices?.[0]?.message?.content || '';
           
-          // Gerar insights estruturados incluindo folha de pagamento
+          // Gerar insights estruturados
           insightsIA = {
             taxaConversao: totalAgendamentos > 0 ? ((completados / totalAgendamentos) * 100).toFixed(1) : 0,
             ticketMedio: completados > 0 ? (receitaTotal / completados).toFixed(2) : 0,
             principalCanal: receitaApp > receitaBarbearia ? 'App' : 'Barbearia',
             tendencia: variacaoReceita > 0 ? 'crescimento' : variacaoReceita < 0 ? 'queda' : 'estável',
-            folhaPagamento: barberPayroll,
-            totalComissoesPendentes: totalComissoesPendentes,
           };
         }
       } catch (aiError) {
@@ -397,13 +284,6 @@ Gere um resumo executivo de 4-5 parágrafos destacando:
         resumoIA = `Relatório mensal de ${mes}/${ano}: Receita total de R$ ${receitaTotal.toFixed(2)} com ${completados} atendimentos concluídos.`;
       }
     } else {
-      // Gerar resumo com folha de pagamento
-      let folhaPagamentoTexto = '\n\n💼 **Folha de Pagamento:**\n';
-      barberPayroll.forEach(b => {
-        folhaPagamentoTexto += `• ${b.barbeiro_nome}: ${b.total_atendimentos} cortes, R$ ${b.receita_gerada.toFixed(0)} gerados → Comissão: R$ ${b.comissao_pendente.toFixed(0)} (${b.comissao_pct}%)\n`;
-      });
-      folhaPagamentoTexto += `\n**Total a Pagar:** R$ ${totalComissoesPendentes.toFixed(2)}`;
-
       resumoIA = `📊 **Relatório Financeiro - ${mes}/${ano}**\n\n` +
         `💰 **Receita Total:** R$ ${receitaTotal.toFixed(2)}\n` +
         `• App (PIX/Cartão): R$ ${receitaApp.toFixed(2)}\n` +
@@ -414,16 +294,13 @@ Gere um resumo executivo de 4-5 parágrafos destacando:
         `• Concluídos: ${completados}\n` +
         `• Cancelados: ${cancelados}\n` +
         `• No-shows: ${noShow}\n\n` +
-        `📈 **Variação:** ${variacaoReceita > 0 ? '+' : ''}${variacaoReceita.toFixed(1)}% vs mês anterior` +
-        folhaPagamentoTexto;
+        `📈 **Variação:** ${variacaoReceita > 0 ? '+' : ''}${variacaoReceita.toFixed(1)}% vs mês anterior`;
       
       insightsIA = {
         taxaConversao: totalAgendamentos > 0 ? ((completados / totalAgendamentos) * 100).toFixed(1) : 0,
         ticketMedio: completados > 0 ? (receitaTotal / completados).toFixed(2) : 0,
         principalCanal: receitaApp > receitaBarbearia ? 'App' : 'Barbearia',
         tendencia: variacaoReceita > 0 ? 'crescimento' : variacaoReceita < 0 ? 'queda' : 'estável',
-        folhaPagamento: barberPayroll,
-        totalComissoesPendentes: totalComissoesPendentes,
       };
     }
 

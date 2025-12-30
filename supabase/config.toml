@@ -12,9 +12,6 @@ verify_jwt = false
 [functions.google-calendar-sync]
 verify_jwt = false
 
-[functions.google-calendar-auth]
-verify_jwt = true
-
 [functions.asaas-webhook]
 verify_jwt = false
 
@@ -53,6 +50,3 @@ verify_jwt = true
 
 [functions.whatsapp-verification]
 verify_jwt = false
-
-[functions.manage-barbers]
-verify_jwt = true

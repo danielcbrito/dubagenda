@@ -75,38 +75,14 @@ const Auth = () => {
   }, [cooldownTimer]);
 
   const checkUserRoleAndRedirect = async (userId: string) => {
-    try {
-      // Determina o painel correto (admin / barbeiro / cliente) baseado na tabela user_roles.
-      const { data: roles, error } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", userId);
+    const { data: roles } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", userId);
 
-      if (error) {
-        console.error("Erro ao buscar roles do usuário:", error);
-        // Fallback seguro: envia para área de cliente
-        navigate("/cliente");
-        return;
-      }
-
-      const roleSet = new Set((roles ?? []).map((r) => r.role));
-      const isAdmin = roleSet.has("admin");
-      const isBarber = roleSet.has("barber");
-
-      if (isAdmin) {
-        navigate("/admin");
-        return;
-      }
-
-      if (isBarber) {
-        navigate("/barbeiro");
-        return;
-      }
-
-      navigate("/cliente");
-    } catch (err) {
-      console.error("Erro inesperado ao redirecionar por role:", err);
-      navigate("/cliente");
+    if (roles && roles.length > 0) {
+      const isAdmin = roles.some(r => r.role === "admin");
+      navigate(isAdmin ? "/admin" : "/cliente");
     }
   };
 

@@ -1,14 +1,3 @@
-/**
- * VALIDATE-APPOINTMENT EDGE FUNCTION
- * 
- * Validação ATÔMICA de disponibilidade de horário.
- * Verifica horário de funcionamento, almoço, conflitos com agendamentos e pending_bookings.
- * 
- * IMPORTANTE: Cada barbeiro tem sua própria agenda!
- * - Se barbeiroId for passado, usa configuracoes_horario_barbeiro
- * - Filtra agendamentos e pending_bookings por barbeiro_id
- */
-
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.80.0';
 
 const corsHeaders = {
@@ -21,8 +10,7 @@ interface AppointmentRequest {
   hora: string;
   duracao: number;
   userId: string;
-  excludeAppointmentId?: string;
-  barbeiroId?: string; // Barbeiro específico para validação
+  excludeAppointmentId?: string; // Para reagendamentos - excluir o agendamento atual
 }
 
 interface BusinessHoursConfig {
@@ -34,11 +22,23 @@ interface BusinessHoursConfig {
   delay_entre_servicos: number;
 }
 
+// Helper function: convert HH:MM to minutes
 function timeToMinutes(time: string): number {
   const [hours, minutes] = time.split(':').map(Number);
   return hours * 60 + minutes;
 }
 
+/**
+ * Edge Function para validação ATÔMICA de disponibilidade de horário.
+ * 
+ * Esta função é CRÍTICA para evitar agendamentos duplicados.
+ * Ela verifica:
+ * 1. Horário de funcionamento (DINÂMICO do banco de dados)
+ * 2. Horário de almoço (DINÂMICO do banco de dados)
+ * 3. Dias de funcionamento (DINÂMICO do banco de dados)
+ * 4. Conflitos com agendamentos existentes (considerando duração + buffer)
+ * 5. Conflitos com pending_bookings (reservas aguardando pagamento)
+ */
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -49,130 +49,71 @@ Deno.serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const { data, hora, duracao, userId, excludeAppointmentId, barbeiroId }: AppointmentRequest = await req.json();
+    const { data, hora, duracao, userId, excludeAppointmentId }: AppointmentRequest = await req.json();
     
-    console.log('[validate-appointment] Validando:', { data, hora, duracao, userId, barbeiroId, excludeAppointmentId });
+    console.log('[validate-appointment] Iniciando validação:', { data, hora, duracao, userId, excludeAppointmentId });
 
-    const appointmentDate = new Date(data + 'T12:00:00');
+    // Parse the date and get day of week
+    const appointmentDate = new Date(data + 'T12:00:00'); // Parse as local date
     const dayOfWeek = appointmentDate.getDay();
 
-    let config: BusinessHoursConfig;
-
     // ============================================
-    // BUSCAR HORÁRIOS DO BARBEIRO (se especificado)
+    // BUSCAR CONFIGURAÇÕES DE HORÁRIO DO BANCO
     // ============================================
-    if (barbeiroId) {
-      console.log(`[validate-appointment] Buscando horários do barbeiro ${barbeiroId}`);
-      
-      // Verificar exceção para esta data
-      const { data: excecaoBarbeiro } = await supabase
-        .from('horarios_excepcionais_barbeiro')
-        .select('*')
-        .eq('barbeiro_id', barbeiroId)
-        .eq('data', data)
-        .maybeSingle();
+    const { data: configData, error: configError } = await supabase
+      .from('configuracoes_horario')
+      .select('*')
+      .eq('dia_semana', dayOfWeek)
+      .maybeSingle();
 
-      if (excecaoBarbeiro) {
-        config = {
-          aberto: excecaoBarbeiro.aberto ?? false,
-          hora_abertura: excecaoBarbeiro.hora_abertura || '09:00',
-          hora_fechamento: excecaoBarbeiro.hora_fechamento || '18:00',
-          hora_almoco_inicio: excecaoBarbeiro.hora_almoco_inicio,
-          hora_almoco_fim: excecaoBarbeiro.hora_almoco_fim,
-          delay_entre_servicos: 10
-        };
-      } else {
-        // Buscar config padrão do barbeiro
-        const { data: configBarbeiro } = await supabase
-          .from('configuracoes_horario_barbeiro')
-          .select('*')
-          .eq('barbeiro_id', barbeiroId)
-          .eq('dia_semana', dayOfWeek)
-          .maybeSingle();
-
-        if (configBarbeiro) {
-          config = {
-            aberto: configBarbeiro.aberto ?? true,
-            hora_abertura: configBarbeiro.hora_abertura || '09:00',
-            hora_fechamento: configBarbeiro.hora_fechamento || '18:00',
-            hora_almoco_inicio: configBarbeiro.hora_almoco_inicio,
-            hora_almoco_fim: configBarbeiro.hora_almoco_fim,
-            delay_entre_servicos: configBarbeiro.delay_entre_servicos || 10
-          };
-        } else {
-          // Fallback: config global
-          const { data: configGlobal } = await supabase
-            .from('configuracoes_horario')
-            .select('*')
-            .eq('dia_semana', dayOfWeek)
-            .maybeSingle();
-
-          config = configGlobal ? {
-            aberto: configGlobal.aberto,
-            hora_abertura: configGlobal.hora_abertura,
-            hora_fechamento: configGlobal.hora_fechamento,
-            hora_almoco_inicio: configGlobal.hora_almoco_inicio,
-            hora_almoco_fim: configGlobal.hora_almoco_fim,
-            delay_entre_servicos: configGlobal.delay_entre_servicos || 10
-          } : {
-            aberto: dayOfWeek !== 0,
-            hora_abertura: '09:00',
-            hora_fechamento: '18:00',
-            hora_almoco_inicio: '12:00',
-            hora_almoco_fim: '13:00',
-            delay_entre_servicos: 10
-          };
-        }
-      }
-    } else {
-      // ============================================
-      // AGENDA CENTRAL (sem barbeiro específico)
-      // ============================================
-      const { data: configData } = await supabase
-        .from('configuracoes_horario')
-        .select('*')
-        .eq('dia_semana', dayOfWeek)
-        .maybeSingle();
-
-      config = configData ? {
-        aberto: configData.aberto,
-        hora_abertura: configData.hora_abertura,
-        hora_fechamento: configData.hora_fechamento,
-        hora_almoco_inicio: configData.hora_almoco_inicio,
-        hora_almoco_fim: configData.hora_almoco_fim,
-        delay_entre_servicos: configData.delay_entre_servicos || 10
-      } : {
-        aberto: dayOfWeek !== 0,
-        hora_abertura: '09:00',
-        hora_fechamento: '21:00',
-        hora_almoco_inicio: '13:00',
-        hora_almoco_fim: '14:00',
-        delay_entre_servicos: 10
-      };
+    if (configError) {
+      console.error('[validate-appointment] Erro ao buscar config:', configError.message);
     }
 
-    console.log(`[validate-appointment] Config:`, JSON.stringify(config));
+    // NUNCA usar valores hardcoded - sempre preferir dados do banco
+    const config: BusinessHoursConfig = configData ? {
+      aberto: configData.aberto,
+      hora_abertura: configData.hora_abertura,
+      hora_fechamento: configData.hora_fechamento,
+      hora_almoco_inicio: configData.hora_almoco_inicio,
+      hora_almoco_fim: configData.hora_almoco_fim,
+      delay_entre_servicos: configData.delay_entre_servicos || 10
+    } : {
+      // Fallback de emergência - mas isso não deveria acontecer
+      aberto: dayOfWeek !== 0,
+      hora_abertura: '09:00',
+      hora_fechamento: '21:00',
+      hora_almoco_inicio: '13:00',
+      hora_almoco_fim: '14:00',
+      delay_entre_servicos: 10
+    };
+
+    console.log(`[validate-appointment] Config do dia ${dayOfWeek}:`, JSON.stringify(config));
 
     // Check if day is closed
     if (!config.aberto) {
       console.log('[validate-appointment] Rejeitado: Dia fechado');
       return new Response(
-        JSON.stringify({ valid: false, message: 'A barbearia não funciona neste dia.' }),
+        JSON.stringify({ 
+          valid: false, 
+          message: 'A barbearia não funciona neste dia.' 
+        }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
       );
     }
 
+    // Parse the time to get start time in minutes
     const [startHour, startMinute] = hora.split(':').map(Number);
     const startTimeInMinutes = startHour * 60 + startMinute;
     const endTimeInMinutes = startTimeInMinutes + duracao;
 
+    // Get business hours from config
     const OPEN_MINUTES = timeToMinutes(config.hora_abertura);
     const CLOSE_MINUTES = timeToMinutes(config.hora_fechamento);
     const LUNCH_START = config.hora_almoco_inicio ? timeToMinutes(config.hora_almoco_inicio) : null;
     const LUNCH_END = config.hora_almoco_fim ? timeToMinutes(config.hora_almoco_fim) : null;
-    const DELAY_MINUTES = config.delay_entre_servicos;
 
-    // Check lunch break
+    // Block lunch break (if configured)
     if (LUNCH_START !== null && LUNCH_END !== null) {
       if (
         (startTimeInMinutes >= LUNCH_START && startTimeInMinutes < LUNCH_END) ||
@@ -183,41 +124,43 @@ Deno.serve(async (req) => {
         return new Response(
           JSON.stringify({ 
             valid: false, 
-            message: `Horário de almoço (${config.hora_almoco_inicio}-${config.hora_almoco_fim}).` 
+            message: `Horário indisponível. A barbearia está fechada para almoço entre ${config.hora_almoco_inicio} e ${config.hora_almoco_fim}.` 
           }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
         );
       }
     }
 
-    // Check business hours
+    // Validate business hours (DYNAMIC from database)
     if (startTimeInMinutes < OPEN_MINUTES || endTimeInMinutes > CLOSE_MINUTES) {
-      console.log('[validate-appointment] Rejeitado: Fora do expediente');
+      console.log('[validate-appointment] Rejeitado: Fora do expediente', {
+        requested: `${startTimeInMinutes}-${endTimeInMinutes}`,
+        allowed: `${OPEN_MINUTES}-${CLOSE_MINUTES}`
+      });
       return new Response(
         JSON.stringify({ 
           valid: false, 
-          message: `Horário fora do expediente (${config.hora_abertura}-${config.hora_fechamento}).` 
+          message: `Horário fora do expediente. Funcionamento: ${config.hora_abertura} às ${config.hora_fechamento}.` 
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
       );
     }
 
     // ============================================
-    // VERIFICAR CONFLITOS - FILTRAR POR BARBEIRO
+    // VERIFICAÇÃO CRÍTICA: Conflitos de agendamentos
     // ============================================
+    
+    // Build query to check for conflicts in agendamentos
+    // INCLUIR todos os status que bloqueiam (pending, confirmed, completed)
     let agendamentosQuery = supabase
       .from('agendamentos')
       .select('id, hora, duracao, status')
       .eq('data', data)
-      .in('status', ['pending', 'confirmed', 'completed']);
+      .in('status', ['pending', 'confirmed', 'completed']); // CORRIGIDO: incluir completed
     
+    // Excluir o próprio agendamento (para reagendamentos)
     if (excludeAppointmentId) {
       agendamentosQuery = agendamentosQuery.neq('id', excludeAppointmentId);
-    }
-
-    // CRÍTICO: Filtrar por barbeiro específico
-    if (barbeiroId) {
-      agendamentosQuery = agendamentosQuery.eq('barbeiro_id', barbeiroId);
     }
 
     const { data: existingAppointments, error: aptError } = await agendamentosQuery;
@@ -230,17 +173,27 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Check conflicts with existing appointments
+    // Check for time conflicts with existing appointments
+    const DELAY_MINUTES = config.delay_entre_servicos;
+    
     for (const apt of existingAppointments || []) {
       const [aptHour, aptMinute] = apt.hora.split(':').map(Number);
       const aptStart = aptHour * 60 + aptMinute;
       const aptEnd = aptStart + apt.duracao;
       const aptEndWithDelay = aptEnd + DELAY_MINUTES;
 
+      // Check for overlap: dois intervalos se sobrepõem quando início1 < fim2+delay E fim1 > início2
       const hasConflict = startTimeInMinutes < aptEndWithDelay && endTimeInMinutes > aptStart;
 
       if (hasConflict) {
-        console.log('[validate-appointment] CONFLITO com agendamento:', apt.id);
+        console.log('[validate-appointment] CONFLITO com agendamento:', { 
+          requestedTime: hora, 
+          conflictingTime: apt.hora,
+          requestedDuration: duracao,
+          conflictingDuration: apt.duracao,
+          aptId: apt.id
+        });
+        
         return new Response(
           JSON.stringify({ 
             valid: false, 
@@ -252,35 +205,36 @@ Deno.serve(async (req) => {
     }
 
     // ============================================
-    // VERIFICAR PENDING BOOKINGS - FILTRAR POR BARBEIRO
+    // VERIFICAÇÃO ADICIONAL: Pending Bookings (reservas aguardando pagamento)
     // ============================================
-    let pendingQuery = supabase
+    const { data: pendingBookings, error: pendingError } = await supabase
       .from('pending_bookings')
       .select('id, hora, duracao, expires_at')
       .eq('data', data)
-      .gt('expires_at', new Date().toISOString());
-
-    // CRÍTICO: Filtrar por barbeiro específico
-    if (barbeiroId) {
-      pendingQuery = pendingQuery.eq('barbeiro_id', barbeiroId);
-    }
-
-    const { data: pendingBookings, error: pendingError } = await pendingQuery;
+      .gt('expires_at', new Date().toISOString()); // Apenas reservas não expiradas
 
     if (pendingError) {
       console.error('[validate-appointment] Erro ao buscar pending_bookings:', pendingError);
+      // Continue mesmo com erro - não bloquear por causa de pending_bookings
     }
 
+    // Check for conflicts with pending bookings
     for (const pending of pendingBookings || []) {
       const [pendingHour, pendingMinute] = pending.hora.split(':').map(Number);
       const pendingStart = pendingHour * 60 + pendingMinute;
       const pendingEnd = pendingStart + pending.duracao;
       const pendingEndWithDelay = pendingEnd + DELAY_MINUTES;
 
+      // Overlap: início1 < fim2+delay E fim1 > início2
       const hasConflict = startTimeInMinutes < pendingEndWithDelay && endTimeInMinutes > pendingStart;
 
       if (hasConflict) {
-        console.log('[validate-appointment] CONFLITO com pending_booking:', pending.id);
+        console.log('[validate-appointment] CONFLITO com pending_booking:', { 
+          requestedTime: hora, 
+          conflictingTime: pending.hora,
+          pendingId: pending.id
+        });
+        
         return new Response(
           JSON.stringify({ 
             valid: false, 
@@ -291,6 +245,7 @@ Deno.serve(async (req) => {
       }
     }
 
+    // No conflicts found
     console.log('[validate-appointment] Horário DISPONÍVEL:', { data, hora, duracao });
     return new Response(
       JSON.stringify({ valid: true, message: 'Horário disponível' }),

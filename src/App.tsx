@@ -14,7 +14,6 @@ import ResetPassword from "./pages/ResetPassword";
 import Cliente from "./pages/Cliente";
 import ClienteAgendar from "./pages/ClienteAgendar";
 import ClienteAssinar from "./pages/ClienteAssinar";
-import Barber from "./pages/Barber";
 import Admin from "./pages/Admin";
 import AdminRelatoriosMensais from "./pages/AdminRelatoriosMensais";
 import AgendaFullScreen from "./pages/AgendaFullScreen";
@@ -41,7 +40,6 @@ const App = () => (
           <Route path="/cliente" element={<Cliente />} />
           <Route path="/cliente/agendar" element={<ClienteAgendar />} />
           <Route path="/cliente/assinar" element={<ClienteAssinar />} />
-          <Route path="/barbeiro/*" element={<Barber />} />
           <Route path="/suporte" element={<SupportChat />} />
           <Route path="/agenda-fullscreen" element={<AgendaFullScreen />} />
           <Route path="/admin/relatorios-mensais" element={<AdminRelatoriosMensais />} />

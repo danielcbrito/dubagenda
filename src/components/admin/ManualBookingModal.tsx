@@ -19,13 +19,6 @@ interface ManualBookingModalProps {
   date: string; // YYYY-MM-DD
   time: string; // HH:MM
   onSuccess: () => void;
-  barbeiroId?: string; // Barbeiro pré-selecionado (opcional)
-}
-
-interface Barbeiro {
-  id: string;
-  apelido: string;
-  foto_url: string | null;
 }
 
 interface Service {
@@ -52,12 +45,11 @@ const promiseWithTimeout = <T,>(promise: Promise<T>, ms: number = 10000): Promis
   ]);
 };
 
-export function ManualBookingModal({ open, onOpenChange, date, time, onSuccess, barbeiroId: initialBarbeiroId }: ManualBookingModalProps) {
+export function ManualBookingModal({ open, onOpenChange, date, time, onSuccess }: ManualBookingModalProps) {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [services, setServices] = useState<Service[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
-  const [barbeiros, setBarbeiros] = useState<Barbeiro[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [filteredClients, setFilteredClients] = useState<Client[]>([]);
   
@@ -65,7 +57,6 @@ export function ManualBookingModal({ open, onOpenChange, date, time, onSuccess, 
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [manualClientName, setManualClientName] = useState("");
   const [selectedService, setSelectedService] = useState("");
-  const [selectedBarbeiroId, setSelectedBarbeiroId] = useState<string | null>(initialBarbeiroId || null);
   const [observations, setObservations] = useState("");
   const [validationError, setValidationError] = useState("");
   const [confirmStatus, setConfirmStatus] = useState<"idle" | "success" | "error">("idle");
@@ -77,14 +68,9 @@ export function ManualBookingModal({ open, onOpenChange, date, time, onSuccess, 
     if (open) {
       loadServices();
       loadClients();
-      loadBarbeiros();
       resetForm();
-      // Se barbeiro foi passado como prop, manter selecionado
-      if (initialBarbeiroId) {
-        setSelectedBarbeiroId(initialBarbeiroId);
-      }
     }
-  }, [open, initialBarbeiroId]);
+  }, [open]);
 
   useEffect(() => {
     if (searchQuery.trim() === "") {
@@ -105,27 +91,11 @@ export function ManualBookingModal({ open, onOpenChange, date, time, onSuccess, 
     setSelectedClient(null);
     setManualClientName("");
     setSelectedService("");
-    setSelectedBarbeiroId(initialBarbeiroId || null);
     setObservations("");
     setValidationError("");
     setSearchQuery("");
     setFilteredClients([]);
     setConfirmStatus("idle");
-  };
-
-  const loadBarbeiros = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("barbeiros")
-        .select("id, apelido, foto_url")
-        .eq("ativo", true)
-        .order("apelido");
-
-      if (error) throw error;
-      setBarbeiros(data || []);
-    } catch (error) {
-      console.error("Error loading barbers:", error);
-    }
   };
 
   const loadServices = async () => {
@@ -162,22 +132,16 @@ export function ManualBookingModal({ open, onOpenChange, date, time, onSuccess, 
   const validateTimeSlot = async () => {
     const selectedServiceData = services.find((s) => s.id === selectedService);
     if (!selectedServiceData) return false;
-    
-    if (!selectedBarbeiroId) {
-      setValidationError("Selecione um barbeiro.");
-      return false;
-    }
 
     try {
-      // Usar edge function para validação atômica - AGORA COM BARBEIRO
-      console.log('[ManualBooking] Validando horário via edge function para barbeiro:', selectedBarbeiroId);
+      // Usar edge function para validação atômica
+      console.log('[ManualBooking] Validando horário via edge function...');
       const { data: validation, error: validationError } = await supabase.functions.invoke('validate-appointment', {
         body: {
           data: date,
           hora: time,
           duracao: selectedServiceData.duracao_minutos,
-          userId: 'manual-booking',
-          barbeiroId: selectedBarbeiroId // Validar na agenda do barbeiro específico
+          userId: 'manual-booking' // Placeholder para encaixes manuais
         }
       });
 
@@ -258,15 +222,14 @@ export function ManualBookingModal({ open, onOpenChange, date, time, onSuccess, 
 
       if (!clientId) throw new Error("Cliente não definido");
 
-      // Criar agendamento com timeout - AGORA COM BARBEIRO_ID
-      console.log('[Encaixe] Criando agendamento para barbeiro:', selectedBarbeiroId);
+      // Criar agendamento com timeout
+      console.log('[Encaixe] Criando agendamento...');
       const insertPromise = Promise.resolve(
         supabase
           .from("agendamentos")
           .insert({
             user_id: clientId,
             servico_id: selectedService,
-            barbeiro_id: selectedBarbeiroId, // Associar ao barbeiro selecionado
             data: date,
             hora: time + ":00",
             duracao: selectedServiceData.duracao_minutos,
@@ -318,11 +281,9 @@ export function ManualBookingModal({ open, onOpenChange, date, time, onSuccess, 
   };
 
   const selectedServiceData = services.find((s) => s.id === selectedService);
-  const selectedBarbeiroData = barbeiros.find((b) => b.id === selectedBarbeiroId);
 
   const canProceedStep1 = selectedClient || manualClientName.trim();
   const canProceedStep2 = selectedService;
-  const canProceedStep3 = selectedBarbeiroId;
 
   return (
     <ErrorBoundary>
@@ -348,9 +309,9 @@ export function ManualBookingModal({ open, onOpenChange, date, time, onSuccess, 
           </DialogDescription>
         </DialogHeader>
 
-        {/* Premium Stepper - Agora com 4 steps incluindo Barbeiro */}
+        {/* Premium Stepper */}
         <div className="flex items-center justify-center gap-1 py-4">
-          {[1, 2, 3, 4].map((s) => (
+          {[1, 2, 3].map((s) => (
             <div key={s} className="flex items-center">
               <div className={cn(
                 "flex items-center justify-center w-9 h-9 rounded-full text-sm font-bold transition-all duration-300",
@@ -360,9 +321,9 @@ export function ManualBookingModal({ open, onOpenChange, date, time, onSuccess, 
               )}>
                 {step > s ? <Check className="h-4 w-4" /> : s}
               </div>
-              {s < 4 && (
+              {s < 3 && (
                 <div className={cn(
-                  "w-8 h-0.5 mx-1 transition-all duration-300 rounded-full",
+                  "w-10 h-0.5 mx-1 transition-all duration-300 rounded-full",
                   step > s ? 'bg-primary' : 'bg-white/[0.08]'
                 )} />
               )}
@@ -484,77 +445,13 @@ export function ManualBookingModal({ open, onOpenChange, date, time, onSuccess, 
             </div>
           )}
 
-          {/* Step 3: Barbeiro */}
+          {/* Step 3: Resumo */}
           {step === 3 && (
-            <div className="space-y-4">
-              <div className="text-center pb-2">
-                <h3 className="font-semibold text-lg">Selecione o Barbeiro</h3>
-                <p className="text-sm text-muted-foreground">Quem vai atender?</p>
-              </div>
-
-              <div className="grid gap-2 max-h-80 overflow-y-auto pr-2">
-                {barbeiros.map((barbeiro) => (
-                  <Card
-                    key={barbeiro.id}
-                    className={`cursor-pointer transition-all hover:shadow-md ${
-                      selectedBarbeiroId === barbeiro.id ? 'border-2 border-primary bg-primary/5' : 'border hover:border-primary/30'
-                    }`}
-                    onClick={() => setSelectedBarbeiroId(barbeiro.id)}
-                  >
-                    <CardContent className="p-3">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden">
-                            {barbeiro.foto_url ? (
-                              <img src={barbeiro.foto_url} alt={barbeiro.apelido} className="h-full w-full object-cover" />
-                            ) : (
-                              <User className="h-5 w-5 text-primary" />
-                            )}
-                          </div>
-                          <p className="font-semibold">{barbeiro.apelido}</p>
-                        </div>
-                        <div className={`h-5 w-5 rounded-full border-2 flex items-center justify-center transition-colors ${
-                          selectedBarbeiroId === barbeiro.id ? 'border-primary bg-primary' : 'border-muted-foreground/30'
-                        }`}>
-                          {selectedBarbeiroId === barbeiro.id && <Check className="h-3 w-3 text-primary-foreground" />}
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Step 4: Resumo */}
-          {step === 4 && (
             <div className="space-y-4">
               <div className="text-center pb-2">
                 <h3 className="font-semibold text-lg">Confirme os Dados</h3>
                 <p className="text-sm text-muted-foreground">Revise antes de confirmar</p>
               </div>
-
-              {/* Barbeiro Info */}
-              {selectedBarbeiroData && (
-                <Card>
-                  <CardContent className="p-4 space-y-3">
-                    <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                      <User className="h-4 w-4" />
-                      Barbeiro
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden">
-                        {selectedBarbeiroData.foto_url ? (
-                          <img src={selectedBarbeiroData.foto_url} alt={selectedBarbeiroData.apelido} className="h-full w-full object-cover" />
-                        ) : (
-                          <User className="h-5 w-5 text-primary" />
-                        )}
-                      </div>
-                      <p className="font-semibold">{selectedBarbeiroData.apelido}</p>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
 
               {/* Cliente Info */}
               <Card>
@@ -639,7 +536,7 @@ export function ManualBookingModal({ open, onOpenChange, date, time, onSuccess, 
         </div>
 
         <DialogFooter className="gap-2">
-          {step > 1 && step < 4 && (
+          {step > 1 && step < 3 && (
             <Button variant="outline" onClick={() => setStep(step - 1)} disabled={loading}>
               <ChevronLeft className="h-4 w-4 mr-1" />
               Voltar
@@ -666,13 +563,6 @@ export function ManualBookingModal({ open, onOpenChange, date, time, onSuccess, 
           )}
 
           {step === 3 && (
-            <Button onClick={() => setStep(4)} disabled={!canProceedStep3}>
-              Próximo
-              <ChevronRight className="h-4 w-4 ml-1" />
-            </Button>
-          )}
-
-          {step === 4 && (
             <Button onClick={handleSubmit} disabled={loading || confirmStatus === "success"} className="min-w-32">
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {confirmStatus === "success" ? "Confirmado!" : "Confirmar"}

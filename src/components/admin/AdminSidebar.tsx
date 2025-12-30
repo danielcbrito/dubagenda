@@ -1,4 +1,4 @@
-import { Home, Calendar, Users, DollarSign, FileText, Gift, Settings, LogOut, CheckCircle, Scissors, Code, ChevronDown, ChevronRight, ChevronLeft, HeadphonesIcon, Clock, BarChart3, CreditCard, Layers, UserCog, UserCircle } from "lucide-react";
+import { Home, Calendar, Users, DollarSign, FileText, Gift, Settings, LogOut, CheckCircle, Scissors, Code, ChevronDown, ChevronRight, ChevronLeft, HeadphonesIcon, Clock, BarChart3, CreditCard, Layers } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -29,16 +29,11 @@ const menuGroups = [
     ],
   },
   {
-    label: "Equipe",
-    items: [
-      { title: "Barbeiros", url: "/admin/barbeiros", icon: UserCog },
-      { title: "Clientes", url: "/admin/clientes", icon: Users },
-    ],
-  },
-  {
     label: "Pagamentos",
     items: [
+      { title: "Clientes", url: "/admin/clientes", icon: Users },
       { title: "Financeiro", url: "/admin/financeiro", icon: CreditCard },
+      { title: "Relatórios", url: "/admin/relatorios", icon: BarChart3 },
     ],
   },
   {
@@ -59,7 +54,6 @@ const menuGroups = [
         icon: Settings, 
         hasSubmenu: true,
         submenuItems: [
-          { title: "Meu Perfil", url: "/admin/perfil" },
           { title: "Geral", url: "/admin/suporte-config" },
           { title: "APIs", url: "/admin/apis" },
           { title: "Segurança", url: "/admin/seguranca" },

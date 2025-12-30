@@ -98,13 +98,14 @@ export function AdminFinanceiro() {
       const fromDate = format(dateRange.from, "yyyy-MM-dd");
       const toDate = format(dateRange.to, "yyyy-MM-dd");
 
-      // Buscar agendamentos completados no período (todos os barbeiros)
+      // Buscar agendamentos completados no período
       const { data: appointments } = await supabase
         .from("agendamentos")
         .select("id, preco, payment_method, data, servico_id")
         .gte("data", fromDate)
         .lte("data", toDate)
         .eq("status", "completed");
+
       // Buscar serviços para pegar preço real quando preco é 0 (plano/crédito)
       const { data: servicos } = await supabase
         .from("servicos")
