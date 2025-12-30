@@ -778,7 +778,7 @@ const ClienteAgendar = () => {
 
       // Validar disponibilidade
       const { data: validation, error: validationError } = await supabase.functions.invoke('validate-appointment', {
-        body: { data: dateStr, hora: selectedTime, duracao: totalDuration, userId: session.user.id }
+        body: { data: dateStr, hora: selectedTime, duracao: totalDuration, userId: session.user.id, barbeiroId: selectedBarbeiroId }
       });
 
       if (validationError || !validation?.valid) {
@@ -862,7 +862,8 @@ const ClienteAgendar = () => {
           hora: selectedTime,
           duracao: totalDuration,
           userId: session.user.id,
-          excludeAppointmentId: isRescheduling ? rescheduleAppointmentId : undefined
+          excludeAppointmentId: isRescheduling ? rescheduleAppointmentId : undefined,
+          barbeiroId: selectedBarbeiroId
         }
       });
 
@@ -996,7 +997,8 @@ const ClienteAgendar = () => {
           data: dateStr,
           hora: selectedTime,
           duracao: totalDuration,
-          userId: session.user.id
+          userId: session.user.id,
+          barbeiroId: selectedBarbeiroId
         }
       });
 
@@ -1166,7 +1168,8 @@ const ClienteAgendar = () => {
           hora: selectedTime,
           duracao: totalDuration,
           userId: session.user.id,
-          excludeAppointmentId: rescheduleAppointmentId // Excluir o próprio agendamento
+          excludeAppointmentId: rescheduleAppointmentId,
+          barbeiroId: selectedBarbeiroId
         }
       });
 

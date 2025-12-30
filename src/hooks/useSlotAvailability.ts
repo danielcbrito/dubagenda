@@ -250,8 +250,9 @@ export function useSlotAvailability(
    * Também usa partial updates para evitar re-render completo
    */
   const loadSlotsFromDatabase = useCallback(async (dateStr: string, forceFullUpdate = false) => {
+    const currentBarbeiroId = barbeiroId; // Capture for closure
     try {
-      console.log('[useSlotAvailability FALLBACK] Iniciando carregamento direto...');
+      console.log('[useSlotAvailability FALLBACK] Barbeiro:', currentBarbeiroId || 'CENTRAL');
       
       const now = new Date();
       const todayStr = format(now, 'yyyy-MM-dd');
@@ -430,7 +431,7 @@ export function useSlotAvailability(
       console.error('[useSlotAvailability FALLBACK] Erro:', err);
       setError('Erro ao carregar horários');
     }
-  }, [serviceDuration]);
+  }, [serviceDuration, barbeiroId]);
 
   /**
    * Configurar listeners em tempo real e polling
@@ -441,7 +442,8 @@ export function useSlotAvailability(
 
     const dateStr = format(selectedDate, 'yyyy-MM-dd');
 
-    // Reset initial load flag quando data muda
+    // Reset initial load flag quando data ou barbeiro muda
+    console.log(`[useSlotAvailability] Data/Barbeiro mudou: ${dateStr}, barbeiro: ${barbeiroId || 'CENTRAL'}`);
     isInitialLoadRef.current = true;
     lastSlotsRef.current = [];
 
@@ -516,7 +518,7 @@ export function useSlotAvailability(
         abortControllerRef.current = null;
       }
     };
-  }, [selectedDate, serviceDuration, loadSlots]);
+  }, [selectedDate, serviceDuration, barbeiroId, loadSlots]);
 
   /**
    * Função para forçar recarga completa dos slots
@@ -542,7 +544,7 @@ export function useSlotAvailability(
     const slotStartMinutes = timeToMinutes(time);
     const slotEndMinutes = slotStartMinutes + serviceDuration;
 
-    console.log(`[verifySlotAvailability] Verificando ${dateStr} ${time} (${minutesToTime(slotStartMinutes)}-${minutesToTime(slotEndMinutes)})`);
+    console.log(`[verifySlotAvailability] Verificando ${dateStr} ${time} | Barbeiro: ${barbeiroId || 'CENTRAL'}`);
 
     try {
       // Buscar configuração do dia para pegar o delay
@@ -557,7 +559,7 @@ export function useSlotAvailability(
 
       const DELAY_MINUTES = configData?.delay_entre_servicos || DEFAULT_DELAY_MINUTES;
 
-      // Buscar agendamentos com status bloqueante
+      // Buscar agendamentos com status bloqueante - FILTRAR POR BARBEIRO
       let query = supabase
         .from('agendamentos')
         .select('id, hora, duracao, status')
@@ -566,6 +568,11 @@ export function useSlotAvailability(
 
       if (excludeAppointmentId) {
         query = query.neq('id', excludeAppointmentId);
+      }
+
+      // CRÍTICO: Filtrar por barbeiro específico
+      if (barbeiroId) {
+        query = query.eq('barbeiro_id', barbeiroId);
       }
 
       const { data: appointments, error } = await query;
@@ -592,12 +599,19 @@ export function useSlotAvailability(
         }
       }
 
-      // Verificar pending_bookings
-      const { data: pendingBookings } = await supabase
+      // Verificar pending_bookings - FILTRAR POR BARBEIRO
+      let pendingQuery = supabase
         .from('pending_bookings')
         .select('id, hora, duracao')
         .eq('data', dateStr)
         .gt('expires_at', new Date().toISOString());
+
+      // CRÍTICO: Filtrar por barbeiro específico
+      if (barbeiroId) {
+        pendingQuery = pendingQuery.eq('barbeiro_id', barbeiroId);
+      }
+
+      const { data: pendingBookings } = await pendingQuery;
 
       for (const pb of pendingBookings || []) {
         const pbStartMinutes = timeToMinutes(pb.hora);
@@ -622,7 +636,7 @@ export function useSlotAvailability(
       console.error('[verifySlotAvailability] Erro geral:', err);
       return { available: false, message: 'Erro ao verificar disponibilidade' };
     }
-  }, [selectedDate, serviceDuration, excludeAppointmentId]);
+  }, [selectedDate, serviceDuration, excludeAppointmentId, barbeiroId]);
 
   return {
     slots,

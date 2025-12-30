@@ -101,41 +101,43 @@ const Barber = () => {
         return;
       }
 
-      // Verificar se é barbeiro
+      // Buscar todas as roles do usuário
       const { data: roles } = await supabase
         .from("user_roles")
         .select("role")
-        .eq("user_id", session.user.id)
-        .eq("role", "barber");
+        .eq("user_id", session.user.id);
 
-      if (!roles || roles.length === 0) {
-        // Não é barbeiro, verificar se é admin
-        const { data: adminRoles } = await supabase
-          .from("user_roles")
-          .select("role")
-          .eq("user_id", session.user.id)
-          .eq("role", "admin");
+      const roleSet = new Set((roles || []).map(r => r.role));
+      const isBarber = roleSet.has("barber");
+      const isAdmin = roleSet.has("admin");
 
-        if (adminRoles && adminRoles.length > 0) {
-          navigate("/admin");
-        } else {
-          navigate("/cliente");
-        }
-        return;
-      }
-
-      // Buscar dados do barbeiro
-      const { data: barbeiroData, error } = await supabase
+      // Verificar se o usuário tem cadastro na tabela barbeiros
+      const { data: barbeiroData, error: barbeiroError } = await supabase
         .from("barbeiros")
         .select("id, apelido, setup_completed, google_calendar_connected")
         .eq("user_id", session.user.id)
-        .single();
+        .maybeSingle();
 
-      if (error || !barbeiroData) {
-        toast.error("Erro ao carregar dados do barbeiro");
-        navigate("/auth");
+      // Se não é barbeiro E não é admin com cadastro de barbeiro, redirecionar
+      if (!isBarber && !isAdmin) {
+        navigate("/cliente");
         return;
       }
+
+      // Se é admin mas NÃO tem cadastro de barbeiro, redirecionar para admin
+      if (isAdmin && !barbeiroData) {
+        navigate("/admin");
+        return;
+      }
+
+      // Se não tem cadastro de barbeiro (e não é admin), erro
+      if (!barbeiroData) {
+        toast.error("Cadastro de barbeiro não encontrado");
+        navigate("/cliente");
+        return;
+      }
+
+      // Dados do barbeiro já foram buscados acima
 
       setBarbeiro(barbeiroData);
 
