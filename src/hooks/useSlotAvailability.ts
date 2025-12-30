@@ -264,31 +264,128 @@ export function useSlotAvailability(
       const dateObj = new Date(dateStr + 'T12:00:00');
       const dayOfWeek = dateObj.getDay();
 
-      const { data: configData } = await supabase
-        .from('configuracoes_horario')
-        .select('*')
-        .eq('dia_semana', dayOfWeek)
-        .maybeSingle();
-
-      // NUNCA usar valores hardcoded - sempre preferir dados do banco
-      const config = configData ? {
-        aberto: configData.aberto,
-        hora_abertura: configData.hora_abertura,
-        hora_fechamento: configData.hora_fechamento,
-        hora_almoco_inicio: configData.hora_almoco_inicio,
-        hora_almoco_fim: configData.hora_almoco_fim,
-        delay_entre_servicos: configData.delay_entre_servicos || DEFAULT_DELAY_MINUTES
-      } : {
-        // Fallback apenas se não houver dados no banco (emergência)
-        aberto: dayOfWeek !== 0, // Fechado domingo
-        hora_abertura: '09:00',
-        hora_fechamento: '21:00', // Padrão estendido para evitar bloqueios
-        hora_almoco_inicio: '13:00',
-        hora_almoco_fim: '14:00',
-        delay_entre_servicos: DEFAULT_DELAY_MINUTES
+      let config: {
+        aberto: boolean;
+        hora_abertura: string;
+        hora_fechamento: string;
+        hora_almoco_inicio: string | null;
+        hora_almoco_fim: string | null;
+        delay_entre_servicos: number;
       };
 
-      console.log(`[useSlotAvailability FALLBACK] Config do dia ${dayOfWeek}: ${config.hora_abertura} - ${config.hora_fechamento}`);
+      // ============================================
+      // CORRIGIDO: Buscar horários do BARBEIRO se especificado
+      // ============================================
+      if (currentBarbeiroId) {
+        // Primeiro: verificar exceção para esta data específica
+        const { data: excecaoBarbeiro } = await supabase
+          .from('horarios_excepcionais_barbeiro')
+          .select('*')
+          .eq('barbeiro_id', currentBarbeiroId)
+          .eq('data', dateStr)
+          .maybeSingle();
+
+        if (excecaoBarbeiro) {
+          console.log(`[useSlotAvailability FALLBACK] EXCEÇÃO do barbeiro encontrada para ${dateStr}`);
+          config = {
+            aberto: excecaoBarbeiro.aberto ?? false,
+            hora_abertura: excecaoBarbeiro.hora_abertura || '09:00',
+            hora_fechamento: excecaoBarbeiro.hora_fechamento || '18:00',
+            hora_almoco_inicio: excecaoBarbeiro.hora_almoco_inicio,
+            hora_almoco_fim: excecaoBarbeiro.hora_almoco_fim,
+            delay_entre_servicos: DEFAULT_DELAY_MINUTES
+          };
+        } else {
+          // Buscar configuração padrão do barbeiro para o dia da semana
+          const { data: configBarbeiro } = await supabase
+            .from('configuracoes_horario_barbeiro')
+            .select('*')
+            .eq('barbeiro_id', currentBarbeiroId)
+            .eq('dia_semana', dayOfWeek)
+            .maybeSingle();
+
+          if (configBarbeiro) {
+            console.log(`[useSlotAvailability FALLBACK] Config do barbeiro para dia ${dayOfWeek}`);
+            config = {
+              aberto: configBarbeiro.aberto ?? true,
+              hora_abertura: configBarbeiro.hora_abertura || '09:00',
+              hora_fechamento: configBarbeiro.hora_fechamento || '18:00',
+              hora_almoco_inicio: configBarbeiro.hora_almoco_inicio,
+              hora_almoco_fim: configBarbeiro.hora_almoco_fim,
+              delay_entre_servicos: configBarbeiro.delay_entre_servicos || DEFAULT_DELAY_MINUTES
+            };
+          } else {
+            // Fallback: usar config global se barbeiro não tem config própria
+            console.log(`[useSlotAvailability FALLBACK] Barbeiro sem config, usando global`);
+            const { data: configGlobal } = await supabase
+              .from('configuracoes_horario')
+              .select('*')
+              .eq('dia_semana', dayOfWeek)
+              .maybeSingle();
+
+            config = configGlobal ? {
+              aberto: configGlobal.aberto,
+              hora_abertura: configGlobal.hora_abertura,
+              hora_fechamento: configGlobal.hora_fechamento,
+              hora_almoco_inicio: configGlobal.hora_almoco_inicio,
+              hora_almoco_fim: configGlobal.hora_almoco_fim,
+              delay_entre_servicos: configGlobal.delay_entre_servicos || DEFAULT_DELAY_MINUTES
+            } : {
+              aberto: dayOfWeek !== 0,
+              hora_abertura: '09:00',
+              hora_fechamento: '18:00',
+              hora_almoco_inicio: '12:00',
+              hora_almoco_fim: '13:00',
+              delay_entre_servicos: DEFAULT_DELAY_MINUTES
+            };
+          }
+        }
+      } else {
+        // ============================================
+        // AGENDA CENTRAL (sem barbeiro específico)
+        // ============================================
+        const { data: excecaoData } = await supabase
+          .from('horarios_excepcionais')
+          .select('*')
+          .eq('data', dateStr)
+          .maybeSingle();
+
+        if (excecaoData) {
+          console.log(`[useSlotAvailability FALLBACK] EXCEÇÃO CENTRAL encontrada para ${dateStr}`);
+          config = {
+            aberto: excecaoData.aberto,
+            hora_abertura: excecaoData.hora_abertura || '09:00',
+            hora_fechamento: excecaoData.hora_fechamento || '20:00',
+            hora_almoco_inicio: excecaoData.hora_almoco_inicio,
+            hora_almoco_fim: excecaoData.hora_almoco_fim,
+            delay_entre_servicos: DEFAULT_DELAY_MINUTES
+          };
+        } else {
+          const { data: configData } = await supabase
+            .from('configuracoes_horario')
+            .select('*')
+            .eq('dia_semana', dayOfWeek)
+            .maybeSingle();
+
+          config = configData ? {
+            aberto: configData.aberto,
+            hora_abertura: configData.hora_abertura,
+            hora_fechamento: configData.hora_fechamento,
+            hora_almoco_inicio: configData.hora_almoco_inicio,
+            hora_almoco_fim: configData.hora_almoco_fim,
+            delay_entre_servicos: configData.delay_entre_servicos || DEFAULT_DELAY_MINUTES
+          } : {
+            aberto: dayOfWeek !== 0,
+            hora_abertura: '09:00',
+            hora_fechamento: '21:00',
+            hora_almoco_inicio: '13:00',
+            hora_almoco_fim: '14:00',
+            delay_entre_servicos: DEFAULT_DELAY_MINUTES
+          };
+        }
+      }
+
+      console.log(`[useSlotAvailability FALLBACK] Config final: ${config.hora_abertura} - ${config.hora_fechamento}`);
 
       if (!config.aberto) {
         console.log('[useSlotAvailability FALLBACK] Dia fechado');
