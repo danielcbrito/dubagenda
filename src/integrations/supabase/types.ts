@@ -1611,6 +1611,8 @@ export type Database = {
           ativo: boolean | null
           created_at: string | null
           id: string
+          manutencao_ativa: boolean | null
+          manutencao_mensagem: string | null
           updated_at: string | null
           webhook_url: string | null
           whatsapp_ativo: boolean | null
@@ -1620,6 +1622,8 @@ export type Database = {
           ativo?: boolean | null
           created_at?: string | null
           id?: string
+          manutencao_ativa?: boolean | null
+          manutencao_mensagem?: string | null
           updated_at?: string | null
           webhook_url?: string | null
           whatsapp_ativo?: boolean | null
@@ -1629,6 +1633,8 @@ export type Database = {
           ativo?: boolean | null
           created_at?: string | null
           id?: string
+          manutencao_ativa?: boolean | null
+          manutencao_mensagem?: string | null
           updated_at?: string | null
           webhook_url?: string | null
           whatsapp_ativo?: boolean | null
