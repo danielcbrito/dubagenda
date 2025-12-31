@@ -1,9 +1,10 @@
-import { Settings, MessageSquare, Webhook } from "lucide-react";
+import { Settings, MessageSquare, Webhook, Wrench } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AdminMensagens } from "./AdminMensagens";
 import { AdminWebhook } from "./AdminWebhook";
+import { AdminManutencao } from "./AdminManutencao";
 
 export function AdminConfiguracoes() {
   const handleGoogleCalendarInfo = () => {
@@ -18,12 +19,20 @@ export function AdminConfiguracoes() {
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">Configurações</h1>
 
-      <Tabs defaultValue="integrations" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 card-glass">
+      <Tabs defaultValue="maintenance" className="w-full">
+        <TabsList className="grid w-full grid-cols-4 card-glass">
+          <TabsTrigger value="maintenance" className="flex items-center gap-2">
+            <Wrench className="w-4 h-4" />
+            <span className="hidden sm:inline">Manutenção</span>
+          </TabsTrigger>
           <TabsTrigger value="integrations">Integrações</TabsTrigger>
           <TabsTrigger value="webhook">Webhook</TabsTrigger>
           <TabsTrigger value="messages">Mensagens</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="maintenance">
+          <AdminManutencao />
+        </TabsContent>
 
         <TabsContent value="integrations">
           <Card className="p-6 card-glass">

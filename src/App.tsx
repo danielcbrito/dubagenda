@@ -2,7 +2,9 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useNavigate, useLocation } from "react-router-dom";
+import { useMaintenanceMode } from "@/hooks/useMaintenanceMode";
+import { MaintenanceScreen } from "@/components/MaintenanceScreen";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import AuthCallback from "./pages/AuthCallback";
@@ -22,31 +24,76 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
+function MaintenanceWrapper({ children }: { children: React.ReactNode }) {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { isMaintenanceMode, maintenanceMessage, isLoading, isAdmin } = useMaintenanceMode();
+
+  // Admin routes are always accessible
+  const isAdminRoute = location.pathname.startsWith('/admin');
+  
+  // If admin, allow access
+  if (isAdmin) {
+    return <>{children}</>;
+  }
+
+  // If still loading, show nothing (to avoid flash)
+  if (isLoading) {
+    return null;
+  }
+
+  // If maintenance mode is active and not admin route
+  if (isMaintenanceMode && !isAdminRoute) {
+    return (
+      <MaintenanceScreen 
+        message={maintenanceMessage || undefined}
+        onExit={() => {
+          // Navigate to root and close the window/tab
+          window.location.href = 'about:blank';
+          window.close();
+          // Fallback if window.close() doesn't work
+          navigate('/');
+        }}
+      />
+    );
+  }
+
+  return <>{children}</>;
+}
+
+function AppRoutes() {
+  return (
+    <MaintenanceWrapper>
+      <Routes>
+        <Route path="/" element={<Index />} />
+        <Route path="/auth" element={<Auth />} />
+        <Route path="/auth/callback" element={<AuthCallback />} />
+        <Route path="/verificar-email" element={<EmailVerification />} />
+        <Route path="/verificar-whatsapp" element={<VerificarWhatsApp />} />
+        <Route path="/escolher-verificacao" element={<EscolherVerificacao />} />
+        <Route path="/esqueci-senha" element={<ForgotPassword />} />
+        <Route path="/resetar-senha" element={<ResetPassword />} />
+        <Route path="/cliente" element={<Cliente />} />
+        <Route path="/cliente/agendar" element={<ClienteAgendar />} />
+        <Route path="/cliente/assinar" element={<ClienteAssinar />} />
+        <Route path="/suporte" element={<SupportChat />} />
+        <Route path="/agenda-fullscreen" element={<AgendaFullScreen />} />
+        <Route path="/admin/relatorios-mensais" element={<AdminRelatoriosMensais />} />
+        <Route path="/admin/*" element={<Admin />} />
+        {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </MaintenanceWrapper>
+  );
+}
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/auth" element={<Auth />} />
-          <Route path="/auth/callback" element={<AuthCallback />} />
-          <Route path="/verificar-email" element={<EmailVerification />} />
-          <Route path="/verificar-whatsapp" element={<VerificarWhatsApp />} />
-          <Route path="/escolher-verificacao" element={<EscolherVerificacao />} />
-          <Route path="/esqueci-senha" element={<ForgotPassword />} />
-          <Route path="/resetar-senha" element={<ResetPassword />} />
-          <Route path="/cliente" element={<Cliente />} />
-          <Route path="/cliente/agendar" element={<ClienteAgendar />} />
-          <Route path="/cliente/assinar" element={<ClienteAssinar />} />
-          <Route path="/suporte" element={<SupportChat />} />
-          <Route path="/agenda-fullscreen" element={<AgendaFullScreen />} />
-          <Route path="/admin/relatorios-mensais" element={<AdminRelatoriosMensais />} />
-          <Route path="/admin/*" element={<Admin />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+        <AppRoutes />
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
