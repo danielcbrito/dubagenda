@@ -1,4 +1,4 @@
-import { X, Home, Calendar, Users, DollarSign, FileText, Gift, Settings, LogOut, CheckCircle, Scissors, Code, ChevronRight, HeadphonesIcon, Clock, BarChart3, CreditCard, Layers, Shield, Zap, MessageSquare, Webhook } from "lucide-react";
+import { X, Home, Calendar, Users, DollarSign, FileText, Gift, Settings, Wrench, LogOut, CheckCircle, Scissors, Code, ChevronRight, HeadphonesIcon, Clock, BarChart3, CreditCard, Layers, Shield, Zap, MessageSquare, Webhook } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -49,6 +49,7 @@ const menuSections = [
   {
     label: "Configurações",
     items: [
+      { title: "Manutenção", url: "/admin/configuracoes", icon: Wrench },
       { title: "Geral", url: "/admin/suporte-config", icon: Settings },
       { title: "APIs", url: "/admin/apis", icon: Zap },
       { title: "Segurança", url: "/admin/seguranca", icon: Shield },

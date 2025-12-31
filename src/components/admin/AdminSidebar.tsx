@@ -54,6 +54,7 @@ const menuGroups = [
         icon: Settings, 
         hasSubmenu: true,
         submenuItems: [
+          { title: "Manutenção", url: "/admin/configuracoes" },
           { title: "Geral", url: "/admin/suporte-config" },
           { title: "APIs", url: "/admin/apis" },
           { title: "Segurança", url: "/admin/seguranca" },

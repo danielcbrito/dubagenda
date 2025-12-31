@@ -23,6 +23,7 @@ export function AdminConfiguracoes() {
         <TabsList className="grid w-full grid-cols-4 card-glass">
           <TabsTrigger value="maintenance" className="flex items-center gap-2">
             <Wrench className="w-4 h-4" />
+            <span className="sm:hidden">Manut.</span>
             <span className="hidden sm:inline">Manutenção</span>
           </TabsTrigger>
           <TabsTrigger value="integrations">Integrações</TabsTrigger>
