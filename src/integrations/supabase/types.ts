@@ -1612,6 +1612,10 @@ export type Database = {
           created_at: string | null
           id: string
           manutencao_ativa: boolean | null
+          manutencao_aviso_ativo: boolean
+          manutencao_aviso_mensagem: string | null
+          manutencao_fim_programada: string | null
+          manutencao_inicio_programada: string | null
           manutencao_mensagem: string | null
           updated_at: string | null
           webhook_url: string | null
@@ -1623,6 +1627,10 @@ export type Database = {
           created_at?: string | null
           id?: string
           manutencao_ativa?: boolean | null
+          manutencao_aviso_ativo?: boolean
+          manutencao_aviso_mensagem?: string | null
+          manutencao_fim_programada?: string | null
+          manutencao_inicio_programada?: string | null
           manutencao_mensagem?: string | null
           updated_at?: string | null
           webhook_url?: string | null
@@ -1634,6 +1642,10 @@ export type Database = {
           created_at?: string | null
           id?: string
           manutencao_ativa?: boolean | null
+          manutencao_aviso_ativo?: boolean
+          manutencao_aviso_mensagem?: string | null
+          manutencao_fim_programada?: string | null
+          manutencao_inicio_programada?: string | null
           manutencao_mensagem?: string | null
           updated_at?: string | null
           webhook_url?: string | null
@@ -1729,6 +1741,17 @@ export type Database = {
           p_telefone: string
         }
         Returns: Json
+      }
+      get_maintenance_status: {
+        Args: never
+        Returns: {
+          manutencao_ativa: boolean
+          manutencao_aviso_ativo: boolean
+          manutencao_aviso_mensagem: string
+          manutencao_fim_programada: string
+          manutencao_inicio_programada: string
+          manutencao_mensagem: string
+        }[]
       }
       get_user_available_credits: {
         Args: { p_user_id: string }
