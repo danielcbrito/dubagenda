@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, useNavigate, useLocation } from "react-router-dom";
 import { useMaintenanceMode } from "@/hooks/useMaintenanceMode";
 import { MaintenanceScreen } from "@/components/MaintenanceScreen";
+import { MaintenanceWarningBanner } from "@/components/MaintenanceWarningBanner";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import AuthCallback from "./pages/AuthCallback";
@@ -27,14 +28,28 @@ const queryClient = new QueryClient();
 function MaintenanceWrapper({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   const navigate = useNavigate();
-  const { isMaintenanceMode, maintenanceMessage, isLoading, isAdmin } = useMaintenanceMode();
+  const { 
+    isMaintenanceMode, 
+    maintenanceMessage, 
+    isLoading, 
+    isAdmin,
+    warningActive,
+    warningMessage
+  } = useMaintenanceMode();
 
   // Admin routes are always accessible
   const isAdminRoute = location.pathname.startsWith('/admin');
   
-  // If admin, allow access
+  // If admin, allow access (with warning banner if active)
   if (isAdmin) {
-    return <>{children}</>;
+    return (
+      <>
+        {warningActive && warningMessage && !isAdminRoute && (
+          <MaintenanceWarningBanner message={warningMessage} />
+        )}
+        {children}
+      </>
+    );
   }
 
   // If still loading, show nothing (to avoid flash)
@@ -42,8 +57,8 @@ function MaintenanceWrapper({ children }: { children: React.ReactNode }) {
     return null;
   }
 
-  // If maintenance mode is active and not admin route
-  if (isMaintenanceMode && !isAdminRoute) {
+  // If maintenance mode is active (manual or scheduled)
+  if (isMaintenanceMode) {
     return (
       <MaintenanceScreen 
         message={maintenanceMessage || undefined}
@@ -58,7 +73,15 @@ function MaintenanceWrapper({ children }: { children: React.ReactNode }) {
     );
   }
 
-  return <>{children}</>;
+  // Show warning banner if active
+  return (
+    <>
+      {warningActive && warningMessage && (
+        <MaintenanceWarningBanner message={warningMessage} />
+      )}
+      {children}
+    </>
+  );
 }
 
 function AppRoutes() {
