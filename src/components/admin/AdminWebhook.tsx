@@ -26,14 +26,17 @@ export function AdminWebhook() {
 
   const loadConfig = async () => {
     try {
+      // IMPORTANTE: a tabela webhook_config já teve múltiplas linhas no passado.
+      // Para evitar erro do PostgREST com .single(), pegamos SEMPRE a config mais recente.
       const { data, error } = await supabase
         .from('webhook_config')
         .select('*')
-        .single();
+        .order('updated_at', { ascending: false })
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
 
-      if (error && error.code !== 'PGRST116') {
-        throw error;
-      }
+      if (error) throw error;
 
       if (data) {
         setWebhookUrl(data.webhook_url || "");

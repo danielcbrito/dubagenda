@@ -570,10 +570,13 @@ async function handleSubscriptionUpdated(supabase: any, payload: AsaasWebhookEve
 // Helper function to send webhook events
 async function sendWebhookEvent(supabase: any, eventData: any): Promise<void> {
   try {
-    // Buscar configuração do webhook
+    // Buscar configuração do webhook (sempre a mais recente)
     const { data: config } = await supabase
       .from('webhook_config')
       .select('webhook_url, ativo')
+      .order('updated_at', { ascending: false })
+      .order('created_at', { ascending: false })
+      .limit(1)
       .single();
 
     if (!config?.webhook_url || !config?.ativo) {

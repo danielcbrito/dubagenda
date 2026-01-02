@@ -97,10 +97,14 @@ export function AdminDisparo() {
     }
 
     // Get webhook config - usando o webhook de disparo específico
+    // IMPORTANTE: garantimos pegar a config mais recente (evita erro quando existem múltiplas linhas)
     const { data: config, error: configError } = await supabase
       .from("webhook_config")
       .select("disparo_webhook_url, disparo_ativo")
-      .single();
+      .order("updated_at", { ascending: false })
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
     if (configError || !config?.disparo_webhook_url || !config?.disparo_ativo) {
       toast.error("Webhook de disparo não configurado ou inativo. Configure em TI > Webhooks");

@@ -131,10 +131,13 @@ Deno.serve(async (req) => {
     console.log('[send-webhook-event] Recebido evento:', payload.evento);
     console.log('[send-webhook-event] Cliente:', payload.cliente_nome, '| Telefone:', payload.cliente_telefone);
 
-    // Buscar configuração do webhook
+    // Buscar configuração do webhook (sempre a mais recente)
     const { data: config, error: configError } = await supabase
       .from('webhook_config')
       .select('webhook_url, ativo')
+      .order('updated_at', { ascending: false })
+      .order('created_at', { ascending: false })
+      .limit(1)
       .single();
 
     if (configError) {

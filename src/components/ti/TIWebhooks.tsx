@@ -52,12 +52,17 @@ export function TIWebhooks() {
 
   const loadConfig = async () => {
     try {
+      // IMPORTANTE: a tabela webhook_config já teve múltiplas linhas no passado.
+      // Para evitar erro do PostgREST com .single(), pegamos SEMPRE a config mais recente.
       const { data, error } = await supabase
         .from('webhook_config')
         .select('id, webhook_url, ativo, whatsapp_webhook_url, whatsapp_ativo, disparo_webhook_url, disparo_ativo')
-        .single();
+        .order('updated_at', { ascending: false })
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
 
-      if (error && error.code !== 'PGRST116') throw error;
+      if (error) throw error;
 
       if (data) {
         setConfig(data);

@@ -86,10 +86,13 @@ Deno.serve(async (req) => {
         );
       }
 
-      // Buscar configuração do webhook DEDICADO para WhatsApp
+      // Buscar configuração do webhook DEDICADO para WhatsApp (sempre a mais recente)
       const { data: webhookConfig } = await supabase
         .from('webhook_config')
         .select('whatsapp_webhook_url, whatsapp_ativo, webhook_url, ativo')
+        .order('updated_at', { ascending: false })
+        .order('created_at', { ascending: false })
+        .limit(1)
         .single();
 
       // Priorizar webhook dedicado para WhatsApp, senão usar o padrão
@@ -338,10 +341,13 @@ Deno.serve(async (req) => {
         );
       }
 
-      // Buscar configuração do webhook DEDICADO para WhatsApp
+      // Buscar configuração do webhook DEDICADO para WhatsApp (sempre a mais recente)
       const { data: webhookConfigResend } = await supabase
         .from('webhook_config')
         .select('whatsapp_webhook_url, whatsapp_ativo, webhook_url, ativo')
+        .order('updated_at', { ascending: false })
+        .order('created_at', { ascending: false })
+        .limit(1)
         .single();
 
       // Priorizar webhook dedicado para WhatsApp
