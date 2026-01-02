@@ -1,4 +1,4 @@
-import { Home, Calendar, Users, DollarSign, FileText, Gift, Settings, LogOut, CheckCircle, Scissors, Code, ChevronDown, ChevronRight, ChevronLeft, HeadphonesIcon, Clock, BarChart3, CreditCard, Layers } from "lucide-react";
+import { Home, Calendar, Users, DollarSign, FileText, Gift, Settings, LogOut, CheckCircle, Scissors, Code, ChevronDown, ChevronRight, ChevronLeft, HeadphonesIcon, Clock, BarChart3, CreditCard, Layers, Terminal } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -49,18 +49,7 @@ const menuGroups = [
     items: [
       { title: "Horários", url: "/admin/horarios", icon: Clock },
       { title: "Suporte", url: "/admin/suporte", icon: HeadphonesIcon },
-      { 
-        title: "Configurações", 
-        icon: Settings, 
-        hasSubmenu: true,
-        submenuItems: [
-          { title: "Manutenção", url: "/admin/configuracoes" },
-          { title: "Geral", url: "/admin/suporte-config" },
-          { title: "APIs", url: "/admin/apis" },
-          { title: "Segurança", url: "/admin/seguranca" },
-          { title: "Dev Tools", url: "/admin/dev" },
-        ]
-      },
+      { title: "Painel TI", url: "/ti", icon: Terminal, openInNewTab: true },
     ],
   },
 ];

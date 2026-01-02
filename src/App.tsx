@@ -18,6 +18,7 @@ import Cliente from "./pages/Cliente";
 import ClienteAgendar from "./pages/ClienteAgendar";
 import ClienteAssinar from "./pages/ClienteAssinar";
 import Admin from "./pages/Admin";
+import TI from "./pages/TI";
 import AdminRelatoriosMensais from "./pages/AdminRelatoriosMensais";
 import AgendaFullScreen from "./pages/AgendaFullScreen";
 import SupportChat from "./pages/SupportChat";
@@ -122,6 +123,7 @@ function AppRoutes() {
         <Route path="/agenda-fullscreen" element={<AgendaFullScreen />} />
         <Route path="/admin/relatorios-mensais" element={<AdminRelatoriosMensais />} />
         <Route path="/admin/*" element={<Admin />} />
+        <Route path="/ti/*" element={<TI />} />
         {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
         <Route path="*" element={<NotFound />} />
       </Routes>
