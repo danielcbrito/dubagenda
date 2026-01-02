@@ -22,6 +22,7 @@ import { AdminDev } from "@/components/admin/AdminDev";
 import { AdminSuportePanel } from "@/components/admin/AdminSuportePanel";
 import { AdminSuporteConfig } from "@/components/admin/AdminSuporteConfig";
 import AdminHorarios from "@/components/admin/AdminHorarios";
+import { AdminDisparo } from "@/components/admin/AdminDisparo";
 
 // Mapeamento de rotas para títulos
 const routeTitles: Record<string, string> = {
@@ -41,6 +42,7 @@ const routeTitles: Record<string, string> = {
   "/admin/seguranca": "Segurança",
   "/admin/horarios": "Horários",
   "/admin/dev": "Dev Tools",
+  "/admin/disparo": "Disparo de Mensagens",
 };
 
 const Admin = () => {
@@ -242,6 +244,7 @@ const Admin = () => {
                   <Route path="seguranca" element={<AdminSeguranca />} />
                   <Route path="horarios" element={<AdminHorarios />} />
                   <Route path="dev" element={<AdminDev />} />
+                  <Route path="disparo" element={<AdminDisparo />} />
                 </Routes>
               </Suspense>
             </div>

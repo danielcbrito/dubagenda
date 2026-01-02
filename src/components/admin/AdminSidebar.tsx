@@ -1,4 +1,4 @@
-import { Home, Calendar, Users, DollarSign, FileText, Gift, Settings, LogOut, CheckCircle, Scissors, Code, ChevronDown, ChevronRight, ChevronLeft, HeadphonesIcon, Clock, BarChart3, CreditCard, Layers, Terminal } from "lucide-react";
+import { Home, Calendar, Users, DollarSign, FileText, Gift, Settings, LogOut, CheckCircle, Scissors, Code, ChevronDown, ChevronRight, ChevronLeft, HeadphonesIcon, Clock, BarChart3, CreditCard, Layers, Terminal, Send } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -42,6 +42,12 @@ const menuGroups = [
       { title: "Cortes", url: "/admin/servicos/cortes", icon: Scissors },
       { title: "Planos", url: "/admin/servicos/planos", icon: Layers },
       { title: "Promoções", url: "/admin/promocoes", icon: Gift },
+    ],
+  },
+  {
+    label: "Comunicação",
+    items: [
+      { title: "Disparo de Mensagens", url: "/admin/disparo", icon: Send },
     ],
   },
   {
