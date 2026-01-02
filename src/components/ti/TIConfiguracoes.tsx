@@ -1,8 +1,7 @@
-import { Settings, Calendar, Webhook, MessageSquare } from "lucide-react";
+import { Calendar } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AdminMensagens } from "@/components/admin/AdminMensagens";
-import { AdminWebhook } from "@/components/admin/AdminWebhook";
 import { AdminSuporteConfig } from "@/components/admin/AdminSuporteConfig";
 import { toast } from "sonner";
 
@@ -10,7 +9,7 @@ export function TIConfiguracoes() {
   const handleGoogleCalendarInfo = () => {
     toast.info(
       "As credenciais do Google Calendar foram configuradas com sucesso. " +
-      "Para atualizá-las, entre em contato com o suporte técnico.",
+        "Para atualizá-las, entre em contato com o suporte técnico.",
       { duration: 5000 }
     );
   };
@@ -29,16 +28,22 @@ export function TIConfiguracoes() {
 
       <Tabs defaultValue="integrations" className="w-full">
         <TabsList className="bg-[#12121a] border border-cyan-500/20">
-          <TabsTrigger value="integrations" className="data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-400">
+          <TabsTrigger
+            value="integrations"
+            className="data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-400"
+          >
             Integrações
           </TabsTrigger>
-          <TabsTrigger value="webhook" className="data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-400">
-            Webhook
-          </TabsTrigger>
-          <TabsTrigger value="messages" className="data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-400">
+          <TabsTrigger
+            value="messages"
+            className="data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-400"
+          >
             Mensagens
           </TabsTrigger>
-          <TabsTrigger value="support" className="data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-400">
+          <TabsTrigger
+            value="support"
+            className="data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-400"
+          >
             Suporte
           </TabsTrigger>
         </TabsList>
@@ -75,10 +80,6 @@ export function TIConfiguracoes() {
               </button>
             </div>
           </Card>
-        </TabsContent>
-
-        <TabsContent value="webhook" className="mt-6">
-          <AdminWebhook />
         </TabsContent>
 
         <TabsContent value="messages" className="mt-6">
