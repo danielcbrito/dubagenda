@@ -76,9 +76,43 @@ interface WebhookEventPayload {
 
   // Mensagens e detalhes extras
   mensagem_barbeiro?: string;
-  mensagem?: string;
+  mensagem?: string; // Mensagem pronta para enviar ao cliente
   motivo?: string;
   detalhes?: Record<string, unknown>;
+}
+
+/**
+ * Gera mensagem personalizada baseada no evento
+ */
+function gerarMensagemPersonalizada(evento: string, payload: WebhookEventPayload): string {
+  const nome = payload.cliente_nome?.split(' ')[0] || 'Cliente';
+  const data = payload.data ? new Date(payload.data + 'T00:00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' }) : '';
+  const hora = payload.hora || '';
+  const servico = payload.servico || 'seu serviço';
+  const preco = payload.preco ? `R$ ${payload.preco.toFixed(2)}` : '';
+
+  switch (evento) {
+    case 'agendamento_criado':
+      return `Olá ${nome}! 🎉\n\nSeu agendamento foi confirmado!\n\n📅 ${data}\n⏰ ${hora}\n✂️ ${servico}\n💰 ${preco}\n\nAguardamos você! Qualquer dúvida, estamos à disposição.`;
+    
+    case 'agendamento_confirmado':
+      return `Olá ${nome}! ✅\n\nSeu agendamento para ${data} às ${hora} foi confirmado pelo barbeiro.\n\nNos vemos em breve!`;
+    
+    case 'agendamento_cancelado':
+      return `Olá ${nome}!\n\nSeu agendamento para ${data} às ${hora} foi cancelado.\n\nSe precisar remarcar, acesse nosso app ou entre em contato.`;
+    
+    case 'remarcacao_solicitada':
+      return `Olá ${nome}!\n\nPrecisamos remarcar seu agendamento de ${data} às ${hora}.\n\nMotivo: ${payload.motivo || 'Imprevisto'}\n\nPor favor, acesse o app para escolher um novo horário.`;
+    
+    case 'lembrete_agendamento':
+      return `Olá ${nome}! 📢\n\nLembrete: Seu agendamento é amanhã!\n\n📅 ${data}\n⏰ ${hora}\n✂️ ${servico}\n\nTe esperamos!`;
+    
+    case 'atendimento_finalizado':
+      return `Olá ${nome}! 💈\n\nObrigado pela visita! Esperamos que tenha gostado do ${servico}.\n\nVolte sempre! ⭐`;
+    
+    default:
+      return `Olá ${nome}! Temos uma atualização sobre seu agendamento. Acesse o app para mais detalhes.`;
+  }
 }
 
 Deno.serve(async (req) => {
@@ -207,8 +241,14 @@ Deno.serve(async (req) => {
       }
     }
 
+    // GERAR MENSAGEM PERSONALIZADA SE NÃO TIVER
+    if (!eventPayload.mensagem && eventPayload.evento !== 'disparo_mensagem') {
+      eventPayload.mensagem = gerarMensagemPersonalizada(eventPayload.evento, eventPayload);
+    }
+
     console.log('[send-webhook-event] Enviando para:', config.webhook_url);
     console.log('[send-webhook-event] Telefone WhatsApp:', eventPayload.cliente_telefone_whatsapp);
+    console.log('[send-webhook-event] Mensagem:', eventPayload.mensagem);
     console.log('[send-webhook-event] Payload completo:', JSON.stringify(eventPayload, null, 2));
 
     // Enviar evento para o webhook
