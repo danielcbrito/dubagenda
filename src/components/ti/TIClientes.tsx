@@ -80,12 +80,18 @@ export function TIClientes() {
   const loadClients = async () => {
     setLoading(true);
     try {
+      // Buscar perfis
       const { data: profiles, error: profilesError } = await supabase
         .from("profiles")
         .select("id, nome, cpf, telefone, blocked, created_at")
         .order("created_at", { ascending: false });
 
-      if (profilesError) throw profilesError;
+      if (profilesError) {
+        console.error("Error fetching profiles:", profilesError);
+        throw profilesError;
+      }
+
+      console.log("Profiles loaded:", profiles?.length);
 
       // Fetch emails via Edge Function
       let usersMap: Record<string, { email?: string }> = {};
@@ -100,26 +106,48 @@ export function TIClientes() {
         console.log('Could not fetch users from edge function:', e);
       }
       
-      const { data: pontos } = await supabase.from("pontos").select("user_id, pontos");
-      const { data: appointments } = await supabase.from("agendamentos").select("user_id");
-      const { data: creditos } = await supabase.from("creditos").select("user_id, valor, usado");
+      // Buscar pontos de todos os usuários
+      const { data: pontos, error: pontosError } = await supabase
+        .from("pontos")
+        .select("user_id, pontos");
+      
+      if (pontosError) console.error("Error fetching pontos:", pontosError);
+      console.log("Pontos loaded:", pontos?.length);
+
+      // Buscar todos os agendamentos (sem limite)
+      const { data: appointments, error: appointmentsError } = await supabase
+        .from("agendamentos")
+        .select("user_id, id");
+      
+      if (appointmentsError) console.error("Error fetching appointments:", appointmentsError);
+      console.log("Appointments loaded:", appointments?.length);
+
+      // Buscar créditos disponíveis
+      const { data: creditos, error: creditosError } = await supabase
+        .from("creditos")
+        .select("user_id, valor, usado")
+        .eq("usado", false);
+      
+      if (creditosError) console.error("Error fetching creditos:", creditosError);
+      console.log("Creditos loaded:", creditos?.length);
 
       const clientsData = profiles?.map(profile => {
         const userData = usersMap[profile.id];
         const userPoints = pontos?.find(p => p.user_id === profile.id);
-        const userAppointments = appointments?.filter(a => a.user_id === profile.id);
-        const userCreditos = creditos?.filter(c => c.user_id === profile.id && !c.usado);
-        const totalCreditos = userCreditos?.reduce((sum, c) => sum + c.valor, 0) || 0;
+        const userAppointments = appointments?.filter(a => a.user_id === profile.id) || [];
+        const userCreditos = creditos?.filter(c => c.user_id === profile.id) || [];
+        const totalCreditos = userCreditos.reduce((sum, c) => sum + Number(c.valor), 0);
 
         return {
           ...profile,
           email: userData?.email || null,
           pontos: userPoints?.pontos || 0,
-          total_agendamentos: userAppointments?.length || 0,
+          total_agendamentos: userAppointments.length,
           creditos: totalCreditos,
         };
       }) || [];
 
+      console.log("Clients processed:", clientsData.length);
       setClients(clientsData);
     } catch (error) {
       console.error("Error loading clients:", error);
@@ -384,6 +412,7 @@ export function TIClientes() {
                 <tr>
                   <th className="text-left px-4 py-2 text-[10px] text-gray-500 uppercase tracking-wider font-medium">Cliente</th>
                   <th className="text-left px-4 py-2 text-[10px] text-gray-500 uppercase tracking-wider font-medium hidden md:table-cell">Contato</th>
+                  <th className="text-center px-4 py-2 text-[10px] text-gray-500 uppercase tracking-wider font-medium">Cortes</th>
                   <th className="text-center px-4 py-2 text-[10px] text-gray-500 uppercase tracking-wider font-medium">Pontos</th>
                   <th className="text-center px-4 py-2 text-[10px] text-gray-500 uppercase tracking-wider font-medium">Créditos</th>
                   <th className="text-center px-4 py-2 text-[10px] text-gray-500 uppercase tracking-wider font-medium">Status</th>
@@ -422,6 +451,12 @@ export function TIClientes() {
                             <span>{client.telefone}</span>
                           </div>
                         )}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      <div className="flex items-center justify-center gap-1">
+                        <Calendar className="w-3.5 h-3.5 text-blue-400" />
+                        <span className="text-xs font-bold text-blue-400">{client.total_agendamentos}</span>
                       </div>
                     </td>
                     <td className="px-4 py-3 text-center">
