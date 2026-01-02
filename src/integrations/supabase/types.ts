@@ -1634,6 +1634,8 @@ export type Database = {
         Row: {
           ativo: boolean | null
           created_at: string | null
+          disparo_ativo: boolean | null
+          disparo_webhook_url: string | null
           id: string
           manutencao_ativa: boolean | null
           manutencao_aviso_ativo: boolean
@@ -1649,6 +1651,8 @@ export type Database = {
         Insert: {
           ativo?: boolean | null
           created_at?: string | null
+          disparo_ativo?: boolean | null
+          disparo_webhook_url?: string | null
           id?: string
           manutencao_ativa?: boolean | null
           manutencao_aviso_ativo?: boolean
@@ -1664,6 +1668,8 @@ export type Database = {
         Update: {
           ativo?: boolean | null
           created_at?: string | null
+          disparo_ativo?: boolean | null
+          disparo_webhook_url?: string | null
           id?: string
           manutencao_ativa?: boolean | null
           manutencao_aviso_ativo?: boolean

@@ -96,16 +96,18 @@ export function AdminDisparo() {
       return;
     }
 
-    // Get webhook config
+    // Get webhook config - usando o webhook de disparo específico
     const { data: config, error: configError } = await supabase
       .from("webhook_config")
-      .select("webhook_url, ativo")
+      .select("disparo_webhook_url, disparo_ativo")
       .single();
 
-    if (configError || !config?.webhook_url || !config?.ativo) {
-      toast.error("Webhook não configurado ou inativo. Configure em TI > Webhooks");
+    if (configError || !config?.disparo_webhook_url || !config?.disparo_ativo) {
+      toast.error("Webhook de disparo não configurado ou inativo. Configure em TI > Webhooks");
       return;
     }
+
+    const webhookUrl = config.disparo_webhook_url;
 
     setSending(true);
     let successCount = 0;
@@ -117,7 +119,7 @@ export function AdminDisparo() {
       for (const client of selectedClientsList) {
         try {
           // Send to webhook with the message
-          const response = await fetch(config.webhook_url, {
+          const response = await fetch(webhookUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
