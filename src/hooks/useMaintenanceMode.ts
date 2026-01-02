@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 interface MaintenanceStatus {
@@ -8,6 +8,7 @@ interface MaintenanceStatus {
   manutencao_fim_programada: string | null;
   manutencao_aviso_ativo: boolean;
   manutencao_aviso_mensagem: string | null;
+  manutencao_ips_permitidos: string[] | null;
 }
 
 export function useMaintenanceMode() {
@@ -20,8 +21,23 @@ export function useMaintenanceMode() {
   const [warningMessage, setWarningMessage] = useState<string | null>(null);
   const [scheduledStart, setScheduledStart] = useState<Date | null>(null);
   const [scheduledEnd, setScheduledEnd] = useState<Date | null>(null);
+  const [currentUserIP, setCurrentUserIP] = useState<string | null>(null);
+
+  // Busca IP do usuário
+  const fetchUserIP = useCallback(async () => {
+    try {
+      const response = await fetch('https://api.ipify.org?format=json');
+      const data = await response.json();
+      setCurrentUserIP(data.ip);
+      return data.ip;
+    } catch (error) {
+      console.error('Error fetching IP:', error);
+      return null;
+    }
+  }, []);
 
   useEffect(() => {
+    fetchUserIP();
     checkMaintenanceStatus();
     checkAuthAndPermissions();
 
@@ -77,10 +93,14 @@ export function useMaintenanceMode() {
           p_email: user.email
         });
         
-        setIsAllowedUser(!!isAllowed);
-      } else {
-        setIsAllowedUser(false);
+        if (isAllowed) {
+          setIsAllowedUser(true);
+          return;
+        }
       }
+      
+      // Se não é admin nem email permitido, verifica IP
+      setIsAllowedUser(false);
     } else {
       setIsAuthenticated(false);
       setIsAllowedUser(false);
@@ -89,44 +109,27 @@ export function useMaintenanceMode() {
 
   const checkMaintenanceStatus = async () => {
     try {
-      const { data, error } = await supabase.rpc('get_maintenance_status');
+      // Usa a nova função que inclui IPs
+      const { data, error } = await supabase.rpc('get_maintenance_status_with_ips');
 
       if (error) {
-        console.error('Error checking maintenance status:', error);
-        setIsMaintenanceMode(false);
-        setIsLoading(false);
+        // Fallback para função antiga se a nova não existir
+        const { data: oldData, error: oldError } = await supabase.rpc('get_maintenance_status');
+        if (oldError) {
+          console.error('Error checking maintenance status:', oldError);
+          setIsMaintenanceMode(false);
+          setIsLoading(false);
+          return;
+        }
+        if (oldData && oldData.length > 0) {
+          processMaintenanceData(oldData[0], []);
+        }
         return;
       }
 
       if (data && data.length > 0) {
         const status = data[0] as MaintenanceStatus;
-        const now = new Date();
-        
-        // Verifica manutenção manual
-        let maintenanceActive = status.manutencao_ativa || false;
-        
-        // Verifica manutenção programada
-        const startDate = status.manutencao_inicio_programada 
-          ? new Date(status.manutencao_inicio_programada) 
-          : null;
-        const endDate = status.manutencao_fim_programada 
-          ? new Date(status.manutencao_fim_programada) 
-          : null;
-        
-        setScheduledStart(startDate);
-        setScheduledEnd(endDate);
-        
-        // Se está dentro do período programado, ativa manutenção
-        if (startDate && endDate && now >= startDate && now <= endDate) {
-          maintenanceActive = true;
-        }
-        
-        setIsMaintenanceMode(maintenanceActive);
-        setMaintenanceMessage(status.manutencao_mensagem || null);
-        
-        // Aviso prévio
-        setWarningActive(status.manutencao_aviso_ativo || false);
-        setWarningMessage(status.manutencao_aviso_mensagem || null);
+        processMaintenanceData(status, status.manutencao_ips_permitidos || []);
       } else {
         setIsMaintenanceMode(false);
       }
@@ -135,6 +138,44 @@ export function useMaintenanceMode() {
       setIsMaintenanceMode(false);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const processMaintenanceData = async (status: Partial<MaintenanceStatus>, allowedIPs: string[]) => {
+    const now = new Date();
+    
+    // Verifica manutenção manual
+    let maintenanceActive = status.manutencao_ativa || false;
+    
+    // Verifica manutenção programada
+    const startDate = status.manutencao_inicio_programada 
+      ? new Date(status.manutencao_inicio_programada) 
+      : null;
+    const endDate = status.manutencao_fim_programada 
+      ? new Date(status.manutencao_fim_programada) 
+      : null;
+    
+    setScheduledStart(startDate);
+    setScheduledEnd(endDate);
+    
+    // Se está dentro do período programado, ativa manutenção
+    if (startDate && endDate && now >= startDate && now <= endDate) {
+      maintenanceActive = true;
+    }
+    
+    setIsMaintenanceMode(maintenanceActive);
+    setMaintenanceMessage(status.manutencao_mensagem || null);
+    
+    // Aviso prévio
+    setWarningActive(status.manutencao_aviso_ativo || false);
+    setWarningMessage(status.manutencao_aviso_mensagem || null);
+
+    // Verifica se o IP do usuário está permitido
+    if (maintenanceActive && allowedIPs.length > 0) {
+      const userIP = currentUserIP || await fetchUserIP();
+      if (userIP && allowedIPs.includes(userIP)) {
+        setIsAllowedUser(true);
+      }
     }
   };
 
@@ -148,6 +189,7 @@ export function useMaintenanceMode() {
     warningMessage,
     scheduledStart,
     scheduledEnd,
+    currentUserIP,
     refresh: checkMaintenanceStatus
   };
 }

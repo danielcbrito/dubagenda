@@ -50,3 +50,12 @@ verify_jwt = true
 
 [functions.whatsapp-verification]
 verify_jwt = false
+
+[functions.execute-scheduled-dispatches]
+verify_jwt = false
+
+[functions.manage-clients]
+verify_jwt = true
+
+[functions.generate-monthly-report]
+verify_jwt = true
