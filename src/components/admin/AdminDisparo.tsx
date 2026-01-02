@@ -114,56 +114,47 @@ export function AdminDisparo() {
     const webhookUrl = config.disparo_webhook_url;
 
     setSending(true);
-    let successCount = 0;
-    let errorCount = 0;
 
     try {
       const selectedClientsList = clients.filter(c => selectedClients.has(c.id));
 
-      for (const client of selectedClientsList) {
-        try {
-          // Send to webhook with the message
-          const response = await fetch(webhookUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              evento: "disparo_mensagem",
-              cliente_id: client.id,
-              cliente_nome: client.nome,
-              cliente_telefone: client.telefone,
-              cliente_telefone_whatsapp: formatPhoneForWhatsApp(client.telefone!),
-              mensagem: message.replace("{nome}", client.nome),
-              timestamp: new Date().toISOString()
-            }),
-          });
+      // Monta o array com todos os contatos separados
+      const contatos = selectedClientsList.map((client) => ({
+        cliente_id: client.id,
+        cliente_nome: client.nome,
+        cliente_telefone: client.telefone,
+        cliente_telefone_whatsapp: formatPhoneForWhatsApp(client.telefone!),
+        mensagem: message.replace("{nome}", client.nome)
+      }));
 
-          if (response.ok) {
-            successCount++;
-          } else {
-            errorCount++;
-          }
-        } catch (e) {
-          errorCount++;
-          console.error(`Erro ao enviar para ${client.nome}:`, e);
-        }
-      }
+      // Envia TUDO de uma vez só em uma única requisição
+      const response = await fetch(webhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          evento: "disparo_mensagem_lote",
+          total_contatos: contatos.length,
+          contatos: contatos,
+          timestamp: new Date().toISOString()
+        }),
+      });
 
-      if (successCount > 0) {
-        toast.success(`${successCount} mensagem(ns) enviada(s) com sucesso!`);
-      }
-      if (errorCount > 0) {
-        toast.error(`${errorCount} mensagem(ns) falharam`);
+      if (response.ok) {
+        toast.success(`Disparo enviado com sucesso! ${contatos.length} contato(s) enviados ao webhook.`);
+      } else {
+        const errorText = await response.text();
+        console.error("Erro no webhook:", errorText);
+        toast.error("Erro ao enviar disparo. Verifique o webhook.");
       }
 
       // Log the dispatch
       await supabase.from("system_logs").insert({
         level: "info",
         category: "disparo",
-        message: `Disparo de mensagens: ${successCount} sucesso, ${errorCount} falhas`,
+        message: `Disparo de mensagens em lote: ${contatos.length} contatos`,
         details: {
-          total: selectedClients.size,
-          success: successCount,
-          errors: errorCount,
+          total: contatos.length,
+          contatos: contatos,
           message_preview: message.substring(0, 100)
         }
       });
@@ -174,7 +165,7 @@ export function AdminDisparo() {
       setSelectAll(false);
     } catch (error) {
       console.error(error);
-      toast.error("Erro ao enviar mensagens");
+      toast.error("Erro ao enviar disparo");
     } finally {
       setSending(false);
     }
