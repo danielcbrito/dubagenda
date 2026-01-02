@@ -14,7 +14,8 @@ export function useMaintenanceMode() {
   const [isMaintenanceMode, setIsMaintenanceMode] = useState(false);
   const [maintenanceMessage, setMaintenanceMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [isAllowedUser, setIsAllowedUser] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [warningActive, setWarningActive] = useState(false);
   const [warningMessage, setWarningMessage] = useState<string | null>(null);
   const [scheduledStart, setScheduledStart] = useState<Date | null>(null);
@@ -22,7 +23,12 @@ export function useMaintenanceMode() {
 
   useEffect(() => {
     checkMaintenanceStatus();
-    checkIsAdmin();
+    checkAuthAndPermissions();
+
+    // Subscribe to auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
+      checkAuthAndPermissions();
+    });
 
     // Subscribe to realtime changes
     const channel = supabase
@@ -41,27 +47,48 @@ export function useMaintenanceMode() {
       .subscribe();
 
     return () => {
+      subscription.unsubscribe();
       supabase.removeChannel(channel);
     };
   }, []);
 
-  const checkIsAdmin = async () => {
+  const checkAuthAndPermissions = async () => {
     const { data: { user } } = await supabase.auth.getUser();
+    
     if (user) {
-      const { data } = await supabase
+      setIsAuthenticated(true);
+      
+      // Check if user is admin
+      const { data: adminRole } = await supabase
         .from('user_roles')
         .select('role')
         .eq('user_id', user.id)
         .eq('role', 'admin')
         .maybeSingle();
       
-      setIsAdmin(!!data);
+      if (adminRole) {
+        setIsAllowedUser(true);
+        return;
+      }
+      
+      // Check if user's email is in allowed list
+      if (user.email) {
+        const { data: isAllowed } = await supabase.rpc('is_email_allowed_maintenance', {
+          p_email: user.email
+        });
+        
+        setIsAllowedUser(!!isAllowed);
+      } else {
+        setIsAllowedUser(false);
+      }
+    } else {
+      setIsAuthenticated(false);
+      setIsAllowedUser(false);
     }
   };
 
   const checkMaintenanceStatus = async () => {
     try {
-      // Usa RPC segura que funciona sem login (SECURITY DEFINER)
       const { data, error } = await supabase.rpc('get_maintenance_status');
 
       if (error) {
@@ -115,7 +142,8 @@ export function useMaintenanceMode() {
     isMaintenanceMode,
     maintenanceMessage,
     isLoading,
-    isAdmin,
+    isAllowedUser,
+    isAuthenticated,
     warningActive,
     warningMessage,
     scheduledStart,

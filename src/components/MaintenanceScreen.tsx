@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Wrench, Clock, ArrowLeft } from "lucide-react";
+import { Settings, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import logoDub from "@/assets/logo-dub.png";
 
@@ -9,90 +9,91 @@ interface MaintenanceScreenProps {
 }
 
 export function MaintenanceScreen({ message, onExit }: MaintenanceScreenProps) {
-  const defaultMessage = "Estamos realizando melhorias para você. Voltamos em breve!";
+  const defaultMessage = "Estamos realizando melhorias no sistema. Por favor, tente novamente mais tarde.";
   
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6 relative overflow-hidden">
-      {/* Background effects */}
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/10 rounded-full blur-[100px] animate-pulse" />
-        <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-gold/10 rounded-full blur-[80px] animate-pulse" style={{ animationDelay: '1s' }} />
+    <div className="min-h-screen bg-gradient-to-b from-background via-background to-background/95 flex flex-col items-center justify-center p-6 relative overflow-hidden">
+      {/* Subtle background pattern */}
+      <div className="absolute inset-0 opacity-[0.02]">
+        <div 
+          className="absolute inset-0"
+          style={{
+            backgroundImage: `radial-gradient(circle at 1px 1px, currentColor 1px, transparent 0)`,
+            backgroundSize: '40px 40px'
+          }}
+        />
       </div>
 
       {/* Content */}
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
+        initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6 }}
-        className="relative z-10 flex flex-col items-center text-center max-w-md"
+        transition={{ duration: 0.4 }}
+        className="relative z-10 flex flex-col items-center text-center max-w-sm w-full"
       >
         {/* Logo */}
         <motion.img
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.5, delay: 0.2 }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.3, delay: 0.1 }}
           src={logoDub}
           alt="Barbearia DUB"
-          className="w-32 h-32 object-contain mb-8"
+          className="w-20 h-20 object-contain mb-6"
         />
 
-        {/* Icon */}
+        {/* Status indicator */}
         <motion.div
-          initial={{ scale: 0 }}
-          animate={{ scale: 1, rotate: [0, -10, 10, -10, 0] }}
-          transition={{ 
-            scale: { duration: 0.4, delay: 0.3 },
-            rotate: { duration: 0.6, delay: 0.7, ease: "easeInOut" }
-          }}
-          className="w-24 h-24 rounded-full glass-card flex items-center justify-center mb-8"
-          style={{ boxShadow: 'var(--shadow-glow-red)' }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.2 }}
+          className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20 mb-6"
         >
-          <Wrench className="w-12 h-12 text-primary" />
+          <Settings className="w-3.5 h-3.5 text-primary animate-[spin_3s_linear_infinite]" />
+          <span className="text-xs font-medium text-primary">Manutenção em andamento</span>
         </motion.div>
 
         {/* Title */}
         <motion.h1
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
-          className="text-3xl font-bold text-foreground mb-4"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.25 }}
+          className="text-xl font-semibold text-foreground mb-3"
         >
-          Em Manutenção
+          Sistema Temporariamente Indisponível
         </motion.h1>
 
         {/* Message */}
         <motion.p
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5 }}
-          className="text-muted-foreground text-lg mb-8 leading-relaxed"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.3 }}
+          className="text-sm text-muted-foreground mb-8 leading-relaxed"
         >
           {message || defaultMessage}
         </motion.p>
 
-        {/* Time indicator */}
+        {/* Divider */}
         <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.6 }}
-          className="flex items-center gap-2 text-muted-foreground mb-10"
-        >
-          <Clock className="w-5 h-5 animate-pulse" />
-          <span className="text-sm">Volte em breve</span>
-        </motion.div>
+          initial={{ opacity: 0, scaleX: 0 }}
+          animate={{ opacity: 1, scaleX: 1 }}
+          transition={{ delay: 0.35 }}
+          className="w-16 h-px bg-border mb-8"
+        />
 
         {/* Exit Button */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.7 }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.4 }}
+          className="w-full"
         >
           <Button
             onClick={onExit}
-            className="btn-neon px-8 py-4 text-base font-semibold flex items-center gap-2"
+            variant="outline"
+            className="w-full h-11 text-sm font-medium gap-2 border-border/50 hover:bg-secondary/50"
           >
-            <ArrowLeft className="w-5 h-5" />
-            Entendi, voltar mais tarde
+            <ArrowLeft className="w-4 h-4" />
+            Voltar
           </Button>
         </motion.div>
       </motion.div>
@@ -101,8 +102,8 @@ export function MaintenanceScreen({ message, onExit }: MaintenanceScreenProps) {
       <motion.p
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        transition={{ delay: 1 }}
-        className="absolute bottom-6 text-muted-foreground text-xs"
+        transition={{ delay: 0.5 }}
+        className="absolute bottom-4 text-muted-foreground/60 text-[10px] tracking-wide uppercase"
       >
         Agradecemos a compreensão
       </motion.p>

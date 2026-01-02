@@ -25,6 +25,18 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
+// Routes that are always accessible (before login)
+const PUBLIC_ROUTES = [
+  '/',
+  '/auth',
+  '/auth/callback',
+  '/verificar-email',
+  '/verificar-whatsapp',
+  '/escolher-verificacao',
+  '/esqueci-senha',
+  '/resetar-senha'
+];
+
 function MaintenanceWrapper({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   const navigate = useNavigate();
@@ -32,16 +44,32 @@ function MaintenanceWrapper({ children }: { children: React.ReactNode }) {
     isMaintenanceMode, 
     maintenanceMessage, 
     isLoading, 
-    isAdmin,
+    isAllowedUser,
+    isAuthenticated,
     warningActive,
     warningMessage
   } = useMaintenanceMode();
 
-  // Admin routes are always accessible
-  const isAdminRoute = location.pathname.startsWith('/admin');
+  // Check if current route is public (before login)
+  const isPublicRoute = PUBLIC_ROUTES.some(route => 
+    location.pathname === route || location.pathname.startsWith('/auth')
+  );
   
-  // If admin, allow access (with warning banner if active)
-  if (isAdmin) {
+  // Admin routes are always accessible for allowed users
+  const isAdminRoute = location.pathname.startsWith('/admin');
+
+  // If still loading, show nothing (to avoid flash)
+  if (isLoading) {
+    return null;
+  }
+
+  // Public routes (login, signup, etc.) are always accessible
+  if (isPublicRoute) {
+    return <>{children}</>;
+  }
+
+  // Allowed users (admins or in email whitelist) can access everything
+  if (isAllowedUser) {
     return (
       <>
         {warningActive && warningMessage && !isAdminRoute && (
@@ -52,28 +80,19 @@ function MaintenanceWrapper({ children }: { children: React.ReactNode }) {
     );
   }
 
-  // If still loading, show nothing (to avoid flash)
-  if (isLoading) {
-    return null;
-  }
-
-  // If maintenance mode is active (manual or scheduled)
-  if (isMaintenanceMode) {
+  // If user is authenticated but NOT allowed, and maintenance is active
+  if (isAuthenticated && isMaintenanceMode) {
     return (
       <MaintenanceScreen 
         message={maintenanceMessage || undefined}
         onExit={() => {
-          // Navigate to root and close the window/tab
-          window.location.href = 'about:blank';
-          window.close();
-          // Fallback if window.close() doesn't work
           navigate('/');
         }}
       />
     );
   }
 
-  // Show warning banner if active
+  // Normal flow - show warning banner if active
   return (
     <>
       {warningActive && warningMessage && (
