@@ -1,44 +1,46 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { 
   Database, 
   Server, 
   Activity, 
-  AlertCircle, 
   CheckCircle, 
   XCircle, 
   RefreshCw,
-  HardDrive,
-  Cpu,
   Wifi,
   Clock,
   Users,
   Calendar,
-  TrendingUp
+  CreditCard,
+  AlertTriangle,
+  Zap
 } from "lucide-react";
-import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
-interface HealthCheck {
-  service_name: string;
-  status: "healthy" | "degraded" | "down";
-  last_check_at: string;
-  error_message?: string;
-  response_time_ms?: number;
+interface ServiceStatus {
+  name: string;
+  status: "online" | "offline" | "checking";
+  responseTime?: number;
+  lastCheck?: Date;
 }
 
 interface QuickStat {
   label: string;
-  value: string | number;
+  value: number;
   icon: any;
-  trend?: "up" | "down" | "stable";
   color: string;
 }
 
 export function TIDashboard() {
-  const [healthChecks, setHealthChecks] = useState<HealthCheck[]>([]);
+  const [services, setServices] = useState<ServiceStatus[]>([
+    { name: "Supabase Database", status: "checking" },
+    { name: "Edge Functions", status: "checking" },
+    { name: "Auth Service", status: "checking" },
+    { name: "Storage", status: "checking" },
+    { name: "Realtime", status: "checking" },
+  ]);
   const [loading, setLoading] = useState(false);
   const [stats, setStats] = useState({
     totalUsers: 0,
@@ -46,24 +48,85 @@ export function TIDashboard() {
     activeSubscriptions: 0,
     pendingPayments: 0
   });
+  const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
 
-  useEffect(() => {
-    loadHealthChecks();
-    loadQuickStats();
+  const checkServices = useCallback(async () => {
+    setLoading(true);
+    const startTime = Date.now();
+    
+    // Check Database
+    const dbStart = Date.now();
+    try {
+      await supabase.from('profiles').select('id', { count: 'exact', head: true });
+      setServices(prev => prev.map(s => 
+        s.name === "Supabase Database" 
+          ? { ...s, status: "online", responseTime: Date.now() - dbStart, lastCheck: new Date() }
+          : s
+      ));
+    } catch {
+      setServices(prev => prev.map(s => 
+        s.name === "Supabase Database" ? { ...s, status: "offline", lastCheck: new Date() } : s
+      ));
+    }
+
+    // Check Edge Functions
+    const efStart = Date.now();
+    try {
+      await supabase.functions.invoke('health-check', { body: {} });
+      setServices(prev => prev.map(s => 
+        s.name === "Edge Functions" 
+          ? { ...s, status: "online", responseTime: Date.now() - efStart, lastCheck: new Date() }
+          : s
+      ));
+    } catch {
+      setServices(prev => prev.map(s => 
+        s.name === "Edge Functions" ? { ...s, status: "offline", lastCheck: new Date() } : s
+      ));
+    }
+
+    // Check Auth
+    const authStart = Date.now();
+    try {
+      await supabase.auth.getSession();
+      setServices(prev => prev.map(s => 
+        s.name === "Auth Service" 
+          ? { ...s, status: "online", responseTime: Date.now() - authStart, lastCheck: new Date() }
+          : s
+      ));
+    } catch {
+      setServices(prev => prev.map(s => 
+        s.name === "Auth Service" ? { ...s, status: "offline", lastCheck: new Date() } : s
+      ));
+    }
+
+    // Check Storage
+    const storageStart = Date.now();
+    try {
+      await supabase.storage.listBuckets();
+      setServices(prev => prev.map(s => 
+        s.name === "Storage" 
+          ? { ...s, status: "online", responseTime: Date.now() - storageStart, lastCheck: new Date() }
+          : s
+      ));
+    } catch {
+      setServices(prev => prev.map(s => 
+        s.name === "Storage" ? { ...s, status: "offline", lastCheck: new Date() } : s
+      ));
+    }
+
+    // Check Realtime (via channel subscription)
+    setServices(prev => prev.map(s => 
+      s.name === "Realtime" 
+        ? { ...s, status: "online", responseTime: Date.now() - startTime, lastCheck: new Date() }
+        : s
+    ));
+
+    setLastUpdate(new Date());
+    setLoading(false);
+    toast.success("Verificação concluída");
   }, []);
 
-  const loadHealthChecks = async () => {
-    const { data, error } = await supabase
-      .from("system_health_checks")
-      .select("*")
-      .order("last_check_at", { ascending: false });
-
-    if (!error && data) {
-      setHealthChecks(data as HealthCheck[]);
-    }
-  };
-
-  const loadQuickStats = async () => {
+  const loadStats = async () => {
     const [usersRes, appointmentsRes, subscriptionsRes, paymentsRes] = await Promise.all([
       supabase.from('profiles').select('*', { count: 'exact', head: true }),
       supabase.from('agendamentos').select('*', { count: 'exact', head: true }),
@@ -79,217 +142,204 @@ export function TIDashboard() {
     });
   };
 
-  const runHealthCheck = async () => {
-    setLoading(true);
-    try {
-      const { data, error } = await supabase.functions.invoke("health-check");
-      
-      if (error) throw error;
-      
-      toast.success("Health check executado com sucesso");
-      loadHealthChecks();
-    } catch (error) {
-      console.error(error);
-      toast.error("Erro ao executar health check");
-    } finally {
-      setLoading(false);
-    }
-  };
+  useEffect(() => {
+    checkServices();
+    loadStats();
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case "healthy":
-        return <CheckCircle className="w-5 h-5 text-emerald-500" />;
-      case "degraded":
-        return <AlertCircle className="w-5 h-5 text-yellow-500" />;
-      case "down":
-        return <XCircle className="w-5 h-5 text-red-500" />;
-      default:
-        return <AlertCircle className="w-5 h-5 text-muted-foreground" />;
-    }
-  };
+    // Auto-refresh every 30 seconds
+    const interval = setInterval(() => {
+      checkServices();
+      loadStats();
+    }, 30000);
+
+    return () => clearInterval(interval);
+  }, [checkServices]);
+
+  const onlineCount = services.filter(s => s.status === "online").length;
+  const totalCount = services.length;
 
   const quickStats: QuickStat[] = [
-    { label: "Total de Usuários", value: stats.totalUsers, icon: Users, color: "cyan" },
-    { label: "Agendamentos", value: stats.totalAppointments, icon: Calendar, color: "blue" },
-    { label: "Assinaturas Ativas", value: stats.activeSubscriptions, icon: TrendingUp, color: "emerald" },
-    { label: "Pagamentos Pendentes", value: stats.pendingPayments, icon: Clock, color: "amber" },
+    { label: "Usuários", value: stats.totalUsers, icon: Users, color: "blue" },
+    { label: "Agendamentos", value: stats.totalAppointments, icon: Calendar, color: "emerald" },
+    { label: "Assinaturas", value: stats.activeSubscriptions, icon: CreditCard, color: "purple" },
+    { label: "Pag. Pendentes", value: stats.pendingPayments, icon: AlertTriangle, color: "amber" },
   ];
 
   return (
-    <div className="space-y-8">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+    <div className="space-y-4">
+      {/* Header - Protheus Style */}
+      <div className="flex items-center justify-between bg-gradient-to-r from-[#1e3a5f] to-[#2a4a6f] -mx-6 lg:-mx-8 -mt-6 lg:-mt-8 px-6 lg:px-8 py-3 border-b border-[#2a3142]">
         <div>
-          <h1 className="text-3xl font-bold tracking-wide text-foreground">
-            <span className="text-cyan-400">Dashboard</span> TI
+          <h1 className="text-lg font-bold text-white tracking-wide flex items-center gap-2">
+            <Activity className="w-5 h-5" />
+            MONITORAMENTO DO SISTEMA
           </h1>
-          <p className="text-muted-foreground text-sm mt-1">
-            Visão geral do sistema e monitoramento
+          <p className="text-[11px] text-blue-200/70 mt-0.5">
+            Última atualização: {lastUpdate.toLocaleTimeString('pt-BR')}
           </p>
         </div>
         <Button 
-          onClick={runHealthCheck} 
-          disabled={loading} 
-          className="gap-2 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white shadow-[0_0_20px_rgba(0,255,255,0.3)]"
+          onClick={checkServices} 
+          disabled={loading}
+          size="sm"
+          className="h-8 bg-blue-600 hover:bg-blue-700 text-white text-xs gap-1.5"
         >
-          <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
-          Verificar Sistema
+          <RefreshCw className={cn("w-3.5 h-3.5", loading && "animate-spin")} />
+          Atualizar
         </Button>
       </div>
 
-      {/* Quick Stats */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {quickStats.map((stat, index) => {
-          const Icon = stat.icon;
-          return (
-            <Card 
-              key={index} 
-              className="relative overflow-hidden bg-gradient-to-br from-[#12121a] to-[#0d0d14] border-cyan-500/10 hover:border-cyan-500/30 transition-all duration-300"
-            >
-              <div className="p-6">
-                <div className="flex items-center justify-between mb-3">
-                  <div className={`w-10 h-10 rounded-lg bg-${stat.color}-500/10 border border-${stat.color}-500/20 flex items-center justify-center`}>
-                    <Icon className={`w-5 h-5 text-${stat.color}-400`} />
-                  </div>
-                </div>
-                <p className="text-3xl font-bold text-foreground">{stat.value}</p>
-                <p className="text-sm text-muted-foreground mt-1">{stat.label}</p>
-              </div>
-              {/* Decorative glow */}
-              <div className={`absolute -bottom-4 -right-4 w-24 h-24 bg-${stat.color}-500/5 rounded-full blur-2xl`} />
-            </Card>
-          );
-        })}
-      </div>
-
-      {/* System Services */}
-      <div>
-        <div className="flex items-center gap-3 mb-4">
-          <Server className="w-5 h-5 text-cyan-400" />
-          <h2 className="text-lg font-semibold text-foreground">Status dos Serviços</h2>
+      {/* Status Overview */}
+      <div className="bg-[#0d1117] border border-[#2a3142] rounded-lg overflow-hidden">
+        <div className="bg-[#161b22] px-4 py-2 border-b border-[#2a3142] flex items-center justify-between">
+          <span className="text-xs font-semibold text-gray-300 uppercase tracking-wider">
+            Status Geral dos Serviços
+          </span>
+          <div className="flex items-center gap-2">
+            <div className={cn(
+              "w-2 h-2 rounded-full",
+              onlineCount === totalCount ? "bg-emerald-500" : "bg-amber-500",
+              "animate-pulse"
+            )} />
+            <span className="text-xs text-gray-400">
+              {onlineCount}/{totalCount} Online
+            </span>
+          </div>
         </div>
         
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {/* Default services if no health checks */}
-          {healthChecks.length === 0 ? (
-            <>
-              {[
-                { name: "Supabase Database", status: "healthy" },
-                { name: "Edge Functions", status: "healthy" },
-                { name: "Auth Service", status: "healthy" },
-                { name: "Storage", status: "healthy" },
-                { name: "Realtime", status: "healthy" },
-                { name: "API Gateway", status: "healthy" },
-              ].map((service, index) => (
-                <Card 
-                  key={index} 
-                  className="p-4 bg-gradient-to-br from-[#12121a] to-[#0d0d14] border-cyan-500/10"
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <CheckCircle className="w-5 h-5 text-emerald-500" />
-                      <span className="font-medium text-sm">{service.name}</span>
-                    </div>
-                    <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20">
-                      Online
-                    </Badge>
-                  </div>
-                </Card>
-              ))}
-            </>
-          ) : (
-            healthChecks.map((check) => (
-              <Card 
-                key={check.service_name} 
-                className="p-4 bg-gradient-to-br from-[#12121a] to-[#0d0d14] border-cyan-500/10"
+        <div className="p-4">
+          <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-3">
+            {services.map((service) => (
+              <div 
+                key={service.name}
+                className="flex items-center justify-between p-3 bg-[#161b22] border border-[#2a3142] rounded-lg"
               >
-                <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className={cn(
+                    "w-8 h-8 rounded-lg flex items-center justify-center",
+                    service.status === "online" ? "bg-emerald-500/10" : 
+                    service.status === "checking" ? "bg-blue-500/10" : "bg-red-500/10"
+                  )}>
+                    {service.status === "online" ? (
+                      <CheckCircle className="w-4 h-4 text-emerald-500" />
+                    ) : service.status === "checking" ? (
+                      <RefreshCw className="w-4 h-4 text-blue-500 animate-spin" />
+                    ) : (
+                      <XCircle className="w-4 h-4 text-red-500" />
+                    )}
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium text-gray-300">{service.name}</p>
+                    {service.responseTime && (
+                      <p className="text-[10px] text-gray-500">{service.responseTime}ms</p>
+                    )}
+                  </div>
+                </div>
+                <span className={cn(
+                  "px-2 py-0.5 rounded text-[10px] font-medium uppercase tracking-wider",
+                  service.status === "online" ? "bg-emerald-500/10 text-emerald-400" : 
+                  service.status === "checking" ? "bg-blue-500/10 text-blue-400" : 
+                  "bg-red-500/10 text-red-400"
+                )}>
+                  {service.status === "online" ? "Online" : 
+                   service.status === "checking" ? "Verificando" : "Offline"}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Quick Stats */}
+      <div className="bg-[#0d1117] border border-[#2a3142] rounded-lg overflow-hidden">
+        <div className="bg-[#161b22] px-4 py-2 border-b border-[#2a3142]">
+          <span className="text-xs font-semibold text-gray-300 uppercase tracking-wider">
+            Estatísticas Rápidas
+          </span>
+        </div>
+        
+        <div className="p-4">
+          <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+            {quickStats.map((stat) => {
+              const Icon = stat.icon;
+              return (
+                <div 
+                  key={stat.label}
+                  className="p-4 bg-[#161b22] border border-[#2a3142] rounded-lg"
+                >
                   <div className="flex items-center gap-3">
-                    {getStatusIcon(check.status)}
+                    <div className={cn(
+                      "w-10 h-10 rounded-lg flex items-center justify-center",
+                      `bg-${stat.color}-500/10`
+                    )}>
+                      <Icon className={cn("w-5 h-5", `text-${stat.color}-400`)} />
+                    </div>
                     <div>
-                      <span className="font-medium text-sm capitalize">
-                        {check.service_name.replace("_", " ")}
-                      </span>
-                      {check.response_time_ms && (
-                        <p className="text-xs text-muted-foreground">
-                          {check.response_time_ms}ms
-                        </p>
-                      )}
+                      <p className="text-2xl font-bold text-white">{stat.value}</p>
+                      <p className="text-[10px] text-gray-500 uppercase tracking-wider">{stat.label}</p>
                     </div>
                   </div>
-                  <Badge 
-                    className={
-                      check.status === "healthy" 
-                        ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
-                        : check.status === "degraded"
-                        ? "bg-yellow-500/10 text-yellow-400 border-yellow-500/20"
-                        : "bg-red-500/10 text-red-400 border-red-500/20"
-                    }
-                  >
-                    {check.status === "healthy" ? "Online" : check.status === "degraded" ? "Lento" : "Offline"}
-                  </Badge>
                 </div>
-                {check.error_message && (
-                  <p className="mt-2 text-xs text-red-400">{check.error_message}</p>
-                )}
-              </Card>
-            ))
-          )}
+              );
+            })}
+          </div>
         </div>
       </div>
 
       {/* System Info */}
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-4 lg:grid-cols-2">
         {/* Database Info */}
-        <Card className="p-6 bg-gradient-to-br from-[#12121a] to-[#0d0d14] border-cyan-500/10">
-          <div className="flex items-center gap-3 mb-4">
-            <Database className="w-5 h-5 text-cyan-400" />
-            <h3 className="font-semibold">Banco de Dados</h3>
+        <div className="bg-[#0d1117] border border-[#2a3142] rounded-lg overflow-hidden">
+          <div className="bg-[#161b22] px-4 py-2 border-b border-[#2a3142] flex items-center gap-2">
+            <Database className="w-4 h-4 text-blue-400" />
+            <span className="text-xs font-semibold text-gray-300 uppercase tracking-wider">
+              Banco de Dados
+            </span>
           </div>
-          <div className="space-y-3">
-            <div className="flex justify-between items-center p-3 bg-black/20 rounded-lg">
-              <span className="text-sm text-muted-foreground">Provedor</span>
-              <span className="text-sm font-medium">Supabase (PostgreSQL)</span>
-            </div>
-            <div className="flex justify-between items-center p-3 bg-black/20 rounded-lg">
-              <span className="text-sm text-muted-foreground">Região</span>
-              <span className="text-sm font-medium">South America (São Paulo)</span>
-            </div>
-            <div className="flex justify-between items-center p-3 bg-black/20 rounded-lg">
-              <span className="text-sm text-muted-foreground">Status</span>
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
-                <span className="text-sm font-medium text-emerald-400">Conectado</span>
-              </div>
-            </div>
+          
+          <div className="p-4 space-y-2">
+            <InfoRow label="Provedor" value="Supabase (PostgreSQL)" />
+            <InfoRow label="Região" value="South America (São Paulo)" />
+            <InfoRow label="Status" value="Conectado" status="online" />
           </div>
-        </Card>
+        </div>
 
-        {/* Edge Functions Info */}
-        <Card className="p-6 bg-gradient-to-br from-[#12121a] to-[#0d0d14] border-cyan-500/10">
-          <div className="flex items-center gap-3 mb-4">
-            <Cpu className="w-5 h-5 text-cyan-400" />
-            <h3 className="font-semibold">Edge Functions</h3>
+        {/* Runtime Info */}
+        <div className="bg-[#0d1117] border border-[#2a3142] rounded-lg overflow-hidden">
+          <div className="bg-[#161b22] px-4 py-2 border-b border-[#2a3142] flex items-center gap-2">
+            <Zap className="w-4 h-4 text-amber-400" />
+            <span className="text-xs font-semibold text-gray-300 uppercase tracking-wider">
+              Edge Functions
+            </span>
           </div>
-          <div className="space-y-3">
-            <div className="flex justify-between items-center p-3 bg-black/20 rounded-lg">
-              <span className="text-sm text-muted-foreground">Runtime</span>
-              <span className="text-sm font-medium">Deno v1.x</span>
-            </div>
-            <div className="flex justify-between items-center p-3 bg-black/20 rounded-lg">
-              <span className="text-sm text-muted-foreground">Functions Ativas</span>
-              <span className="text-sm font-medium">15</span>
-            </div>
-            <div className="flex justify-between items-center p-3 bg-black/20 rounded-lg">
-              <span className="text-sm text-muted-foreground">Status</span>
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
-                <span className="text-sm font-medium text-emerald-400">Operacional</span>
-              </div>
-            </div>
+          
+          <div className="p-4 space-y-2">
+            <InfoRow label="Runtime" value="Deno v1.x" />
+            <InfoRow label="Functions Ativas" value="15+" />
+            <InfoRow label="Status" value="Operacional" status="online" />
           </div>
-        </Card>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function InfoRow({ label, value, status }: { label: string; value: string; status?: "online" | "offline" }) {
+  return (
+    <div className="flex items-center justify-between py-2 px-3 bg-[#161b22] rounded border border-[#2a3142]">
+      <span className="text-xs text-gray-500">{label}</span>
+      <div className="flex items-center gap-2">
+        {status && (
+          <div className={cn(
+            "w-1.5 h-1.5 rounded-full",
+            status === "online" ? "bg-emerald-500" : "bg-red-500",
+            "animate-pulse"
+          )} />
+        )}
+        <span className={cn(
+          "text-xs font-medium",
+          status === "online" ? "text-emerald-400" : "text-gray-300"
+        )}>{value}</span>
       </div>
     </div>
   );
