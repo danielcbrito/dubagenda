@@ -13,15 +13,31 @@ import {
   MessageSquare,
   Search,
   RefreshCw,
-  AlertTriangle
+  AlertTriangle,
+  Clock,
+  Calendar,
+  Trash2,
+  Play
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { Card } from "@/components/ui/card";
 
 interface Client {
   id: string;
   nome: string;
   telefone: string | null;
+}
+
+interface ScheduledDispatch {
+  id: string;
+  mensagem: string;
+  contatos_ids: string[];
+  data_programada: string;
+  executado: boolean;
+  created_at: string;
 }
 
 export function AdminDisparo() {
@@ -32,9 +48,16 @@ export function AdminDisparo() {
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  
+  // Disparo programado
+  const [scheduledDate, setScheduledDate] = useState("");
+  const [scheduledDispatches, setScheduledDispatches] = useState<ScheduledDispatch[]>([]);
+  const [loadingScheduled, setLoadingScheduled] = useState(false);
+  const [scheduling, setScheduling] = useState(false);
 
   useEffect(() => {
     loadClients();
+    loadScheduledDispatches();
   }, []);
 
   const loadClients = async () => {
@@ -53,6 +76,24 @@ export function AdminDisparo() {
       toast.error("Erro ao carregar clientes");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadScheduledDispatches = async () => {
+    setLoadingScheduled(true);
+    try {
+      const { data, error } = await supabase
+        .from("disparos_programados")
+        .select("*")
+        .eq("executado", false)
+        .order("data_programada", { ascending: true });
+
+      if (error) throw error;
+      setScheduledDispatches(data || []);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoadingScheduled(false);
     }
   };
 
@@ -168,6 +209,138 @@ export function AdminDisparo() {
       toast.error("Erro ao enviar disparo");
     } finally {
       setSending(false);
+    }
+  };
+
+  // Agendar disparo programado
+  const handleScheduleDispatch = async () => {
+    if (selectedClients.size === 0) {
+      toast.error("Selecione pelo menos um cliente");
+      return;
+    }
+
+    if (!message.trim()) {
+      toast.error("Digite uma mensagem");
+      return;
+    }
+
+    if (!scheduledDate) {
+      toast.error("Selecione data e hora para o disparo");
+      return;
+    }
+
+    const scheduledTime = new Date(scheduledDate);
+    if (scheduledTime <= new Date()) {
+      toast.error("A data/hora deve ser no futuro");
+      return;
+    }
+
+    setScheduling(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      const { error } = await supabase
+        .from("disparos_programados")
+        .insert({
+          mensagem: message,
+          contatos_ids: Array.from(selectedClients),
+          data_programada: scheduledTime.toISOString(),
+          created_by: user?.id
+        });
+
+      if (error) throw error;
+
+      toast.success(`Disparo agendado para ${format(scheduledTime, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}`);
+      
+      // Reset form
+      setMessage("");
+      setSelectedClients(new Set());
+      setSelectAll(false);
+      setScheduledDate("");
+      loadScheduledDispatches();
+    } catch (error) {
+      console.error(error);
+      toast.error("Erro ao agendar disparo");
+    } finally {
+      setScheduling(false);
+    }
+  };
+
+  // Cancelar disparo programado
+  const handleCancelScheduled = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from("disparos_programados")
+        .delete()
+        .eq("id", id);
+
+      if (error) throw error;
+
+      toast.success("Disparo cancelado");
+      loadScheduledDispatches();
+    } catch (error) {
+      console.error(error);
+      toast.error("Erro ao cancelar disparo");
+    }
+  };
+
+  // Executar disparo programado imediatamente
+  const handleExecuteNow = async (dispatch: ScheduledDispatch) => {
+    // Get webhook config
+    const { data: config, error: configError } = await supabase
+      .from("webhook_config")
+      .select("disparo_webhook_url, disparo_ativo")
+      .order("updated_at", { ascending: false })
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (configError || !config?.disparo_webhook_url || !config?.disparo_ativo) {
+      toast.error("Webhook de disparo não configurado ou inativo");
+      return;
+    }
+
+    try {
+      const selectedClientsList = clients.filter(c => dispatch.contatos_ids.includes(c.id));
+      
+      const contatos = selectedClientsList.map((client) => ({
+        cliente_id: client.id,
+        cliente_nome: client.nome,
+        cliente_telefone: client.telefone,
+        cliente_telefone_whatsapp: formatPhoneForWhatsApp(client.telefone!),
+        mensagem: dispatch.mensagem.replace("{nome}", client.nome)
+      }));
+
+      const response = await fetch(config.disparo_webhook_url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          evento: "disparo_mensagem_lote",
+          total_contatos: contatos.length,
+          contatos: contatos,
+          timestamp: new Date().toISOString()
+        }),
+      });
+
+      if (response.ok) {
+        // Marca como executado
+        await supabase
+          .from("disparos_programados")
+          .update({ 
+            executado: true, 
+            executado_em: new Date().toISOString(),
+            resultado: { success: true, total: contatos.length }
+          })
+          .eq("id", dispatch.id);
+
+        toast.success(`Disparo executado! ${contatos.length} contato(s)`);
+        loadScheduledDispatches();
+      } else {
+        toast.error("Erro ao executar disparo");
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error("Erro ao executar disparo");
     }
   };
 
@@ -290,7 +463,7 @@ export function AdminDisparo() {
                   placeholder={`Olá {nome}! 
 
 Temos novidades especiais para você...`}
-                  className="min-h-[200px] resize-none"
+                  className="min-h-[150px] resize-none"
                 />
                 <p className="text-xs text-muted-foreground mt-2">
                   💡 Use <code className="bg-secondary/50 px-1 rounded">{"{nome}"}</code> para personalizar com o nome do cliente
@@ -315,7 +488,7 @@ Temos novidades especiais para você...`}
                 </p>
               </div>
 
-              {/* Send Button */}
+              {/* Send Button - Imediato */}
               <Button
                 onClick={handleSendMessages}
                 disabled={sending || selectedClients.size === 0 || !message.trim()}
@@ -329,12 +502,99 @@ Temos novidades especiais para você...`}
                 ) : (
                   <>
                     <Send className="w-4 h-4" />
-                    Disparar Mensagem ({selectedClients.size})
+                    Disparar Agora ({selectedClients.size})
                   </>
                 )}
               </Button>
+
+              {/* Programar Disparo */}
+              <div className="border-t border-border pt-4 space-y-3">
+                <div className="flex items-center gap-2">
+                  <Calendar className="w-4 h-4 text-blue-400" />
+                  <span className="text-sm font-medium">Programar Disparo</span>
+                </div>
+                
+                <div className="flex gap-2">
+                  <Input
+                    type="datetime-local"
+                    value={scheduledDate}
+                    onChange={(e) => setScheduledDate(e.target.value)}
+                    className="flex-1 text-sm"
+                  />
+                  <Button
+                    onClick={handleScheduleDispatch}
+                    disabled={scheduling || selectedClients.size === 0 || !message.trim() || !scheduledDate}
+                    variant="outline"
+                    size="sm"
+                    className="gap-1"
+                  >
+                    {scheduling ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <>
+                        <Clock className="w-4 h-4" />
+                        Agendar
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
             </div>
           </div>
+
+          {/* Disparos Programados */}
+          {scheduledDispatches.length > 0 && (
+            <Card className="p-4 border-blue-500/20 bg-blue-500/5">
+              <div className="flex items-center gap-2 mb-3">
+                <Calendar className="w-4 h-4 text-blue-400" />
+                <h3 className="font-medium text-sm">Disparos Programados</h3>
+              </div>
+              
+              <div className="space-y-2 max-h-[200px] overflow-y-auto">
+                {scheduledDispatches.map((dispatch) => (
+                  <div
+                    key={dispatch.id}
+                    className="flex items-center justify-between p-3 rounded-lg bg-secondary/50 border border-border"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Clock className="w-3 h-3 text-blue-400" />
+                        <span className="text-sm font-medium">
+                          {format(new Date(dispatch.data_programada), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          ({dispatch.contatos_ids.length} contato{dispatch.contatos_ids.length > 1 ? 's' : ''})
+                        </span>
+                      </div>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {dispatch.mensagem.substring(0, 60)}...
+                      </p>
+                    </div>
+                    <div className="flex gap-1 ml-2">
+                      <Button
+                        onClick={() => handleExecuteNow(dispatch)}
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 p-0 text-green-500 hover:text-green-400 hover:bg-green-500/10"
+                        title="Executar agora"
+                      >
+                        <Play className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        onClick={() => handleCancelScheduled(dispatch.id)}
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                        title="Cancelar"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )}
         </div>
       </div>
     </div>

@@ -546,6 +546,42 @@ export type Database = {
         }
         Relationships: []
       }
+      disparos_programados: {
+        Row: {
+          contatos_ids: string[]
+          created_at: string | null
+          created_by: string | null
+          data_programada: string
+          executado: boolean | null
+          executado_em: string | null
+          id: string
+          mensagem: string
+          resultado: Json | null
+        }
+        Insert: {
+          contatos_ids?: string[]
+          created_at?: string | null
+          created_by?: string | null
+          data_programada: string
+          executado?: boolean | null
+          executado_em?: string | null
+          id?: string
+          mensagem: string
+          resultado?: Json | null
+        }
+        Update: {
+          contatos_ids?: string[]
+          created_at?: string | null
+          created_by?: string | null
+          data_programada?: string
+          executado?: boolean | null
+          executado_em?: string | null
+          id?: string
+          mensagem?: string
+          resultado?: Json | null
+        }
+        Relationships: []
+      }
       email_confirmation_tokens: {
         Row: {
           created_at: string
@@ -1642,6 +1678,7 @@ export type Database = {
           manutencao_aviso_mensagem: string | null
           manutencao_fim_programada: string | null
           manutencao_inicio_programada: string | null
+          manutencao_ips_permitidos: string[] | null
           manutencao_mensagem: string | null
           updated_at: string | null
           webhook_url: string | null
@@ -1659,6 +1696,7 @@ export type Database = {
           manutencao_aviso_mensagem?: string | null
           manutencao_fim_programada?: string | null
           manutencao_inicio_programada?: string | null
+          manutencao_ips_permitidos?: string[] | null
           manutencao_mensagem?: string | null
           updated_at?: string | null
           webhook_url?: string | null
@@ -1676,6 +1714,7 @@ export type Database = {
           manutencao_aviso_mensagem?: string | null
           manutencao_fim_programada?: string | null
           manutencao_inicio_programada?: string | null
+          manutencao_ips_permitidos?: string[] | null
           manutencao_mensagem?: string | null
           updated_at?: string | null
           webhook_url?: string | null
@@ -1783,6 +1822,18 @@ export type Database = {
           manutencao_mensagem: string
         }[]
       }
+      get_maintenance_status_with_ips: {
+        Args: never
+        Returns: {
+          manutencao_ativa: boolean
+          manutencao_aviso_ativo: boolean
+          manutencao_aviso_mensagem: string
+          manutencao_fim_programada: string
+          manutencao_inicio_programada: string
+          manutencao_ips_permitidos: string[]
+          manutencao_mensagem: string
+        }[]
+      }
       get_user_available_credits: {
         Args: { p_user_id: string }
         Returns: number
@@ -1802,6 +1853,7 @@ export type Database = {
         Args: { p_email: string }
         Returns: boolean
       }
+      is_ip_allowed_maintenance: { Args: { p_ip: string }; Returns: boolean }
       use_credits_atomic: {
         Args: { p_amount: number; p_appointment_id: string; p_user_id: string }
         Returns: Json
