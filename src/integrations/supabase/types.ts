@@ -807,6 +807,30 @@ export type Database = {
           },
         ]
       }
+      manutencao_emails_permitidos: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          descricao: string | null
+          email: string
+          id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          descricao?: string | null
+          email: string
+          id?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          descricao?: string | null
+          email?: string
+          id?: string
+        }
+        Relationships: []
+      }
       notificacoes: {
         Row: {
           agendamento_id: string | null
@@ -1767,6 +1791,10 @@ export type Database = {
       initialize_barber_hours: {
         Args: { p_barbeiro_id: string }
         Returns: undefined
+      }
+      is_email_allowed_maintenance: {
+        Args: { p_email: string }
+        Returns: boolean
       }
       use_credits_atomic: {
         Args: { p_amount: number; p_appointment_id: string; p_user_id: string }
