@@ -1,12 +1,11 @@
 import { useState, useEffect } from "react";
-import { Wrench, AlertTriangle, Loader2, Calendar, Clock, Bell, Mail, Plus, Trash2, UserCheck, Globe } from "lucide-react";
+import { Wrench, AlertTriangle, Loader2, Calendar, Clock, Bell, Mail, Plus, Trash2, UserCheck } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
@@ -30,7 +29,6 @@ interface MaintenanceConfig {
   manutencao_fim_programada: string | null;
   manutencao_aviso_ativo: boolean;
   manutencao_aviso_mensagem: string | null;
-  manutencao_ips_permitidos: string[] | null;
 }
 
 interface AllowedEmail {
@@ -62,11 +60,6 @@ export function AdminManutencao() {
   const [newEmailDesc, setNewEmailDesc] = useState("");
   const [isAddingEmail, setIsAddingEmail] = useState(false);
 
-  // IPs permitidos
-  const [allowedIPs, setAllowedIPs] = useState<string[]>([]);
-  const [newIP, setNewIP] = useState("");
-  const [isAddingIP, setIsAddingIP] = useState(false);
-
   useEffect(() => {
     loadConfig();
     loadAllowedEmails();
@@ -77,7 +70,7 @@ export function AdminManutencao() {
     try {
       const { data, error } = await supabase
         .from("webhook_config")
-        .select("id, manutencao_ativa, manutencao_mensagem, manutencao_inicio_programada, manutencao_fim_programada, manutencao_aviso_ativo, manutencao_aviso_mensagem, manutencao_ips_permitidos")
+        .select("id, manutencao_ativa, manutencao_mensagem, manutencao_inicio_programada, manutencao_fim_programada, manutencao_aviso_ativo, manutencao_aviso_mensagem")
         .order("updated_at", { ascending: false })
         .order("created_at", { ascending: false })
         .limit(1)
@@ -99,7 +92,6 @@ export function AdminManutencao() {
         
         setWarningActive(configData.manutencao_aviso_ativo || false);
         setWarningMessage(configData.manutencao_aviso_mensagem || "");
-        setAllowedIPs(configData.manutencao_ips_permitidos || []);
       }
     } catch (error) {
       console.error("Error loading config:", error);
@@ -370,78 +362,6 @@ export function AdminManutencao() {
     }
   };
 
-  // Validação de IP
-  const isValidIP = (ip: string): boolean => {
-    const ipv4Regex = /^(\d{1,3}\.){3}\d{1,3}$/;
-    if (!ipv4Regex.test(ip)) return false;
-    const parts = ip.split('.').map(Number);
-    return parts.every(p => p >= 0 && p <= 255);
-  };
-
-  const addAllowedIP = async () => {
-    const trimmedIP = newIP.trim();
-    if (!trimmedIP) {
-      toast.error("Digite um IP");
-      return;
-    }
-
-    if (!isValidIP(trimmedIP)) {
-      toast.error("IP inválido. Use o formato: 192.168.1.1");
-      return;
-    }
-
-    if (allowedIPs.includes(trimmedIP)) {
-      toast.error("Este IP já está na lista");
-      return;
-    }
-
-    setIsAddingIP(true);
-    try {
-      const newList = [...allowedIPs, trimmedIP];
-      
-      const { error } = await supabase
-        .from("webhook_config")
-        .update({
-          manutencao_ips_permitidos: newList,
-          updated_at: new Date().toISOString()
-        })
-        .eq("id", config!.id);
-
-      if (error) throw error;
-
-      setAllowedIPs(newList);
-      setNewIP("");
-      toast.success("IP adicionado");
-    } catch (error) {
-      console.error("Error adding IP:", error);
-      toast.error("Erro ao adicionar IP");
-    } finally {
-      setIsAddingIP(false);
-    }
-  };
-
-  const removeAllowedIP = async (ip: string) => {
-    try {
-      const newList = allowedIPs.filter(i => i !== ip);
-      
-      const { error } = await supabase
-        .from("webhook_config")
-        .update({
-          manutencao_ips_permitidos: newList,
-          updated_at: new Date().toISOString()
-        })
-        .eq("id", config!.id);
-
-      if (error) throw error;
-
-      setAllowedIPs(newList);
-      toast.success("IP removido");
-    } catch (error) {
-      console.error("Error removing IP:", error);
-      toast.error("Erro ao remover IP");
-    }
-  };
-
   if (isLoading) {
     return (
       <Card className="p-6 card-glass">
@@ -462,7 +382,7 @@ export function AdminManutencao() {
           </div>
           <div>
             <h3 className="font-medium text-sm">Modo Manutenção</h3>
-            <p className="text-xs text-muted-foreground">Bloqueia acesso imediatamente</p>
+            <p className="text-xs text-muted-foreground">Bloqueia acesso imediatamente (incluindo Admin)</p>
           </div>
         </div>
 
@@ -481,7 +401,7 @@ export function AdminManutencao() {
                   {config?.manutencao_ativa ? "Ativo" : "Inativo"}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  {config?.manutencao_ativa ? "Usuários bloqueados" : "Sistema normal"}
+                  {config?.manutencao_ativa ? "Todos bloqueados (exceto emails permitidos)" : "Sistema normal"}
                 </p>
               </div>
             </div>
@@ -523,7 +443,7 @@ export function AdminManutencao() {
           </div>
           <div>
             <h3 className="font-medium text-sm">E-mails Permitidos</h3>
-            <p className="text-xs text-muted-foreground">Usuários que podem acessar durante manutenção</p>
+            <p className="text-xs text-muted-foreground">Únicos que podem acessar durante manutenção</p>
           </div>
         </div>
 
@@ -590,83 +510,12 @@ export function AdminManutencao() {
             </div>
           ) : (
             <p className="text-xs text-muted-foreground text-center py-4">
-              Nenhum e-mail permitido. Apenas administradores terão acesso.
+              Nenhum e-mail permitido. Adicione seu e-mail antes de ativar a manutenção!
             </p>
           )}
 
-          <div className="text-xs text-muted-foreground bg-secondary/30 p-2 rounded-lg">
-            <strong>Nota:</strong> Administradores sempre podem acessar, mesmo sem estar na lista.
-          </div>
-        </div>
-      </Card>
-
-      {/* IPs Permitidos */}
-      <Card className="p-5 card-glass">
-        <div className="flex items-center gap-3 mb-5">
-          <div className="p-2 rounded-lg bg-purple-500/20">
-            <Globe className="w-4 h-4 text-purple-500" />
-          </div>
-          <div>
-            <h3 className="font-medium text-sm">IPs Permitidos</h3>
-            <p className="text-xs text-muted-foreground">Dispositivos que podem acessar durante manutenção (por IP)</p>
-          </div>
-        </div>
-
-        <div className="space-y-4">
-          {/* Add new IP */}
-          <div className="flex gap-2">
-            <Input
-              type="text"
-              value={newIP}
-              onChange={(e) => setNewIP(e.target.value)}
-              placeholder="Ex: 192.168.1.100"
-              className="flex-1 text-sm input-glass"
-            />
-            <Button
-              onClick={addAllowedIP}
-              disabled={isAddingIP || !newIP.trim()}
-              size="sm"
-              className="shrink-0"
-            >
-              {isAddingIP ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Plus className="w-4 h-4" />
-              )}
-            </Button>
-          </div>
-
-          {/* IP list */}
-          {allowedIPs.length > 0 ? (
-            <div className="space-y-2 max-h-[150px] overflow-y-auto">
-              {allowedIPs.map((ip) => (
-                <div 
-                  key={ip} 
-                  className="flex items-center justify-between p-2 rounded-lg bg-secondary/50 border border-border"
-                >
-                  <div className="flex items-center gap-2 min-w-0">
-                    <Globe className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-                    <p className="text-sm font-mono">{ip}</p>
-                  </div>
-                  <Button
-                    onClick={() => removeAllowedIP(ip)}
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 w-7 p-0 text-destructive hover:text-destructive hover:bg-destructive/10 shrink-0"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </Button>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-xs text-muted-foreground text-center py-4">
-              Nenhum IP permitido. Apenas e-mails autorizados e administradores terão acesso.
-            </p>
-          )}
-
-          <div className="text-xs text-muted-foreground bg-secondary/30 p-2 rounded-lg">
-            <strong>Dica:</strong> Para descobrir seu IP, pesquise "meu ip" no Google.
+          <div className="text-xs text-destructive/80 bg-destructive/10 p-2 rounded-lg border border-destructive/20">
+            <strong>⚠️ IMPORTANTE:</strong> Adicione seu e-mail aqui ANTES de ativar a manutenção, ou você também será bloqueado!
           </div>
         </div>
       </Card>
@@ -807,7 +656,7 @@ export function AdminManutencao() {
         <div className="flex gap-2">
           <AlertTriangle className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5" />
           <p className="text-xs text-muted-foreground">
-            Durante a manutenção, apenas administradores e e-mails da lista podem acessar o sistema.
+            Durante a manutenção, <strong>TODOS</strong> são bloqueados (incluindo Admin/TI). Apenas e-mails da lista acima podem acessar.
           </p>
         </div>
       </Card>
@@ -821,7 +670,7 @@ export function AdminManutencao() {
               Ativar manutenção?
             </AlertDialogTitle>
             <AlertDialogDescription className="text-sm">
-              Usuários não autorizados serão bloqueados do sistema.
+              <strong>TODOS</strong> serão bloqueados (incluindo Admin/TI). Apenas e-mails da lista de permitidos terão acesso.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
