@@ -1,7 +1,9 @@
-import { useEffect, Suspense } from "react";
+import { useEffect, Suspense, useState } from "react";
 import { useNavigate, Routes, Route } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useMaintenanceMode } from "@/hooks/useMaintenanceMode";
+import { MaintenanceScreen } from "@/components/MaintenanceScreen";
 import { TISidebar } from "@/components/ti/TISidebar";
 import { TIDashboard } from "@/components/ti/TIDashboard";
 import { TIClientes } from "@/components/ti/TIClientes";
@@ -12,6 +14,15 @@ import { TIManutencao } from "@/components/ti/TIManutencao";
 
 const TI = () => {
   const navigate = useNavigate();
+  const [authChecked, setAuthChecked] = useState(false);
+  
+  // Verificação de manutenção
+  const { 
+    isMaintenanceMode, 
+    maintenanceMessage, 
+    isLoading: maintenanceLoading, 
+    isAllowedUser 
+  } = useMaintenanceMode();
 
   useEffect(() => {
     checkAuth();
@@ -36,6 +47,8 @@ const TI = () => {
       navigate("/cliente");
       return;
     }
+    
+    setAuthChecked(true);
   };
 
   const LoadingFallback = () => (
@@ -43,6 +56,25 @@ const TI = () => {
       <div className="w-8 h-8 rounded-full border-2 border-blue-500 border-t-transparent animate-spin" />
     </div>
   );
+
+  // Loading state enquanto verifica auth e manutenção
+  if (maintenanceLoading || !authChecked) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-[#0a0d12]">
+        <LoadingFallback />
+      </div>
+    );
+  }
+
+  // Se está em manutenção e o usuário NÃO está na lista de permitidos
+  if (isMaintenanceMode && !isAllowedUser) {
+    return (
+      <MaintenanceScreen 
+        message={maintenanceMessage || undefined}
+        onExit={() => navigate("/")}
+      />
+    );
+  }
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-[#0a0d12]">

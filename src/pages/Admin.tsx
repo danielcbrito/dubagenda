@@ -7,6 +7,8 @@ import { AdminMobileHeader } from "@/components/admin/mobile/AdminMobileHeader";
 import { AdminMobileNavigation } from "@/components/admin/mobile/AdminMobileNavigation";
 import { AdminMobileDrawer } from "@/components/admin/mobile/AdminMobileDrawer";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useMaintenanceMode } from "@/hooks/useMaintenanceMode";
+import { MaintenanceScreen } from "@/components/MaintenanceScreen";
 import { AdminDashboard } from "@/components/admin/AdminDashboard";
 import { AdminAgenda } from "@/components/admin/AdminAgenda";
 import { AdminClientes } from "@/components/admin/AdminClientes";
@@ -51,6 +53,15 @@ const Admin = () => {
   const isMobile = useIsMobile();
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
+  const [authChecked, setAuthChecked] = useState(false);
+  
+  // Verificação de manutenção
+  const { 
+    isMaintenanceMode, 
+    maintenanceMessage, 
+    isLoading: maintenanceLoading, 
+    isAllowedUser 
+  } = useMaintenanceMode();
 
   // Carregar contagem de pendentes
   useEffect(() => {
@@ -110,7 +121,19 @@ const Admin = () => {
       navigate("/cliente");
       return;
     }
+    
+    setAuthChecked(true);
   };
+
+  // Se está em manutenção e o usuário NÃO está na lista de permitidos
+  if (!maintenanceLoading && authChecked && isMaintenanceMode && !isAllowedUser) {
+    return (
+      <MaintenanceScreen 
+        message={maintenanceMessage || undefined}
+        onExit={() => navigate("/")}
+      />
+    );
+  }
 
   // Obter título da rota atual
   const getCurrentTitle = () => {
@@ -139,6 +162,15 @@ const Admin = () => {
       </div>
     </div>
   );
+
+  // Loading state enquanto verifica auth e manutenção
+  if (maintenanceLoading || !authChecked) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-[#0E0E11]">
+        <LoadingFallback />
+      </div>
+    );
+  }
 
   // ========== LAYOUT MOBILE ==========
   if (isMobile) {
