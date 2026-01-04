@@ -76,11 +76,40 @@ export function useMaintenanceMode() {
     setWarningMessage(status.manutencao_aviso_mensagem || null);
   };
 
+  // Verificar se dispositivo está autorizado
+  const checkDeviceAuthorization = useCallback(async (): Promise<boolean> => {
+    try {
+      const fingerprint = localStorage.getItem('device_fingerprint');
+      if (!fingerprint) return false;
+
+      const { data, error } = await supabase.rpc('is_device_authorized', {
+        p_fingerprint: fingerprint
+      });
+
+      if (error) {
+        console.error('Error checking device authorization:', error);
+        return false;
+      }
+
+      return data === true;
+    } catch (error) {
+      console.error('Error checking device authorization:', error);
+      return false;
+    }
+  }, []);
+
   const checkAuthAndPermissions = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
     
     if (user) {
       setIsAuthenticated(true);
+      
+      // Primeiro verifica se o dispositivo está autorizado
+      const isDeviceAuth = await checkDeviceAuthorization();
+      if (isDeviceAuth) {
+        setIsAllowedUser(true);
+        return;
+      }
       
       // Verifica se o email está na lista de permitidos
       if (user.email) {
@@ -94,13 +123,13 @@ export function useMaintenanceMode() {
         }
       }
       
-      // Se não está na lista de emails permitidos, não tem acesso durante manutenção
+      // Se não está na lista de emails/dispositivos permitidos, não tem acesso durante manutenção
       setIsAllowedUser(false);
     } else {
       setIsAuthenticated(false);
       setIsAllowedUser(false);
     }
-  }, []);
+  }, [checkDeviceAuthorization]);
 
   useEffect(() => {
     checkMaintenanceStatus();
@@ -123,6 +152,17 @@ export function useMaintenanceMode() {
         },
         () => {
           checkMaintenanceStatus();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'dispositivos_autorizados'
+        },
+        () => {
+          checkAuthAndPermissions();
         }
       )
       .subscribe();

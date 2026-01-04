@@ -11,10 +11,15 @@ import { TIWebhooks } from "@/components/ti/TIWebhooks";
 import { TIConfiguracoes } from "@/components/ti/TIConfiguracoes";
 import { TILogs } from "@/components/ti/TILogs";
 import { TIManutencao } from "@/components/ti/TIManutencao";
+import { TIDispositivos } from "@/components/ti/TIDispositivos";
+import { TISenha } from "@/components/ti/TISenha";
+import { TIPasswordModal } from "@/components/ti/TIPasswordModal";
 
 const TI = () => {
   const navigate = useNavigate();
   const [authChecked, setAuthChecked] = useState(false);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   
   // Verificação de manutenção
   const { 
@@ -26,6 +31,16 @@ const TI = () => {
 
   useEffect(() => {
     checkAuth();
+  }, []);
+
+  // Verificar se já está autenticado no TI
+  useEffect(() => {
+    const tiAuth = sessionStorage.getItem('ti_authenticated');
+    if (tiAuth === 'true') {
+      setIsAuthenticated(true);
+    } else {
+      setShowPasswordModal(true);
+    }
   }, []);
 
   const checkAuth = async () => {
@@ -51,6 +66,16 @@ const TI = () => {
     setAuthChecked(true);
   };
 
+  const handlePasswordSuccess = () => {
+    setShowPasswordModal(false);
+    setIsAuthenticated(true);
+  };
+
+  const handlePasswordCancel = () => {
+    setShowPasswordModal(false);
+    navigate("/admin");
+  };
+
   const LoadingFallback = () => (
     <div className="flex items-center justify-center min-h-[60vh]">
       <div className="w-8 h-8 rounded-full border-2 border-blue-500 border-t-transparent animate-spin" />
@@ -62,6 +87,19 @@ const TI = () => {
     return (
       <div className="flex items-center justify-center min-h-screen bg-[#0a0d12]">
         <LoadingFallback />
+      </div>
+    );
+  }
+
+  // Modal de senha
+  if (showPasswordModal || !isAuthenticated) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-[#0a0d12]">
+        <TIPasswordModal
+          isOpen={true}
+          onSuccess={handlePasswordSuccess}
+          onCancel={handlePasswordCancel}
+        />
       </div>
     );
   }
@@ -88,6 +126,8 @@ const TI = () => {
                 <Route index element={<TIDashboard />} />
                 <Route path="clientes" element={<TIClientes />} />
                 <Route path="webhooks" element={<TIWebhooks />} />
+                <Route path="dispositivos" element={<TIDispositivos />} />
+                <Route path="senha" element={<TISenha />} />
                 <Route path="configuracoes" element={<TIConfiguracoes />} />
                 <Route path="logs" element={<TILogs />} />
                 <Route path="manutencao" element={<TIManutencao />} />
