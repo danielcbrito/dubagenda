@@ -76,15 +76,22 @@ export function useMaintenanceMode() {
     setWarningMessage(status.manutencao_aviso_mensagem || null);
   };
 
-  // Verificar se dispositivo está autorizado
+  // Verificar se dispositivo está autorizado - PRIORIDADE MÁXIMA
   const checkDeviceAuthorization = useCallback(async (): Promise<boolean> => {
     try {
       const fingerprint = localStorage.getItem('device_fingerprint');
-      if (!fingerprint) return false;
+      console.log('[Maintenance] Checking device authorization for fingerprint:', fingerprint);
+      
+      if (!fingerprint) {
+        console.log('[Maintenance] No fingerprint found in localStorage');
+        return false;
+      }
 
       const { data, error } = await supabase.rpc('is_device_authorized', {
         p_fingerprint: fingerprint
       });
+
+      console.log('[Maintenance] Device authorization result:', data, 'error:', error);
 
       if (error) {
         console.error('Error checking device authorization:', error);
@@ -99,23 +106,32 @@ export function useMaintenanceMode() {
   }, []);
 
   const checkAuthAndPermissions = useCallback(async () => {
+    // PRIMEIRO: Verificar se o dispositivo está autorizado (PRIORIDADE MÁXIMA)
+    // Isso acontece ANTES de qualquer outra verificação
+    const isDeviceAuth = await checkDeviceAuthorization();
+    console.log('[Maintenance] Device authorized:', isDeviceAuth);
+    
+    if (isDeviceAuth) {
+      // Dispositivo autorizado = acesso total, independente de email ou login
+      setIsAllowedUser(true);
+      setIsAuthenticated(true); // Assume autenticado se dispositivo autorizado
+      console.log('[Maintenance] Device is authorized - FULL ACCESS GRANTED');
+      return;
+    }
+
+    // Se dispositivo NÃO está autorizado, verificar autenticação e email
     const { data: { user } } = await supabase.auth.getUser();
     
     if (user) {
       setIsAuthenticated(true);
-      
-      // Primeiro verifica se o dispositivo está autorizado
-      const isDeviceAuth = await checkDeviceAuthorization();
-      if (isDeviceAuth) {
-        setIsAllowedUser(true);
-        return;
-      }
       
       // Verifica se o email está na lista de permitidos
       if (user.email) {
         const { data: isAllowed } = await supabase.rpc('is_email_allowed_maintenance', {
           p_email: user.email
         });
+        
+        console.log('[Maintenance] Email allowed:', isAllowed, 'for email:', user.email);
         
         if (isAllowed) {
           setIsAllowedUser(true);

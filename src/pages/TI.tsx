@@ -91,7 +91,18 @@ const TI = () => {
     );
   }
 
-  // Modal de senha
+  // Se está em manutenção e o usuário NÃO está na lista de permitidos
+  // Verifica ANTES do modal de senha para evitar ficar preso
+  if (isMaintenanceMode && !isAllowedUser) {
+    return (
+      <MaintenanceScreen 
+        message={maintenanceMessage || undefined}
+        onExit={() => navigate("/")}
+      />
+    );
+  }
+
+  // Modal de senha - só aparece se passou pela verificação de manutenção
   if (showPasswordModal || !isAuthenticated) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-[#0a0d12]">
@@ -101,16 +112,6 @@ const TI = () => {
           onCancel={handlePasswordCancel}
         />
       </div>
-    );
-  }
-
-  // Se está em manutenção e o usuário NÃO está na lista de permitidos
-  if (isMaintenanceMode && !isAllowedUser) {
-    return (
-      <MaintenanceScreen 
-        message={maintenanceMessage || undefined}
-        onExit={() => navigate("/")}
-      />
     );
   }
 
