@@ -12,7 +12,9 @@ import {
   Database,
   FileText,
   Wrench,
-  Key
+  Key,
+  Monitor,
+  Lock
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -43,6 +45,16 @@ const menuItems: MenuItem[] = [
     title: "Webhooks", 
     url: "/ti/webhooks", 
     icon: Webhook 
+  },
+  { 
+    title: "Dispositivos", 
+    url: "/ti/dispositivos", 
+    icon: Monitor 
+  },
+  { 
+    title: "Senha do Painel", 
+    url: "/ti/senha", 
+    icon: Lock 
   },
   { 
     title: "Configurações", 

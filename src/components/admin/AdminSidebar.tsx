@@ -12,6 +12,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
+import { TIPasswordModal } from "@/components/ti/TIPasswordModal";
 
 // 🎨 Grupos organizados premium com gavetas
 const menuGroups = [
@@ -55,7 +56,7 @@ const menuGroups = [
     items: [
       { title: "Horários", url: "/admin/horarios", icon: Clock },
       { title: "Suporte", url: "/admin/suporte", icon: HeadphonesIcon },
-      { title: "Painel TI", url: "/ti", icon: Terminal, openInNewTab: true },
+      { title: "Painel TI", url: "/ti", icon: Terminal, requiresPassword: true },
     ],
   },
 ];
@@ -66,6 +67,7 @@ export function AdminSidebar() {
   const [pendingCount, setPendingCount] = useState(0);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [openMenus, setOpenMenus] = useState<Record<string, boolean>>({});
+  const [showTIPasswordModal, setShowTIPasswordModal] = useState(false);
 
   useEffect(() => {
     const loadPendingCount = async () => {
@@ -291,6 +293,34 @@ export function AdminSidebar() {
                   );
                 }
                 
+                // Painel TI com modal de senha
+                if (item.requiresPassword) {
+                  return (
+                    <button
+                      key={item.title}
+                      onClick={() => setShowTIPasswordModal(true)}
+                      className={cn(
+                        "relative h-12 rounded-xl flex items-center gap-3 px-4 w-full text-left",
+                        "text-muted-foreground/90 hover:text-foreground",
+                        "bg-transparent hover:bg-white/[0.04]",
+                        "transition-all duration-300 ease-out",
+                        "group/item",
+                        isActive && "text-foreground bg-white/[0.06]",
+                        isCollapsed && "justify-center px-0"
+                      )}
+                      title={isCollapsed ? item.title : undefined}
+                    >
+                      <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-primary/0 via-primary/5 to-primary/0 opacity-0 group-hover/item:opacity-100 transition-opacity duration-300" />
+                      <Icon className={cn(
+                        "w-5 h-5 flex-shrink-0 relative z-10 transition-all duration-300",
+                        "group-hover/item:drop-shadow-[0_0_8px_rgba(255,59,59,0.4)]",
+                        isActive && "text-primary drop-shadow-[0_0_8px_rgba(255,59,59,0.5)]"
+                      )} />
+                      {!isCollapsed && <span className="flex-1 text-sm font-medium relative z-10">{item.title}</span>}
+                    </button>
+                  );
+                }
+
                 if (item.openInNewTab) {
                   return (
                     <a
@@ -389,6 +419,16 @@ export function AdminSidebar() {
           {!isCollapsed && <span className="text-sm font-medium relative z-10">Sair do Sistema</span>}
         </button>
       </div>
+
+      {/* Modal de senha para Painel TI */}
+      <TIPasswordModal
+        isOpen={showTIPasswordModal}
+        onSuccess={() => {
+          setShowTIPasswordModal(false);
+          navigate("/ti");
+        }}
+        onCancel={() => setShowTIPasswordModal(false)}
+      />
     </aside>
   );
 }

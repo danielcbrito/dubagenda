@@ -582,6 +582,78 @@ export type Database = {
         }
         Relationships: []
       }
+      dispositivos_autorizados: {
+        Row: {
+          autorizado_por: string | null
+          created_at: string | null
+          descricao: string | null
+          device_fingerprint: string
+          device_name: string
+          device_type: string
+          id: string
+        }
+        Insert: {
+          autorizado_por?: string | null
+          created_at?: string | null
+          descricao?: string | null
+          device_fingerprint: string
+          device_name: string
+          device_type: string
+          id?: string
+        }
+        Update: {
+          autorizado_por?: string | null
+          created_at?: string | null
+          descricao?: string | null
+          device_fingerprint?: string
+          device_name?: string
+          device_type?: string
+          id?: string
+        }
+        Relationships: []
+      }
+      dispositivos_conectados: {
+        Row: {
+          browser: string | null
+          created_at: string | null
+          device_fingerprint: string
+          device_name: string
+          device_type: string
+          id: string
+          ip_address: string | null
+          is_active: boolean | null
+          last_activity: string | null
+          os: string | null
+          user_id: string | null
+        }
+        Insert: {
+          browser?: string | null
+          created_at?: string | null
+          device_fingerprint: string
+          device_name: string
+          device_type: string
+          id?: string
+          ip_address?: string | null
+          is_active?: boolean | null
+          last_activity?: string | null
+          os?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          browser?: string | null
+          created_at?: string | null
+          device_fingerprint?: string
+          device_name?: string
+          device_type?: string
+          id?: string
+          ip_address?: string | null
+          is_active?: boolean | null
+          last_activity?: string | null
+          os?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       email_confirmation_tokens: {
         Row: {
           created_at: string
@@ -1645,6 +1717,27 @@ export type Database = {
         }
         Relationships: []
       }
+      ti_security_config: {
+        Row: {
+          created_at: string | null
+          id: string
+          password_hash: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          password_hash: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          password_hash?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string | null
@@ -1848,6 +1941,10 @@ export type Database = {
       initialize_barber_hours: {
         Args: { p_barbeiro_id: string }
         Returns: undefined
+      }
+      is_device_authorized: {
+        Args: { p_fingerprint: string }
+        Returns: boolean
       }
       is_email_allowed_maintenance: {
         Args: { p_email: string }
