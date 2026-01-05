@@ -4,14 +4,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Calendar, Gift, MoreVertical } from "lucide-react";
+import { Calendar, Gift } from "lucide-react";
 import { toast } from "sonner";
-import logoDub from "@/assets/logo-dub.png";
 import { ClientDrawerMenu } from "@/components/ClientDrawerMenu";
 import { PointsDetailModal } from "@/components/PointsDetailModal";
 import { AppointmentCard } from "@/components/AppointmentCard";
 import { PendingPaymentCard } from "@/components/PendingPaymentCard";
-import { NotificationBell } from "@/components/NotificationBell";
 import { MyPlansSheet } from "@/components/MyPlansSheet";
 import { SubscribePlanSheet } from "@/components/SubscribePlanSheet";
 import { MyProfileSheet } from "@/components/MyProfileSheet";
@@ -343,27 +341,14 @@ const Cliente = () => {
         }}
       />
 
-      {/* Clean Top Bar - Logo, Name, Notifications, Menu */}
+      {/* Top Bar (sem logo / notificações / 3 pontinhos) */}
       <div className="z-50 flex-shrink-0">
-        <div className="max-w-4xl mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <img src={logoDub} alt="DUB" className="w-10 h-10 drop-shadow-lg" />
-            <div>
-              <h1 className="font-bold text-sm tracking-wide">Barbearia DUB</h1>
-              <p className="text-[10px] text-muted-foreground">{profile?.nome || user?.email}</p>
-            </div>
-          </div>
-          
-          <div className="flex items-center gap-2">
-            {user && <NotificationBell userId={user.id} />}
-            <Button
-              variant="ghost" 
-              size="icon"
-              onClick={() => setDrawerOpen(true)}
-              className="h-9 w-9 hover:bg-primary/10 transition-all duration-300 rounded-full"
-            >
-              <MoreVertical className="w-5 h-5" />
-            </Button>
+        <div className="max-w-4xl mx-auto px-4 h-12 flex items-center">
+          <div className="min-w-0">
+            <h1 className="font-bold text-sm tracking-wide truncate">
+              {profile?.nome ? `Olá, ${String(profile.nome).split(" ")[0]}` : "Olá"}
+            </h1>
+            <p className="text-[10px] text-muted-foreground truncate">{user?.email}</p>
           </div>
         </div>
       </div>
@@ -569,6 +554,8 @@ const Cliente = () => {
 
       {/* Bottom Navigation Bar */}
       <BottomNavigation
+        userId={user?.id}
+        onMenuClick={() => setDrawerOpen(true)}
         onProfileClick={() => setProfileSheetOpen(true)}
         onPlansClick={() => setPlansSheetOpen(true)}
         onPointsClick={() => setPointsModalOpen(true)}
