@@ -268,7 +268,13 @@ export function AdminManutencao() {
     }
   };
 
-  const saveWarning = async () => {
+  /**
+   * Persiste o aviso prévio imediatamente no banco.
+   *
+   * Motivo: na prática o admin alterna o switch e espera que isso já reflita
+   * para os clientes (sem precisar clicar em “Salvar”).
+   */
+  const persistWarning = async (nextActive: boolean, nextMessage: string) => {
     if (!config) return;
 
     setIsSaving(true);
@@ -276,27 +282,40 @@ export function AdminManutencao() {
       const { error } = await supabase
         .from("webhook_config")
         .update({
-          manutencao_aviso_ativo: warningActive,
-          manutencao_aviso_mensagem: warningMessage || null,
-          updated_at: new Date().toISOString()
+          manutencao_aviso_ativo: nextActive,
+          manutencao_aviso_mensagem: nextMessage?.trim() ? nextMessage.trim() : null,
+          updated_at: new Date().toISOString(),
         })
         .eq("id", config.id);
 
       if (error) throw error;
 
-      setConfig(prev => prev ? { 
-        ...prev, 
-        manutencao_aviso_ativo: warningActive,
-        manutencao_aviso_mensagem: warningMessage
-      } : null);
-      
-      toast.success("Aviso salvo");
+      setConfig((prev) =>
+        prev
+          ? {
+              ...prev,
+              manutencao_aviso_ativo: nextActive,
+              manutencao_aviso_mensagem: nextMessage,
+            }
+          : null
+      );
+
+      toast.success(nextActive ? "Aviso ativado" : "Aviso desativado");
     } catch (error) {
       console.error("Error saving warning:", error);
       toast.error("Erro ao salvar aviso");
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const handleWarningToggle = (checked: boolean) => {
+    setWarningActive(checked);
+    void persistWarning(checked, warningMessage);
+  };
+
+  const saveWarning = async () => {
+    await persistWarning(warningActive, warningMessage);
   };
 
   const addAllowedEmail = async () => {
@@ -623,7 +642,7 @@ export function AdminManutencao() {
             </div>
             <Switch
               checked={warningActive}
-              onCheckedChange={setWarningActive}
+              onCheckedChange={handleWarningToggle}
               disabled={isSaving}
             />
           </div>
