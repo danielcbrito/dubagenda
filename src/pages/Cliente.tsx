@@ -1,14 +1,13 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
-import { Calendar, Gift } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Calendar } from "lucide-react";
 import { toast } from "sonner";
+
+import { supabase } from "@/integrations/supabase/client";
+import { Card } from "@/components/ui/card";
 import { ClientDrawerMenu } from "@/components/ClientDrawerMenu";
 import { PointsDetailModal } from "@/components/PointsDetailModal";
-import { AppointmentCard } from "@/components/AppointmentCard";
 import { PendingPaymentCard } from "@/components/PendingPaymentCard";
 import { MyPlansSheet } from "@/components/MyPlansSheet";
 import { SubscribePlanSheet } from "@/components/SubscribePlanSheet";
@@ -19,6 +18,12 @@ import { CancelledAppointmentBanner } from "@/components/CancelledAppointmentBan
 import { AnnouncementModal } from "@/components/AnnouncementModal";
 import { BottomNavigation } from "@/components/BottomNavigation";
 import { AppointmentHistorySheet } from "@/components/AppointmentHistorySheet";
+
+// Premium components
+import { ClientHeader } from "@/components/client/ClientHeader";
+import { LoyaltyCard } from "@/components/client/LoyaltyCard";
+import { ScheduleButton } from "@/components/client/ScheduleButton";
+import { AppointmentCardPremium } from "@/components/client/AppointmentCardPremium";
 
 interface Appointment {
   id: string;
@@ -69,7 +74,6 @@ const Cliente = () => {
   useEffect(() => {
     if (!user) return;
 
-    // Set up realtime listener for appointments
     const channel = supabase
       .channel('appointments-changes')
       .on(
@@ -91,16 +95,13 @@ const Cliente = () => {
           } else if (payload.eventType === 'UPDATE') {
             const newData = payload.new as any;
             
-            // If marked as not visible, remove from list
             if (newData.visivel_para_usuario === false) {
               setAppointments(prev => prev.filter(apt => apt.id !== newData.id));
               return;
             }
             
-            // Update appointment in state
             loadUserData(user.id);
             
-            // Show notification based on status change
             if (newData.status === 'confirmed' && payload.old.status !== 'confirmed') {
               toast.success("✅ Agendamento confirmado pelo barbeiro!");
             } else if (newData.status === 'completed') {
@@ -118,7 +119,6 @@ const Cliente = () => {
     };
   }, [user]);
 
-  // Fallback polling every 20 seconds to ensure UI stays in sync
   useEffect(() => {
     if (!user) return;
     const interval = setInterval(() => {
@@ -140,13 +140,11 @@ const Cliente = () => {
   };
 
   const loadUserData = async (userId: string) => {
-    // Load available credits
     const { data: creditsData } = await supabase
       .rpc('get_user_available_credits', { p_user_id: userId });
     
     setAvailableCredits(creditsData || 0);
 
-    // Load profile
     const { data: profileData } = await supabase
       .from("profiles")
       .select("*")
@@ -155,7 +153,6 @@ const Cliente = () => {
     
     setProfile(profileData);
 
-    // Load appointments (excluding hidden ones)
     const { data: appointmentsData } = await supabase
       .from("agendamentos")
       .select(`
@@ -183,7 +180,6 @@ const Cliente = () => {
 
     setAppointments(appointmentsData || []);
     
-    // Filtrar cancelamentos recentes pelo admin (últimas 48h)
     const twoDaysAgo = new Date();
     twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
     
@@ -196,7 +192,6 @@ const Cliente = () => {
     
     setRecentCancellations(recentlyCancelled);
 
-    // Load payments for appointments
     const { data: paymentsData } = await supabase
       .from("pagamentos")
       .select("*")
@@ -204,7 +199,6 @@ const Cliente = () => {
     
     setPayments(paymentsData || []);
 
-    // Load completed appointments count
     const { count } = await supabase
       .from("agendamentos")
       .select("*", { count: 'exact', head: true })
@@ -213,7 +207,6 @@ const Cliente = () => {
 
     setCompletedAppointments(count || 0);
 
-    // Load points
     const { data: pointsData } = await supabase
       .from("pontos")
       .select("pontos")
@@ -222,7 +215,6 @@ const Cliente = () => {
 
     setPoints(pointsData?.pontos || 0);
 
-    // Load available redemptions
     const { data: redemptionsData } = await supabase
       .from("resgates")
       .select("id")
@@ -231,7 +223,6 @@ const Cliente = () => {
 
     setRedemptions(redemptionsData?.length || 0);
 
-    // Load pending bookings (awaiting payment)
     const { data: pendingBookingsData } = await supabase
       .from("pending_bookings")
       .select(`
@@ -257,7 +248,6 @@ const Cliente = () => {
   };
 
   const handleResumePayment = (bookingId: string) => {
-    // Store pending booking ID and navigate to payment screen
     sessionStorage.setItem('resumePendingBookingId', bookingId);
     navigate("/cliente/agendar");
   };
@@ -279,7 +269,6 @@ const Cliente = () => {
     }
   };
 
-
   const handleConfirmAppointment = async (appointmentId: string) => {
     const { error } = await supabase
       .from("agendamentos")
@@ -291,23 +280,16 @@ const Cliente = () => {
       return;
     }
 
-    // Check if barber also confirmed
-    const { data: appointment } = await supabase
-      .from("agendamentos")
-      .select("barbeiro_confirmou, ponto_liberado") as any;
-
-    // Fallback fetch for the specific appointment
     const { data: appointmentRow } = await supabase
       .from("agendamentos")
       .select("barbeiro_confirmou, ponto_liberado")
       .eq("id", appointmentId)
       .single();
 
-    const barberConfirmed = (appointment as any)?.barbeiro_confirmou ?? (appointmentRow as any)?.barbeiro_confirmou;
-    const pointReleased = (appointment as any)?.ponto_liberado ?? (appointmentRow as any)?.ponto_liberado;
+    const barberConfirmed = (appointmentRow as any)?.barbeiro_confirmou;
+    const pointReleased = (appointmentRow as any)?.ponto_liberado;
 
     if (barberConfirmed && !pointReleased) {
-      // Both confirmed, award point and complete
       const { error: pointError } = await supabase
         .from("agendamentos")
         .update({ 
@@ -325,108 +307,47 @@ const Cliente = () => {
     }
   };
 
-  const pointsProgress = (points % 5) * 20;
-  const cutsUntilFree = 5 - (points % 5);
-
   return (
-    <div className="h-screen bg-background relative overflow-hidden flex flex-col">
+    <div className="min-h-screen bg-background flex flex-col">
       <AnnouncementModal />
       
-      {/* Background Image with Blur */}
-      <div 
-        className="absolute inset-0 opacity-[0.08] bg-cover bg-center pointer-events-none"
-        style={{
-          backgroundImage: "url('https://images.unsplash.com/photo-1585747860715-2ba37e788b70?w=1200&q=80')",
-          filter: "blur(8px) grayscale(50%)"
-        }}
-      />
-
-      {/* Top Bar (sem logo / notificações / 3 pontinhos) */}
-      <div className="z-50 flex-shrink-0">
-        <div className="max-w-4xl mx-auto px-4 h-12 flex items-center">
-          <div className="min-w-0">
-            <h1 className="font-bold text-sm tracking-wide truncate">
-              {profile?.nome ? `Olá, ${String(profile.nome).split(" ")[0]}` : "Olá"}
-            </h1>
-            <p className="text-[10px] text-muted-foreground truncate">{user?.email}</p>
-          </div>
+      {/* Header */}
+      <div className="sticky top-0 z-40 bg-background/95 backdrop-blur-md border-b border-border/50">
+        <div className="max-w-lg mx-auto">
+          <ClientHeader 
+            profileName={profile?.nome}
+            email={user?.email}
+          />
         </div>
       </div>
 
-      {/* Scrollable content area - with padding for bottom nav */}
-      <div className="flex-1 overflow-hidden relative z-10">
-        <div className="h-full scrollable-content pb-24">
-          <div className="max-w-4xl mx-auto px-4 py-4 space-y-4">
-            {/* 💎 Premium Points Card - Compact */}
-            <Card className="card-glass overflow-hidden border border-gold/20 shadow-glow-gold hover:scale-[1.01] transition-all duration-500">
-              <div 
-                className="p-4 relative"
-                style={{
-                  background: "linear-gradient(135deg, hsl(var(--card)) 0%, hsl(var(--gold) / 0.1) 100%)"
-                }}
-              >
-                {/* Glow effect */}
-                <div className="absolute top-0 right-0 w-32 h-32 bg-gold/10 rounded-full blur-3xl" />
-                
-                <div className="relative z-10">
-                  <div className="flex items-center justify-between mb-3">
-                    <div>
-                      <h3 className="text-base font-bold tracking-wide">Programa de Pontos</h3>
-                      <p className="text-[10px] text-muted-foreground">A cada 5 cortes, ganhe 1 grátis</p>
-                    </div>
-                    <div className="relative">
-                      <div className="absolute inset-0 bg-gold/30 blur-lg animate-pulse" />
-                      <Gift className="relative w-6 h-6 text-gold" />
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-3">
-                    <div className="flex justify-between items-center">
-                      <span className="text-xs text-muted-foreground">{points % 5} de 5 cortes</span>
-                      <span className="text-gold font-bold text-xs flex items-center gap-1">
-                        <div className="w-1.5 h-1.5 bg-gold rounded-full animate-pulse" />
-                        {redemptions} {redemptions === 1 ? 'disponível' : 'disponíveis'}
-                      </span>
-                    </div>
-                    
-                    <Progress value={pointsProgress} className="h-1.5 bg-secondary/50" />
-                    
-                    <p className="text-[10px] text-center text-muted-foreground font-medium">
-                      Faltam {cutsUntilFree} {cutsUntilFree === 1 ? 'corte' : 'cortes'} para o próximo grátis 🎁
-                    </p>
-                  </div>
+      {/* Scrollable Content */}
+      <div className="flex-1 overflow-y-auto pb-28">
+        <div className="max-w-lg mx-auto px-4 py-6 space-y-6">
+          
+          {/* Loyalty Card */}
+          <LoyaltyCard
+            points={points}
+            redemptions={redemptions}
+            onViewDetails={() => setPointsModalOpen(true)}
+          />
 
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setPointsModalOpen(true)}
-                    className="w-full mt-3 h-8 text-[10px] hover:bg-gold/10 hover:text-gold transition-all duration-300 font-semibold"
-                  >
-                    Ver detalhes completos
-                  </Button>
-                </div>
-              </div>
-            </Card>
+          {/* Schedule Button */}
+          <ScheduleButton onClick={() => navigate("/cliente/agendar")} />
 
-            {/* 🔥 Premium Schedule Button - Compact */}
-            <Button 
-              className="relative w-full h-12 bg-gradient-primary text-sm font-bold tracking-wide overflow-hidden group shadow-glow-red hover:shadow-premium-hover transition-all duration-300 hover:scale-[1.01]"
-              onClick={() => navigate("/cliente/agendar")}
-            >
-              {/* Animated background glow */}
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
-              
-              <div className="relative flex items-center justify-center gap-2">
-                <Calendar className="w-5 h-5 group-hover:rotate-12 transition-transform duration-300" />
-                <span>Agendar Horário</span>
-              </div>
-            </Button>
-
-            {/* Pending Bookings - Awaiting Payment */}
+          {/* Pending Bookings */}
+          <AnimatePresence>
             {pendingBookings.length > 0 && (
-              <div className="mb-4">
-                <h3 className="text-sm font-semibold mb-3">Pagamentos Pendentes</h3>
-                <div className="space-y-2">
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+              >
+                <h3 className="text-sm font-bold text-foreground mb-3 flex items-center gap-2">
+                  <span className="w-1 h-4 bg-yellow-500 rounded-full" />
+                  Pagamentos Pendentes
+                </h3>
+                <div className="space-y-3">
                   {pendingBookings.map((booking) => (
                     <PendingPaymentCard
                       key={booking.id}
@@ -436,16 +357,25 @@ const Cliente = () => {
                     />
                   ))}
                 </div>
-              </div>
+              </motion.div>
             )}
+          </AnimatePresence>
 
-            {/* Appointments */}
-            <div>
-              <h3 className="text-sm font-semibold mb-3">Meus Agendamentos</h3>
-              
-              {/* Banner de Cancelamento Recente */}
+          {/* Appointments Section */}
+          <div>
+            <h3 className="text-sm font-bold text-foreground mb-3 flex items-center gap-2">
+              <span className="w-1 h-4 bg-primary rounded-full" />
+              Meus Agendamentos
+            </h3>
+            
+            {/* Recent Cancellation Banners */}
+            <AnimatePresence>
               {recentCancellations.length > 0 && (
-                <div className="space-y-3 mb-4">
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="space-y-3 mb-4"
+                >
                   {recentCancellations.map(apt => {
                     const reason = apt.observacoes?.replace("Cancelado em massa: ", "") || "Não informado";
                     return (
@@ -458,31 +388,47 @@ const Cliente = () => {
                       />
                     );
                   })}
-                </div>
+                </motion.div>
               )}
-              
-              {appointments.length === 0 && pendingBookings.length === 0 ? (
-                <Card className="p-6 text-center border-dashed">
-                  <Calendar className="w-10 h-10 mx-auto mb-2 text-muted-foreground opacity-50" />
-                  <p className="text-xs text-muted-foreground">
+            </AnimatePresence>
+            
+            {appointments.length === 0 && pendingBookings.length === 0 ? (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+              >
+                <Card className="p-8 text-center border-dashed border-2 bg-card/50">
+                  <div 
+                    className="w-16 h-16 mx-auto mb-4 rounded-2xl flex items-center justify-center"
+                    style={{
+                      background: "rgba(239, 68, 68, 0.1)",
+                    }}
+                  >
+                    <Calendar className="w-8 h-8 text-primary/50" />
+                  </div>
+                  <p className="text-sm text-muted-foreground font-medium">
                     Você ainda não tem agendamentos
                   </p>
+                  <p className="text-xs text-muted-foreground/70 mt-1">
+                    Toque em "Agendar Horário" para começar
+                  </p>
                 </Card>
-              ) : (
-                <div className="space-y-2">
-                  {appointments.map((apt) => (
-                    <AppointmentCard
-                      key={apt.id}
-                      appointment={apt}
-                      onCancel={() => loadUserData(user.id)}
-                      onConfirm={handleConfirmAppointment}
-                      userId={user?.id}
-                      payments={payments}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
+              </motion.div>
+            ) : (
+              <div className="space-y-3">
+                {appointments.map((apt, index) => (
+                  <AppointmentCardPremium
+                    key={apt.id}
+                    appointment={apt}
+                    onCancel={() => loadUserData(user.id)}
+                    onConfirm={handleConfirmAppointment}
+                    userId={user?.id}
+                    payments={payments}
+                    index={index}
+                  />
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -534,7 +480,6 @@ const Cliente = () => {
         redemptions={redemptions}
       />
 
-
       {/* Wallet Sheet */}
       <WalletSheet
         open={walletSheetOpen}
@@ -552,7 +497,7 @@ const Cliente = () => {
         userId={user?.id}
       />
 
-      {/* Bottom Navigation Bar */}
+      {/* Bottom Navigation */}
       <BottomNavigation
         userId={user?.id}
         onMenuClick={() => setDrawerOpen(true)}
