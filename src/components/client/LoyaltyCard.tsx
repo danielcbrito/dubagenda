@@ -8,10 +8,29 @@ interface LoyaltyCardProps {
   onViewDetails: () => void;
 }
 
+function ProgressDot({ filled, index }: { filled: boolean; index: number }) {
+  return (
+    <motion.div
+      initial={{ scale: 0 }}
+      animate={{ scale: 1 }}
+      transition={{ delay: index * 0.08, duration: 0.3 }}
+      className="flex-1"
+    >
+      <div
+        className={`h-2 rounded-full transition-all duration-300 ${
+          filled
+            ? "bg-gradient-to-r from-yellow-200 to-yellow-300 shadow-[0_0_12px_rgba(254,240,138,0.6)]"
+            : "bg-white/20"
+        }`}
+      />
+    </motion.div>
+  );
+}
+
 export function LoyaltyCard({ points, redemptions, onViewDetails }: LoyaltyCardProps) {
-  const pointsProgress = (points % 5) * 20;
-  const cutsUntilFree = 5 - (points % 5);
-  const progressDots = Array.from({ length: 5 }, (_, i) => i < (points % 5));
+  const currentCycleProgress = points % 5;
+  const cutsUntilFree = 5 - currentCycleProgress;
+  const progressDots = Array.from({ length: 5 }, (_, i) => i < currentCycleProgress);
 
   return (
     <motion.div
@@ -48,17 +67,17 @@ export function LoyaltyCard({ points, redemptions, onViewDetails }: LoyaltyCardP
         <div className="flex items-start justify-between mb-4">
           <div className="flex items-center gap-3">
             <div 
-              className="w-12 h-12 rounded-xl flex items-center justify-center"
+              className="w-11 h-11 rounded-xl flex items-center justify-center"
               style={{
                 background: "rgba(255,255,255,0.2)",
                 backdropFilter: "blur(8px)",
               }}
             >
-              <Gift className="w-6 h-6 text-white" />
+              <Gift className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h3 className="text-white font-bold text-lg tracking-tight">
-                Programa de Pontos
+              <h3 className="text-white font-bold text-base tracking-tight">
+                Programa Fidelidade
               </h3>
               <p className="text-white/70 text-xs">
                 A cada 5 cortes, ganhe 1 grátis
@@ -70,56 +89,36 @@ export function LoyaltyCard({ points, redemptions, onViewDetails }: LoyaltyCardP
             <motion.div
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full"
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-full"
               style={{
                 background: "rgba(255,255,255,0.25)",
                 backdropFilter: "blur(8px)",
                 boxShadow: "0 0 20px rgba(255,255,255,0.3)",
               }}
             >
-              <Sparkles className="w-3.5 h-3.5 text-yellow-200" />
+              <Sparkles className="w-3 h-3 text-yellow-200" />
               <span className="text-white text-xs font-bold">
-                {redemptions} disponível
+                {redemptions}
               </span>
             </motion.div>
           )}
         </div>
 
         {/* Progress section */}
-        <div className="space-y-3 mb-4">
-          {/* Progress dots */}
-          <div className="flex items-center justify-between gap-2">
+        <div className="space-y-2.5 mb-4">
+          {/* Progress bars */}
+          <div className="flex items-center gap-1.5">
             {progressDots.map((filled, index) => (
-              <motion.div
-                key={index}
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                transition={{ delay: index * 0.1 }}
-                className="flex-1 h-2.5 rounded-full overflow-hidden"
-                style={{
-                  background: "rgba(255,255,255,0.2)",
-                }}
-              >
-                <motion.div
-                  initial={{ width: 0 }}
-                  animate={{ width: filled ? "100%" : "0%" }}
-                  transition={{ delay: index * 0.1 + 0.2, duration: 0.4 }}
-                  className="h-full rounded-full"
-                  style={{
-                    background: "linear-gradient(90deg, #FEF08A, #FDE047)",
-                    boxShadow: "0 0 12px rgba(254, 240, 138, 0.6)",
-                  }}
-                />
-              </motion.div>
+              <ProgressDot key={index} filled={filled} index={index} />
             ))}
           </div>
 
           {/* Progress text */}
           <div className="flex items-center justify-between text-white/80 text-xs">
-            <span className="font-medium">{points % 5} de 5 cortes</span>
+            <span className="font-medium">{currentCycleProgress} de 5 cortes</span>
             <span className="flex items-center gap-1">
-              <Gift className="w-3.5 h-3.5" />
-              Faltam {cutsUntilFree} para o próximo grátis
+              <Gift className="w-3 h-3" />
+              Faltam {cutsUntilFree}
             </span>
           </div>
         </div>
@@ -128,9 +127,9 @@ export function LoyaltyCard({ points, redemptions, onViewDetails }: LoyaltyCardP
         <Button
           variant="ghost"
           onClick={onViewDetails}
-          className="w-full h-10 rounded-xl text-white/90 hover:text-white hover:bg-white/10 transition-all duration-300 group"
+          className="w-full h-9 rounded-xl text-white/90 hover:text-white hover:bg-white/10 transition-all duration-300 group text-sm"
         >
-          <span className="text-sm font-medium">Ver detalhes completos</span>
+          <span className="font-medium">Ver detalhes</span>
           <ChevronRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
         </Button>
       </div>

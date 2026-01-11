@@ -1,12 +1,11 @@
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Gift, CheckCircle, Clock } from "lucide-react";
-import { Progress } from "@/components/ui/progress";
+import { Gift, CheckCircle, Clock, X, Sparkles } from "lucide-react";
+import { motion } from "framer-motion";
 
 interface PointsDetailModalProps {
   open: boolean;
@@ -14,6 +13,54 @@ interface PointsDetailModalProps {
   points: number;
   completedAppointments: number;
   redemptions: number;
+}
+
+function ProgressDot({ filled, index }: { filled: boolean; index: number }) {
+  return (
+    <motion.div
+      initial={{ scale: 0, opacity: 0 }}
+      animate={{ scale: 1, opacity: 1 }}
+      transition={{ delay: index * 0.1, duration: 0.3, ease: "easeOut" }}
+      className={`w-4 h-4 rounded-full transition-all duration-300 ${
+        filled
+          ? "bg-red-500 shadow-lg shadow-red-500/50"
+          : "bg-zinc-700 border-2 border-zinc-600"
+      }`}
+    />
+  );
+}
+
+function StatCard({ 
+  icon: Icon, 
+  value, 
+  label, 
+  highlight = false,
+  delay = 0 
+}: { 
+  icon: React.ElementType; 
+  value: number; 
+  label: string; 
+  highlight?: boolean;
+  delay?: number;
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay, duration: 0.4, ease: "easeOut" }}
+      className={`rounded-xl p-4 text-center space-y-2 ${
+        highlight
+          ? "bg-red-500/10 border border-red-500/30"
+          : "bg-zinc-800/30 border border-zinc-700/50"
+      }`}
+    >
+      <Icon className={`w-5 h-5 mx-auto ${highlight ? "text-red-400" : "text-zinc-400"}`} />
+      <p className={`text-2xl font-bold ${highlight ? "text-red-400" : "text-white"}`}>
+        {value}
+      </p>
+      <p className="text-[11px] text-zinc-400 leading-tight">{label}</p>
+    </motion.div>
+  );
 }
 
 export function PointsDetailModal({ 
@@ -25,68 +72,134 @@ export function PointsDetailModal({
 }: PointsDetailModalProps) {
   const currentCycleProgress = points % 5;
   const cutsUntilFree = 5 - currentCycleProgress;
-  const progressPercentage = (currentCycleProgress / 5) * 100;
+  const progressDots = Array.from({ length: 5 }, (_, i) => i < currentCycleProgress);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[90vw] sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-lg">
-            <Gift className="w-5 h-5 text-gold" />
-            Programa de Pontos
+      <DialogContent className="max-w-[95vw] sm:max-w-md p-0 bg-gradient-to-b from-zinc-900 to-zinc-950 border-zinc-800 overflow-hidden">
+        {/* Header */}
+        <DialogHeader className="p-4 pb-0 flex flex-row items-center justify-between">
+          <button
+            onClick={() => onOpenChange(false)}
+            className="w-8 h-8 rounded-full bg-zinc-800/80 flex items-center justify-center hover:bg-zinc-700 transition-colors"
+          >
+            <X className="w-4 h-4 text-zinc-400" />
+          </button>
+          <DialogTitle className="flex items-center gap-2 text-base font-semibold text-white">
+            <Gift className="w-4 h-4 text-red-500" />
+            Programa Fidelidade
           </DialogTitle>
-          <DialogDescription className="text-xs">
-            Seus benefícios e progresso no programa de fidelidade
-          </DialogDescription>
+          <div className="w-8" /> {/* Spacer for centering */}
         </DialogHeader>
 
-        <div className="space-y-6 py-4">
-          {/* Current Progress */}
-          <div className="space-y-3">
-            <div className="flex justify-between items-center">
-              <h4 className="text-sm font-semibold">Progresso Atual</h4>
-              <span className="text-xs text-muted-foreground">
-                {currentCycleProgress} de 5 cortes
-              </span>
-            </div>
-            <Progress value={progressPercentage} className="h-2" />
-            <p className="text-xs text-center text-muted-foreground">
-              Faltam <span className="font-semibold text-primary">{cutsUntilFree}</span> {cutsUntilFree === 1 ? 'corte' : 'cortes'} para ganhar 1 grátis
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.3 }}
+          className="p-5 pt-4 space-y-6"
+        >
+          {/* Progress Section */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
+            className="bg-zinc-800/50 backdrop-blur-sm rounded-2xl p-5 border border-zinc-700/50"
+          >
+            <p className="text-xs text-zinc-400 uppercase tracking-wider mb-4 font-medium">
+              Progresso Atual
             </p>
-          </div>
+            
+            {/* Progress Dots */}
+            <div className="flex items-center justify-center gap-3 mb-4">
+              {progressDots.map((filled, index) => (
+                <ProgressDot key={index} filled={filled} index={index} />
+              ))}
+            </div>
+
+            {/* Progress Text */}
+            <div className="text-center space-y-1">
+              <p className="text-2xl font-bold text-white">
+                {currentCycleProgress} de 5 <span className="text-lg font-normal text-zinc-400">cortes</span>
+              </p>
+              <p className="text-sm text-zinc-400">
+                Mais <span className="text-red-400 font-semibold">{cutsUntilFree}</span> {cutsUntilFree === 1 ? 'corte' : 'cortes'} para ganhar 1 grátis
+              </p>
+            </div>
+
+            {/* Reward Badge */}
+            {redemptions > 0 && (
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ delay: 0.5, type: "spring", stiffness: 200 }}
+                className="mt-4 flex items-center justify-center"
+              >
+                <div className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-red-500/20 to-orange-500/20 rounded-full border border-red-500/30">
+                  <Sparkles className="w-4 h-4 text-yellow-400" />
+                  <span className="text-sm font-semibold text-white">
+                    {redemptions} {redemptions === 1 ? 'corte grátis disponível' : 'cortes grátis disponíveis'}!
+                  </span>
+                </div>
+              </motion.div>
+            )}
+          </motion.div>
 
           {/* Stats Grid */}
           <div className="grid grid-cols-3 gap-3">
-            <div className="bg-primary/5 rounded-lg p-3 text-center space-y-1">
-              <CheckCircle className="w-5 h-5 mx-auto text-primary" />
-              <p className="text-xl font-bold">{completedAppointments}</p>
-              <p className="text-[10px] text-muted-foreground">Cortes realizados</p>
-            </div>
-
-            <div className="bg-gold/10 rounded-lg p-3 text-center space-y-1">
-              <Gift className="w-5 h-5 mx-auto text-gold" />
-              <p className="text-xl font-bold text-gold">{redemptions}</p>
-              <p className="text-[10px] text-muted-foreground">Disponíveis</p>
-            </div>
-
-            <div className="bg-secondary/50 rounded-lg p-3 text-center space-y-1">
-              <Clock className="w-5 h-5 mx-auto text-foreground" />
-              <p className="text-xl font-bold">{points}</p>
-              <p className="text-[10px] text-muted-foreground">Pontos totais</p>
-            </div>
+            <StatCard
+              icon={CheckCircle}
+              value={completedAppointments}
+              label="Cortes realizados"
+              delay={0.2}
+            />
+            <StatCard
+              icon={Gift}
+              value={redemptions}
+              label="Prontos para usar"
+              highlight={redemptions > 0}
+              delay={0.3}
+            />
+            <StatCard
+              icon={Clock}
+              value={points}
+              label="Pontos totais"
+              delay={0.4}
+            />
           </div>
 
           {/* How it works */}
-          <div className="bg-muted/50 rounded-lg p-4 space-y-2">
-            <h4 className="text-xs font-semibold">Como funciona?</h4>
-            <ul className="space-y-1 text-[10px] text-muted-foreground">
-              <li>• A cada corte válido, você ganha 1 ponto</li>
-              <li>• Ao completar 5 pontos, ganhe 1 corte grátis</li>
-              <li>• Use seus resgates disponíveis no próximo agendamento</li>
-              <li>• Resgates não utilizados não expiram</li>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5, duration: 0.4 }}
+            className="space-y-3"
+          >
+            <div className="flex items-center gap-2">
+              <h4 className="text-sm font-semibold text-white">Como funciona?</h4>
+              <div className="flex-1 h-px bg-zinc-700" />
+            </div>
+            
+            <ul className="space-y-2.5">
+              {[
+                "Cada corte válido = 1 ponto",
+                "Ao completar 5 pontos, ganhe 1 corte grátis",
+                "Use seus resgates no próximo agendamento",
+                "Resgates não utilizados não expiram"
+              ].map((item, index) => (
+                <motion.li
+                  key={index}
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.6 + index * 0.1 }}
+                  className="flex items-start gap-2.5 text-sm text-zinc-300"
+                >
+                  <span className="text-red-500 mt-0.5">→</span>
+                  {item}
+                </motion.li>
+              ))}
             </ul>
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
       </DialogContent>
     </Dialog>
   );

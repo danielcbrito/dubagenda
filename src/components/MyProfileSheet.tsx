@@ -1,15 +1,71 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card } from "@/components/ui/card";
-import { User, Mail, CreditCard, Calendar, Lock, Edit2, Save, X, Phone } from "lucide-react";
+import { 
+  User, 
+  Mail, 
+  CreditCard, 
+  Calendar, 
+  Lock, 
+  Edit2, 
+  Save, 
+  X, 
+  Phone,
+  Wallet,
+  Bell,
+  Settings,
+  LogOut,
+  ChevronRight,
+  UserCircle,
+  Shield
+} from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { validateCPF, formatCPF, formatPhone, validatePhone } from "@/lib/validators";
+import { motion, AnimatePresence } from "framer-motion";
+import { WalletSheet } from "./WalletSheet";
+import { MyPlansSheet } from "./MyPlansSheet";
+import { NotificationsSheet } from "./NotificationsSheet";
+import { useNavigate } from "react-router-dom";
+
+interface ProfileMenuItemProps {
+  icon: React.ElementType;
+  label: string;
+  onClick: () => void;
+  badge?: string;
+  danger?: boolean;
+}
+
+function ProfileMenuItem({ icon: Icon, label, onClick, badge, danger }: ProfileMenuItemProps) {
+  return (
+    <motion.button
+      whileTap={{ scale: 0.98 }}
+      onClick={onClick}
+      className={`w-full flex items-center justify-between p-4 rounded-xl transition-all duration-200 ${
+        danger 
+          ? "bg-red-500/10 hover:bg-red-500/20 text-red-500" 
+          : "bg-zinc-800/50 hover:bg-zinc-800 text-white"
+      }`}
+    >
+      <div className="flex items-center gap-3">
+        <Icon className={`w-5 h-5 ${danger ? "text-red-500" : "text-zinc-400"}`} />
+        <span className="font-medium text-sm">{label}</span>
+      </div>
+      <div className="flex items-center gap-2">
+        {badge && (
+          <span className="px-2 py-0.5 bg-red-500 text-white text-xs font-bold rounded-full">
+            {badge}
+          </span>
+        )}
+        <ChevronRight className={`w-4 h-4 ${danger ? "text-red-500/50" : "text-zinc-600"}`} />
+      </div>
+    </motion.button>
+  );
+}
 
 interface MyProfileSheetProps {
   open: boolean;
@@ -17,9 +73,19 @@ interface MyProfileSheetProps {
   userId?: string;
   profile: any;
   onProfileUpdate: () => void;
+  credits?: number;
 }
 
-export function MyProfileSheet({ open, onOpenChange, userId, profile, onProfileUpdate }: MyProfileSheetProps) {
+export function MyProfileSheet({ 
+  open, 
+  onOpenChange, 
+  userId, 
+  profile, 
+  onProfileUpdate,
+  credits = 0
+}: MyProfileSheetProps) {
+  const navigate = useNavigate();
+  const [view, setView] = useState<"menu" | "edit">("menu");
   const [editing, setEditing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -32,6 +98,12 @@ export function MyProfileSheet({ open, onOpenChange, userId, profile, onProfileU
   const [createdAt, setCreatedAt] = useState("");
   const [cpfError, setCpfError] = useState("");
   const [telefoneError, setTelefoneError] = useState("");
+  
+  // Sub-sheets
+  const [walletOpen, setWalletOpen] = useState(false);
+  const [plansOpen, setPlansOpen] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   useEffect(() => {
     if (open && profile) {
@@ -42,6 +114,8 @@ export function MyProfileSheet({ open, onOpenChange, userId, profile, onProfileU
         telefone: formatPhone(profile.telefone || "")
       });
       loadUserData();
+      setView("menu");
+      setEditing(false);
     }
   }, [open, profile]);
 
@@ -56,10 +130,18 @@ export function MyProfileSheet({ open, onOpenChange, userId, profile, onProfileU
     }
   };
 
+  const getInitials = (name: string) => {
+    return name
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2);
+  };
+
   const handleSave = async () => {
     if (!userId) return;
 
-    // Validate before saving
     const cleanCPF = formData.cpf.replace(/\D/g, '');
     const cleanPhone = formData.telefone.replace(/\D/g, '');
 
@@ -75,7 +157,6 @@ export function MyProfileSheet({ open, onOpenChange, userId, profile, onProfileU
 
     setLoading(true);
 
-    // Update profile
     const { error: profileError } = await supabase
       .from("profiles")
       .update({
@@ -92,7 +173,6 @@ export function MyProfileSheet({ open, onOpenChange, userId, profile, onProfileU
       return;
     }
 
-    // Update email if changed
     if (formData.email !== userEmail) {
       const { error: emailError } = await supabase.auth.updateUser({
         email: formData.email
@@ -108,6 +188,7 @@ export function MyProfileSheet({ open, onOpenChange, userId, profile, onProfileU
 
     toast.success("Perfil atualizado com sucesso!");
     setEditing(false);
+    setView("menu");
     onProfileUpdate();
     setLoading(false);
   };
@@ -122,6 +203,7 @@ export function MyProfileSheet({ open, onOpenChange, userId, profile, onProfileU
     setCpfError("");
     setTelefoneError("");
     setEditing(false);
+    setView("menu");
   };
 
   const handleInputChange = (field: string, value: string) => {
@@ -156,148 +238,281 @@ export function MyProfileSheet({ open, onOpenChange, userId, profile, onProfileU
     setFormData({ ...formData, [field]: formattedValue });
   };
 
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+    try {
+      await supabase.auth.signOut();
+      toast.success("Você saiu da conta");
+      navigate("/auth");
+    } catch (error) {
+      toast.error("Erro ao sair da conta");
+    } finally {
+      setIsLoggingOut(false);
+    }
+  };
+
+  const handleEditProfile = () => {
+    setView("edit");
+    setEditing(true);
+  };
+
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="h-[85vh] rounded-t-[10px] z-[100]">
-        <SheetHeader>
-          <SheetTitle className="text-lg">Meu Perfil</SheetTitle>
-          <SheetDescription className="sr-only">
-            Visualize e edite suas informações pessoais
-          </SheetDescription>
-        </SheetHeader>
+    <>
+      <Sheet open={open} onOpenChange={onOpenChange}>
+        <SheetContent 
+          side="bottom" 
+          className="h-[85vh] bg-gradient-to-b from-zinc-900 to-zinc-950 border-zinc-800 rounded-t-3xl p-0"
+        >
+          <SheetHeader className="p-5 pb-0">
+            <SheetTitle className="text-white text-lg font-bold text-left flex items-center gap-2">
+              {view === "edit" && (
+                <button 
+                  onClick={handleCancel}
+                  className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center hover:bg-zinc-700 transition-colors"
+                >
+                  <X className="w-4 h-4 text-zinc-400" />
+                </button>
+              )}
+              {view === "menu" ? "Meu Perfil" : "Editar Dados"}
+            </SheetTitle>
+          </SheetHeader>
 
-        <div className="mt-6 space-y-4 overflow-y-auto h-[calc(85vh-80px)] pb-6">
-          <Card className="p-5 border-0 shadow-elegant">
-            <div className="space-y-4">
-              <div className="space-y-3">
-                <div className="space-y-2">
-                  <Label className="text-xs flex items-center gap-2">
-                    <User className="w-3.5 h-3.5" />
-                    Nome completo
-                  </Label>
-                  <Input
-                    value={formData.nome}
-                    onChange={(e) => handleInputChange('nome', e.target.value)}
-                    disabled={!editing}
-                    className="h-10 text-sm"
-                  />
+          <AnimatePresence mode="wait">
+            {view === "menu" ? (
+              <motion.div 
+                key="menu"
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                className="p-5 pt-4 space-y-6 overflow-y-auto h-full pb-32"
+              >
+                {/* User Info Card */}
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="flex items-center gap-4 p-4 bg-zinc-800/50 rounded-2xl border border-zinc-700/50"
+                >
+                  <div className="w-14 h-14 rounded-full bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center shadow-lg shadow-red-500/20">
+                    <span className="text-white font-bold text-lg">
+                      {profile?.nome ? getInitials(profile.nome) : "U"}
+                    </span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-white font-semibold text-base truncate">
+                      {profile?.nome || "Usuário"}
+                    </p>
+                    <p className="text-zinc-400 text-sm truncate">
+                      {userEmail || "email@exemplo.com"}
+                    </p>
+                  </div>
+                </motion.div>
+
+                {/* Account Section */}
+                <div className="space-y-3">
+                  <p className="text-xs text-zinc-500 uppercase tracking-wider font-semibold px-1">
+                    Conta
+                  </p>
+                  <div className="space-y-2">
+                    <ProfileMenuItem
+                      icon={Wallet}
+                      label="Minha Carteira"
+                      onClick={() => setWalletOpen(true)}
+                      badge={credits > 0 ? `R$ ${credits}` : undefined}
+                    />
+                    <ProfileMenuItem
+                      icon={CreditCard}
+                      label="Meus Planos"
+                      onClick={() => setPlansOpen(true)}
+                    />
+                    <ProfileMenuItem
+                      icon={UserCircle}
+                      label="Meus Dados"
+                      onClick={handleEditProfile}
+                    />
+                  </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label className="text-xs flex items-center gap-2">
-                    <Mail className="w-3.5 h-3.5" />
-                    E-mail
-                  </Label>
-                  <Input
-                    value={formData.email}
-                    onChange={(e) => handleInputChange('email', e.target.value)}
-                    disabled={!editing}
-                    type="email"
-                    className="h-10 text-sm"
-                  />
+                {/* Preferences Section */}
+                <div className="space-y-3">
+                  <p className="text-xs text-zinc-500 uppercase tracking-wider font-semibold px-1">
+                    Preferências
+                  </p>
+                  <div className="space-y-2">
+                    <ProfileMenuItem
+                      icon={Bell}
+                      label="Notificações"
+                      onClick={() => setNotificationsOpen(true)}
+                    />
+                    <ProfileMenuItem
+                      icon={Settings}
+                      label="Configurações"
+                      onClick={() => toast.info("Em breve")}
+                    />
+                    <ProfileMenuItem
+                      icon={Shield}
+                      label="Privacidade"
+                      onClick={() => toast.info("Em breve")}
+                    />
+                  </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label className="text-xs flex items-center gap-2">
-                    <CreditCard className="w-3.5 h-3.5" />
-                    CPF
-                  </Label>
-                  <Input
-                    value={formData.cpf}
-                    onChange={(e) => handleInputChange('cpf', e.target.value)}
-                    disabled={!editing}
-                    maxLength={14}
-                    className={`h-10 text-sm ${cpfError ? 'border-destructive' : ''}`}
-                    placeholder="000.000.000-00"
-                  />
-                  {cpfError && editing && (
-                    <p className="text-xs text-destructive">{cpfError}</p>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="text-xs flex items-center gap-2">
-                    <Phone className="w-3.5 h-3.5" />
-                    Telefone
-                  </Label>
-                  <Input
-                    value={formData.telefone}
-                    onChange={(e) => handleInputChange('telefone', e.target.value)}
-                    disabled={!editing}
-                    maxLength={15}
-                    className={`h-10 text-sm ${telefoneError ? 'border-destructive' : ''}`}
-                    placeholder="(99) 99999-9999"
-                  />
-                  {telefoneError && editing && (
-                    <p className="text-xs text-destructive">{telefoneError}</p>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="text-xs flex items-center gap-2">
-                    <Lock className="w-3.5 h-3.5" />
-                    Senha
-                  </Label>
-                  <Input
-                    value="••••••••"
-                    disabled
-                    type="password"
-                    className="h-10 text-sm"
-                  />
+                {/* Logout Section */}
+                <div className="pt-2">
                   <Button
                     variant="ghost"
-                    size="sm"
-                    className="h-7 text-xs hover:bg-primary/10 transition-all duration-300"
-                    onClick={() => toast.info("Alteração de senha em breve")}
+                    onClick={handleLogout}
+                    disabled={isLoggingOut}
+                    className="w-full h-12 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-xl font-semibold"
                   >
-                    Alterar senha
+                    <LogOut className="w-5 h-5 mr-2" />
+                    {isLoggingOut ? "Saindo..." : "Sair da Conta"}
                   </Button>
                 </div>
 
-                {createdAt && (
-                  <div className="pt-3 border-t border-border/20">
-                    <Label className="text-xs flex items-center gap-2 text-muted-foreground">
-                      <Calendar className="w-3.5 h-3.5" />
-                      Membro desde {format(new Date(createdAt), "dd/MM/yyyy", { locale: ptBR })}
+                {/* Version */}
+                <p className="text-center text-xs text-zinc-600 pt-4">
+                  Barbearia Dub • v1.0.0
+                </p>
+              </motion.div>
+            ) : (
+              <motion.div 
+                key="edit"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 20 }}
+                className="p-5 pt-4 space-y-4 overflow-y-auto h-full pb-32"
+              >
+                <div className="space-y-4 bg-zinc-800/50 rounded-2xl p-5 border border-zinc-700/50">
+                  <div className="space-y-2">
+                    <Label className="text-xs flex items-center gap-2 text-zinc-400">
+                      <User className="w-3.5 h-3.5" />
+                      Nome completo
                     </Label>
+                    <Input
+                      value={formData.nome}
+                      onChange={(e) => handleInputChange('nome', e.target.value)}
+                      className="h-11 bg-zinc-900 border-zinc-700 text-white"
+                    />
                   </div>
-                )}
-              </div>
 
-              <div className="flex gap-2 pt-4">
-                {!editing ? (
-                  <Button
-                    onClick={() => setEditing(true)}
-                    className="flex-1 h-11 bg-primary hover:bg-primary/90 transition-all duration-300"
-                  >
-                    <Edit2 className="w-4 h-4 mr-2" />
-                    Editar Informações
-                  </Button>
-                ) : (
-                  <>
+                  <div className="space-y-2">
+                    <Label className="text-xs flex items-center gap-2 text-zinc-400">
+                      <Mail className="w-3.5 h-3.5" />
+                      E-mail
+                    </Label>
+                    <Input
+                      value={formData.email}
+                      onChange={(e) => handleInputChange('email', e.target.value)}
+                      type="email"
+                      className="h-11 bg-zinc-900 border-zinc-700 text-white"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-xs flex items-center gap-2 text-zinc-400">
+                      <CreditCard className="w-3.5 h-3.5" />
+                      CPF
+                    </Label>
+                    <Input
+                      value={formData.cpf}
+                      onChange={(e) => handleInputChange('cpf', e.target.value)}
+                      maxLength={14}
+                      className={`h-11 bg-zinc-900 border-zinc-700 text-white ${cpfError ? 'border-red-500' : ''}`}
+                      placeholder="000.000.000-00"
+                    />
+                    {cpfError && (
+                      <p className="text-xs text-red-500">{cpfError}</p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-xs flex items-center gap-2 text-zinc-400">
+                      <Phone className="w-3.5 h-3.5" />
+                      Telefone
+                    </Label>
+                    <Input
+                      value={formData.telefone}
+                      onChange={(e) => handleInputChange('telefone', e.target.value)}
+                      maxLength={15}
+                      className={`h-11 bg-zinc-900 border-zinc-700 text-white ${telefoneError ? 'border-red-500' : ''}`}
+                      placeholder="(99) 99999-9999"
+                    />
+                    {telefoneError && (
+                      <p className="text-xs text-red-500">{telefoneError}</p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-xs flex items-center gap-2 text-zinc-400">
+                      <Lock className="w-3.5 h-3.5" />
+                      Senha
+                    </Label>
+                    <Input
+                      value="••••••••"
+                      disabled
+                      type="password"
+                      className="h-11 bg-zinc-900 border-zinc-700 text-zinc-500"
+                    />
                     <Button
-                      onClick={handleCancel}
                       variant="ghost"
-                      className="flex-1 h-11 hover:bg-destructive/10 text-destructive transition-all duration-300"
+                      size="sm"
+                      className="h-7 text-xs text-red-500 hover:bg-red-500/10"
+                      onClick={() => toast.info("Alteração de senha em breve")}
                     >
-                      <X className="w-4 h-4 mr-2" />
-                      Cancelar
+                      Alterar senha
                     </Button>
-                    <Button
-                      onClick={handleSave}
-                      disabled={loading || !!cpfError || !!telefoneError}
-                      className="flex-1 h-11 bg-primary hover:bg-primary/90 transition-all duration-300"
-                    >
-                      <Save className="w-4 h-4 mr-2" />
-                      {loading ? "Salvando..." : "Salvar Alterações"}
-                    </Button>
-                  </>
-                )}
-              </div>
-            </div>
-          </Card>
-        </div>
-      </SheetContent>
-    </Sheet>
+                  </div>
+
+                  {createdAt && (
+                    <div className="pt-3 border-t border-zinc-700">
+                      <Label className="text-xs flex items-center gap-2 text-zinc-500">
+                        <Calendar className="w-3.5 h-3.5" />
+                        Membro desde {format(new Date(createdAt), "dd/MM/yyyy", { locale: ptBR })}
+                      </Label>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex gap-3 pt-4">
+                  <Button
+                    onClick={handleCancel}
+                    variant="ghost"
+                    className="flex-1 h-12 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-xl"
+                  >
+                    <X className="w-4 h-4 mr-2" />
+                    Cancelar
+                  </Button>
+                  <Button
+                    onClick={handleSave}
+                    disabled={loading || !!cpfError || !!telefoneError}
+                    className="flex-1 h-12 bg-red-500 hover:bg-red-600 text-white rounded-xl"
+                  >
+                    <Save className="w-4 h-4 mr-2" />
+                    {loading ? "Salvando..." : "Salvar"}
+                  </Button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </SheetContent>
+      </Sheet>
+
+      {/* Nested Sheets */}
+      <WalletSheet 
+        open={walletOpen} 
+        onOpenChange={setWalletOpen}
+        userId={userId}
+      />
+      <MyPlansSheet 
+        open={plansOpen} 
+        onOpenChange={setPlansOpen}
+        userId={userId}
+      />
+      <NotificationsSheet 
+        open={notificationsOpen} 
+        onOpenChange={setNotificationsOpen}
+        userId={userId}
+      />
+    </>
   );
 }
