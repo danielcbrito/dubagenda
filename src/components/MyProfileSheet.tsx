@@ -10,7 +10,6 @@ import {
   CreditCard, 
   Calendar, 
   Lock, 
-  Edit2, 
   Save, 
   X, 
   Phone,
@@ -20,7 +19,11 @@ import {
   LogOut,
   ChevronRight,
   UserCircle,
-  Shield
+  Shield,
+  History,
+  Gift,
+  HelpCircle,
+  FileText
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -30,6 +33,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { WalletSheet } from "./WalletSheet";
 import { MyPlansSheet } from "./MyPlansSheet";
 import { NotificationsSheet } from "./NotificationsSheet";
+import { AppointmentHistorySheet } from "./AppointmentHistorySheet";
+import { PointsDetailModal } from "./PointsDetailModal";
 import { useNavigate } from "react-router-dom";
 
 interface ProfileMenuItemProps {
@@ -38,9 +43,10 @@ interface ProfileMenuItemProps {
   onClick: () => void;
   badge?: string;
   danger?: boolean;
+  comingSoon?: boolean;
 }
 
-function ProfileMenuItem({ icon: Icon, label, onClick, badge, danger }: ProfileMenuItemProps) {
+function ProfileMenuItem({ icon: Icon, label, onClick, badge, danger, comingSoon }: ProfileMenuItemProps) {
   return (
     <motion.button
       whileTap={{ scale: 0.98 }}
@@ -61,6 +67,11 @@ function ProfileMenuItem({ icon: Icon, label, onClick, badge, danger }: ProfileM
             {badge}
           </span>
         )}
+        {comingSoon && (
+          <span className="px-2 py-0.5 bg-zinc-700 text-zinc-400 text-xs font-medium rounded-full">
+            Em breve
+          </span>
+        )}
         <ChevronRight className={`w-4 h-4 ${danger ? "text-red-500/50" : "text-zinc-600"}`} />
       </div>
     </motion.button>
@@ -74,6 +85,9 @@ interface MyProfileSheetProps {
   profile: any;
   onProfileUpdate: () => void;
   credits?: number;
+  points?: number;
+  completedAppointments?: number;
+  redemptions?: number;
 }
 
 export function MyProfileSheet({ 
@@ -82,7 +96,10 @@ export function MyProfileSheet({
   userId, 
   profile, 
   onProfileUpdate,
-  credits = 0
+  credits = 0,
+  points = 0,
+  completedAppointments = 0,
+  redemptions = 0
 }: MyProfileSheetProps) {
   const navigate = useNavigate();
   const [view, setView] = useState<"menu" | "edit">("menu");
@@ -103,6 +120,8 @@ export function MyProfileSheet({
   const [walletOpen, setWalletOpen] = useState(false);
   const [plansOpen, setPlansOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [pointsModalOpen, setPointsModalOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   useEffect(() => {
@@ -261,7 +280,7 @@ export function MyProfileSheet({
       <Sheet open={open} onOpenChange={onOpenChange}>
         <SheetContent 
           side="bottom" 
-          className="h-[85vh] bg-gradient-to-b from-zinc-900 to-zinc-950 border-zinc-800 rounded-t-3xl p-0"
+          className="h-[90vh] bg-gradient-to-b from-zinc-900 to-zinc-950 border-zinc-800 rounded-t-3xl p-0"
         >
           <SheetHeader className="p-5 pb-0">
             <SheetTitle className="text-white text-lg font-bold text-left flex items-center gap-2">
@@ -284,7 +303,7 @@ export function MyProfileSheet({
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -20 }}
-                className="p-5 pt-4 space-y-6 overflow-y-auto h-full pb-32"
+                className="p-5 pt-4 space-y-5 overflow-y-auto h-full pb-32"
               >
                 {/* User Info Card */}
                 <motion.div
@@ -308,7 +327,7 @@ export function MyProfileSheet({
                 </motion.div>
 
                 {/* Account Section */}
-                <div className="space-y-3">
+                <div className="space-y-2">
                   <p className="text-xs text-zinc-500 uppercase tracking-wider font-semibold px-1">
                     Conta
                   </p>
@@ -333,7 +352,7 @@ export function MyProfileSheet({
                 </div>
 
                 {/* Preferences Section */}
-                <div className="space-y-3">
+                <div className="space-y-2">
                   <p className="text-xs text-zinc-500 uppercase tracking-wider font-semibold px-1">
                     Preferências
                   </p>
@@ -347,11 +366,45 @@ export function MyProfileSheet({
                       icon={Settings}
                       label="Configurações"
                       onClick={() => toast.info("Em breve")}
+                      comingSoon
                     />
                     <ProfileMenuItem
                       icon={Shield}
                       label="Privacidade"
                       onClick={() => toast.info("Em breve")}
+                      comingSoon
+                    />
+                  </div>
+                </div>
+
+                {/* More Section */}
+                <div className="space-y-2">
+                  <p className="text-xs text-zinc-500 uppercase tracking-wider font-semibold px-1">
+                    Mais
+                  </p>
+                  <div className="space-y-2">
+                    <ProfileMenuItem
+                      icon={History}
+                      label="Histórico de Agendamentos"
+                      onClick={() => setHistoryOpen(true)}
+                    />
+                    <ProfileMenuItem
+                      icon={Gift}
+                      label="Programa de Pontos"
+                      onClick={() => setPointsModalOpen(true)}
+                      badge={redemptions > 0 ? `${redemptions} disponível` : undefined}
+                    />
+                    <ProfileMenuItem
+                      icon={HelpCircle}
+                      label="Central de Ajuda"
+                      onClick={() => toast.info("Em breve")}
+                      comingSoon
+                    />
+                    <ProfileMenuItem
+                      icon={FileText}
+                      label="Termos de Uso"
+                      onClick={() => toast.info("Em breve")}
+                      comingSoon
                     />
                   </div>
                 </div>
@@ -512,6 +565,18 @@ export function MyProfileSheet({
         open={notificationsOpen} 
         onOpenChange={setNotificationsOpen}
         userId={userId}
+      />
+      <AppointmentHistorySheet 
+        open={historyOpen} 
+        onOpenChange={setHistoryOpen}
+        userId={userId}
+      />
+      <PointsDetailModal
+        open={pointsModalOpen}
+        onOpenChange={setPointsModalOpen}
+        points={points}
+        completedAppointments={completedAppointments}
+        redemptions={redemptions}
       />
     </>
   );
