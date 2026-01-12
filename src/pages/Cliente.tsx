@@ -437,13 +437,7 @@ const Cliente = () => {
       <ClientDrawerMenu
         open={drawerOpen}
         onOpenChange={setDrawerOpen}
-        onLogout={handleLogout}
-        profile={profile}
         userId={user?.id}
-        onProfileClick={() => setProfileSheetOpen(true)}
-        onPlansClick={() => setPlansSheetOpen(true)}
-        onPointsClick={() => setPointsModalOpen(true)}
-        onWalletClick={() => setWalletSheetOpen(true)}
       />
 
       {/* My Plans Sheet */}
@@ -499,13 +493,9 @@ const Cliente = () => {
 
       {/* Bottom Navigation */}
       <BottomNavigation
-        userId={user?.id}
         onMenuClick={() => setDrawerOpen(true)}
         onProfileClick={() => setProfileSheetOpen(true)}
-        onPlansClick={() => setPlansSheetOpen(true)}
-        onPointsClick={() => setPointsModalOpen(true)}
-        onWalletClick={() => setWalletSheetOpen(true)}
-        onHistoryClick={() => setHistorySheetOpen(true)}
+        onSupportClick={() => navigate('/suporte')}
       />
     </div>
   );
