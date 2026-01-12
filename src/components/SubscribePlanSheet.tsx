@@ -1,12 +1,21 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { CheckCircle2, Sparkles, AlertCircle, Loader2 } from "lucide-react";
+import { 
+  CheckCircle2, 
+  Sparkles, 
+  AlertCircle, 
+  Loader2,
+  ChevronLeft,
+  Crown,
+  TrendingDown
+} from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { motion, AnimatePresence } from "framer-motion";
+import { cn } from "@/lib/utils";
 
 interface Plan {
   id: string;
@@ -25,6 +34,99 @@ interface SubscribePlanSheetProps {
 
 type LoadingState = "idle" | "loading" | "error" | "success";
 
+// Componente de Card de Plano Premium
+function PlanCard({ 
+  plan, 
+  isPopular,
+  onSubscribe,
+  isSubscribing 
+}: { 
+  plan: Plan;
+  isPopular?: boolean;
+  onSubscribe: () => void;
+  isSubscribing: boolean;
+}) {
+  const benefits = Array.isArray(plan.beneficios_json) ? plan.beneficios_json : [];
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className={cn(
+        "relative rounded-2xl p-6 border transition-all",
+        isPopular 
+          ? "bg-gradient-to-br from-red-500/10 to-orange-500/10 border-red-500/30 shadow-xl shadow-red-500/10" 
+          : "bg-zinc-900/50 border-zinc-800"
+      )}
+    >
+      {/* Badge "Mais Popular" */}
+      {isPopular && (
+        <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+          <div className="bg-gradient-to-r from-red-500 to-orange-500 text-white text-xs font-bold px-4 py-1.5 rounded-full shadow-lg flex items-center gap-1">
+            <Crown className="w-3 h-3" />
+            MAIS POPULAR
+          </div>
+        </div>
+      )}
+
+      {/* Header do Card */}
+      <div className="mb-4">
+        <h3 className="text-xl font-bold text-white mb-2">
+          {plan.nome}
+        </h3>
+        <p className="text-sm text-zinc-400">
+          {plan.descricao}
+        </p>
+      </div>
+
+      {/* Preço */}
+      <div className="mb-6">
+        <div className="flex items-baseline gap-2">
+          <span className="text-4xl font-bold text-red-500">
+            R$ {Number(plan.preco_mensal).toFixed(2).replace('.', ',')}
+          </span>
+          <span className="text-zinc-500">/mês</span>
+        </div>
+      </div>
+
+      {/* Benefícios */}
+      <div className="space-y-3 mb-6">
+        <h4 className="text-xs font-semibold text-zinc-500 uppercase tracking-wide">
+          Benefícios inclusos
+        </h4>
+        
+        {benefits.map((benefit: string, index: number) => (
+          <div key={index} className="flex items-start gap-3">
+            <CheckCircle2 className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+            <span className="text-sm text-zinc-300">{benefit}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* Botão CTA */}
+      <Button
+        onClick={onSubscribe}
+        disabled={isSubscribing}
+        className={cn(
+          "w-full h-12 font-bold transition-all",
+          isPopular
+            ? "bg-gradient-to-r from-red-500 to-orange-500 text-white shadow-lg hover:shadow-xl hover:shadow-red-500/20 hover:scale-[1.02]"
+            : "bg-zinc-800 text-white hover:bg-zinc-700"
+        )}
+      >
+        {isSubscribing ? (
+          <div className="flex items-center gap-2">
+            <Loader2 className="w-4 h-4 animate-spin" />
+            Processando...
+          </div>
+        ) : (
+          "Assinar Agora"
+        )}
+      </Button>
+    </motion.div>
+  );
+}
+
 export function SubscribePlanSheet({ open, onOpenChange, userId }: SubscribePlanSheetProps) {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [loadingState, setLoadingState] = useState<LoadingState>("idle");
@@ -38,7 +140,6 @@ export function SubscribePlanSheet({ open, onOpenChange, userId }: SubscribePlan
   }, [open]);
 
   useEffect(() => {
-    // Set up realtime listener for plans
     const channel = supabase
       .channel('plans-changes')
       .on(
@@ -58,7 +159,7 @@ export function SubscribePlanSheet({ open, onOpenChange, userId }: SubscribePlan
               const newData = payload.new as any;
               if (newData.ativo === false) {
                 toast.info("Um plano foi desativado");
-              } else if (newData.ativo === true && payload.old.ativo === false) {
+              } else if (newData.ativo === true && (payload.old as any).ativo === false) {
                 toast.success("Novo plano ativado!");
               }
             }
@@ -77,7 +178,6 @@ export function SubscribePlanSheet({ open, onOpenChange, userId }: SubscribePlan
     setErrorMessage("");
     
     try {
-      console.log("[SubscribePlanSheet] Loading plans with ativo=true filter");
       const { data, error } = await supabase
         .from("planos")
         .select("*")
@@ -85,14 +185,10 @@ export function SubscribePlanSheet({ open, onOpenChange, userId }: SubscribePlan
         .order("prioridade_agendamento", { ascending: false });
 
       if (error) {
-        console.error("[SubscribePlanSheet] Error loading plans:", error);
         setLoadingState("error");
         setErrorMessage("Não foi possível carregar os planos disponíveis.");
         toast.error("Erro ao carregar planos");
       } else {
-        console.log("[SubscribePlanSheet] Raw plans from DB:", data);
-        
-        // Normalize beneficios_json to always be an array
         const normalizedData = (data || []).map(plan => ({
           ...plan,
           beneficios_json: Array.isArray(plan.beneficios_json) 
@@ -102,7 +198,6 @@ export function SubscribePlanSheet({ open, onOpenChange, userId }: SubscribePlan
             : []
         }));
         
-        // Filter to show only "Plano Corte" and "Plano Corte + Barba"
         const filteredPlans = normalizedData.filter(plan => {
           const nomeLower = plan.nome.toLowerCase();
           return (nomeLower === 'plano corte' || 
@@ -111,17 +206,14 @@ export function SubscribePlanSheet({ open, onOpenChange, userId }: SubscribePlan
                   !nomeLower.includes('supreme') && !nomeLower.includes('gentleman'));
         });
         
-        console.log("[SubscribePlanSheet] Filtered plans to show:", filteredPlans);
         setPlans(filteredPlans);
         setLoadingState("success");
         
         if (filteredPlans.length === 0) {
           setErrorMessage("Nenhum plano disponível no momento.");
-          console.warn("[SubscribePlanSheet] No plans match filter criteria");
         }
       }
     } catch (err) {
-      console.error("[SubscribePlanSheet] Unexpected error loading plans:", err);
       setLoadingState("error");
       setErrorMessage("Erro inesperado ao carregar planos. Verifique sua conexão.");
     }
@@ -136,7 +228,6 @@ export function SubscribePlanSheet({ open, onOpenChange, userId }: SubscribePlan
     setSubscribing(planId);
 
     try {
-      // Check for existing active subscription
       const { data: existingSubscription, error: checkError } = await supabase
         .from("assinaturas")
         .select("id")
@@ -145,7 +236,6 @@ export function SubscribePlanSheet({ open, onOpenChange, userId }: SubscribePlan
         .maybeSingle();
 
       if (checkError) {
-        console.error("Error checking subscription:", checkError);
         toast.error("Erro ao verificar assinaturas existentes");
         setSubscribing(null);
         return;
@@ -157,7 +247,6 @@ export function SubscribePlanSheet({ open, onOpenChange, userId }: SubscribePlan
         return;
       }
 
-      // Create new subscription
       const nextBillingDate = new Date();
       nextBillingDate.setMonth(nextBillingDate.getMonth() + 1);
 
@@ -167,11 +256,10 @@ export function SubscribePlanSheet({ open, onOpenChange, userId }: SubscribePlan
           user_id: userId,
           plano_id: planId,
           status: "active",
-          next_billing_date: format(nextBillingDate, 'yyyy-MM-dd') // Format without timezone conversion
+          next_billing_date: format(nextBillingDate, 'yyyy-MM-dd')
         }]);
 
       if (insertError) {
-        console.error("Error creating subscription:", insertError);
         toast.error("Erro ao criar assinatura. Tente novamente.");
       } else {
         toast.success("✅ Assinatura efetuada com sucesso!");
@@ -180,7 +268,6 @@ export function SubscribePlanSheet({ open, onOpenChange, userId }: SubscribePlan
         }, 1000);
       }
     } catch (err) {
-      console.error("Unexpected error during subscription:", err);
       toast.error("Erro inesperado ao criar assinatura");
     } finally {
       setSubscribing(null);
@@ -188,33 +275,38 @@ export function SubscribePlanSheet({ open, onOpenChange, userId }: SubscribePlan
   };
 
   const renderLoadingState = () => (
-    <div className="space-y-4 pb-6 px-1">
-      {[1, 2, 3].map((i) => (
-        <Card key={i} className="p-5 border-0">
-          <Skeleton className="h-6 w-3/4 mb-3" />
-          <Skeleton className="h-4 w-full mb-2" />
-          <Skeleton className="h-4 w-2/3 mb-4" />
-          <Skeleton className="h-24 w-full mb-3" />
-          <Skeleton className="h-11 w-full" />
-        </Card>
+    <div className="space-y-4 pb-6">
+      {[1, 2].map((i) => (
+        <div key={i} className="bg-zinc-900/50 rounded-2xl p-6 border border-zinc-800">
+          <Skeleton className="h-6 w-3/4 mb-3 bg-zinc-800" />
+          <Skeleton className="h-4 w-full mb-2 bg-zinc-800" />
+          <Skeleton className="h-10 w-32 mb-4 bg-zinc-800" />
+          <Skeleton className="h-20 w-full mb-3 bg-zinc-800" />
+          <Skeleton className="h-12 w-full bg-zinc-800" />
+        </div>
       ))}
     </div>
   );
 
   const renderErrorState = () => (
-    <div className="text-center py-12 space-y-6">
-      <AlertCircle className="w-16 h-16 mx-auto text-destructive opacity-70" />
+    <motion.div 
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="text-center py-12 space-y-6"
+    >
+      <div className="w-20 h-20 bg-red-500/10 rounded-full flex items-center justify-center mx-auto">
+        <AlertCircle className="w-10 h-10 text-red-500" />
+      </div>
       <div className="space-y-2">
-        <p className="text-sm font-medium text-foreground">Erro ao carregar planos</p>
-        <p className="text-xs text-muted-foreground max-w-xs mx-auto">
+        <p className="text-lg font-semibold text-white">Erro ao carregar planos</p>
+        <p className="text-sm text-zinc-400 max-w-xs mx-auto">
           {errorMessage}
         </p>
       </div>
       <div className="flex flex-col gap-2">
         <Button
           onClick={loadPlans}
-          variant="default"
-          className="h-11 px-6"
+          className="h-12 px-6 bg-red-500 hover:bg-red-600"
         >
           <Loader2 className="w-4 h-4 mr-2" />
           Tentar Novamente
@@ -222,84 +314,75 @@ export function SubscribePlanSheet({ open, onOpenChange, userId }: SubscribePlan
         <Button
           onClick={() => onOpenChange(false)}
           variant="ghost"
-          size="sm"
+          className="text-zinc-400"
         >
           Voltar
         </Button>
       </div>
-    </div>
+    </motion.div>
   );
 
   const renderEmptyState = () => (
-    <div className="text-center py-12 space-y-6">
-      <Sparkles className="w-16 h-16 mx-auto text-muted-foreground opacity-50" />
+    <motion.div 
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="text-center py-12 space-y-6"
+    >
+      <div className="w-20 h-20 bg-zinc-800/50 rounded-full flex items-center justify-center mx-auto">
+        <Sparkles className="w-10 h-10 text-zinc-600" />
+      </div>
       <div className="space-y-2">
-        <p className="text-sm font-medium">Nenhum plano disponível</p>
-        <p className="text-xs text-muted-foreground">
+        <p className="text-lg font-semibold text-zinc-400">Nenhum plano disponível</p>
+        <p className="text-sm text-zinc-500">
           Não há planos disponíveis no momento. Tente novamente mais tarde.
         </p>
       </div>
       <Button
         onClick={() => onOpenChange(false)}
         variant="ghost"
+        className="text-zinc-400"
       >
         Voltar
       </Button>
-    </div>
+    </motion.div>
   );
 
   const renderPlansList = () => (
-    <div className="space-y-4 pb-6 px-1">
-      {plans.map((plan) => (
-        <Card 
-          key={plan.id} 
-          className="p-5 border-0 shadow-elegant hover:shadow-glow transition-all duration-300"
-        >
-          <div 
-            className="space-y-4 p-4 rounded-lg"
-            style={{
-              background: "linear-gradient(135deg, hsl(var(--background)) 0%, hsl(var(--primary) / 0.1) 100%)"
-            }}
-          >
-            <div>
-              <h3 className="text-base font-semibold">{plan.nome}</h3>
-              <p className="text-xs text-muted-foreground mt-1">
-                {plan.descricao}
-              </p>
-            </div>
-
-            <div className="text-2xl font-bold text-gold">
-              R$ {Number(plan.preco_mensal).toFixed(2)}
-              <span className="text-sm font-normal text-muted-foreground">/mês</span>
-            </div>
-
-            <div className="space-y-2 pt-2 border-t border-border/20">
-              <p className="text-xs font-medium">Benefícios inclusos:</p>
-              {plan.beneficios_json?.map((benefit: string, index: number) => (
-                <div key={index} className="flex items-start gap-2 text-xs">
-                  <CheckCircle2 className="w-3.5 h-3.5 mt-0.5 text-gold flex-shrink-0" />
-                  <span className="text-muted-foreground">{benefit}</span>
-                </div>
-              ))}
-            </div>
-
-            <Button
-              onClick={() => handleSubscribe(plan.id)}
-              disabled={subscribing !== null}
-              className="w-full h-11 bg-primary hover:bg-primary/90 transition-all duration-300 disabled:opacity-50"
-            >
-              {subscribing === plan.id ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Processando...
-                </>
-              ) : (
-                "Assinar Agora"
-              )}
-            </Button>
+    <div className="space-y-4 pb-20">
+      {/* Destaque - Economia */}
+      <motion.div 
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-gradient-to-r from-red-500/10 to-orange-500/10 border border-red-500/20 rounded-xl p-4 mb-6"
+      >
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-red-500/20 rounded-full flex items-center justify-center">
+            <TrendingDown className="w-5 h-5 text-red-500" />
           </div>
-        </Card>
-      ))}
+          <div>
+            <h3 className="font-bold text-white text-sm">Economize todo mês</h3>
+            <p className="text-xs text-zinc-400">Agendamento prioritário garantido</p>
+          </div>
+        </div>
+      </motion.div>
+
+      <AnimatePresence>
+        {plans.map((plan, index) => (
+          <motion.div
+            key={plan.id}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: index * 0.1 }}
+          >
+            <PlanCard 
+              plan={plan}
+              isPopular={index === 0}
+              onSubscribe={() => handleSubscribe(plan.id)}
+              isSubscribing={subscribing === plan.id}
+            />
+          </motion.div>
+        ))}
+      </AnimatePresence>
     </div>
   );
 
@@ -307,20 +390,26 @@ export function SubscribePlanSheet({ open, onOpenChange, userId }: SubscribePlan
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent 
         side="bottom" 
-        className="h-[90vh] rounded-t-[10px] flex flex-col overflow-hidden"
+        className="h-[90vh] rounded-t-3xl flex flex-col overflow-hidden bg-zinc-950 border-zinc-800 p-0"
       >
-        <SheetHeader className="flex-shrink-0">
-          <SheetTitle className="text-lg flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-gold" />
-            Escolha seu Plano
-          </SheetTitle>
-          <SheetDescription className="sr-only">
-            Selecione um plano de assinatura que melhor atende suas necessidades
-          </SheetDescription>
-        </SheetHeader>
+        {/* Header */}
+        <div className="sticky top-0 bg-zinc-900 border-b border-zinc-800 px-4 py-4 z-10">
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={() => onOpenChange(false)}
+              className="w-8 h-8 flex items-center justify-center rounded-full bg-zinc-800 hover:bg-zinc-700 transition-colors"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-red-500" />
+              <h2 className="text-lg font-bold">Escolha seu Plano</h2>
+            </div>
+          </div>
+        </div>
 
-        {/* Container com scroll habilitado para mobile */}
-        <div className="flex-1 overflow-y-auto overflow-x-hidden mt-4 -mx-6 px-6 pb-safe touch-pan-y">
+        {/* Container com scroll */}
+        <div className="flex-1 overflow-y-auto p-4">
           {loadingState === "loading" && renderLoadingState()}
           {loadingState === "error" && renderErrorState()}
           {loadingState === "success" && plans.length === 0 && renderEmptyState()}
