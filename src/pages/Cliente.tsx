@@ -6,7 +6,7 @@ import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
-import { ClientDrawerMenu } from "@/components/ClientDrawerMenu";
+
 import { PointsDetailModal } from "@/components/PointsDetailModal";
 import { PendingPaymentCard } from "@/components/PendingPaymentCard";
 import { MyPlansSheet } from "@/components/MyPlansSheet";
@@ -20,7 +20,6 @@ import { BottomNavigation } from "@/components/BottomNavigation";
 import { AppointmentHistorySheet } from "@/components/AppointmentHistorySheet";
 
 // Premium components
-import { ClientHeader } from "@/components/client/ClientHeader";
 import { LoyaltyCard } from "@/components/client/LoyaltyCard";
 import { ScheduleButton } from "@/components/client/ScheduleButton";
 import { AppointmentCardPremium } from "@/components/client/AppointmentCardPremium";
@@ -55,7 +54,7 @@ const Cliente = () => {
   const [pendingBookings, setPendingBookings] = useState<any[]>([]);
   const [points, setPoints] = useState(0);
   const [redemptions, setRedemptions] = useState(0);
-  const [drawerOpen, setDrawerOpen] = useState(false);
+  
   const [pointsModalOpen, setPointsModalOpen] = useState(false);
   const [completedAppointments, setCompletedAppointments] = useState(0);
   const [plansSheetOpen, setPlansSheetOpen] = useState(false);
@@ -311,15 +310,6 @@ const Cliente = () => {
     <div className="min-h-screen bg-background flex flex-col">
       <AnnouncementModal />
       
-      {/* Header */}
-      <div className="sticky top-0 z-40 bg-background/95 backdrop-blur-md border-b border-border/50">
-        <div className="max-w-lg mx-auto">
-          <ClientHeader 
-            profileName={profile?.nome}
-            email={user?.email}
-          />
-        </div>
-      </div>
 
       {/* Scrollable Content */}
       <div className="flex-1 overflow-y-auto pb-28">
@@ -433,12 +423,6 @@ const Cliente = () => {
         </div>
       </div>
 
-      {/* Drawer Menu */}
-      <ClientDrawerMenu
-        open={drawerOpen}
-        onOpenChange={setDrawerOpen}
-        userId={user?.id}
-      />
 
       {/* My Plans Sheet */}
       <MyPlansSheet
@@ -463,6 +447,10 @@ const Cliente = () => {
         onProfileUpdate={() => {
           if (user) loadUserData(user.id);
         }}
+        credits={availableCredits}
+        points={points}
+        completedAppointments={completedAppointments}
+        redemptions={redemptions}
       />
 
       {/* Points Detail Modal */}
@@ -493,7 +481,6 @@ const Cliente = () => {
 
       {/* Bottom Navigation */}
       <BottomNavigation
-        onMenuClick={() => setDrawerOpen(true)}
         onProfileClick={() => setProfileSheetOpen(true)}
         onSupportClick={() => navigate('/suporte')}
       />
