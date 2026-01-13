@@ -1,10 +1,11 @@
-import { Send, Paperclip, Mic, X, Image as ImageIcon, FileText, StopCircle, AlertTriangle, CreditCard, Lock, Bug } from "lucide-react";
+import { Send, Paperclip, Mic, X, Image as ImageIcon, FileText, StopCircle, AlertTriangle, CreditCard, Lock, Bug, Sparkles } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { BotAvatar } from "./BotAvatar";
+import { motion, AnimatePresence } from "framer-motion";
+import logoImage from "@/assets/logo-dub.png";
 
 interface Message {
   role: "user" | "assistant";
@@ -41,8 +42,8 @@ const quickSuggestions = [
 ];
 
 /**
- * Interface Premium 2025 — Ultra Moderna
- * Glassmorphism, animações fluidas, tipografia premium
+ * Interface de Chat Premium 2025
+ * Design flutuante, clean e moderno — inspirado no ChatGPT
  */
 export function SupportChatInterface() {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -51,6 +52,7 @@ export function SupportChatInterface() {
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [isRecording, setIsRecording] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [isFocused, setIsFocused] = useState(false);
   
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
@@ -68,7 +70,7 @@ export function SupportChatInterface() {
     const textarea = textareaRef.current;
     if (textarea) {
       textarea.style.height = "auto";
-      textarea.style.height = `${Math.min(textarea.scrollHeight, 200)}px`;
+      textarea.style.height = `${Math.min(textarea.scrollHeight, 160)}px`;
     }
   };
 
@@ -93,8 +95,6 @@ export function SupportChatInterface() {
       mediaRecorder.onstop = async () => {
         const audioBlob = new Blob(audioChunksRef.current, { type: "audio/webm" });
         stream.getTracks().forEach(track => track.stop());
-        
-        // Converter áudio para texto
         await convertAudioToText(audioBlob);
       };
 
@@ -214,213 +214,252 @@ export function SupportChatInterface() {
     }
   };
 
+  // Tela de boas-vindas — clean e minimalista
   const renderWelcomeScreen = () => (
-    <div className="chat-messages px-4 md:px-6 py-6 flex items-center justify-center">
-      <div className="max-w-2xl w-full">
-        {/* Mensagem de Boas-vindas com Avatar */}
-        <div className="flex gap-4 mb-8 animate-fade-in">
-          <BotAvatar size="lg" />
-          <div 
-            className="flex-1 rounded-3xl px-6 py-5 bg-white/5 backdrop-blur-2xl border border-white/10 shadow-2xl"
-            style={{
-              boxShadow: "0 8px 32px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1)"
-            }}
-          >
-            <p className="text-white/90 text-[15px] leading-relaxed font-light">
-              Olá! Sou o assistente técnico da Barbearia DUB. Estou aqui para ajudar você a resolver problemas com o aplicativo. Qual dificuldade você está enfrentando?
-            </p>
-            <p className="text-white/40 text-[11px] mt-2 font-medium">
-              Agora
-            </p>
+    <div className="flex-1 flex flex-col items-center justify-center px-6 py-12">
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: "easeOut" }}
+        className="text-center max-w-md"
+      >
+        {/* Logo/Avatar centralizado */}
+        <div className="relative mb-8">
+          <div className="w-20 h-20 mx-auto rounded-3xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center border border-white/10 shadow-2xl">
+            <img src={logoImage} alt="DUB" className="w-12 h-12 object-contain" />
+          </div>
+          <div className="absolute -bottom-1 -right-1 left-1/2 transform translate-x-4">
+            <div className="w-6 h-6 rounded-full bg-emerald-500/20 flex items-center justify-center border border-emerald-500/30">
+              <Sparkles className="w-3 h-3 text-emerald-400" />
+            </div>
           </div>
         </div>
 
-        {/* Sugestões Rápidas Premium */}
-        <div className="grid grid-cols-2 gap-3 animate-fade-in" style={{ animationDelay: "150ms" }}>
+        {/* Título */}
+        <h2 className="text-2xl font-semibold text-white mb-3">
+          Olá! Como posso ajudar?
+        </h2>
+        <p className="text-white/50 text-sm leading-relaxed mb-10">
+          Sou o assistente da Barbearia DUB. Descreva sua dúvida ou escolha uma opção abaixo.
+        </p>
+      </motion.div>
+
+      {/* Sugestões em grid */}
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.15, ease: "easeOut" }}
+        className="w-full max-w-lg px-4"
+      >
+        <div className="grid grid-cols-2 gap-3">
           {quickSuggestions.map((suggestion, index) => {
             const Icon = suggestion.icon;
             return (
-              <button
+              <motion.button
                 key={index}
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.3, delay: 0.2 + index * 0.05 }}
                 onClick={() => sendMessage(suggestion.message)}
-                className="group p-4 rounded-2xl bg-white/5 backdrop-blur-2xl border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all duration-300 text-left hover:scale-[1.02] active:scale-[0.98]"
-                style={{
-                  boxShadow: "0 4px 16px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.05)"
-                }}
+                className="group p-4 rounded-2xl bg-white/[0.03] border border-white/[0.06] hover:bg-white/[0.06] hover:border-white/10 transition-all duration-300 text-left active:scale-[0.98]"
               >
-                <div className="flex items-start gap-3">
-                  <div className="p-2 rounded-xl bg-primary/10 border border-primary/20 group-hover:bg-primary/20 transition-colors duration-300">
-                    <Icon className="h-5 w-5 text-primary" />
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-xl bg-white/[0.05] group-hover:bg-primary/10 transition-colors duration-300">
+                    <Icon className="h-4 w-4 text-white/40 group-hover:text-primary transition-colors duration-300" />
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-white/90 text-sm font-medium group-hover:text-white transition-colors duration-300">
-                      {suggestion.title}
-                    </p>
-                  </div>
+                  <span className="text-[13px] text-white/60 group-hover:text-white/80 font-medium transition-colors duration-300">
+                    {suggestion.title}
+                  </span>
                 </div>
-              </button>
+              </motion.button>
             );
           })}
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 
+  // Área de mensagens — espaçada e fluida
   const renderMessages = () => (
-    <div ref={scrollAreaRef} className="chat-messages px-4 md:px-6 py-6">
-      <div className="max-w-3xl mx-auto space-y-4 md:space-y-6">
-        {messages.map((message, index) => (
-          <div
-            key={index}
-            className={cn(
-              "flex w-full animate-fade-in gap-3",
-              message.role === "user" ? "justify-end" : "justify-start"
-            )}
-          >
-            {/* Avatar do Bot - apenas para mensagens do assistente */}
-            {message.role === "assistant" && (
-              <BotAvatar size="md" />
-            )}
-            
-            <div
+    <div ref={scrollAreaRef} className="flex-1 overflow-y-auto px-4 md:px-6">
+      <div className="max-w-2xl mx-auto py-8 space-y-6">
+        <AnimatePresence mode="popLayout">
+          {messages.map((message, index) => (
+            <motion.div
+              key={index}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, ease: "easeOut" }}
               className={cn(
-                "max-w-[80%] md:max-w-[75%] rounded-3xl px-5 py-4 shadow-xl backdrop-blur-xl transition-all duration-300 hover:scale-[1.01]",
-                message.role === "user"
-                  ? "bg-gradient-to-br from-primary/30 via-primary/20 to-primary/10 backdrop-blur-2xl border border-primary/30 text-white shadow-primary/20"
-                  : "bg-white/5 backdrop-blur-2xl border border-white/10 text-white/90 shadow-black/20"
+                "flex gap-4",
+                message.role === "user" ? "justify-end" : "justify-start"
               )}
-              style={message.role === "user" ? {
-                boxShadow: "0 0 20px rgba(217, 65, 65, 0.2), 0 8px 32px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1)"
-              } : {
-                boxShadow: "0 8px 32px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1)"
-              }}
             >
-              {/* Attachments Premium */}
-              {message.attachments && message.attachments.length > 0 && (
-                <div className="mb-3 space-y-2">
-                  {message.attachments.map((attachment, idx) => (
-                    <div key={idx} className="flex items-center gap-3 p-3 rounded-2xl bg-black/20 backdrop-blur-xl border border-white/10">
-                      {attachment.type === "image" ? (
-                        <>
-                          <ImageIcon className="h-4 w-4 text-white/60" />
-                          <img src={attachment.url} alt={attachment.name} className="max-w-xs rounded-xl shadow-lg" />
-                        </>
-                      ) : attachment.type === "audio" ? (
-                        <>
-                          <Mic className="h-4 w-4 text-white/60" />
-                          <audio src={attachment.url} controls className="max-w-xs" />
-                        </>
-                      ) : (
-                        <>
-                          <FileText className="h-4 w-4 text-white/60" />
-                          <span className="text-xs text-white/70">{attachment.name}</span>
-                        </>
-                      )}
-                    </div>
-                  ))}
+              {/* Avatar do assistente */}
+              {message.role === "assistant" && (
+                <div className="shrink-0 w-8 h-8 rounded-xl bg-gradient-to-br from-white/10 to-white/5 flex items-center justify-center border border-white/10">
+                  <img src={logoImage} alt="DUB" className="w-5 h-5 object-contain" />
                 </div>
               )}
               
-              {/* Message Content Premium */}
-              <p className="text-[15px] leading-relaxed whitespace-pre-wrap break-words font-light">
-                {message.content}
-              </p>
-              
-              {/* Timestamp Premium */}
-              <p className={cn(
-                "text-[11px] mt-2.5 font-medium",
-                message.role === "user" ? "text-white/50" : "text-white/40"
-              )}>
-                {message.timestamp.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
-              </p>
-            </div>
-          </div>
-        ))}
+              {/* Balão da mensagem */}
+              <div
+                className={cn(
+                  "max-w-[85%] md:max-w-[75%]",
+                  message.role === "user" ? "order-1" : ""
+                )}
+              >
+                {/* Attachments */}
+                {message.attachments && message.attachments.length > 0 && (
+                  <div className="mb-3 space-y-2">
+                    {message.attachments.map((attachment, idx) => (
+                      <div key={idx} className="flex items-center gap-2 p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+                        {attachment.type === "image" ? (
+                          <>
+                            <ImageIcon className="h-4 w-4 text-white/40" />
+                            <img src={attachment.url} alt={attachment.name} className="max-w-xs rounded-lg" />
+                          </>
+                        ) : attachment.type === "audio" ? (
+                          <>
+                            <Mic className="h-4 w-4 text-white/40" />
+                            <audio src={attachment.url} controls className="max-w-xs" />
+                          </>
+                        ) : (
+                          <>
+                            <FileText className="h-4 w-4 text-white/40" />
+                            <span className="text-xs text-white/60">{attachment.name}</span>
+                          </>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+                
+                {/* Conteúdo */}
+                <div
+                  className={cn(
+                    "rounded-2xl px-4 py-3",
+                    message.role === "user"
+                      ? "bg-primary/90 text-white"
+                      : "bg-white/[0.04] border border-white/[0.06] text-white/90"
+                  )}
+                >
+                  <p className="text-[15px] leading-relaxed whitespace-pre-wrap break-words">
+                    {message.content}
+                  </p>
+                </div>
+                
+                {/* Timestamp */}
+                <p className={cn(
+                  "text-[11px] mt-1.5 px-1",
+                  message.role === "user" ? "text-right text-white/40" : "text-white/30"
+                )}>
+                  {message.timestamp.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                </p>
+              </div>
 
-        {/* Loading State Premium com Avatar */}
-        {isLoading && (
-          <div className="flex justify-start animate-fade-in gap-3">
-            <BotAvatar size="md" />
-            <div 
-              className="max-w-[75%] rounded-3xl px-5 py-4 bg-white/5 backdrop-blur-2xl border border-white/10"
-              style={{
-                boxShadow: "0 8px 32px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1)"
-              }}
-            >
-              <div className="flex items-center gap-3">
-                <div className="flex gap-1.5">
-                  <div className="h-2.5 w-2.5 rounded-full bg-white/40 animate-bounce" style={{ animationDelay: "0ms" }} />
-                  <div className="h-2.5 w-2.5 rounded-full bg-white/40 animate-bounce" style={{ animationDelay: "150ms" }} />
-                  <div className="h-2.5 w-2.5 rounded-full bg-white/40 animate-bounce" style={{ animationDelay: "300ms" }} />
+              {/* Avatar do usuário (placeholder) */}
+              {message.role === "user" && (
+                <div className="shrink-0 w-8 h-8 rounded-xl bg-gradient-to-br from-primary/30 to-primary/10 flex items-center justify-center border border-primary/20 order-2">
+                  <span className="text-xs font-semibold text-white/80">EU</span>
                 </div>
-                <span className="text-xs text-white/30 font-light">Analisando sua mensagem...</span>
+              )}
+            </motion.div>
+          ))}
+        </AnimatePresence>
+
+        {/* Loading indicator */}
+        {isLoading && (
+          <motion.div 
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex gap-4"
+          >
+            <div className="shrink-0 w-8 h-8 rounded-xl bg-gradient-to-br from-white/10 to-white/5 flex items-center justify-center border border-white/10">
+              <img src={logoImage} alt="DUB" className="w-5 h-5 object-contain" />
+            </div>
+            <div className="bg-white/[0.04] border border-white/[0.06] rounded-2xl px-4 py-3">
+              <div className="flex items-center gap-2">
+                <div className="flex gap-1">
+                  <span className="w-2 h-2 rounded-full bg-white/30 animate-bounce" style={{ animationDelay: "0ms" }} />
+                  <span className="w-2 h-2 rounded-full bg-white/30 animate-bounce" style={{ animationDelay: "150ms" }} />
+                  <span className="w-2 h-2 rounded-full bg-white/30 animate-bounce" style={{ animationDelay: "300ms" }} />
+                </div>
+                <span className="text-xs text-white/30">Digitando...</span>
               </div>
             </div>
-          </div>
+          </motion.div>
         )}
       </div>
     </div>
   );
 
   return (
-    <div className="flex flex-col" style={{ height: '100%', minHeight: '100%' }}>
-      {/* Messages Area - Flex 1 para ocupar todo espaço disponível */}
-      <div className="flex-1 overflow-y-auto" style={{ flexGrow: 1, flexShrink: 1, minHeight: 0 }}>
-        {messages.length === 0 && !isLoading ? renderWelcomeScreen() : renderMessages()}
-      </div>
+    <div className="flex flex-col h-full relative">
+      {/* Área de conteúdo */}
+      {messages.length === 0 && !isLoading ? renderWelcomeScreen() : renderMessages()}
 
-      {/* Input Area Premium 2025 - Fixo no bottom */}
-      <div 
-        className="shrink-0 p-3 md:p-4 border-t border-white/5 backdrop-blur-xl"
-        style={{
-          background: 'rgba(255, 255, 255, 0.03)',
-          boxShadow: '0 -4px 20px rgba(0, 0, 0, 0.3)'
-        }}
-      >
-        <div className="max-w-3xl mx-auto">
-          {/* Selected Files Preview Premium */}
-          {selectedFiles.length > 0 && (
-            <div className="mb-3 flex flex-wrap gap-2">
-              {selectedFiles.map((file, index) => (
-                <div key={index} className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/5 backdrop-blur-xl border border-white/10 text-sm group hover:bg-white/10 transition-all duration-300">
-                  {file.type.startsWith("image/") ? (
-                    <ImageIcon className="h-4 w-4 text-white/60" />
-                  ) : file.type.startsWith("audio/") ? (
-                    <Mic className="h-4 w-4 text-white/60" />
-                  ) : (
-                    <FileText className="h-4 w-4 text-white/60" />
-                  )}
-                  <span className="text-xs text-white/70 font-medium">{file.name}</span>
-                  <button 
-                    onClick={() => removeFile(index)} 
-                    className="hover:text-red-400 transition-colors duration-200"
+      {/* Input flutuante — design premium */}
+      <div className="shrink-0 px-4 pb-6 pt-2">
+        <div className="max-w-2xl mx-auto">
+          {/* Preview de arquivos selecionados */}
+          <AnimatePresence>
+            {selectedFiles.length > 0 && (
+              <motion.div 
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 10 }}
+                className="mb-3 flex flex-wrap gap-2"
+              >
+                {selectedFiles.map((file, index) => (
+                  <div 
+                    key={index} 
+                    className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm"
                   >
-                    <X className="h-3.5 w-3.5 text-white/50" />
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
+                    {file.type.startsWith("image/") ? (
+                      <ImageIcon className="h-4 w-4 text-white/40" />
+                    ) : file.type.startsWith("audio/") ? (
+                      <Mic className="h-4 w-4 text-white/40" />
+                    ) : (
+                      <FileText className="h-4 w-4 text-white/40" />
+                    )}
+                    <span className="text-xs text-white/60">{file.name}</span>
+                    <button 
+                      onClick={() => removeFile(index)} 
+                      className="hover:text-red-400 transition-colors"
+                    >
+                      <X className="h-3.5 w-3.5 text-white/40" />
+                    </button>
+                  </div>
+                ))}
+              </motion.div>
+            )}
+          </AnimatePresence>
 
-          {/* Input Container Premium Glassmorphism */}
-          <div 
-            className="relative flex items-center gap-2 p-2.5 rounded-3xl backdrop-blur-2xl border transition-all duration-300 focus-within:border-primary/50 focus-within:shadow-[0_0_20px_rgba(217,65,65,0.3)]"
-            style={{
-              background: 'rgba(255, 255, 255, 0.05)',
-              borderColor: 'rgba(255, 255, 255, 0.1)',
-              boxShadow: "0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.05)"
+          {/* Container do input flutuante */}
+          <motion.div 
+            animate={{ 
+              boxShadow: isFocused 
+                ? "0 0 0 1px rgba(239, 68, 68, 0.3), 0 8px 40px -8px rgba(0, 0, 0, 0.5)" 
+                : "0 4px 24px -4px rgba(0, 0, 0, 0.4)"
             }}
+            transition={{ duration: 0.2 }}
+            className={cn(
+              "relative flex items-end gap-2 p-2 rounded-2xl transition-all duration-200",
+              "bg-white/[0.04] border",
+              isFocused ? "border-primary/30" : "border-white/[0.08]"
+            )}
           >
-            {/* Attach Button Premium */}
+            {/* Botão de anexo */}
             <Button
               type="button"
               variant="ghost"
               size="icon"
-              className="h-10 w-10 rounded-full shrink-0 hover:bg-white/10 text-white/60 hover:text-white transition-all duration-300"
+              className="h-9 w-9 rounded-xl shrink-0 hover:bg-white/[0.06] text-white/40 hover:text-white/60 transition-colors"
               onClick={() => fileInputRef.current?.click()}
               disabled={isLoading}
             >
-              <Paperclip className="h-5 w-5" />
+              <Paperclip className="h-[18px] w-[18px]" />
             </Button>
             <input
               ref={fileInputRef}
@@ -431,58 +470,60 @@ export function SupportChatInterface() {
               onChange={handleFileSelect}
             />
 
-            {/* Textarea Premium */}
+            {/* Textarea */}
             <textarea
               ref={textareaRef}
               value={input}
               onChange={handleInputChange}
               onKeyDown={handleKeyPress}
-              placeholder="Digite sua mensagem..."
+              onFocus={() => setIsFocused(true)}
+              onBlur={() => setIsFocused(false)}
+              placeholder="Mensagem..."
               disabled={isLoading}
-              className="flex-1 min-h-[40px] max-h-[120px] resize-none border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 px-2 py-2.5 text-[15px] text-white placeholder:text-white/40 focus:outline-none font-light"
+              className="flex-1 min-h-[36px] max-h-[120px] resize-none border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 px-1 py-2 text-[15px] text-white placeholder:text-white/30 focus:outline-none leading-tight"
               rows={1}
             />
 
-            {/* Audio Button Premium */}
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className={cn(
-                "h-10 w-10 rounded-full shrink-0 transition-all duration-300",
-                isRecording 
-                  ? "bg-red-500/20 hover:bg-red-500/30 text-red-400 animate-pulse" 
-                  : "hover:bg-white/10 text-white/60 hover:text-white"
-              )}
-              onClick={isRecording ? stopRecording : startRecording}
-              disabled={isLoading}
-            >
-              {isRecording ? <StopCircle className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
-            </Button>
+            {/* Botões de ação */}
+            <div className="flex items-center gap-1">
+              {/* Botão de áudio */}
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className={cn(
+                  "h-9 w-9 rounded-xl shrink-0 transition-all duration-200",
+                  isRecording 
+                    ? "bg-red-500/20 hover:bg-red-500/30 text-red-400" 
+                    : "hover:bg-white/[0.06] text-white/40 hover:text-white/60"
+                )}
+                onClick={isRecording ? stopRecording : startRecording}
+                disabled={isLoading}
+              >
+                {isRecording ? <StopCircle className="h-[18px] w-[18px]" /> : <Mic className="h-[18px] w-[18px]" />}
+              </Button>
 
-            {/* Send Button Premium com Destaque */}
-            <Button
-              type="button"
-              size="icon"
-              className="h-10 w-10 rounded-full shrink-0 transition-all duration-300 disabled:opacity-40 disabled:cursor-not-allowed hover:scale-105 active:scale-95"
-              style={{
-                background: input.trim() && !isLoading 
-                  ? 'linear-gradient(135deg, hsl(0 64% 52%), hsl(0 64% 42%))' 
-                  : 'rgba(255, 255, 255, 0.1)',
-                boxShadow: input.trim() && !isLoading 
-                  ? '0 4px 16px rgba(217, 65, 65, 0.4), 0 0 20px rgba(217, 65, 65, 0.3)' 
-                  : 'none'
-              }}
-              onClick={() => sendMessage()}
-              disabled={!input.trim() || isLoading}
-            >
-              <Send className="h-4 w-4 text-white" />
-            </Button>
-          </div>
+              {/* Botão de enviar */}
+              <Button
+                type="button"
+                size="icon"
+                className={cn(
+                  "h-9 w-9 rounded-xl shrink-0 transition-all duration-200",
+                  input.trim() || selectedFiles.length > 0
+                    ? "bg-primary hover:bg-primary/90 text-white"
+                    : "bg-white/[0.06] text-white/20 cursor-not-allowed"
+                )}
+                onClick={() => sendMessage()}
+                disabled={isLoading || (!input.trim() && selectedFiles.length === 0)}
+              >
+                <Send className="h-[18px] w-[18px]" />
+              </Button>
+            </div>
+          </motion.div>
 
-          {/* Disclaimer Premium */}
-          <p className="text-center text-[11px] text-white/30 mt-3 font-light">
-            IA pode cometer erros. Verifique informações importantes.
+          {/* Disclaimer sutil */}
+          <p className="text-[11px] text-white/20 text-center mt-3">
+            Respostas geradas por IA podem conter imprecisões
           </p>
         </div>
       </div>
