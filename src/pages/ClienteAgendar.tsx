@@ -16,7 +16,7 @@ import { TimeSlot } from "@/components/booking/TimeSlot";
 import { PaymentOption } from "@/components/booking/PaymentOption";
 import { SummaryRow } from "@/components/booking/SummaryRow";
 import { PremiumCalendar } from "@/components/booking/PremiumCalendar";
-import { StepIndicator } from "@/components/booking/StepIndicator";
+import { StepDots } from "@/components/booking/StepDots";
 
 interface Service {
   id: string;
@@ -1093,28 +1093,24 @@ const ClienteAgendar = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-zinc-950 to-black">
-      {/* Header Flutuante Premium */}
-      <div className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-b from-black/80 via-black/40 to-transparent backdrop-blur-md">
-        <div className="max-w-2xl mx-auto px-6 pt-6 pb-4">
-          <div className="relative flex items-center justify-center mb-6">
+    <div className="min-h-screen bg-background">
+      {/* Header Minimalista - Apenas Setinha + Bolinhas */}
+      <div className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-md border-b border-border/50">
+        <div className="max-w-2xl mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            {/* Botão Voltar */}
             <button 
               onClick={handleBack}
-              className="absolute left-0 w-10 h-10 flex items-center justify-center rounded-full bg-white/10 backdrop-blur hover:bg-white/20 transition-all"
+              className="w-10 h-10 flex items-center justify-center rounded-full bg-card hover:bg-secondary transition-all"
             >
-              <ArrowLeft className="w-5 h-5 text-white" />
+              <ArrowLeft className="w-5 h-5 text-foreground" />
             </button>
 
-            <h1 className="text-xl font-bold text-white tracking-tight">
-              {isRescheduling ? "Remarcar Horário" : "Agendar Horário"}
-            </h1>
-          </div>
+            {/* Bolinhas de Etapas */}
+            <StepDots currentStep={currentDisplayStep} totalSteps={totalSteps} />
 
-          <div className="h-1 bg-white/10 rounded-full overflow-hidden">
-            <div 
-              className="h-full bg-gradient-to-r from-primary to-orange-500 transition-all duration-500 ease-out"
-              style={{ width: `${(currentDisplayStep / totalSteps) * 100}%` }}
-            />
+            {/* Espaço vazio para balancear */}
+            <div className="w-10" />
           </div>
         </div>
       </div>
@@ -1130,15 +1126,18 @@ const ClienteAgendar = () => {
             animate="animate"
             exit="exit"
             transition={{ duration: 0.3 }}
-            className="min-h-screen pt-32 pb-32 px-6"
+            className="min-h-screen pt-20 pb-32 px-4"
           >
             <div className="max-w-2xl mx-auto">
-              <StepIndicator 
-                currentStep={1} 
-                totalSteps={totalSteps} 
-                title="Escolha os Serviços"
-                subtitle="Selecione um ou mais serviços desejados"
-              />
+              {/* Título da Etapa */}
+              <div className="mb-6 pt-4">
+                <h2 className="text-xl font-semibold text-foreground">
+                  Escolha os Serviços
+                </h2>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Selecione um ou mais serviços
+                </p>
+              </div>
 
               <div ref={servicesListRef} className="space-y-3">
                 {services.map((service) => (
@@ -1153,20 +1152,20 @@ const ClienteAgendar = () => {
 
               {/* Bottom CTA */}
               {selectedServices.length > 0 && (
-                <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-black via-black/95 to-transparent backdrop-blur-xl border-t border-white/5 p-6">
+                <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-xl border-t border-border p-4">
                   <div className="max-w-2xl mx-auto">
-                    <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm text-zinc-400">
+                        <p className="text-xs text-muted-foreground">
                           {selectedServices.length} {selectedServices.length === 1 ? 'serviço' : 'serviços'} • {getTotalDuration()} min
                         </p>
-                        <p className="text-2xl font-bold text-white">
+                        <p className="text-lg font-bold text-foreground">
                           R$ {getTotalPrice().toFixed(2).replace('.', ',')}
                         </p>
                       </div>
                       <button
                         onClick={() => setStep(2)}
-                        className="px-8 py-4 bg-gradient-to-r from-primary to-primary/80 text-white font-semibold rounded-2xl hover:shadow-lg hover:shadow-primary/25 transition-all hover:scale-[1.02] active:scale-[0.98]"
+                        className="px-6 py-3 bg-primary text-primary-foreground font-semibold rounded-xl hover:bg-primary/90 transition-all active:scale-[0.98]"
                       >
                         Continuar
                       </button>
@@ -1187,15 +1186,18 @@ const ClienteAgendar = () => {
             animate="animate"
             exit="exit"
             transition={{ duration: 0.3 }}
-            className="min-h-screen pt-32 pb-24 px-6"
+            className="min-h-screen pt-20 pb-24 px-4"
           >
             <div className="max-w-2xl mx-auto">
-              <StepIndicator 
-                currentStep={activeSubscription?.servico ? 1 : 2} 
-                totalSteps={totalSteps} 
-                title="Escolha a Data"
-                subtitle="Selecione o dia desejado para o atendimento"
-              />
+              {/* Título da Etapa */}
+              <div className="mb-6 pt-4">
+                <h2 className="text-xl font-semibold text-foreground">
+                  Escolha a Data
+                </h2>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Selecione o dia desejado
+                </p>
+              </div>
 
               <PremiumCalendar
                 selectedDate={selectedDate}
@@ -1205,7 +1207,7 @@ const ClienteAgendar = () => {
               {selectedDate && (
                 <button
                   onClick={handleNextStep}
-                  className="w-full mt-6 py-4 bg-gradient-to-r from-primary to-primary/80 text-white font-semibold rounded-2xl hover:shadow-lg hover:shadow-primary/25 transition-all"
+                  className="w-full mt-6 py-3.5 bg-primary text-primary-foreground font-semibold rounded-xl hover:bg-primary/90 transition-all"
                 >
                   Continuar
                 </button>
@@ -1223,31 +1225,34 @@ const ClienteAgendar = () => {
             animate="animate"
             exit="exit"
             transition={{ duration: 0.3 }}
-            className="min-h-screen pt-32 pb-32 px-6"
+            className="min-h-screen pt-20 pb-32 px-4"
           >
             <div className="max-w-2xl mx-auto">
-              <StepIndicator 
-                currentStep={activeSubscription?.servico ? 2 : 3} 
-                totalSteps={totalSteps} 
-                title="Escolha o Horário"
-                subtitle={selectedDate ? format(selectedDate, "EEEE, d 'de' MMMM", { locale: ptBR }) : undefined}
-              />
+              {/* Título da Etapa */}
+              <div className="mb-6 pt-4">
+                <h2 className="text-xl font-semibold text-foreground">
+                  Escolha o Horário
+                </h2>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {selectedDate ? format(selectedDate, "EEEE, d 'de' MMMM", { locale: ptBR }) : ""}
+                </p>
+              </div>
 
               {loadingSlots ? (
-                <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-8 text-center">
+                <div className="bg-card border border-border rounded-2xl p-8 text-center">
                   <div className="w-12 h-12 rounded-full bg-primary/20 mx-auto flex items-center justify-center mb-4">
                     <Clock className="w-6 h-6 text-primary animate-spin" />
                   </div>
-                  <p className="text-sm text-zinc-400">Carregando horários disponíveis...</p>
+                  <p className="text-sm text-muted-foreground">Carregando horários...</p>
                 </div>
               ) : availableSlots.filter(slot => slot.available).length === 0 ? (
-                <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-8 text-center">
-                  <p className="text-zinc-400 font-medium mb-4">
+                <div className="bg-card border border-border rounded-2xl p-8 text-center">
+                  <p className="text-muted-foreground font-medium mb-4">
                     Agenda cheia neste dia.
                   </p>
                   <button
                     onClick={() => setStep(2)}
-                    className="px-6 py-3 border border-white/10 rounded-xl text-white hover:bg-white/5 transition-all"
+                    className="px-6 py-3 border border-border rounded-xl text-foreground hover:bg-secondary transition-all"
                   >
                     Escolher outra data
                   </button>
@@ -1278,22 +1283,22 @@ const ClienteAgendar = () => {
                   </div>
 
                   {unavailableMessage && (
-                    <div className="mt-4 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-center">
-                      <p className="text-sm text-red-400 font-medium">{unavailableMessage}</p>
+                    <div className="mt-4 p-3 rounded-xl bg-destructive/10 border border-destructive/20 text-center">
+                      <p className="text-sm text-destructive font-medium">{unavailableMessage}</p>
                     </div>
                   )}
 
                   {selectedTime && (
-                    <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-black via-black/95 to-transparent backdrop-blur-xl border-t border-white/5 p-6">
+                    <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-xl border-t border-border p-4">
                       <div className="max-w-2xl mx-auto">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
-                            <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center">
-                              <Clock className="w-6 h-6 text-primary" />
+                            <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center">
+                              <Clock className="w-5 h-5 text-primary" />
                             </div>
                             <div>
-                              <p className="text-sm text-zinc-400">Horário selecionado</p>
-                              <p className="text-xl font-bold text-white">
+                              <p className="text-xs text-muted-foreground">Selecionado</p>
+                              <p className="text-base font-semibold text-foreground">
                                 {selectedDate && format(selectedDate, 'd/MM')} às {selectedTime}
                               </p>
                             </div>
@@ -1301,7 +1306,7 @@ const ClienteAgendar = () => {
                           <button
                             onClick={handleNextStep}
                             disabled={loading}
-                            className="px-8 py-4 bg-gradient-to-r from-primary to-primary/80 text-white font-semibold rounded-2xl hover:shadow-lg hover:shadow-primary/25 transition-all disabled:opacity-50"
+                            className="px-6 py-3 bg-primary text-primary-foreground font-semibold rounded-xl hover:bg-primary/90 transition-all disabled:opacity-50"
                           >
                             {loading ? "Verificando..." : "Continuar"}
                           </button>
@@ -1324,15 +1329,18 @@ const ClienteAgendar = () => {
             animate="animate"
             exit="exit"
             transition={{ duration: 0.3 }}
-            className="min-h-screen pt-32 pb-24 px-6"
+            className="min-h-screen pt-20 pb-24 px-4"
           >
             <div className="max-w-2xl mx-auto">
-              <StepIndicator 
-                currentStep={4} 
-                totalSteps={totalSteps} 
-                title="Forma de Pagamento"
-                subtitle="Escolha como deseja pagar"
-              />
+              {/* Título da Etapa */}
+              <div className="mb-6 pt-4">
+                <h2 className="text-xl font-semibold text-foreground">
+                  Forma de Pagamento
+                </h2>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Escolha como deseja pagar
+                </p>
+              </div>
 
               <div className="space-y-3">
                 <PaymentOption
@@ -1403,35 +1411,35 @@ const ClienteAgendar = () => {
               </div>
 
               {/* Resumo de valores */}
-              <div className="mt-8 bg-white/[0.02] border border-white/5 rounded-2xl p-6 backdrop-blur-xl">
+              <div className="mt-6 bg-card border border-border rounded-2xl p-5">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-zinc-400">Valor do serviço</span>
+                  <span className="text-muted-foreground text-sm">Valor do serviço</span>
                   <span className={cn(
-                    "text-white font-semibold",
-                    useRedemption && getCorteService() && "line-through text-zinc-500"
+                    "text-foreground font-semibold",
+                    useRedemption && getCorteService() && "line-through text-muted-foreground"
                   )}>
                     R$ {selectedServices.reduce((sum, s) => sum + s.preco, 0).toFixed(2).replace('.', ',')}
                   </span>
                 </div>
                 
                 {useRedemption && getRedemptionDiscount() > 0 && (
-                  <div className="flex items-center justify-between text-green-400 font-semibold">
+                  <div className="flex items-center justify-between text-success font-semibold text-sm">
                     <span>Desconto (resgate)</span>
                     <span>-R$ {getRedemptionDiscount().toFixed(2).replace('.', ',')}</span>
                   </div>
                 )}
 
                 {availableCredits > 0 && getTotalPrice() > 0 && (
-                  <div className="flex items-center justify-between text-green-400 text-sm mt-2">
+                  <div className="flex items-center justify-between text-success text-sm mt-2">
                     <span>Créditos aplicados</span>
                     <span>-R$ {Math.min(availableCredits, getTotalPrice()).toFixed(2).replace('.', ',')}</span>
                   </div>
                 )}
                 
-                <div className="border-t border-white/5 mt-4 pt-4">
+                <div className="border-t border-border mt-4 pt-4">
                   <div className="flex items-center justify-between">
-                    <span className="text-lg font-semibold text-white">Valor a pagar</span>
-                    <span className="text-3xl font-bold text-primary">
+                    <span className="font-semibold text-foreground">Valor a pagar</span>
+                    <span className="text-2xl font-bold text-primary">
                       R$ {Math.max(0, getTotalPrice() - availableCredits).toFixed(2).replace('.', ',')}
                     </span>
                   </div>
@@ -1440,7 +1448,7 @@ const ClienteAgendar = () => {
 
               <button
                 onClick={() => setStep(5)}
-                className="w-full mt-6 py-4 bg-gradient-to-r from-primary to-primary/80 text-white font-semibold rounded-2xl hover:shadow-lg hover:shadow-primary/25 transition-all"
+                className="w-full mt-6 py-3.5 bg-primary text-primary-foreground font-semibold rounded-xl hover:bg-primary/90 transition-all"
               >
                 Continuar
               </button>
@@ -1457,38 +1465,41 @@ const ClienteAgendar = () => {
             animate="animate"
             exit="exit"
             transition={{ duration: 0.3 }}
-            className="min-h-screen pt-32 pb-24 px-6"
+            className="min-h-screen pt-20 pb-24 px-4"
           >
             <div className="max-w-2xl mx-auto">
-              <StepIndicator 
-                currentStep={isPlanEligible ? 3 : 5} 
-                totalSteps={totalSteps} 
-                title="Confirmar Agendamento"
-                subtitle="Revise os detalhes antes de finalizar"
-              />
+              {/* Título da Etapa */}
+              <div className="mb-6 pt-4">
+                <h2 className="text-xl font-semibold text-foreground">
+                  Confirmar Agendamento
+                </h2>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Revise os detalhes antes de finalizar
+                </p>
+              </div>
 
               {/* Card de resumo */}
-              <div className="bg-white/[0.02] border border-white/5 rounded-3xl p-6 backdrop-blur-xl space-y-4 mb-6">
+              <div className="bg-card border border-border rounded-2xl p-5 space-y-4 mb-6">
                 <SummaryRow 
                   label="Serviço"
                   value={selectedServices.map(s => s.nome).join(", ")}
                 />
                 
-                <div className="border-t border-white/5" />
+                <div className="border-t border-border" />
                 
                 <SummaryRow 
                   label="Data"
                   value={selectedDate ? format(selectedDate, "dd 'de' MMMM 'de' yyyy", { locale: ptBR }) : ""}
                 />
                 
-                <div className="border-t border-white/5" />
+                <div className="border-t border-border" />
                 
                 <SummaryRow 
                   label="Horário"
                   value={selectedTime}
                 />
                 
-                <div className="border-t border-white/5" />
+                <div className="border-t border-border" />
                 
                 <SummaryRow 
                   label="Forma de Pagamento"
@@ -1502,10 +1513,10 @@ const ClienteAgendar = () => {
                   }
                 />
                 
-                <div className="border-t border-white/5 mt-6 pt-6">
+                <div className="border-t border-border mt-4 pt-4">
                   <div className="flex items-center justify-between">
-                    <span className="text-lg font-semibold text-white">Total</span>
-                    <span className="text-3xl font-bold text-primary">
+                    <span className="font-semibold text-foreground">Total</span>
+                    <span className="text-2xl font-bold text-primary">
                       R$ {Math.max(0, getTotalPrice() - availableCredits).toFixed(2).replace('.', ',')}
                     </span>
                   </div>
@@ -1514,15 +1525,15 @@ const ClienteAgendar = () => {
 
               {/* Card Dados do Cartão */}
               {paymentMethod === 'card' && !isPlanEligible && availableCredits < getTotalPrice() && (
-                <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-6 mb-6 space-y-4">
-                  <h3 className="text-lg font-semibold text-white mb-4">Dados do Cartão</h3>
+                <div className="bg-card border border-border rounded-2xl p-5 mb-6 space-y-4">
+                  <h3 className="text-base font-semibold text-foreground mb-3">Dados do Cartão</h3>
                   
                   <input
                     type="text"
                     placeholder="Nome no cartão"
                     value={cardHolderName}
                     onChange={(e) => setCardHolderName(e.target.value)}
-                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-zinc-500 focus:outline-none focus:border-primary/50"
+                    className="w-full px-4 py-3 bg-secondary border border-border rounded-xl text-foreground placeholder-muted-foreground focus:outline-none focus:border-primary/50"
                   />
                   
                   <input
@@ -1530,7 +1541,7 @@ const ClienteAgendar = () => {
                     placeholder="Número do cartão"
                     value={cardNumber}
                     onChange={(e) => setCardNumber(e.target.value)}
-                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-zinc-500 focus:outline-none focus:border-primary/50"
+                    className="w-full px-4 py-3 bg-secondary border border-border rounded-xl text-foreground placeholder-muted-foreground focus:outline-none focus:border-primary/50"
                   />
                   
                   <div className="grid grid-cols-3 gap-3">
@@ -1539,21 +1550,21 @@ const ClienteAgendar = () => {
                       placeholder="MM"
                       value={cardExpiryMonth}
                       onChange={(e) => setCardExpiryMonth(e.target.value)}
-                      className="px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-zinc-500 focus:outline-none focus:border-primary/50"
+                      className="px-4 py-3 bg-secondary border border-border rounded-xl text-foreground placeholder-muted-foreground focus:outline-none focus:border-primary/50"
                     />
                     <input
                       type="text"
                       placeholder="AA"
                       value={cardExpiryYear}
                       onChange={(e) => setCardExpiryYear(e.target.value)}
-                      className="px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-zinc-500 focus:outline-none focus:border-primary/50"
+                      className="px-4 py-3 bg-secondary border border-border rounded-xl text-foreground placeholder-muted-foreground focus:outline-none focus:border-primary/50"
                     />
                     <input
                       type="text"
                       placeholder="CVV"
                       value={cardCvv}
                       onChange={(e) => setCardCvv(e.target.value)}
-                      className="px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-zinc-500 focus:outline-none focus:border-primary/50"
+                      className="px-4 py-3 bg-secondary border border-border rounded-xl text-foreground placeholder-muted-foreground focus:outline-none focus:border-primary/50"
                     />
                   </div>
                   
@@ -1562,24 +1573,24 @@ const ClienteAgendar = () => {
                     placeholder="CPF do titular"
                     value={cardCpf}
                     onChange={(e) => setCardCpf(e.target.value)}
-                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-zinc-500 focus:outline-none focus:border-primary/50"
+                    className="w-full px-4 py-3 bg-secondary border border-border rounded-xl text-foreground placeholder-muted-foreground focus:outline-none focus:border-primary/50"
                   />
                 </div>
               )}
 
               {/* Avisos contextuais */}
               {isPlanEligible && (
-                <div className="bg-green-500/5 border border-green-500/20 rounded-2xl p-4 mb-6">
-                  <p className="text-sm text-green-400 text-center">
-                    Este agendamento será registrado como PLANO. Nenhum pagamento será solicitado.
+                <div className="bg-success/10 border border-success/20 rounded-xl p-4 mb-6">
+                  <p className="text-sm text-success text-center">
+                    Agendamento via PLANO. Sem pagamento adicional.
                   </p>
                 </div>
               )}
 
               {!isPlanEligible && paymentMethod === 'pix' && availableCredits < getTotalPrice() && (
-                <div className="bg-orange-500/5 border border-orange-500/20 rounded-2xl p-4 mb-6">
-                  <p className="text-sm text-orange-300 text-center">
-                    Ao confirmar, o QR Code PIX será gerado para pagamento
+                <div className="bg-gold/10 border border-gold/20 rounded-xl p-4 mb-6">
+                  <p className="text-sm text-gold text-center">
+                    Ao confirmar, o QR Code PIX será gerado
                   </p>
                 </div>
               )}
@@ -1587,7 +1598,7 @@ const ClienteAgendar = () => {
               <button
                 onClick={handlePayment}
                 disabled={processingPayment}
-                className="w-full py-5 bg-gradient-to-r from-primary to-primary/80 text-white text-lg font-bold rounded-2xl hover:shadow-xl hover:shadow-primary/25 transition-all disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]"
+                className="w-full py-4 bg-primary text-primary-foreground text-base font-semibold rounded-xl hover:bg-primary/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]"
               >
                 {processingPayment ? 'Processando...' : 
                   isPlanEligible ? 'Finalizar (usando PLANO)' :
@@ -1609,30 +1620,33 @@ const ClienteAgendar = () => {
             animate="animate"
             exit="exit"
             transition={{ duration: 0.3 }}
-            className="min-h-screen pt-32 pb-24 px-6"
+            className="min-h-screen pt-20 pb-24 px-4"
           >
             <div className="max-w-2xl mx-auto">
-              <StepIndicator 
-                currentStep={3} 
-                totalSteps={3} 
-                title="Confirmar Remarcação"
-                subtitle="Revise os novos dados"
-              />
+              {/* Título da Etapa */}
+              <div className="mb-6 pt-4">
+                <h2 className="text-xl font-semibold text-foreground">
+                  Confirmar Remarcação
+                </h2>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Revise os novos dados
+                </p>
+              </div>
 
-              <div className="bg-white/[0.02] border border-white/5 rounded-3xl p-6 backdrop-blur-xl space-y-4 mb-6">
+              <div className="bg-card border border-border rounded-2xl p-5 space-y-4 mb-6">
                 <SummaryRow 
                   label="Nova Data"
                   value={selectedDate ? format(selectedDate, "dd 'de' MMMM 'de' yyyy", { locale: ptBR }) : ""}
                 />
                 
-                <div className="border-t border-white/5" />
+                <div className="border-t border-border" />
                 
                 <SummaryRow 
                   label="Novo Horário"
                   value={selectedTime}
                 />
                 
-                <div className="border-t border-white/5" />
+                <div className="border-t border-border" />
                 
                 <SummaryRow 
                   label="Serviço"
@@ -1640,8 +1654,8 @@ const ClienteAgendar = () => {
                 />
               </div>
 
-              <div className="bg-blue-500/5 border border-blue-500/20 rounded-2xl p-4 mb-6">
-                <p className="text-sm text-blue-300 text-center">
+              <div className="bg-primary/10 border border-primary/20 rounded-xl p-4 mb-6">
+                <p className="text-sm text-primary text-center">
                   O pagamento existente permanecerá válido
                 </p>
               </div>
@@ -1649,7 +1663,7 @@ const ClienteAgendar = () => {
               <button
                 onClick={handleRescheduleUpdate}
                 disabled={processingPayment}
-                className="w-full py-5 bg-gradient-to-r from-primary to-primary/80 text-white text-lg font-bold rounded-2xl hover:shadow-xl hover:shadow-primary/25 transition-all disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]"
+                className="w-full py-4 bg-primary text-primary-foreground text-base font-semibold rounded-xl hover:bg-primary/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]"
               >
                 {processingPayment ? 'Remarcando...' : 'Confirmar Remarcação'}
               </button>
@@ -1666,94 +1680,96 @@ const ClienteAgendar = () => {
             animate="animate"
             exit="exit"
             transition={{ duration: 0.3 }}
-            className="min-h-screen bg-white"
+            className="min-h-screen bg-background"
           >
             {paymentConfirmed ? (
               <div className="min-h-screen flex flex-col items-center justify-center px-6">
-                <div className="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center mb-6">
-                  <Check className="w-10 h-10 text-green-500" />
+                <div className="w-16 h-16 bg-success/20 rounded-full flex items-center justify-center mb-6">
+                  <Check className="w-8 h-8 text-success" />
                 </div>
-                <h2 className="text-2xl font-bold text-zinc-900 mb-2">Pagamento confirmado!</h2>
-                <p className="text-zinc-500 text-center mb-8">
-                  Seu agendamento foi confirmado. Você será redirecionado automaticamente...
+                <h2 className="text-xl font-bold text-foreground mb-2">Pagamento confirmado!</h2>
+                <p className="text-muted-foreground text-center text-sm mb-8">
+                  Você será redirecionado automaticamente...
                 </p>
                 <button
                   onClick={() => navigate("/cliente")}
-                  className="px-8 py-4 bg-zinc-900 text-white font-semibold rounded-2xl"
+                  className="px-6 py-3 bg-primary text-primary-foreground font-semibold rounded-xl"
                 >
                   Ir para tela inicial
                 </button>
               </div>
             ) : (
               <>
-                {/* Header minimalista branco */}
-                <div className="bg-gradient-to-b from-zinc-50 to-white border-b border-zinc-200 px-6 py-4">
-                  <button onClick={() => setStep(5)} className="mb-4">
-                    <ArrowLeft className="w-6 h-6 text-zinc-900" />
-                  </button>
-                  <div className="text-center">
-                    <h1 className="text-2xl font-bold text-zinc-900 mb-1">
-                      Pagamento PIX
-                    </h1>
-                    <p className="text-sm text-zinc-500">
-                      Escaneie o código ou copie a chave
-                    </p>
+                {/* Header PIX */}
+                <div className="bg-background border-b border-border px-4 py-4">
+                  <div className="flex items-center gap-4">
+                    <button onClick={() => setStep(5)} className="w-10 h-10 flex items-center justify-center rounded-full bg-card hover:bg-secondary transition-all">
+                      <ArrowLeft className="w-5 h-5 text-foreground" />
+                    </button>
+                    <div>
+                      <h1 className="text-lg font-semibold text-foreground">
+                        Pagamento PIX
+                      </h1>
+                      <p className="text-xs text-muted-foreground">
+                        Escaneie ou copie o código
+                      </p>
+                    </div>
                   </div>
                 </div>
 
-                <div className="max-w-md mx-auto px-6 py-8">
+                <div className="max-w-md mx-auto px-4 py-6">
                   {/* Valor */}
-                  <div className="text-center mb-8">
-                    <p className="text-sm text-zinc-500 mb-2">Valor a pagar</p>
-                    <p className="text-5xl font-bold text-zinc-900">
+                  <div className="text-center mb-6">
+                    <p className="text-xs text-muted-foreground mb-1">Valor a pagar</p>
+                    <p className="text-3xl font-bold text-foreground">
                       R$ {Math.max(0, getTotalPrice() - availableCredits).toFixed(2).replace('.', ',')}
                     </p>
                   </div>
 
-                  {/* QR Code - LIMPO */}
-                  <div className="bg-white rounded-3xl p-8 shadow-xl border border-zinc-200 mb-6 flex justify-center">
+                  {/* QR Code */}
+                  <div className="bg-white rounded-2xl p-6 mb-6 flex justify-center">
                     <img 
                       src={`data:image/png;base64,${pixQrCode}`} 
                       alt="QR Code PIX" 
-                      className="w-64 h-64"
+                      className="w-52 h-52"
                     />
                   </div>
 
                   {/* Instruções */}
                   <div className="text-center mb-6">
-                    <p className="text-sm text-zinc-600">
-                      Abra o app do seu banco e escaneie o código acima para pagar
+                    <p className="text-sm text-muted-foreground">
+                      Abra o app do seu banco e escaneie o código acima
                     </p>
                   </div>
 
                   {/* Código PIX para copiar */}
                   {pixPayload && (
                     <div className="space-y-3">
-                      <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wide text-center">
-                        Ou copie o código PIX
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide text-center">
+                        Ou copie o código
                       </p>
                       
-                      <div className="bg-zinc-100 rounded-2xl p-4 border border-zinc-200">
-                        <p className="text-xs font-mono text-zinc-700 break-all leading-relaxed">
+                      <div className="bg-card rounded-xl p-3 border border-border">
+                        <p className="text-xs font-mono text-muted-foreground break-all leading-relaxed">
                           {pixPayload}
                         </p>
                       </div>
 
                       <button
                         onClick={handleCopyPix}
-                        className="w-full py-4 bg-zinc-900 text-white font-semibold rounded-2xl hover:bg-zinc-800 transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+                        className="w-full py-3.5 bg-primary text-primary-foreground font-semibold rounded-xl hover:bg-primary/90 transition-all active:scale-[0.98] flex items-center justify-center gap-2"
                       >
-                        <Copy className="w-5 h-5" />
-                        {copied ? 'Código Copiado!' : 'Copiar Código PIX'}
+                        <Copy className="w-4 h-4" />
+                        {copied ? 'Copiado!' : 'Copiar Código PIX'}
                       </button>
                     </div>
                   )}
 
                   {/* Status de pagamento */}
-                  <div className="mt-8 text-center">
-                    <div className="inline-flex items-center gap-2 text-sm text-zinc-500">
-                      <div className="w-2 h-2 bg-orange-500 rounded-full animate-pulse" />
-                      Aguardando confirmação do pagamento
+                  <div className="mt-6 text-center">
+                    <div className="inline-flex items-center gap-2 text-xs text-muted-foreground">
+                      <div className="w-2 h-2 bg-gold rounded-full animate-pulse" />
+                      Aguardando confirmação
                     </div>
                   </div>
                 </div>
