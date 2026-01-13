@@ -1,17 +1,22 @@
 import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Calendar } from "@/components/ui/calendar";
 import { ArrowLeft, Clock, Check, Copy } from "lucide-react";
 import { toast } from "sonner";
 import { ptBR } from "date-fns/locale";
 import { format } from "date-fns";
-import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import { useSlotAvailability } from "@/hooks/useSlotAvailability";
 import { sendNovoAgendamentoEvent, sendRemarcacaoConcluidaEvent } from "@/lib/webhookService";
+import { motion, AnimatePresence } from "framer-motion";
+
+// Premium Components
+import { ServiceCard } from "@/components/booking/ServiceCard";
+import { TimeSlot } from "@/components/booking/TimeSlot";
+import { PaymentOption } from "@/components/booking/PaymentOption";
+import { SummaryRow } from "@/components/booking/SummaryRow";
+import { PremiumCalendar } from "@/components/booking/PremiumCalendar";
+import { StepIndicator } from "@/components/booking/StepIndicator";
 
 interface Service {
   id: string;
@@ -21,7 +26,6 @@ interface Service {
   preco: number;
 }
 
-// Interface para assinatura ativa
 interface ActiveSubscription {
   id: string;
   plano_id: string;
@@ -61,24 +65,12 @@ const ClienteAgendar = () => {
   const [rescheduleAppointmentId, setRescheduleAppointmentId] = useState<string | null>(null);
   const [unavailableMessage, setUnavailableMessage] = useState<string | null>(null);
   const servicesListRef = useRef<HTMLDivElement | null>(null);
-  
-  // NOVO: Estado para assinatura ativa do usuário
   const [activeSubscription, setActiveSubscription] = useState<ActiveSubscription | null>(null);
   const [subscriptionBlocked, setSubscriptionBlocked] = useState(false);
-  
-  // NOVO: Estado para resgates disponíveis (corte grátis do programa de fidelidade)
   const [availableRedemptions, setAvailableRedemptions] = useState<{ id: string; promocao_id: string }[]>([]);
   const [useRedemption, setUseRedemption] = useState(false);
+  const [copied, setCopied] = useState(false);
 
-  /**
-   * PLANO: o agendamento só é tratado como "via plano" quando:
-   * - existe assinatura ativa com serviço vinculado
-   * - o usuário está agendando exatamente o serviço do plano (sem extras)
-   * - ainda não atingiu o limite mensal
-   *
-   * Isso corrige o bug de cair no fluxo de pagamento indevidamente e também
-   * evita que o plano seja aplicado em serviços fora da cobertura.
-   */
   const isPlanEligible =
     !isRescheduling &&
     !!activeSubscription?.servico &&
@@ -86,15 +78,12 @@ const ClienteAgendar = () => {
     selectedServices[0]?.id === activeSubscription.servico.id &&
     activeSubscription.agendamentos_usados < activeSubscription.limite_agendamentos_mes;
 
-  // Guard extra: se por qualquer motivo cair na etapa de pagamento, pular para confirmação do plano
   useEffect(() => {
     if (step === 4 && isPlanEligible) setStep(5);
   }, [step, isPlanEligible]);
 
-  // Calcular duração total dos serviços selecionados
   const totalDuration = selectedServices.reduce((sum, s) => sum + s.duracao_minutos, 0);
 
-  // NOVO HOOK: Gerencia toda a lógica de disponibilidade de slots
   const { 
     slots: availableSlots, 
     loading: loadingSlots, 
@@ -106,19 +95,18 @@ const ClienteAgendar = () => {
     isRescheduling ? rescheduleAppointmentId : null
   );
 
+  // Initialize booking
   useEffect(() => {
     const initializeBooking = async () => {
-      // Carregar dados essenciais primeiro (evita "flash" da lista de serviços para assinantes)
       await loadUserCredits();
-      await loadAvailableRedemptions(); // Carregar resgates disponíveis
+      await loadAvailableRedemptions();
 
-      // Fluxos especiais têm prioridade (pagamento pendente / remarcação)
       const resumeBookingId = sessionStorage.getItem('resumePendingBookingId');
       if (resumeBookingId) {
         setResumePendingBookingId(resumeBookingId);
         sessionStorage.removeItem('resumePendingBookingId');
         loadPendingBookingDetails(resumeBookingId);
-        return; // Sair aqui pois já tem fluxo próprio
+        return;
       }
 
       const isReschedulingSession = sessionStorage.getItem('isRescheduling');
@@ -128,28 +116,21 @@ const ClienteAgendar = () => {
         setIsRescheduling(true);
         setRescheduleAppointmentId(appointmentId);
         loadAppointmentForReschedule(appointmentId);
-        return; // Sair aqui pois já tem fluxo próprio
+        return;
       }
 
-      // Assinatura ativa (se existir)
       const subscription = await loadActiveSubscription();
 
-      // Se usuário é assinante com serviço vinculado e ainda tem uso do plano,
-      // pré-selecionar e pular step 1 sem carregar lista de serviços (UX mais limpa)
       if (subscription?.servico) {
         const restantes = subscription.limite_agendamentos_mes - subscription.agendamentos_usados;
 
         if (restantes > 0) {
-          console.log('[initializeBooking] Assinante detectado! Pré-selecionando serviço:', subscription.servico.nome);
           setSelectedServices([subscription.servico]);
-          setStep(2); // Ir direto para seleção de data
-          // Removido toast de "Plano" - usuário já sabe que tem plano
+          setStep(2);
           return;
         }
 
-        // Limite atingido - permitir agendar serviços avulsos
-        console.log('[initializeBooking] Limite do plano atingido! Usuário pode agendar serviços avulsos.');
-        toast.info(`Você já usou seus ${subscription.limite_agendamentos_mes} agendamentos do plano este mês. Você pode agendar serviços avulsos.`);
+        toast.info(`Você já usou seus ${subscription.limite_agendamentos_mes} agendamentos do plano este mês.`);
       }
 
       await loadServices();
@@ -158,8 +139,7 @@ const ClienteAgendar = () => {
     initializeBooking();
   }, []);
 
-
-  // Lock body scroll and set dynamic viewport height for mobile
+  // Lock body scroll
   useEffect(() => {
     document.documentElement.classList.add('lock-scroll');
     document.body.classList.add('lock-scroll');
@@ -179,10 +159,8 @@ const ClienteAgendar = () => {
     };
   }, []);
 
-  // Prevent scroll chaining on the services list container
   useEffect(() => {
     if (step !== 1) return;
-
     const el = servicesListRef.current;
     if (!el) return;
 
@@ -191,51 +169,40 @@ const ClienteAgendar = () => {
     };
 
     el.addEventListener('touchmove', handleTouchMove, { passive: false });
-
     return () => {
       el.removeEventListener('touchmove', handleTouchMove as any);
     };
   }, [step]);
 
-  // Limpar mensagem de indisponibilidade quando mudar data
   useEffect(() => {
     if (selectedDate) {
       setUnavailableMessage(null);
     }
   }, [selectedDate]);
 
-  // Poll for payment confirmation when showing PIX QR Code
+  // Poll for payment confirmation
   useEffect(() => {
     if (step === 6 && pixQrCode && pendingBookingId && !paymentConfirmed) {
       const pollInterval = setInterval(async () => {
         try {
-          // Check if pending booking still exists
           const { data: pendingBooking, error } = await supabase
             .from("pending_bookings")
             .select("id")
             .eq("id", pendingBookingId)
             .maybeSingle();
 
-          if (error) {
-            console.error("Error checking pending booking:", error);
-            return;
-          }
+          if (error) return;
 
-          // If pending booking no longer exists, payment was confirmed
           if (!pendingBooking) {
             setPaymentConfirmed(true);
             clearInterval(pollInterval);
             toast.success("Pagamento confirmado!");
-            
-            // Auto-redirect after 4 seconds
-            setTimeout(() => {
-              navigate("/cliente");
-            }, 4000);
+            setTimeout(() => navigate("/cliente"), 4000);
           }
         } catch (error) {
           console.error("Error polling payment status:", error);
         }
-      }, 3000); // Poll every 3 seconds
+      }, 3000);
 
       return () => clearInterval(pollInterval);
     }
@@ -247,7 +214,6 @@ const ClienteAgendar = () => {
       .select("*")
       .eq("ativo", true)
       .order("preco");
-
     setServices(data || []);
   };
 
@@ -262,14 +228,12 @@ const ClienteAgendar = () => {
         .rpc("get_user_available_credits", { p_user_id: session.user.id });
 
       if (error) throw error;
-      
       setAvailableCredits(creditsData || 0);
     } catch (error) {
       console.error("Error loading credits:", error);
     }
   };
 
-  // NOVO: Carregar resgates disponíveis (corte grátis do programa de fidelidade)
   const loadAvailableRedemptions = async () => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -283,21 +247,17 @@ const ClienteAgendar = () => {
         .is("used_at", null);
 
       if (error) throw error;
-      
       setAvailableRedemptions(redemptions || []);
-      console.log('[loadAvailableRedemptions] Resgates disponíveis:', redemptions?.length || 0);
     } catch (error) {
       console.error("Error loading redemptions:", error);
     }
   };
 
-  // NOVO: Carregar assinatura ativa do usuário
   const loadActiveSubscription = async (): Promise<ActiveSubscription | null> => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return null;
 
-      // Buscar assinatura ativa com dados do plano e serviço vinculado
       const { data: subscription, error } = await supabase
         .from("assinaturas")
         .select(`
@@ -311,13 +271,9 @@ const ClienteAgendar = () => {
         .eq("status", "active")
         .maybeSingle();
 
-      if (error) {
-        console.error("Error loading subscription:", error);
-        return null;
-      }
+      if (error) return null;
 
       if (subscription && subscription.plano) {
-        // Verificar se plano está vencido (bloquear se passou da data de vencimento)
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         const billingDate = new Date(subscription.next_billing_date + 'T12:00:00');
@@ -326,13 +282,11 @@ const ClienteAgendar = () => {
         const isOverdue = today > billingDate;
 
         if (isOverdue) {
-          console.log('[loadActiveSubscription] Plano vencido em:', subscription.next_billing_date);
           setSubscriptionBlocked(true);
           toast.error("Seu plano está vencido. Regularize o pagamento para continuar agendando.");
           return null;
         }
 
-        // Contar agendamentos do mês atual
         const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
         const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
         
@@ -348,7 +302,6 @@ const ClienteAgendar = () => {
         const usedCount = countError ? 0 : (monthAppointments?.length || 0);
         const planoData = subscription.plano as any;
 
-        // Buscar dados completos do serviço vinculado ao plano
         let servicoVinculado: Service | null = null;
         if (planoData.servico_id) {
           const { data: servicoData } = await supabase
@@ -375,15 +328,6 @@ const ClienteAgendar = () => {
         };
 
         setActiveSubscription(activeSubscriptionData);
-
-        console.log('[loadActiveSubscription] Assinatura ativa encontrada:', {
-          plano: planoData.nome,
-          limite: planoData.limite_agendamentos_mes,
-          usados: usedCount,
-          vencimento: subscription.next_billing_date,
-          servico: servicoVinculado?.nome || 'Não vinculado'
-        });
-
         return activeSubscriptionData;
       }
       
@@ -398,10 +342,7 @@ const ClienteAgendar = () => {
     try {
       const { data: booking, error } = await supabase
         .from("pending_bookings")
-        .select(`
-          *,
-          servico:servicos(*)
-        `)
+        .select(`*, servico:servicos(*)`)
         .eq("id", bookingId)
         .single();
 
@@ -412,22 +353,18 @@ const ClienteAgendar = () => {
         return;
       }
 
-      // Set booking details
       setSelectedServices([booking.servico]);
       setSelectedDate(new Date(`${booking.data}T12:00:00`));
       setSelectedTime(booking.hora);
       setPendingBookingId(booking.id);
 
-      // Se já existe QR Code PIX salvo, ir direto para a tela do QR Code
       if (booking.pix_qr_code && booking.pix_payload) {
-        console.log('[loadPendingBookingDetails] QR Code PIX encontrado, exibindo...');
         setPixQrCode(booking.pix_qr_code);
         setPixPayload(booking.pix_payload);
         setPaymentMethod('pix');
-        setStep(6); // Ir direto para tela do QR Code
+        setStep(6);
         toast.info("Continue o pagamento do seu agendamento PIX");
       } else {
-        // Sem QR Code salvo, ir para seleção de pagamento
         setStep(4);
         toast.info("Continue o pagamento do seu agendamento");
       }
@@ -442,10 +379,7 @@ const ClienteAgendar = () => {
     try {
       const { data: appointment, error } = await supabase
         .from("agendamentos")
-        .select(`
-          *,
-          servico:servicos(*)
-        `)
+        .select(`*, servico:servicos(*)`)
         .eq("id", appointmentId)
         .single();
 
@@ -457,9 +391,8 @@ const ClienteAgendar = () => {
         return;
       }
 
-      // Set appointment details
       setSelectedServices([appointment.servico]);
-      setStep(2); // Go to date selection
+      setStep(2);
       toast.info("Escolha a nova data e horário");
     } catch (error) {
       console.error("Error loading appointment for reschedule:", error);
@@ -468,7 +401,6 @@ const ClienteAgendar = () => {
       sessionStorage.removeItem('rescheduleAppointmentId');
     }
   };
-
 
   const toggleService = (service: Service) => {
     setSelectedServices(prev => {
@@ -495,15 +427,12 @@ const ClienteAgendar = () => {
       return;
     }
     
-    // VALIDAÇÃO CRÍTICA: Verificar disponibilidade do slot ANTES de avançar do step 3
     if (step === 3 && selectedDate && selectedTime) {
       setLoading(true);
       try {
-        // Usar o hook para verificar disponibilidade (double-check direto no banco)
         const result = await verifySlotAvailability(selectedTime);
         
         if (!result.available) {
-          console.log('[handleNextStep] Horário INDISPONÍVEL:', result.message);
           toast.error(result.message || "Este horário acabou de ser reservado. Por favor, escolha outro.");
           refreshSlots();
           setSelectedTime("");
@@ -511,7 +440,6 @@ const ClienteAgendar = () => {
           return;
         }
         
-        console.log('[handleNextStep] Horário DISPONÍVEL, avançando...');
         setLoading(false);
       } catch (err) {
         console.error('[handleNextStep] Erro:', err);
@@ -521,20 +449,16 @@ const ClienteAgendar = () => {
       }
     }
     
-    // If rescheduling and in step 3 (time selection), skip to confirmation
     if (isRescheduling && step === 3) {
-      setStep(5); // Go to confirmation step for reschedule
+      setStep(5);
       return;
     }
     
-    // PLANO: só pular pagamento quando o agendamento é elegível (serviço do plano + dentro do limite)
     if (step === 3 && isPlanEligible) {
-      console.log('[handleNextStep] Agendamento via PLANO elegível, pulando pagamento');
       setStep(5);
       return;
     }
 
-    // Se o usuário escolheu o serviço do plano mas já atingiu o limite, segue fluxo avulso (pagamento)
     if (
       step === 3 &&
       !isRescheduling &&
@@ -546,14 +470,11 @@ const ClienteAgendar = () => {
       toast.info(`Limite do plano atingido. Este agendamento será considerado avulso.`);
     }
 
-    
-    // Se créditos cobrem 100% do valor, pular step 4 (pagamento) e ir direto para confirmação
     if (step === 3 && !isRescheduling) {
       const totalPrice = getTotalPrice();
       if (availableCredits >= totalPrice) {
-        console.log('[handleNextStep] Créditos cobrem 100%, pulando para confirmação');
-        setPaymentMethod('cash'); // Define como cash pois será pago com créditos
-        setStep(5); // Pula step 4 e vai direto para confirmação
+        setPaymentMethod('cash');
+        setStep(5);
         return;
       }
     }
@@ -561,37 +482,30 @@ const ClienteAgendar = () => {
     setStep(step + 1);
   };
 
-  // Removed createAppointment - now happens during payment
-
   const handlePayment = async () => {
     if (!selectedDate || !selectedTime || selectedServices.length === 0) {
       toast.error("Dados do agendamento inválidos");
       return;
     }
 
-    // PLANO: criar agendamento com plano (sem pagamento) apenas quando elegível
     if (isPlanEligible) {
       await createAppointmentWithPlan();
       return;
     }
 
-
-    const totalPrice = getTotalPrice(); // Já considera desconto do resgate
+    const totalPrice = getTotalPrice();
     const finalPrice = Math.max(0, totalPrice - availableCredits);
 
-    // Se resgate cobriu 100% do corte e não há valor a pagar, criar agendamento direto
     if (totalPrice === 0 && useRedemption) {
       await createAppointmentWithRedemption();
       return;
     }
 
-    // If fully covered by credits, create appointment directly
     if (finalPrice === 0) {
       await createAppointmentWithCredits(totalPrice);
       return;
     }
 
-    // Validate card data if paying with card
     if (paymentMethod === 'card') {
       if (!cardHolderName || !cardNumber || !cardExpiryMonth || !cardExpiryYear || !cardCvv || !cardCpf) {
         toast.error("Preencha todos os dados do cartão");
@@ -613,21 +527,19 @@ const ClienteAgendar = () => {
       const totalDuration = selectedServices.reduce((sum, s) => sum + s.duracao_minutos, 0);
       const serviceNames = selectedServices.map(s => s.nome).join(", ");
 
-      // Prepare booking data
       const mainService = selectedServices[0];
       const bookingData = {
         servico_id: mainService.id,
         barbeiro_id: null,
-        data: format(selectedDate, 'yyyy-MM-dd'), // Format without timezone conversion
+        data: format(selectedDate, 'yyyy-MM-dd'),
         hora: selectedTime,
         duracao: totalDuration,
-        preco: finalPrice, // Use final price after credits
+        preco: finalPrice,
         observacoes: selectedServices.length > 1 
           ? `Serviços: ${serviceNames}` 
           : undefined,
       };
 
-      // Prepare payment payload
       const payload: any = {
         bookingData,
         metodo: paymentMethod,
@@ -635,7 +547,6 @@ const ClienteAgendar = () => {
         rescheduleFromId: isRescheduling ? rescheduleAppointmentId : undefined,
       };
 
-      // For card, add card and customer info
       if (paymentMethod === 'card') {
         payload.cardInfo = {
           holderName: cardHolderName.trim(),
@@ -652,32 +563,24 @@ const ClienteAgendar = () => {
         };
       }
 
-      // Call payment function
       const { data, error } = await supabase.functions.invoke('create-payment', {
         body: payload,
       });
 
-      if (error) {
-        throw error;
-      }
+      if (error) throw error;
 
-      // If credits were used, mark them as used
       if (availableCredits > 0 && data.appointmentId) {
         await useCredits(Math.min(availableCredits, totalPrice), data.appointmentId);
       }
 
-      // Marcar resgate como usado (se aplicável)
       if (useRedemption && data.appointmentId) {
         await markRedemptionAsUsed(data.appointmentId);
       }
 
-      // Handle response based on payment method
       if (paymentMethod === 'cash') {
-        // Clear rescheduling session data
         sessionStorage.removeItem('isRescheduling');
         sessionStorage.removeItem('rescheduleAppointmentId');
         
-        // Enviar evento de novo agendamento
         const { data: profile } = await supabase.from('profiles').select('nome, telefone').eq('id', session.user.id).single();
         sendNovoAgendamentoEvent({
           agendamento_id: data.appointmentId || '',
@@ -690,7 +593,7 @@ const ClienteAgendar = () => {
           preco: finalPrice
         });
         
-        toast.success("Agendamento criado!" + (useRedemption ? " Corte grátis resgatado! Pague o restante na barbearia." : " Pague na barbearia."));
+        toast.success("Agendamento criado! Pague na barbearia.");
         navigate("/cliente");
       } else if (paymentMethod === 'pix' && data.asaasPayment?.pixQrCode) {
         setPixQrCode(data.asaasPayment.pixQrCode.encodedImage);
@@ -699,7 +602,6 @@ const ClienteAgendar = () => {
         toast.success("QR Code gerado! Escaneie para pagar.");
         setStep(6);
       } else if (paymentMethod === 'card') {
-        // Clear rescheduling session data
         sessionStorage.removeItem('isRescheduling');
         sessionStorage.removeItem('rescheduleAppointmentId');
         
@@ -713,10 +615,8 @@ const ClienteAgendar = () => {
     } catch (error: any) {
       console.error('Payment error:', error);
       
-      // Tratar erro de conflito (horário já ocupado)
       if (error.message?.includes('TIME_SLOT_UNAVAILABLE') || error.message?.includes('indisponível') || error.message?.includes('Horário')) {
         toast.error(error.message || "Horário indisponível. Escolha outro horário.");
-        // Voltar para seleção de horário e recarregar slots
         setStep(3);
         refreshSlots();
       } else {
@@ -727,7 +627,6 @@ const ClienteAgendar = () => {
     }
   };
 
-  // NOVO: Criar agendamento usando resgate (corte grátis do programa de fidelidade)
   const createAppointmentWithRedemption = async () => {
     setProcessingPayment(true);
     try {
@@ -743,7 +642,6 @@ const ClienteAgendar = () => {
       const mainService = selectedServices[0];
       const dateStr = format(selectedDate!, 'yyyy-MM-dd');
 
-      // Validar disponibilidade
       const { data: validation, error: validationError } = await supabase.functions.invoke('validate-appointment', {
         body: { data: dateStr, hora: selectedTime, duracao: totalDuration, userId: session.user.id }
       });
@@ -755,7 +653,6 @@ const ClienteAgendar = () => {
         return;
       }
 
-      // Criar agendamento grátis (resgate)
       const { data: appointment, error: aptError } = await supabase
         .from("agendamentos")
         .insert({
@@ -777,10 +674,8 @@ const ClienteAgendar = () => {
 
       if (aptError) throw aptError;
 
-      // Marcar resgate como usado
       await markRedemptionAsUsed(appointment.id);
 
-      // Enviar evento
       const { data: profile } = await supabase.from('profiles').select('nome, telefone').eq('id', session.user.id).single();
       sendNovoAgendamentoEvent({
         agendamento_id: appointment.id,
@@ -793,7 +688,7 @@ const ClienteAgendar = () => {
         preco: 0
       });
 
-      toast.success("🎁 Corte grátis resgatado com sucesso!");
+      toast.success("Corte grátis resgatado com sucesso!");
       navigate("/cliente");
     } catch (error: any) {
       console.error('Error creating appointment with redemption:', error);
@@ -818,10 +713,6 @@ const ClienteAgendar = () => {
       const mainService = selectedServices[0];
       const dateStr = format(selectedDate!, 'yyyy-MM-dd');
 
-      // ============================================
-      // VALIDAÇÃO CRÍTICA: Verificar disponibilidade antes de criar
-      // ============================================
-      console.log('[ClienteAgendar] Validando disponibilidade...');
       const { data: validation, error: validationError } = await supabase.functions.invoke('validate-appointment', {
         body: {
           data: dateStr,
@@ -833,22 +724,17 @@ const ClienteAgendar = () => {
       });
 
       if (validationError) {
-        console.error('[ClienteAgendar] Erro na validação:', validationError);
         toast.error("Erro ao verificar disponibilidade. Tente novamente.");
         return;
       }
 
       if (!validation?.valid) {
-        console.log('[ClienteAgendar] Horário INDISPONÍVEL:', validation?.message);
         toast.error(validation?.message || "Horário indisponível. Escolha outro horário.");
-        // Voltar para seleção de horário
         setStep(3);
         refreshSlots();
         return;
       }
-      console.log('[ClienteAgendar] Horário DISPONÍVEL, criando agendamento...');
 
-      // If rescheduling, cancel old appointment first
       if (isRescheduling && rescheduleAppointmentId) {
         await supabase
           .from("agendamentos")
@@ -859,7 +745,6 @@ const ClienteAgendar = () => {
           .eq("id", rescheduleAppointmentId);
       }
 
-      // Create appointment directly (paid with credits)
       const creditUsedAmount = Math.min(availableCredits, totalPrice);
       const observacoesText = selectedServices.length > 1 
         ? `Serviços: ${serviceNames}. Pago com crédito do app: R$ ${creditUsedAmount.toFixed(2)}`
@@ -873,11 +758,11 @@ const ClienteAgendar = () => {
           data: dateStr,
           hora: selectedTime,
           duracao: totalDuration,
-          preco: 0, // Fully paid with credits
+          preco: 0,
           status: "pending",
           observacoes: observacoesText,
-          payment_method: 'credit', // Mark as credit payment
-          is_free: true, // Mark as free (using credits)
+          payment_method: 'credit',
+          is_free: true,
           remarcado_de: isRescheduling ? rescheduleAppointmentId : null,
           barbeiro_confirmou: false,
           cliente_confirmou: false,
@@ -887,30 +772,25 @@ const ClienteAgendar = () => {
 
       if (aptError) throw aptError;
 
-      // Create payment record
       await supabase
         .from("pagamentos")
         .insert({
           user_id: session.user.id,
           agendamento_id: appointment.id,
-          metodo: "cash", // Mark as cash since paid with credits
+          metodo: "cash",
           valor: 0,
           status: "paid",
         });
 
-      // Use credits
       await useCredits(totalPrice, appointment.id);
 
-      // Marcar resgate como usado (se aplicável)
       if (useRedemption) {
         await markRedemptionAsUsed(appointment.id);
       }
 
-      // Clear rescheduling session data
       sessionStorage.removeItem('isRescheduling');
       sessionStorage.removeItem('rescheduleAppointmentId');
 
-      // Enviar evento de novo agendamento
       const { data: profile } = await supabase.from('profiles').select('nome, telefone').eq('id', session.user.id).single();
       sendNovoAgendamentoEvent({
         agendamento_id: appointment.id,
@@ -923,7 +803,7 @@ const ClienteAgendar = () => {
         preco: 0
       });
 
-      toast.success("Agendamento criado! " + (useRedemption ? "Corte grátis resgatado!" : "Créditos aplicados com sucesso."));
+      toast.success("Agendamento criado! Créditos aplicados com sucesso.");
       navigate("/cliente");
     } catch (error: any) {
       console.error('Error creating appointment with credits:', error);
@@ -933,7 +813,6 @@ const ClienteAgendar = () => {
     }
   };
 
-  // NOVO: Criar agendamento usando o plano (sem pagamento)
   const createAppointmentWithPlan = async () => {
     if (!activeSubscription) {
       toast.error("Assinatura não encontrada");
@@ -954,8 +833,6 @@ const ClienteAgendar = () => {
       const mainService = selectedServices[0];
       const dateStr = format(selectedDate!, 'yyyy-MM-dd');
 
-      // Verificar disponibilidade antes de criar
-      console.log('[createAppointmentWithPlan] Validando disponibilidade...');
       const { data: validation, error: validationError } = await supabase.functions.invoke('validate-appointment', {
         body: {
           data: dateStr,
@@ -966,22 +843,17 @@ const ClienteAgendar = () => {
       });
 
       if (validationError) {
-        console.error('[createAppointmentWithPlan] Erro na validação:', validationError);
         toast.error("Erro ao verificar disponibilidade. Tente novamente.");
         return;
       }
 
       if (!validation?.valid) {
-        console.log('[createAppointmentWithPlan] Horário INDISPONÍVEL:', validation?.message);
         toast.error(validation?.message || "Horário indisponível. Escolha outro horário.");
         setStep(3);
         refreshSlots();
         return;
       }
 
-      console.log('[createAppointmentWithPlan] Criando agendamento com plano:', activeSubscription.plano_nome);
-
-      // Criar agendamento marcado como "plano"
       const { data: appointment, error: aptError } = await supabase
         .from("agendamentos")
         .insert({
@@ -990,13 +862,11 @@ const ClienteAgendar = () => {
           data: dateStr,
           hora: selectedTime,
           duracao: totalDuration,
-          preco: 0, // Sem custo - coberto pelo plano
+          preco: 0,
           status: "pending",
-          observacoes: selectedServices.length > 1 
-            ? `Serviços: ${serviceNames}. Agendamento via ${activeSubscription.plano_nome}` 
-            : `Agendamento via ${activeSubscription.plano_nome}`,
-          payment_method: 'plano', // Marcar como pagamento via plano
-          tipo_agendamento: 'plano', // Tipo especial para contagem
+          observacoes: `Agendamento via ${activeSubscription.plano_nome}. ${selectedServices.length > 1 ? 'Serviços: ' + serviceNames : ''}`,
+          payment_method: 'plano',
+          tipo_agendamento: 'plano',
           is_free: true,
           barbeiro_confirmou: false,
           cliente_confirmou: false,
@@ -1006,7 +876,6 @@ const ClienteAgendar = () => {
 
       if (aptError) throw aptError;
 
-      // Criar registro de pagamento como "pago" (via plano)
       await supabase
         .from("pagamentos")
         .insert({
@@ -1017,7 +886,6 @@ const ClienteAgendar = () => {
           status: "paid",
         });
 
-      // Enviar evento de novo agendamento
       const { data: profile } = await supabase.from('profiles').select('nome, telefone').eq('id', session.user.id).single();
       sendNovoAgendamentoEvent({
         agendamento_id: appointment.id,
@@ -1044,40 +912,27 @@ const ClienteAgendar = () => {
     if (!userId || amount <= 0) return;
 
     try {
-      console.log(`[useCredits] Chamando função atômica para debitar R$ ${amount}`);
-      
-      // Usar função atômica do banco de dados para garantir transação segura
       const { data, error } = await supabase.rpc('use_credits_atomic', {
         p_user_id: userId,
         p_appointment_id: appointmentId,
         p_amount: amount
       });
 
-      if (error) {
-        console.error('[useCredits] Erro na função atômica:', error);
-        throw error;
-      }
+      if (error) throw error;
 
-      // Cast para tipo esperado
       const result = data as { success: boolean; error?: string; used_amount?: number } | null;
 
       if (!result?.success) {
-        console.error('[useCredits] Falha no débito:', result?.error);
         throw new Error(result?.error || 'Erro ao debitar créditos');
       }
 
-      console.log(`[useCredits] Débito atômico concluído: R$ ${result.used_amount} usado com sucesso`);
-      
-      // Atualizar saldo local imediatamente
       setAvailableCredits(prev => Math.max(0, prev - amount));
-      
     } catch (error) {
       console.error("Error using credits:", error);
-      throw error; // Re-throw to handle in caller
+      throw error;
     }
   };
 
-  // NOVO: Marcar resgate como usado
   const markRedemptionAsUsed = async (appointmentId: string) => {
     if (!useRedemption || availableRedemptions.length === 0) return;
     
@@ -1094,7 +949,6 @@ const ClienteAgendar = () => {
 
       if (error) throw error;
       
-      console.log('[markRedemptionAsUsed] Resgate usado:', redemptionToUse.id);
       setAvailableRedemptions(prev => prev.filter(r => r.id !== redemptionToUse.id));
       setUseRedemption(false);
     } catch (error) {
@@ -1120,56 +974,46 @@ const ClienteAgendar = () => {
       const totalDuration = selectedServices.reduce((sum, s) => sum + s.duracao_minutos, 0);
       const dateStr = format(selectedDate, 'yyyy-MM-dd');
       
-      // ============================================
-      // VALIDAÇÃO CRÍTICA: Verificar disponibilidade antes de remarcar
-      // ============================================
-      console.log('[ClienteAgendar] Validando disponibilidade para remarcação...');
       const { data: validation, error: validationError } = await supabase.functions.invoke('validate-appointment', {
         body: {
           data: dateStr,
           hora: selectedTime,
           duracao: totalDuration,
           userId: session.user.id,
-          excludeAppointmentId: rescheduleAppointmentId // Excluir o próprio agendamento
+          excludeAppointmentId: rescheduleAppointmentId
         }
       });
 
       if (validationError) {
-        console.error('[ClienteAgendar] Erro na validação:', validationError);
         toast.error("Erro ao verificar disponibilidade. Tente novamente.");
         return;
       }
 
       if (!validation?.valid) {
-        console.log('[ClienteAgendar] Horário INDISPONÍVEL:', validation?.message);
         toast.error(validation?.message || "Horário indisponível. Escolha outro horário.");
         setStep(3);
         refreshSlots();
         return;
       }
-      console.log('[ClienteAgendar] Horário DISPONÍVEL, remarcando...');
       
-      // UPDATE the existing appointment
       const { error } = await supabase
         .from("agendamentos")
         .update({
           data: dateStr,
           hora: selectedTime,
           duracao: totalDuration,
-          status: 'pending', // Reset to pending
-          barbeiro_confirmou: false, // Volta para confirmação do barbeiro
-          cliente_confirmou: false, // Volta para confirmação do cliente
+          status: 'pending',
+          barbeiro_confirmou: false,
+          cliente_confirmou: false,
           updated_at: new Date().toISOString(),
         } as any)
         .eq("id", rescheduleAppointmentId);
 
       if (error) throw error;
 
-      // Clear reschedule session
       sessionStorage.removeItem('isRescheduling');
       sessionStorage.removeItem('rescheduleAppointmentId');
 
-      // Enviar evento de remarcação concluída
       const { data: profile } = await supabase.from('profiles').select('nome, telefone').eq('id', session.user.id).single();
       const mainService = selectedServices[0];
       sendRemarcacaoConcluidaEvent({
@@ -1182,7 +1026,7 @@ const ClienteAgendar = () => {
         preco: mainService?.preco
       });
 
-      toast.success("✅ Agendamento remarcado com sucesso!");
+      toast.success("Agendamento remarcado com sucesso!");
       navigate("/cliente");
     } catch (error: any) {
       console.error("Error rescheduling:", error);
@@ -1196,7 +1040,6 @@ const ClienteAgendar = () => {
     return selectedServices.reduce((sum, s) => sum + s.duracao_minutos, 0);
   };
 
-  // Verifica se algum serviço selecionado é um "Corte" (para aplicar desconto do resgate)
   const getCorteService = () => {
     return selectedServices.find(s => 
       s.nome.toLowerCase().includes('corte') && 
@@ -1204,7 +1047,6 @@ const ClienteAgendar = () => {
     );
   };
 
-  // Calcula o desconto do resgate (valor do corte)
   const getRedemptionDiscount = () => {
     if (!useRedemption || availableRedemptions.length === 0) return 0;
     const corteService = getCorteService();
@@ -1214,1023 +1056,712 @@ const ClienteAgendar = () => {
 
   const getTotalPrice = () => {
     const baseTotal = selectedServices.reduce((sum, s) => sum + s.preco, 0);
-    // Aplicar desconto do resgate (corte grátis) se ativo
     const redemptionDiscount = getRedemptionDiscount();
     return Math.max(0, baseTotal - redemptionDiscount);
   };
 
-  // Verifica se o usuário pode usar resgate (tem serviço de corte selecionado)
   const canUseRedemption = availableRedemptions.length > 0 && !!getCorteService();
 
-  const progressValue = (step / 6) * 100;
+  const handleBack = () => {
+    if (activeSubscription?.servico && step === 2) {
+      navigate("/cliente");
+    } else if (step === 1) {
+      navigate("/cliente");
+    } else {
+      setStep(step - 1);
+    }
+  };
+
+  const handleCopyPix = () => {
+    if (pixPayload) {
+      navigator.clipboard.writeText(pixPayload);
+      setCopied(true);
+      toast.success("Código PIX copiado!");
+      setTimeout(() => setCopied(false), 3000);
+    }
+  };
+
+  const totalSteps = isPlanEligible ? 4 : isRescheduling ? 4 : 5;
+  const currentDisplayStep = step > 5 ? totalSteps : 
+    isPlanEligible && step >= 5 ? step - 1 : 
+    isRescheduling && step >= 4 ? step - 1 : step;
+
+  const pageVariants = {
+    initial: { opacity: 0, x: 20 },
+    animate: { opacity: 1, x: 0 },
+    exit: { opacity: 0, x: -20 }
+  };
 
   return (
-    <div
-      className="h-screen w-full flex flex-col overflow-hidden relative"
-      style={{ height: 'calc(var(--vh, 1vh) * 100)' }}
-    >
-      {/* Premium Animated Background - Same as Admin */}
-      <div className="fixed inset-0 -z-10 overflow-hidden pointer-events-none">
-        {/* Base gradient */}
-        <div className="absolute inset-0 bg-gradient-to-br from-[#0E0E11] via-[#141418] to-[#0E0E11]" />
-        
-        {/* Animated red glow orbs */}
-        <div 
-          className="absolute top-1/4 left-1/4 w-[500px] h-[500px] rounded-full opacity-20 animate-pulse"
-          style={{
-            background: 'radial-gradient(circle, rgba(255, 59, 59, 0.4) 0%, transparent 70%)',
-            filter: 'blur(60px)',
-            animation: 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite'
-          }}
-        />
-        <div 
-          className="absolute bottom-1/3 right-1/4 w-[400px] h-[400px] rounded-full opacity-15 animate-pulse"
-          style={{
-            background: 'radial-gradient(circle, rgba(255, 59, 59, 0.35) 0%, transparent 70%)',
-            filter: 'blur(50px)',
-            animationDelay: '2s',
-            animation: 'pulse 5s cubic-bezier(0.4, 0, 0.6, 1) infinite'
-          }}
-        />
-        <div 
-          className="absolute top-2/3 left-1/2 w-[300px] h-[300px] rounded-full opacity-10 animate-pulse"
-          style={{
-            background: 'radial-gradient(circle, rgba(255, 59, 59, 0.3) 0%, transparent 70%)',
-            filter: 'blur(40px)',
-            animationDelay: '1s',
-            animation: 'pulse 6s cubic-bezier(0.4, 0, 0.6, 1) infinite'
-          }}
-        />
-        
-        {/* Subtle noise texture overlay */}
-        <div 
-          className="absolute inset-0 opacity-[0.015]"
-          style={{
-            backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`
-          }}
-        />
-      </div>
-      {/* Header Premium - No divider line */}
-      <div className="glass-card rounded-none border-0 border-b border-white/5 p-4 flex-shrink-0">
-        <div className="max-w-4xl mx-auto">
-          <div className="flex items-center gap-3 mb-4">
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              onClick={() => {
-                // Assinante com serviço vinculado: step 2 volta para /cliente (não para step 1 de preços)
-                if (activeSubscription?.servico && step === 2) {
-                  navigate("/cliente");
-                } else if (step === 1) {
-                  navigate("/cliente");
-                } else {
-                  setStep(step - 1);
-                }
-              }}
-              className="h-10 w-10 rounded-full hover:bg-white/10 transition-all duration-300"
+    <div className="min-h-screen bg-gradient-to-b from-zinc-950 to-black">
+      {/* Header Flutuante Premium */}
+      <div className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-b from-black/80 via-black/40 to-transparent backdrop-blur-md">
+        <div className="max-w-2xl mx-auto px-6 pt-6 pb-4">
+          <div className="relative flex items-center justify-center mb-6">
+            <button 
+              onClick={handleBack}
+              className="absolute left-0 w-10 h-10 flex items-center justify-center rounded-full bg-white/10 backdrop-blur hover:bg-white/20 transition-all"
             >
-              <ArrowLeft className="w-5 h-5" />
-            </Button>
-            <h1 className="font-bold text-xl responsive-title tracking-tight">Agendar Horário</h1>
+              <ArrowLeft className="w-5 h-5 text-white" />
+            </button>
+
+            <h1 className="text-xl font-bold text-white tracking-tight">
+              {isRescheduling ? "Remarcar Horário" : "Agendar Horário"}
+            </h1>
           </div>
-          <div className="relative h-1.5 bg-white/5 rounded-full overflow-hidden">
+
+          <div className="h-1 bg-white/10 rounded-full overflow-hidden">
             <div 
-              className="absolute top-0 left-0 h-full rounded-full transition-all duration-500"
-              style={{
-                width: `${progressValue}%`,
-                background: 'linear-gradient(90deg, hsl(0 64% 52%), hsl(0 64% 62%))',
-                boxShadow: '0 0 20px rgba(212, 49, 49, 0.5)'
-              }}
+              className="h-full bg-gradient-to-r from-primary to-orange-500 transition-all duration-500 ease-out"
+              style={{ width: `${(currentDisplayStep / totalSteps) * 100}%` }}
             />
           </div>
         </div>
       </div>
 
-      <div className="flex-1 overflow-hidden">
-        <div className="h-full max-w-4xl mx-auto flex flex-col">
-          {/* Step 1: Select Services */}
-          {step === 1 && (
-            <>
-              {/* Services List - Scrollable Container */}
-              <div ref={servicesListRef} className="services-list flex-1 p-4 md:p-6">
+      {/* Content */}
+      <AnimatePresence mode="wait">
+        {/* Step 1: Serviços */}
+        {step === 1 && (
+          <motion.div
+            key="step-1"
+            variants={pageVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            transition={{ duration: 0.3 }}
+            className="min-h-screen pt-32 pb-32 px-6"
+          >
+            <div className="max-w-2xl mx-auto">
+              <StepIndicator 
+                currentStep={1} 
+                totalSteps={totalSteps} 
+                title="Escolha os Serviços"
+                subtitle="Selecione um ou mais serviços desejados"
+              />
 
-                <div className="space-y-3 mb-4">
-                  <div>
-                    <h3 className="text-sm font-semibold mb-1 text-muted-foreground">Etapa 1 de 5</h3>
-                    <h2 className="text-xl md:text-2xl font-bold mb-2 responsive-title">Escolha os Serviços</h2>
-                    <p className="text-sm text-muted-foreground responsive-text">
-                      Selecione um ou mais serviços
-                    </p>
-                  </div>
-                </div>
-                
-                <div className="grid gap-4 pb-6">
-                  {services.map((service) => {
-                    const isSelected = selectedServices.some(s => s.id === service.id);
-                    return (
-                      <div
-                        key={service.id}
-                        onClick={() => toggleService(service)}
-                        className={cn(
-                          "glass-card mirror-shine cursor-pointer p-5 transition-all duration-300 hover-elevate",
-                          isSelected && "ring-2 ring-primary shadow-glow-red"
-                        )}
-                      >
-                        <div className="flex justify-between items-start gap-4">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-3 mb-2">
-                              <h4 className="font-semibold text-base responsive-text">{service.nome}</h4>
-                              {isSelected && (
-                                <div 
-                                  className="rounded-full p-1.5 flex-shrink-0 animate-scale-in"
-                                  style={{
-                                    background: 'linear-gradient(135deg, hsl(0 64% 62%), hsl(0 64% 52%))',
-                                    boxShadow: '0 4px 12px rgba(212,49,49,0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2)'
-                                  }}
-                                >
-                                  <Check className="w-3.5 h-3.5 text-white" />
-                                </div>
-                              )}
-                            </div>
-                            {service.descricao && (
-                              <p className="text-sm text-muted-foreground leading-relaxed mb-3 responsive-text font-light">
-                                {service.descricao}
-                              </p>
-                            )}
-                            <div className="flex items-center gap-4 text-sm responsive-text">
-                              <span className="flex items-center gap-2 text-muted-foreground font-medium">
-                                <Clock className="w-4 h-4" />
-                                {service.duracao_minutos} min
-                              </span>
-                              <span className="font-bold text-base" style={{ 
-                                color: 'hsl(0 64% 52%)',
-                                textShadow: '0 2px 8px rgba(212, 49, 49, 0.3)'
-                              }}>
-                                R$ {service.preco.toFixed(2)}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
+              <div ref={servicesListRef} className="space-y-3">
+                {services.map((service) => (
+                  <ServiceCard
+                    key={service.id}
+                    service={service}
+                    isSelected={selectedServices.some(s => s.id === service.id)}
+                    onToggle={() => toggleService(service)}
+                  />
+                ))}
               </div>
 
-              {/* Fixed CTA Button - Premium Footer */}
+              {/* Bottom CTA */}
               {selectedServices.length > 0 && (
-                <div className="flex-shrink-0 p-4 border-t-0">
-                  <div className="max-w-4xl mx-auto space-y-3 animate-fade-in">
-                    {/* Premium Summary Card */}
-                    <div className="glass-card p-4">
-                      <div className="flex justify-between items-center">
-                        <div className="space-y-1">
-                          <p className="text-sm font-light text-muted-foreground">
-                            {selectedServices.length} {selectedServices.length === 1 ? 'serviço selecionado' : 'serviços selecionados'}
-                          </p>
-                          <p className="text-xs text-muted-foreground font-light">
-                            Duração total: {getTotalDuration()} minutos
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-xs text-muted-foreground font-light mb-1">Total</p>
-                          <p className="text-2xl font-bold tracking-tight" style={{ 
-                            color: 'hsl(0 64% 52%)',
-                            textShadow: '0 2px 12px rgba(212, 49, 49, 0.4)'
-                          }}>
-                            R$ {getTotalPrice().toFixed(2)}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Premium CTA Button */}
-                    <Button
-                      onClick={() => setStep(2)}
-                      className="relative w-full h-14 font-bold text-base tracking-wide overflow-hidden group ripple"
-                      style={{
-                        background: 'linear-gradient(135deg, hsl(0 64% 52%), hsl(0 64% 42%))',
-                        boxShadow: '0 8px 24px rgba(212, 49, 49, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1)'
-                      }}
-                    >
-                      {/* Animated shine effect */}
-                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
-                      <span className="relative">Continuar</span>
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </>
-          )}
-
-        {/* Step 2: Select Date */}
-        {step === 2 && (
-          <div className="scrollable-content p-4 md:p-6">
-            <div className="space-y-4 max-w-4xl mx-auto">
-              <div>
-                <h3 className="text-sm font-semibold mb-1">Etapa {activeSubscription?.servico ? '1' : '2'} de {activeSubscription?.servico ? '4' : '5'}</h3>
-                <h2 className="text-xl font-bold mb-3 responsive-title">Escolha a Data</h2>
-                <p className="text-sm text-muted-foreground mb-4 responsive-text">
-                  Selecione o dia desejado para o atendimento
-                </p>
-              </div>
-
-              {/* NOVO: Card do Plano para Assinantes */}
-              {activeSubscription?.servico && (
-                <div className="glass-card p-4 border border-green-500/30 bg-green-500/5">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center">
-                        <Check className="w-5 h-5 text-green-500" />
-                      </div>
+                <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-black via-black/95 to-transparent backdrop-blur-xl border-t border-white/5 p-6">
+                  <div className="max-w-2xl mx-auto">
+                    <div className="flex items-center justify-between mb-4">
                       <div>
-                        <p className="font-semibold text-green-400">{activeSubscription.plano_nome}</p>
-                        <p className="text-sm text-muted-foreground">
-                          Serviço: <span className="text-foreground font-medium">{activeSubscription.servico.nome}</span>
+                        <p className="text-sm text-zinc-400">
+                          {selectedServices.length} {selectedServices.length === 1 ? 'serviço' : 'serviços'} • {getTotalDuration()} min
+                        </p>
+                        <p className="text-2xl font-bold text-white">
+                          R$ {getTotalPrice().toFixed(2).replace('.', ',')}
                         </p>
                       </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-2xl font-bold text-green-400">
-                        {activeSubscription.limite_agendamentos_mes - activeSubscription.agendamentos_usados}
-                      </p>
-                      <p className="text-xs text-muted-foreground">restantes</p>
-                    </div>
-                  </div>
-                  <div className="mt-3 pt-3 border-t border-white/5">
-                    <div className="flex justify-between text-xs text-muted-foreground">
-                      <span>Usados este mês: {activeSubscription.agendamentos_usados}/{activeSubscription.limite_agendamentos_mes}</span>
-                      <span className="text-green-400">R$ 0,00</span>
+                      <button
+                        onClick={() => setStep(2)}
+                        className="px-8 py-4 bg-gradient-to-r from-primary to-primary/80 text-white font-semibold rounded-2xl hover:shadow-lg hover:shadow-primary/25 transition-all hover:scale-[1.02] active:scale-[0.98]"
+                      >
+                        Continuar
+                      </button>
                     </div>
                   </div>
                 </div>
               )}
-
-              <Card className="p-4 card-premium flex justify-center">
-                <Calendar
-                  mode="single"
-                  selected={selectedDate}
-                  onSelect={setSelectedDate}
-                  locale={ptBR}
-                  disabled={(date) => {
-                    const today = new Date();
-                    today.setHours(0, 0, 0, 0);
-                    const compareDate = new Date(date);
-                    compareDate.setHours(0, 0, 0, 0);
-                    // Permitir hoje e dias futuros, bloquear domingos
-                    return compareDate < today || date.getDay() === 0;
-                  }}
-                  className="rounded-md pointer-events-auto"
-                />
-              </Card>
-
-              <Button
-                onClick={handleNextStep}
-                disabled={!selectedDate}
-                className="w-full touch-target font-semibold responsive-button"
-                style={{
-                  background: 'linear-gradient(135deg, hsl(0 64% 52%), hsl(0 64% 42%))',
-                  minHeight: '44px'
-                }}
-              >
-                Continuar
-              </Button>
             </div>
-          </div>
+          </motion.div>
         )}
 
-        {/* Step 3: Select Time - Premium Design */}
+        {/* Step 2: Data */}
+        {step === 2 && (
+          <motion.div
+            key="step-2"
+            variants={pageVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            transition={{ duration: 0.3 }}
+            className="min-h-screen pt-32 pb-24 px-6"
+          >
+            <div className="max-w-2xl mx-auto">
+              <StepIndicator 
+                currentStep={activeSubscription?.servico ? 1 : 2} 
+                totalSteps={totalSteps} 
+                title="Escolha a Data"
+                subtitle="Selecione o dia desejado para o atendimento"
+              />
+
+              <PremiumCalendar
+                selectedDate={selectedDate}
+                onSelectDate={setSelectedDate}
+              />
+
+              {selectedDate && (
+                <button
+                  onClick={handleNextStep}
+                  className="w-full mt-6 py-4 bg-gradient-to-r from-primary to-primary/80 text-white font-semibold rounded-2xl hover:shadow-lg hover:shadow-primary/25 transition-all"
+                >
+                  Continuar
+                </button>
+              )}
+            </div>
+          </motion.div>
+        )}
+
+        {/* Step 3: Horário */}
         {step === 3 && (
-          <div className="scrollable-content p-4 md:p-6">
-            <div className="space-y-6 max-w-4xl mx-auto">
-              {/* Premium Header */}
-              <div className="text-center">
-                <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-primary/20 mb-4 shadow-[0_0_30px_rgba(255,59,59,0.3)]">
-                  <Clock className="w-7 h-7 text-primary" />
-                </div>
-                <h3 className="text-sm font-semibold mb-1 text-muted-foreground">
-                  Etapa {activeSubscription?.servico ? '2' : '3'} de {activeSubscription?.servico ? '4' : '5'}
-                </h3>
-                <h2 className="text-2xl font-bold mb-2 responsive-title">Escolha o Horário</h2>
-                <p className="text-sm text-muted-foreground responsive-text">
-                  {selectedDate?.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' })}
-                </p>
-              </div>
+          <motion.div
+            key="step-3"
+            variants={pageVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            transition={{ duration: 0.3 }}
+            className="min-h-screen pt-32 pb-32 px-6"
+          >
+            <div className="max-w-2xl mx-auto">
+              <StepIndicator 
+                currentStep={activeSubscription?.servico ? 2 : 3} 
+                totalSteps={totalSteps} 
+                title="Escolha o Horário"
+                subtitle={selectedDate ? format(selectedDate, "EEEE, d 'de' MMMM", { locale: ptBR }) : undefined}
+              />
 
               {loadingSlots ? (
-                <Card className="glass-card p-8 text-center">
-                  <div className="animate-pulse space-y-4">
-                    <div className="w-12 h-12 rounded-full bg-primary/20 mx-auto flex items-center justify-center">
-                      <Clock className="w-6 h-6 text-primary animate-spin" />
-                    </div>
-                    <p className="text-sm text-muted-foreground">Carregando horários disponíveis...</p>
+                <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-8 text-center">
+                  <div className="w-12 h-12 rounded-full bg-primary/20 mx-auto flex items-center justify-center mb-4">
+                    <Clock className="w-6 h-6 text-primary animate-spin" />
                   </div>
-                </Card>
+                  <p className="text-sm text-zinc-400">Carregando horários disponíveis...</p>
+                </div>
               ) : availableSlots.filter(slot => slot.available).length === 0 ? (
-                <Card className="glass-card p-8 text-center">
-                  <div className="text-4xl mb-4">😔</div>
-                  <p className="text-muted-foreground font-medium mb-4">
+                <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-8 text-center">
+                  <p className="text-zinc-400 font-medium mb-4">
                     Agenda cheia neste dia.
                   </p>
-                  <Button
+                  <button
                     onClick={() => setStep(2)}
-                    variant="outline"
-                    className="gap-2"
+                    className="px-6 py-3 border border-white/10 rounded-xl text-white hover:bg-white/5 transition-all"
                   >
-                    <ArrowLeft className="w-4 h-4" />
                     Escolher outra data
-                  </Button>
-                </Card>
+                  </button>
+                </div>
               ) : (
                 <>
-                  {/* Premium Time Slots Grid */}
-                  <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-2">
-                    {availableSlots.map((slot) => {
-                      const isSelected = selectedTime === slot.time;
-                      const isUnavailable = !slot.available;
-                      
-                      return (
-                        <button
-                          key={slot.time}
-                          onClick={() => {
-                            if (slot.available) {
-                              setSelectedTime(slot.time);
-                              setUnavailableMessage(null);
+                  <div className="grid grid-cols-3 gap-3">
+                    {availableSlots.map((slot) => (
+                      <TimeSlot
+                        key={slot.time}
+                        time={slot.time}
+                        isSelected={selectedTime === slot.time}
+                        isDisabled={!slot.available}
+                        onSelect={() => {
+                          if (slot.available) {
+                            setSelectedTime(slot.time);
+                            setUnavailableMessage(null);
+                          } else {
+                            if (slot.blockedReason === 'minimum_advance') {
+                              setUnavailableMessage("É necessário 1 hora de antecedência.");
                             } else {
-                              if (slot.blockedReason === 'minimum_advance') {
-                                setUnavailableMessage("É necessário 1 hora de antecedência.");
-                              } else {
-                                setUnavailableMessage("Este horário já foi agendado.");
-                              }
+                              setUnavailableMessage("Este horário já foi agendado.");
                             }
-                          }}
-                          disabled={isUnavailable}
-                          className={cn(
-                            "relative h-12 rounded-xl font-semibold text-sm transition-all duration-300",
-                            isUnavailable && "opacity-30 cursor-not-allowed bg-white/[0.02] border border-white/[0.05] text-muted-foreground/50",
-                            !isUnavailable && !isSelected && "bg-white/[0.05] border border-white/[0.08] hover:bg-white/[0.08] hover:border-primary/30 hover:shadow-[0_0_15px_rgba(255,59,59,0.15)]",
-                            isSelected && "bg-primary text-primary-foreground border-0 shadow-[0_0_25px_rgba(255,59,59,0.5)]"
-                          )}
-                        >
-                          {isSelected && (
-                            <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-white/20 to-transparent" />
-                          )}
-                          <span className="relative">{slot.time}</span>
-                        </button>
-                      );
-                    })}
+                          }
+                        }}
+                      />
+                    ))}
                   </div>
 
                   {unavailableMessage && (
-                    <div className="p-4 rounded-xl bg-destructive/10 border border-destructive/20 text-center animate-fade-in">
-                      <p className="text-sm text-destructive font-medium">{unavailableMessage}</p>
+                    <div className="mt-4 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-center">
+                      <p className="text-sm text-red-400 font-medium">{unavailableMessage}</p>
                     </div>
                   )}
 
-                  {/* Selected Time Preview */}
                   {selectedTime && (
-                    <div className="glass-card p-4 border border-primary/20 bg-primary/5 animate-fade-in">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
-                            <Check className="w-5 h-5 text-primary" />
+                    <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-black via-black/95 to-transparent backdrop-blur-xl border-t border-white/5 p-6">
+                      <div className="max-w-2xl mx-auto">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center">
+                              <Clock className="w-6 h-6 text-primary" />
+                            </div>
+                            <div>
+                              <p className="text-sm text-zinc-400">Horário selecionado</p>
+                              <p className="text-xl font-bold text-white">
+                                {selectedDate && format(selectedDate, 'd/MM')} às {selectedTime}
+                              </p>
+                            </div>
                           </div>
-                          <div>
-                            <p className="font-semibold">Horário selecionado</p>
-                            <p className="text-sm text-muted-foreground">
-                              {selectedDate?.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })} às {selectedTime}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-2xl font-bold text-primary">{selectedTime}</p>
+                          <button
+                            onClick={handleNextStep}
+                            disabled={loading}
+                            className="px-8 py-4 bg-gradient-to-r from-primary to-primary/80 text-white font-semibold rounded-2xl hover:shadow-lg hover:shadow-primary/25 transition-all disabled:opacity-50"
+                          >
+                            {loading ? "Verificando..." : "Continuar"}
+                          </button>
                         </div>
                       </div>
                     </div>
                   )}
-
-                  {/* Premium CTA Button */}
-                  <Button
-                    onClick={handleNextStep}
-                    disabled={!selectedTime}
-                    className="relative w-full h-14 font-bold text-base tracking-wide overflow-hidden group ripple"
-                    style={{
-                      background: selectedTime 
-                        ? 'linear-gradient(135deg, hsl(0 64% 52%), hsl(0 64% 42%))' 
-                        : 'rgba(255,255,255,0.05)',
-                      boxShadow: selectedTime 
-                        ? '0 8px 24px rgba(212, 49, 49, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1)' 
-                        : 'none'
-                    }}
-                  >
-                    {selectedTime && (
-                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
-                    )}
-                    <span className="relative">Continuar</span>
-                  </Button>
                 </>
               )}
             </div>
-          </div>
+          </motion.div>
         )}
 
-        {/* Step 4: Payment Method */}
+        {/* Step 4: Pagamento */}
         {step === 4 && !isRescheduling && (
-          <div className="scrollable-content p-4 md:p-6">
-            <div className="space-y-4 max-w-4xl mx-auto">
-              <div>
-                <h3 className="text-sm font-semibold mb-1">Etapa 4 de 5</h3>
-                <h2 className="text-xl font-bold mb-3 responsive-title">Forma de Pagamento</h2>
-                <p className="text-sm text-muted-foreground mb-4 responsive-text">
-                  Escolha como deseja pagar
-                </p>
+          <motion.div
+            key="step-4"
+            variants={pageVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            transition={{ duration: 0.3 }}
+            className="min-h-screen pt-32 pb-24 px-6"
+          >
+            <div className="max-w-2xl mx-auto">
+              <StepIndicator 
+                currentStep={4} 
+                totalSteps={totalSteps} 
+                title="Forma de Pagamento"
+                subtitle="Escolha como deseja pagar"
+              />
+
+              <div className="space-y-3">
+                <PaymentOption
+                  value="pix"
+                  selected={paymentMethod === 'pix'}
+                  onSelect={() => setPaymentMethod('pix')}
+                  title="PIX"
+                  description="Pagamento instantâneo via QR Code"
+                />
+
+                <PaymentOption
+                  value="card"
+                  selected={paymentMethod === 'card'}
+                  onSelect={() => setPaymentMethod('card')}
+                  title="Cartão de Crédito"
+                  description="Pagamento aprovado na hora"
+                />
+
+                <PaymentOption
+                  value="cash"
+                  selected={paymentMethod === 'cash'}
+                  onSelect={() => setPaymentMethod('cash')}
+                  title="Pagar na Barbearia"
+                  description="Pagamento presencial após confirmação"
+                />
+
+                {/* Resgate Grátis */}
+                {canUseRedemption && (
+                  <div className="relative mt-6">
+                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-10">
+                      <div className="bg-gradient-to-r from-orange-500 to-yellow-500 text-black text-xs font-bold px-3 py-1 rounded-full">
+                        RESGATE DISPONÍVEL
+                      </div>
+                    </div>
+                    
+                    <button
+                      onClick={() => setUseRedemption(!useRedemption)}
+                      className={cn(
+                        "w-full text-left rounded-2xl p-5 transition-all duration-200 border",
+                        useRedemption 
+                          ? "bg-gradient-to-br from-green-500/10 to-emerald-500/10 border-green-500/50" 
+                          : "bg-gradient-to-br from-orange-500/5 to-yellow-500/5 border-orange-500/30 hover:border-orange-500/50"
+                      )}
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1">
+                          <h3 className="text-base font-semibold text-white mb-1">
+                            Corte Grátis Disponível
+                          </h3>
+                          <p className="text-sm text-zinc-400">
+                            Você tem {availableRedemptions.length} resgate{availableRedemptions.length > 1 ? 's' : ''} do programa de fidelidade
+                          </p>
+                        </div>
+                        <div className={cn(
+                          "flex-shrink-0 w-6 h-6 rounded-full border-2 transition-all flex items-center justify-center mt-0.5",
+                          useRedemption 
+                            ? "bg-green-500 border-green-500"
+                            : "border-orange-500/50"
+                        )}>
+                          {useRedemption && (
+                            <Check className="w-4 h-4 text-white" strokeWidth={3} />
+                          )}
+                        </div>
+                      </div>
+                    </button>
+                  </div>
+                )}
               </div>
 
-            <div className="grid gap-3">
-              <Card
-                className={`p-4 cursor-pointer transition-all ${
-                  paymentMethod === 'pix'
-                    ? "border-primary bg-primary/5 ring-2 ring-primary"
-                    : "card-premium hover:border-primary/50"
-                }`}
-                onClick={() => setPaymentMethod('pix')}
-              >
-                <div className="flex items-center gap-3">
-                  <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                    paymentMethod === 'pix' ? 'border-primary' : 'border-muted'
-                  }`}>
-                    {paymentMethod === 'pix' && (
-                      <div className="w-3 h-3 rounded-full bg-primary" />
-                    )}
-                  </div>
-                  <div className="flex-1">
-                    <h4 className="font-semibold">PIX</h4>
-                    <p className="text-xs text-muted-foreground">
-                      Pagamento instantâneo via QR Code
-                    </p>
-                  </div>
-                </div>
-              </Card>
-
-              <Card
-                className={`p-4 cursor-pointer transition-all ${
-                  paymentMethod === 'card'
-                    ? "border-primary bg-primary/5 ring-2 ring-primary"
-                    : "card-premium hover:border-primary/50"
-                }`}
-                onClick={() => setPaymentMethod('card')}
-              >
-                <div className="flex items-center gap-3">
-                  <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                    paymentMethod === 'card' ? 'border-primary' : 'border-muted'
-                  }`}>
-                    {paymentMethod === 'card' && (
-                      <div className="w-3 h-3 rounded-full bg-primary" />
-                    )}
-                  </div>
-                  <div className="flex-1">
-                    <h4 className="font-semibold">Cartão de Crédito</h4>
-                    <p className="text-xs text-muted-foreground">
-                      Pagamento aprovado na hora
-                    </p>
-                  </div>
-                </div>
-              </Card>
-
-              <Card
-                className={`p-4 cursor-pointer transition-all ${
-                  paymentMethod === 'cash'
-                    ? "border-primary bg-primary/5 ring-2 ring-primary"
-                    : "card-premium hover:border-primary/50"
-                }`}
-                onClick={() => setPaymentMethod('cash')}
-              >
-                <div className="flex items-center gap-3">
-                  <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                    paymentMethod === 'cash' ? 'border-primary' : 'border-muted'
-                  }`}>
-                    {paymentMethod === 'cash' && (
-                      <div className="w-3 h-3 rounded-full bg-primary" />
-                    )}
-                  </div>
-                  <div className="flex-1">
-                    <h4 className="font-semibold">Pagar na Barbearia</h4>
-                    <p className="text-xs text-muted-foreground">
-                      Pagamento presencial após confirmação do barbeiro
-                    </p>
-                  </div>
-                </div>
-              </Card>
-            </div>
-
-            {/* Banner de Resgate Disponível */}
-            {canUseRedemption && (
-              <Card 
-                className={`p-4 cursor-pointer transition-all ${
-                  useRedemption 
-                    ? "border-green-500 bg-green-500/10 ring-2 ring-green-500" 
-                    : "border-amber-500/50 bg-amber-500/10 hover:border-green-500/50"
-                }`}
-                onClick={() => setUseRedemption(!useRedemption)}
-              >
-                <div className="flex items-center gap-3">
-                  <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                    useRedemption ? 'border-green-500' : 'border-amber-500'
-                  }`}>
-                    {useRedemption && (
-                      <Check className="w-3 h-3 text-green-500" />
-                    )}
-                  </div>
-                  <div className="flex-1">
-                    <h4 className="font-semibold text-amber-700 dark:text-amber-400">
-                      🎁 Corte Grátis Disponível!
-                    </h4>
-                    <p className="text-xs text-muted-foreground">
-                      Você tem {availableRedemptions.length} resgate{availableRedemptions.length > 1 ? 's' : ''} do programa de fidelidade. 
-                      {useRedemption ? ' (Aplicado!)' : ' Clique para usar.'}
-                    </p>
-                  </div>
-                </div>
-              </Card>
-            )}
-
-            <Card className="p-4 bg-primary/5 border-primary/20">
-              <div className="space-y-3">
-                {/* Preço original */}
-                <div className="flex justify-between items-center text-sm">
-                  <span className="text-muted-foreground">Valor do serviço:</span>
-                  <span className={`font-semibold ${useRedemption && getCorteService() ? 'line-through text-muted-foreground' : ''}`}>
-                    R$ {selectedServices.reduce((sum, s) => sum + s.preco, 0).toFixed(2)}
+              {/* Resumo de valores */}
+              <div className="mt-8 bg-white/[0.02] border border-white/5 rounded-2xl p-6 backdrop-blur-xl">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-zinc-400">Valor do serviço</span>
+                  <span className={cn(
+                    "text-white font-semibold",
+                    useRedemption && getCorteService() && "line-through text-zinc-500"
+                  )}>
+                    R$ {selectedServices.reduce((sum, s) => sum + s.preco, 0).toFixed(2).replace('.', ',')}
                   </span>
                 </div>
-
-                {/* Desconto do resgate */}
+                
                 {useRedemption && getRedemptionDiscount() > 0 && (
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="text-green-600">🎁 Corte grátis (resgate):</span>
-                    <span className="font-semibold text-green-600">
-                      - R$ {getRedemptionDiscount().toFixed(2)}
-                    </span>
+                  <div className="flex items-center justify-between text-green-400 font-semibold">
+                    <span>Desconto (resgate)</span>
+                    <span>-R$ {getRedemptionDiscount().toFixed(2).replace('.', ',')}</span>
                   </div>
                 )}
 
-                {/* Créditos */}
                 {availableCredits > 0 && getTotalPrice() > 0 && (
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="text-green-600">Créditos aplicados:</span>
-                    <span className="font-semibold text-green-600">
-                      - R$ {Math.min(availableCredits, getTotalPrice()).toFixed(2)}
-                    </span>
+                  <div className="flex items-center justify-between text-green-400 text-sm mt-2">
+                    <span>Créditos aplicados</span>
+                    <span>-R$ {Math.min(availableCredits, getTotalPrice()).toFixed(2).replace('.', ',')}</span>
                   </div>
                 )}
-
-                <div className="border-t border-border/50 pt-2">
-                  <div className="flex justify-between items-center">
-                    <span className="font-semibold">Valor a pagar:</span>
-                    <span className="text-2xl font-bold text-primary">
-                      R$ {Math.max(0, getTotalPrice() - availableCredits).toFixed(2)}
+                
+                <div className="border-t border-white/5 mt-4 pt-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-lg font-semibold text-white">Valor a pagar</span>
+                    <span className="text-3xl font-bold text-primary">
+                      R$ {Math.max(0, getTotalPrice() - availableCredits).toFixed(2).replace('.', ',')}
                     </span>
                   </div>
-                  {getTotalPrice() === 0 && useRedemption && (
-                    <p className="text-xs text-green-600 mt-2 text-center">
-                      🎉 Seu corte está 100% coberto pelo resgate de fidelidade!
-                    </p>
-                  )}
-                  {getTotalPrice() > 0 && getTotalPrice() <= availableCredits && (
-                    <p className="text-xs text-green-600 mt-2 text-center">
-                      🎉 Valor restante coberto por créditos!
-                    </p>
-                  )}
                 </div>
               </div>
-            </Card>
 
-              <Button
+              <button
                 onClick={() => setStep(5)}
-                className="w-full touch-target font-semibold responsive-button"
-                style={{
-                  background: 'linear-gradient(135deg, hsl(0 64% 52%), hsl(0 64% 42%))',
-                  minHeight: '44px'
-                }}
+                className="w-full mt-6 py-4 bg-gradient-to-r from-primary to-primary/80 text-white font-semibold rounded-2xl hover:shadow-lg hover:shadow-primary/25 transition-all"
               >
                 Continuar
-              </Button>
+              </button>
             </div>
-          </div>
+          </motion.div>
         )}
 
-        {/* Step 5: Review and Card Details (if card) or Confirm */}
+        {/* Step 5: Confirmação */}
         {step === 5 && !isRescheduling && (
-          <div className="scrollable-content p-4 md:p-6">
-            <div className="space-y-4 max-w-4xl mx-auto">
-              <div>
-                <h3 className="text-sm font-semibold mb-1">Etapa {isPlanEligible ? '3' : '5'} de {isPlanEligible ? '4' : '5'}</h3>
-                <h2 className="text-xl font-bold mb-3 responsive-title">
-                  {paymentMethod === 'card' ? 'Dados do Cartão' : 'Confirmar Agendamento'}
-                </h2>
-              </div>
+          <motion.div
+            key="step-5"
+            variants={pageVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            transition={{ duration: 0.3 }}
+            className="min-h-screen pt-32 pb-24 px-6"
+          >
+            <div className="max-w-2xl mx-auto">
+              <StepIndicator 
+                currentStep={isPlanEligible ? 3 : 5} 
+                totalSteps={totalSteps} 
+                title="Confirmar Agendamento"
+                subtitle="Revise os detalhes antes de finalizar"
+              />
 
-            <Card className="p-6 space-y-4 card-premium">
-              <div className="space-y-3">
-                <div className="flex justify-between py-2 border-b border-border">
-                  <span className="text-muted-foreground">Serviços:</span>
-                  <span className="font-semibold text-right">
-                    {selectedServices.map(s => s.nome).join(", ")}
-                  </span>
-                </div>
-                <div className="flex justify-between py-2 border-b border-border">
-                  <span className="text-muted-foreground">Data:</span>
-                  <span className="font-semibold">
-                    {selectedDate?.toLocaleDateString('pt-BR', { 
-                      day: '2-digit', 
-                      month: 'long', 
-                      year: 'numeric' 
-                    })}
-                  </span>
-                </div>
-                <div className="flex justify-between py-2 border-b border-border">
-                  <span className="text-muted-foreground">Horário:</span>
-                  <span className="font-semibold">{selectedTime}</span>
-                </div>
-                <div className="flex justify-between py-2 border-b border-border">
-                  <span className="text-muted-foreground">Forma de Pagamento:</span>
-                  <span className="font-semibold">
-                    {isPlanEligible
-                      ? `Plano (${activeSubscription?.plano_nome})`
-                      : availableCredits >= getTotalPrice()
-                        ? 'Crédito do App'
-                        : paymentMethod === 'pix'
-                          ? 'PIX'
-                          : paymentMethod === 'card'
-                            ? 'Cartão de Crédito'
-                            : 'Dinheiro (na barbearia)'
-                    }
-                  </span>
-                </div>
+              {/* Card de resumo */}
+              <div className="bg-white/[0.02] border border-white/5 rounded-3xl p-6 backdrop-blur-xl space-y-4 mb-6">
+                <SummaryRow 
+                  label="Serviço"
+                  value={selectedServices.map(s => s.nome).join(", ")}
+                />
                 
-                {/* Resumo de valores com créditos */}
-                {availableCredits > 0 ? (
-                  <div className="py-3 bg-primary/10 -m-6 mt-2 px-6 rounded-b-lg space-y-2">
-                    <div className="flex justify-between items-center text-sm">
-                      <span className="text-muted-foreground">Valor do serviço:</span>
-                      <span>R$ {getTotalPrice().toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between items-center text-sm text-green-600">
-                      <span>Créditos aplicados:</span>
-                      <span>- R$ {Math.min(availableCredits, getTotalPrice()).toFixed(2)}</span>
-                    </div>
-                    <div className="border-t border-border/50 pt-2 flex justify-between items-center">
-                      <span className="font-semibold">Valor a pagar:</span>
-                      <span className="text-2xl font-bold text-primary">
-                        R$ {Math.max(0, getTotalPrice() - availableCredits).toFixed(2)}
-                      </span>
-                    </div>
-                    {getTotalPrice() <= availableCredits && (
-                      <p className="text-xs text-green-600 text-center font-medium">
-                        Corte 100% coberto por créditos do app
-                      </p>
-                    )}
-                  </div>
-                ) : (
-                  <div className="flex justify-between items-center py-3 bg-primary/10 -m-6 mt-2 px-6 rounded-b-lg">
-                    <span className="font-semibold">Total:</span>
-                    <span className="text-2xl font-bold text-primary">
-                      R$ {getTotalPrice().toFixed(2)}
+                <div className="border-t border-white/5" />
+                
+                <SummaryRow 
+                  label="Data"
+                  value={selectedDate ? format(selectedDate, "dd 'de' MMMM 'de' yyyy", { locale: ptBR }) : ""}
+                />
+                
+                <div className="border-t border-white/5" />
+                
+                <SummaryRow 
+                  label="Horário"
+                  value={selectedTime}
+                />
+                
+                <div className="border-t border-white/5" />
+                
+                <SummaryRow 
+                  label="Forma de Pagamento"
+                  value={
+                    isPlanEligible ? `Plano (${activeSubscription?.plano_nome})` :
+                    useRedemption && getTotalPrice() === 0 ? "Resgate de Fidelidade" :
+                    availableCredits >= getTotalPrice() ? "Créditos do App" :
+                    paymentMethod === 'pix' ? "PIX" :
+                    paymentMethod === 'card' ? "Cartão de Crédito" :
+                    "Pagar na Barbearia"
+                  }
+                />
+                
+                <div className="border-t border-white/5 mt-6 pt-6">
+                  <div className="flex items-center justify-between">
+                    <span className="text-lg font-semibold text-white">Total</span>
+                    <span className="text-3xl font-bold text-primary">
+                      R$ {Math.max(0, getTotalPrice() - availableCredits).toFixed(2).replace('.', ',')}
                     </span>
                   </div>
-                )}
-              </div>
-            </Card>
-
-            {/* Card Payment Form */}
-            {paymentMethod === 'card' && (
-              <Card className="p-6 space-y-4">
-                <h3 className="font-semibold mb-4">Informações do Cartão</h3>
-                
-                <div className="space-y-3">
-                  <div>
-                    <label className="text-sm font-medium mb-2 block">Nome no Cartão</label>
-                    <input
-                      type="text"
-                      placeholder="Como está no cartão"
-                      value={cardHolderName}
-                      onChange={(e) => setCardHolderName(e.target.value)}
-                      className="w-full px-4 py-3 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-sm font-medium mb-2 block">Número do Cartão</label>
-                    <input
-                      type="text"
-                      placeholder="0000 0000 0000 0000"
-                      value={cardNumber}
-                      onChange={(e) => {
-                        const value = e.target.value.replace(/\D/g, '');
-                        const formatted = value.replace(/(\d{4})(?=\d)/g, '$1 ');
-                        setCardNumber(formatted);
-                      }}
-                      maxLength={19}
-                      className="w-full px-4 py-3 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-3 gap-3">
-                    <div>
-                      <label className="text-sm font-medium mb-2 block">Mês</label>
-                      <input
-                        type="text"
-                        placeholder="MM"
-                        value={cardExpiryMonth}
-                        onChange={(e) => {
-                          const value = e.target.value.replace(/\D/g, '');
-                          if (parseInt(value) <= 12) setCardExpiryMonth(value);
-                        }}
-                        maxLength={2}
-                        className="w-full px-4 py-3 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium mb-2 block">Ano</label>
-                      <input
-                        type="text"
-                        placeholder="AA"
-                        value={cardExpiryYear}
-                        onChange={(e) => {
-                          const value = e.target.value.replace(/\D/g, '');
-                          setCardExpiryYear(value);
-                        }}
-                        maxLength={2}
-                        className="w-full px-4 py-3 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium mb-2 block">CVV</label>
-                      <input
-                        type="text"
-                        placeholder="000"
-                        value={cardCvv}
-                        onChange={(e) => setCardCvv(e.target.value.replace(/\D/g, ''))}
-                        maxLength={4}
-                        className="w-full px-4 py-3 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="text-sm font-medium mb-2 block">CPF do Titular</label>
-                    <input
-                      type="text"
-                      placeholder="000.000.000-00"
-                      value={cardCpf}
-                      onChange={(e) => {
-                        const value = e.target.value.replace(/\D/g, '');
-                        let formatted = value;
-                        if (value.length > 3) formatted = value.slice(0,3) + '.' + value.slice(3);
-                        if (value.length > 6) formatted = value.slice(0,3) + '.' + value.slice(3,6) + '.' + value.slice(6);
-                        if (value.length > 9) formatted = value.slice(0,3) + '.' + value.slice(3,6) + '.' + value.slice(6,9) + '-' + value.slice(9,11);
-                        setCardCpf(formatted);
-                      }}
-                      maxLength={14}
-                      className="w-full px-4 py-3 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary"
-                    />
-                  </div>
                 </div>
-              </Card>
-            )}
+              </div>
 
-            {/* Message when paying with credits */}
-            {!isPlanEligible && availableCredits >= getTotalPrice() && (
-              <Card className="p-4 bg-green-500/10 border-green-500/20">
-                <p className="text-sm text-center text-green-600 font-medium">
-                  Seu agendamento será pago usando seus créditos do app
-                </p>
-              </Card>
-            )}
+              {/* Card Dados do Cartão */}
+              {paymentMethod === 'card' && !isPlanEligible && availableCredits < getTotalPrice() && (
+                <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-6 mb-6 space-y-4">
+                  <h3 className="text-lg font-semibold text-white mb-4">Dados do Cartão</h3>
+                  
+                  <input
+                    type="text"
+                    placeholder="Nome no cartão"
+                    value={cardHolderName}
+                    onChange={(e) => setCardHolderName(e.target.value)}
+                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-zinc-500 focus:outline-none focus:border-primary/50"
+                  />
+                  
+                  <input
+                    type="text"
+                    placeholder="Número do cartão"
+                    value={cardNumber}
+                    onChange={(e) => setCardNumber(e.target.value)}
+                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-zinc-500 focus:outline-none focus:border-primary/50"
+                  />
+                  
+                  <div className="grid grid-cols-3 gap-3">
+                    <input
+                      type="text"
+                      placeholder="MM"
+                      value={cardExpiryMonth}
+                      onChange={(e) => setCardExpiryMonth(e.target.value)}
+                      className="px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-zinc-500 focus:outline-none focus:border-primary/50"
+                    />
+                    <input
+                      type="text"
+                      placeholder="AA"
+                      value={cardExpiryYear}
+                      onChange={(e) => setCardExpiryYear(e.target.value)}
+                      className="px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-zinc-500 focus:outline-none focus:border-primary/50"
+                    />
+                    <input
+                      type="text"
+                      placeholder="CVV"
+                      value={cardCvv}
+                      onChange={(e) => setCardCvv(e.target.value)}
+                      className="px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-zinc-500 focus:outline-none focus:border-primary/50"
+                    />
+                  </div>
+                  
+                  <input
+                    type="text"
+                    placeholder="CPF do titular"
+                    value={cardCpf}
+                    onChange={(e) => setCardCpf(e.target.value)}
+                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-zinc-500 focus:outline-none focus:border-primary/50"
+                  />
+                </div>
+              )}
 
-            {isPlanEligible && (
-              <Card className="p-4 bg-green-500/10 border-green-500/20">
-                <p className="text-sm text-center text-green-600 font-medium">
-                  Este agendamento será registrado como PLANO. Nenhum pagamento será solicitado.
-                </p>
-              </Card>
-            )}
+              {/* Avisos contextuais */}
+              {isPlanEligible && (
+                <div className="bg-green-500/5 border border-green-500/20 rounded-2xl p-4 mb-6">
+                  <p className="text-sm text-green-400 text-center">
+                    Este agendamento será registrado como PLANO. Nenhum pagamento será solicitado.
+                  </p>
+                </div>
+              )}
 
-            {!isPlanEligible && paymentMethod === 'pix' && availableCredits < getTotalPrice() && (
-              <Card className="p-4 bg-primary/5 border-primary/20">
-                <p className="text-sm text-center">
-                  Ao confirmar, o QR Code PIX será gerado para pagamento
-                </p>
-              </Card>
-            )}
+              {!isPlanEligible && paymentMethod === 'pix' && availableCredits < getTotalPrice() && (
+                <div className="bg-orange-500/5 border border-orange-500/20 rounded-2xl p-4 mb-6">
+                  <p className="text-sm text-orange-300 text-center">
+                    Ao confirmar, o QR Code PIX será gerado para pagamento
+                  </p>
+                </div>
+              )}
 
-            {!isPlanEligible && paymentMethod === 'cash' && availableCredits < getTotalPrice() && (
-              <Card className="p-4 bg-primary/5 border-primary/20">
-                <p className="text-sm text-center">
-                  Você pagará diretamente na barbearia no dia do atendimento
-                </p>
-              </Card>
-            )}
-
-              <Button
+              <button
                 onClick={handlePayment}
                 disabled={processingPayment}
-                className="w-full responsive-button"
-                style={{
-                  background: 'linear-gradient(135deg, hsl(0 64% 52%), hsl(0 64% 42%))',
-                  minHeight: '44px'
-                }}
+                className="w-full py-5 bg-gradient-to-r from-primary to-primary/80 text-white text-lg font-bold rounded-2xl hover:shadow-xl hover:shadow-primary/25 transition-all disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]"
               >
-                {processingPayment 
-                  ? "Processando..." 
-                  : isPlanEligible
-                    ? "Finalizar (usando PLANO)"
-                    : availableCredits >= getTotalPrice()
-                      ? "Confirmar (usando créditos)"
-                      : paymentMethod === 'pix' 
-                        ? "Gerar QR Code" 
-                        : "Confirmar Agendamento"
+                {processingPayment ? 'Processando...' : 
+                  isPlanEligible ? 'Finalizar (usando PLANO)' :
+                  availableCredits >= getTotalPrice() ? 'Confirmar (usando créditos)' :
+                  paymentMethod === 'pix' ? 'Gerar QR Code PIX' :
+                  'Confirmar Agendamento'
                 }
-              </Button>
+              </button>
             </div>
-          </div>
+          </motion.div>
         )}
 
-        {/* Step 5: Reschedule Confirmation */}
+        {/* Step 5: Confirmação Remarcação */}
         {step === 5 && isRescheduling && (
-          <div className="scrollable-content p-4 md:p-6">
-            <div className="space-y-4 max-w-4xl mx-auto">
-              <div>
-                <h3 className="text-sm font-semibold mb-1">Confirmar Remarcação</h3>
-                <h2 className="text-xl font-bold mb-3 responsive-title">Revise os novos dados</h2>
+          <motion.div
+            key="step-5-reschedule"
+            variants={pageVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            transition={{ duration: 0.3 }}
+            className="min-h-screen pt-32 pb-24 px-6"
+          >
+            <div className="max-w-2xl mx-auto">
+              <StepIndicator 
+                currentStep={3} 
+                totalSteps={3} 
+                title="Confirmar Remarcação"
+                subtitle="Revise os novos dados"
+              />
+
+              <div className="bg-white/[0.02] border border-white/5 rounded-3xl p-6 backdrop-blur-xl space-y-4 mb-6">
+                <SummaryRow 
+                  label="Nova Data"
+                  value={selectedDate ? format(selectedDate, "dd 'de' MMMM 'de' yyyy", { locale: ptBR }) : ""}
+                />
+                
+                <div className="border-t border-white/5" />
+                
+                <SummaryRow 
+                  label="Novo Horário"
+                  value={selectedTime}
+                />
+                
+                <div className="border-t border-white/5" />
+                
+                <SummaryRow 
+                  label="Serviço"
+                  value={selectedServices[0]?.nome || ""}
+                />
               </div>
 
-              <Card className="p-4 space-y-3">
-                <div className="flex items-center gap-3">
-                  <Clock className="w-5 h-5 text-primary" />
-                  <div>
-                    <p className="text-sm font-medium responsive-text">Nova Data e Horário</p>
-                    <p className="text-sm text-muted-foreground responsive-text">
-                      {selectedDate?.toLocaleDateString('pt-BR')} às {selectedTime}
-                    </p>
-                  </div>
-                </div>
-                
-                {selectedServices[0] && (
-                  <div className="flex items-center gap-3">
-                    <div className="w-5 h-5 text-primary" />
-                    <div>
-                      <p className="text-sm font-medium responsive-text">Serviço</p>
-                      <p className="text-sm text-muted-foreground responsive-text">{selectedServices[0].nome}</p>
-                    </div>
-                  </div>
-                )}
+              <div className="bg-blue-500/5 border border-blue-500/20 rounded-2xl p-4 mb-6">
+                <p className="text-sm text-blue-300 text-center">
+                  O pagamento existente permanecerá válido
+                </p>
+              </div>
 
-                <div className="p-3 bg-primary/10 rounded-md text-sm responsive-text compact-padding">
-                  ℹ️ O pagamento existente permanecerá válido
-                </div>
-              </Card>
-
-              <Button
+              <button
                 onClick={handleRescheduleUpdate}
                 disabled={processingPayment}
-                className="w-full responsive-button"
-                style={{
-                  background: 'linear-gradient(135deg, hsl(0 64% 52%), hsl(0 64% 42%))',
-                  minHeight: '44px'
-                }}
+                className="w-full py-5 bg-gradient-to-r from-primary to-primary/80 text-white text-lg font-bold rounded-2xl hover:shadow-xl hover:shadow-primary/25 transition-all disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]"
               >
-                {processingPayment ? "Remarcando..." : "Confirmar Remarcação"}
-              </Button>
+                {processingPayment ? 'Remarcando...' : 'Confirmar Remarcação'}
+              </button>
             </div>
-          </div>
+          </motion.div>
         )}
 
-        {/* Step 6: PIX QR Code Display */}
+        {/* Step 6: QR Code PIX */}
         {step === 6 && pixQrCode && (
-          <div className="scrollable-content p-4 md:p-6">
-            <div className="space-y-4 max-w-4xl mx-auto">
+          <motion.div
+            key="step-6"
+            variants={pageVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            transition={{ duration: 0.3 }}
+            className="min-h-screen bg-white"
+          >
             {paymentConfirmed ? (
-              // Payment Confirmed View
-              <div className="space-y-6">
-                <div className="text-center">
-                  <div className="mb-4">
-                    <div className="w-20 h-20 mx-auto bg-green-500/20 rounded-full flex items-center justify-center">
-                      <Check className="w-10 h-10 text-green-500" />
-                    </div>
-                  </div>
-                  <h2 className="text-2xl font-bold mb-2 text-foreground">Pagamento realizado com sucesso!</h2>
-                  <p className="text-muted-foreground mb-4">
-                    Seu agendamento foi confirmado. Você será redirecionado automaticamente...
-                  </p>
+              <div className="min-h-screen flex flex-col items-center justify-center px-6">
+                <div className="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center mb-6">
+                  <Check className="w-10 h-10 text-green-500" />
                 </div>
-
-                <Button
+                <h2 className="text-2xl font-bold text-zinc-900 mb-2">Pagamento confirmado!</h2>
+                <p className="text-zinc-500 text-center mb-8">
+                  Seu agendamento foi confirmado. Você será redirecionado automaticamente...
+                </p>
+                <button
                   onClick={() => navigate("/cliente")}
-                  className="w-full h-14 bg-primary hover:bg-primary/90 text-base"
+                  className="px-8 py-4 bg-zinc-900 text-white font-semibold rounded-2xl"
                 >
                   Ir para tela inicial
-                </Button>
+                </button>
               </div>
             ) : (
-              // QR Code View
               <>
-                <div>
-                  <h3 className="text-sm font-semibold mb-1">Pagamento PIX</h3>
-                  <h2 className="text-xl font-bold mb-3">Escaneie o QR Code</h2>
+                {/* Header minimalista branco */}
+                <div className="bg-gradient-to-b from-zinc-50 to-white border-b border-zinc-200 px-6 py-4">
+                  <button onClick={() => setStep(5)} className="mb-4">
+                    <ArrowLeft className="w-6 h-6 text-zinc-900" />
+                  </button>
+                  <div className="text-center">
+                    <h1 className="text-2xl font-bold text-zinc-900 mb-1">
+                      Pagamento PIX
+                    </h1>
+                    <p className="text-sm text-zinc-500">
+                      Escaneie o código ou copie a chave
+                    </p>
+                  </div>
                 </div>
 
-                <Card className="p-6 text-center space-y-4">
-                  <div className="bg-primary/10 p-4 rounded-lg mb-4">
-                    <p className="text-sm text-muted-foreground mb-1">Valor a pagar</p>
-                    <p className="text-3xl font-bold text-primary">
-                      R$ {getTotalPrice().toFixed(2)}
+                <div className="max-w-md mx-auto px-6 py-8">
+                  {/* Valor */}
+                  <div className="text-center mb-8">
+                    <p className="text-sm text-zinc-500 mb-2">Valor a pagar</p>
+                    <p className="text-5xl font-bold text-zinc-900">
+                      R$ {Math.max(0, getTotalPrice() - availableCredits).toFixed(2).replace('.', ',')}
                     </p>
                   </div>
 
-                  <p className="text-muted-foreground mb-4">
-                    Abra o app do seu banco e escaneie o código abaixo para pagar
-                  </p>
-                  
-                  {/* QR Code com visual premium - sem fundo branco */}
-                  <div className="flex justify-center">
-                    <div 
-                      className="relative p-4 rounded-2xl"
-                      style={{
-                        background: 'linear-gradient(145deg, rgba(255,255,255,0.95), rgba(248,248,248,0.98))',
-                        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255,255,255,0.5)',
-                      }}
-                    >
-                      {/* Borda decorativa com gradiente */}
-                      <div 
-                        className="absolute inset-0 rounded-2xl opacity-30"
-                        style={{
-                          background: 'linear-gradient(135deg, hsl(0 64% 52%), hsl(0 64% 42%))',
-                          padding: '2px',
-                          mask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
-                          maskComposite: 'exclude',
-                          WebkitMaskComposite: 'xor',
-                        }}
-                      />
-                      <img 
-                        src={`data:image/png;base64,${pixQrCode}`} 
-                        alt="QR Code PIX" 
-                        className="w-56 h-56 md:w-64 md:h-64 relative z-10"
-                        style={{
-                          filter: 'contrast(1.1)',
-                        }}
-                      />
-                    </div>
+                  {/* QR Code - LIMPO */}
+                  <div className="bg-white rounded-3xl p-8 shadow-xl border border-zinc-200 mb-6 flex justify-center">
+                    <img 
+                      src={`data:image/png;base64,${pixQrCode}`} 
+                      alt="QR Code PIX" 
+                      className="w-64 h-64"
+                    />
                   </div>
 
-                  {/* Indicador de aguardando sem emoji */}
-                  <div className="flex items-center justify-center gap-2 py-3">
-                    <div className="w-2 h-2 bg-primary rounded-full animate-pulse" />
-                    <span className="text-sm text-muted-foreground animate-pulse">
-                      Aguardando confirmação do pagamento...
-                    </span>
+                  {/* Instruções */}
+                  <div className="text-center mb-6">
+                    <p className="text-sm text-zinc-600">
+                      Abra o app do seu banco e escaneie o código acima para pagar
+                    </p>
                   </div>
 
+                  {/* Código PIX para copiar */}
                   {pixPayload && (
-                    <div className="mt-6 space-y-4">
-                      <p className="text-base font-semibold text-foreground">Ou copie o código PIX</p>
+                    <div className="space-y-3">
+                      <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wide text-center">
+                        Ou copie o código PIX
+                      </p>
                       
-                      {/* PIX Code Display */}
-                      <div className="bg-muted/50 backdrop-blur-sm p-4 rounded-xl border border-border/50">
-                        <p className="text-xs text-muted-foreground mb-2 font-mono break-all">
+                      <div className="bg-zinc-100 rounded-2xl p-4 border border-zinc-200">
+                        <p className="text-xs font-mono text-zinc-700 break-all leading-relaxed">
                           {pixPayload}
                         </p>
                       </div>
 
-                      {/* Copy Button - Large and Prominent */}
-                      <Button
-                        onClick={() => {
-                          navigator.clipboard.writeText(pixPayload);
-                          toast.success("Código PIX copiado!");
-                        }}
-                        className="w-full h-14 text-base font-semibold"
-                        style={{
-                          background: 'linear-gradient(135deg, hsl(0 64% 52%), hsl(0 64% 42%))',
-                          boxShadow: '0 4px 20px rgba(217, 65, 65, 0.3)'
-                        }}
+                      <button
+                        onClick={handleCopyPix}
+                        className="w-full py-4 bg-zinc-900 text-white font-semibold rounded-2xl hover:bg-zinc-800 transition-all active:scale-[0.98] flex items-center justify-center gap-2"
                       >
-                        <Copy className="w-5 h-5 mr-2" />
-                        Copiar Código PIX
-                      </Button>
-                      
-                      <p className="text-xs text-muted-foreground text-center">
-                        Toque no botão acima para copiar o código automaticamente
-                      </p>
+                        <Copy className="w-5 h-5" />
+                        {copied ? 'Código Copiado!' : 'Copiar Código PIX'}
+                      </button>
                     </div>
                   )}
-                </Card>
+
+                  {/* Status de pagamento */}
+                  <div className="mt-8 text-center">
+                    <div className="inline-flex items-center gap-2 text-sm text-zinc-500">
+                      <div className="w-2 h-2 bg-orange-500 rounded-full animate-pulse" />
+                      Aguardando confirmação do pagamento
+                    </div>
+                  </div>
+                </div>
               </>
             )}
-          </div>
-        </div>
+          </motion.div>
         )}
-        </div>
-      </div>
+      </AnimatePresence>
     </div>
   );
 };
