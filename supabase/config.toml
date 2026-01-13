@@ -1,1 +1,61 @@
 project_id = "djtpzvujzmrrslirzwun"
+
+[functions.check-availability]
+verify_jwt = false
+
+[functions.atomic-booking]
+verify_jwt = true
+
+[functions.validate-appointment]
+verify_jwt = false
+
+[functions.google-calendar-sync]
+verify_jwt = false
+
+[functions.asaas-webhook]
+verify_jwt = false
+
+[functions.create-payment]
+verify_jwt = true
+
+[functions.create-subscription]
+verify_jwt = true
+
+[functions.cancel-subscription]
+verify_jwt = true
+
+[functions.generate-subscription-charges]
+verify_jwt = false
+
+[functions.get-asaas-financial-data]
+verify_jwt = true
+
+[functions.send-confirmation-email]
+verify_jwt = true
+
+[functions.generate-promotion-ai]
+verify_jwt = true
+
+[functions.ai-support-chat]
+verify_jwt = true
+
+[functions.speech-to-text]
+verify_jwt = true
+
+[functions.health-check]
+verify_jwt = true
+
+[functions.send-webhook-event]
+verify_jwt = true
+
+[functions.whatsapp-verification]
+verify_jwt = false
+
+[functions.execute-scheduled-dispatches]
+verify_jwt = false
+
+[functions.manage-clients]
+verify_jwt = true
+
+[functions.generate-monthly-report]
+verify_jwt = true
