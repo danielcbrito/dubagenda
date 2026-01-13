@@ -1,9 +1,8 @@
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Clock, Calendar, CreditCard } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { motion } from "framer-motion";
+import { Button } from "@/components/ui/button";
 
 interface PendingBooking {
   id: string;
@@ -20,63 +19,109 @@ interface PendingPaymentCardProps {
   booking: PendingBooking;
   onResumePayment: (bookingId: string) => void;
   onCancel: (bookingId: string) => void;
+  index?: number;
 }
 
-export function PendingPaymentCard({ booking, onResumePayment, onCancel }: PendingPaymentCardProps) {
+export function PendingPaymentCard({ 
+  booking, 
+  onResumePayment, 
+  onCancel,
+  index = 0 
+}: PendingPaymentCardProps) {
   const appointmentDate = new Date(`${booking.data}T12:00:00`);
-  const formattedDate = format(appointmentDate, "dd 'de' MMMM", { locale: ptBR });
 
   return (
-    <Card className="p-4 bg-card border-yellow-500/30 hover:border-yellow-500/50 transition-colors">
-      <div className="flex items-start justify-between mb-3">
-        <div className="flex-1">
-          <div className="flex items-center gap-2 mb-1">
-            <Badge className="bg-yellow-500/20 text-yellow-600 border-yellow-500/30">
-              ⏳ Aguardando Pagamento
-            </Badge>
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: index * 0.1, duration: 0.3 }}
+      className="rounded-2xl overflow-hidden"
+      style={{
+        background: "hsl(var(--card))",
+        border: "1px solid hsl(var(--border))",
+        boxShadow: "0 4px 20px rgba(0, 0, 0, 0.15)",
+      }}
+    >
+      <div className="p-4">
+        {/* Header with status */}
+        <div className="flex items-start justify-between mb-3">
+          <div className="flex-1">
+            <h3 className="font-bold text-foreground text-base mb-1">
+              {booking.servico?.nome || "Serviço"}
+            </h3>
+            <div 
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold"
+              style={{
+                background: "rgba(245, 158, 11, 0.1)",
+                color: "#F59E0B",
+                border: "1px solid rgba(245, 158, 11, 0.3)",
+              }}
+            >
+              <CreditCard className="w-3 h-3" />
+              Aguardando Pagamento
+            </div>
           </div>
-          <h3 className="font-semibold text-foreground">
-            {booking.servico?.nome || "Serviço"}
-          </h3>
-        </div>
-      </div>
 
-      <div className="space-y-2 text-sm text-muted-foreground mb-4">
-        <div className="flex items-center gap-2">
-          <Calendar className="w-4 h-4" />
-          <span>{formattedDate}</span>
+          {/* Date badge */}
+          <div 
+            className="text-center px-3 py-2 rounded-xl"
+            style={{
+              background: "hsl(var(--secondary))",
+            }}
+          >
+            <p className="text-[10px] text-muted-foreground uppercase font-medium">
+              {format(appointmentDate, "MMM", { locale: ptBR })}
+            </p>
+            <p className="text-lg font-bold text-foreground leading-none">
+              {format(appointmentDate, "dd", { locale: ptBR })}
+            </p>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Clock className="w-4 h-4" />
-          <span>{booking.hora}</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <CreditCard className="w-4 h-4" />
-          <span className="font-semibold text-foreground">
-            R$ {booking.preco.toFixed(2)}
-          </span>
-        </div>
-      </div>
 
-      <div className="text-xs text-muted-foreground mb-3 p-2 bg-muted/50 rounded">
-        💡 Seu horário está reservado temporariamente. Complete o pagamento para confirmar o agendamento.
-      </div>
+        {/* Details */}
+        <div className="flex items-center gap-4 text-sm text-muted-foreground mb-4">
+          <div className="flex items-center gap-1.5">
+            <Clock className="w-4 h-4 text-primary/70" />
+            <span className="font-medium">{booking.hora}</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="font-bold text-foreground">
+              R$ {booking.preco.toFixed(2)}
+            </span>
+          </div>
+        </div>
 
-      <div className="flex gap-2">
-        <Button 
-          onClick={() => onResumePayment(booking.id)}
-          className="flex-1 bg-primary hover:bg-primary/90"
+        {/* Info message */}
+        <div 
+          className="mb-4 p-3 rounded-xl"
+          style={{
+            background: "hsl(var(--secondary))",
+          }}
         >
-          Finalizar Pagamento
-        </Button>
-        <Button 
-          onClick={() => onCancel(booking.id)}
-          variant="outline"
-          className="border-destructive/30 text-destructive hover:bg-destructive/10"
-        >
-          Cancelar
-        </Button>
+          <p className="text-xs text-muted-foreground">
+            Seu horário está reservado temporariamente. Complete o pagamento para confirmar o agendamento.
+          </p>
+        </div>
+
+        {/* Action buttons */}
+        <div className="flex gap-2">
+          <Button 
+            onClick={() => onResumePayment(booking.id)}
+            size="sm"
+            className="flex-1 h-10 rounded-xl"
+          >
+            Finalizar Pagamento
+          </Button>
+          <Button 
+            onClick={() => onCancel(booking.id)}
+            size="sm"
+            variant="outline"
+            className="flex-1 h-10 rounded-xl border-destructive/30 text-destructive hover:bg-destructive/10"
+          >
+            Cancelar
+          </Button>
+        </div>
       </div>
-    </Card>
+    </motion.div>
   );
 }
