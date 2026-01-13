@@ -17,6 +17,8 @@ import { PaymentOption } from "@/components/booking/PaymentOption";
 import { SummaryRow } from "@/components/booking/SummaryRow";
 import { PremiumCalendar } from "@/components/booking/PremiumCalendar";
 import { StepDots } from "@/components/booking/StepDots";
+import { BookingBottomBar } from "@/components/booking/BookingBottomBar";
+import { TimeSelectionBar } from "@/components/booking/TimeSelectionBar";
 
 interface Service {
   id: string;
@@ -1135,29 +1137,14 @@ const ClienteAgendar = () => {
                 ))}
               </div>
 
-              {/* Bottom CTA */}
-              {selectedServices.length > 0 && (
-                <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-xl border-t border-border p-4">
-                  <div className="max-w-2xl mx-auto">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-xs text-muted-foreground">
-                          {selectedServices.length} {selectedServices.length === 1 ? 'serviço' : 'serviços'} • {getTotalDuration()} min
-                        </p>
-                        <p className="text-lg font-bold text-foreground">
-                          R$ {getTotalPrice().toFixed(2).replace('.', ',')}
-                        </p>
-                      </div>
-                      <button
-                        onClick={() => setStep(2)}
-                        className="px-6 py-3 bg-primary text-primary-foreground font-semibold rounded-xl hover:bg-primary/90 transition-all active:scale-[0.98]"
-                      >
-                        Continuar
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
+              {/* Premium Bottom Bar */}
+              <BookingBottomBar
+                serviceCount={selectedServices.length}
+                totalDuration={getTotalDuration()}
+                totalPrice={getTotalPrice()}
+                onContinue={() => setStep(2)}
+                isVisible={selectedServices.length > 0}
+              />
             </div>
           </motion.div>
         )}
@@ -1273,32 +1260,15 @@ const ClienteAgendar = () => {
                     </div>
                   )}
 
-                  {selectedTime && (
-                    <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-xl border-t border-border p-4">
-                      <div className="max-w-2xl mx-auto">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center">
-                              <Clock className="w-5 h-5 text-primary" />
-                            </div>
-                            <div>
-                              <p className="text-xs text-muted-foreground">Selecionado</p>
-                              <p className="text-base font-semibold text-foreground">
-                                {selectedDate && format(selectedDate, 'd/MM')} às {selectedTime}
-                              </p>
-                            </div>
-                          </div>
-                          <button
-                            onClick={handleNextStep}
-                            disabled={loading}
-                            className="px-6 py-3 bg-primary text-primary-foreground font-semibold rounded-xl hover:bg-primary/90 transition-all disabled:opacity-50"
-                          >
-                            {loading ? "Verificando..." : "Continuar"}
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  )}
+                  {/* Premium Time Selection Bar */}
+                  <TimeSelectionBar
+                    selectedDate={selectedDate || null}
+                    selectedTime={selectedTime}
+                    formattedDate={selectedDate ? format(selectedDate, 'd/MM') : ''}
+                    onContinue={handleNextStep}
+                    isVisible={!!selectedTime}
+                    isLoading={loading}
+                  />
                 </>
               )}
             </div>
