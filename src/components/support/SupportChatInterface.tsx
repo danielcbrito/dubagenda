@@ -1,5 +1,5 @@
-import { Send, Paperclip, Mic, X, Image as ImageIcon, FileText, StopCircle, AlertTriangle, CreditCard, Lock, Bug, Sparkles } from "lucide-react";
-import { useState, useRef, useEffect } from "react";
+import { Send, Paperclip, Mic, X, Image as ImageIcon, FileText, StopCircle, AlertTriangle, CreditCard, Lock, Bug, Sparkles, RefreshCw, Loader2 } from "lucide-react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -16,6 +16,8 @@ interface Message {
     url: string;
     name: string;
   }>;
+  isAction?: boolean;
+  actionType?: "loading" | "success" | "error";
 }
 
 const quickSuggestions = [
@@ -42,23 +44,80 @@ const quickSuggestions = [
 ];
 
 /**
- * Interface de Chat Premium 2025
- * Design flutuante, clean e moderno — inspirado no ChatGPT
+ * Interface de Chat Premium 2025 — Agente IA Inteligente
+ * Com histórico persistente e indicadores de ações
  */
 export function SupportChatInterface() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(true);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [isRecording, setIsRecording] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [isFocused, setIsFocused] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
   
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
+
+  // Carregar usuário e histórico de conversas
+  useEffect(() => {
+    const loadUserAndHistory = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        if (user) {
+          setUserId(user.id);
+          
+          // Buscar conversa ativa mais recente do usuário
+          const { data: conversations } = await supabase
+            .from('support_conversations')
+            .select('id, created_at')
+            .eq('user_id', user.id)
+            .eq('status', 'active')
+            .order('last_message_at', { ascending: false })
+            .limit(1);
+
+          if (conversations && conversations.length > 0) {
+            const convId = conversations[0].id;
+            setConversationId(convId);
+            
+            // Carregar mensagens dessa conversa
+            const { data: messagesData } = await supabase
+              .from('support_messages')
+              .select('role, content, created_at, metadata')
+              .eq('conversation_id', convId)
+              .order('created_at', { ascending: true });
+
+            if (messagesData && messagesData.length > 0) {
+              const loadedMessages: Message[] = messagesData.map(msg => {
+                const metadata = msg.metadata as Record<string, any> | null;
+                return {
+                  role: msg.role as "user" | "assistant",
+                  content: msg.content,
+                  timestamp: new Date(msg.created_at),
+                  isAction: metadata?.isAction || false,
+                  actionType: metadata?.actionType
+                };
+              });
+              
+              setMessages(loadedMessages);
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Erro ao carregar histórico:', error);
+      } finally {
+        setIsLoadingHistory(false);
+      }
+    };
+
+    loadUserAndHistory();
+  }, []);
 
   useEffect(() => {
     if (scrollAreaRef.current) {
@@ -214,7 +273,29 @@ export function SupportChatInterface() {
     }
   };
 
-  // Tela de boas-vindas — clean e minimalista
+  const startNewConversation = useCallback(async () => {
+    setMessages([]);
+    setConversationId(null);
+    toast.success("Nova conversa iniciada");
+  }, []);
+
+  // Loading de histórico
+  if (isLoadingHistory) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center px-6 py-12">
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="text-center"
+        >
+          <Loader2 className="w-8 h-8 text-primary animate-spin mx-auto mb-4" />
+          <p className="text-white/40 text-sm">Carregando histórico...</p>
+        </motion.div>
+      </div>
+    );
+  }
+
+  // Tela de boas-vindas
   const renderWelcomeScreen = () => (
     <div className="flex-1 flex flex-col items-center justify-center px-6 py-12">
       <motion.div 
@@ -223,7 +304,7 @@ export function SupportChatInterface() {
         transition={{ duration: 0.5, ease: "easeOut" }}
         className="text-center max-w-md"
       >
-        {/* Logo/Avatar centralizado */}
+        {/* Logo/Avatar */}
         <div className="relative mb-8">
           <div className="w-20 h-20 mx-auto rounded-3xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center border border-white/10 shadow-2xl">
             <img src={logoImage} alt="DUB" className="w-12 h-12 object-contain" />
@@ -237,14 +318,14 @@ export function SupportChatInterface() {
 
         {/* Título */}
         <h2 className="text-2xl font-semibold text-white mb-3">
-          Olá! Como posso ajudar?
+          Como posso ajudar?
         </h2>
         <p className="text-white/50 text-sm leading-relaxed mb-10">
-          Sou o assistente da Barbearia DUB. Descreva sua dúvida ou escolha uma opção abaixo.
+          Sou um agente inteligente com acesso aos seus dados. Posso diagnosticar e resolver problemas automaticamente.
         </p>
       </motion.div>
 
-      {/* Sugestões em grid */}
+      {/* Sugestões */}
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -279,10 +360,25 @@ export function SupportChatInterface() {
     </div>
   );
 
-  // Área de mensagens — espaçada e fluida
+  // Área de mensagens
   const renderMessages = () => (
     <div ref={scrollAreaRef} className="flex-1 overflow-y-auto px-4 md:px-6">
-      <div className="max-w-2xl mx-auto py-8 space-y-6">
+      {/* Botão nova conversa */}
+      {messages.length > 0 && (
+        <div className="sticky top-0 z-10 py-3 flex justify-center">
+          <motion.button
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            onClick={startNewConversation}
+            className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/[0.04] border border-white/[0.08] hover:bg-white/[0.08] text-white/50 hover:text-white/70 text-xs font-medium transition-all"
+          >
+            <RefreshCw className="w-3 h-3" />
+            Nova conversa
+          </motion.button>
+        </div>
+      )}
+
+      <div className="max-w-2xl mx-auto py-6 space-y-5">
         <AnimatePresence mode="popLayout">
           {messages.map((message, index) => (
             <motion.div
@@ -291,7 +387,7 @@ export function SupportChatInterface() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3, ease: "easeOut" }}
               className={cn(
-                "flex gap-4",
+                "flex gap-3",
                 message.role === "user" ? "justify-end" : "justify-start"
               )}
             >
@@ -303,12 +399,7 @@ export function SupportChatInterface() {
               )}
               
               {/* Balão da mensagem */}
-              <div
-                className={cn(
-                  "max-w-[85%] md:max-w-[75%]",
-                  message.role === "user" ? "order-1" : ""
-                )}
-              >
+              <div className={cn("max-w-[85%] md:max-w-[75%]", message.role === "user" ? "order-1" : "")}>
                 {/* Attachments */}
                 {message.attachments && message.attachments.length > 0 && (
                   <div className="mb-3 space-y-2">
@@ -358,7 +449,7 @@ export function SupportChatInterface() {
                 </p>
               </div>
 
-              {/* Avatar do usuário (placeholder) */}
+              {/* Avatar do usuário */}
               {message.role === "user" && (
                 <div className="shrink-0 w-8 h-8 rounded-xl bg-gradient-to-br from-primary/30 to-primary/10 flex items-center justify-center border border-primary/20 order-2">
                   <span className="text-xs font-semibold text-white/80">EU</span>
@@ -373,19 +464,19 @@ export function SupportChatInterface() {
           <motion.div 
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="flex gap-4"
+            className="flex gap-3"
           >
             <div className="shrink-0 w-8 h-8 rounded-xl bg-gradient-to-br from-white/10 to-white/5 flex items-center justify-center border border-white/10">
               <img src={logoImage} alt="DUB" className="w-5 h-5 object-contain" />
             </div>
             <div className="bg-white/[0.04] border border-white/[0.06] rounded-2xl px-4 py-3">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-3">
                 <div className="flex gap-1">
-                  <span className="w-2 h-2 rounded-full bg-white/30 animate-bounce" style={{ animationDelay: "0ms" }} />
-                  <span className="w-2 h-2 rounded-full bg-white/30 animate-bounce" style={{ animationDelay: "150ms" }} />
-                  <span className="w-2 h-2 rounded-full bg-white/30 animate-bounce" style={{ animationDelay: "300ms" }} />
+                  <span className="w-2 h-2 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: "0ms" }} />
+                  <span className="w-2 h-2 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: "150ms" }} />
+                  <span className="w-2 h-2 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: "300ms" }} />
                 </div>
-                <span className="text-xs text-white/30">Digitando...</span>
+                <span className="text-xs text-white/40">Analisando e resolvendo...</span>
               </div>
             </div>
           </motion.div>
@@ -399,10 +490,10 @@ export function SupportChatInterface() {
       {/* Área de conteúdo */}
       {messages.length === 0 && !isLoading ? renderWelcomeScreen() : renderMessages()}
 
-      {/* Input flutuante — design premium */}
+      {/* Input flutuante */}
       <div className="shrink-0 px-4 pb-6 pt-2">
         <div className="max-w-2xl mx-auto">
-          {/* Preview de arquivos selecionados */}
+          {/* Preview de arquivos */}
           <AnimatePresence>
             {selectedFiles.length > 0 && (
               <motion.div 
@@ -436,7 +527,7 @@ export function SupportChatInterface() {
             )}
           </AnimatePresence>
 
-          {/* Container do input flutuante */}
+          {/* Container do input */}
           <motion.div 
             animate={{ 
               boxShadow: isFocused 
@@ -478,7 +569,7 @@ export function SupportChatInterface() {
               onKeyDown={handleKeyPress}
               onFocus={() => setIsFocused(true)}
               onBlur={() => setIsFocused(false)}
-              placeholder="Mensagem..."
+              placeholder="Descreva seu problema..."
               disabled={isLoading}
               className="flex-1 min-h-[36px] max-h-[120px] resize-none border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 px-1 py-2 text-[15px] text-white placeholder:text-white/30 focus:outline-none leading-tight"
               rows={1}
@@ -521,9 +612,9 @@ export function SupportChatInterface() {
             </div>
           </motion.div>
 
-          {/* Disclaimer sutil */}
+          {/* Disclaimer */}
           <p className="text-[11px] text-white/20 text-center mt-3">
-            Respostas geradas por IA podem conter imprecisões
+            IA com acesso aos seus dados para resolver problemas automaticamente
           </p>
         </div>
       </div>
