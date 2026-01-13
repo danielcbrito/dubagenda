@@ -225,6 +225,18 @@ body {
     0%, 100% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
     50% { transform: translateX(50%) translateY(50%) rotate(45deg); }
   }
+  
+  /* Button shine sweep effect */
+  @keyframes btn-shine {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+  
+  .btn-shine-effect {
+    background: linear-gradient(110deg, transparent 25%, rgba(255, 255, 255, 0.15) 50%, transparent 75%);
+    background-size: 200% 100%;
+    animation: btn-shine 1.5s ease-in-out infinite;
+  }
 
   /* Mirror shine effect */
   .mirror-shine {
