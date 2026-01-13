@@ -1,12 +1,12 @@
-import { ArrowLeft, MoreVertical } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useEffect } from "react";
 import { SupportChatInterface } from "@/components/support/SupportChatInterface";
-import logoImage from "@/assets/logo-dub.png";
+import { motion } from "framer-motion";
 
 /**
- * Chat de Suporte — Interface Premium 2025
- * Design ultra-moderno, minimalista e sofisticado
+ * Chat de Suporte — Interface Fluida Premium 2025
+ * Sem barras fixas, visual flutuante e moderno
  */
 export default function SupportChat() {
   const navigate = useNavigate();
@@ -15,12 +15,11 @@ export default function SupportChat() {
     navigate("/cliente");
   };
 
-  // Lock body scroll on mount, unlock on unmount
+  // Lock body scroll e altura dinâmica para mobile
   useEffect(() => {
     document.documentElement.classList.add('lock-scroll');
     document.body.classList.add('lock-scroll');
     
-    // Dynamic height calculation for mobile browsers
     const setFullHeight = () => {
       const vh = window.innerHeight * 0.01;
       document.documentElement.style.setProperty('--vh', `${vh}px`);
@@ -38,53 +37,27 @@ export default function SupportChat() {
 
   return (
     <div
-      className="w-full flex flex-col overflow-hidden"
+      className="w-full flex flex-col overflow-hidden relative"
       style={{ 
         height: 'calc(var(--vh, 1vh) * 100)',
         width: '100vw',
-        background: 'linear-gradient(180deg, #0A0A0A 0%, #141414 100%)'
+        background: 'linear-gradient(180deg, #0A0A0A 0%, #0F0F0F 50%, #0A0A0A 100%)'
       }}
     >
-      {/* Header Premium com Glassmorphism */}
-      <header 
-        className="backdrop-blur-2xl border-b border-white/5 px-4 py-3 flex items-center justify-between z-10 shrink-0"
-        style={{
-          background: 'rgba(255, 255, 255, 0.03)',
-          boxShadow: '0 1px 0 rgba(255, 255, 255, 0.05)'
-        }}
+      {/* Botão voltar flutuante — discreto e elegante */}
+      <motion.button
+        initial={{ opacity: 0, x: -20 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.3, delay: 0.1 }}
+        onClick={handleBack}
+        className="absolute top-4 left-4 z-20 h-10 w-10 rounded-xl bg-white/[0.04] border border-white/[0.08] hover:bg-white/[0.08] flex items-center justify-center transition-all duration-200"
+        aria-label="Voltar"
       >
-        {/* Botão Voltar */}
-        <button
-          onClick={handleBack}
-          className="h-10 w-10 rounded-full hover:bg-white/10 flex items-center justify-center transition-all duration-300"
-          aria-label="Voltar"
-        >
-          <ArrowLeft className="h-5 w-5 text-white/70" />
-        </button>
-        
-        {/* Logo e Título Centralizados */}
-        <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2">
-          <img 
-            src={logoImage} 
-            alt="Logo" 
-            className="h-7 w-7 object-contain"
-          />
-          <h1 className="text-base font-semibold text-white/90">
-            ChatDUB
-          </h1>
-        </div>
+        <ArrowLeft className="h-5 w-5 text-white/60" />
+      </motion.button>
 
-        {/* Botão Menu (3 pontinhos) */}
-        <button
-          className="h-10 w-10 rounded-full hover:bg-white/10 flex items-center justify-center transition-all duration-300"
-          aria-label="Menu"
-        >
-          <MoreVertical className="h-5 w-5 text-white/70" />
-        </button>
-      </header>
-
-      {/* Chat Interface - Flex 1 para ocupar todo espaço disponível */}
-      <div className="flex-1 overflow-hidden" style={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+      {/* Chat Interface — ocupa toda a tela */}
+      <div className="flex-1 overflow-hidden flex flex-col">
         <SupportChatInterface />
       </div>
     </div>
