@@ -139,11 +139,8 @@ const ClienteAgendar = () => {
     initializeBooking();
   }, []);
 
-  // Lock body scroll
+  // Dynamic viewport height for mobile browsers (without locking scroll)
   useEffect(() => {
-    document.documentElement.classList.add('lock-scroll');
-    document.body.classList.add('lock-scroll');
-
     const setFullHeight = () => {
       const vh = window.innerHeight * 0.01;
       document.documentElement.style.setProperty('--vh', `${vh}px`);
@@ -153,25 +150,13 @@ const ClienteAgendar = () => {
     window.addEventListener('resize', setFullHeight);
 
     return () => {
-      document.documentElement.classList.remove('lock-scroll');
-      document.body.classList.remove('lock-scroll');
       window.removeEventListener('resize', setFullHeight);
     };
   }, []);
 
+  // Scroll to top on step change
   useEffect(() => {
-    if (step !== 1) return;
-    const el = servicesListRef.current;
-    if (!el) return;
-
-    const handleTouchMove = (event: TouchEvent) => {
-      event.stopPropagation();
-    };
-
-    el.addEventListener('touchmove', handleTouchMove, { passive: false });
-    return () => {
-      el.removeEventListener('touchmove', handleTouchMove as any);
-    };
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [step]);
 
   useEffect(() => {
@@ -1680,7 +1665,7 @@ const ClienteAgendar = () => {
             animate="animate"
             exit="exit"
             transition={{ duration: 0.3 }}
-            className="min-h-screen bg-background"
+            className="min-h-screen bg-background pb-8"
           >
             {paymentConfirmed ? (
               <div className="min-h-screen flex flex-col items-center justify-center px-6">
