@@ -15,15 +15,12 @@ import {
   Phone,
   Wallet,
   Bell,
-  Settings,
   LogOut,
   ChevronRight,
   UserCircle,
-  Shield,
   History,
   Gift,
-  HelpCircle,
-  FileText
+  HelpCircle
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -362,18 +359,6 @@ export function MyProfileSheet({
                       label="Notificações"
                       onClick={() => setNotificationsOpen(true)}
                     />
-                    <ProfileMenuItem
-                      icon={Settings}
-                      label="Configurações"
-                      onClick={() => toast.info("Em breve")}
-                      comingSoon
-                    />
-                    <ProfileMenuItem
-                      icon={Shield}
-                      label="Privacidade"
-                      onClick={() => toast.info("Em breve")}
-                      comingSoon
-                    />
                   </div>
                 </div>
 
@@ -397,12 +382,6 @@ export function MyProfileSheet({
                     <ProfileMenuItem
                       icon={HelpCircle}
                       label="Central de Ajuda"
-                      onClick={() => toast.info("Em breve")}
-                      comingSoon
-                    />
-                    <ProfileMenuItem
-                      icon={FileText}
-                      label="Termos de Uso"
                       onClick={() => toast.info("Em breve")}
                       comingSoon
                     />
