@@ -20,27 +20,25 @@ export function ServiceCard({ service, isSelected, onToggle }: ServiceCardProps)
     <button
       onClick={onToggle}
       className={cn(
-        "w-full text-left rounded-2xl p-5 transition-all duration-200",
-        "border",
+        "w-full text-left rounded-xl p-4 transition-all duration-200 border",
         isSelected 
-          ? "bg-primary/5 border-primary/50 shadow-lg shadow-primary/10" 
-          : "bg-white/[0.02] border-white/5 hover:bg-white/[0.04] hover:border-white/10"
+          ? "bg-primary/10 border-primary/50" 
+          : "bg-card border-border hover:bg-secondary"
       )}
     >
-      <div className="flex items-start justify-between gap-4">
-        {/* Conteúdo */}
+      <div className="flex items-start justify-between gap-3">
         <div className="flex-1">
-          <h3 className="text-lg font-semibold text-white mb-1">
+          <h3 className="text-base font-semibold text-foreground mb-0.5">
             {service.nome}
           </h3>
           {service.descricao && (
-            <p className="text-sm text-zinc-400 mb-3 leading-relaxed">
+            <p className="text-xs text-muted-foreground mb-2 line-clamp-2">
               {service.descricao}
             </p>
           )}
           
-          <div className="flex items-center gap-4 text-sm">
-            <span className="text-zinc-500">
+          <div className="flex items-center gap-3 text-xs">
+            <span className="text-muted-foreground">
               {service.duracao_minutos} min
             </span>
             <span className="text-primary font-semibold">
@@ -49,15 +47,14 @@ export function ServiceCard({ service, isSelected, onToggle }: ServiceCardProps)
           </div>
         </div>
 
-        {/* Checkbox customizado */}
         <div className={cn(
-          "flex-shrink-0 w-6 h-6 rounded-full border-2 transition-all flex items-center justify-center mt-0.5",
+          "flex-shrink-0 w-5 h-5 rounded-full border-2 transition-all flex items-center justify-center mt-0.5",
           isSelected 
             ? "bg-primary border-primary" 
-            : "border-white/20"
+            : "border-muted-foreground/30"
         )}>
           {isSelected && (
-            <Check className="w-4 h-4 text-white" strokeWidth={3} />
+            <Check className="w-3 h-3 text-primary-foreground" strokeWidth={3} />
           )}
         </div>
       </div>
