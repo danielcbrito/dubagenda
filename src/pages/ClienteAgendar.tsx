@@ -69,20 +69,22 @@ const ClienteAgendar = () => {
   const servicesListRef = useRef<HTMLDivElement | null>(null);
   const [activeSubscription, setActiveSubscription] = useState<ActiveSubscription | null>(null);
   const [subscriptionBlocked, setSubscriptionBlocked] = useState(false);
+  const [subscriptionLimitReached, setSubscriptionLimitReached] = useState(false);
   const [availableRedemptions, setAvailableRedemptions] = useState<{ id: string; promocao_id: string }[]>([]);
   const [useRedemption, setUseRedemption] = useState(false);
   const [copied, setCopied] = useState(false);
+  
+  // Indica se o usuário está usando fluxo de plano (serviço pré-selecionado)
+  const [isPlanFlow, setIsPlanFlow] = useState(false);
 
+  // Verificação se usuário pode usar o plano
   const isPlanEligible =
     !isRescheduling &&
+    isPlanFlow &&
     !!activeSubscription?.servico &&
     selectedServices.length === 1 &&
     selectedServices[0]?.id === activeSubscription.servico.id &&
     activeSubscription.agendamentos_usados < activeSubscription.limite_agendamentos_mes;
-
-  useEffect(() => {
-    if (step === 4 && isPlanEligible) setStep(5);
-  }, [step, isPlanEligible]);
 
   const totalDuration = selectedServices.reduce((sum, s) => sum + s.duracao_minutos, 0);
 
@@ -127,12 +129,16 @@ const ClienteAgendar = () => {
         const restantes = subscription.limite_agendamentos_mes - subscription.agendamentos_usados;
 
         if (restantes > 0) {
+          // Usuário de plano com agendamentos disponíveis
           setSelectedServices([subscription.servico]);
-          setStep(2);
+          setIsPlanFlow(true);
+          setStep(1); // Começa no step 1, mas o step 1 PARA PLANO é a Data (não serviços)
           return;
         }
 
-        toast.info(`Você já usou seus ${subscription.limite_agendamentos_mes} agendamentos do plano este mês.`);
+        // Limite atingido - bloquear fluxo
+        setSubscriptionLimitReached(true);
+        return;
       }
 
       await loadServices();
@@ -401,20 +407,30 @@ const ClienteAgendar = () => {
   };
 
   const handleNextStep = async () => {
-    if (step === 1 && selectedServices.length === 0) {
+    // Para usuários de plano: step 1 = Data, step 2 = Horário, step 3 = Confirmação
+    // Para usuários normais: step 1 = Serviços, step 2 = Data, step 3 = Horário, step 4 = Pagamento, step 5 = Confirmação
+    
+    if (!isPlanFlow && step === 1 && selectedServices.length === 0) {
       toast.error("Selecione pelo menos um serviço");
       return;
     }
-    if (step === 2 && !selectedDate) {
+    
+    // Validação de data (step 2 para normal, step 1 para plano)
+    const dateStep = isPlanFlow ? 1 : 2;
+    if (step === dateStep && !selectedDate) {
       toast.error("Selecione uma data");
       return;
     }
-    if (step === 3 && !selectedTime) {
+    
+    // Validação de horário (step 3 para normal, step 2 para plano)
+    const timeStep = isPlanFlow ? 2 : 3;
+    if (step === timeStep && !selectedTime) {
       toast.error("Selecione um horário");
       return;
     }
     
-    if (step === 3 && selectedDate && selectedTime) {
+    // Verificar disponibilidade antes de avançar da etapa de horário
+    if (step === timeStep && selectedDate && selectedTime) {
       setLoading(true);
       try {
         const result = await verifySlotAvailability(selectedTime);
@@ -436,28 +452,20 @@ const ClienteAgendar = () => {
       }
     }
     
+    // Remarcação: vai direto para confirmação após horário
     if (isRescheduling && step === 3) {
       setStep(5);
       return;
     }
     
-    if (step === 3 && isPlanEligible) {
-      setStep(5);
+    // Fluxo de plano: após horário (step 2), vai para confirmação (step 3)
+    if (isPlanFlow && step === 2) {
+      setStep(3);
       return;
     }
 
-    if (
-      step === 3 &&
-      !isRescheduling &&
-      activeSubscription?.servico &&
-      selectedServices.length === 1 &&
-      selectedServices[0]?.id === activeSubscription.servico.id &&
-      activeSubscription.agendamentos_usados >= activeSubscription.limite_agendamentos_mes
-    ) {
-      toast.info(`Limite do plano atingido. Este agendamento será considerado avulso.`);
-    }
-
-    if (step === 3 && !isRescheduling) {
+    // Fluxo normal: após horário (step 3), verifica créditos
+    if (!isPlanFlow && step === 3 && !isRescheduling) {
       const totalPrice = getTotalPrice();
       if (availableCredits >= totalPrice) {
         setPaymentMethod('cash');
@@ -1050,12 +1058,31 @@ const ClienteAgendar = () => {
   const canUseRedemption = availableRedemptions.length > 0 && !!getCorteService();
 
   const handleBack = () => {
-    if (activeSubscription?.servico && step === 2) {
-      navigate("/cliente");
-    } else if (step === 1) {
-      navigate("/cliente");
+    if (isPlanFlow) {
+      // Fluxo de plano: step 1 = Data, step 2 = Horário, step 3 = Confirmação
+      if (step === 1) {
+        navigate("/cliente");
+      } else {
+        setStep(step - 1);
+      }
+    } else if (isRescheduling) {
+      // Fluxo de remarcação
+      if (step === 2) {
+        navigate("/cliente");
+      } else if (step === 5) {
+        setStep(3);
+      } else {
+        setStep(step - 1);
+      }
     } else {
-      setStep(step - 1);
+      // Fluxo normal
+      if (step === 1) {
+        navigate("/cliente");
+      } else if (step === 5) {
+        setStep(4);
+      } else {
+        setStep(step - 1);
+      }
     }
   };
 
@@ -1068,16 +1095,76 @@ const ClienteAgendar = () => {
     }
   };
 
-  const totalSteps = isPlanEligible ? 4 : isRescheduling ? 4 : 5;
-  const currentDisplayStep = step > 5 ? totalSteps : 
-    isPlanEligible && step >= 5 ? step - 1 : 
-    isRescheduling && step >= 4 ? step - 1 : step;
+  // Cálculo dinâmico das bolinhas de progresso
+  // Plano: 3 etapas (Data, Horário, Confirmação)
+  // Remarcação: 3 etapas (Data, Horário, Confirmação)
+  // Normal: 5 etapas (Serviços, Data, Horário, Pagamento, Confirmação)
+  const totalSteps = isPlanFlow ? 3 : isRescheduling ? 3 : 5;
+  
+  // Mapear step interno para step visual
+  const currentDisplayStep = (() => {
+    if (isPlanFlow) {
+      // Para plano: step 1-3 mapeiam direto para bolinhas 1-3
+      return Math.min(step, 3);
+    }
+    if (isRescheduling) {
+      // Para remarcação: step 2 = 1, step 3 = 2, step 5 = 3
+      if (step === 2) return 1;
+      if (step === 3) return 2;
+      if (step === 5) return 3;
+      return step;
+    }
+    // Normal: step mapeado direto
+    return step;
+  })();
 
   const pageVariants = {
     initial: { opacity: 0, x: 20 },
     animate: { opacity: 1, x: 0 },
     exit: { opacity: 0, x: -20 }
   };
+
+  // Tela de Limite Atingido - para quando o usuário já usou todos os agendamentos do plano
+  if (subscriptionLimitReached) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center px-4">
+        <div className="max-w-md w-full text-center">
+          <div className="w-20 h-20 mx-auto mb-6 bg-destructive/10 rounded-full flex items-center justify-center">
+            <Clock className="w-10 h-10 text-destructive" />
+          </div>
+          
+          <h1 className="text-2xl font-bold text-foreground mb-3">
+            Limite Mensal Atingido
+          </h1>
+          
+          <p className="text-muted-foreground mb-6">
+            Você já utilizou todos os {activeSubscription?.limite_agendamentos_mes || 4} agendamentos 
+            do seu plano <span className="text-primary font-semibold">{activeSubscription?.plano_nome}</span> este mês.
+          </p>
+          
+          <div className="bg-card border border-border rounded-2xl p-4 mb-6">
+            <div className="flex justify-between items-center">
+              <span className="text-muted-foreground text-sm">Agendamentos usados</span>
+              <span className="text-foreground font-semibold">
+                {activeSubscription?.agendamentos_usados}/{activeSubscription?.limite_agendamentos_mes}
+              </span>
+            </div>
+          </div>
+          
+          <p className="text-sm text-muted-foreground mb-6">
+            O limite será renovado no próximo período de cobrança.
+          </p>
+          
+          <button
+            onClick={() => navigate("/cliente")}
+            className="w-full py-3.5 bg-primary text-primary-foreground font-semibold rounded-xl hover:bg-primary/90 transition-all"
+          >
+            Voltar para Início
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -1104,10 +1191,10 @@ const ClienteAgendar = () => {
 
       {/* Content */}
       <AnimatePresence mode="wait">
-        {/* Step 1: Serviços */}
-        {step === 1 && (
+        {/* Step 1: Serviços (APENAS para usuários SEM plano) */}
+        {step === 1 && !isPlanFlow && (
           <motion.div
-            key="step-1"
+            key="step-1-services"
             variants={pageVariants}
             initial="initial"
             animate="animate"
@@ -1149,10 +1236,10 @@ const ClienteAgendar = () => {
           </motion.div>
         )}
 
-        {/* Step 2: Data */}
-        {step === 2 && (
+        {/* Step 1 (Plano) ou Step 2 (Normal): Data */}
+        {((isPlanFlow && step === 1) || (!isPlanFlow && step === 2)) && (
           <motion.div
-            key="step-2"
+            key="step-date"
             variants={pageVariants}
             initial="initial"
             animate="animate"
@@ -1167,7 +1254,11 @@ const ClienteAgendar = () => {
                   Escolha a Data
                 </h2>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Selecione o dia desejado
+                  {isPlanFlow && activeSubscription ? (
+                    <>Serviço: <span className="text-primary font-medium">{activeSubscription.servico?.nome}</span></>
+                  ) : (
+                    "Selecione o dia desejado"
+                  )}
                 </p>
               </div>
 
@@ -1188,10 +1279,10 @@ const ClienteAgendar = () => {
           </motion.div>
         )}
 
-        {/* Step 3: Horário */}
-        {step === 3 && (
+        {/* Step 2 (Plano) ou Step 3 (Normal): Horário */}
+        {((isPlanFlow && step === 2) || (!isPlanFlow && step === 3)) && (
           <motion.div
-            key="step-3"
+            key="step-time"
             variants={pageVariants}
             initial="initial"
             animate="animate"
@@ -1223,7 +1314,7 @@ const ClienteAgendar = () => {
                     Agenda cheia neste dia.
                   </p>
                   <button
-                    onClick={() => setStep(2)}
+                    onClick={() => setStep(isPlanFlow ? 1 : 2)}
                     className="px-6 py-3 border border-border rounded-xl text-foreground hover:bg-secondary transition-all"
                   >
                     Escolher outra data
@@ -1275,8 +1366,8 @@ const ClienteAgendar = () => {
           </motion.div>
         )}
 
-        {/* Step 4: Pagamento */}
-        {step === 4 && !isRescheduling && (
+        {/* Step 4: Pagamento (APENAS para usuários SEM plano) */}
+        {step === 4 && !isRescheduling && !isPlanFlow && (
           <motion.div
             key="step-4"
             variants={pageVariants}
@@ -1411,8 +1502,90 @@ const ClienteAgendar = () => {
           </motion.div>
         )}
 
-        {/* Step 5: Confirmação */}
-        {step === 5 && !isRescheduling && (
+        {/* Step 3 (Plano) Confirmação - Tela limpa e profissional para usuários de plano */}
+        {isPlanFlow && step === 3 && (
+          <motion.div
+            key="step-plan-confirmation"
+            variants={pageVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            transition={{ duration: 0.3 }}
+            className="min-h-screen pt-20 pb-24 px-4"
+          >
+            <div className="max-w-2xl mx-auto">
+              {/* Título da Etapa */}
+              <div className="mb-6 pt-4">
+                <h2 className="text-xl font-semibold text-foreground">
+                  Confirmar Agendamento
+                </h2>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Revise os detalhes do seu horário
+                </p>
+              </div>
+
+              {/* Card de resumo - Layout limpo para plano */}
+              <div className="bg-card border border-border rounded-2xl p-5 space-y-4 mb-6">
+                <SummaryRow 
+                  label="Serviço"
+                  value={selectedServices.map(s => s.nome).join(", ")}
+                />
+                
+                <div className="border-t border-border" />
+                
+                <SummaryRow 
+                  label="Duração"
+                  value={`${getTotalDuration()} minutos`}
+                />
+                
+                <div className="border-t border-border" />
+                
+                <SummaryRow 
+                  label="Data"
+                  value={selectedDate ? format(selectedDate, "dd 'de' MMMM 'de' yyyy", { locale: ptBR }) : ""}
+                />
+                
+                <div className="border-t border-border" />
+                
+                <SummaryRow 
+                  label="Horário"
+                  value={selectedTime}
+                />
+              </div>
+
+              {/* Card do Plano - Destaque elegante */}
+              <div className="bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/30 rounded-2xl p-5 mb-6">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
+                    <Check className="w-5 h-5 text-primary" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-foreground">{activeSubscription?.plano_nome}</p>
+                    <p className="text-sm text-muted-foreground">Plano ativo</p>
+                  </div>
+                </div>
+                
+                <div className="flex justify-between items-center pt-3 border-t border-primary/20">
+                  <span className="text-sm text-muted-foreground">Agendamentos este mês</span>
+                  <span className="text-sm font-semibold text-foreground">
+                    {(activeSubscription?.agendamentos_usados || 0) + 1}/{activeSubscription?.limite_agendamentos_mes || 4}
+                  </span>
+                </div>
+              </div>
+
+              <button
+                onClick={handlePayment}
+                disabled={processingPayment}
+                className="w-full py-4 bg-primary text-primary-foreground text-base font-semibold rounded-xl hover:bg-primary/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]"
+              >
+                {processingPayment ? 'Agendando...' : 'Confirmar Agendamento'}
+              </button>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Step 5: Confirmação (Usuários normais SEM plano) */}
+        {step === 5 && !isRescheduling && !isPlanFlow && (
           <motion.div
             key="step-5"
             variants={pageVariants}
@@ -1459,7 +1632,6 @@ const ClienteAgendar = () => {
                 <SummaryRow 
                   label="Forma de Pagamento"
                   value={
-                    isPlanEligible ? `Plano (${activeSubscription?.plano_nome})` :
                     useRedemption && getTotalPrice() === 0 ? "Resgate de Fidelidade" :
                     availableCredits >= getTotalPrice() ? "Créditos do App" :
                     paymentMethod === 'pix' ? "PIX" :
@@ -1479,7 +1651,7 @@ const ClienteAgendar = () => {
               </div>
 
               {/* Card Dados do Cartão */}
-              {paymentMethod === 'card' && !isPlanEligible && availableCredits < getTotalPrice() && (
+              {paymentMethod === 'card' && availableCredits < getTotalPrice() && (
                 <div className="bg-card border border-border rounded-2xl p-5 mb-6 space-y-4">
                   <h3 className="text-base font-semibold text-foreground mb-3">Dados do Cartão</h3>
                   
@@ -1534,15 +1706,7 @@ const ClienteAgendar = () => {
               )}
 
               {/* Avisos contextuais */}
-              {isPlanEligible && (
-                <div className="bg-success/10 border border-success/20 rounded-xl p-4 mb-6">
-                  <p className="text-sm text-success text-center">
-                    Agendamento via PLANO. Sem pagamento adicional.
-                  </p>
-                </div>
-              )}
-
-              {!isPlanEligible && paymentMethod === 'pix' && availableCredits < getTotalPrice() && (
+              {paymentMethod === 'pix' && availableCredits < getTotalPrice() && (
                 <div className="bg-gold/10 border border-gold/20 rounded-xl p-4 mb-6">
                   <p className="text-sm text-gold text-center">
                     Ao confirmar, o QR Code PIX será gerado
@@ -1556,7 +1720,6 @@ const ClienteAgendar = () => {
                 className="w-full py-4 bg-primary text-primary-foreground text-base font-semibold rounded-xl hover:bg-primary/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]"
               >
                 {processingPayment ? 'Processando...' : 
-                  isPlanEligible ? 'Finalizar (usando PLANO)' :
                   availableCredits >= getTotalPrice() ? 'Confirmar (usando créditos)' :
                   paymentMethod === 'pix' ? 'Gerar QR Code PIX' :
                   'Confirmar Agendamento'
