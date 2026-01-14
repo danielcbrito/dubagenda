@@ -114,13 +114,14 @@ export function TIClientes() {
       if (pontosError) console.error("Error fetching pontos:", pontosError);
       console.log("Pontos loaded:", pontos?.length);
 
-      // Buscar todos os agendamentos (sem limite)
+      // Buscar apenas agendamentos CONCLUÍDOS (para contar cortes realizados)
       const { data: appointments, error: appointmentsError } = await supabase
         .from("agendamentos")
-        .select("user_id, id");
+        .select("user_id, id")
+        .eq("status", "completed");
       
       if (appointmentsError) console.error("Error fetching appointments:", appointmentsError);
-      console.log("Appointments loaded:", appointments?.length);
+      console.log("Completed appointments loaded:", appointments?.length);
 
       // Buscar créditos disponíveis
       const { data: creditos, error: creditosError } = await supabase
