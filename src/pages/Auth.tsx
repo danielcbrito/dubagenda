@@ -5,19 +5,13 @@ import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { z } from "zod";
-import logoDub from "@/assets/logo-dub.png";
-import { Loader2, Eye, EyeOff, User, Mail, Phone, Lock, CreditCard } from "lucide-react";
-import { validateCPF, formatCPF, formatPhone, validatePhone } from "@/lib/validators";
+import { Loader2, Eye, EyeOff, User, Mail, Phone, Lock } from "lucide-react";
+import { formatPhone, validatePhone } from "@/lib/validators";
 import { SupportChatBubble } from "@/components/support/SupportChatBubble";
 
 const signupSchema = z.object({
   nome: z.string().trim().min(2, "Nome deve ter pelo menos 2 caracteres").max(100),
   email: z.string().trim().email("Email inválido").max(255),
-  cpf: z.string()
-    .trim()
-    .transform(val => val.replace(/\D/g, ''))
-    .refine(val => val.length === 11, "CPF deve ter 11 dígitos")
-    .refine(validateCPF, "CPF inválido. Verifique e tente novamente."),
   telefone: z.string()
     .trim()
     .transform(val => val.replace(/\D/g, ''))
@@ -40,11 +34,9 @@ const Auth = () => {
   const [formData, setFormData] = useState({
     nome: "",
     email: "",
-    cpf: "",
     telefone: "",
     senha: "",
   });
-  const [cpfError, setCpfError] = useState("");
   const [telefoneError, setTelefoneError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
 
@@ -88,19 +80,7 @@ const Auth = () => {
     const { name, value } = e.target;
     let formattedValue = value;
 
-    if (name === "cpf") {
-      formattedValue = formatCPF(value);
-      const cleanCPF = value.replace(/\D/g, '');
-      if (cleanCPF.length === 11) {
-        if (!validateCPF(cleanCPF)) {
-          setCpfError("CPF inválido. Verifique e tente novamente.");
-        } else {
-          setCpfError("");
-        }
-      } else {
-        setCpfError("");
-      }
-    } else if (name === "telefone") {
+    if (name === "telefone") {
       formattedValue = formatPhone(value);
       const cleanPhone = value.replace(/\D/g, '');
       if (cleanPhone.length >= 10) {
@@ -120,7 +100,7 @@ const Auth = () => {
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (cpfError || telefoneError) {
+    if (telefoneError) {
       toast.error("Corrija os erros antes de continuar");
       return;
     }
@@ -136,7 +116,6 @@ const Auth = () => {
         options: {
           data: {
             nome: validated.nome,
-            cpf: validated.cpf,
             telefone: validated.telefone,
           },
         },
@@ -168,7 +147,6 @@ const Auth = () => {
               phone: validated.telefone,
               user_name: validated.nome,
               user_email: validated.email,
-              user_cpf: validated.cpf,
             }
           });
 
@@ -251,241 +229,178 @@ const Auth = () => {
       {/* Background Effects */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div 
-          className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[600px] rounded-full opacity-20"
+          className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[400px] rounded-full opacity-15"
           style={{
             background: 'radial-gradient(ellipse at center, hsl(var(--primary) / 0.3) 0%, transparent 70%)',
             filter: 'blur(80px)',
           }}
         />
-        <div 
-          className="absolute bottom-0 left-0 w-[400px] h-[400px] rounded-full opacity-10"
-          style={{
-            background: 'radial-gradient(circle at center, hsl(var(--primary) / 0.4) 0%, transparent 70%)',
-            filter: 'blur(60px)',
-          }}
-        />
       </div>
 
-      {/* Main Content - Scrollable */}
-      <div className="flex-1 flex items-center justify-center px-5 py-8 sm:py-12 overflow-y-auto">
-        <div className="w-full max-w-[400px] relative z-10">
+      {/* Main Content */}
+      <div className="flex-1 flex items-center justify-center px-4 py-6 overflow-y-auto">
+        <div className="w-full max-w-[380px] relative z-10">
           
-          {/* Logo */}
-          <div className="flex justify-center mb-8">
-            <div className="relative">
-              <div 
-                className="absolute inset-0 rounded-full opacity-60"
-                style={{
-                  background: 'radial-gradient(circle, hsl(var(--primary) / 0.4) 0%, transparent 70%)',
-                  filter: 'blur(20px)',
-                  transform: 'scale(1.5)',
-                }}
-              />
-              <img 
-                src={logoDub} 
-                alt="DUB" 
-                className="relative w-16 h-16 sm:w-20 sm:h-20 object-contain"
-              />
-            </div>
-          </div>
-
           {/* Card */}
-          <div className="relative">
-            {/* Card Border Glow */}
-            <div 
-              className="absolute -inset-px rounded-2xl opacity-50"
-              style={{
-                background: 'linear-gradient(180deg, hsl(var(--primary) / 0.3) 0%, transparent 50%)',
-              }}
-            />
-            
-            {/* Card Content */}
-            <div 
-              className="relative rounded-2xl p-6 sm:p-8 border border-white/[0.08]"
-              style={{
-                background: 'linear-gradient(180deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.02) 100%)',
-                backdropFilter: 'blur(20px)',
-              }}
-            >
-              {/* Top Highlight */}
-              <div className="absolute top-0 left-8 right-8 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+          <div 
+            className="rounded-2xl p-5 sm:p-6 border border-white/[0.08]"
+            style={{
+              background: 'linear-gradient(180deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)',
+              backdropFilter: 'blur(20px)',
+            }}
+          >
+            {/* Title */}
+            <div className="text-center mb-6">
+              <h1 className="text-xl sm:text-2xl font-semibold text-white tracking-tight">
+                {isSignup ? "Criar conta" : "Entrar"}
+              </h1>
+              <p className="mt-1.5 text-sm text-white/50">
+                {isSignup 
+                  ? "Preencha seus dados" 
+                  : "Entre com suas credenciais"}
+              </p>
+            </div>
 
-              {/* Title */}
-              <div className="text-center mb-8">
-                <h1 className="text-2xl sm:text-[28px] font-semibold text-white tracking-tight">
-                  {isSignup ? "Criar conta" : "Bem-vindo de volta"}
-                </h1>
-                <p className="mt-2 text-sm text-white/50">
-                  {isSignup 
-                    ? "Preencha seus dados para começar" 
-                    : "Entre com suas credenciais"}
-                </p>
-              </div>
-
-              {/* Form */}
-              <form onSubmit={isSignup ? handleSignup : handleLogin} className="space-y-4">
-                
-                {isSignup && (
-                  <>
-                    {/* Nome */}
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-white/80 block">
-                        Nome completo
-                      </label>
-                      <div className="relative">
-                        <User className="absolute left-4 top-1/2 -translate-y-1/2 w-[18px] h-[18px] text-white/30" />
-                        <Input
-                          name="nome"
-                          type="text"
-                          required
-                          value={formData.nome}
-                          onChange={handleInputChange}
-                          className="h-12 pl-11 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/30 rounded-xl focus:border-primary/50 focus:ring-1 focus:ring-primary/20 transition-all"
-                          placeholder="Seu nome"
-                        />
-                      </div>
-                    </div>
-
-                    {/* CPF */}
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-white/80 block">
-                        CPF
-                      </label>
-                      <div className="relative">
-                        <CreditCard className="absolute left-4 top-1/2 -translate-y-1/2 w-[18px] h-[18px] text-white/30" />
-                        <Input
-                          name="cpf"
-                          type="text"
-                          required
-                          maxLength={14}
-                          value={formData.cpf}
-                          onChange={handleInputChange}
-                          className={`h-12 pl-11 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/30 rounded-xl focus:border-primary/50 focus:ring-1 focus:ring-primary/20 transition-all ${cpfError ? 'border-destructive/50 focus:border-destructive/50' : ''}`}
-                          placeholder="000.000.000-00"
-                        />
-                      </div>
-                      {cpfError && (
-                        <p className="text-xs text-destructive pl-1">{cpfError}</p>
-                      )}
-                    </div>
-
-                    {/* Telefone */}
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-white/80 block">
-                        WhatsApp
-                      </label>
-                      <div className="relative">
-                        <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-[18px] h-[18px] text-white/30" />
-                        <Input
-                          name="telefone"
-                          type="text"
-                          required
-                          maxLength={15}
-                          value={formData.telefone}
-                          onChange={handleInputChange}
-                          className={`h-12 pl-11 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/30 rounded-xl focus:border-primary/50 focus:ring-1 focus:ring-primary/20 transition-all ${telefoneError ? 'border-destructive/50 focus:border-destructive/50' : ''}`}
-                          placeholder="(00) 00000-0000"
-                        />
-                      </div>
-                      {telefoneError && (
-                        <p className="text-xs text-destructive pl-1">{telefoneError}</p>
-                      )}
-                    </div>
-                  </>
-                )}
-
-                {/* Email */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-white/80 block">
-                    Email
-                  </label>
-                  <div className="relative">
-                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-[18px] h-[18px] text-white/30" />
-                    <Input
-                      name="email"
-                      type="email"
-                      required
-                      value={formData.email}
-                      onChange={handleInputChange}
-                      className="h-12 pl-11 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/30 rounded-xl focus:border-primary/50 focus:ring-1 focus:ring-primary/20 transition-all"
-                      placeholder="seu@email.com"
-                    />
-                  </div>
-                </div>
-
-                {/* Senha */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <label className="text-sm font-medium text-white/80">
-                      Senha
+            {/* Form */}
+            <form onSubmit={isSignup ? handleSignup : handleLogin} className="space-y-3">
+              
+              {isSignup && (
+                <>
+                  {/* Nome */}
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-white/70 block">
+                      Nome completo
                     </label>
-                    {!isSignup && (
-                      <button
-                        type="button"
-                        onClick={() => navigate("/esqueci-senha")}
-                        className="text-xs text-primary/80 hover:text-primary transition-colors"
-                      >
-                        Esqueceu a senha?
-                      </button>
+                    <div className="relative">
+                      <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
+                      <Input
+                        name="nome"
+                        type="text"
+                        required
+                        value={formData.nome}
+                        onChange={handleInputChange}
+                        className="h-11 pl-10 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/30 rounded-lg focus:border-primary/50 focus:ring-1 focus:ring-primary/20 transition-all text-sm"
+                        placeholder="Seu nome"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Telefone */}
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-white/70 block">
+                      WhatsApp
+                    </label>
+                    <div className="relative">
+                      <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
+                      <Input
+                        name="telefone"
+                        type="text"
+                        required
+                        maxLength={15}
+                        value={formData.telefone}
+                        onChange={handleInputChange}
+                        className={`h-11 pl-10 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/30 rounded-lg focus:border-primary/50 focus:ring-1 focus:ring-primary/20 transition-all text-sm ${telefoneError ? 'border-destructive/50 focus:border-destructive/50' : ''}`}
+                        placeholder="(00) 00000-0000"
+                      />
+                    </div>
+                    {telefoneError && (
+                      <p className="text-xs text-destructive pl-1">{telefoneError}</p>
                     )}
                   </div>
-                  <div className="relative">
-                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-[18px] h-[18px] text-white/30" />
-                    <Input
-                      name="senha"
-                      type={showPassword ? "text" : "password"}
-                      required
-                      value={formData.senha}
-                      onChange={handleInputChange}
-                      className="h-12 pl-11 pr-11 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/30 rounded-xl focus:border-primary/50 focus:ring-1 focus:ring-primary/20 transition-all"
-                      placeholder={isSignup ? "Mínimo 6 caracteres" : "Sua senha"}
-                    />
+                </>
+              )}
+
+              {/* Email */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-white/70 block">
+                  Email
+                </label>
+                <div className="relative">
+                  <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
+                  <Input
+                    name="email"
+                    type="email"
+                    required
+                    value={formData.email}
+                    onChange={handleInputChange}
+                    className="h-11 pl-10 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/30 rounded-lg focus:border-primary/50 focus:ring-1 focus:ring-primary/20 transition-all text-sm"
+                    placeholder="seu@email.com"
+                  />
+                </div>
+              </div>
+
+              {/* Senha */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-medium text-white/70">
+                    Senha
+                  </label>
+                  {!isSignup && (
                     <button
                       type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-4 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 transition-colors"
+                      onClick={() => navigate("/esqueci-senha")}
+                      className="text-xs text-primary/80 hover:text-primary transition-colors"
                     >
-                      {showPassword ? (
-                        <EyeOff className="w-[18px] h-[18px]" />
-                      ) : (
-                        <Eye className="w-[18px] h-[18px]" />
-                      )}
+                      Esqueci a senha
                     </button>
-                  </div>
-                </div>
-
-                {/* Submit Button */}
-                <Button 
-                  type="submit" 
-                  className="w-full h-12 mt-6 bg-primary hover:bg-primary/90 text-white font-semibold rounded-xl transition-all duration-200 shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 disabled:opacity-50"
-                  disabled={isLoading || cooldownTimer > 0 || (isSignup && (!!cpfError || !!telefoneError))}
-                >
-                  {isLoading ? (
-                    <span className="flex items-center gap-2">
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      {isSignup ? "Criando conta..." : "Entrando..."}
-                    </span>
-                  ) : cooldownTimer > 0 ? (
-                    `Aguarde ${cooldownTimer}s`
-                  ) : (
-                    isSignup ? "Criar conta" : "Entrar"
                   )}
-                </Button>
-              </form>
-
-              {/* Toggle Mode */}
-              <div className="mt-6 pt-6 border-t border-white/[0.06] text-center">
-                <p className="text-sm text-white/40">
-                  {isSignup ? "Já tem uma conta?" : "Não tem conta?"}
+                </div>
+                <div className="relative">
+                  <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
+                  <Input
+                    name="senha"
+                    type={showPassword ? "text" : "password"}
+                    required
+                    value={formData.senha}
+                    onChange={handleInputChange}
+                    className="h-11 pl-10 pr-10 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/30 rounded-lg focus:border-primary/50 focus:ring-1 focus:ring-primary/20 transition-all text-sm"
+                    placeholder={isSignup ? "Mínimo 6 caracteres" : "Sua senha"}
+                  />
                   <button
                     type="button"
-                    onClick={() => navigate(`/auth?mode=${isSignup ? "login" : "signup"}`)}
-                    className="ml-1.5 text-primary hover:text-primary/80 font-medium transition-colors"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 transition-colors"
                   >
-                    {isSignup ? "Fazer login" : "Criar agora"}
+                    {showPassword ? (
+                      <EyeOff className="w-4 h-4" />
+                    ) : (
+                      <Eye className="w-4 h-4" />
+                    )}
                   </button>
-                </p>
+                </div>
               </div>
+
+              {/* Submit Button */}
+              <Button 
+                type="submit" 
+                className="w-full h-11 mt-4 bg-primary hover:bg-primary/90 text-white font-semibold rounded-lg transition-all duration-200 disabled:opacity-50"
+                disabled={isLoading || cooldownTimer > 0 || (isSignup && !!telefoneError)}
+              >
+                {isLoading ? (
+                  <span className="flex items-center gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    {isSignup ? "Criando..." : "Entrando..."}
+                  </span>
+                ) : cooldownTimer > 0 ? (
+                  `Aguarde ${cooldownTimer}s`
+                ) : (
+                  isSignup ? "Criar conta" : "Entrar"
+                )}
+              </Button>
+            </form>
+
+            {/* Toggle Mode */}
+            <div className="mt-5 pt-5 border-t border-white/[0.06] text-center">
+              <p className="text-sm text-white/40">
+                {isSignup ? "Já tem conta?" : "Não tem conta?"}
+                <button
+                  type="button"
+                  onClick={() => navigate(`/auth?mode=${isSignup ? "login" : "signup"}`)}
+                  className="ml-1.5 text-primary hover:text-primary/80 font-medium transition-colors"
+                >
+                  {isSignup ? "Entrar" : "Criar agora"}
+                </button>
+              </p>
             </div>
           </div>
 
