@@ -198,29 +198,41 @@ const Cliente = () => {
     
     setPayments(paymentsData || []);
 
-    const { count } = await supabase
+    // Contar cortes CONCLUÍDOS e PAGOS (não grátis) para calcular pontos reais
+    const { count: paidCompletedCount } = await supabase
+      .from("agendamentos")
+      .select("*", { count: 'exact', head: true })
+      .eq("user_id", userId)
+      .eq("status", "completed")
+      .eq("is_free", false);
+
+    const paidCompleted = paidCompletedCount || 0;
+    
+    // Contar total de cortes concluídos (incluindo grátis) para estatísticas
+    const { count: totalCompletedCount } = await supabase
       .from("agendamentos")
       .select("*", { count: 'exact', head: true })
       .eq("user_id", userId)
       .eq("status", "completed");
 
-    setCompletedAppointments(count || 0);
+    setCompletedAppointments(totalCompletedCount || 0);
 
-    const { data: pointsData } = await supabase
-      .from("pontos")
-      .select("pontos")
-      .eq("user_id", userId)
-      .maybeSingle();
-
-    setPoints(pointsData?.pontos || 0);
-
-    const { data: redemptionsData } = await supabase
+    // Buscar total de resgates (usados + disponíveis) para calcular ciclos completos
+    const { data: allRedemptions } = await supabase
       .from("resgates")
-      .select("id")
-      .eq("user_id", userId)
-      .eq("status", "available");
+      .select("id, status")
+      .eq("user_id", userId);
 
-    setRedemptions(redemptionsData?.length || 0);
+    const totalRedemptions = allRedemptions?.length || 0;
+    const availableRedemptions = allRedemptions?.filter(r => r.status === 'available').length || 0;
+
+    // Calcular pontos no ciclo atual baseado em cortes pagos
+    // Fórmula: pontos = cortes_pagos - (resgates_totais * 5)
+    // Se der negativo (dados inconsistentes), usar 0
+    const calculatedPoints = Math.max(0, paidCompleted - (totalRedemptions * 5));
+    
+    setPoints(calculatedPoints);
+    setRedemptions(availableRedemptions);
 
     const { data: pendingBookingsData } = await supabase
       .from("pending_bookings")
