@@ -2,12 +2,11 @@ import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { z } from "zod";
 import logoDub from "@/assets/logo-dub.png";
-import { Loader2, Eye, EyeOff } from "lucide-react";
+import { Loader2, Eye, EyeOff, User, Mail, Phone, Lock, CreditCard } from "lucide-react";
 import { validateCPF, formatCPF, formatPhone, validatePhone } from "@/lib/validators";
 import { SupportChatBubble } from "@/components/support/SupportChatBubble";
 
@@ -50,10 +49,9 @@ const Auth = () => {
   const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
-    // Check if coming back from email verification
     const verified = searchParams.get("verified");
-    if (verified === "true") {
-      toast.success("E-mail confirmado. Faça login para continuar.", {
+    if (verified === "true" || verified === "whatsapp") {
+      toast.success("Conta confirmada com sucesso! Faça login para continuar.", {
         duration: 5000,
       });
     }
@@ -90,7 +88,6 @@ const Auth = () => {
     const { name, value } = e.target;
     let formattedValue = value;
 
-    // Apply masks
     if (name === "cpf") {
       formattedValue = formatCPF(value);
       const cleanCPF = value.replace(/\D/g, '');
@@ -123,7 +120,6 @@ const Auth = () => {
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validate before submitting
     if (cpfError || telefoneError) {
       toast.error("Corrija os erros antes de continuar");
       return;
@@ -134,8 +130,6 @@ const Auth = () => {
     try {
       const validated = signupSchema.parse(formData);
 
-      // IMPORTANTE: Não definimos emailRedirectTo aqui para evitar envio automático de email
-      // O email só será enviado quando o usuário escolher essa opção na tela de escolha
       const { data, error } = await supabase.auth.signUp({
         email: validated.email,
         password: validated.senha,
@@ -145,7 +139,6 @@ const Auth = () => {
             cpf: validated.cpf,
             telefone: validated.telefone,
           },
-          // Removido emailRedirectTo para não enviar email automaticamente
         },
       });
 
@@ -166,17 +159,33 @@ const Auth = () => {
       }
 
       if (data.user) {
-        // Redirecionar para tela de escolha de verificação (Email ou WhatsApp)
-        const params = new URLSearchParams({
-          user_id: data.user.id,
-          phone: validated.telefone,
-          email: validated.email,
-          nome: validated.nome,
-          cpf: validated.cpf,
-        });
-        
-        navigate(`/escolher-verificacao?${params.toString()}`);
-        toast.success("Cadastro realizado! Agora escolha como confirmar.");
+        // Redirecionar diretamente para verificação via WhatsApp
+        try {
+          const { data: whatsappData, error: whatsappError } = await supabase.functions.invoke('whatsapp-verification', {
+            body: {
+              action: 'generate',
+              user_id: data.user.id,
+              phone: validated.telefone,
+              user_name: validated.nome,
+              user_email: validated.email,
+              user_cpf: validated.cpf,
+            }
+          });
+
+          if (whatsappError) throw whatsappError;
+
+          if (whatsappData?.success) {
+            toast.success("Código enviado para seu WhatsApp!");
+            navigate(`/verificar-whatsapp?user_id=${data.user.id}&phone=${encodeURIComponent(validated.telefone)}`);
+          } else {
+            toast.error("Erro ao enviar código. Tente novamente.");
+            navigate(`/verificar-whatsapp?user_id=${data.user.id}&phone=${encodeURIComponent(validated.telefone)}`);
+          }
+        } catch (whatsappErr) {
+          console.error("Erro ao gerar código WhatsApp:", whatsappErr);
+          toast.info("Cadastro realizado! Confirme via WhatsApp.");
+          navigate(`/verificar-whatsapp?user_id=${data.user.id}&phone=${encodeURIComponent(validated.telefone)}`);
+        }
       }
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -208,8 +217,7 @@ const Auth = () => {
         if (error.message.includes("Invalid login")) {
           toast.error("Email ou senha incorretos");
         } else if (error.message.includes("Email not confirmed")) {
-          toast.error("Por favor, confirme seu email antes de fazer login");
-          navigate(`/verificar-email?email=${encodeURIComponent(validated.email)}`);
+          toast.error("Por favor, confirme seu cadastro antes de fazer login");
         } else {
           toast.error("Erro ao fazer login: " + error.message);
         }
@@ -217,10 +225,8 @@ const Auth = () => {
       }
 
       if (data.user) {
-        // Check if email is confirmed
         if (!data.user.email_confirmed_at) {
-          toast.error("Por favor, confirme seu email antes de fazer login");
-          navigate(`/verificar-email?email=${encodeURIComponent(validated.email)}`);
+          toast.error("Por favor, confirme seu cadastro antes de fazer login");
           return;
         }
         
@@ -238,201 +244,265 @@ const Auth = () => {
     }
   };
 
+  const isSignup = mode === "signup";
+
   return (
-    <div className="min-h-screen relative flex items-center justify-center overflow-hidden px-4" style={{ background: '#000000' }}>
-      {/* Ambient background lights - Premium glow effect */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/5 rounded-full blur-[120px] animate-pulse" style={{ animationDuration: '4s' }} />
-        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-primary/5 rounded-full blur-[120px] animate-pulse" style={{ animationDuration: '6s', animationDelay: '2s' }} />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/3 rounded-full blur-[150px]" />
+    <div className="min-h-screen min-h-[100dvh] flex flex-col bg-black">
+      {/* Background Effects */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div 
+          className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[600px] rounded-full opacity-20"
+          style={{
+            background: 'radial-gradient(ellipse at center, hsl(var(--primary) / 0.3) 0%, transparent 70%)',
+            filter: 'blur(80px)',
+          }}
+        />
+        <div 
+          className="absolute bottom-0 left-0 w-[400px] h-[400px] rounded-full opacity-10"
+          style={{
+            background: 'radial-gradient(circle at center, hsl(var(--primary) / 0.4) 0%, transparent 70%)',
+            filter: 'blur(60px)',
+          }}
+        />
       </div>
 
-      {/* Content wrapper - Centered */}
-      <div className="relative z-10 w-full max-w-[480px] animate-fade-in">
-        
-        {/* Logo at top - Floating */}
-        <div className="flex justify-center mb-12 animate-scale-in">
-          <div className="relative">
-            <div className="absolute inset-0 bg-primary/20 blur-xl rounded-full" />
-            <img 
-              src={logoDub} 
-              alt="DUB" 
-              className="relative w-16 h-16 object-contain drop-shadow-2xl"
-            />
-          </div>
-        </div>
-
-        {/* Luxury Glass Card - Mirror effect */}
-        <div className="relative group">
-          {/* Outer glow */}
-          <div className="absolute -inset-[1px] bg-gradient-to-b from-primary/20 via-primary/5 to-transparent rounded-2xl blur-sm opacity-60 group-hover:opacity-100 transition-opacity duration-500" />
+      {/* Main Content - Scrollable */}
+      <div className="flex-1 flex items-center justify-center px-5 py-8 sm:py-12 overflow-y-auto">
+        <div className="w-full max-w-[400px] relative z-10">
           
-          {/* Main card with glassmorphism */}
-          <div 
-            className="relative bg-gradient-to-b from-white/[0.07] to-white/[0.02] rounded-2xl p-10 border border-white/10 shadow-2xl overflow-hidden"
-            style={{
-              backdropFilter: 'blur(20px) saturate(180%)',
-              WebkitBackdropFilter: 'blur(20px) saturate(180%)',
-            }}
-          >
-            {/* Top reflection line */}
-            <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/30 to-transparent" />
+          {/* Logo */}
+          <div className="flex justify-center mb-8">
+            <div className="relative">
+              <div 
+                className="absolute inset-0 rounded-full opacity-60"
+                style={{
+                  background: 'radial-gradient(circle, hsl(var(--primary) / 0.4) 0%, transparent 70%)',
+                  filter: 'blur(20px)',
+                  transform: 'scale(1.5)',
+                }}
+              />
+              <img 
+                src={logoDub} 
+                alt="DUB" 
+                className="relative w-16 h-16 sm:w-20 sm:h-20 object-contain"
+              />
+            </div>
+          </div>
+
+          {/* Card */}
+          <div className="relative">
+            {/* Card Border Glow */}
+            <div 
+              className="absolute -inset-px rounded-2xl opacity-50"
+              style={{
+                background: 'linear-gradient(180deg, hsl(var(--primary) / 0.3) 0%, transparent 50%)',
+              }}
+            />
             
-            {/* Title */}
-            <h2 className="text-2xl font-semibold text-white tracking-tight text-center mb-8" style={{ textShadow: '0 2px 10px rgba(0,0,0,0.3)' }}>
-              {mode === "signup" ? "Criar Conta" : "Acesso ao Sistema"}
-            </h2>
+            {/* Card Content */}
+            <div 
+              className="relative rounded-2xl p-6 sm:p-8 border border-white/[0.08]"
+              style={{
+                background: 'linear-gradient(180deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.02) 100%)',
+                backdropFilter: 'blur(20px)',
+              }}
+            >
+              {/* Top Highlight */}
+              <div className="absolute top-0 left-8 right-8 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
 
-            {/* Form */}
-            <form onSubmit={mode === "signup" ? handleSignup : handleLogin} className="space-y-5">
-              {mode === "signup" && (
-                <>
-                  <div>
-                    <Label htmlFor="nome" className="text-sm font-medium text-white/90 mb-2 block">Nome completo</Label>
-                    <Input
-                      id="nome"
-                      name="nome"
-                      type="text"
-                      required
-                      value={formData.nome}
-                      onChange={handleInputChange}
-                      className="h-12 bg-white/5 border-white/10 text-white placeholder:text-white/40 focus:border-primary/50 focus:ring-primary/20 rounded-xl transition-all"
-                      placeholder="Seu nome"
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="cpf" className="text-sm font-medium text-white/90 mb-2 block">CPF</Label>
-                    <Input
-                      id="cpf"
-                      name="cpf"
-                      type="text"
-                      required
-                      maxLength={14}
-                      value={formData.cpf}
-                      onChange={handleInputChange}
-                      className={`h-12 bg-white/5 border-white/10 text-white placeholder:text-white/40 focus:border-primary/50 focus:ring-primary/20 rounded-xl transition-all ${cpfError ? 'border-destructive' : ''}`}
-                      placeholder="000.000.000-00"
-                    />
-                    {cpfError && (
-                      <p className="text-xs text-destructive mt-2">{cpfError}</p>
-                    )}
-                  </div>
-
-                  <div>
-                    <Label htmlFor="telefone" className="text-sm font-medium text-white/90 mb-2 block">Telefone</Label>
-                    <Input
-                      id="telefone"
-                      name="telefone"
-                      type="text"
-                      required
-                      maxLength={15}
-                      value={formData.telefone}
-                      onChange={handleInputChange}
-                      className={`h-12 bg-white/5 border-white/10 text-white placeholder:text-white/40 focus:border-primary/50 focus:ring-primary/20 rounded-xl transition-all ${telefoneError ? 'border-destructive' : ''}`}
-                      placeholder="(99) 99999-9999"
-                    />
-                    {telefoneError && (
-                      <p className="text-xs text-destructive mt-2">{telefoneError}</p>
-                    )}
-                  </div>
-                </>
-              )}
-
-              <div>
-                <Label htmlFor="email" className="text-sm font-medium text-white/90 mb-2 block">Email</Label>
-                <Input
-                  id="email"
-                  name="email"
-                  type="email"
-                  required
-                  value={formData.email}
-                  onChange={handleInputChange}
-                  className="h-12 bg-white/5 border-white/10 text-white placeholder:text-white/40 focus:border-primary/50 focus:ring-primary/20 rounded-xl transition-all"
-                  placeholder="seu@email.com"
-                />
+              {/* Title */}
+              <div className="text-center mb-8">
+                <h1 className="text-2xl sm:text-[28px] font-semibold text-white tracking-tight">
+                  {isSignup ? "Criar conta" : "Bem-vindo de volta"}
+                </h1>
+                <p className="mt-2 text-sm text-white/50">
+                  {isSignup 
+                    ? "Preencha seus dados para começar" 
+                    : "Entre com suas credenciais"}
+                </p>
               </div>
 
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <Label htmlFor="senha" className="text-sm font-medium text-white/90">Senha</Label>
-                  {mode === "login" && (
+              {/* Form */}
+              <form onSubmit={isSignup ? handleSignup : handleLogin} className="space-y-4">
+                
+                {isSignup && (
+                  <>
+                    {/* Nome */}
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-white/80 block">
+                        Nome completo
+                      </label>
+                      <div className="relative">
+                        <User className="absolute left-4 top-1/2 -translate-y-1/2 w-[18px] h-[18px] text-white/30" />
+                        <Input
+                          name="nome"
+                          type="text"
+                          required
+                          value={formData.nome}
+                          onChange={handleInputChange}
+                          className="h-12 pl-11 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/30 rounded-xl focus:border-primary/50 focus:ring-1 focus:ring-primary/20 transition-all"
+                          placeholder="Seu nome"
+                        />
+                      </div>
+                    </div>
+
+                    {/* CPF */}
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-white/80 block">
+                        CPF
+                      </label>
+                      <div className="relative">
+                        <CreditCard className="absolute left-4 top-1/2 -translate-y-1/2 w-[18px] h-[18px] text-white/30" />
+                        <Input
+                          name="cpf"
+                          type="text"
+                          required
+                          maxLength={14}
+                          value={formData.cpf}
+                          onChange={handleInputChange}
+                          className={`h-12 pl-11 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/30 rounded-xl focus:border-primary/50 focus:ring-1 focus:ring-primary/20 transition-all ${cpfError ? 'border-destructive/50 focus:border-destructive/50' : ''}`}
+                          placeholder="000.000.000-00"
+                        />
+                      </div>
+                      {cpfError && (
+                        <p className="text-xs text-destructive pl-1">{cpfError}</p>
+                      )}
+                    </div>
+
+                    {/* Telefone */}
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-white/80 block">
+                        WhatsApp
+                      </label>
+                      <div className="relative">
+                        <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-[18px] h-[18px] text-white/30" />
+                        <Input
+                          name="telefone"
+                          type="text"
+                          required
+                          maxLength={15}
+                          value={formData.telefone}
+                          onChange={handleInputChange}
+                          className={`h-12 pl-11 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/30 rounded-xl focus:border-primary/50 focus:ring-1 focus:ring-primary/20 transition-all ${telefoneError ? 'border-destructive/50 focus:border-destructive/50' : ''}`}
+                          placeholder="(00) 00000-0000"
+                        />
+                      </div>
+                      {telefoneError && (
+                        <p className="text-xs text-destructive pl-1">{telefoneError}</p>
+                      )}
+                    </div>
+                  </>
+                )}
+
+                {/* Email */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-white/80 block">
+                    Email
+                  </label>
+                  <div className="relative">
+                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-[18px] h-[18px] text-white/30" />
+                    <Input
+                      name="email"
+                      type="email"
+                      required
+                      value={formData.email}
+                      onChange={handleInputChange}
+                      className="h-12 pl-11 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/30 rounded-xl focus:border-primary/50 focus:ring-1 focus:ring-primary/20 transition-all"
+                      placeholder="seu@email.com"
+                    />
+                  </div>
+                </div>
+
+                {/* Senha */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm font-medium text-white/80">
+                      Senha
+                    </label>
+                    {!isSignup && (
+                      <button
+                        type="button"
+                        onClick={() => navigate("/esqueci-senha")}
+                        className="text-xs text-primary/80 hover:text-primary transition-colors"
+                      >
+                        Esqueceu a senha?
+                      </button>
+                    )}
+                  </div>
+                  <div className="relative">
+                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-[18px] h-[18px] text-white/30" />
+                    <Input
+                      name="senha"
+                      type={showPassword ? "text" : "password"}
+                      required
+                      value={formData.senha}
+                      onChange={handleInputChange}
+                      className="h-12 pl-11 pr-11 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/30 rounded-xl focus:border-primary/50 focus:ring-1 focus:ring-primary/20 transition-all"
+                      placeholder={isSignup ? "Mínimo 6 caracteres" : "Sua senha"}
+                    />
                     <button
                       type="button"
-                      onClick={() => navigate("/esqueci-senha")}
-                      className="text-xs text-primary hover:text-primary/80 transition-colors"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 transition-colors"
                     >
-                      Esqueci minha senha
+                      {showPassword ? (
+                        <EyeOff className="w-[18px] h-[18px]" />
+                      ) : (
+                        <Eye className="w-[18px] h-[18px]" />
+                      )}
                     </button>
-                  )}
+                  </div>
                 </div>
-                <div className="relative">
-                  <Input
-                    id="senha"
-                    name="senha"
-                    type={showPassword ? "text" : "password"}
-                    required
-                    value={formData.senha}
-                    onChange={handleInputChange}
-                    className="h-12 bg-white/5 border-white/10 text-white placeholder:text-white/40 focus:border-primary/50 focus:ring-primary/20 rounded-xl transition-all pr-12"
-                    placeholder="Mínimo 6 caracteres"
-                  />
+
+                {/* Submit Button */}
+                <Button 
+                  type="submit" 
+                  className="w-full h-12 mt-6 bg-primary hover:bg-primary/90 text-white font-semibold rounded-xl transition-all duration-200 shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 disabled:opacity-50"
+                  disabled={isLoading || cooldownTimer > 0 || (isSignup && (!!cpfError || !!telefoneError))}
+                >
+                  {isLoading ? (
+                    <span className="flex items-center gap-2">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      {isSignup ? "Criando conta..." : "Entrando..."}
+                    </span>
+                  ) : cooldownTimer > 0 ? (
+                    `Aguarde ${cooldownTimer}s`
+                  ) : (
+                    isSignup ? "Criar conta" : "Entrar"
+                  )}
+                </Button>
+              </form>
+
+              {/* Toggle Mode */}
+              <div className="mt-6 pt-6 border-t border-white/[0.06] text-center">
+                <p className="text-sm text-white/40">
+                  {isSignup ? "Já tem uma conta?" : "Não tem conta?"}
                   <button
                     type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-white/50 hover:text-white/90 transition-colors"
+                    onClick={() => navigate(`/auth?mode=${isSignup ? "login" : "signup"}`)}
+                    className="ml-1.5 text-primary hover:text-primary/80 font-medium transition-colors"
                   >
-                    {showPassword ? (
-                      <EyeOff className="h-5 w-5" />
-                    ) : (
-                      <Eye className="h-5 w-5" />
-                    )}
+                    {isSignup ? "Fazer login" : "Criar agora"}
                   </button>
-                </div>
+                </p>
               </div>
-
-              <Button 
-                type="submit" 
-                className="relative w-full h-12 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary text-white font-semibold rounded-xl transition-all duration-300 shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/40 hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed mt-6"
-                disabled={isLoading || cooldownTimer > 0 || (mode === "signup" && (!!cpfError || !!telefoneError))}
-              >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Processando...
-                  </>
-                ) : cooldownTimer > 0 ? (
-                  `Aguarde ${cooldownTimer}s...`
-                ) : (
-                  mode === "signup" ? "Criar conta" : "Entrar"
-                )}
-              </Button>
-            </form>
-
-            {/* Toggle mode */}
-            <div className="mt-6 text-center">
-              <button
-                onClick={() => navigate(`/auth?mode=${mode === "signup" ? "login" : "signup"}`)}
-                className="text-sm text-primary hover:text-primary/80 transition-colors font-medium"
-              >
-                {mode === "signup" ? "Já possui conta? Fazer login" : "Não possui conta? Criar agora"}
-              </button>
             </div>
+          </div>
 
-            {/* Back button */}
-            <div className="mt-4 text-center">
-              <button
-                onClick={() => navigate("/")}
-                className="text-sm text-white/50 hover:text-white/90 transition-colors duration-300 font-medium"
-              >
-                ← Voltar
-              </button>
-            </div>
+          {/* Back Link */}
+          <div className="mt-6 text-center">
+            <button
+              type="button"
+              onClick={() => navigate("/")}
+              className="text-sm text-white/40 hover:text-white/70 transition-colors"
+            >
+              ← Voltar ao início
+            </button>
           </div>
         </div>
       </div>
 
-      {/* Bolinha de chat de suporte */}
+      {/* Support Chat */}
       <SupportChatBubble />
     </div>
   );
