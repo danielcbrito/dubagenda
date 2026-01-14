@@ -2,13 +2,11 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Card } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { z } from "zod";
 import logoDub from "@/assets/logo-dub.png";
-import { Loader2, ArrowLeft, Mail } from "lucide-react";
+import { Loader2, Mail, CheckCircle2, ArrowLeft } from "lucide-react";
 
 const emailSchema = z.object({
   email: z.string().trim().email("Email inválido"),
@@ -27,7 +25,6 @@ const ForgotPassword = () => {
     try {
       const validated = emailSchema.parse({ email });
 
-      // Use production URL for email redirects (never localhost)
       const productionUrl = window.location.origin.includes('localhost') 
         ? 'https://djtpzvujzmrrslirzwun.lovable.app'
         : window.location.origin;
@@ -58,92 +55,156 @@ const ForgotPassword = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-6">
-      <Card className="w-full max-w-md p-8 card-premium">
-        {/* Logo */}
-        <div className="flex justify-center mb-6">
-          <img src={logoDub} alt="Barbearia DUB" className="w-20 h-20 object-contain" />
-        </div>
+    <div className="min-h-screen min-h-[100dvh] flex flex-col bg-black">
+      {/* Background Effects */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div 
+          className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[600px] rounded-full opacity-20"
+          style={{
+            background: 'radial-gradient(ellipse at center, hsl(var(--primary) / 0.3) 0%, transparent 70%)',
+            filter: 'blur(80px)',
+          }}
+        />
+      </div>
 
-        {!emailSent ? (
-          <>
-            {/* Title */}
-            <h2 className="text-2xl font-bold text-center mb-2">
-              Esqueceu sua senha?
-            </h2>
-            <p className="text-sm text-muted-foreground text-center mb-6">
-              Digite seu email para receber as instruções de recuperação
-            </p>
-
-            {/* Form */}
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <Label htmlFor="email" className="text-sm">Email</Label>
-                <Input
-                  id="email"
-                  name="email"
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="input-premium mt-1"
-                  placeholder="seu@email.com"
-                />
-              </div>
-
-              <Button 
-                type="submit" 
-                className="w-full h-11 bg-primary hover:bg-primary/90"
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Enviando...
-                  </>
-                ) : (
-                  <>
-                    <Mail className="mr-2 h-4 w-4" />
-                    Enviar email de recuperação
-                  </>
-                )}
-              </Button>
-            </form>
-          </>
-        ) : (
-          <>
-            {/* Success message */}
-            <div className="text-center">
-              <div className="mx-auto w-16 h-16 bg-primary/20 rounded-full flex items-center justify-center mb-4">
-                <Mail className="w-8 h-8 text-primary" />
-              </div>
-              <h2 className="text-2xl font-bold mb-2">Email enviado!</h2>
-              <p className="text-sm text-muted-foreground mb-6">
-                Verifique sua caixa de entrada em <strong>{email}</strong> e siga as instruções para redefinir sua senha.
-              </p>
-              <Button 
-                onClick={() => navigate("/auth")}
-                className="w-full h-11 bg-primary hover:bg-primary/90"
-              >
-                Voltar para login
-              </Button>
+      {/* Main Content */}
+      <div className="flex-1 flex items-center justify-center px-5 py-8 sm:py-12 overflow-y-auto">
+        <div className="w-full max-w-[400px] relative z-10">
+          
+          {/* Logo */}
+          <div className="flex justify-center mb-8">
+            <div className="relative">
+              <div 
+                className="absolute inset-0 rounded-full opacity-60"
+                style={{
+                  background: 'radial-gradient(circle, hsl(var(--primary) / 0.4) 0%, transparent 70%)',
+                  filter: 'blur(20px)',
+                  transform: 'scale(1.5)',
+                }}
+              />
+              <img 
+                src={logoDub} 
+                alt="DUB" 
+                className="relative w-16 h-16 sm:w-20 sm:h-20 object-contain"
+              />
             </div>
-          </>
-        )}
-
-        {/* Back button */}
-        {!emailSent && (
-          <div className="mt-6 text-center">
-            <button
-              onClick={() => navigate("/auth")}
-              className="text-sm text-muted-foreground hover:text-foreground flex items-center justify-center gap-1 mx-auto"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Voltar para login
-            </button>
           </div>
-        )}
-      </Card>
+
+          {/* Card */}
+          <div className="relative">
+            <div 
+              className="absolute -inset-px rounded-2xl opacity-50"
+              style={{
+                background: 'linear-gradient(180deg, hsl(var(--primary) / 0.3) 0%, transparent 50%)',
+              }}
+            />
+            
+            <div 
+              className="relative rounded-2xl p-6 sm:p-8 border border-white/[0.08]"
+              style={{
+                background: 'linear-gradient(180deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.02) 100%)',
+                backdropFilter: 'blur(20px)',
+              }}
+            >
+              <div className="absolute top-0 left-8 right-8 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+
+              {!emailSent ? (
+                <>
+                  {/* Icon */}
+                  <div className="flex justify-center mb-6">
+                    <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center border border-primary/20">
+                      <Mail className="w-8 h-8 text-primary" />
+                    </div>
+                  </div>
+
+                  {/* Title */}
+                  <div className="text-center mb-8">
+                    <h1 className="text-2xl sm:text-[26px] font-semibold text-white tracking-tight">
+                      Recuperar senha
+                    </h1>
+                    <p className="mt-2 text-sm text-white/50 leading-relaxed">
+                      Digite seu email para receber o link de recuperação
+                    </p>
+                  </div>
+
+                  {/* Form */}
+                  <form onSubmit={handleSubmit} className="space-y-4">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-white/80 block">
+                        Email
+                      </label>
+                      <div className="relative">
+                        <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-[18px] h-[18px] text-white/30" />
+                        <Input
+                          type="email"
+                          required
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          className="h-12 pl-11 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/30 rounded-xl focus:border-primary/50 focus:ring-1 focus:ring-primary/20 transition-all"
+                          placeholder="seu@email.com"
+                        />
+                      </div>
+                    </div>
+
+                    <Button 
+                      type="submit" 
+                      className="w-full h-12 mt-2 bg-primary hover:bg-primary/90 text-white font-semibold rounded-xl transition-all duration-200 shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 disabled:opacity-50"
+                      disabled={isLoading}
+                    >
+                      {isLoading ? (
+                        <span className="flex items-center gap-2">
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          Enviando...
+                        </span>
+                      ) : (
+                        "Enviar link de recuperação"
+                      )}
+                    </Button>
+                  </form>
+                </>
+              ) : (
+                <>
+                  {/* Success State */}
+                  <div className="flex justify-center mb-6">
+                    <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center border border-primary/20 animate-scale-in">
+                      <CheckCircle2 className="w-10 h-10 text-primary" />
+                    </div>
+                  </div>
+
+                  <div className="text-center">
+                    <h1 className="text-2xl font-semibold text-white mb-3">
+                      Email enviado!
+                    </h1>
+                    <p className="text-sm text-white/50 mb-6 leading-relaxed">
+                      Verifique sua caixa de entrada em<br />
+                      <span className="text-primary font-medium">{email}</span>
+                    </p>
+                    <Button 
+                      onClick={() => navigate("/auth")}
+                      className="w-full h-12 bg-primary hover:bg-primary/90 text-white font-semibold rounded-xl transition-all duration-200"
+                    >
+                      Voltar para login
+                    </Button>
+                  </div>
+                </>
+              )}
+
+              {/* Back Link */}
+              {!emailSent && (
+                <div className="mt-6 pt-6 border-t border-white/[0.06] text-center">
+                  <button
+                    onClick={() => navigate("/auth")}
+                    className="inline-flex items-center gap-2 text-sm text-white/40 hover:text-white/70 transition-colors"
+                  >
+                    <ArrowLeft className="w-4 h-4" />
+                    Voltar para login
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };
