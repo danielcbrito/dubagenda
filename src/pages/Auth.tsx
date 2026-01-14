@@ -72,8 +72,19 @@ const Auth = () => {
 
     if (roles && roles.length > 0) {
       const isAdmin = roles.some(r => r.role === "admin");
-      navigate(isAdmin ? "/admin" : "/cliente");
+      
+      // Bloquear acesso de admins - este app é exclusivo para clientes
+      if (isAdmin) {
+        await supabase.auth.signOut();
+        toast.error("Este aplicativo é exclusivo para clientes. Acesse o app administrativo para gerenciar.", {
+          duration: 5000,
+        });
+        return;
+      }
     }
+    
+    // Redirecionar clientes para área do cliente
+    navigate("/cliente");
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {

@@ -17,10 +17,6 @@ import ResetPassword from "./pages/ResetPassword";
 import Cliente from "./pages/Cliente";
 import ClienteAgendar from "./pages/ClienteAgendar";
 import ClienteAssinar from "./pages/ClienteAssinar";
-import Admin from "./pages/Admin";
-import TI from "./pages/TI";
-import AdminRelatoriosMensais from "./pages/AdminRelatoriosMensais";
-import AgendaFullScreen from "./pages/AgendaFullScreen";
 import SupportChat from "./pages/SupportChat";
 import NotFound from "./pages/NotFound";
 
@@ -55,9 +51,6 @@ function MaintenanceWrapper({ children }: { children: React.ReactNode }) {
   const isPublicRoute = PUBLIC_ROUTES.some(route => 
     location.pathname === route || location.pathname.startsWith('/auth')
   );
-  
-  // Admin routes are always accessible for allowed users
-  const isAdminRoute = location.pathname.startsWith('/admin');
 
   // If still loading, show nothing (to avoid flash)
   if (isLoading) {
@@ -69,11 +62,11 @@ function MaintenanceWrapper({ children }: { children: React.ReactNode }) {
     return <>{children}</>;
   }
 
-  // Allowed users (admins or in email whitelist) can access everything
+  // Allowed users can access everything
   if (isAllowedUser) {
     return (
       <>
-        {warningActive && warningMessage && !isAdminRoute && (
+        {warningActive && warningMessage && (
           <MaintenanceWarningBanner message={warningMessage} />
         )}
         {children}
@@ -120,11 +113,6 @@ function AppRoutes() {
         <Route path="/cliente/agendar" element={<ClienteAgendar />} />
         <Route path="/cliente/assinar" element={<ClienteAssinar />} />
         <Route path="/suporte" element={<SupportChat />} />
-        <Route path="/agenda-fullscreen" element={<AgendaFullScreen />} />
-        <Route path="/admin/relatorios-mensais" element={<AdminRelatoriosMensais />} />
-        <Route path="/admin/*" element={<Admin />} />
-        <Route path="/ti/*" element={<TI />} />
-        {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
         <Route path="*" element={<NotFound />} />
       </Routes>
     </MaintenanceWrapper>
