@@ -6,6 +6,7 @@ import { ptBR } from "date-fns/locale";
 import { motion } from "framer-motion";
 import { LayoutGrid, List, Plus, X, Filter } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useBarbeiroLogado } from "@/hooks/useBarbeiroLogado";
 
 import { CompactWeekSelector } from "./agenda/CompactWeekSelector";
 import { PremiumTimeline } from "./agenda/PremiumTimeline";
@@ -30,7 +31,8 @@ export interface TimelineAppointment {
   servico_id: string;
   is_free: boolean | null;
   payment_method: string | null;
-  tipo_agendamento: string | null; // NOVO: tipo do agendamento (plano, normal, etc)
+  tipo_agendamento: string | null;
+  barbeiro_id: string | null;
   profile: { nome: string; cpf?: string } | null;
   servico: { nome: string; duracao_minutos: number } | null;
   pagamentos: Array<{ metodo: string; status: string; valor: number }>;
@@ -47,20 +49,27 @@ export function AdminAgenda() {
   const [cancelAllModalOpen, setCancelAllModalOpen] = useState(false);
   const [manualBookingModalOpen, setManualBookingModalOpen] = useState(false);
   const [selectedEmptySlot, setSelectedEmptySlot] = useState({ date: "", time: "" });
-  const [viewMode, setViewMode] = useState<ViewMode>("week"); // Default to week view
+  const [viewMode, setViewMode] = useState<ViewMode>("week");
   const [filterService, setFilterService] = useState<string>("all");
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [services, setServices] = useState<Array<{ id: string; nome: string }>>([]);
   const [showFilters, setShowFilters] = useState(false);
   
   const isInitialLoad = useRef(true);
+  
+  // Hook para obter o barbeiro logado
+  const { barbeiroId, loading: loadingBarbeiro } = useBarbeiroLogado();
 
   useEffect(() => {
     loadServices();
   }, []);
 
   // Load appointments for the entire week when in week view
+  // FILTRO POR BARBEIRO: Cada barbeiro vê APENAS seus próprios agendamentos
   const loadAppointments = useCallback(async (selectedDate: Date, silent = false) => {
+    // Aguardar o barbeiro_id estar disponível
+    if (loadingBarbeiro) return;
+    
     try {
       // Calculate week range
       const weekStart = startOfWeek(selectedDate, { weekStartsOn: 1 });
@@ -68,12 +77,20 @@ export function AdminAgenda() {
         format(addDays(weekStart, i), 'yyyy-MM-dd')
       );
       
-      const { data, error } = await supabase
+      // Construir query com filtro por barbeiro
+      let query = supabase
         .from("agendamentos")
         .select("*")
         .in("data", weekDates)
         .in("status", ["pending", "confirmed", "completed"])
         .order("hora", { ascending: true });
+
+      // FILTRO CRÍTICO: Se o usuário é um barbeiro, mostrar APENAS seus agendamentos
+      if (barbeiroId) {
+        query = query.eq("barbeiro_id", barbeiroId);
+      }
+      
+      const { data, error } = await query;
 
       if (error) throw error;
 
@@ -102,22 +119,32 @@ export function AdminAgenda() {
       console.error("Error loading appointments:", error);
       if (!silent) toast.error("Erro ao carregar agendamentos");
     }
-  }, []);
+  }, [barbeiroId, loadingBarbeiro]);
 
   // Load all appointments for calendar indicators
+  // FILTRO POR BARBEIRO: Cada barbeiro vê APENAS seus próprios agendamentos
   const loadAllAppointments = useCallback(async () => {
+    if (loadingBarbeiro) return;
+    
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from("agendamentos")
         .select("data, status")
         .in("status", ["pending", "confirmed", "completed"]);
+
+      // FILTRO CRÍTICO: Se o usuário é um barbeiro, mostrar APENAS seus agendamentos
+      if (barbeiroId) {
+        query = query.eq("barbeiro_id", barbeiroId);
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
       setAllAppointments(data || []);
     } catch (error) {
       console.error("Error loading all appointments:", error);
     }
-  }, []);
+  }, [barbeiroId, loadingBarbeiro]);
 
   useEffect(() => {
     loadAppointments(date);

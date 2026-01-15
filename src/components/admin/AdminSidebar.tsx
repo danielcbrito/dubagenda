@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
 import { TIPasswordModal } from "@/components/ti/TIPasswordModal";
+import { useBarbeiroLogado } from "@/hooks/useBarbeiroLogado";
 
 // 🎨 Grupos organizados premium com gavetas
 const menuGroups = [
@@ -68,16 +69,27 @@ export function AdminSidebar() {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [openMenus, setOpenMenus] = useState<Record<string, boolean>>({});
   const [showTIPasswordModal, setShowTIPasswordModal] = useState(false);
+  
+  // Hook para obter o barbeiro logado
+  const { barbeiroId, loading: loadingBarbeiro } = useBarbeiroLogado();
 
+  // Carregar contagem de pendentes - FILTRADO POR BARBEIRO
   useEffect(() => {
+    if (loadingBarbeiro) return;
+    
     const loadPendingCount = async () => {
-      // Deve usar a mesma lógica da tela de confirmações: apenas status 'pending' e barbeiro_confirmou = false
-      const { count } = await supabase
+      let query = supabase
         .from('agendamentos')
         .select('*', { count: 'exact', head: true })
         .eq('status', 'pending')
         .eq('barbeiro_confirmou', false);
       
+      // FILTRO CRÍTICO: Se o usuário é um barbeiro, contar APENAS seus agendamentos
+      if (barbeiroId) {
+        query = query.eq('barbeiro_id', barbeiroId);
+      }
+      
+      const { count } = await query;
       setPendingCount(count || 0);
     };
 
@@ -104,7 +116,7 @@ export function AdminSidebar() {
       supabase.removeChannel(channel);
       clearInterval(interval);
     };
-  }, []);
+  }, [barbeiroId, loadingBarbeiro]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();

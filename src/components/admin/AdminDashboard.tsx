@@ -6,6 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { format, subDays, startOfDay } from "date-fns";
 import { cn } from "@/lib/utils";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { useBarbeiroLogado } from "@/hooks/useBarbeiroLogado";
 
 interface Stats {
   todayAppointments: number;
@@ -84,8 +85,13 @@ export function AdminDashboard() {
   const [recentAppointments, setRecentAppointments] = useState<RecentAppointment[]>([]);
   const [dailyRevenue, setDailyRevenue] = useState<DailyRevenue[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // Hook para obter o barbeiro logado
+  const { barbeiroId, loading: loadingBarbeiro } = useBarbeiroLogado();
 
   useEffect(() => {
+    if (loadingBarbeiro) return;
+    
     loadDashboardData();
     
     const appointmentsChannel = supabase
@@ -98,7 +104,7 @@ export function AdminDashboard() {
     return () => {
       supabase.removeChannel(appointmentsChannel);
     };
-  }, []);
+  }, [barbeiroId, loadingBarbeiro]);
 
   const loadDashboardData = async () => {
     try {
@@ -106,38 +112,66 @@ export function AdminDashboard() {
       const firstDayOfMonth = format(new Date(new Date().getFullYear(), new Date().getMonth(), 1), 'yyyy-MM-dd');
 
       // Agendamentos de hoje (apenas confirmados/pendentes - sem cancelados)
-      const { count: todayCount } = await supabase
+      // FILTRO POR BARBEIRO
+      let todayQuery = supabase
         .from("agendamentos")
         .select("*", { count: "exact", head: true })
         .eq("data", today)
         .in("status", ["pending", "confirmed", "completed"]);
+      
+      if (barbeiroId) {
+        todayQuery = todayQuery.eq("barbeiro_id", barbeiroId);
+      }
+      
+      const { count: todayCount } = await todayQuery;
 
-      // Clientes ativos
+      // Clientes ativos (global - não filtrar por barbeiro)
       const { count: clientsCount } = await supabase
         .from("profiles")
         .select("*", { count: "exact", head: true })
         .eq("blocked", false);
 
       // Cortes do mês - APENAS finalizados (completed) pelo barbeiro
-      const { count: cutsCount } = await supabase
+      // FILTRO POR BARBEIRO
+      let cutsQuery = supabase
         .from("agendamentos")
         .select("*", { count: "exact", head: true })
         .gte("data", firstDayOfMonth)
         .eq("status", "completed");
+      
+      if (barbeiroId) {
+        cutsQuery = cutsQuery.eq("barbeiro_id", barbeiroId);
+      }
+      
+      const { count: cutsCount } = await cutsQuery;
 
       // Confirmações pendentes
-      const { count: pendingAppointments } = await supabase
+      // FILTRO POR BARBEIRO
+      let pendingQuery = supabase
         .from("agendamentos")
         .select("*", { count: "exact", head: true })
         .eq("status", "pending");
+      
+      if (barbeiroId) {
+        pendingQuery = pendingQuery.eq("barbeiro_id", barbeiroId);
+      }
+      
+      const { count: pendingAppointments } = await pendingQuery;
 
-      // Agendamentos recentes (sem preco)
-      const { data: appointments } = await supabase
+      // Agendamentos recentes
+      // FILTRO POR BARBEIRO
+      let recentQuery = supabase
         .from("agendamentos")
         .select("id, data, hora, status, user_id, servico_id")
         .order("data", { ascending: false })
         .order("hora", { ascending: false })
         .limit(5);
+      
+      if (barbeiroId) {
+        recentQuery = recentQuery.eq("barbeiro_id", barbeiroId);
+      }
+      
+      const { data: appointments } = await recentQuery;
 
       const appointmentsWithDetails = await Promise.all(
         (appointments || []).map(async (apt) => {
@@ -162,17 +196,24 @@ export function AdminDashboard() {
       );
 
       // Carregar receita dos últimos 14 dias
+      // FILTRO POR BARBEIRO
       const revenueData: DailyRevenue[] = [];
       for (let i = 13; i >= 0; i--) {
         const date = subDays(new Date(), i);
         const dateStr = format(date, 'yyyy-MM-dd');
         
         // Buscar agendamentos completados naquele dia
-        const { data: dayAppointments } = await supabase
+        let dayQuery = supabase
           .from("agendamentos")
           .select("preco")
           .eq("data", dateStr)
           .eq("status", "completed");
+        
+        if (barbeiroId) {
+          dayQuery = dayQuery.eq("barbeiro_id", barbeiroId);
+        }
+        
+        const { data: dayAppointments } = await dayQuery;
 
         const dayRevenue = (dayAppointments || []).reduce((sum, apt) => sum + (apt.preco || 0), 0);
         
