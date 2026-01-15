@@ -8,6 +8,7 @@ import { AdminMobileNavigation } from "@/components/admin/mobile/AdminMobileNavi
 import { AdminMobileDrawer } from "@/components/admin/mobile/AdminMobileDrawer";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useMaintenanceMode } from "@/hooks/useMaintenanceMode";
+import { useBarbeiroLogado } from "@/hooks/useBarbeiroLogado";
 import { MaintenanceScreen } from "@/components/MaintenanceScreen";
 import { AdminDashboard } from "@/components/admin/AdminDashboard";
 import { AdminAgenda } from "@/components/admin/AdminAgenda";
@@ -55,6 +56,9 @@ const Admin = () => {
   const [pendingCount, setPendingCount] = useState(0);
   const [authChecked, setAuthChecked] = useState(false);
   
+  // Hook para obter o barbeiro logado
+  const { barbeiroId, loading: loadingBarbeiro } = useBarbeiroLogado();
+  
   // Verificação de manutenção
   const { 
     isMaintenanceMode, 
@@ -63,15 +67,23 @@ const Admin = () => {
     isAllowedUser 
   } = useMaintenanceMode();
 
-  // Carregar contagem de pendentes
+  // Carregar contagem de pendentes - FILTRADO POR BARBEIRO
   useEffect(() => {
+    if (loadingBarbeiro) return;
+    
     const loadPendingCount = async () => {
-      const { count } = await supabase
+      let query = supabase
         .from('agendamentos')
         .select('*', { count: 'exact', head: true })
         .eq('status', 'pending')
         .eq('barbeiro_confirmou', false);
       
+      // FILTRO CRÍTICO: Se o usuário é um barbeiro, contar APENAS seus agendamentos
+      if (barbeiroId) {
+        query = query.eq('barbeiro_id', barbeiroId);
+      }
+      
+      const { count } = await query;
       setPendingCount(count || 0);
     };
 
@@ -95,7 +107,7 @@ const Admin = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [barbeiroId, loadingBarbeiro]);
 
   useEffect(() => {
     checkAuth();

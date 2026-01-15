@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { sendAgendamentoConfirmadoEvent, sendAgendamentoCanceladoEvent } from "@/lib/webhookService";
+import { useBarbeiroLogado } from "@/hooks/useBarbeiroLogado";
 
 interface PendingAppointment {
   id: string;
@@ -28,6 +29,9 @@ interface PendingAppointment {
 export function AdminConfirmacoesPendentes() {
   const [appointments, setAppointments] = useState<PendingAppointment[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // Hook para obter o barbeiro logado
+  const { barbeiroId, loading: loadingBarbeiro } = useBarbeiroLogado();
 
   useEffect(() => {
     loadPending();
@@ -48,18 +52,29 @@ export function AdminConfirmacoesPendentes() {
       supabase.removeChannel(channel);
       clearInterval(pollingInterval);
     };
-  }, []);
+  }, [barbeiroId, loadingBarbeiro]);
 
   const loadPending = async () => {
+    // Aguardar o barbeiro_id estar disponível
+    if (loadingBarbeiro) return;
+    
     setLoading(true);
     try {
-      const { data, error } = await supabase
+      // Construir query com filtro por barbeiro
+      let query = supabase
         .from("agendamentos")
-        .select("id, data, hora, status, preco, cliente_confirmou, barbeiro_confirmou, user_id, servico_id, payment_method, remarcado_de, tipo_agendamento")
+        .select("id, data, hora, status, preco, cliente_confirmou, barbeiro_confirmou, user_id, servico_id, payment_method, remarcado_de, tipo_agendamento, barbeiro_id")
         .eq("status", "pending")
         .eq("barbeiro_confirmou", false)
         .order("data", { ascending: true })
         .order("hora", { ascending: true });
+
+      // FILTRO CRÍTICO: Se o usuário é um barbeiro, mostrar APENAS seus agendamentos
+      if (barbeiroId) {
+        query = query.eq("barbeiro_id", barbeiroId);
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
 
