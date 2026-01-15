@@ -53,7 +53,7 @@ const ClienteAgendar = () => {
   const [barbers, setBarbers] = useState<Barber[]>([]);
   const [selectedBarber, setSelectedBarber] = useState<Barber | null>(null);
   const [services, setServices] = useState<Service[]>([]);
-  const [selectedServices, setSelectedServices] = useState<Service[]>();
+  const [selectedServices, setSelectedServices] = useState<Service[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date>();
   const [selectedTime, setSelectedTime] = useState<string>("");
   const [loading, setLoading] = useState(false);
