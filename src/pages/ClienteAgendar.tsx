@@ -12,6 +12,7 @@ import { motion, AnimatePresence } from "framer-motion";
 
 // Premium Components
 import { ServiceCard } from "@/components/booking/ServiceCard";
+import { BarberCard } from "@/components/booking/BarberCard";
 import { TimeSlot } from "@/components/booking/TimeSlot";
 import { PaymentOption } from "@/components/booking/PaymentOption";
 import { SummaryRow } from "@/components/booking/SummaryRow";
@@ -19,6 +20,13 @@ import { PremiumCalendar } from "@/components/booking/PremiumCalendar";
 import { StepDots } from "@/components/booking/StepDots";
 import { BookingBottomBar } from "@/components/booking/BookingBottomBar";
 import { TimeSelectionBar } from "@/components/booking/TimeSelectionBar";
+
+interface Barber {
+  id: string;
+  apelido: string;
+  foto_url: string | null;
+  telefone: string | null;
+}
 
 interface Service {
   id: string;
@@ -42,8 +50,10 @@ interface ActiveSubscription {
 
 const ClienteAgendar = () => {
   const navigate = useNavigate();
+  const [barbers, setBarbers] = useState<Barber[]>([]);
+  const [selectedBarber, setSelectedBarber] = useState<Barber | null>(null);
   const [services, setServices] = useState<Service[]>([]);
-  const [selectedServices, setSelectedServices] = useState<Service[]>([]);
+  const [selectedServices, setSelectedServices] = useState<Service[]>();
   const [selectedDate, setSelectedDate] = useState<Date>();
   const [selectedTime, setSelectedTime] = useState<string>("");
   const [loading, setLoading] = useState(false);
@@ -82,11 +92,11 @@ const ClienteAgendar = () => {
     !isRescheduling &&
     isPlanFlow &&
     !!activeSubscription?.servico &&
-    selectedServices.length === 1 &&
-    selectedServices[0]?.id === activeSubscription.servico.id &&
+    (selectedServices?.length ?? 0) === 1 &&
+    selectedServices?.[0]?.id === activeSubscription.servico.id &&
     activeSubscription.agendamentos_usados < activeSubscription.limite_agendamentos_mes;
 
-  const totalDuration = selectedServices.reduce((sum, s) => sum + s.duracao_minutos, 0);
+  const totalDuration = (selectedServices || []).reduce((sum, s) => sum + s.duracao_minutos, 0);
 
   const { 
     slots: availableSlots, 
@@ -96,12 +106,24 @@ const ClienteAgendar = () => {
   } = useSlotAvailability(
     selectedDate, 
     totalDuration,
-    isRescheduling ? rescheduleAppointmentId : null
+    isRescheduling ? rescheduleAppointmentId : null,
+    selectedBarber?.id || null
   );
+
+  // Carregar barbeiros
+  const loadBarbers = async () => {
+    const { data } = await supabase
+      .from("barbeiros")
+      .select("id, apelido, foto_url, telefone")
+      .eq("ativo", true)
+      .order("apelido");
+    setBarbers(data || []);
+  };
 
   // Initialize booking
   useEffect(() => {
     const initializeBooking = async () => {
+      await loadBarbers();
       await loadUserCredits();
       await loadAvailableRedemptions();
 
@@ -132,7 +154,7 @@ const ClienteAgendar = () => {
           // Usuário de plano com agendamentos disponíveis
           setSelectedServices([subscription.servico]);
           setIsPlanFlow(true);
-          setStep(1); // Começa no step 1, mas o step 1 PARA PLANO é a Data (não serviços)
+          setStep(1); // Step 1 = Escolher barbeiro (para todos)
           return;
         }
 
@@ -397,33 +419,43 @@ const ClienteAgendar = () => {
 
   const toggleService = (service: Service) => {
     setSelectedServices(prev => {
-      const exists = prev.find(s => s.id === service.id);
+      const existing = prev || [];
+      const exists = existing.find(s => s.id === service.id);
       if (exists) {
-        return prev.filter(s => s.id !== service.id);
+        return existing.filter(s => s.id !== service.id);
       } else {
-        return [...prev, service];
+        return [...existing, service];
       }
     });
   };
 
   const handleNextStep = async () => {
-    // Para usuários de plano: step 1 = Data, step 2 = Horário, step 3 = Confirmação
-    // Para usuários normais: step 1 = Serviços, step 2 = Data, step 3 = Horário, step 4 = Pagamento, step 5 = Confirmação
+    // NOVO FLUXO:
+    // Step 1 = Barbeiro (TODOS)
+    // Para plano: step 2 = Data, step 3 = Horário, step 4 = Confirmação
+    // Para normal: step 2 = Serviços, step 3 = Data, step 4 = Horário, step 5 = Pagamento, step 6 = Confirmação
     
-    if (!isPlanFlow && step === 1 && selectedServices.length === 0) {
+    // Step 1: Validar barbeiro
+    if (step === 1 && !selectedBarber) {
+      toast.error("Selecione um profissional");
+      return;
+    }
+    
+    // Step 2: Serviços (apenas para não-plano)
+    if (!isPlanFlow && step === 2 && (selectedServices?.length ?? 0) === 0) {
       toast.error("Selecione pelo menos um serviço");
       return;
     }
     
-    // Validação de data (step 2 para normal, step 1 para plano)
-    const dateStep = isPlanFlow ? 1 : 2;
+    // Validação de data (step 3 para normal, step 2 para plano)
+    const dateStep = isPlanFlow ? 2 : 3;
     if (step === dateStep && !selectedDate) {
       toast.error("Selecione uma data");
       return;
     }
     
-    // Validação de horário (step 3 para normal, step 2 para plano)
-    const timeStep = isPlanFlow ? 2 : 3;
+    // Validação de horário (step 4 para normal, step 3 para plano)
+    const timeStep = isPlanFlow ? 3 : 4;
     if (step === timeStep && !selectedTime) {
       toast.error("Selecione um horário");
       return;
@@ -453,23 +485,23 @@ const ClienteAgendar = () => {
     }
     
     // Remarcação: vai direto para confirmação após horário
-    if (isRescheduling && step === 3) {
-      setStep(5);
+    if (isRescheduling && step === 4) {
+      setStep(6);
       return;
     }
     
-    // Fluxo de plano: após horário (step 2), vai para confirmação (step 3)
-    if (isPlanFlow && step === 2) {
-      setStep(3);
+    // Fluxo de plano: após horário (step 3), vai para confirmação (step 4)
+    if (isPlanFlow && step === 3) {
+      setStep(4);
       return;
     }
 
-    // Fluxo normal: após horário (step 3), verifica créditos
-    if (!isPlanFlow && step === 3 && !isRescheduling) {
+    // Fluxo normal: após horário (step 4), verifica créditos
+    if (!isPlanFlow && step === 4 && !isRescheduling) {
       const totalPrice = getTotalPrice();
       if (availableCredits >= totalPrice) {
         setPaymentMethod('cash');
-        setStep(5);
+        setStep(6);
         return;
       }
     }

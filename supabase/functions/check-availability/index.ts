@@ -38,6 +38,7 @@ interface AvailabilityRequest {
   date: string;
   duration: number;
   excludeAppointmentId?: string;
+  barbeiroId?: string;
 }
 
 interface TimeSlot {
@@ -76,6 +77,63 @@ function minutesToTime(minutes: number): string {
   return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
 }
 
+// Helper function to get default business hours config
+async function getDefaultConfig(supabase: any, date: string, dayOfWeek: number): Promise<BusinessHoursConfig> {
+  // Primeiro: Verificar exceção geral para esta data
+  const { data: excecaoData, error: excecaoError } = await supabase
+    .from('horarios_excepcionais')
+    .select('*')
+    .eq('data', date)
+    .maybeSingle();
+
+  if (excecaoError) {
+    console.log('[check-availability] Erro ao buscar exceção:', excecaoError.message);
+  }
+
+  if (excecaoData) {
+    console.log(`[check-availability] EXCEÇÃO GERAL encontrada para ${date}`);
+    return {
+      aberto: excecaoData.aberto,
+      hora_abertura: excecaoData.hora_abertura || '09:00',
+      hora_fechamento: excecaoData.hora_fechamento || '20:00',
+      hora_almoco_inicio: excecaoData.hora_almoco_inicio,
+      hora_almoco_fim: excecaoData.hora_almoco_fim,
+      delay_entre_servicos: 10
+    };
+  }
+
+  // Buscar configurações padrão do dia da semana
+  const { data: configData, error: configError } = await supabase
+    .from('configuracoes_horario')
+    .select('*')
+    .eq('dia_semana', dayOfWeek)
+    .maybeSingle();
+
+  if (configError) {
+    console.log('[check-availability] Erro ao buscar config:', configError.message);
+  }
+
+  if (!configData) {
+    console.warn(`[check-availability] ATENÇÃO: Nenhuma configuração para dia ${dayOfWeek}. Usando padrão.`);
+  }
+
+  return configData ? {
+    aberto: configData.aberto,
+    hora_abertura: configData.hora_abertura,
+    hora_fechamento: configData.hora_fechamento,
+    hora_almoco_inicio: configData.hora_almoco_inicio,
+    hora_almoco_fim: configData.hora_almoco_fim,
+    delay_entre_servicos: configData.delay_entre_servicos || 10
+  } : {
+    aberto: dayOfWeek !== 0,
+    hora_abertura: '09:00',
+    hora_fechamento: '21:00',
+    hora_almoco_inicio: '13:00',
+    hora_almoco_fim: '14:00',
+    delay_entre_servicos: 10
+  };
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -87,11 +145,12 @@ Deno.serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     const body: AvailabilityRequest = await req.json();
-    const { date, duration, excludeAppointmentId } = body;
+    const { date, duration, excludeAppointmentId, barbeiroId } = body;
 
     console.log('='.repeat(70));
     console.log('[check-availability] INICIANDO VERIFICAÇÃO');
-    console.log(`[check-availability] Data: ${date} | Duração solicitada: ${duration}min`);
+    console.log(`[check-availability] Data: ${date} | Duração solicitada: ${duration}min | Barbeiro: ${barbeiroId || 'TODOS'}`);
+
 
     if (!date || !duration || duration <= 0) {
       return new Response(
@@ -103,63 +162,56 @@ Deno.serve(async (req) => {
     const dateObj = new Date(date + 'T12:00:00');
     const dayOfWeek = dateObj.getDay();
 
-    // PRIMEIRO: Verificar se existe exceção de horário para esta data específica
-    const { data: excecaoData, error: excecaoError } = await supabase
-      .from('horarios_excepcionais')
-      .select('*')
-      .eq('data', date)
-      .maybeSingle();
-
-    if (excecaoError) {
-      console.log('[check-availability] Erro ao buscar exceção:', excecaoError.message);
-    }
-
-    // Se existe exceção para esta data, usar ela em vez da configuração padrão
+    // BUSCAR CONFIGURAÇÃO DE HORÁRIO
+    // Prioridade: 1) Exceção do barbeiro, 2) Exceção geral, 3) Config do barbeiro, 4) Config geral
     let config: BusinessHoursConfig;
 
-    if (excecaoData) {
-      console.log(`[check-availability] EXCEÇÃO ENCONTRADA para ${date}:`, JSON.stringify(excecaoData));
-      config = {
-        aberto: excecaoData.aberto,
-        hora_abertura: excecaoData.hora_abertura || '09:00',
-        hora_fechamento: excecaoData.hora_fechamento || '20:00',
-        hora_almoco_inicio: excecaoData.hora_almoco_inicio,
-        hora_almoco_fim: excecaoData.hora_almoco_fim,
-        delay_entre_servicos: 10 // Usar delay padrão para exceções
-      };
-    } else {
-      // Buscar configurações padrão do dia da semana
-      const { data: configData, error: configError } = await supabase
-        .from('configuracoes_horario')
+    if (barbeiroId) {
+      // Se barbeiro especificado, verificar exceções e config do barbeiro
+      const { data: excecaoBarbeiroData } = await supabase
+        .from('horarios_excepcionais_barbeiro')
         .select('*')
-        .eq('dia_semana', dayOfWeek)
+        .eq('data', date)
+        .eq('barbeiro_id', barbeiroId)
         .maybeSingle();
 
-      if (configError) {
-        console.log('[check-availability] Erro ao buscar config:', configError.message);
-      }
+      if (excecaoBarbeiroData) {
+        console.log(`[check-availability] EXCEÇÃO DO BARBEIRO encontrada para ${date}`);
+        config = {
+          aberto: excecaoBarbeiroData.aberto ?? true,
+          hora_abertura: excecaoBarbeiroData.hora_abertura || '09:00',
+          hora_fechamento: excecaoBarbeiroData.hora_fechamento || '20:00',
+          hora_almoco_inicio: excecaoBarbeiroData.hora_almoco_inicio,
+          hora_almoco_fim: excecaoBarbeiroData.hora_almoco_fim,
+          delay_entre_servicos: 10
+        };
+      } else {
+        // Buscar config padrão do barbeiro
+        const { data: configBarbeiroData } = await supabase
+          .from('configuracoes_horario_barbeiro')
+          .select('*')
+          .eq('barbeiro_id', barbeiroId)
+          .eq('dia_semana', dayOfWeek)
+          .maybeSingle();
 
-      if (!configData) {
-        console.warn(`[check-availability] ATENÇÃO: Nenhuma configuração encontrada para dia ${dayOfWeek}. Usando padrão de emergência.`);
+        if (configBarbeiroData && configBarbeiroData.aberto !== null) {
+          console.log(`[check-availability] Config do barbeiro ${barbeiroId} para dia ${dayOfWeek}`);
+          config = {
+            aberto: configBarbeiroData.aberto ?? true,
+            hora_abertura: configBarbeiroData.hora_abertura || '09:00',
+            hora_fechamento: configBarbeiroData.hora_fechamento || '20:00',
+            hora_almoco_inicio: configBarbeiroData.hora_almoco_inicio,
+            hora_almoco_fim: configBarbeiroData.hora_almoco_fim,
+            delay_entre_servicos: configBarbeiroData.delay_entre_servicos || 10
+          };
+        } else {
+          // Fallback para config geral
+          config = await getDefaultConfig(supabase, date, dayOfWeek);
+        }
       }
-
-      // NUNCA usar valores hardcoded - sempre preferir dados do banco
-      config = configData ? {
-        aberto: configData.aberto,
-        hora_abertura: configData.hora_abertura,
-        hora_fechamento: configData.hora_fechamento,
-        hora_almoco_inicio: configData.hora_almoco_inicio,
-        hora_almoco_fim: configData.hora_almoco_fim,
-        delay_entre_servicos: configData.delay_entre_servicos || 10
-      } : {
-        // Fallback apenas se não houver dados no banco (emergência)
-        aberto: dayOfWeek !== 0, // Fechado domingo
-        hora_abertura: '09:00',
-        hora_fechamento: '21:00', // Padrão estendido para evitar bloqueios
-        hora_almoco_inicio: '13:00',
-        hora_almoco_fim: '14:00',
-        delay_entre_servicos: 10
-      };
+    } else {
+      // Sem barbeiro - usar config geral
+      config = await getDefaultConfig(supabase, date, dayOfWeek);
     }
 
     console.log(`[check-availability] Config do dia ${dayOfWeek}:`, JSON.stringify(config));
@@ -184,11 +236,16 @@ Deno.serve(async (req) => {
     console.log(`[check-availability] Horário: ${minutesToTime(OPEN_MINUTES)}-${minutesToTime(CLOSE_MINUTES)} | Almoço: ${LUNCH_START ? minutesToTime(LUNCH_START) : 'N/A'}-${LUNCH_END ? minutesToTime(LUNCH_END) : 'N/A'} | Delay: ${DELAY_MINUTES}min`);
 
     // Buscar agendamentos com status bloqueante
+    // Se barbeiro especificado, filtrar apenas agendamentos desse barbeiro
     let appointmentsQuery = supabase
       .from('agendamentos')
-      .select('id, hora, duracao, status')
+      .select('id, hora, duracao, status, barbeiro_id')
       .eq('data', date)
       .in('status', BLOCKING_STATUSES);
+
+    if (barbeiroId) {
+      appointmentsQuery = appointmentsQuery.eq('barbeiro_id', barbeiroId);
+    }
 
     if (excludeAppointmentId) {
       appointmentsQuery = appointmentsQuery.neq('id', excludeAppointmentId);
@@ -205,12 +262,19 @@ Deno.serve(async (req) => {
     }
 
     // Buscar pending bookings não expirados
+    // Se barbeiro especificado, filtrar apenas pending do barbeiro
     const now = new Date();
-    const { data: pendingBookings, error: pbError } = await supabase
+    let pendingQuery = supabase
       .from('pending_bookings')
-      .select('id, hora, duracao, expires_at')
+      .select('id, hora, duracao, expires_at, barbeiro_id')
       .eq('data', date)
       .gt('expires_at', now.toISOString());
+
+    if (barbeiroId) {
+      pendingQuery = pendingQuery.eq('barbeiro_id', barbeiroId);
+    }
+
+    const { data: pendingBookings, error: pbError } = await pendingQuery;
 
     if (pbError) {
       console.log('[check-availability] Aviso ao buscar pending:', pbError.message);

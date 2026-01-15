@@ -125,7 +125,8 @@ function applyPartialUpdate(existingSlots: TimeSlot[], newSlots: TimeSlot[]): Ti
 export function useSlotAvailability(
   selectedDate: Date | undefined,
   serviceDuration: number,
-  excludeAppointmentId?: string | null
+  excludeAppointmentId?: string | null,
+  barbeiroId?: string | null
 ) {
   const [slots, setSlots] = useState<TimeSlot[]>([]);
   const [loading, setLoading] = useState(false);
@@ -165,7 +166,7 @@ export function useSlotAvailability(
 
     const dateStr = format(selectedDate, 'yyyy-MM-dd');
 
-    console.log('[useSlotAvailability] Buscando slots...', isInitialLoadRef.current ? '(inicial)' : '(update parcial)');
+    console.log('[useSlotAvailability] Buscando slots...', isInitialLoadRef.current ? '(inicial)' : '(update parcial)', barbeiroId ? `barbeiro: ${barbeiroId}` : '');
 
     try {
       const response = await fetch(
@@ -178,7 +179,8 @@ export function useSlotAvailability(
           body: JSON.stringify({
             date: dateStr,
             duration: serviceDuration,
-            excludeAppointmentId: excludeAppointmentId || undefined
+            excludeAppointmentId: excludeAppointmentId || undefined,
+            barbeiroId: barbeiroId || undefined
           }),
           signal: abortControllerRef.current.signal
         }
@@ -240,7 +242,7 @@ export function useSlotAvailability(
     } finally {
       setLoading(false);
     }
-  }, [selectedDate, serviceDuration, excludeAppointmentId]);
+  }, [selectedDate, serviceDuration, excludeAppointmentId, barbeiroId]);
 
   /**
    * Fallback CORRIGIDO: carregar slots diretamente do banco
@@ -500,7 +502,7 @@ export function useSlotAvailability(
         abortControllerRef.current = null;
       }
     };
-  }, [selectedDate, serviceDuration, loadSlots]);
+  }, [selectedDate, serviceDuration, barbeiroId, loadSlots]);
 
   /**
    * Função para forçar recarga completa dos slots
