@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Calendar, Clock, CheckCircle, AlertCircle } from "lucide-react";
+import { Calendar, Clock, CheckCircle, AlertCircle, Crown, Gift } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { RescheduleAppointmentModal } from "./RescheduleAppointmentModal";
@@ -24,6 +24,9 @@ interface Appointment {
   visivel_para_usuario?: boolean;
   remarcacao_solicitada?: boolean;
   motivo_remarcacao?: string;
+  payment_method?: string | null;
+  tipo_agendamento?: string | null;
+  is_free?: boolean | null;
   pagamentos?: Array<{
     metodo: string;
     status: string;
@@ -87,6 +90,13 @@ export function AppointmentCard({
   const isPaid = externalPayment?.status === "paid" || !!inlinePayment;
   const amount = appointment.preco || 0;
 
+  const isPlanAppointment = (appointment as any).tipo_agendamento === 'plano' || (appointment as any).payment_method === 'plano';
+  const isFreeAppointment = (appointment as any).is_free && (
+    (appointment as any).payment_method === 'resgate' || 
+    appointment.observacoes?.toLowerCase().includes('corte grátis') ||
+    appointment.observacoes?.toLowerCase().includes('resgate')
+  );
+
   // Extrair motivo do cancelamento das observações
   const cancellationReason = appointment.observacoes?.includes("Cancelado em massa:") 
     ? appointment.observacoes.replace("Cancelado em massa: ", "")
@@ -124,11 +134,21 @@ export function AppointmentCard({
             <Clock className="w-4 h-4" />
             <span>{appointment.hora}</span>
           </div>
-          {appointment.preco && (
+          {isPlanAppointment ? (
+            <div className="flex items-center gap-1.5">
+              <Crown className="w-3.5 h-3.5 text-primary" />
+              <span className="text-xs font-semibold text-primary">Plano</span>
+            </div>
+          ) : isFreeAppointment ? (
+            <div className="flex items-center gap-1.5">
+              <Gift className="w-3.5 h-3.5 text-emerald-500" />
+              <span className="text-xs font-semibold text-emerald-500">Corte Grátis</span>
+            </div>
+          ) : appointment.preco ? (
             <div className="flex items-center gap-2">
               <span className="font-semibold text-foreground">R$ {appointment.preco.toFixed(2)}</span>
             </div>
-          )}
+          ) : null}
           
           {isAwaitingBarberApproval && statusConfig.message && (
             <div className="bg-yellow-500/10 border border-yellow-500/20 p-3 rounded-lg mt-3">

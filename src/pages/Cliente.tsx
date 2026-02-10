@@ -42,6 +42,9 @@ interface Appointment {
   ponto_liberado?: boolean;
   remarcacao_solicitada?: boolean;
   motivo_remarcacao?: string;
+  payment_method?: string | null;
+  tipo_agendamento?: string | null;
+  is_free?: boolean | null;
   pagamentos?: Array<{
     metodo: string;
     status: string;
@@ -175,6 +178,9 @@ const Cliente = () => {
         ponto_liberado,
         remarcacao_solicitada,
         motivo_remarcacao,
+        payment_method,
+        tipo_agendamento,
+        is_free,
         servico:servicos(nome),
         pagamentos(metodo, status)
       `)

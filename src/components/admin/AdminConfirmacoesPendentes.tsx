@@ -21,6 +21,7 @@ interface PendingAppointment {
   payment_method: string | null;
   remarcado_de: string | null;
   tipo_agendamento: string | null;
+  is_free: boolean | null;
   profile: { nome: string } | null;
   servico: { nome: string } | null;
   payment: { metodo: string; status: string } | null;
@@ -63,7 +64,7 @@ export function AdminConfirmacoesPendentes() {
       // Construir query com filtro por barbeiro
       let query = supabase
         .from("agendamentos")
-        .select("id, data, hora, status, preco, cliente_confirmou, barbeiro_confirmou, user_id, servico_id, payment_method, remarcado_de, tipo_agendamento, barbeiro_id")
+        .select("id, data, hora, status, preco, cliente_confirmou, barbeiro_confirmou, user_id, servico_id, payment_method, remarcado_de, tipo_agendamento, is_free, barbeiro_id")
         .eq("status", "pending")
         .eq("barbeiro_confirmou", false)
         .order("data", { ascending: true })
@@ -305,7 +306,7 @@ export function AdminConfirmacoesPendentes() {
                     {/* Forma de Pagamento - Cores: Amarelo=Barbearia, Verde=Pago, Roxo=Crédito, Azul=Plano */}
                     <div className="flex flex-wrap gap-2 mb-3">
                       <Badge variant="outline" className="text-xs">
-                        Valor: R$ {apt.preco.toFixed(2)}
+                        {isPlano ? 'Incluído no Plano' : apt.is_free ? 'Corte Grátis' : `Valor: R$ ${apt.preco.toFixed(2)}`}
                       </Badge>
                       
                       {/* PLANO - Azul */}
