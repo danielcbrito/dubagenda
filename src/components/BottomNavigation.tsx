@@ -20,10 +20,10 @@ function NavItem({ icon: Icon, label, isActive, onClick, isSupport }: NavItemPro
         onClick={onClick}
         className="flex flex-col items-center justify-center gap-1 -mt-6"
       >
-        <div className="w-14 h-14 rounded-full bg-red-500 flex items-center justify-center shadow-lg shadow-red-500/40">
-          <Icon className="w-6 h-6 text-white" />
+        <div className="w-14 h-14 rounded-full bg-primary flex items-center justify-center shadow-lg shadow-primary/40">
+          <Icon className="w-6 h-6 text-primary-foreground" />
         </div>
-        <span className="text-[10px] font-semibold text-red-500">{label}</span>
+        <span className="text-[10px] font-semibold text-primary">{label}</span>
       </motion.button>
     );
   }
@@ -36,12 +36,12 @@ function NavItem({ icon: Icon, label, isActive, onClick, isSupport }: NavItemPro
     >
       <Icon 
         className={`w-5 h-5 transition-colors duration-200 ${
-          isActive ? "text-red-500" : "text-zinc-400"
+          isActive ? "text-primary" : "text-muted-foreground"
         }`} 
       />
       <span 
         className={`text-[10px] transition-colors duration-200 ${
-          isActive ? "text-red-500 font-semibold" : "text-zinc-400 font-medium"
+          isActive ? "text-primary font-semibold" : "text-muted-foreground font-medium"
         }`}
       >
         {label}
@@ -75,8 +75,11 @@ export function BottomNavigation({
       >
         {/* Background with blur */}
         <div 
-          className="absolute inset-0 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-lg border-t border-zinc-200 dark:border-zinc-800" 
-          style={{ boxShadow: "0 -4px 24px rgba(0, 0, 0, 0.08)" }}
+          className="absolute inset-0 backdrop-blur-xl border-t border-border/50" 
+          style={{ 
+            background: "linear-gradient(to top, hsl(var(--background) / 0.98), hsl(var(--card) / 0.95))",
+            boxShadow: "0 -8px 32px rgba(0, 0, 0, 0.25)" 
+          }}
         />
         
         {/* Navigation Items - 4 items: Início, Loja, Suporte, Perfil */}
