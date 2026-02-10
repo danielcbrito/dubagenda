@@ -673,7 +673,7 @@ const ClienteAgendar = () => {
       const dateStr = format(selectedDate!, 'yyyy-MM-dd');
 
       const { data: validation, error: validationError } = await supabase.functions.invoke('validate-appointment', {
-        body: { data: dateStr, hora: selectedTime, duracao: totalDuration, userId: session.user.id }
+        body: { data: dateStr, hora: selectedTime, duracao: totalDuration, userId: session.user.id, barberId: selectedBarber?.id }
       });
 
       if (validationError || !validation?.valid) {
@@ -750,6 +750,7 @@ const ClienteAgendar = () => {
           hora: selectedTime,
           duracao: totalDuration,
           userId: session.user.id,
+          barberId: selectedBarber?.id,
           excludeAppointmentId: isRescheduling ? rescheduleAppointmentId : undefined
         }
       });
@@ -870,7 +871,8 @@ const ClienteAgendar = () => {
           data: dateStr,
           hora: selectedTime,
           duracao: totalDuration,
-          userId: session.user.id
+          userId: session.user.id,
+          barberId: selectedBarber?.id
         }
       });
 
@@ -1013,6 +1015,7 @@ const ClienteAgendar = () => {
           hora: selectedTime,
           duracao: totalDuration,
           userId: session.user.id,
+          barberId: selectedBarber?.id,
           excludeAppointmentId: rescheduleAppointmentId
         }
       });

@@ -10,6 +10,7 @@ interface AppointmentRequest {
   hora: string;
   duracao: number;
   userId: string;
+  barberId?: string; // Filtrar por barbeiro específico
   excludeAppointmentId?: string; // Para reagendamentos - excluir o agendamento atual
 }
 
@@ -49,9 +50,9 @@ Deno.serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const { data, hora, duracao, userId, excludeAppointmentId }: AppointmentRequest = await req.json();
+    const { data, hora, duracao, userId, barberId, excludeAppointmentId }: AppointmentRequest = await req.json();
     
-    console.log('[validate-appointment] Iniciando validação:', { data, hora, duracao, userId, excludeAppointmentId });
+    console.log('[validate-appointment] Iniciando validação:', { data, hora, duracao, userId, barberId, excludeAppointmentId });
 
     // Parse the date and get day of week
     const appointmentDate = new Date(data + 'T12:00:00'); // Parse as local date
@@ -60,11 +61,30 @@ Deno.serve(async (req) => {
     // ============================================
     // BUSCAR CONFIGURAÇÕES DE HORÁRIO DO BANCO
     // ============================================
-    const { data: configData, error: configError } = await supabase
-      .from('configuracoes_horario')
-      .select('*')
-      .eq('dia_semana', dayOfWeek)
-      .maybeSingle();
+    // Se barberId informado, usar config do barbeiro; senão, config global
+    let configData: any = null;
+    let configError: any = null;
+
+    if (barberId) {
+      const result = await supabase
+        .from('configuracoes_horario_barbeiro')
+        .select('*')
+        .eq('barbeiro_id', barberId)
+        .eq('dia_semana', dayOfWeek)
+        .maybeSingle();
+      configData = result.data;
+      configError = result.error;
+    }
+
+    if (!configData) {
+      const result = await supabase
+        .from('configuracoes_horario')
+        .select('*')
+        .eq('dia_semana', dayOfWeek)
+        .maybeSingle();
+      configData = result.data;
+      configError = result.error;
+    }
 
     if (configError) {
       console.error('[validate-appointment] Erro ao buscar config:', configError.message);
@@ -156,7 +176,12 @@ Deno.serve(async (req) => {
       .from('agendamentos')
       .select('id, hora, duracao, status')
       .eq('data', data)
-      .in('status', ['pending', 'confirmed', 'completed']); // CORRIGIDO: incluir completed
+      .in('status', ['pending', 'confirmed', 'completed']);
+    
+    // Filtrar por barbeiro se informado
+    if (barberId) {
+      agendamentosQuery = agendamentosQuery.eq('barbeiro_id', barberId);
+    }
     
     // Excluir o próprio agendamento (para reagendamentos)
     if (excludeAppointmentId) {
@@ -207,11 +232,17 @@ Deno.serve(async (req) => {
     // ============================================
     // VERIFICAÇÃO ADICIONAL: Pending Bookings (reservas aguardando pagamento)
     // ============================================
-    const { data: pendingBookings, error: pendingError } = await supabase
+    let pendingQuery = supabase
       .from('pending_bookings')
       .select('id, hora, duracao, expires_at')
       .eq('data', data)
-      .gt('expires_at', new Date().toISOString()); // Apenas reservas não expiradas
+      .gt('expires_at', new Date().toISOString());
+    
+    if (barberId) {
+      pendingQuery = pendingQuery.eq('barbeiro_id', barberId);
+    }
+
+    const { data: pendingBookings, error: pendingError } = await pendingQuery;
 
     if (pendingError) {
       console.error('[validate-appointment] Erro ao buscar pending_bookings:', pendingError);
