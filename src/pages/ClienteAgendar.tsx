@@ -25,7 +25,6 @@ interface Barber {
   id: string;
   apelido: string;
   foto_url: string | null;
-  telefone: string | null;
 }
 
 interface Service {
@@ -114,7 +113,7 @@ const ClienteAgendar = () => {
   const loadBarbers = async () => {
     const { data } = await supabase
       .from("barbeiros")
-      .select("id, apelido, foto_url, telefone")
+      .select("id, apelido, foto_url")
       .eq("ativo", true)
       .order("apelido");
     setBarbers(data || []);
@@ -394,7 +393,7 @@ const ClienteAgendar = () => {
     try {
       const { data: appointment, error } = await supabase
         .from("agendamentos")
-        .select(`*, servico:servicos(*)`)
+        .select(`*, servico:servicos(*), barbeiro:barbeiros(id, apelido, foto_url)`)
         .eq("id", appointmentId)
         .single();
 
@@ -407,6 +406,10 @@ const ClienteAgendar = () => {
       }
 
       setSelectedServices([appointment.servico]);
+      // Pré-selecionar o barbeiro do agendamento original
+      if (appointment.barbeiro) {
+        setSelectedBarber(appointment.barbeiro);
+      }
       setStep(2);
       toast.info("Escolha a nova data e horário");
     } catch (error) {
@@ -557,7 +560,7 @@ const ClienteAgendar = () => {
       const mainService = selectedServices[0];
       const bookingData = {
         servico_id: mainService.id,
-        barbeiro_id: null,
+        barbeiro_id: selectedBarber?.id || null,
         data: format(selectedDate, 'yyyy-MM-dd'),
         hora: selectedTime,
         duracao: totalDuration,
