@@ -21,6 +21,8 @@ import { AppointmentHistorySheet } from "@/components/AppointmentHistorySheet";
 
 // Premium components
 import { LoyaltyCard } from "@/components/client/LoyaltyCard";
+import { PlanTrackerCard } from "@/components/client/PlanTrackerCard";
+import { PlanExpiredBanner } from "@/components/client/PlanExpiredBanner";
 import { ScheduleButton } from "@/components/client/ScheduleButton";
 import { AppointmentCardPremium } from "@/components/client/AppointmentCardPremium";
 
@@ -65,6 +67,9 @@ const Cliente = () => {
   const [availableCredits, setAvailableCredits] = useState(0);
   const [payments, setPayments] = useState<any[]>([]);
   const [recentCancellations, setRecentCancellations] = useState<Appointment[]>([]);
+  const [activeSubscription, setActiveSubscription] = useState<any>(null);
+  const [expiredSubscription, setExpiredSubscription] = useState<any>(null);
+  const [planUsageCount, setPlanUsageCount] = useState(0);
 
   useEffect(() => {
     checkAuth();
@@ -234,6 +239,48 @@ const Cliente = () => {
     setPoints(calculatedPoints);
     setRedemptions(availableRedemptions);
 
+    // Buscar assinatura ativa do usuário
+    const { data: activeSub } = await supabase
+      .from("assinaturas")
+      .select("id, status, next_billing_date, plano_id, plano:planos(nome, limite_agendamentos_mes)")
+      .eq("user_id", userId)
+      .eq("status", "active")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (activeSub) {
+      setActiveSubscription(activeSub);
+      setExpiredSubscription(null);
+
+      // Contar usos do plano no mês atual
+      const now = new Date();
+      const competencia = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+      
+      const { count: usageCount } = await supabase
+        .from("plano_agendamentos_usos")
+        .select("*", { count: 'exact', head: true })
+        .eq("assinatura_id", activeSub.id)
+        .eq("competencia", competencia);
+
+      setPlanUsageCount(usageCount || 0);
+    } else {
+      setActiveSubscription(null);
+
+      // Verificar se tem assinatura recém-expirada (cancelled/suspended)
+      const { data: expiredSub } = await supabase
+        .from("assinaturas")
+        .select("id, status, plano_id, plano:planos(nome)")
+        .eq("user_id", userId)
+        .in("status", ["cancelled", "suspended"])
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      setExpiredSubscription(expiredSub);
+      setPlanUsageCount(0);
+    }
+
     const { data: pendingBookingsData } = await supabase
       .from("pending_bookings")
       .select(`
@@ -327,12 +374,34 @@ const Cliente = () => {
       <div className="flex-1 overflow-y-auto pb-28">
         <div className="max-w-lg mx-auto px-4 py-6 space-y-6">
           
-          {/* Loyalty Card */}
-          <LoyaltyCard
-            points={points}
-            redemptions={redemptions}
-            onViewDetails={() => setPointsModalOpen(true)}
-          />
+          {/* Plan Tracker ou Loyalty Card */}
+          {activeSubscription ? (
+            <PlanTrackerCard
+              planName={(activeSubscription as any).plano?.nome || "Meu Plano"}
+              usedAppointments={planUsageCount}
+              totalAppointments={4}
+              nextBillingDate={activeSubscription.next_billing_date || ""}
+              onViewDetails={() => setPlansSheetOpen(true)}
+            />
+          ) : expiredSubscription ? (
+            <>
+              <PlanExpiredBanner
+                planName={(expiredSubscription as any).plano?.nome || "Plano"}
+                onRenew={() => setSubscribeSheetOpen(true)}
+              />
+              <LoyaltyCard
+                points={points}
+                redemptions={redemptions}
+                onViewDetails={() => setPointsModalOpen(true)}
+              />
+            </>
+          ) : (
+            <LoyaltyCard
+              points={points}
+              redemptions={redemptions}
+              onViewDetails={() => setPointsModalOpen(true)}
+            />
+          )}
 
           {/* Schedule Button */}
           <ScheduleButton onClick={() => navigate("/cliente/agendar")} />
