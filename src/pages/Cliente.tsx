@@ -204,15 +204,14 @@ const Cliente = () => {
     
     setPayments(paymentsData || []);
 
-    // Contar cortes CONCLUÍDOS e PAGOS (não grátis) para calcular pontos reais
-    const { count: paidCompletedCount } = await supabase
-      .from("agendamentos")
-      .select("*", { count: 'exact', head: true })
+    // Buscar pontos diretamente da tabela pontos (fonte de verdade, gerenciada pelo trigger)
+    const { data: pontosData } = await supabase
+      .from("pontos")
+      .select("pontos")
       .eq("user_id", userId)
-      .eq("status", "completed")
-      .eq("is_free", false);
+      .maybeSingle();
 
-    const paidCompleted = paidCompletedCount || 0;
+    const currentPoints = pontosData?.pontos || 0;
     
     // Contar total de cortes concluídos (incluindo grátis) para estatísticas
     const { count: totalCompletedCount } = await supabase
@@ -223,21 +222,16 @@ const Cliente = () => {
 
     setCompletedAppointments(totalCompletedCount || 0);
 
-    // Buscar total de resgates (usados + disponíveis) para calcular ciclos completos
+    // Buscar resgates disponíveis
     const { data: allRedemptions } = await supabase
       .from("resgates")
       .select("id, status")
-      .eq("user_id", userId);
+      .eq("user_id", userId)
+      .eq("status", "available");
 
-    const totalRedemptions = allRedemptions?.length || 0;
-    const availableRedemptions = allRedemptions?.filter(r => r.status === 'available').length || 0;
+    const availableRedemptions = allRedemptions?.length || 0;
 
-    // Calcular pontos no ciclo atual baseado em cortes pagos
-    // Fórmula: pontos = cortes_pagos - (resgates_totais * 5)
-    // Se der negativo (dados inconsistentes), usar 0
-    const calculatedPoints = Math.max(0, paidCompleted - (totalRedemptions * 5));
-    
-    setPoints(calculatedPoints);
+    setPoints(currentPoints);
     setRedemptions(availableRedemptions);
 
     // Buscar assinatura ativa do usuário
