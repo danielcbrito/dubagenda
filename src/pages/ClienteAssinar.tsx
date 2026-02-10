@@ -46,78 +46,71 @@ function PlanCard({
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       whileTap={{ scale: disabled ? 1 : 0.98 }}
       onClick={() => !disabled && onSelect()}
       className={cn(
-        "relative rounded-2xl p-6 border transition-all cursor-pointer",
+        "relative rounded-2xl border transition-all cursor-pointer overflow-hidden",
         isSelected
-          ? "bg-gradient-to-br from-red-500/10 to-orange-500/10 border-red-500/50 shadow-xl shadow-red-500/10 ring-2 ring-red-500/30"
+          ? "border-primary/50 bg-card shadow-lg shadow-primary/5 ring-2 ring-primary/30"
           : isPopular 
-            ? "bg-gradient-to-br from-red-500/5 to-orange-500/5 border-red-500/30 hover:border-red-500/50" 
-            : "bg-zinc-900/50 border-zinc-800 hover:border-zinc-700",
+            ? "border-primary/20 bg-card hover:border-primary/40" 
+            : "border-border/40 bg-card hover:border-border",
         disabled && "opacity-50 cursor-not-allowed"
       )}
     >
-      {/* Badge "Mais Popular" */}
-      {isPopular && (
-        <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-          <div className="bg-gradient-to-r from-red-500 to-orange-500 text-white text-xs font-bold px-4 py-1.5 rounded-full shadow-lg flex items-center gap-1">
-            <Crown className="w-3 h-3" />
-            MAIS POPULAR
-          </div>
-        </div>
+      {/* Accent line for selected/popular */}
+      {(isSelected || isPopular) && (
+        <div className="h-0.5 bg-gradient-to-r from-primary via-primary/80 to-primary/40" />
       )}
 
-      {/* Check de seleção */}
-      {isSelected && (
-        <div className="absolute top-4 right-4">
-          <div className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center shadow-lg">
-            <Check className="w-4 h-4 text-white" />
+      <div className="p-6">
+        {/* Check de seleção */}
+        {isSelected && (
+          <div className="absolute top-5 right-5">
+            <div className="w-7 h-7 bg-primary rounded-full flex items-center justify-center">
+              <Check className="w-4 h-4 text-primary-foreground" />
+            </div>
+          </div>
+        )}
+
+        {/* Header */}
+        <div className="mb-4 pr-10">
+          <h3 className="text-xl font-bold text-foreground mb-1">
+            {plan.nome}
+          </h3>
+          <p className="text-sm text-muted-foreground">
+            {plan.descricao}
+          </p>
+        </div>
+
+        {/* Preço */}
+        <div className="mb-5">
+          <div className="flex items-baseline gap-1">
+            <span className="text-3xl font-bold text-primary">
+              R$ {plan.preco_mensal.toFixed(2).replace('.', ',')}
+            </span>
+            <span className="text-sm text-muted-foreground">/mês</span>
           </div>
         </div>
-      )}
 
-      {/* Header do Card */}
-      <div className="mb-4 pr-10">
-        <h3 className="text-2xl font-bold text-white mb-2">
-          {plan.nome}
-        </h3>
-        <p className="text-sm text-zinc-400">
-          {plan.descricao}
-        </p>
-      </div>
-
-      {/* Preço */}
-      <div className="mb-6">
-        <div className="flex items-baseline gap-2">
-          <span className="text-4xl font-bold text-red-500">
-            R$ {plan.preco_mensal.toFixed(2).replace('.', ',')}
-          </span>
-          <span className="text-zinc-500">/mês</span>
-        </div>
-      </div>
-
-      {/* Benefícios */}
-      <div className="space-y-3">
-        <h4 className="text-xs font-semibold text-zinc-500 uppercase tracking-wide">
-          Benefícios inclusos
-        </h4>
-        
-        <div className="flex items-start gap-3">
-          <CheckCircle2 className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
-          <span className="text-sm text-zinc-300">
-            {plan.limite_agendamentos_mes} agendamentos por mês
-          </span>
-        </div>
-        
-        {benefits.map((beneficio: string, index: number) => (
-          <div key={index} className="flex items-start gap-3">
-            <CheckCircle2 className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
-            <span className="text-sm text-zinc-300">{beneficio}</span>
+        {/* Benefícios */}
+        <div className="space-y-2.5 pt-4 border-t border-border/30">
+          <div className="flex items-start gap-3">
+            <CheckCircle2 className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
+            <span className="text-sm text-muted-foreground">
+              {plan.limite_agendamentos_mes} agendamentos por mês
+            </span>
           </div>
-        ))}
+          
+          {benefits.map((beneficio: string, index: number) => (
+            <div key={index} className="flex items-start gap-3">
+              <CheckCircle2 className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
+              <span className="text-sm text-muted-foreground">{beneficio}</span>
+            </div>
+          ))}
+        </div>
       </div>
     </motion.div>
   );
@@ -284,22 +277,19 @@ const ClienteAssinar = () => {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-950 pb-20">
+    <div className="min-h-screen bg-background pb-20">
       
-      {/* HEADER PREMIUM */}
-      <div className="sticky top-0 bg-zinc-900/95 backdrop-blur-xl border-b border-zinc-800 px-4 py-4 z-10">
+      {/* Header */}
+      <div className="sticky top-0 bg-background/95 backdrop-blur-xl border-b border-border/40 px-4 py-4 z-10">
         <div className="max-w-2xl mx-auto">
           <div className="flex items-center gap-3">
             <button 
               onClick={() => step === 1 ? navigate("/cliente") : setStep(step - 1)}
-              className="w-10 h-10 flex items-center justify-center rounded-full bg-zinc-800 hover:bg-zinc-700 transition-colors"
+              className="w-10 h-10 flex items-center justify-center rounded-full bg-card hover:bg-muted transition-colors"
             >
-              <ArrowLeft className="w-5 h-5" />
+              <ArrowLeft className="w-5 h-5 text-foreground" />
             </button>
-            <div>
-              <h1 className="text-xl font-bold">Planos de Assinatura</h1>
-              <p className="text-sm text-zinc-400">Escolha o melhor para você</p>
-            </div>
+            <h1 className="text-lg font-bold text-foreground">Planos de Assinatura</h1>
           </div>
         </div>
       </div>
@@ -311,9 +301,9 @@ const ClienteAssinar = () => {
           <motion.div 
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-orange-500/10 border border-orange-500/30 rounded-xl p-4"
+            className="bg-destructive/10 border border-destructive/30 rounded-xl p-4"
           >
-            <p className="text-sm text-orange-400">
+            <p className="text-sm text-destructive">
               Você já possui uma assinatura ativa. Cancele-a antes de assinar outro plano.
             </p>
           </motion.div>
@@ -346,7 +336,7 @@ const ClienteAssinar = () => {
               <Button
                 onClick={() => setStep(2)}
                 disabled={!selectedPlan || hasActiveSubscription}
-                className="w-full h-14 text-lg font-bold bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-600 hover:to-orange-600 shadow-lg shadow-red-500/20"
+                className="w-full h-14 text-lg font-semibold bg-primary hover:bg-primary/90"
               >
                 Continuar
               </Button>
@@ -363,20 +353,20 @@ const ClienteAssinar = () => {
               className="space-y-4"
             >
               <div>
-                <h2 className="text-xl font-bold mb-1">Forma de Pagamento</h2>
-                <p className="text-sm text-zinc-400">
+                <h2 className="text-xl font-bold text-foreground mb-1">Forma de Pagamento</h2>
+                <p className="text-sm text-muted-foreground">
                   Escolha como deseja pagar sua assinatura mensal
                 </p>
               </div>
 
               {/* Resumo do plano */}
-              <div className="bg-gradient-to-r from-red-500/10 to-orange-500/10 border border-red-500/30 rounded-xl p-4">
+              <div className="rounded-xl border border-border/40 bg-card p-4">
                 <div className="flex justify-between items-center">
                   <div>
-                    <div className="font-semibold text-white">{selectedPlan.nome}</div>
-                    <div className="text-sm text-zinc-400">Cobrança mensal</div>
+                    <div className="font-semibold text-foreground">{selectedPlan.nome}</div>
+                    <div className="text-sm text-muted-foreground">Cobrança mensal</div>
                   </div>
-                  <div className="text-2xl font-bold text-red-500">
+                  <div className="text-2xl font-bold text-primary">
                     R$ {selectedPlan.preco_mensal.toFixed(2).replace('.', ',')}
                   </div>
                 </div>
@@ -389,26 +379,26 @@ const ClienteAssinar = () => {
                   className={cn(
                     "p-4 rounded-xl border cursor-pointer transition-all",
                     paymentMethod === 'card'
-                      ? "bg-red-500/10 border-red-500/50 ring-2 ring-red-500/30"
-                      : "bg-zinc-900/50 border-zinc-800 hover:border-zinc-700"
+                      ? "bg-primary/5 border-primary/40 ring-2 ring-primary/20"
+                      : "bg-card border-border/40 hover:border-border"
                   )}
                   onClick={() => setPaymentMethod('card')}
                 >
                   <div className="flex items-center gap-3">
                     <div className={cn(
                       "w-5 h-5 rounded-full border-2 flex items-center justify-center",
-                      paymentMethod === 'card' ? "border-red-500" : "border-zinc-600"
+                      paymentMethod === 'card' ? "border-primary" : "border-muted-foreground/40"
                     )}>
                       {paymentMethod === 'card' && (
-                        <div className="w-3 h-3 rounded-full bg-red-500" />
+                        <div className="w-3 h-3 rounded-full bg-primary" />
                       )}
                     </div>
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
-                        <CreditCard className="w-4 h-4 text-zinc-400" />
-                        <h4 className="font-semibold text-white">Cartão de Crédito</h4>
+                        <CreditCard className="w-4 h-4 text-muted-foreground" />
+                        <h4 className="font-semibold text-foreground">Cartão de Crédito</h4>
                       </div>
-                      <p className="text-xs text-zinc-500">
+                      <p className="text-xs text-muted-foreground">
                         Cobrança automática mensal
                       </p>
                     </div>
@@ -421,26 +411,26 @@ const ClienteAssinar = () => {
                   className={cn(
                     "p-4 rounded-xl border cursor-pointer transition-all",
                     paymentMethod === 'pix'
-                      ? "bg-red-500/10 border-red-500/50 ring-2 ring-red-500/30"
-                      : "bg-zinc-900/50 border-zinc-800 hover:border-zinc-700"
+                      ? "bg-primary/5 border-primary/40 ring-2 ring-primary/20"
+                      : "bg-card border-border/40 hover:border-border"
                   )}
                   onClick={() => setPaymentMethod('pix')}
                 >
                   <div className="flex items-center gap-3">
                     <div className={cn(
                       "w-5 h-5 rounded-full border-2 flex items-center justify-center",
-                      paymentMethod === 'pix' ? "border-red-500" : "border-zinc-600"
+                      paymentMethod === 'pix' ? "border-primary" : "border-muted-foreground/40"
                     )}>
                       {paymentMethod === 'pix' && (
-                        <div className="w-3 h-3 rounded-full bg-red-500" />
+                        <div className="w-3 h-3 rounded-full bg-primary" />
                       )}
                     </div>
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
-                        <Zap className="w-4 h-4 text-zinc-400" />
-                        <h4 className="font-semibold text-white">PIX</h4>
+                        <Zap className="w-4 h-4 text-muted-foreground" />
+                        <h4 className="font-semibold text-foreground">PIX</h4>
                       </div>
-                      <p className="text-xs text-zinc-500">
+                      <p className="text-xs text-muted-foreground">
                         Você receberá um QR Code todo mês
                       </p>
                     </div>
@@ -450,7 +440,7 @@ const ClienteAssinar = () => {
 
               <Button
                 onClick={() => setStep(3)}
-                className="w-full h-14 text-lg font-bold bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-600 hover:to-orange-600 shadow-lg shadow-red-500/20"
+                className="w-full h-14 text-lg font-semibold bg-primary hover:bg-primary/90"
               >
                 Continuar
               </Button>
@@ -467,27 +457,27 @@ const ClienteAssinar = () => {
               className="space-y-4"
             >
               <div>
-                <h2 className="text-xl font-bold mb-1">Dados de Pagamento</h2>
-                <p className="text-sm text-zinc-400">
+                <h2 className="text-xl font-bold text-foreground mb-1">Dados de Pagamento</h2>
+                <p className="text-sm text-muted-foreground">
                   {paymentMethod === 'card' ? 'Preencha os dados do seu cartão' : 'Confirme para gerar o QR Code'}
                 </p>
               </div>
 
               {paymentMethod === 'card' && (
-                <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-6 space-y-4">
+                <div className="bg-card border border-border/40 rounded-xl p-6 space-y-4">
                   <div>
-                    <Label htmlFor="cardHolderName" className="text-zinc-400 text-sm">Nome no Cartão</Label>
+                    <Label htmlFor="cardHolderName" className="text-muted-foreground text-sm">Nome no Cartão</Label>
                     <Input
                       id="cardHolderName"
                       placeholder="Como está no cartão"
                       value={cardHolderName}
                       onChange={(e) => setCardHolderName(e.target.value)}
-                      className="bg-zinc-800/50 border-zinc-700 mt-1.5"
+                      className="bg-muted/50 border-border mt-1.5"
                     />
                   </div>
 
                   <div>
-                    <Label htmlFor="cardNumber" className="text-zinc-400 text-sm">Número do Cartão</Label>
+                    <Label htmlFor="cardNumber" className="text-muted-foreground text-sm">Número do Cartão</Label>
                     <Input
                       id="cardNumber"
                       placeholder="0000 0000 0000 0000"
@@ -498,37 +488,37 @@ const ClienteAssinar = () => {
                         setCardNumber(formatted);
                       }}
                       maxLength={19}
-                      className="bg-zinc-800/50 border-zinc-700 mt-1.5"
+                      className="bg-muted/50 border-border mt-1.5"
                     />
                   </div>
 
                   <div className="grid grid-cols-3 gap-3">
                     <div>
-                      <Label htmlFor="cardExpiryMonth" className="text-zinc-400 text-sm">Mês</Label>
+                      <Label htmlFor="cardExpiryMonth" className="text-muted-foreground text-sm">Mês</Label>
                       <Input
                         id="cardExpiryMonth"
                         placeholder="MM"
                         value={cardExpiryMonth}
                         onChange={(e) => setCardExpiryMonth(e.target.value.replace(/\D/g, '').slice(0, 2))}
                         maxLength={2}
-                        className="bg-zinc-800/50 border-zinc-700 mt-1.5"
+                        className="bg-muted/50 border-border mt-1.5"
                       />
                     </div>
 
                     <div>
-                      <Label htmlFor="cardExpiryYear" className="text-zinc-400 text-sm">Ano</Label>
+                      <Label htmlFor="cardExpiryYear" className="text-muted-foreground text-sm">Ano</Label>
                       <Input
                         id="cardExpiryYear"
                         placeholder="AAAA"
                         value={cardExpiryYear}
                         onChange={(e) => setCardExpiryYear(e.target.value.replace(/\D/g, '').slice(0, 4))}
                         maxLength={4}
-                        className="bg-zinc-800/50 border-zinc-700 mt-1.5"
+                        className="bg-muted/50 border-border mt-1.5"
                       />
                     </div>
 
                     <div>
-                      <Label htmlFor="cardCvv" className="text-zinc-400 text-sm">CVV</Label>
+                      <Label htmlFor="cardCvv" className="text-muted-foreground text-sm">CVV</Label>
                       <Input
                         id="cardCvv"
                         placeholder="123"
@@ -536,7 +526,7 @@ const ClienteAssinar = () => {
                         value={cardCvv}
                         onChange={(e) => setCardCvv(e.target.value.replace(/\D/g, '').slice(0, 4))}
                         maxLength={4}
-                        className="bg-zinc-800/50 border-zinc-700 mt-1.5"
+                        className="bg-muted/50 border-border mt-1.5"
                       />
                     </div>
                   </div>
@@ -544,37 +534,37 @@ const ClienteAssinar = () => {
               )}
 
               {paymentMethod === 'pix' && (
-                <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-6">
+                <div className="bg-card border border-border/40 rounded-xl p-6">
                   <div className="flex items-center gap-3 mb-3">
-                    <div className="w-10 h-10 bg-green-500/20 rounded-full flex items-center justify-center">
-                      <Zap className="w-5 h-5 text-green-500" />
+                    <div className="w-10 h-10 bg-emerald-500/15 rounded-full flex items-center justify-center">
+                      <Zap className="w-5 h-5 text-emerald-500" />
                     </div>
                     <div>
-                      <h4 className="font-semibold text-white">Pagamento PIX</h4>
-                      <p className="text-sm text-zinc-400">Rápido e seguro</p>
+                      <h4 className="font-semibold text-foreground">Pagamento PIX</h4>
+                      <p className="text-sm text-muted-foreground">Rápido e seguro</p>
                     </div>
                   </div>
-                  <p className="text-sm text-zinc-400">
+                  <p className="text-sm text-muted-foreground">
                     Clique em confirmar para gerar o QR Code PIX para pagamento da sua primeira mensalidade.
                   </p>
                 </div>
               )}
 
               {/* Resumo */}
-              <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-4 space-y-3">
-                <div className="flex justify-between py-2 border-b border-zinc-800">
-                  <span className="text-zinc-400">Plano:</span>
-                  <span className="font-semibold text-white">{selectedPlan.nome}</span>
+              <div className="bg-card border border-border/40 rounded-xl p-4 space-y-3">
+                <div className="flex justify-between py-2 border-b border-border/30">
+                  <span className="text-muted-foreground">Plano:</span>
+                  <span className="font-semibold text-foreground">{selectedPlan.nome}</span>
                 </div>
-                <div className="flex justify-between py-2 border-b border-zinc-800">
-                  <span className="text-zinc-400">Forma de Pagamento:</span>
-                  <span className="font-semibold text-white">
+                <div className="flex justify-between py-2 border-b border-border/30">
+                  <span className="text-muted-foreground">Forma de Pagamento:</span>
+                  <span className="font-semibold text-foreground">
                     {paymentMethod === 'card' ? 'Cartão de Crédito' : 'PIX'}
                   </span>
                 </div>
-                <div className="flex justify-between items-center py-3 bg-red-500/10 -mx-4 -mb-4 px-4 rounded-b-xl">
-                  <span className="font-semibold text-white">Valor Mensal:</span>
-                  <span className="text-2xl font-bold text-red-500">
+                <div className="flex justify-between items-center py-3">
+                  <span className="font-semibold text-foreground">Valor Mensal:</span>
+                  <span className="text-2xl font-bold text-primary">
                     R$ {selectedPlan.preco_mensal.toFixed(2).replace('.', ',')}
                   </span>
                 </div>
@@ -583,11 +573,11 @@ const ClienteAssinar = () => {
               <Button
                 onClick={handleSubscribe}
                 disabled={loading}
-                className="w-full h-14 text-lg font-bold bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-600 hover:to-orange-600 shadow-lg shadow-red-500/20"
+                className="w-full h-14 text-lg font-semibold bg-primary hover:bg-primary/90"
               >
                 {loading ? (
                   <div className="flex items-center gap-2">
-                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <div className="w-5 h-5 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" />
                     Processando...
                   </div>
                 ) : (
@@ -606,19 +596,19 @@ const ClienteAssinar = () => {
               className="space-y-6"
             >
               {paymentConfirmed ? (
-                <div className="bg-zinc-900/50 border border-green-500/30 rounded-2xl p-8 text-center space-y-4">
+                <div className="bg-card border border-emerald-500/30 rounded-2xl p-8 text-center space-y-4">
                   <motion.div 
                     initial={{ scale: 0 }}
                     animate={{ scale: 1 }}
                     className="flex justify-center"
                   >
-                    <div className="bg-green-500/20 rounded-full p-4">
-                      <CheckCircle2 className="w-16 h-16 text-green-500" />
+                    <div className="bg-emerald-500/15 rounded-full p-4">
+                      <CheckCircle2 className="w-16 h-16 text-emerald-500" />
                     </div>
                   </motion.div>
                   <div>
-                    <h2 className="text-2xl font-bold mb-2 text-white">Pagamento Confirmado</h2>
-                    <p className="text-zinc-400">
+                    <h2 className="text-2xl font-bold mb-2 text-foreground">Pagamento Confirmado</h2>
+                    <p className="text-muted-foreground">
                       Sua assinatura foi ativada com sucesso!
                     </p>
                   </div>
@@ -626,13 +616,13 @@ const ClienteAssinar = () => {
               ) : (
                 <>
                   <div className="text-center">
-                    <h2 className="text-xl font-bold mb-1 text-white">Escaneie o QR Code</h2>
-                    <p className="text-sm text-zinc-400">
+                    <h2 className="text-xl font-bold mb-1 text-foreground">Escaneie o QR Code</h2>
+                    <p className="text-sm text-muted-foreground">
                       Use o app do seu banco para pagar
                     </p>
                   </div>
 
-                  <div className="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-6 space-y-6">
+                  <div className="bg-card border border-border/40 rounded-2xl p-6 space-y-6">
                     <div className="flex justify-center bg-white p-4 rounded-xl">
                       <img
                         src={`data:image/png;base64,${pixQrCode}`}
@@ -643,33 +633,33 @@ const ClienteAssinar = () => {
 
                     {pixPayload && (
                       <div className="space-y-4">
-                        <p className="text-base font-semibold text-white text-center">
+                        <p className="text-base font-semibold text-foreground text-center">
                           Ou copie o código PIX
                         </p>
                         
-                        <div className="bg-zinc-800/50 p-4 rounded-xl border border-zinc-700">
-                          <p className="text-xs text-zinc-400 font-mono break-all">
+                        <div className="bg-muted/50 p-4 rounded-xl border border-border/40">
+                          <p className="text-xs text-muted-foreground font-mono break-all">
                             {pixPayload}
                           </p>
                         </div>
 
                         <Button
                           onClick={copyPixCode}
-                          className="w-full h-14 text-base font-semibold bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-600 hover:to-orange-600 shadow-lg shadow-red-500/20"
+                          className="w-full h-14 text-base font-semibold bg-primary hover:bg-primary/90"
                         >
                           <Copy className="w-5 h-5 mr-2" />
                           Copiar Código PIX
                         </Button>
                         
-                        <p className="text-xs text-zinc-500 text-center">
+                        <p className="text-xs text-muted-foreground text-center">
                           Toque no botão acima para copiar o código automaticamente
                         </p>
                       </div>
                     )}
 
-                    <div className="text-center pt-4 border-t border-zinc-800">
-                      <div className="flex items-center justify-center gap-2 text-zinc-400">
-                        <div className="w-4 h-4 border-2 border-red-500 border-t-transparent rounded-full animate-spin" />
+                    <div className="text-center pt-4 border-t border-border/30">
+                      <div className="flex items-center justify-center gap-2 text-muted-foreground">
+                        <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
                         <p className="text-sm">
                           Aguardando confirmação do pagamento...
                         </p>
