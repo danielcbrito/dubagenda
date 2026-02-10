@@ -70,6 +70,7 @@ const Cliente = () => {
   const [activeSubscription, setActiveSubscription] = useState<any>(null);
   const [expiredSubscription, setExpiredSubscription] = useState<any>(null);
   const [planUsageCount, setPlanUsageCount] = useState(0);
+  const [dataLoaded, setDataLoaded] = useState(false);
 
   useEffect(() => {
     checkAuth();
@@ -297,6 +298,7 @@ const Cliente = () => {
       .order("created_at", { ascending: false });
 
     setPendingBookings(pendingBookingsData || []);
+    setDataLoaded(true);
   };
 
   const handleLogout = async () => {
@@ -375,7 +377,9 @@ const Cliente = () => {
         <div className="max-w-lg mx-auto px-4 py-6 space-y-6">
           
           {/* Plan Tracker ou Loyalty Card */}
-          {activeSubscription ? (
+          {!dataLoaded ? (
+            <div className="rounded-2xl h-[180px] bg-muted/30 animate-pulse" />
+          ) : activeSubscription ? (
             <PlanTrackerCard
               planName={(activeSubscription as any).plano?.nome || "Meu Plano"}
               usedAppointments={planUsageCount}

@@ -10,27 +10,35 @@ interface PlanTrackerCardProps {
   onViewDetails: () => void;
 }
 
-function UsageSlot({ used, index }: { used: boolean; index: number }) {
+function UsageSlot({ used, index, total }: { used: boolean; index: number; total: number }) {
   return (
     <motion.div
-      initial={{ scale: 0 }}
-      animate={{ scale: 1 }}
-      transition={{ delay: index * 0.1, duration: 0.3 }}
-      className="flex-1 flex flex-col items-center gap-1.5"
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.15 + index * 0.08, duration: 0.35, ease: "easeOut" }}
+      className="flex-1 flex flex-col items-center"
     >
       <div
-        className={`w-full h-10 rounded-xl flex items-center justify-center transition-all duration-300 ${
+        className={`w-full h-11 rounded-lg flex items-center justify-center transition-all duration-500 ${
           used
-            ? "bg-white/25 shadow-[0_0_16px_rgba(255,255,255,0.2)]"
-            : "bg-white/10 border border-white/10"
+            ? "border border-white/20"
+            : "border border-dashed border-white/[0.08]"
         }`}
+        style={used ? {
+          background: "linear-gradient(180deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.04) 100%)",
+        } : {
+          background: "rgba(255,255,255,0.02)",
+        }}
       >
         {used ? (
-          <CalendarCheck className="w-5 h-5 text-white" />
+          <CalendarCheck className="w-[18px] h-[18px] text-white/80" strokeWidth={1.8} />
         ) : (
-          <span className="text-white/30 text-xs font-bold">—</span>
+          <span className="w-1.5 h-1.5 rounded-full bg-white/15" />
         )}
       </div>
+      <span className="text-[10px] text-white/30 mt-1.5 font-medium tabular-nums">
+        {index + 1}/{total}
+      </span>
     </motion.div>
   );
 }
@@ -45,7 +53,6 @@ export function PlanTrackerCard({
   const remaining = Math.max(0, totalAppointments - usedAppointments);
   const slots = Array.from({ length: totalAppointments }, (_, i) => i < usedAppointments);
 
-  // Formatar data de renovação
   const formattedDate = (() => {
     try {
       const d = new Date(nextBillingDate + "T00:00:00");
@@ -57,31 +64,21 @@ export function PlanTrackerCard({
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, ease: "easeOut" }}
+      transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
       className="relative overflow-hidden rounded-2xl"
       style={{
-        background: "linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)",
-        boxShadow: "0 20px 40px -12px rgba(15, 52, 96, 0.5), 0 8px 24px rgba(0, 0, 0, 0.3)",
+        background: "linear-gradient(145deg, #111113 0%, #18181b 40%, #1c1c22 100%)",
+        boxShadow: "0 1px 0 0 rgba(255,255,255,0.04) inset, 0 16px 40px -8px rgba(0,0,0,0.5)",
+        border: "1px solid rgba(255,255,255,0.06)",
       }}
     >
-      {/* Background decorativo */}
+      {/* Subtle top-left accent glow */}
       <div
-        className="absolute inset-0 opacity-10"
+        className="absolute -top-16 -left-16 w-48 h-48 rounded-full opacity-[0.04]"
         style={{
-          backgroundImage: `radial-gradient(circle at 90% 10%, rgba(251, 191, 36, 0.4) 0%, transparent 40%),
-                            radial-gradient(circle at 10% 90%, rgba(251, 191, 36, 0.2) 0%, transparent 50%)`,
-        }}
-      />
-
-      {/* Shine */}
-      <div
-        className="absolute inset-0 opacity-15"
-        style={{
-          background: "linear-gradient(135deg, transparent 0%, rgba(251,191,36,0.3) 50%, transparent 100%)",
-          transform: "translateX(-100%)",
-          animation: "shimmer 4s infinite",
+          background: "radial-gradient(circle, #FBBF24 0%, transparent 70%)",
         }}
       />
 
@@ -90,35 +87,36 @@ export function PlanTrackerCard({
         <div className="flex items-start justify-between mb-5">
           <div className="flex items-center gap-3">
             <div
-              className="w-11 h-11 rounded-xl flex items-center justify-center"
+              className="w-10 h-10 rounded-lg flex items-center justify-center"
               style={{
-                background: "linear-gradient(135deg, #FBBF24, #F59E0B)",
-                boxShadow: "0 4px 12px rgba(251, 191, 36, 0.4)",
+                background: "linear-gradient(135deg, #FBBF24 0%, #D97706 100%)",
+                boxShadow: "0 2px 8px rgba(251, 191, 36, 0.25)",
               }}
             >
-              <Crown className="w-5 h-5 text-black" />
+              <Crown className="w-[18px] h-[18px] text-black" strokeWidth={2} />
             </div>
             <div>
-              <h3 className="text-white font-bold text-base tracking-tight">
+              <h3 className="text-white font-semibold text-[15px] tracking-tight leading-tight">
                 {planName}
               </h3>
-              <p className="text-white/50 text-xs">
+              <p className="text-white/40 text-xs mt-0.5">
                 Renova em {formattedDate}
               </p>
             </div>
           </div>
 
           <div
-            className="flex items-center gap-1 px-2.5 py-1 rounded-full"
+            className="px-2.5 py-1 rounded-md"
             style={{
               background: remaining > 0
-                ? "rgba(34, 197, 94, 0.2)"
-                : "rgba(239, 68, 68, 0.2)",
+                ? "rgba(34, 197, 94, 0.1)"
+                : "rgba(239, 68, 68, 0.1)",
+              border: `1px solid ${remaining > 0 ? "rgba(34, 197, 94, 0.15)" : "rgba(239, 68, 68, 0.15)"}`,
             }}
           >
             <span
-              className={`text-xs font-bold ${
-                remaining > 0 ? "text-green-400" : "text-red-400"
+              className={`text-[11px] font-semibold ${
+                remaining > 0 ? "text-green-400/90" : "text-red-400/90"
               }`}
             >
               {remaining > 0 ? `${remaining} restante${remaining > 1 ? "s" : ""}` : "Esgotado"}
@@ -126,38 +124,48 @@ export function PlanTrackerCard({
           </div>
         </div>
 
-        {/* Slots de uso */}
-        <div className="space-y-2.5 mb-4">
+        {/* Usage slots */}
+        <div className="mb-4">
           <div className="flex items-center gap-2">
             {slots.map((used, index) => (
-              <UsageSlot key={index} used={used} index={index} />
+              <UsageSlot key={index} used={used} index={index} total={totalAppointments} />
             ))}
           </div>
 
-          <div className="flex items-center justify-between text-white/60 text-xs">
-            <span className="font-medium">
-              {usedAppointments} de {totalAppointments} agendamentos usados
+          <div className="flex items-center justify-between mt-3">
+            <span className="text-white/40 text-xs font-medium">
+              {usedAppointments} de {totalAppointments} usados
             </span>
+            {/* Minimal progress bar */}
+            <div className="flex items-center gap-1.5">
+              <div className="w-16 h-1 rounded-full bg-white/[0.06] overflow-hidden">
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: `${(usedAppointments / totalAppointments) * 100}%` }}
+                  transition={{ delay: 0.3, duration: 0.6, ease: "easeOut" }}
+                  className="h-full rounded-full"
+                  style={{
+                    background: "linear-gradient(90deg, rgba(251,191,36,0.6), rgba(251,191,36,0.3))",
+                  }}
+                />
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Botão detalhes */}
+        {/* Divider */}
+        <div className="h-px bg-white/[0.06] mb-3" />
+
+        {/* Details button */}
         <Button
           variant="ghost"
           onClick={onViewDetails}
-          className="w-full h-9 rounded-xl text-white/80 hover:text-white hover:bg-white/10 transition-all duration-300 group text-sm"
+          className="w-full h-9 rounded-lg text-white/50 hover:text-white/80 hover:bg-white/[0.04] transition-all duration-300 group text-xs"
         >
           <span className="font-medium">Ver meu plano</span>
-          <ChevronRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
+          <ChevronRight className="w-3.5 h-3.5 ml-1 group-hover:translate-x-0.5 transition-transform" />
         </Button>
       </div>
-
-      <style>{`
-        @keyframes shimmer {
-          0% { transform: translateX(-100%); }
-          100% { transform: translateX(100%); }
-        }
-      `}</style>
     </motion.div>
   );
 }
