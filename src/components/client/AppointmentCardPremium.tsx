@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Calendar, Clock, Check, AlertCircle, ChevronRight, X } from "lucide-react";
+import { Calendar, Clock, Check, AlertCircle, ChevronRight, X, Crown, Gift } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { motion } from "framer-motion";
@@ -23,6 +23,9 @@ interface Appointment {
   visivel_para_usuario?: boolean;
   remarcacao_solicitada?: boolean;
   motivo_remarcacao?: string;
+  payment_method?: string | null;
+  tipo_agendamento?: string | null;
+  is_free?: boolean | null;
   pagamentos?: Array<{
     metodo: string;
     status: string;
@@ -110,8 +113,13 @@ export function AppointmentCardPremium({
   const isPaid = externalPayment?.status === "paid" || !!inlinePayment;
   const amount = appointment.preco || 0;
 
-  const formattedDate = format(new Date(`${appointment.data}T12:00:00`), "dd MMM", { locale: ptBR });
-  const formattedFullDate = format(new Date(`${appointment.data}T12:00:00`), "EEEE, dd 'de' MMMM", { locale: ptBR });
+  // Determinar se é agendamento de plano ou corte grátis
+  const isPlanAppointment = appointment.tipo_agendamento === 'plano' || appointment.payment_method === 'plano';
+  const isFreeAppointment = appointment.is_free && (
+    appointment.payment_method === 'resgate' || 
+    appointment.observacoes?.toLowerCase().includes('corte grátis') ||
+    appointment.observacoes?.toLowerCase().includes('resgate')
+  );
 
   return (
     <>
@@ -168,16 +176,26 @@ export function AppointmentCardPremium({
               <Clock className="w-4 h-4 text-primary/70" />
               <span className="font-medium">{appointment.hora}</span>
             </div>
-            {appointment.preco && (
+            {isPlanAppointment ? (
+              <div className="flex items-center gap-1.5">
+                <Crown className="w-3.5 h-3.5 text-primary" />
+                <span className="text-xs font-semibold text-primary">Plano</span>
+              </div>
+            ) : isFreeAppointment ? (
+              <div className="flex items-center gap-1.5">
+                <Gift className="w-3.5 h-3.5 text-emerald-500" />
+                <span className="text-xs font-semibold text-emerald-500">Corte Grátis</span>
+              </div>
+            ) : appointment.preco ? (
               <div className="flex items-center gap-1.5">
                 <span className="font-bold text-foreground">
                   R$ {appointment.preco.toFixed(2)}
                 </span>
                 {isPaid && (
-                  <span className="text-[10px] text-green-500 font-medium">• Pago</span>
+                  <span className="text-[10px] text-green-500 font-medium">Pago</span>
                 )}
               </div>
-            )}
+            ) : null}
           </div>
 
           {/* Reschedule requested banner */}
