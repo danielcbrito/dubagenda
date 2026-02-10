@@ -4,9 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 interface BarbeiroLogado {
   id: string;
   apelido: string;
-  email: string | null;
   foto_url: string | null;
-  telefone: string | null;
 }
 
 /**
@@ -36,7 +34,7 @@ export function useBarbeiroLogado() {
         // Buscar barbeiro vinculado ao user_id
         const { data, error: fetchError } = await supabase
           .from("barbeiros")
-          .select("id, apelido, email, foto_url, telefone")
+          .select("id, apelido, foto_url")
           .eq("user_id", session.user.id)
           .eq("ativo", true)
           .maybeSingle();

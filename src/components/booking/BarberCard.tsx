@@ -6,7 +6,6 @@ interface Barber {
   id: string;
   apelido: string;
   foto_url: string | null;
-  telefone: string | null;
 }
 
 interface BarberCardProps {
