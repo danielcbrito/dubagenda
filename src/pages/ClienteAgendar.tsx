@@ -82,6 +82,7 @@ const ClienteAgendar = () => {
   const [availableRedemptions, setAvailableRedemptions] = useState<{ id: string; promocao_id: string }[]>([]);
   const [useRedemption, setUseRedemption] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [serviceQuantities, setServiceQuantities] = useState<Record<string, number>>({});
   
   // Indica se o usuário está usando fluxo de plano (serviço pré-selecionado)
   const [isPlanFlow, setIsPlanFlow] = useState(false);
@@ -95,7 +96,7 @@ const ClienteAgendar = () => {
     selectedServices?.[0]?.id === activeSubscription.servico.id &&
     activeSubscription.agendamentos_usados < activeSubscription.limite_agendamentos_mes;
 
-  const totalDuration = (selectedServices || []).reduce((sum, s) => sum + s.duracao_minutos, 0);
+  const totalDuration = (selectedServices || []).reduce((sum, s) => sum + s.duracao_minutos * (serviceQuantities[s.id] || 1), 0);
 
   const { 
     slots: availableSlots, 
@@ -425,11 +426,36 @@ const ClienteAgendar = () => {
       const existing = prev || [];
       const exists = existing.find(s => s.id === service.id);
       if (exists) {
+        setServiceQuantities(q => {
+          const copy = { ...q };
+          delete copy[service.id];
+          return copy;
+        });
         return existing.filter(s => s.id !== service.id);
       } else {
+        setServiceQuantities(q => ({ ...q, [service.id]: 1 }));
         return [...existing, service];
       }
     });
+  };
+
+  const incrementServiceQty = (serviceId: string) => {
+    setServiceQuantities(q => ({
+      ...q,
+      [serviceId]: Math.min((q[serviceId] || 1) + 1, 5)
+    }));
+  };
+
+  const decrementServiceQty = (service: Service) => {
+    const current = serviceQuantities[service.id] || 1;
+    if (current <= 1) {
+      toggleService(service);
+    } else {
+      setServiceQuantities(q => ({
+        ...q,
+        [service.id]: current - 1
+      }));
+    }
   };
 
   const handleNextStep = async () => {
@@ -554,8 +580,11 @@ const ClienteAgendar = () => {
         return;
       }
 
-      const totalDuration = selectedServices.reduce((sum, s) => sum + s.duracao_minutos, 0);
-      const serviceNames = selectedServices.map(s => s.nome).join(", ");
+      const totalDuration = selectedServices.reduce((sum, s) => sum + s.duracao_minutos * (serviceQuantities[s.id] || 1), 0);
+      const serviceNames = selectedServices.map(s => {
+        const qty = serviceQuantities[s.id] || 1;
+        return qty > 1 ? `${s.nome} x${qty}` : s.nome;
+      }).join(", ");
 
       const mainService = selectedServices[0];
       const bookingData = {
@@ -667,8 +696,11 @@ const ClienteAgendar = () => {
         return;
       }
 
-      const totalDuration = selectedServices.reduce((sum, s) => sum + s.duracao_minutos, 0);
-      const serviceNames = selectedServices.map(s => s.nome).join(", ");
+      const totalDuration = selectedServices.reduce((sum, s) => sum + s.duracao_minutos * (serviceQuantities[s.id] || 1), 0);
+      const serviceNames = selectedServices.map(s => {
+        const qty = serviceQuantities[s.id] || 1;
+        return qty > 1 ? `${s.nome} x${qty}` : s.nome;
+      }).join(", ");
       const mainService = selectedServices[0];
       const dateStr = format(selectedDate!, 'yyyy-MM-dd');
 
@@ -739,8 +771,11 @@ const ClienteAgendar = () => {
         return;
       }
 
-      const totalDuration = selectedServices.reduce((sum, s) => sum + s.duracao_minutos, 0);
-      const serviceNames = selectedServices.map(s => s.nome).join(", ");
+      const totalDuration = selectedServices.reduce((sum, s) => sum + s.duracao_minutos * (serviceQuantities[s.id] || 1), 0);
+      const serviceNames = selectedServices.map(s => {
+        const qty = serviceQuantities[s.id] || 1;
+        return qty > 1 ? `${s.nome} x${qty}` : s.nome;
+      }).join(", ");
       const mainService = selectedServices[0];
       const dateStr = format(selectedDate!, 'yyyy-MM-dd');
 
@@ -861,8 +896,11 @@ const ClienteAgendar = () => {
         return;
       }
 
-      const totalDuration = selectedServices.reduce((sum, s) => sum + s.duracao_minutos, 0);
-      const serviceNames = selectedServices.map(s => s.nome).join(", ");
+      const totalDuration = selectedServices.reduce((sum, s) => sum + s.duracao_minutos * (serviceQuantities[s.id] || 1), 0);
+      const serviceNames = selectedServices.map(s => {
+        const qty = serviceQuantities[s.id] || 1;
+        return qty > 1 ? `${s.nome} x${qty}` : s.nome;
+      }).join(", ");
       const mainService = selectedServices[0];
       const dateStr = format(selectedDate!, 'yyyy-MM-dd');
 
@@ -1006,7 +1044,7 @@ const ClienteAgendar = () => {
         return;
       }
 
-      const totalDuration = selectedServices.reduce((sum, s) => sum + s.duracao_minutos, 0);
+      const totalDuration = selectedServices.reduce((sum, s) => sum + s.duracao_minutos * (serviceQuantities[s.id] || 1), 0);
       const dateStr = format(selectedDate, 'yyyy-MM-dd');
       
       const { data: validation, error: validationError } = await supabase.functions.invoke('validate-appointment', {
@@ -1073,7 +1111,7 @@ const ClienteAgendar = () => {
   };
 
   const getTotalDuration = () => {
-    return selectedServices.reduce((sum, s) => sum + s.duracao_minutos, 0);
+    return selectedServices.reduce((sum, s) => sum + s.duracao_minutos * (serviceQuantities[s.id] || 1), 0);
   };
 
   const getCorteService = () => {
@@ -1091,7 +1129,7 @@ const ClienteAgendar = () => {
   };
 
   const getTotalPrice = () => {
-    const baseTotal = selectedServices.reduce((sum, s) => sum + s.preco, 0);
+    const baseTotal = selectedServices.reduce((sum, s) => sum + s.preco * (serviceQuantities[s.id] || 1), 0);
     const redemptionDiscount = getRedemptionDiscount();
     return Math.max(0, baseTotal - redemptionDiscount);
   };
@@ -1292,14 +1330,17 @@ const ClienteAgendar = () => {
                     key={service.id}
                     service={service}
                     isSelected={selectedServices.some(s => s.id === service.id)}
+                    quantity={serviceQuantities[service.id] || 0}
                     onToggle={() => toggleService(service)}
+                    onIncrement={() => incrementServiceQty(service.id)}
+                    onDecrement={() => decrementServiceQty(service)}
                   />
                 ))}
               </div>
 
               {/* Premium Bottom Bar */}
               <BookingBottomBar
-                serviceCount={selectedServices.length}
+                serviceCount={selectedServices.reduce((sum, s) => sum + (serviceQuantities[s.id] || 1), 0)}
                 totalDuration={getTotalDuration()}
                 totalPrice={getTotalPrice()}
                 onContinue={() => setStep(3)}
