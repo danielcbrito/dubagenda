@@ -260,8 +260,8 @@ const Cliente = () => {
       const { count: usageCount } = await supabase
         .from("plano_agendamentos_usos")
         .select("*", { count: 'exact', head: true })
-        .eq("assinatura_id", activeSub.id)
-        .eq("competencia", competencia);
+        .eq("user_id", userId)
+        .is("released_at", null);
 
       setPlanUsageCount(usageCount || 0);
     } else {
