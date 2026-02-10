@@ -268,13 +268,18 @@ const Cliente = () => {
     } else {
       setActiveSubscription(null);
 
-      // Verificar se tem assinatura recém-expirada (cancelled/suspended)
+      // Verificar se tem assinatura recém-expirada (cancelled/suspended) nos últimos 30 dias
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      const thirtyDaysAgoISO = thirtyDaysAgo.toISOString();
+
       const { data: expiredSub } = await supabase
         .from("assinaturas")
-        .select("id, status, plano_id, plano:planos(nome)")
+        .select("id, status, plano_id, updated_at, plano:planos(nome)")
         .eq("user_id", userId)
         .in("status", ["cancelled", "suspended"])
-        .order("created_at", { ascending: false })
+        .gte("updated_at", thirtyDaysAgoISO)
+        .order("updated_at", { ascending: false })
         .limit(1)
         .maybeSingle();
 
