@@ -259,35 +259,39 @@ export function useSlotAvailability(
       const currentMinutes = now.getHours() * 60 + now.getMinutes();
       const minimumAdvanceMinutes = isToday ? currentMinutes + MINIMUM_ADVANCE_MINUTES : 0;
 
-      // Buscar configuração do dia
+      // Buscar configuração do dia com exceções
       const dateObj = new Date(dateStr + 'T12:00:00');
       const dayOfWeek = dateObj.getDay();
 
-      const { data: configData } = await supabase
-        .from('configuracoes_horario')
-        .select('*')
-        .eq('dia_semana', dayOfWeek)
-        .maybeSingle();
+      // Prioridade: 1) Exceção global, 2) Config global
+      const [excecaoRes, configRes] = await Promise.all([
+        supabase.from('horarios_excepcionais').select('*').eq('data', dateStr).maybeSingle(),
+        supabase.from('configuracoes_horario').select('*').eq('dia_semana', dayOfWeek).maybeSingle()
+      ]);
 
-      // NUNCA usar valores hardcoded - sempre preferir dados do banco
-      const config = configData ? {
-        aberto: configData.aberto,
-        hora_abertura: configData.hora_abertura,
-        hora_fechamento: configData.hora_fechamento,
-        hora_almoco_inicio: configData.hora_almoco_inicio,
-        hora_almoco_fim: configData.hora_almoco_fim,
-        delay_entre_servicos: configData.delay_entre_servicos || DEFAULT_DELAY_MINUTES
+      const excecaoData = excecaoRes.data;
+      const configData = configRes.data;
+
+      // Exceção tem prioridade sobre config padrão
+      const sourceData = excecaoData || configData;
+
+      const config = sourceData ? {
+        aberto: sourceData.aberto ?? true,
+        hora_abertura: sourceData.hora_abertura || '09:00',
+        hora_fechamento: sourceData.hora_fechamento || '21:00',
+        hora_almoco_inicio: sourceData.hora_almoco_inicio,
+        hora_almoco_fim: sourceData.hora_almoco_fim,
+        delay_entre_servicos: (sourceData as any).delay_entre_servicos || DEFAULT_DELAY_MINUTES
       } : {
-        // Fallback apenas se não houver dados no banco (emergência)
-        aberto: dayOfWeek !== 0, // Fechado domingo
+        aberto: dayOfWeek !== 0,
         hora_abertura: '09:00',
-        hora_fechamento: '21:00', // Padrão estendido para evitar bloqueios
+        hora_fechamento: '21:00',
         hora_almoco_inicio: '13:00',
         hora_almoco_fim: '14:00',
         delay_entre_servicos: DEFAULT_DELAY_MINUTES
       };
 
-      console.log(`[useSlotAvailability FALLBACK] Config do dia ${dayOfWeek}: ${config.hora_abertura} - ${config.hora_fechamento}`);
+      console.log(`[useSlotAvailability FALLBACK] Config do dia ${dayOfWeek}:`, excecaoData ? '(EXCEÇÃO)' : '(padrão)', `${config.hora_abertura} - ${config.hora_fechamento}`);
 
       if (!config.aberto) {
         console.log('[useSlotAvailability FALLBACK] Dia fechado');
