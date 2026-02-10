@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -6,6 +7,7 @@ import { BrowserRouter, Routes, Route, useNavigate, useLocation } from "react-ro
 import { useMaintenanceMode } from "@/hooks/useMaintenanceMode";
 import { MaintenanceScreen } from "@/components/MaintenanceScreen";
 import { MaintenanceWarningBanner } from "@/components/MaintenanceWarningBanner";
+import { supabase } from "@/integrations/supabase/client";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import AuthCallback from "./pages/AuthCallback";
@@ -97,25 +99,62 @@ function MaintenanceWrapper({ children }: { children: React.ReactNode }) {
   );
 }
 
+/**
+ * Limpa sessões inválidas automaticamente para evitar loops de erro
+ */
+function AuthSessionGuard({ children }: { children: React.ReactNode }) {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'TOKEN_REFRESHED') {
+        console.log('[Auth] Token refreshed successfully');
+      }
+      if (event === 'SIGNED_OUT') {
+        console.log('[Auth] User signed out');
+      }
+    });
+
+    // Verificar sessão inicial e limpar se inválida
+    supabase.auth.getSession().then(({ error }) => {
+      if (error) {
+        console.warn('[Auth] Sessão inválida detectada, limpando...', error.message);
+        supabase.auth.signOut().then(() => {
+          if (!PUBLIC_ROUTES.some(r => location.pathname === r || location.pathname.startsWith('/auth'))) {
+            navigate('/auth?mode=login');
+          }
+        });
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  return <>{children}</>;
+}
+
 function AppRoutes() {
   return (
-    <MaintenanceWrapper>
-      <Routes>
-        <Route path="/" element={<Index />} />
-        <Route path="/auth" element={<Auth />} />
-        <Route path="/auth/callback" element={<AuthCallback />} />
-        <Route path="/verificar-email" element={<EmailVerification />} />
-        <Route path="/verificar-whatsapp" element={<VerificarWhatsApp />} />
-        <Route path="/escolher-verificacao" element={<EscolherVerificacao />} />
-        <Route path="/esqueci-senha" element={<ForgotPassword />} />
-        <Route path="/resetar-senha" element={<ResetPassword />} />
-        <Route path="/cliente" element={<Cliente />} />
-        <Route path="/cliente/agendar" element={<ClienteAgendar />} />
-        <Route path="/cliente/assinar" element={<ClienteAssinar />} />
-        <Route path="/suporte" element={<SupportChat />} />
-        <Route path="*" element={<NotFound />} />
-      </Routes>
-    </MaintenanceWrapper>
+    <AuthSessionGuard>
+      <MaintenanceWrapper>
+        <Routes>
+          <Route path="/" element={<Index />} />
+          <Route path="/auth" element={<Auth />} />
+          <Route path="/auth/callback" element={<AuthCallback />} />
+          <Route path="/verificar-email" element={<EmailVerification />} />
+          <Route path="/verificar-whatsapp" element={<VerificarWhatsApp />} />
+          <Route path="/escolher-verificacao" element={<EscolherVerificacao />} />
+          <Route path="/esqueci-senha" element={<ForgotPassword />} />
+          <Route path="/resetar-senha" element={<ResetPassword />} />
+          <Route path="/cliente" element={<Cliente />} />
+          <Route path="/cliente/agendar" element={<ClienteAgendar />} />
+          <Route path="/cliente/assinar" element={<ClienteAssinar />} />
+          <Route path="/suporte" element={<SupportChat />} />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </MaintenanceWrapper>
+    </AuthSessionGuard>
   );
 }
 
