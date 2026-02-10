@@ -329,19 +329,6 @@ const ClienteAssinar = () => {
               exit={{ opacity: 0, x: 20 }}
               className="space-y-4"
             >
-              {/* Destaque - Economia */}
-              <div className="bg-gradient-to-r from-red-500/10 to-orange-500/10 border border-red-500/20 rounded-xl p-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-red-500/20 rounded-full flex items-center justify-center">
-                    <TrendingDown className="w-6 h-6 text-red-500" />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-white">Economize até R$ 50/mês</h3>
-                    <p className="text-sm text-zinc-400">Com agendamento prioritário e garantido</p>
-                  </div>
-                </div>
-              </div>
-
               {/* Cards de Planos */}
               <div className="space-y-4">
                 {plans.map((plan, index) => (

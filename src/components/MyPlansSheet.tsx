@@ -1,15 +1,14 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Gift, Calendar, CheckCircle2, AlertCircle, Loader2, XCircle } from "lucide-react";
+import { Gift, Calendar, CheckCircle2, AlertCircle, Loader2, XCircle, ArrowLeft, Crown } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -118,12 +117,9 @@ export function MyPlansSheet({ open, onOpenChange, userId }: MyPlansSheetProps) 
 
   const handleCancelSubscription = async () => {
     setCanceling(true);
-
     try {
       const { error } = await supabase.functions.invoke('cancel-subscription');
-
       if (error) throw error;
-
       toast.success("Assinatura cancelada com sucesso");
       setCancelDialogOpen(false);
       loadSubscription();
@@ -135,142 +131,159 @@ export function MyPlansSheet({ open, onOpenChange, userId }: MyPlansSheetProps) 
     }
   };
 
-  const renderLoadingState = () => (
-    <div className="space-y-4 py-4">
-      <Card className="p-5 border-0">
-        <Skeleton className="h-6 w-3/4 mb-3" />
-        <Skeleton className="h-4 w-full mb-2" />
-        <Skeleton className="h-4 w-2/3 mb-4" />
-        <Skeleton className="h-20 w-full" />
-      </Card>
-    </div>
-  );
+  if (!open) return null;
 
-  const renderErrorState = () => (
-    <div className="text-center py-12 space-y-6">
-      <AlertCircle className="w-16 h-16 mx-auto text-destructive opacity-70" />
-      <div className="space-y-2">
-        <p className="text-sm font-medium text-foreground">Erro ao carregar planos</p>
-        <p className="text-xs text-muted-foreground max-w-xs mx-auto">
-          {errorMessage || "Não foi possível carregar os planos. Tente novamente."}
-        </p>
-      </div>
-      <div className="flex flex-col gap-2">
-        <Button
-          onClick={loadSubscription}
-          variant="default"
-          className="h-11 px-6"
-        >
-          <Loader2 className="w-4 h-4 mr-2" />
-          Tentar Novamente
-        </Button>
-        <Button
-          onClick={() => onOpenChange(false)}
-          variant="ghost"
-          size="sm"
-        >
-          Voltar
-        </Button>
-      </div>
-    </div>
-  );
-
-  const renderEmptyState = () => (
-    <div className="text-center py-12 space-y-6">
-      <Gift className="w-16 h-16 mx-auto text-muted-foreground opacity-50" />
-      <div className="space-y-2">
-        <p className="text-sm font-medium">Você ainda não possui um plano ativo</p>
-        <p className="text-xs text-muted-foreground">
-          Assine um plano e aproveite benefícios exclusivos
-        </p>
-      </div>
-      <Button
-        onClick={handleSubscribeClick}
-        className="h-12 px-8 bg-primary hover:bg-primary/90 transition-all duration-300"
-      >
-        Assinar um Plano
-      </Button>
-    </div>
-  );
-
-  const renderSubscriptionCard = () => (
-    <Card className="p-5 border-0 shadow-elegant">
-      <div 
-        className="space-y-4 p-4 rounded-lg"
-        style={{
-          background: "linear-gradient(135deg, hsl(var(--background)) 0%, hsl(var(--primary) / 0.15) 100%)"
-        }}
-      >
-        <div className="flex items-start justify-between">
-          <div className="flex-1">
-            <h3 className="text-base font-semibold">{subscription?.plano.nome}</h3>
-            <p className="text-xs text-muted-foreground mt-1">
-              {subscription?.plano.descricao}
-            </p>
-          </div>
-          <Badge variant={getStatusBadge(subscription?.status || "").variant}>
-            {getStatusBadge(subscription?.status || "").label}
-          </Badge>
-        </div>
-
-        <div className="flex items-center gap-2 text-sm">
-          <Gift className="w-4 h-4 text-gold" />
-          <span className="font-semibold text-gold">
-            R$ {Number(subscription?.plano.preco_mensal || 0).toFixed(2)}/mês
-          </span>
-        </div>
-
-        {subscription?.next_billing_date && (
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <Calendar className="w-3.5 h-3.5" />
-            <span>
-              Próxima cobrança: {format(new Date(subscription.next_billing_date), "dd/MM/yyyy", { locale: ptBR })}
-            </span>
-          </div>
-        )}
-
-        <div className="space-y-2 pt-3 border-t border-border/20">
-          <p className="text-xs font-medium">Benefícios inclusos:</p>
-          {subscription?.plano.beneficios_json?.map((benefit: string, index: number) => (
-            <div key={index} className="flex items-start gap-2 text-xs text-muted-foreground">
-              <CheckCircle2 className="w-3.5 h-3.5 mt-0.5 text-gold flex-shrink-0" />
-              <span>{benefit}</span>
-            </div>
-          ))}
-        </div>
-
-        <Button
-          variant="ghost"
-          size="sm"
-          className="w-full h-8 text-xs hover:bg-destructive/10 text-destructive transition-all duration-300"
-          onClick={() => setCancelDialogOpen(true)}
-        >
-          <XCircle className="w-3.5 h-3.5 mr-2" />
-          Cancelar Assinatura
-        </Button>
-      </div>
-    </Card>
-  );
+  const benefits = Array.isArray(subscription?.plano?.beneficios_json) 
+    ? subscription.plano.beneficios_json 
+    : [];
 
   return (
     <>
-      <Sheet open={open} onOpenChange={onOpenChange}>
-        <SheetContent side="bottom" className="h-[85vh] rounded-t-[10px]">
-          <SheetHeader>
-            <SheetTitle className="text-lg">Meus Planos</SheetTitle>
-            <SheetDescription className="sr-only">
-              Gerencie suas assinaturas e planos ativos
-            </SheetDescription>
-          </SheetHeader>
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0, y: "100%" }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: "100%" }}
+            transition={{ type: "spring", damping: 30, stiffness: 300 }}
+            className="fixed inset-0 z-50 bg-background flex flex-col"
+          >
+            {/* Header */}
+            <div className="flex items-center gap-3 px-5 py-4 border-b border-border/40">
+              <button
+                onClick={() => onOpenChange(false)}
+                className="w-10 h-10 flex items-center justify-center rounded-full bg-card hover:bg-muted transition-colors"
+              >
+                <ArrowLeft className="w-5 h-5 text-foreground" />
+              </button>
+              <h1 className="text-lg font-bold text-foreground">Meus Planos</h1>
+            </div>
 
-          <div className="mt-6 space-y-4 overflow-y-auto h-[calc(85vh-80px)] pb-6">
-            {loadingState === "loading" && renderLoadingState()}
-            {loadingState === "error" && renderErrorState()}
-            {loadingState === "success" && !subscription && renderEmptyState()}
-            {loadingState === "success" && subscription && renderSubscriptionCard()}
-          </div>
-        </SheetContent>
-      </Sheet>
+            {/* Content */}
+            <div className="flex-1 overflow-y-auto px-5 py-6">
+              {/* Loading */}
+              {loadingState === "loading" && (
+                <div className="space-y-4">
+                  <Skeleton className="h-6 w-3/4 bg-muted" />
+                  <Skeleton className="h-4 w-full bg-muted" />
+                  <Skeleton className="h-4 w-2/3 bg-muted" />
+                  <Skeleton className="h-40 w-full rounded-2xl bg-muted" />
+                </div>
+              )}
+
+              {/* Error */}
+              {loadingState === "error" && (
+                <div className="flex flex-col items-center justify-center pt-20 space-y-6">
+                  <div className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center">
+                    <AlertCircle className="w-8 h-8 text-destructive" />
+                  </div>
+                  <div className="text-center space-y-1">
+                    <p className="text-sm font-medium text-foreground">Erro ao carregar</p>
+                    <p className="text-xs text-muted-foreground max-w-xs">
+                      {errorMessage}
+                    </p>
+                  </div>
+                  <Button onClick={loadSubscription} variant="default" className="h-11 px-6">
+                    <Loader2 className="w-4 h-4 mr-2" />
+                    Tentar Novamente
+                  </Button>
+                </div>
+              )}
+
+              {/* Empty */}
+              {loadingState === "success" && !subscription && (
+                <div className="flex flex-col items-center justify-center pt-20 space-y-6">
+                  <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center">
+                    <Crown className="w-8 h-8 text-muted-foreground" />
+                  </div>
+                  <div className="text-center space-y-1">
+                    <p className="text-sm font-medium text-foreground">Nenhum plano ativo</p>
+                    <p className="text-xs text-muted-foreground">
+                      Assine um plano e aproveite benefícios exclusivos
+                    </p>
+                  </div>
+                  <Button
+                    onClick={handleSubscribeClick}
+                    className="h-12 px-8 bg-primary hover:bg-primary/90 transition-all"
+                  >
+                    Assinar um Plano
+                  </Button>
+                </div>
+              )}
+
+              {/* Subscription Card */}
+              {loadingState === "success" && subscription && (
+                <motion.div
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="space-y-6"
+                >
+                  {/* Plan Header */}
+                  <div className="rounded-2xl border border-border/40 bg-card p-6 space-y-5">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1 space-y-1">
+                        <h2 className="text-xl font-bold text-foreground">
+                          {subscription.plano.nome}
+                        </h2>
+                        <p className="text-sm text-muted-foreground">
+                          {subscription.plano.descricao}
+                        </p>
+                      </div>
+                      <Badge variant={getStatusBadge(subscription.status).variant}>
+                        {getStatusBadge(subscription.status).label}
+                      </Badge>
+                    </div>
+
+                    {/* Price */}
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-3xl font-bold text-primary">
+                        R$ {Number(subscription.plano.preco_mensal || 0).toFixed(2).replace(".", ",")}
+                      </span>
+                      <span className="text-sm text-muted-foreground">/mês</span>
+                    </div>
+
+                    {/* Next billing */}
+                    {subscription.next_billing_date && (
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Calendar className="w-4 h-4" />
+                        <span>
+                          Próxima cobrança:{" "}
+                          {format(new Date(subscription.next_billing_date), "dd 'de' MMMM", { locale: ptBR })}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Benefits */}
+                  {benefits.length > 0 && (
+                    <div className="rounded-2xl border border-border/40 bg-card p-6 space-y-4">
+                      <h3 className="text-sm font-semibold text-foreground">
+                        Benefícios inclusos
+                      </h3>
+                      <div className="space-y-3">
+                        {benefits.map((benefit: string, i: number) => (
+                          <div key={i} className="flex items-start gap-3">
+                            <CheckCircle2 className="w-4 h-4 mt-0.5 text-primary flex-shrink-0" />
+                            <span className="text-sm text-muted-foreground">{benefit}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Cancel */}
+                  <button
+                    onClick={() => setCancelDialogOpen(true)}
+                    className="w-full py-3 text-sm text-destructive hover:text-destructive/80 transition-colors"
+                  >
+                    Cancelar assinatura
+                  </button>
+                </motion.div>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <AlertDialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
         <AlertDialogContent>

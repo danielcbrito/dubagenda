@@ -1,16 +1,13 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { 
   CheckCircle2, 
-  Sparkles, 
   AlertCircle, 
   Loader2,
-  ChevronLeft,
-  Crown,
-  TrendingDown
+  ArrowLeft,
+  Crown
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -34,15 +31,15 @@ interface SubscribePlanSheetProps {
 
 type LoadingState = "idle" | "loading" | "error" | "success";
 
-// Componente de Card de Plano Premium
+/** Card individual de plano */
 function PlanCard({ 
   plan, 
-  isPopular,
+  isHighlighted,
   onSubscribe,
   isSubscribing 
 }: { 
   plan: Plan;
-  isPopular?: boolean;
+  isHighlighted?: boolean;
   onSubscribe: () => void;
   isSubscribing: boolean;
 }) {
@@ -50,79 +47,68 @@ function PlanCard({
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       className={cn(
-        "relative rounded-2xl p-6 border transition-all",
-        isPopular 
-          ? "bg-gradient-to-br from-red-500/10 to-orange-500/10 border-red-500/30 shadow-xl shadow-red-500/10" 
-          : "bg-zinc-900/50 border-zinc-800"
+        "relative rounded-2xl border transition-all overflow-hidden",
+        isHighlighted 
+          ? "border-primary/40 bg-card shadow-lg shadow-primary/5" 
+          : "border-border/40 bg-card"
       )}
     >
-      {/* Badge "Mais Popular" */}
-      {isPopular && (
-        <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-          <div className="bg-gradient-to-r from-red-500 to-orange-500 text-white text-xs font-bold px-4 py-1.5 rounded-full shadow-lg flex items-center gap-1">
-            <Crown className="w-3 h-3" />
-            MAIS POPULAR
-          </div>
-        </div>
+      {/* Accent top line for highlighted */}
+      {isHighlighted && (
+        <div className="h-0.5 bg-gradient-to-r from-primary via-primary/80 to-primary/40" />
       )}
 
-      {/* Header do Card */}
-      <div className="mb-4">
-        <h3 className="text-xl font-bold text-white mb-2">
-          {plan.nome}
-        </h3>
-        <p className="text-sm text-zinc-400">
-          {plan.descricao}
-        </p>
-      </div>
+      <div className="p-6 space-y-5">
+        {/* Name & Description */}
+        <div className="space-y-1">
+          <h3 className="text-lg font-bold text-foreground">{plan.nome}</h3>
+          <p className="text-sm text-muted-foreground">{plan.descricao}</p>
+        </div>
 
-      {/* Preço */}
-      <div className="mb-6">
-        <div className="flex items-baseline gap-2">
-          <span className="text-4xl font-bold text-red-500">
+        {/* Price */}
+        <div className="flex items-baseline gap-1">
+          <span className="text-3xl font-bold text-primary">
             R$ {Number(plan.preco_mensal).toFixed(2).replace('.', ',')}
           </span>
-          <span className="text-zinc-500">/mês</span>
+          <span className="text-sm text-muted-foreground">/mês</span>
         </div>
-      </div>
 
-      {/* Benefícios */}
-      <div className="space-y-3 mb-6">
-        <h4 className="text-xs font-semibold text-zinc-500 uppercase tracking-wide">
-          Benefícios inclusos
-        </h4>
-        
-        {benefits.map((benefit: string, index: number) => (
-          <div key={index} className="flex items-start gap-3">
-            <CheckCircle2 className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
-            <span className="text-sm text-zinc-300">{benefit}</span>
+        {/* Benefits */}
+        {benefits.length > 0 && (
+          <div className="space-y-2.5 pt-2 border-t border-border/30">
+            {benefits.map((benefit: string, index: number) => (
+              <div key={index} className="flex items-start gap-3">
+                <CheckCircle2 className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
+                <span className="text-sm text-muted-foreground">{benefit}</span>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
+        )}
 
-      {/* Botão CTA */}
-      <Button
-        onClick={onSubscribe}
-        disabled={isSubscribing}
-        className={cn(
-          "w-full h-12 font-bold transition-all",
-          isPopular
-            ? "bg-gradient-to-r from-red-500 to-orange-500 text-white shadow-lg hover:shadow-xl hover:shadow-red-500/20 hover:scale-[1.02]"
-            : "bg-zinc-800 text-white hover:bg-zinc-700"
-        )}
-      >
-        {isSubscribing ? (
-          <div className="flex items-center gap-2">
-            <Loader2 className="w-4 h-4 animate-spin" />
-            Processando...
-          </div>
-        ) : (
-          "Assinar Agora"
-        )}
-      </Button>
+        {/* CTA */}
+        <Button
+          onClick={onSubscribe}
+          disabled={isSubscribing}
+          className={cn(
+            "w-full h-12 font-semibold transition-all",
+            isHighlighted
+              ? "bg-primary hover:bg-primary/90 text-primary-foreground"
+              : "bg-secondary hover:bg-secondary/80 text-secondary-foreground"
+          )}
+        >
+          {isSubscribing ? (
+            <div className="flex items-center gap-2">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Processando...
+            </div>
+          ) : (
+            "Assinar Agora"
+          )}
+        </Button>
+      </div>
     </motion.div>
   );
 }
@@ -144,13 +130,8 @@ export function SubscribePlanSheet({ open, onOpenChange, userId }: SubscribePlan
       .channel('plans-changes')
       .on(
         'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'planos'
-        },
+        { event: '*', schema: 'public', table: 'planos' },
         (payload) => {
-          console.log('Plan change detected:', payload);
           if (open) {
             loadPlans();
             if (payload.eventType === 'INSERT') {
@@ -262,7 +243,7 @@ export function SubscribePlanSheet({ open, onOpenChange, userId }: SubscribePlan
       if (insertError) {
         toast.error("Erro ao criar assinatura. Tente novamente.");
       } else {
-        toast.success("✅ Assinatura efetuada com sucesso!");
+        toast.success("Assinatura efetuada com sucesso!");
         setTimeout(() => {
           onOpenChange(false);
         }, 1000);
@@ -274,148 +255,101 @@ export function SubscribePlanSheet({ open, onOpenChange, userId }: SubscribePlan
     }
   };
 
-  const renderLoadingState = () => (
-    <div className="space-y-4 pb-6">
-      {[1, 2].map((i) => (
-        <div key={i} className="bg-zinc-900/50 rounded-2xl p-6 border border-zinc-800">
-          <Skeleton className="h-6 w-3/4 mb-3 bg-zinc-800" />
-          <Skeleton className="h-4 w-full mb-2 bg-zinc-800" />
-          <Skeleton className="h-10 w-32 mb-4 bg-zinc-800" />
-          <Skeleton className="h-20 w-full mb-3 bg-zinc-800" />
-          <Skeleton className="h-12 w-full bg-zinc-800" />
-        </div>
-      ))}
-    </div>
-  );
-
-  const renderErrorState = () => (
-    <motion.div 
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="text-center py-12 space-y-6"
-    >
-      <div className="w-20 h-20 bg-red-500/10 rounded-full flex items-center justify-center mx-auto">
-        <AlertCircle className="w-10 h-10 text-red-500" />
-      </div>
-      <div className="space-y-2">
-        <p className="text-lg font-semibold text-white">Erro ao carregar planos</p>
-        <p className="text-sm text-zinc-400 max-w-xs mx-auto">
-          {errorMessage}
-        </p>
-      </div>
-      <div className="flex flex-col gap-2">
-        <Button
-          onClick={loadPlans}
-          className="h-12 px-6 bg-red-500 hover:bg-red-600"
-        >
-          <Loader2 className="w-4 h-4 mr-2" />
-          Tentar Novamente
-        </Button>
-        <Button
-          onClick={() => onOpenChange(false)}
-          variant="ghost"
-          className="text-zinc-400"
-        >
-          Voltar
-        </Button>
-      </div>
-    </motion.div>
-  );
-
-  const renderEmptyState = () => (
-    <motion.div 
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="text-center py-12 space-y-6"
-    >
-      <div className="w-20 h-20 bg-zinc-800/50 rounded-full flex items-center justify-center mx-auto">
-        <Sparkles className="w-10 h-10 text-zinc-600" />
-      </div>
-      <div className="space-y-2">
-        <p className="text-lg font-semibold text-zinc-400">Nenhum plano disponível</p>
-        <p className="text-sm text-zinc-500">
-          Não há planos disponíveis no momento. Tente novamente mais tarde.
-        </p>
-      </div>
-      <Button
-        onClick={() => onOpenChange(false)}
-        variant="ghost"
-        className="text-zinc-400"
-      >
-        Voltar
-      </Button>
-    </motion.div>
-  );
-
-  const renderPlansList = () => (
-    <div className="space-y-4 pb-20">
-      {/* Destaque - Economia */}
-      <motion.div 
-        initial={{ opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="bg-gradient-to-r from-red-500/10 to-orange-500/10 border border-red-500/20 rounded-xl p-4 mb-6"
-      >
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-red-500/20 rounded-full flex items-center justify-center">
-            <TrendingDown className="w-5 h-5 text-red-500" />
-          </div>
-          <div>
-            <h3 className="font-bold text-white text-sm">Economize todo mês</h3>
-            <p className="text-xs text-zinc-400">Agendamento prioritário garantido</p>
-          </div>
-        </div>
-      </motion.div>
-
-      <AnimatePresence>
-        {plans.map((plan, index) => (
-          <motion.div
-            key={plan.id}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.1 }}
-          >
-            <PlanCard 
-              plan={plan}
-              isPopular={index === 0}
-              onSubscribe={() => handleSubscribe(plan.id)}
-              isSubscribing={subscribing === plan.id}
-            />
-          </motion.div>
-        ))}
-      </AnimatePresence>
-    </div>
-  );
+  if (!open) return null;
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent 
-        side="bottom" 
-        className="h-[90vh] rounded-t-3xl flex flex-col overflow-hidden bg-zinc-950 border-zinc-800 p-0"
-      >
-        {/* Header */}
-        <div className="sticky top-0 bg-zinc-900 border-b border-zinc-800 px-4 py-4 z-10">
-          <div className="flex items-center gap-3">
-            <button 
+    <AnimatePresence>
+      {open && (
+        <motion.div
+          initial={{ opacity: 0, y: "100%" }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: "100%" }}
+          transition={{ type: "spring", damping: 30, stiffness: 300 }}
+          className="fixed inset-0 z-50 bg-background flex flex-col"
+        >
+          {/* Header */}
+          <div className="flex items-center gap-3 px-5 py-4 border-b border-border/40">
+            <button
               onClick={() => onOpenChange(false)}
-              className="w-8 h-8 flex items-center justify-center rounded-full bg-zinc-800 hover:bg-zinc-700 transition-colors"
+              className="w-10 h-10 flex items-center justify-center rounded-full bg-card hover:bg-muted transition-colors"
             >
-              <ChevronLeft className="w-5 h-5" />
+              <ArrowLeft className="w-5 h-5 text-foreground" />
             </button>
-            <div className="flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-red-500" />
-              <h2 className="text-lg font-bold">Escolha seu Plano</h2>
-            </div>
+            <h1 className="text-lg font-bold text-foreground">Escolha seu Plano</h1>
           </div>
-        </div>
 
-        {/* Container com scroll */}
-        <div className="flex-1 overflow-y-auto p-4">
-          {loadingState === "loading" && renderLoadingState()}
-          {loadingState === "error" && renderErrorState()}
-          {loadingState === "success" && plans.length === 0 && renderEmptyState()}
-          {loadingState === "success" && plans.length > 0 && renderPlansList()}
-        </div>
-      </SheetContent>
-    </Sheet>
+          {/* Content */}
+          <div className="flex-1 overflow-y-auto px-5 py-6">
+            {/* Loading */}
+            {loadingState === "loading" && (
+              <div className="space-y-4">
+                {[1, 2].map((i) => (
+                  <div key={i} className="rounded-2xl p-6 border border-border/40 bg-card">
+                    <Skeleton className="h-5 w-3/4 mb-3 bg-muted" />
+                    <Skeleton className="h-4 w-full mb-2 bg-muted" />
+                    <Skeleton className="h-8 w-32 mb-4 bg-muted" />
+                    <Skeleton className="h-16 w-full mb-3 bg-muted" />
+                    <Skeleton className="h-12 w-full bg-muted" />
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Error */}
+            {loadingState === "error" && (
+              <div className="flex flex-col items-center justify-center pt-20 space-y-6">
+                <div className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center">
+                  <AlertCircle className="w-8 h-8 text-destructive" />
+                </div>
+                <div className="text-center space-y-1">
+                  <p className="text-sm font-medium text-foreground">Erro ao carregar planos</p>
+                  <p className="text-xs text-muted-foreground max-w-xs">{errorMessage}</p>
+                </div>
+                <Button onClick={loadPlans} className="h-11 px-6 bg-primary hover:bg-primary/90">
+                  <Loader2 className="w-4 h-4 mr-2" />
+                  Tentar Novamente
+                </Button>
+              </div>
+            )}
+
+            {/* Empty */}
+            {loadingState === "success" && plans.length === 0 && (
+              <div className="flex flex-col items-center justify-center pt-20 space-y-6">
+                <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center">
+                  <Crown className="w-8 h-8 text-muted-foreground" />
+                </div>
+                <div className="text-center space-y-1">
+                  <p className="text-sm font-medium text-muted-foreground">Nenhum plano disponível</p>
+                  <p className="text-xs text-muted-foreground">
+                    Tente novamente mais tarde.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Plans List */}
+            {loadingState === "success" && plans.length > 0 && (
+              <div className="space-y-4 pb-6">
+                {plans.map((plan, index) => (
+                  <motion.div
+                    key={plan.id}
+                    initial={{ opacity: 0, y: 16 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.08 }}
+                  >
+                    <PlanCard
+                      plan={plan}
+                      isHighlighted={index === 0}
+                      onSubscribe={() => handleSubscribe(plan.id)}
+                      isSubscribing={subscribing === plan.id}
+                    />
+                  </motion.div>
+                ))}
+              </div>
+            )}
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }
