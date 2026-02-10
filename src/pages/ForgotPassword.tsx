@@ -17,9 +17,30 @@ const ForgotPassword = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [emailSent, setEmailSent] = useState(false);
+  const [cooldown, setCooldown] = useState(0);
+
+  // Cooldown timer
+  useState(() => {
+    const lastSent = localStorage.getItem('pwd_reset_ts');
+    if (lastSent) {
+      const diff = 60 - Math.floor((Date.now() - Number(lastSent)) / 1000);
+      if (diff > 0) setCooldown(diff);
+    }
+  });
+
+  // Decrement cooldown
+  useState(() => {
+    if (cooldown <= 0) return;
+    const id = setInterval(() => setCooldown(p => p <= 1 ? (clearInterval(id), 0) : p - 1), 1000);
+    return () => clearInterval(id);
+  });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (cooldown > 0) {
+      toast.error(`Aguarde ${cooldown}s antes de tentar novamente.`);
+      return;
+    }
     setIsLoading(true);
 
     try {
@@ -37,12 +58,20 @@ const ForgotPassword = () => {
       );
 
       if (error) {
-        toast.error("Erro ao enviar email: " + error.message);
+        if (error.message?.includes('rate limit')) {
+          toast.error("Você já solicitou a recuperação recentemente. Verifique sua caixa de entrada ou aguarde alguns minutos para tentar novamente.");
+          setCooldown(60);
+          localStorage.setItem('pwd_reset_ts', String(Date.now()));
+        } else {
+          toast.error("Erro ao enviar email: " + error.message);
+        }
         return;
       }
 
+      localStorage.setItem('pwd_reset_ts', String(Date.now()));
+      setCooldown(60);
       setEmailSent(true);
-      toast.success("Email de recuperação enviado!");
+      toast.success("Email de recuperação enviado! Verifique sua caixa de entrada e spam.");
     } catch (error) {
       if (error instanceof z.ZodError) {
         toast.error(error.errors[0].message);
@@ -149,13 +178,15 @@ const ForgotPassword = () => {
                     <Button 
                       type="submit" 
                       className="w-full h-12 mt-2 bg-primary hover:bg-primary/90 text-white font-semibold rounded-xl transition-all duration-200 shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 disabled:opacity-50"
-                      disabled={isLoading}
+                      disabled={isLoading || cooldown > 0}
                     >
                       {isLoading ? (
                         <span className="flex items-center gap-2">
                           <Loader2 className="w-4 h-4 animate-spin" />
                           Enviando...
                         </span>
+                      ) : cooldown > 0 ? (
+                        `Aguarde ${cooldown}s`
                       ) : (
                         "Enviar link de recuperação"
                       )}
