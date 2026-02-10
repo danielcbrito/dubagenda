@@ -338,7 +338,10 @@ export function MyProfileSheet({
                     <ProfileMenuItem
                       icon={CreditCard}
                       label="Meus Planos"
-                      onClick={() => setPlansOpen(true)}
+                      onClick={() => {
+                        onOpenChange(false);
+                        setTimeout(() => setPlansOpen(true), 300);
+                      }}
                     />
                     <ProfileMenuItem
                       icon={UserCircle}
