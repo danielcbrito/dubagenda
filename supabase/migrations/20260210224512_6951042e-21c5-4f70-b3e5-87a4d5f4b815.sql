@@ -1,0 +1,1 @@
+UPDATE public.assinaturas SET next_billing_date = '2026-03-10', updated_at = now() WHERE id = '09eb1333-a505-4ca1-8b46-17dbfe7b392d';
