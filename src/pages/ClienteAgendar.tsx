@@ -1121,6 +1121,14 @@ const ClienteAgendar = () => {
     );
   };
 
+  // Helper para formatar nomes dos serviços com quantidade
+  const getFormattedServiceNames = () => {
+    return selectedServices.map(s => {
+      const qty = serviceQuantities[s.id] || 1;
+      return qty > 1 ? `${s.nome} x${qty}` : s.nome;
+    }).join(", ");
+  };
+
   const getRedemptionDiscount = () => {
     if (!useRedemption || availableRedemptions.length === 0) return 0;
     const corteService = getCorteService();
@@ -1580,7 +1588,7 @@ const ClienteAgendar = () => {
                     "text-foreground font-semibold",
                     useRedemption && getCorteService() && "line-through text-muted-foreground"
                   )}>
-                    R$ {selectedServices.reduce((sum, s) => sum + s.preco, 0).toFixed(2).replace('.', ',')}
+                    R$ {selectedServices.reduce((sum, s) => sum + s.preco * (serviceQuantities[s.id] || 1), 0).toFixed(2).replace('.', ',')}
                   </span>
                 </div>
                 
@@ -1644,7 +1652,7 @@ const ClienteAgendar = () => {
               <div className="bg-card border border-border rounded-2xl p-5 space-y-4 mb-6">
                 <SummaryRow 
                   label="Serviço"
-                  value={selectedServices.map(s => s.nome).join(", ")}
+                  value={getFormattedServiceNames()}
                 />
                 
                 <div className="border-t border-border" />
@@ -1726,7 +1734,14 @@ const ClienteAgendar = () => {
               <div className="bg-card border border-border rounded-2xl p-5 space-y-4 mb-6">
                 <SummaryRow 
                   label="Serviço"
-                  value={selectedServices.map(s => s.nome).join(", ")}
+                  value={getFormattedServiceNames()}
+                />
+
+                <div className="border-t border-border" />
+
+                <SummaryRow 
+                  label="Duração"
+                  value={`${getTotalDuration()} minutos`}
                 />
                 
                 <div className="border-t border-border" />
