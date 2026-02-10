@@ -60,22 +60,53 @@ Deno.serve(async (req) => {
 
     // ============================================
     // BUSCAR CONFIGURAÇÕES DE HORÁRIO DO BANCO
+    // Prioridade: 1) Exceção barbeiro, 2) Exceção global, 3) Config barbeiro, 4) Config global
     // ============================================
-    // Se barberId informado, usar config do barbeiro; senão, config global
     let configData: any = null;
     let configError: any = null;
 
+    // 1) Exceção do barbeiro para esta data
     if (barberId) {
+      const result = await supabase
+        .from('horarios_excepcionais_barbeiro')
+        .select('*')
+        .eq('barbeiro_id', barberId)
+        .eq('data', data)
+        .maybeSingle();
+      if (result.data) {
+        console.log('[validate-appointment] EXCEÇÃO DO BARBEIRO encontrada');
+        configData = result.data;
+      }
+    }
+
+    // 2) Exceção global para esta data
+    if (!configData) {
+      const result = await supabase
+        .from('horarios_excepcionais')
+        .select('*')
+        .eq('data', data)
+        .maybeSingle();
+      if (result.data) {
+        console.log('[validate-appointment] EXCEÇÃO GLOBAL encontrada');
+        configData = result.data;
+      }
+    }
+
+    // 3) Config padrão do barbeiro para o dia da semana
+    if (!configData && barberId) {
       const result = await supabase
         .from('configuracoes_horario_barbeiro')
         .select('*')
         .eq('barbeiro_id', barberId)
         .eq('dia_semana', dayOfWeek)
         .maybeSingle();
-      configData = result.data;
+      if (result.data && result.data.aberto !== null) {
+        configData = result.data;
+      }
       configError = result.error;
     }
 
+    // 4) Config global do dia da semana
     if (!configData) {
       const result = await supabase
         .from('configuracoes_horario')
@@ -92,14 +123,13 @@ Deno.serve(async (req) => {
 
     // NUNCA usar valores hardcoded - sempre preferir dados do banco
     const config: BusinessHoursConfig = configData ? {
-      aberto: configData.aberto,
-      hora_abertura: configData.hora_abertura,
-      hora_fechamento: configData.hora_fechamento,
+      aberto: configData.aberto ?? true,
+      hora_abertura: configData.hora_abertura || '09:00',
+      hora_fechamento: configData.hora_fechamento || '21:00',
       hora_almoco_inicio: configData.hora_almoco_inicio,
       hora_almoco_fim: configData.hora_almoco_fim,
       delay_entre_servicos: configData.delay_entre_servicos || 10
     } : {
-      // Fallback de emergência - mas isso não deveria acontecer
       aberto: dayOfWeek !== 0,
       hora_abertura: '09:00',
       hora_fechamento: '21:00',
