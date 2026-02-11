@@ -58,7 +58,8 @@ async function checkTimeSlotAvailability(
   data: string,
   hora: string,
   duracao: number,
-  excludeAppointmentId?: string
+  excludeAppointmentId?: string,
+  excludePendingBookingId?: string
 ): Promise<{ available: boolean; message: string }> {
   
   console.log('[checkTimeSlotAvailability] Verificando:', { data, hora, duracao, excludeAppointmentId });
@@ -179,11 +180,17 @@ async function checkTimeSlotAvailability(
   }
 
   // Check pending bookings
-  const { data: pendingBookings } = await supabase
+  let pendingQuery = supabase
     .from('pending_bookings')
     .select('id, hora, duracao')
     .eq('data', data)
     .gt('expires_at', new Date().toISOString());
+
+  if (excludePendingBookingId) {
+    pendingQuery = pendingQuery.neq('id', excludePendingBookingId);
+  }
+
+  const { data: pendingBookings } = await pendingQuery;
 
   for (const pending of pendingBookings || []) {
     const [pendingHour, pendingMinute] = pending.hora.split(':').map(Number);
@@ -230,6 +237,7 @@ interface CreatePaymentRequest {
     ccv: string;
   };
   rescheduleFromId?: string;
+  excludePendingBookingId?: string;
 }
 
 serve(async (req) => {
@@ -267,9 +275,9 @@ serve(async (req) => {
 
     console.log('User authenticated:', user.id);
 
-    const { bookingData, metodo, customerInfo, cardInfo, rescheduleFromId }: CreatePaymentRequest = await req.json();
+    const { bookingData, metodo, customerInfo, cardInfo, rescheduleFromId, excludePendingBookingId }: CreatePaymentRequest = await req.json();
 
-    console.log('Received payment request:', { bookingData, metodo, hasCustomerInfo: !!customerInfo, hasCardInfo: !!cardInfo, isRescheduling: !!rescheduleFromId });
+    console.log('Received payment request:', { bookingData, metodo, hasCustomerInfo: !!customerInfo, hasCardInfo: !!cardInfo, isRescheduling: !!rescheduleFromId, excludePendingBookingId });
 
     // ============================================
     // VERIFICAÇÃO CRÍTICA DE DISPONIBILIDADE
@@ -281,7 +289,8 @@ serve(async (req) => {
       bookingData.data,
       bookingData.hora,
       bookingData.duracao,
-      rescheduleFromId // Excluir agendamento atual se for reagendamento
+      rescheduleFromId, // Excluir agendamento atual se for reagendamento
+      excludePendingBookingId // Excluir pending booking que está sendo regenerado
     );
 
     if (!availability.available) {
