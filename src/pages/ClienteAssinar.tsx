@@ -272,8 +272,9 @@ const ClienteAssinar = () => {
         toast.success("QR Code gerado! Escaneie para pagar.");
         setStep(4);
       } else if (paymentMethod === 'card') {
-        if (data.asaasSubscription?.firstPayment?.status === 'CONFIRMED') {
-          toast.success("Pagamento aprovado! Assinatura ativada.");
+        const paymentStatus = data.asaasSubscription?.firstPayment?.status;
+        if (paymentStatus === 'CONFIRMED' || paymentStatus === 'PENDING') {
+          toast.success("Assinatura ativada com sucesso! 🎉");
           navigate("/cliente");
         } else {
           toast.error("Pagamento recusado. Verifique os dados do cartão.");
