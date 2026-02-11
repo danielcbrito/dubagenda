@@ -37,11 +37,12 @@ interface MyPlansSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   userId?: string;
+  onSubscriptionChanged?: () => void;
 }
 
 type LoadingState = "idle" | "loading" | "error" | "success";
 
-export function MyPlansSheet({ open, onOpenChange, userId }: MyPlansSheetProps) {
+export function MyPlansSheet({ open, onOpenChange, userId, onSubscriptionChanged }: MyPlansSheetProps) {
   const navigate = useNavigate();
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [loadingState, setLoadingState] = useState<LoadingState>("idle");
@@ -126,7 +127,10 @@ export function MyPlansSheet({ open, onOpenChange, userId }: MyPlansSheetProps) 
       if (error) throw error;
       toast.success("Assinatura cancelada com sucesso");
       setCancelDialogOpen(false);
-      loadSubscription();
+      setSubscription(null);
+      onOpenChange(false);
+      // Notificar o dashboard para recarregar dados imediatamente
+      onSubscriptionChanged?.();
     } catch (error: any) {
       console.error('Cancel subscription error:', error);
       toast.error("Erro ao cancelar assinatura: " + error.message);
