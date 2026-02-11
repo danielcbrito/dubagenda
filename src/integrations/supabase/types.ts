@@ -2541,6 +2541,30 @@ export type Database = {
         }
         Relationships: []
       }
+      wallet_balances: {
+        Row: {
+          balance: number
+          created_at: string
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          balance?: number
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          balance?: number
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       wallet_deposits: {
         Row: {
           amount: number
@@ -2578,6 +2602,72 @@ export type Database = {
           pix_qr_code?: string | null
           provider?: string
           status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      wallet_transactions: {
+        Row: {
+          amount: number
+          created_at: string
+          description: string | null
+          destination_account: string | null
+          destination_agency: string | null
+          destination_bank_code: string | null
+          destination_cpf: string | null
+          destination_name: string | null
+          destination_pix_key: string | null
+          gateway_payment_id: string | null
+          id: string
+          metadata: Json | null
+          pix_expires_at: string | null
+          pix_payload: string | null
+          pix_qr_code: string | null
+          status: string
+          type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          description?: string | null
+          destination_account?: string | null
+          destination_agency?: string | null
+          destination_bank_code?: string | null
+          destination_cpf?: string | null
+          destination_name?: string | null
+          destination_pix_key?: string | null
+          gateway_payment_id?: string | null
+          id?: string
+          metadata?: Json | null
+          pix_expires_at?: string | null
+          pix_payload?: string | null
+          pix_qr_code?: string | null
+          status?: string
+          type: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          description?: string | null
+          destination_account?: string | null
+          destination_agency?: string | null
+          destination_bank_code?: string | null
+          destination_cpf?: string | null
+          destination_name?: string | null
+          destination_pix_key?: string | null
+          gateway_payment_id?: string | null
+          id?: string
+          metadata?: Json | null
+          pix_expires_at?: string | null
+          pix_payload?: string | null
+          pix_qr_code?: string | null
+          status?: string
+          type?: string
           updated_at?: string
           user_id?: string
         }
@@ -2809,6 +2899,10 @@ export type Database = {
           manutencao_ips_permitidos: string[]
           manutencao_mensagem: string
         }[]
+      }
+      get_or_create_wallet_balance: {
+        Args: { p_user_id: string }
+        Returns: number
       }
       get_store_maintenance_config: {
         Args: never
