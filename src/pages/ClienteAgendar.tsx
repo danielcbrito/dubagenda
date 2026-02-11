@@ -667,6 +667,11 @@ const ClienteAgendar = () => {
 
       if (error) throw error;
 
+      // Tratar erros retornados pelo gateway (status 400)
+      if (data?.error) {
+        throw new Error(data.error);
+      }
+
       if (availableCredits > 0 && data.appointmentId) {
         await useCredits(Math.min(availableCredits, totalPrice), data.appointmentId);
       }
