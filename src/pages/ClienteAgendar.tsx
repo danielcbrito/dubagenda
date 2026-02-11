@@ -1119,19 +1119,16 @@ const ClienteAgendar = () => {
   };
 
   /** Valida cupom de desconto no banco de dados */
-  const validateCoupon = async () => {
-    const code = couponCode.trim().toUpperCase();
-    if (!code) {
-      toast.error("Digite o código do cupom");
-      return;
-    }
+  const validateCoupon = async (codeOverride?: string) => {
+    const code = (codeOverride ?? couponCode).trim().toUpperCase();
+    if (!code || code.length < 3) return;
 
     setValidatingCoupon(true);
     try {
       const { data, error } = await supabase
         .from("discount_coupons")
         .select("id, code, percent, starts_at, expires_at, active")
-        .eq("code", code)
+        .ilike("code", code)
         .maybeSingle();
 
       if (error) throw error;
@@ -1848,21 +1845,29 @@ const ClienteAgendar = () => {
                     </button>
                   </div>
                 ) : (
-                  <div className="flex gap-2">
+                  <div className="relative">
                     <input
                       type="text"
-                      placeholder="Digite o código"
+                      placeholder="Digite o código do cupom"
                       value={couponCode}
-                      onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
-                      className="flex-1 px-4 py-3 bg-card border border-border/40 rounded-xl text-foreground placeholder-muted-foreground focus:outline-none focus:border-primary/50 text-sm uppercase tracking-wider"
+                      onChange={(e) => {
+                        const val = e.target.value.toUpperCase();
+                        setCouponCode(val);
+                        // Auto-validação com debounce
+                        if (val.trim().length >= 3) {
+                          clearTimeout((window as any).__couponDebounce);
+                          (window as any).__couponDebounce = setTimeout(() => {
+                            validateCoupon(val);
+                          }, 600);
+                        }
+                      }}
+                      className="w-full px-4 py-3 pr-10 bg-card border border-border/40 rounded-xl text-foreground placeholder-muted-foreground focus:outline-none focus:border-primary/50 text-sm uppercase tracking-wider transition-colors"
                     />
-                    <button
-                      onClick={validateCoupon}
-                      disabled={validatingCoupon || !couponCode.trim()}
-                      className="px-5 py-3 bg-primary text-primary-foreground font-semibold rounded-xl hover:bg-primary/90 transition-all disabled:opacity-50 text-sm"
-                    >
-                      {validatingCoupon ? '...' : 'Aplicar'}
-                    </button>
+                    {validatingCoupon && (
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                        <div className="w-4 h-4 border-2 border-primary/40 border-t-primary rounded-full animate-spin" />
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
