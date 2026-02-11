@@ -70,7 +70,7 @@ const ClientePagamento = () => {
     try {
       const { data, error: fnError } = await supabase.functions.invoke(
         "manage-subscription-payment",
-        { method: "GET" }
+        { body: { action: "get" } }
       );
 
       if (fnError) throw fnError;
@@ -100,8 +100,8 @@ const ClientePagamento = () => {
       const { data, error: fnError } = await supabase.functions.invoke(
         "manage-subscription-payment",
         {
-          method: "PUT",
           body: {
+            action: "update",
             changeToMethod: "card",
             cardInfo: {
               holderName: cardHolderName.trim(),
@@ -139,8 +139,7 @@ const ClientePagamento = () => {
       const { data, error: fnError } = await supabase.functions.invoke(
         "manage-subscription-payment",
         {
-          method: "PUT",
-          body: { changeToMethod: "pix" },
+          body: { action: "update", changeToMethod: "pix" },
         }
       );
 
