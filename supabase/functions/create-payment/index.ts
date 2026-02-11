@@ -309,7 +309,7 @@ serve(async (req) => {
     // Fetch user profile for name and CPF used in Asaas
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select('nome, cpf')
+      .select('nome, cpf, cep, telefone')
       .eq('id', user.id)
       .single();
  
@@ -622,9 +622,9 @@ serve(async (req) => {
         name: cardInfo.holderName,
         email: user.email || 'noemail@example.com',
         cpfCnpj: (asaasCustomer.cpfCnpj || '').replace(/\D/g, ''),
-        postalCode: (customerInfo?.postalCode || '00000000').replace(/\D/g, ''),
+        postalCode: (customerInfo?.postalCode || profile?.cep || '00000000').replace(/\D/g, ''),
         addressNumber: '0',
-        phone: '0000000000',
+        phone: (profile?.telefone || '00000000000').replace(/\D/g, ''),
       };
     }
 
