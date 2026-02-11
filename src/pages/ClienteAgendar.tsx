@@ -649,8 +649,8 @@ const ClienteAgendar = () => {
         payload.cardInfo = {
           holderName: cardHolderName.trim(),
           number: cardNumber.replace(/\s/g, ''),
-          expiryMonth: cardExpiryMonth.trim(),
-          expiryYear: cardExpiryYear.trim(),
+          expiryMonth: cardExpiryMonth.trim().padStart(2, '0'),
+          expiryYear: cardExpiryYear.trim().length === 2 ? `20${cardExpiryYear.trim()}` : cardExpiryYear.trim(),
           ccv: cardCvv.trim(),
         };
 
@@ -1917,7 +1917,12 @@ const ClienteAgendar = () => {
                     type="text"
                     placeholder="Número do cartão"
                     value={cardNumber}
-                    onChange={(e) => setCardNumber(e.target.value)}
+                    maxLength={19}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/\D/g, '').slice(0, 16);
+                      const formatted = value.replace(/(\d{4})(?=\d)/g, '$1 ');
+                      setCardNumber(formatted);
+                    }}
                     className="w-full px-4 py-3 bg-secondary border border-border rounded-xl text-foreground placeholder-muted-foreground focus:outline-none focus:border-primary/50"
                   />
                   
@@ -1926,21 +1931,33 @@ const ClienteAgendar = () => {
                       type="text"
                       placeholder="MM"
                       value={cardExpiryMonth}
-                      onChange={(e) => setCardExpiryMonth(e.target.value)}
+                      maxLength={2}
+                      onChange={(e) => {
+                        const value = e.target.value.replace(/\D/g, '').slice(0, 2);
+                        setCardExpiryMonth(value);
+                      }}
                       className="px-4 py-3 bg-secondary border border-border rounded-xl text-foreground placeholder-muted-foreground focus:outline-none focus:border-primary/50"
                     />
                     <input
                       type="text"
-                      placeholder="AA"
+                      placeholder="AAAA"
                       value={cardExpiryYear}
-                      onChange={(e) => setCardExpiryYear(e.target.value)}
+                      maxLength={4}
+                      onChange={(e) => {
+                        const value = e.target.value.replace(/\D/g, '').slice(0, 4);
+                        setCardExpiryYear(value);
+                      }}
                       className="px-4 py-3 bg-secondary border border-border rounded-xl text-foreground placeholder-muted-foreground focus:outline-none focus:border-primary/50"
                     />
                     <input
                       type="text"
                       placeholder="CVV"
                       value={cardCvv}
-                      onChange={(e) => setCardCvv(e.target.value)}
+                      maxLength={4}
+                      onChange={(e) => {
+                        const value = e.target.value.replace(/\D/g, '').slice(0, 4);
+                        setCardCvv(value);
+                      }}
                       className="px-4 py-3 bg-secondary border border-border rounded-xl text-foreground placeholder-muted-foreground focus:outline-none focus:border-primary/50"
                     />
                   </div>
