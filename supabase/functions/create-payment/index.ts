@@ -316,15 +316,30 @@ serve(async (req) => {
       console.warn('Profile not found for user, proceeding with limited data:', { userId: user.id, error: profileError?.message });
     }
 
-    // Validate CPF if payment requires Asaas (PIX or Card)
-    if ((metodo === 'pix' || metodo === 'card') && profile?.cpf && !validateCPF(profile.cpf)) {
-      console.error('Invalid CPF detected:', profile.cpf);
-      return new Response(
-        JSON.stringify({ 
-          error: 'CPF inválido. Por favor, atualize seu perfil com um CPF válido antes de prosseguir com o pagamento.' 
-        }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    // Validate CPF is present and valid for Asaas payments (PIX or Card)
+    if (metodo === 'pix' || metodo === 'card') {
+      const cpf = profile?.cpf || customerInfo?.cpf || '';
+      const cleanCpf = cpf.replace(/\D/g, '');
+
+      if (!cleanCpf) {
+        console.error('CPF missing for PIX/Card payment. User:', user.id);
+        return new Response(
+          JSON.stringify({ 
+            error: 'CPF é obrigatório para pagamento via PIX ou cartão. Por favor, atualize seu perfil com um CPF válido.' 
+          }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      if (!validateCPF(cleanCpf)) {
+        console.error('Invalid CPF detected:', cpf);
+        return new Response(
+          JSON.stringify({ 
+            error: 'CPF inválido. Por favor, atualize seu perfil com um CPF válido antes de prosseguir com o pagamento.' 
+          }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
     }
 
     // Handle "cash" payment - create appointment immediately
