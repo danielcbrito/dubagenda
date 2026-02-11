@@ -89,6 +89,11 @@ const ClienteAgendar = () => {
   const [copied, setCopied] = useState(false);
   const [serviceQuantities, setServiceQuantities] = useState<Record<string, number>>({});
   
+  // Estados para cupom de desconto
+  const [couponCode, setCouponCode] = useState("");
+  const [appliedCoupon, setAppliedCoupon] = useState<{ id: string; code: string; percent: number } | null>(null);
+  const [validatingCoupon, setValidatingCoupon] = useState(false);
+  
   // Indica se o usuário está usando fluxo de plano (serviço pré-selecionado)
   const [isPlanFlow, setIsPlanFlow] = useState(false);
 
@@ -706,6 +711,11 @@ const ClienteAgendar = () => {
         await markRedemptionAsUsed(data.appointmentId);
       }
 
+      // Registra uso do cupom se aplicado
+      if (appliedCoupon && data.appointmentId) {
+        await registerCouponUsage(data.appointmentId);
+      }
+
       if (paymentMethod === 'cash') {
         sessionStorage.removeItem('isRescheduling');
         sessionStorage.removeItem('rescheduleAppointmentId');
@@ -930,6 +940,11 @@ const ClienteAgendar = () => {
         await markRedemptionAsUsed(appointment.id);
       }
 
+      // Registra uso do cupom se aplicado
+      if (appliedCoupon) {
+        await registerCouponUsage(appointment.id);
+      }
+
       sessionStorage.removeItem('isRescheduling');
       sessionStorage.removeItem('rescheduleAppointmentId');
 
@@ -1103,6 +1118,77 @@ const ClienteAgendar = () => {
     }
   };
 
+  /** Valida cupom de desconto no banco de dados */
+  const validateCoupon = async () => {
+    const code = couponCode.trim().toUpperCase();
+    if (!code) {
+      toast.error("Digite o código do cupom");
+      return;
+    }
+
+    setValidatingCoupon(true);
+    try {
+      const { data, error } = await supabase
+        .from("discount_coupons")
+        .select("id, code, percent, starts_at, expires_at, active")
+        .eq("code", code)
+        .maybeSingle();
+
+      if (error) throw error;
+
+      if (!data) {
+        toast.error("Cupom inválido");
+        return;
+      }
+
+      if (!data.active) {
+        toast.error("Este cupom está inativo");
+        return;
+      }
+
+      const now = new Date();
+      if (data.starts_at && new Date(data.starts_at) > now) {
+        toast.error("Este cupom ainda não está válido");
+        return;
+      }
+
+      if (data.expires_at && new Date(data.expires_at) < now) {
+        toast.error("Este cupom expirou");
+        return;
+      }
+
+      setAppliedCoupon({ id: data.id, code: data.code, percent: data.percent });
+      toast.success(`Cupom aplicado! ${data.percent}% de desconto`);
+    } catch (err: any) {
+      console.error("Error validating coupon:", err);
+      toast.error("Erro ao validar cupom");
+    } finally {
+      setValidatingCoupon(false);
+    }
+  };
+
+  /** Remove cupom aplicado */
+  const removeCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponCode("");
+  };
+
+  /** Registra o uso do cupom após confirmação do agendamento */
+  const registerCouponUsage = async (appointmentId: string) => {
+    if (!appliedCoupon || !userId) return;
+    try {
+      await supabase
+        .from("discount_coupon_redemptions")
+        .insert({
+          coupon_id: appliedCoupon.id,
+          user_id: userId,
+          appointment_id: appointmentId,
+        });
+    } catch (err) {
+      console.error("Error registering coupon usage:", err);
+    }
+  };
+
   const handleRescheduleUpdate = async () => {
     if (!rescheduleAppointmentId || !selectedDate || !selectedTime) {
       toast.error("Dados incompletos para remarcação");
@@ -1213,7 +1299,26 @@ const ClienteAgendar = () => {
   const getTotalPrice = () => {
     const baseTotal = selectedServices.reduce((sum, s) => sum + s.preco * (serviceQuantities[s.id] || 1), 0);
     const redemptionDiscount = getRedemptionDiscount();
+    const afterRedemption = Math.max(0, baseTotal - redemptionDiscount);
+    // Aplica cupom de desconto sobre o valor restante
+    if (appliedCoupon) {
+      return Math.max(0, afterRedemption * (1 - appliedCoupon.percent / 100));
+    }
+    return afterRedemption;
+  };
+
+  /** Retorna o valor base SEM cupom (para exibição) */
+  const getBaseTotalBeforeCoupon = () => {
+    const baseTotal = selectedServices.reduce((sum, s) => sum + s.preco * (serviceQuantities[s.id] || 1), 0);
+    const redemptionDiscount = getRedemptionDiscount();
     return Math.max(0, baseTotal - redemptionDiscount);
+  };
+
+  /** Retorna o valor do desconto do cupom */
+  const getCouponDiscount = () => {
+    if (!appliedCoupon) return 0;
+    const base = getBaseTotalBeforeCoupon();
+    return base * (appliedCoupon.percent / 100);
   };
 
   const canUseRedemption = availableRedemptions.length > 0 && !!getCorteService();
@@ -1725,27 +1830,71 @@ const ClienteAgendar = () => {
                 )}
               </div>
 
+              {/* Cupom de Desconto */}
+              <div className="mt-6">
+                <h3 className="text-sm font-semibold text-foreground mb-3">Cupom de desconto</h3>
+                {appliedCoupon ? (
+                  <div className="flex items-center justify-between bg-emerald-500/10 border border-emerald-500/30 rounded-xl px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <Check className="w-4 h-4 text-emerald-500" />
+                      <span className="text-sm font-semibold text-foreground">{appliedCoupon.code}</span>
+                      <span className="text-xs text-emerald-400">({appliedCoupon.percent}% off)</span>
+                    </div>
+                    <button
+                      onClick={removeCoupon}
+                      className="text-xs text-muted-foreground hover:text-destructive transition-colors font-medium"
+                    >
+                      Remover
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      placeholder="Digite o código"
+                      value={couponCode}
+                      onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                      className="flex-1 px-4 py-3 bg-card border border-border/40 rounded-xl text-foreground placeholder-muted-foreground focus:outline-none focus:border-primary/50 text-sm uppercase tracking-wider"
+                    />
+                    <button
+                      onClick={validateCoupon}
+                      disabled={validatingCoupon || !couponCode.trim()}
+                      className="px-5 py-3 bg-primary text-primary-foreground font-semibold rounded-xl hover:bg-primary/90 transition-all disabled:opacity-50 text-sm"
+                    >
+                      {validatingCoupon ? '...' : 'Aplicar'}
+                    </button>
+                  </div>
+                )}
+              </div>
+
               {/* Resumo de valores */}
               <div className="mt-6 bg-card border border-border rounded-2xl p-5">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-muted-foreground text-sm">Valor do serviço</span>
                   <span className={cn(
                     "text-foreground font-semibold",
-                    useRedemption && getCorteService() && "line-through text-muted-foreground"
+                    (useRedemption && getCorteService()) && "line-through text-muted-foreground"
                   )}>
                     R$ {selectedServices.reduce((sum, s) => sum + s.preco * (serviceQuantities[s.id] || 1), 0).toFixed(2).replace('.', ',')}
                   </span>
                 </div>
                 
                 {useRedemption && getRedemptionDiscount() > 0 && (
-                  <div className="flex items-center justify-between text-success font-semibold text-sm">
+                  <div className="flex items-center justify-between text-emerald-400 font-semibold text-sm">
                     <span>Desconto (resgate)</span>
                     <span>-R$ {getRedemptionDiscount().toFixed(2).replace('.', ',')}</span>
                   </div>
                 )}
 
+                {appliedCoupon && getCouponDiscount() > 0 && (
+                  <div className="flex items-center justify-between text-emerald-400 font-semibold text-sm mt-2">
+                    <span>Cupom ({appliedCoupon.percent}%)</span>
+                    <span>-R$ {getCouponDiscount().toFixed(2).replace('.', ',')}</span>
+                  </div>
+                )}
+
                 {availableCredits > 0 && getTotalPrice() > 0 && (
-                  <div className="flex items-center justify-between text-success text-sm mt-2">
+                  <div className="flex items-center justify-between text-emerald-400 text-sm mt-2">
                     <span>Créditos aplicados</span>
                     <span>-R$ {Math.min(availableCredits, getTotalPrice()).toFixed(2).replace('.', ',')}</span>
                   </div>
@@ -1915,6 +2064,17 @@ const ClienteAgendar = () => {
                     "Pagar na Barbearia"
                   }
                 />
+
+                {/* Cupom aplicado */}
+                {appliedCoupon && getCouponDiscount() > 0 && (
+                  <>
+                    <div className="border-t border-border" />
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-emerald-400 font-medium">Cupom {appliedCoupon.code} ({appliedCoupon.percent}%)</span>
+                      <span className="text-sm font-semibold text-emerald-400">-R$ {getCouponDiscount().toFixed(2).replace('.', ',')}</span>
+                    </div>
+                  </>
+                )}
                 
                 <div className="border-t border-border mt-4 pt-4">
                   <div className="flex items-center justify-between">
