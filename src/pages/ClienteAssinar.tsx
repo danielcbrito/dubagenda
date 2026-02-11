@@ -135,7 +135,7 @@ const ClienteAssinar = () => {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
   const [loading, setLoading] = useState(false);
-  const [step, setStep] = useState(1);
+  const [step, setStep] = useState(resumePlanId ? 0 : 1); // Start at 0 (hidden) when resuming to avoid flash
   const [paymentMethod, setPaymentMethod] = useState<'pix' | 'card'>('pix');
   const [hasActiveSubscription, setHasActiveSubscription] = useState(false);
   
@@ -160,12 +160,18 @@ const ClienteAssinar = () => {
 
   // Se veio com resumePlanId, auto-seleciona o plano e pula para step 2
   useEffect(() => {
-    if (resumePlanId && plans.length > 0 && step === 1) {
+    if (resumePlanId && plans.length > 0 && (step === 0 || step === 1)) {
       const plan = plans.find(p => p.id === resumePlanId);
       if (plan) {
         setSelectedPlan(plan);
         setStep(2);
+      } else {
+        // Plan not found, fallback to step 1
+        setStep(1);
       }
+    } else if (step === 0 && plans.length > 0 && !resumePlanId) {
+      // Safety: if somehow step is 0 without resumePlanId
+      setStep(1);
     }
   }, [resumePlanId, plans]);
 
@@ -316,7 +322,7 @@ const ClienteAssinar = () => {
       <div className="sticky top-0 z-10 px-4 pt-[max(env(safe-area-inset-top),1rem)] pb-3 bg-background/80 backdrop-blur-xl">
         <div className="max-w-2xl mx-auto flex items-center gap-3">
           <button 
-            onClick={() => step === 1 ? navigate("/cliente") : setStep(step - 1)}
+            onClick={() => (step <= 1) ? navigate("/cliente") : setStep(step - 1)}
             className="w-9 h-9 flex items-center justify-center rounded-full bg-card border border-border/40 hover:bg-muted transition-colors"
           >
             <ArrowLeft className="w-4 h-4 text-foreground" />
@@ -350,6 +356,19 @@ const ClienteAssinar = () => {
 
         {/* Step 1: Seleção de Plano */}
         <AnimatePresence mode="wait">
+          {/* Step 0: Loading while resuming subscription */}
+          {step === 0 && (
+            <motion.div
+              key="step0"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="flex items-center justify-center py-20"
+            >
+              <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+            </motion.div>
+          )}
+
           {step === 1 && (
             <motion.div
               key="step1"
