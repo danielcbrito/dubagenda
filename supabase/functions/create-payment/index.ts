@@ -227,7 +227,8 @@ interface CreatePaymentRequest {
   customerInfo?: {
     name: string;
     email: string;
-    cpf: string;
+    cpf?: string;
+    postalCode?: string;
   };
   cardInfo?: {
     holderName: string;
@@ -621,7 +622,7 @@ serve(async (req) => {
         name: cardInfo.holderName,
         email: user.email || 'noemail@example.com',
         cpfCnpj: (asaasCustomer.cpfCnpj || '').replace(/\D/g, ''),
-        postalCode: '00000000',
+        postalCode: (customerInfo?.postalCode || '00000000').replace(/\D/g, ''),
         addressNumber: '0',
         phone: '0000000000',
       };
