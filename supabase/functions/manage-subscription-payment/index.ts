@@ -76,8 +76,9 @@ Deno.serve(async (req) => {
     // ========== GET: Buscar dados de pagamento ==========
     if (action === 'get') {
       let cardInfo = null;
+      const hasGateway = !!subscription.gateway_subscription_id;
 
-      if (subscription.gateway_subscription_id) {
+      if (hasGateway) {
         try {
           const asaasResponse = await fetch(
             `https://api.asaas.com/v3/subscriptions/${subscription.gateway_subscription_id}`,
@@ -115,6 +116,7 @@ Deno.serve(async (req) => {
             payment_method: subscription.payment_method,
             next_billing_date: subscription.next_billing_date,
             gateway_subscription_id: subscription.gateway_subscription_id,
+            has_gateway: hasGateway,
             plano: subscription.planos,
           },
           cardInfo,
