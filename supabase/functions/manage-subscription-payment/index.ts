@@ -163,6 +163,11 @@ Deno.serve(async (req) => {
         };
 
         console.log('Updating Asaas subscription card:', subscription.gateway_subscription_id);
+        console.log('Update payload:', JSON.stringify({
+          billingType: 'CREDIT_CARD',
+          creditCard: { holderName: cardInfo.holderName, numberLength: cardInfo.number?.length, expiryMonth: cardInfo.expiryMonth, expiryYear: cardInfo.expiryYear },
+          creditCardHolderInfo: { name: cardInfo.holderName, email: user.email, cpfCnpj: profile?.cpf || '00000000000' },
+        }));
 
         const asaasResponse = await fetch(
           `https://api.asaas.com/v3/subscriptions/${subscription.gateway_subscription_id}`,
@@ -177,9 +182,11 @@ Deno.serve(async (req) => {
         );
 
         const asaasResult = await asaasResponse.json();
+        console.log('Asaas response status:', asaasResponse.status);
+        console.log('Asaas response body:', JSON.stringify(asaasResult));
 
         if (!asaasResponse.ok || asaasResult.errors) {
-          console.error('Asaas update error:', asaasResult);
+          console.error('Asaas update error:', JSON.stringify(asaasResult));
           return new Response(
             JSON.stringify({ 
               error: asaasResult.errors?.[0]?.description || 'Erro ao atualizar cartão no gateway' 
