@@ -43,6 +43,7 @@ function PlanCard({
   disabled?: boolean;
 }) {
   const benefits = Array.isArray(plan.beneficios_json) ? plan.beneficios_json : [];
+  const isMostPopular = plan.nome.toLowerCase().includes('barba');
 
   return (
     <motion.div
@@ -54,18 +55,27 @@ function PlanCard({
         "relative rounded-2xl border transition-all cursor-pointer overflow-hidden",
         isSelected
           ? "border-primary/50 bg-card shadow-lg shadow-primary/5 ring-2 ring-primary/30"
-          : isPopular 
-            ? "border-primary/20 bg-card hover:border-primary/40" 
+          : isMostPopular
+            ? "border-primary/20 bg-card hover:border-primary/40"
             : "border-border/40 bg-card hover:border-border",
         disabled && "opacity-50 cursor-not-allowed"
       )}
     >
-      {/* Accent line for selected/popular */}
-      {(isSelected || isPopular) && (
+      {/* Accent line */}
+      {(isSelected || isMostPopular) && (
         <div className="h-0.5 bg-gradient-to-r from-primary via-primary/80 to-primary/40" />
       )}
 
       <div className="p-6">
+        {/* Badge mais popular */}
+        {isMostPopular && !isSelected && (
+          <div className="flex items-center gap-1.5 mb-3">
+            <Crown className="w-3.5 h-3.5 text-primary" />
+            <span className="text-[11px] font-bold uppercase tracking-widest text-primary">
+              Mais Popular
+            </span>
+          </div>
+        )}
         {/* Check de seleção */}
         {isSelected && (
           <div className="absolute top-5 right-5">
@@ -279,14 +289,25 @@ const ClienteAssinar = () => {
   return (
     <div className="min-h-screen bg-background pb-20">
       
-      {/* Back Button */}
-      <div className="sticky top-0 z-10 pt-[env(safe-area-inset-top)] px-4 py-3">
-        <button 
-          onClick={() => step === 1 ? navigate("/cliente") : setStep(step - 1)}
-          className="w-10 h-10 flex items-center justify-center rounded-full bg-card/80 backdrop-blur-md border border-border/30 hover:bg-muted transition-colors shadow-sm"
-        >
-          <ArrowLeft className="w-5 h-5 text-foreground" />
-        </button>
+      {/* Header */}
+      <div className="sticky top-0 z-10 pt-[env(safe-area-inset-top)] px-4 py-4 bg-background/80 backdrop-blur-xl">
+        <div className="max-w-2xl mx-auto flex items-center gap-3">
+          <button 
+            onClick={() => step === 1 ? navigate("/cliente") : setStep(step - 1)}
+            className="w-9 h-9 flex items-center justify-center rounded-full bg-card border border-border/40 hover:bg-muted transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4 text-foreground" />
+          </button>
+          {step === 1 && (
+            <motion.p 
+              initial={{ opacity: 0, x: -8 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="text-sm font-semibold text-foreground tracking-tight"
+            >
+              Escolha o melhor para você
+            </motion.p>
+          )}
+        </div>
       </div>
 
       <div className="max-w-2xl mx-auto p-4 space-y-6">
