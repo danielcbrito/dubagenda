@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Home, ShoppingBag, Headphones, User } from "lucide-react";
+import { Home, Wallet, Headphones, User } from "lucide-react";
 import { motion } from "framer-motion";
 import { useLocation, useNavigate } from "react-router-dom";
 import { StoreComingSoonDialog } from "./client/StoreComingSoonDialog";
@@ -92,11 +92,12 @@ export function BottomNavigation({
             onClick={() => navigate("/cliente")}
           />
           
-          {/* 2. Loja */}
+          {/* 2. Carteira */}
           <NavItem
-            icon={ShoppingBag}
-            label="Loja"
-            onClick={() => setStoreDialogOpen(true)}
+            icon={Wallet}
+            label="Carteira"
+            isActive={isActive("/cliente/carteira")}
+            onClick={() => navigate("/cliente/carteira")}
           />
           
           {/* 3. Suporte (destaque central) */}
