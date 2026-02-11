@@ -284,6 +284,21 @@ const ClienteAgendar = () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
 
+      // Verificar se já existe agendamento ativo usando resgate (anti-fraude)
+      const { data: activeResgateAppointments } = await supabase
+        .from("agendamentos")
+        .select("id")
+        .eq("user_id", session.user.id)
+        .eq("payment_method", "resgate")
+        .in("status", ["pending", "confirmed", "completed"])
+        .limit(1);
+
+      // Se já tem agendamento ativo com resgate, bloquear novos resgates
+      if (activeResgateAppointments && activeResgateAppointments.length > 0) {
+        setAvailableRedemptions([]);
+        return;
+      }
+
       const { data: redemptions, error } = await supabase
         .from("resgates")
         .select("id, promocao_id")

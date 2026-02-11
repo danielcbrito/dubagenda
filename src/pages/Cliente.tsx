@@ -230,14 +230,24 @@ const Cliente = () => {
 
     setCompletedAppointments(totalCompletedCount || 0);
 
-    // Buscar resgates disponíveis
-    const { data: allRedemptions } = await supabase
-      .from("resgates")
-      .select("id, status")
+    // Buscar resgates disponíveis (verificando se não há agendamento ativo com resgate)
+    const { data: activeResgateApt } = await supabase
+      .from("agendamentos")
+      .select("id")
       .eq("user_id", userId)
-      .eq("status", "available");
+      .eq("payment_method", "resgate")
+      .in("status", ["pending", "confirmed", "completed"])
+      .limit(1);
 
-    const availableRedemptions = allRedemptions?.length || 0;
+    let availableRedemptions = 0;
+    if (!activeResgateApt || activeResgateApt.length === 0) {
+      const { data: allRedemptions } = await supabase
+        .from("resgates")
+        .select("id, status")
+        .eq("user_id", userId)
+        .eq("status", "available");
+      availableRedemptions = allRedemptions?.length || 0;
+    }
 
     setPoints(currentPoints);
     setRedemptions(availableRedemptions);
