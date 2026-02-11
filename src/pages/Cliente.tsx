@@ -273,11 +273,12 @@ const Cliente = () => {
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
       const thirtyDaysAgoISO = thirtyDaysAgo.toISOString();
 
+      // Apenas assinaturas que foram ativas e depois canceladas (não "suspended" que nunca foram pagas)
       const { data: expiredSub } = await supabase
         .from("assinaturas")
         .select("id, status, plano_id, updated_at, plano:planos(nome)")
         .eq("user_id", userId)
-        .in("status", ["cancelled", "suspended"])
+        .eq("status", "cancelled")
         .gte("updated_at", thirtyDaysAgoISO)
         .order("updated_at", { ascending: false })
         .limit(1)
