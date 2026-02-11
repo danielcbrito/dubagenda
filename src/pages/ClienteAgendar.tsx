@@ -1233,30 +1233,25 @@ const ClienteAgendar = () => {
         return;
       }
 
+      // Delete old pending booking first
       await supabase.from("pending_bookings").delete().eq("id", pendingBookingId);
 
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
 
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("nome, telefone, cpf")
-        .eq("id", session.user.id)
-        .single();
+      const bookingData = {
+        servico_id: oldBooking.servico_id,
+        barbeiro_id: oldBooking.barbeiro_id,
+        data: oldBooking.data,
+        hora: oldBooking.hora,
+        duracao: oldBooking.duracao,
+        preco: oldBooking.preco,
+      };
 
       const payload: any = {
-        userId: session.user.id,
-        serviceId: oldBooking.servico_id,
-        barberId: oldBooking.barbeiro_id,
-        date: oldBooking.data,
-        time: oldBooking.hora,
-        duration: oldBooking.duracao,
-        price: oldBooking.preco,
-        paymentMethod: 'pix',
-        customerName: profile?.nome || session.user.email,
-        customerEmail: session.user.email,
-        customerCpf: (profile as any)?.cpf || undefined,
-        customerPhone: profile?.telefone || undefined,
+        bookingData,
+        metodo: 'pix' as const,
+        excludePendingBookingId: pendingBookingId,
       };
 
       const { data, error } = await supabase.functions.invoke('create-payment', {
