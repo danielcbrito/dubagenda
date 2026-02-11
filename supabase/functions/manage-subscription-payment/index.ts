@@ -42,6 +42,18 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Determinar ação: via body.action ou fallback para "get"
+    let action = 'get';
+    let body: any = {};
+
+    try {
+      body = await req.json();
+      action = body.action || 'get';
+    } catch {
+      // Body vazio = GET
+      action = 'get';
+    }
+
     // Buscar assinatura ativa do usuário
     const { data: subscription, error: subError } = await supabase
       .from('assinaturas')
@@ -62,12 +74,11 @@ Deno.serve(async (req) => {
     }
 
     // ========== GET: Buscar dados de pagamento ==========
-    if (req.method === 'GET') {
+    if (action === 'get') {
       let cardInfo = null;
 
       if (subscription.gateway_subscription_id) {
         try {
-          // Buscar detalhes da assinatura no Asaas
           const asaasResponse = await fetch(
             `https://api.asaas.com/v3/subscriptions/${subscription.gateway_subscription_id}`,
             {
@@ -112,9 +123,8 @@ Deno.serve(async (req) => {
       );
     }
 
-    // ========== PUT: Atualizar cartão ==========
-    if (req.method === 'PUT') {
-      const body = await req.json();
+    // ========== UPDATE: Atualizar cartão ou trocar para PIX ==========
+    if (action === 'update') {
       const { cardInfo, changeToMethod } = body;
 
       // Buscar perfil do usuário para CPF
@@ -249,7 +259,7 @@ Deno.serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ error: 'Método não suportado' }),
+      JSON.stringify({ error: 'Ação não suportada' }),
       { status: 405, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
