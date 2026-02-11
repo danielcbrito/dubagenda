@@ -279,19 +279,14 @@ const ClienteAssinar = () => {
   return (
     <div className="min-h-screen bg-background pb-20">
       
-      {/* Header */}
-      <div className="sticky top-0 bg-background/95 backdrop-blur-xl border-b border-border/40 px-4 py-4 z-10">
-        <div className="max-w-2xl mx-auto">
-          <div className="flex items-center gap-3">
-            <button 
-              onClick={() => step === 1 ? navigate("/cliente") : setStep(step - 1)}
-              className="w-10 h-10 flex items-center justify-center rounded-full bg-card hover:bg-muted transition-colors"
-            >
-              <ArrowLeft className="w-5 h-5 text-foreground" />
-            </button>
-            <h1 className="text-lg font-bold text-foreground">Planos de Assinatura</h1>
-          </div>
-        </div>
+      {/* Back Button */}
+      <div className="sticky top-0 z-10 pt-[env(safe-area-inset-top)] px-4 py-3">
+        <button 
+          onClick={() => step === 1 ? navigate("/cliente") : setStep(step - 1)}
+          className="w-10 h-10 flex items-center justify-center rounded-full bg-card/80 backdrop-blur-md border border-border/30 hover:bg-muted transition-colors shadow-sm"
+        >
+          <ArrowLeft className="w-5 h-5 text-foreground" />
+        </button>
       </div>
 
       <div className="max-w-2xl mx-auto p-4 space-y-6">
