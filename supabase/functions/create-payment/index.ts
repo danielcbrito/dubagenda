@@ -495,13 +495,22 @@ serve(async (req) => {
     const asaasApiKey = Deno.env.get('ASAAS_API_KEY');
     if (!asaasApiKey) {
       console.error('ASAAS_API_KEY not configured');
-      // Clean up pending booking
       await supabase.from('pending_bookings').delete().eq('id', pendingBooking.id);
       return new Response(
         JSON.stringify({ error: 'Payment gateway not configured' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    // DIAGNÓSTICO: Verificar se é chave de produção ou sandbox
+    const keyPrefix = asaasApiKey.substring(0, 15);
+    const isSandboxKey = asaasApiKey.includes('hmlg');
+    const isProductionKey = asaasApiKey.includes('prod');
+    console.log('ASAAS KEY CHECK:', { keyPrefix, isSandboxKey, isProductionKey });
+    
+    // Se a chave é sandbox, usar URL de sandbox
+    const asaasBaseUrl = isSandboxKey ? 'https://api-sandbox.asaas.com/v3' : 'https://api.asaas.com/v3';
+    console.log('Using Asaas base URL:', asaasBaseUrl);
 
     // Create or get customer in Asaas
     const asaasCustomer = {
@@ -519,7 +528,7 @@ serve(async (req) => {
     });
 
     // Search for existing customer first
-    const customerSearchUrl = `https://api.asaas.com/v3/customers?externalReference=${user.id}`;
+    const customerSearchUrl = `${asaasBaseUrl}/customers?externalReference=${user.id}`;
     const customerSearchResponse = await fetch(customerSearchUrl, {
       method: 'GET',
       headers: {
@@ -546,7 +555,7 @@ serve(async (req) => {
 
       if (needsUpdate) {
         console.log('Updating existing Asaas customer with latest data...');
-        const updateResponse = await fetch(`https://api.asaas.com/v3/customers/${customerId}`, {
+        const updateResponse = await fetch(`${asaasBaseUrl}/customers/${customerId}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
@@ -568,7 +577,7 @@ serve(async (req) => {
       }
     } else {
       // Create new customer
-      const customerCreateResponse = await fetch('https://api.asaas.com/v3/customers', {
+      const customerCreateResponse = await fetch(`${asaasBaseUrl}/customers`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -660,7 +669,7 @@ serve(async (req) => {
     }
     console.log('FULL Asaas payload:', JSON.stringify(sanitizedPayload));
 
-    const asaasUrl = 'https://api.asaas.com/v3/payments';
+    const asaasUrl = `${asaasBaseUrl}/payments`;
     console.log('Using Asaas URL:', asaasUrl);
 
     const asaasPaymentResponse = await fetch(asaasUrl, {
