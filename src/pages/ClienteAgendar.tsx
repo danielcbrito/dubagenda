@@ -67,7 +67,7 @@ const ClienteAgendar = () => {
   const [cardExpiryMonth, setCardExpiryMonth] = useState("");
   const [cardExpiryYear, setCardExpiryYear] = useState("");
   const [cardCvv, setCardCvv] = useState("");
-  const [cardCpf, setCardCpf] = useState("");
+  const [cardCep, setCardCep] = useState("");
   const [resumePendingBookingId, setResumePendingBookingId] = useState<string | null>(null);
   const [paymentConfirmed, setPaymentConfirmed] = useState(false);
   const [pendingBookingId, setPendingBookingId] = useState<string | null>(null);
@@ -602,7 +602,7 @@ const ClienteAgendar = () => {
     }
 
     if (paymentMethod === 'card') {
-      if (!cardHolderName || !cardNumber || !cardExpiryMonth || !cardExpiryYear || !cardCvv || !cardCpf) {
+      if (!cardHolderName || !cardNumber || !cardExpiryMonth || !cardExpiryYear || !cardCvv || !cardCep) {
         toast.error("Preencha todos os dados do cartão");
         return;
       }
@@ -657,7 +657,7 @@ const ClienteAgendar = () => {
         payload.customerInfo = {
           name: cardHolderName.trim(),
           email: session.user.email,
-          cpf: cardCpf.replace(/\D/g, ''),
+          postalCode: cardCep.replace(/\D/g, ''),
         };
       }
 
@@ -1942,9 +1942,14 @@ const ClienteAgendar = () => {
                   
                   <input
                     type="text"
-                    placeholder="CPF do titular"
-                    value={cardCpf}
-                    onChange={(e) => setCardCpf(e.target.value)}
+                    placeholder="CEP do titular (ex: 00000-000)"
+                    value={cardCep}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/\D/g, "").slice(0, 8);
+                      const formatted = value.length > 5 ? `${value.slice(0, 5)}-${value.slice(5)}` : value;
+                      setCardCep(formatted);
+                    }}
+                    maxLength={9}
                     className="w-full px-4 py-3 bg-secondary border border-border rounded-xl text-foreground placeholder-muted-foreground focus:outline-none focus:border-primary/50"
                   />
                 </div>
