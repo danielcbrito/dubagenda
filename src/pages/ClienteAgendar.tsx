@@ -2092,26 +2092,26 @@ const ClienteAgendar = () => {
                   </div>
                 </div>
 
-                <div className="max-w-md mx-auto px-4 py-6 space-y-5">
-                  {/* Valor */}
+                <div className="flex flex-col items-center px-5 pt-4 pb-6 gap-4">
+                  {/* Valor compacto */}
                   <div className="text-center">
-                    <p className="text-xs text-muted-foreground mb-1 uppercase tracking-wider">Valor a pagar</p>
-                    <p className="text-3xl font-bold text-foreground tracking-tight">
+                    <p className="text-[11px] text-muted-foreground uppercase tracking-widest mb-0.5">Valor</p>
+                    <p className="text-2xl font-bold text-foreground tracking-tight">
                       R$ {Math.max(0, getTotalPrice() - availableCredits).toFixed(2).replace('.', ',')}
                     </p>
                   </div>
 
                   {pixExpired ? (
                     /* QR Code expirado */
-                    <div className="space-y-5">
-                      <div className="bg-card border border-destructive/20 rounded-2xl p-6 text-center space-y-4">
-                        <div className="w-14 h-14 mx-auto bg-destructive/10 rounded-full flex items-center justify-center">
-                          <AlertTriangle className="w-7 h-7 text-destructive" />
+                    <div className="w-full max-w-sm space-y-4">
+                      <div className="bg-card border border-destructive/20 rounded-2xl p-6 text-center space-y-3">
+                        <div className="w-12 h-12 mx-auto bg-destructive/10 rounded-full flex items-center justify-center">
+                          <AlertTriangle className="w-6 h-6 text-destructive" />
                         </div>
                         <div>
-                          <h3 className="text-base font-semibold text-foreground mb-1">QR Code expirado</h3>
-                          <p className="text-sm text-muted-foreground">
-                            O tempo para pagamento deste QR Code se esgotou. Gere um novo para continuar.
+                          <h3 className="text-sm font-semibold text-foreground mb-1">QR Code expirado</h3>
+                          <p className="text-xs text-muted-foreground">
+                            O tempo se esgotou. Gere um novo para continuar.
                           </p>
                         </div>
                       </div>
@@ -2119,87 +2119,69 @@ const ClienteAgendar = () => {
                       <button
                         onClick={handleRegeneratePix}
                         disabled={regeneratingPix}
-                        className="w-full py-3.5 bg-primary text-primary-foreground font-semibold rounded-xl hover:bg-primary/90 transition-all active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-50"
+                        className="w-full py-3 bg-primary text-primary-foreground font-semibold rounded-xl hover:bg-primary/90 transition-all active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-50"
                       >
                         <RefreshCw className={cn("w-4 h-4", regeneratingPix && "animate-spin")} />
-                        {regeneratingPix ? 'Gerando novo QR Code...' : 'Gerar Novo QR Code'}
+                        {regeneratingPix ? 'Gerando...' : 'Gerar Novo QR Code'}
                       </button>
 
                       <button
                         onClick={() => navigate("/cliente")}
-                        className="w-full py-3 text-muted-foreground text-sm font-medium hover:text-foreground transition-colors"
+                        className="w-full py-2.5 text-muted-foreground text-xs font-medium hover:text-foreground transition-colors"
                       >
                         Voltar para o início
                       </button>
                     </div>
                   ) : (
                     /* QR Code ativo */
-                    <>
-                      <div className="relative">
-                        <div className="absolute -top-px left-6 right-6 h-[2px] bg-gradient-to-r from-transparent via-primary/40 to-transparent rounded-full" />
-                        
-                        <div className="bg-card border border-border/40 rounded-2xl p-5">
-                          <div className="relative bg-white rounded-xl p-4 flex justify-center overflow-hidden">
-                            <div className="absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-primary/25 rounded-tl-xl" />
-                            <div className="absolute top-0 right-0 w-8 h-8 border-t-2 border-r-2 border-primary/25 rounded-tr-xl" />
-                            <div className="absolute bottom-0 left-0 w-8 h-8 border-b-2 border-l-2 border-primary/25 rounded-bl-xl" />
-                            <div className="absolute bottom-0 right-0 w-8 h-8 border-b-2 border-r-2 border-primary/25 rounded-br-xl" />
-                            
-                            <img 
-                              src={`data:image/png;base64,${pixQrCode}`} 
-                              alt="QR Code PIX" 
-                              className="w-48 h-48 relative z-[1]"
-                            />
-                          </div>
-
-                          <p className="text-xs text-muted-foreground text-center mt-3">
-                            Abra o app do seu banco e escaneie o código acima
-                          </p>
-                        </div>
+                    <div className="w-full max-w-sm flex flex-col items-center gap-4">
+                      {/* QR Code container */}
+                      <div className="bg-white rounded-2xl p-3 shadow-lg shadow-black/10">
+                        <img 
+                          src={`data:image/png;base64,${pixQrCode}`} 
+                          alt="QR Code PIX" 
+                          className="w-56 h-56"
+                        />
                       </div>
 
+                      <p className="text-xs text-muted-foreground text-center">
+                        Abra o app do seu banco e escaneie o código
+                      </p>
+
                       {pixPayload && (
-                        <div className="space-y-3">
-                          <div className="flex items-center gap-2 justify-center">
-                            <div className="h-px flex-1 bg-border/40" />
-                            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                              Ou copie o código
-                            </p>
-                            <div className="h-px flex-1 bg-border/40" />
-                          </div>
-                          
+                        <div className="w-full space-y-2.5">
                           <button
                             onClick={handleCopyPix}
-                            className="w-full group relative overflow-hidden py-3.5 bg-primary text-primary-foreground font-semibold rounded-xl hover:bg-primary/90 transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+                            className="w-full py-3 bg-primary text-primary-foreground font-semibold rounded-xl hover:bg-primary/90 transition-all active:scale-[0.98] flex items-center justify-center gap-2"
                           >
                             <Copy className="w-4 h-4" />
                             {copied ? 'Copiado!' : 'Copiar Código PIX'}
                           </button>
                           
-                          <div className="bg-card/50 rounded-xl p-3 border border-border/30">
-                            <p className="text-[10px] font-mono text-muted-foreground/70 break-all leading-relaxed line-clamp-2">
+                          <div className="bg-card/60 rounded-lg px-3 py-2 border border-border/30">
+                            <p className="text-[10px] font-mono text-muted-foreground/60 break-all leading-relaxed line-clamp-2">
                               {pixPayload}
                             </p>
                           </div>
                         </div>
                       )}
 
-                      {/* Status de pagamento */}
-                      <div className="flex items-center justify-center gap-3 py-3 px-4 bg-card/50 border border-border/30 rounded-xl">
+                      {/* Status aguardando */}
+                      <div className="flex items-center gap-2.5 py-2.5 px-4 bg-card/50 border border-border/30 rounded-full">
                         <div className="relative flex items-center justify-center">
-                          <div className="w-2 h-2 bg-primary rounded-full animate-pulse" />
-                          <div className="absolute w-4 h-4 bg-primary/20 rounded-full animate-ping" />
+                          <div className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse" />
+                          <div className="absolute w-3 h-3 bg-primary/20 rounded-full animate-ping" />
                         </div>
-                        <p className="text-xs text-muted-foreground">
-                          Aguardando confirmação do pagamento
+                        <p className="text-[11px] text-muted-foreground">
+                          Aguardando pagamento
                         </p>
                       </div>
 
-                      <div className="flex items-center justify-center gap-1.5 text-muted-foreground/50">
+                      <div className="flex items-center gap-1.5 text-muted-foreground/40">
                         <Shield className="w-3 h-3" />
                         <p className="text-[10px]">Pagamento seguro via PIX</p>
                       </div>
-                    </>
+                    </div>
                   )}
                 </div>
               </>
