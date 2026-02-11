@@ -122,6 +122,13 @@ serve(async (req) => {
       throw new Error('Você já possui uma assinatura ativa');
     }
 
+    // Limpar assinaturas "suspended" antigas (tentativas de pagamento que não foram concluídas)
+    await supabase
+      .from('assinaturas')
+      .delete()
+      .eq('user_id', user.id)
+      .eq('status', 'suspended');
+
     const asaasApiKey = Deno.env.get('ASAAS_API_KEY');
     if (!asaasApiKey) {
       throw new Error('Asaas API key not configured');

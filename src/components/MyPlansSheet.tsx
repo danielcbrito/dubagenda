@@ -81,7 +81,7 @@ export function MyPlansSheet({ open, onOpenChange, userId }: MyPlansSheetProps) 
           )
         `)
         .eq("user_id", userId)
-        .in("status", ["active", "suspended"])
+        .eq("status", "active")
         .maybeSingle();
 
       if (error) {
