@@ -206,9 +206,9 @@ Deno.serve(async (req) => {
             name: cardInfo.holderName,
             email: user.email,
             cpfCnpj: profile?.cpf || '00000000000',
-            postalCode: '00000000',
+            postalCode: cardInfo.cep || profile?.cep || '00000000',
             addressNumber: '0',
-            phone: profile?.telefone || '0000000000',
+            phone: profile?.telefone?.replace(/\D/g, '') || '0000000000',
           };
         }
 
@@ -286,9 +286,9 @@ Deno.serve(async (req) => {
             name: cardInfo.holderName,
             email: user.email,
             cpfCnpj: profile?.cpf || '00000000000',
-            postalCode: '00000000',
+            postalCode: cardInfo.cep || profile?.cep || '00000000',
             addressNumber: '0',
-            phone: profile?.telefone || '0000000000',
+            phone: profile?.telefone?.replace(/\D/g, '') || '0000000000',
           },
         };
 

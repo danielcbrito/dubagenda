@@ -56,6 +56,7 @@ const ClientePagamento = () => {
   const [cardExpiryMonth, setCardExpiryMonth] = useState("");
   const [cardExpiryYear, setCardExpiryYear] = useState("");
   const [cardCvv, setCardCvv] = useState("");
+  const [cardCep, setCardCep] = useState("");
 
   // Estado para troca para PIX
   const [changingToPix, setChangingToPix] = useState(false);
@@ -91,8 +92,13 @@ const ClientePagamento = () => {
   };
 
   const handleUpdateCard = async () => {
-    if (!cardHolderName || !cardNumber || !cardExpiryMonth || !cardExpiryYear || !cardCvv) {
+    if (!cardHolderName || !cardNumber || !cardExpiryMonth || !cardExpiryYear || !cardCvv || !cardCep) {
       toast.error("Preencha todos os dados do cartão");
+      return;
+    }
+    const cleanCep = cardCep.replace(/\D/g, '');
+    if (cleanCep.length !== 8) {
+      toast.error("CEP inválido. Informe 8 dígitos.");
       return;
     }
 
@@ -110,6 +116,7 @@ const ClientePagamento = () => {
               expiryMonth: cardExpiryMonth.trim(),
               expiryYear: cardExpiryYear.trim(),
               ccv: cardCvv.trim(),
+              cep: cardCep.replace(/\D/g, ""),
             },
           },
         }
@@ -167,6 +174,7 @@ const ClientePagamento = () => {
     setCardExpiryMonth("");
     setCardExpiryYear("");
     setCardCvv("");
+    setCardCep("");
   };
 
   /** Retorna o label da bandeira do cartão */
@@ -477,6 +485,21 @@ const ClientePagamento = () => {
                             className="bg-muted/50 border-border mt-1.5"
                           />
                         </div>
+                      </div>
+
+                      <div>
+                        <Label className="text-muted-foreground text-sm">CEP</Label>
+                        <Input
+                          placeholder="00000-000"
+                          value={cardCep}
+                          onChange={(e) => {
+                            const value = e.target.value.replace(/\D/g, "").slice(0, 8);
+                            const formatted = value.length > 5 ? `${value.slice(0, 5)}-${value.slice(5)}` : value;
+                            setCardCep(formatted);
+                          }}
+                          maxLength={9}
+                          className="bg-muted/50 border-border mt-1.5"
+                        />
                       </div>
 
                       <div className="flex items-center gap-1.5 text-muted-foreground/60 mt-2">

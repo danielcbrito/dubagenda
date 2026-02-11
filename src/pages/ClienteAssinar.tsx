@@ -142,6 +142,7 @@ const ClienteAssinar = () => {
   const [cardExpiryMonth, setCardExpiryMonth] = useState("");
   const [cardExpiryYear, setCardExpiryYear] = useState("");
   const [cardCvv, setCardCvv] = useState("");
+  const [cardCep, setCardCep] = useState("");
   
   // PIX payment states
   const [pixQrCode, setPixQrCode] = useState<string | null>(null);
@@ -220,8 +221,13 @@ const ClienteAssinar = () => {
     if (!selectedPlan) return;
 
     if (paymentMethod === 'card') {
-      if (!cardHolderName || !cardNumber || !cardExpiryMonth || !cardExpiryYear || !cardCvv) {
+      if (!cardHolderName || !cardNumber || !cardExpiryMonth || !cardExpiryYear || !cardCvv || !cardCep) {
         toast.error("Preencha todos os dados do cartão");
+        return;
+      }
+      const cleanCep = cardCep.replace(/\D/g, '');
+      if (cleanCep.length !== 8) {
+        toast.error("CEP inválido. Informe 8 dígitos.");
         return;
       }
     }
@@ -249,6 +255,7 @@ const ClienteAssinar = () => {
           expiryMonth: cardExpiryMonth.trim(),
           expiryYear: cardExpiryYear.trim(),
           ccv: cardCvv.trim(),
+          cep: cardCep.replace(/\D/g, ''),
         };
       }
 
@@ -546,6 +553,22 @@ const ClienteAssinar = () => {
                         className="bg-muted/50 border-border mt-1.5"
                       />
                     </div>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="cardCep" className="text-muted-foreground text-sm">CEP</Label>
+                    <Input
+                      id="cardCep"
+                      placeholder="00000-000"
+                      value={cardCep}
+                      onChange={(e) => {
+                        const value = e.target.value.replace(/\D/g, '').slice(0, 8);
+                        const formatted = value.length > 5 ? `${value.slice(0, 5)}-${value.slice(5)}` : value;
+                        setCardCep(formatted);
+                      }}
+                      maxLength={9}
+                      className="bg-muted/50 border-border mt-1.5"
+                    />
                   </div>
                 </div>
               )}

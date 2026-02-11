@@ -1956,6 +1956,7 @@ export type Database = {
         Row: {
           avatar_url: string | null
           blocked: boolean | null
+          cep: string | null
           cpf: string | null
           created_at: string | null
           id: string
@@ -1966,6 +1967,7 @@ export type Database = {
         Insert: {
           avatar_url?: string | null
           blocked?: boolean | null
+          cep?: string | null
           cpf?: string | null
           created_at?: string | null
           id: string
@@ -1976,6 +1978,7 @@ export type Database = {
         Update: {
           avatar_url?: string | null
           blocked?: boolean | null
+          cep?: string | null
           cpf?: string | null
           created_at?: string | null
           id?: string

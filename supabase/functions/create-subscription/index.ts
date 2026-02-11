@@ -47,6 +47,7 @@ interface CreateSubscriptionRequest {
     expiryMonth: string;
     expiryYear: string;
     ccv: string;
+    cep?: string;
   };
 }
 
@@ -198,9 +199,9 @@ serve(async (req) => {
         name: cardInfo.holderName,
         email: user.email,
         cpfCnpj: profile.cpf || '00000000000',
-        postalCode: '00000000',
+        postalCode: cardInfo.cep || profile.cep || '00000000',
         addressNumber: '0',
-        phone: '0000000000',
+        phone: profile.telefone?.replace(/\D/g, '') || '0000000000',
       };
     }
 
@@ -310,6 +311,14 @@ serve(async (req) => {
       .single();
 
     if (subscriptionError) throw subscriptionError;
+
+    // Save CEP to profile if provided
+    if (cardInfo?.cep && cardInfo.cep !== '00000000') {
+      await supabase
+        .from('profiles')
+        .update({ cep: cardInfo.cep })
+        .eq('id', user.id);
+    }
 
     // Unblock user if they were blocked (only if payment is confirmed)
     if (profile.blocked && initialStatus === 'active') {
