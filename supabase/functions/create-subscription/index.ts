@@ -284,11 +284,13 @@ serve(async (req) => {
     const nextBillingDate = new Date(asaasResult.nextDueDate);
 
     // Determine initial subscription status
-    // For PIX, use 'suspended' until payment is confirmed (enum doesn't have 'pending')
-    // For card, mark as 'active' if first payment is confirmed, otherwise 'suspended'
+    // For PIX, use 'suspended' until payment is confirmed via webhook
+    // For card, PENDING means processing (not refused) — treat as active
+    // Only truly refused statuses (REFUNDED, OVERDUE, RECEIVED_IN_CASH) should be suspended
+    const cardPaymentOk = firstPaymentDetails?.status === 'CONFIRMED' || firstPaymentDetails?.status === 'PENDING';
     const initialStatus = (paymentMethod === 'pix') 
       ? 'suspended' 
-      : (firstPaymentDetails?.status === 'CONFIRMED' ? 'active' : 'suspended');
+      : (cardPaymentOk ? 'active' : 'suspended');
 
     console.log('Subscription initial status:', { 
       paymentMethod, 
