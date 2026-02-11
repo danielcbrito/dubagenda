@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { ReactNode } from "react";
 
 interface PaymentOptionProps {
   value: string;
@@ -7,6 +8,7 @@ interface PaymentOptionProps {
   title: string;
   description: string;
   highlight?: boolean;
+  icon?: ReactNode;
 }
 
 export function PaymentOption({ 
@@ -15,7 +17,8 @@ export function PaymentOption({
   onSelect, 
   title, 
   description, 
-  highlight = false 
+  highlight = false,
+  icon
 }: PaymentOptionProps) {
   return (
     <button
@@ -28,13 +31,18 @@ export function PaymentOption({
       )}
     >
       <div className="flex items-start justify-between gap-3">
-        <div className="flex-1">
-          <h3 className="text-sm font-semibold text-foreground mb-0.5">
-            {title}
-          </h3>
-          <p className="text-xs text-muted-foreground">
-            {description}
-          </p>
+        <div className="flex items-start gap-3 flex-1">
+          {icon && (
+            <div className="flex-shrink-0 mt-0.5">{icon}</div>
+          )}
+          <div className="flex-1">
+            <h3 className="text-sm font-semibold text-foreground mb-0.5">
+              {title}
+            </h3>
+            <p className="text-xs text-muted-foreground">
+              {description}
+            </p>
+          </div>
         </div>
 
         <div className={cn(
