@@ -660,7 +660,11 @@ serve(async (req) => {
       console.error('Asaas payment creation failed:', asaasPaymentResult);
       // Clean up pending booking
       await supabase.from('pending_bookings').delete().eq('id', pendingBooking.id);
-      throw new Error(asaasPaymentResult.errors?.[0]?.description || 'Payment creation failed');
+      const errorMessage = asaasPaymentResult.errors?.[0]?.description || 'Erro ao processar pagamento';
+      return new Response(
+        JSON.stringify({ error: errorMessage }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     // Update pending booking with payment intent ID
