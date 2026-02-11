@@ -19,7 +19,8 @@ const signupSchema = z.object({
   cpf: z.string()
     .trim()
     .transform(val => val.replace(/\D/g, ''))
-    .refine(val => val.length === 0 || validateCPF(val), "CPF inválido."),
+    .refine(val => val.length === 11, "CPF é obrigatório.")
+    .refine(validateCPF, "CPF inválido."),
   senha: z.string().min(6, "Senha deve ter pelo menos 6 caracteres"),
 });
 
@@ -350,6 +351,7 @@ const Auth = () => {
                       <Input
                         name="cpf"
                         type="text"
+                        required
                         maxLength={14}
                         value={formData.cpf}
                         onChange={handleInputChange}
