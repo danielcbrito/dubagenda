@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Gift, Calendar, CheckCircle2, AlertCircle, Loader2, XCircle, ArrowLeft, Crown } from "lucide-react";
+import { Gift, Calendar, CheckCircle2, AlertCircle, Loader2, XCircle, ArrowLeft, Crown, CreditCard, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -270,6 +270,28 @@ export function MyPlansSheet({ open, onOpenChange, userId }: MyPlansSheetProps) 
                       </div>
                     </div>
                   )}
+
+                  {/* Gerenciar pagamento */}
+                  <button
+                    onClick={() => {
+                      onOpenChange(false);
+                      setTimeout(() => navigate("/cliente/pagamento"), 300);
+                    }}
+                    className="w-full rounded-2xl border border-border/40 bg-card p-5 flex items-center justify-between hover:bg-muted/50 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                        <CreditCard className="w-5 h-5 text-primary" />
+                      </div>
+                      <div className="text-left">
+                        <p className="text-sm font-semibold text-foreground">Formas de Pagamento</p>
+                        <p className="text-xs text-muted-foreground">
+                          {subscription.payment_method === 'card' ? 'Cartão de crédito • Débito automático' : 'PIX mensal'}
+                        </p>
+                      </div>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                  </button>
 
                   {/* Cancel */}
                   <button
