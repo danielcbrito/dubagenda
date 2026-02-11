@@ -1,5 +1,6 @@
-import { Clock, ArrowRight, Crown } from "lucide-react";
+import { Clock, ArrowRight } from "lucide-react";
 import { motion } from "framer-motion";
+import { Button } from "@/components/ui/button";
 
 interface PendingSubscriptionBannerProps {
   planName: string;
@@ -7,55 +8,39 @@ interface PendingSubscriptionBannerProps {
 }
 
 /**
- * Card premium exibido quando o usuário iniciou a assinatura mas não finalizou o pagamento.
- * Design consistente com PlanTrackerCard — visual limpo sem parecer erro.
+ * Banner exibido quando o usuário iniciou a assinatura mas não finalizou o pagamento.
+ * Incentiva a conclusão do processo com CTA claro.
  */
 export function PendingSubscriptionBanner({ planName, onFinalize }: PendingSubscriptionBannerProps) {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 16 }}
+      initial={{ opacity: 0, y: -10 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.35, ease: "easeOut" }}
-      className="relative overflow-hidden rounded-2xl border border-border/60 bg-card"
-      style={{ boxShadow: "0 8px 32px -8px rgba(0, 0, 0, 0.3)" }}
+      className="rounded-xl p-4 border border-primary/30"
+      style={{
+        background: "linear-gradient(135deg, rgba(239,68,68,0.08), rgba(251,191,36,0.05))",
+      }}
     >
-      {/* Accent line */}
-      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
-
-      <div className="relative z-10 p-5">
-        {/* Header */}
-        <div className="flex items-center gap-3 mb-3">
-          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-            <Crown className="w-5 h-5 text-primary" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <h3 className="text-foreground font-semibold text-sm tracking-tight">
-              {planName}
-            </h3>
-            <p className="text-muted-foreground text-xs mt-0.5">
-              Pagamento pendente
-            </p>
-          </div>
-          <div className="px-2.5 py-1 rounded-lg border bg-amber-500/10 border-amber-500/20">
-            <span className="text-xs font-bold tabular-nums text-amber-400">
-              Pendente
-            </span>
-          </div>
+      <div className="flex items-start gap-3">
+        <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 bg-primary/15">
+          <Clock className="w-4 h-4 text-primary" />
         </div>
-
-        {/* Message */}
-        <p className="text-xs text-muted-foreground mb-4 leading-relaxed">
-          Finalize o pagamento para ativar seus benefícios exclusivos.
-        </p>
-
-        {/* CTA */}
-        <button
-          onClick={onFinalize}
-          className="w-full h-11 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-semibold flex items-center justify-center gap-2 transition-all group"
-        >
-          Finalizar pagamento
-          <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
-        </button>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold text-foreground">
+            Assinatura pendente
+          </p>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Finalize o pagamento do <span className="font-medium text-foreground">{planName}</span> para ativar seus benefícios.
+          </p>
+          <Button
+            size="sm"
+            onClick={onFinalize}
+            className="mt-2.5 h-8 text-xs bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-lg group"
+          >
+            Finalizar pagamento
+            <ArrowRight className="w-3.5 h-3.5 ml-1 group-hover:translate-x-0.5 transition-transform" />
+          </Button>
+        </div>
       </div>
     </motion.div>
   );

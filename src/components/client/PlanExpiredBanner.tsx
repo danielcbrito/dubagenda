@@ -1,61 +1,42 @@
 import { AlertTriangle, ArrowRight } from "lucide-react";
 import { motion } from "framer-motion";
+import { Button } from "@/components/ui/button";
 
 interface PlanExpiredBannerProps {
   planName: string;
   onRenew: () => void;
 }
 
-/**
- * Card exibido quando a assinatura do usuário expirou por falta de pagamento.
- * Apenas para assinaturas que foram ativas e venceram — design consistente com o app.
- */
 export function PlanExpiredBanner({ planName, onRenew }: PlanExpiredBannerProps) {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 16 }}
+      initial={{ opacity: 0, y: -10 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.35, ease: "easeOut" }}
-      className="relative overflow-hidden rounded-2xl border border-border/60 bg-card"
-      style={{ boxShadow: "0 8px 32px -8px rgba(0, 0, 0, 0.3)" }}
+      className="rounded-xl p-4 border border-yellow-500/30"
+      style={{
+        background: "linear-gradient(135deg, rgba(251,191,36,0.1), rgba(245,158,11,0.05))",
+      }}
     >
-      {/* Accent line */}
-      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-amber-400/40 to-transparent" />
-
-      <div className="relative z-10 p-5">
-        {/* Header */}
-        <div className="flex items-center gap-3 mb-3">
-          <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center shrink-0">
-            <AlertTriangle className="w-5 h-5 text-amber-400" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <h3 className="text-foreground font-semibold text-sm tracking-tight">
-              {planName}
-            </h3>
-            <p className="text-muted-foreground text-xs mt-0.5">
-              Assinatura vencida
-            </p>
-          </div>
-          <div className="px-2.5 py-1 rounded-lg border bg-destructive/10 border-destructive/20">
-            <span className="text-xs font-bold tabular-nums text-destructive">
-              Vencido
-            </span>
-          </div>
+      <div className="flex items-start gap-3">
+        <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 bg-yellow-500/20">
+          <AlertTriangle className="w-4 h-4 text-yellow-400" />
         </div>
-
-        {/* Message */}
-        <p className="text-xs text-muted-foreground mb-4 leading-relaxed">
-          Renove seu plano para continuar aproveitando os benefícios exclusivos.
-        </p>
-
-        {/* CTA */}
-        <button
-          onClick={onRenew}
-          className="w-full h-11 rounded-xl bg-amber-500 hover:bg-amber-400 text-black text-sm font-semibold flex items-center justify-center gap-2 transition-all group"
-        >
-          Renovar plano
-          <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
-        </button>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold text-yellow-300">
+            Plano expirado
+          </p>
+          <p className="text-xs text-yellow-200/60 mt-0.5">
+            Seu <span className="font-medium">{planName}</span> venceu. Renove para continuar aproveitando os benefícios.
+          </p>
+          <Button
+            size="sm"
+            onClick={onRenew}
+            className="mt-2.5 h-8 text-xs bg-yellow-500 hover:bg-yellow-400 text-black font-semibold rounded-lg group"
+          >
+            Renovar plano
+            <ArrowRight className="w-3.5 h-3.5 ml-1 group-hover:translate-x-0.5 transition-transform" />
+          </Button>
+        </div>
       </div>
     </motion.div>
   );
