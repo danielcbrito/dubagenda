@@ -19,6 +19,7 @@ import ResetPassword from "./pages/ResetPassword";
 import Cliente from "./pages/Cliente";
 import ClienteAgendar from "./pages/ClienteAgendar";
 import ClienteAssinar from "./pages/ClienteAssinar";
+import ClientePagamento from "./pages/ClientePagamento";
 import SupportChat from "./pages/SupportChat";
 import NotFound from "./pages/NotFound";
 
@@ -150,6 +151,7 @@ function AppRoutes() {
           <Route path="/cliente" element={<Cliente />} />
           <Route path="/cliente/agendar" element={<ClienteAgendar />} />
           <Route path="/cliente/assinar" element={<ClienteAssinar />} />
+          <Route path="/cliente/pagamento" element={<ClientePagamento />} />
           <Route path="/suporte" element={<SupportChat />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
