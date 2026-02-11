@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { 
@@ -133,7 +134,7 @@ const ClienteAssinar = () => {
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState(1);
-  const [paymentMethod, setPaymentMethod] = useState<'pix' | 'card'>('card');
+  const [paymentMethod, setPaymentMethod] = useState<'pix' | 'card'>('pix');
   const [hasActiveSubscription, setHasActiveSubscription] = useState(false);
   
   // Card payment states
@@ -398,37 +399,26 @@ const ClienteAssinar = () => {
               </div>
 
               <div className="space-y-3">
-                {/* Cartão */}
-                <motion.div
-                  whileTap={{ scale: 0.98 }}
-                  className={cn(
-                    "p-4 rounded-xl border cursor-pointer transition-all",
-                    paymentMethod === 'card'
-                      ? "bg-primary/5 border-primary/40 ring-2 ring-primary/20"
-                      : "bg-card border-border/40 hover:border-border"
-                  )}
-                  onClick={() => setPaymentMethod('card')}
+                {/* Cartão - Em breve */}
+                <div
+                  className="p-4 rounded-xl border border-border/30 bg-muted/30 opacity-60 cursor-not-allowed relative overflow-hidden"
                 >
                   <div className="flex items-center gap-3">
-                    <div className={cn(
-                      "w-5 h-5 rounded-full border-2 flex items-center justify-center",
-                      paymentMethod === 'card' ? "border-primary" : "border-muted-foreground/40"
-                    )}>
-                      {paymentMethod === 'card' && (
-                        <div className="w-3 h-3 rounded-full bg-primary" />
-                      )}
-                    </div>
+                    <div className="w-5 h-5 rounded-full border-2 border-muted-foreground/30 flex items-center justify-center" />
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
-                        <CreditCard className="w-4 h-4 text-muted-foreground" />
-                        <h4 className="font-semibold text-foreground">Cartão de Crédito</h4>
+                        <CreditCard className="w-4 h-4 text-muted-foreground/50" />
+                        <h4 className="font-semibold text-muted-foreground/60">Cartão de Crédito / Débito</h4>
+                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-primary/40 text-primary">
+                          Em breve
+                        </Badge>
                       </div>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-xs text-muted-foreground/50">
                         Cobrança automática mensal
                       </p>
                     </div>
                   </div>
-                </motion.div>
+                </div>
 
                 {/* PIX */}
                 <motion.div
