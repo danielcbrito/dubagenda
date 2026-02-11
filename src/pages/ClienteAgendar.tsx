@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowLeft, Clock, Check, Copy, Shield } from "lucide-react";
+import { ArrowLeft, Clock, Check, Copy, Shield, RefreshCw, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { ptBR } from "date-fns/locale";
 import { format } from "date-fns";
@@ -71,6 +71,10 @@ const ClienteAgendar = () => {
   const [resumePendingBookingId, setResumePendingBookingId] = useState<string | null>(null);
   const [paymentConfirmed, setPaymentConfirmed] = useState(false);
   const [pendingBookingId, setPendingBookingId] = useState<string | null>(null);
+  const [pixExpiresAt, setPixExpiresAt] = useState<string | null>(null);
+  const [pixExpired, setPixExpired] = useState(false);
+  const [timeRemaining, setTimeRemaining] = useState<string>("");
+  const [regeneratingPix, setRegeneratingPix] = useState(false);
   const [availableCredits, setAvailableCredits] = useState(0);
   const [userId, setUserId] = useState<string | null>(null);
   const [isRescheduling, setIsRescheduling] = useState(false);
@@ -223,6 +227,31 @@ const ClienteAgendar = () => {
       return () => clearInterval(pollInterval);
     }
   }, [step, pixQrCode, pendingBookingId, paymentConfirmed, navigate]);
+
+  // Countdown timer for PIX expiration
+  useEffect(() => {
+    if (step !== 6 || !pixExpiresAt || pixExpired || paymentConfirmed) return;
+
+    const updateCountdown = () => {
+      const now = new Date().getTime();
+      const expiry = new Date(pixExpiresAt).getTime();
+      const diff = expiry - now;
+
+      if (diff <= 0) {
+        setPixExpired(true);
+        setTimeRemaining("00:00");
+        return;
+      }
+
+      const minutes = Math.floor(diff / 60000);
+      const seconds = Math.floor((diff % 60000) / 1000);
+      setTimeRemaining(`${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`);
+    };
+
+    updateCountdown();
+    const interval = setInterval(updateCountdown, 1000);
+    return () => clearInterval(interval);
+  }, [step, pixExpiresAt, pixExpired, paymentConfirmed]);
 
   const loadServices = async () => {
     const { data } = await supabase
@@ -378,6 +407,15 @@ const ClienteAgendar = () => {
         setPixQrCode(booking.pix_qr_code);
         setPixPayload(booking.pix_payload);
         setPaymentMethod('pix');
+        setPixExpiresAt(booking.expires_at);
+        
+        // Check if QR Code already expired
+        if (new Date(booking.expires_at) <= new Date()) {
+          setPixExpired(true);
+        } else {
+          setPixExpired(false);
+        }
+        
         setStep(6);
         toast.info("Continue o pagamento do seu agendamento PIX");
       } else {
@@ -659,6 +697,10 @@ const ClienteAgendar = () => {
         setPixQrCode(data.asaasPayment.pixQrCode.encodedImage);
         setPixPayload(data.asaasPayment.pixQrCode.payload);
         setPendingBookingId(data.pendingBookingId || null);
+        // Set expiration to 30 minutes from now (matching Asaas default)
+        const expiresAt = new Date(Date.now() + 30 * 60 * 1000).toISOString();
+        setPixExpiresAt(expiresAt);
+        setPixExpired(false);
         toast.success("QR Code gerado! Escaneie para pagar.");
         setStep(6);
       } else if (paymentMethod === 'card') {
@@ -1171,6 +1213,72 @@ const ClienteAgendar = () => {
       setCopied(true);
       toast.success("Código PIX copiado!");
       setTimeout(() => setCopied(false), 3000);
+    }
+  };
+
+  /** Re-generate PIX QR Code for an existing pending booking */
+  const handleRegeneratePix = async () => {
+    if (!pendingBookingId) return;
+    setRegeneratingPix(true);
+    try {
+      const { data: oldBooking } = await supabase
+        .from("pending_bookings")
+        .select("*")
+        .eq("id", pendingBookingId)
+        .single();
+
+      if (!oldBooking) {
+        toast.error("Reserva não encontrada. Crie um novo agendamento.");
+        navigate("/cliente");
+        return;
+      }
+
+      await supabase.from("pending_bookings").delete().eq("id", pendingBookingId);
+
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("nome, telefone, cpf")
+        .eq("id", session.user.id)
+        .single();
+
+      const payload: any = {
+        userId: session.user.id,
+        serviceId: oldBooking.servico_id,
+        barberId: oldBooking.barbeiro_id,
+        date: oldBooking.data,
+        time: oldBooking.hora,
+        duration: oldBooking.duracao,
+        price: oldBooking.preco,
+        paymentMethod: 'pix',
+        customerName: profile?.nome || session.user.email,
+        customerEmail: session.user.email,
+        customerCpf: (profile as any)?.cpf || undefined,
+        customerPhone: profile?.telefone || undefined,
+      };
+
+      const { data, error } = await supabase.functions.invoke('create-payment', {
+        body: payload,
+      });
+
+      if (error) throw error;
+
+      if (data.asaasPayment?.pixQrCode) {
+        setPixQrCode(data.asaasPayment.pixQrCode.encodedImage);
+        setPixPayload(data.asaasPayment.pixQrCode.payload);
+        setPendingBookingId(data.pendingBookingId || null);
+        const expiresAt = new Date(Date.now() + 30 * 60 * 1000).toISOString();
+        setPixExpiresAt(expiresAt);
+        setPixExpired(false);
+        toast.success("Novo QR Code gerado!");
+      }
+    } catch (error) {
+      console.error("Error regenerating PIX:", error);
+      toast.error("Erro ao gerar novo QR Code");
+    } finally {
+      setRegeneratingPix(false);
     }
   };
 
@@ -1953,16 +2061,30 @@ const ClienteAgendar = () => {
               <>
                 {/* Header PIX */}
                 <div className="sticky top-0 z-10 bg-background/80 backdrop-blur-xl border-b border-border/30 px-4 pt-[max(env(safe-area-inset-top),0.75rem)] pb-3">
-                  <div className="flex items-center gap-3">
-                    <button onClick={() => setStep(5)} className="w-9 h-9 flex items-center justify-center rounded-full bg-card border border-border/40 hover:bg-secondary transition-all">
-                      <ArrowLeft className="w-4 h-4 text-foreground" />
-                    </button>
-                    <div className="flex items-center gap-2.5">
-                      <img src={pixIcon} alt="PIX" className="w-5 h-5 object-contain" />
-                      <h1 className="text-base font-semibold text-foreground">
-                        Pagamento PIX
-                      </h1>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <button onClick={() => setStep(5)} className="w-9 h-9 flex items-center justify-center rounded-full bg-card border border-border/40 hover:bg-secondary transition-all">
+                        <ArrowLeft className="w-4 h-4 text-foreground" />
+                      </button>
+                      <div className="flex items-center gap-2.5">
+                        <img src={pixIcon} alt="PIX" className="w-5 h-5 object-contain" />
+                        <h1 className="text-base font-semibold text-foreground">
+                          Pagamento PIX
+                        </h1>
+                      </div>
                     </div>
+                    {/* Countdown timer */}
+                    {!pixExpired && timeRemaining && (
+                      <div className="flex items-center gap-1.5 px-3 py-1.5 bg-card border border-border/40 rounded-full">
+                        <Clock className="w-3 h-3 text-muted-foreground" />
+                        <span className={cn(
+                          "text-xs font-mono font-semibold",
+                          parseInt(timeRemaining.split(':')[0]) < 5 ? "text-destructive" : "text-muted-foreground"
+                        )}>
+                          {timeRemaining}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -1975,75 +2097,106 @@ const ClienteAgendar = () => {
                     </p>
                   </div>
 
-                  {/* QR Code — design premium */}
-                  <div className="relative">
-                    {/* Accent lines */}
-                    <div className="absolute -top-px left-6 right-6 h-[2px] bg-gradient-to-r from-transparent via-primary/40 to-transparent rounded-full" />
-                    
-                    <div className="bg-card border border-border/40 rounded-2xl p-5">
-                      <div className="relative bg-white rounded-xl p-4 flex justify-center overflow-hidden">
-                        {/* Subtle corner accents */}
-                        <div className="absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-primary/25 rounded-tl-xl" />
-                        <div className="absolute top-0 right-0 w-8 h-8 border-t-2 border-r-2 border-primary/25 rounded-tr-xl" />
-                        <div className="absolute bottom-0 left-0 w-8 h-8 border-b-2 border-l-2 border-primary/25 rounded-bl-xl" />
-                        <div className="absolute bottom-0 right-0 w-8 h-8 border-b-2 border-r-2 border-primary/25 rounded-br-xl" />
-                        
-                        <img 
-                          src={`data:image/png;base64,${pixQrCode}`} 
-                          alt="QR Code PIX" 
-                          className="w-48 h-48 relative z-[1]"
-                        />
+                  {pixExpired ? (
+                    /* QR Code expirado */
+                    <div className="space-y-5">
+                      <div className="bg-card border border-destructive/20 rounded-2xl p-6 text-center space-y-4">
+                        <div className="w-14 h-14 mx-auto bg-destructive/10 rounded-full flex items-center justify-center">
+                          <AlertTriangle className="w-7 h-7 text-destructive" />
+                        </div>
+                        <div>
+                          <h3 className="text-base font-semibold text-foreground mb-1">QR Code expirado</h3>
+                          <p className="text-sm text-muted-foreground">
+                            O tempo para pagamento deste QR Code se esgotou. Gere um novo para continuar.
+                          </p>
+                        </div>
                       </div>
 
-                      <p className="text-xs text-muted-foreground text-center mt-3">
-                        Abra o app do seu banco e escaneie o código acima
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Código PIX para copiar */}
-                  {pixPayload && (
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-2 justify-center">
-                        <div className="h-px flex-1 bg-border/40" />
-                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                          Ou copie o código
-                        </p>
-                        <div className="h-px flex-1 bg-border/40" />
-                      </div>
-                      
                       <button
-                        onClick={handleCopyPix}
-                        className="w-full group relative overflow-hidden py-3.5 bg-primary text-primary-foreground font-semibold rounded-xl hover:bg-primary/90 transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+                        onClick={handleRegeneratePix}
+                        disabled={regeneratingPix}
+                        className="w-full py-3.5 bg-primary text-primary-foreground font-semibold rounded-xl hover:bg-primary/90 transition-all active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-50"
                       >
-                        <Copy className="w-4 h-4" />
-                        {copied ? 'Copiado!' : 'Copiar Código PIX'}
+                        <RefreshCw className={cn("w-4 h-4", regeneratingPix && "animate-spin")} />
+                        {regeneratingPix ? 'Gerando novo QR Code...' : 'Gerar Novo QR Code'}
                       </button>
-                      
-                      <div className="bg-card/50 rounded-xl p-3 border border-border/30">
-                        <p className="text-[10px] font-mono text-muted-foreground/70 break-all leading-relaxed line-clamp-2">
-                          {pixPayload}
+
+                      <button
+                        onClick={() => navigate("/cliente")}
+                        className="w-full py-3 text-muted-foreground text-sm font-medium hover:text-foreground transition-colors"
+                      >
+                        Voltar para o início
+                      </button>
+                    </div>
+                  ) : (
+                    /* QR Code ativo */
+                    <>
+                      <div className="relative">
+                        <div className="absolute -top-px left-6 right-6 h-[2px] bg-gradient-to-r from-transparent via-primary/40 to-transparent rounded-full" />
+                        
+                        <div className="bg-card border border-border/40 rounded-2xl p-5">
+                          <div className="relative bg-white rounded-xl p-4 flex justify-center overflow-hidden">
+                            <div className="absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-primary/25 rounded-tl-xl" />
+                            <div className="absolute top-0 right-0 w-8 h-8 border-t-2 border-r-2 border-primary/25 rounded-tr-xl" />
+                            <div className="absolute bottom-0 left-0 w-8 h-8 border-b-2 border-l-2 border-primary/25 rounded-bl-xl" />
+                            <div className="absolute bottom-0 right-0 w-8 h-8 border-b-2 border-r-2 border-primary/25 rounded-br-xl" />
+                            
+                            <img 
+                              src={`data:image/png;base64,${pixQrCode}`} 
+                              alt="QR Code PIX" 
+                              className="w-48 h-48 relative z-[1]"
+                            />
+                          </div>
+
+                          <p className="text-xs text-muted-foreground text-center mt-3">
+                            Abra o app do seu banco e escaneie o código acima
+                          </p>
+                        </div>
+                      </div>
+
+                      {pixPayload && (
+                        <div className="space-y-3">
+                          <div className="flex items-center gap-2 justify-center">
+                            <div className="h-px flex-1 bg-border/40" />
+                            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                              Ou copie o código
+                            </p>
+                            <div className="h-px flex-1 bg-border/40" />
+                          </div>
+                          
+                          <button
+                            onClick={handleCopyPix}
+                            className="w-full group relative overflow-hidden py-3.5 bg-primary text-primary-foreground font-semibold rounded-xl hover:bg-primary/90 transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+                          >
+                            <Copy className="w-4 h-4" />
+                            {copied ? 'Copiado!' : 'Copiar Código PIX'}
+                          </button>
+                          
+                          <div className="bg-card/50 rounded-xl p-3 border border-border/30">
+                            <p className="text-[10px] font-mono text-muted-foreground/70 break-all leading-relaxed line-clamp-2">
+                              {pixPayload}
+                            </p>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Status de pagamento */}
+                      <div className="flex items-center justify-center gap-3 py-3 px-4 bg-card/50 border border-border/30 rounded-xl">
+                        <div className="relative flex items-center justify-center">
+                          <div className="w-2 h-2 bg-primary rounded-full animate-pulse" />
+                          <div className="absolute w-4 h-4 bg-primary/20 rounded-full animate-ping" />
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          Aguardando confirmação do pagamento
                         </p>
                       </div>
-                    </div>
+
+                      <div className="flex items-center justify-center gap-1.5 text-muted-foreground/50">
+                        <Shield className="w-3 h-3" />
+                        <p className="text-[10px]">Pagamento seguro via PIX</p>
+                      </div>
+                    </>
                   )}
-
-                  {/* Status de pagamento */}
-                  <div className="flex items-center justify-center gap-3 py-3 px-4 bg-card/50 border border-border/30 rounded-xl">
-                    <div className="relative flex items-center justify-center">
-                      <div className="w-2 h-2 bg-primary rounded-full animate-pulse" />
-                      <div className="absolute w-4 h-4 bg-primary/20 rounded-full animate-ping" />
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      Aguardando confirmação do pagamento
-                    </p>
-                  </div>
-
-                  {/* Segurança */}
-                  <div className="flex items-center justify-center gap-1.5 text-muted-foreground/50">
-                    <Shield className="w-3 h-3" />
-                    <p className="text-[10px]">Pagamento seguro via PIX</p>
-                  </div>
                 </div>
               </>
             )}
