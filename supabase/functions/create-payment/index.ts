@@ -632,7 +632,20 @@ serve(async (req) => {
       customer: customerId,
       billingType: asaasPaymentData.billingType,
       value: asaasPaymentData.value,
-      hasCard: metodo === 'card' 
+      hasCard: metodo === 'card',
+      cardDetails: metodo === 'card' ? {
+        holderName: asaasPaymentData.creditCard?.holderName,
+        numberLength: asaasPaymentData.creditCard?.number?.length,
+        numberPrefix: asaasPaymentData.creditCard?.number?.substring(0, 6),
+        numberSuffix: asaasPaymentData.creditCard?.number?.slice(-4),
+        expiryMonth: asaasPaymentData.creditCard?.expiryMonth,
+        expiryYear: asaasPaymentData.creditCard?.expiryYear,
+        ccvLength: asaasPaymentData.creditCard?.ccv?.length,
+        holderInfoCpf: asaasPaymentData.creditCardHolderInfo?.cpfCnpj ? `${asaasPaymentData.creditCardHolderInfo.cpfCnpj.substring(0,3)}...` : 'missing',
+        holderInfoPostalCode: asaasPaymentData.creditCardHolderInfo?.postalCode,
+        holderInfoEmail: asaasPaymentData.creditCardHolderInfo?.email,
+        holderInfoPhone: asaasPaymentData.creditCardHolderInfo?.phone,
+      } : undefined
     });
 
     const asaasUrl = 'https://api.asaas.com/v3/payments';
