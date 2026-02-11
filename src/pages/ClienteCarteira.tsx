@@ -366,47 +366,28 @@ export default function ClienteCarteira() {
           <div className="w-8" />
         </div>
 
-        {/* Balance Cards */}
-        <div className="grid grid-cols-2 gap-3 mb-5">
-          {/* Saldo Disponível */}
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="bg-card rounded-2xl p-4 border border-border"
-          >
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-1.5">
-                <Wallet className="w-3.5 h-3.5 text-primary" />
-                <span className="text-[11px] text-muted-foreground font-medium">Saldo disponível</span>
-              </div>
-              <button onClick={() => setBalanceVisible(!balanceVisible)} className="text-muted-foreground hover:text-foreground transition-colors">
-                {balanceVisible ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
-              </button>
-            </div>
-            <p className="text-xl font-bold text-foreground tracking-tight">
-              {balanceVisible ? `R$ ${balance.toFixed(2).replace(".", ",")}` : "R$ •••••"}
-            </p>
-          </motion.div>
+        {/* Saldo principal */}
+        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-2">
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-sm text-muted-foreground">Saldo disponível</span>
+            <button onClick={() => setBalanceVisible(!balanceVisible)} className="text-muted-foreground hover:text-foreground transition-colors">
+              {balanceVisible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+            </button>
+          </div>
+          <div className="text-3xl font-bold text-foreground tracking-tight">
+            {balanceVisible ? <>R$ {balance.toFixed(2).replace(".", ",")}</> : "R$ •••••"}
+          </div>
+        </motion.div>
 
-          {/* Créditos */}
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.05 }}
-            className="bg-card rounded-2xl p-4 border border-border"
-          >
-            <div className="flex items-center gap-1.5 mb-2">
-              <Gift className="w-3.5 h-3.5 text-green-400" />
-              <span className="text-[11px] text-muted-foreground font-medium">Créditos</span>
-            </div>
-            <p className="text-xl font-bold text-foreground tracking-tight">
-              {balanceVisible ? `R$ ${creditsBalance.toFixed(2).replace(".", ",")}` : "R$ •••••"}
-            </p>
-          </motion.div>
-        </div>
+        {/* Créditos disponíveis */}
+        {creditsBalance > 0 && (
+          <div className="text-xs text-muted-foreground mb-6">
+            <span className="text-green-400 font-medium">R$ {creditsBalance.toFixed(2).replace(".", ",")}</span> em créditos disponíveis para conversão
+          </div>
+        )}
 
         {/* Ações rápidas */}
-        <div className="flex items-center justify-around">
+        <div className="flex items-center justify-around mt-4">
           <QuickAction icon={Plus} label="Recarregar" onClick={() => setActiveModal("recharge")} />
           <QuickAction icon={ArrowDownToLine} label="Retirar" onClick={() => setActiveModal("withdraw")} />
           <QuickAction icon={Send} label="Transferir" onClick={() => setActiveModal("transfer")} />
