@@ -60,6 +60,7 @@ const Cliente = () => {
   const [pendingBookings, setPendingBookings] = useState<any[]>([]);
   const [points, setPoints] = useState(0);
   const [redemptions, setRedemptions] = useState(0);
+  const [pontosNecessarios, setPontosNecessarios] = useState(5);
   
   const [pointsModalOpen, setPointsModalOpen] = useState(false);
   const [completedAppointments, setCompletedAppointments] = useState(0);
@@ -128,6 +129,39 @@ const Cliente = () => {
       supabase.removeChannel(channel);
     };
   }, [user]);
+
+  // Buscar pontos_necessarios da promoção ativa + realtime
+  useEffect(() => {
+    const fetchPontosNecessarios = async () => {
+      const { data } = await supabase
+        .from("promocoes")
+        .select("pontos_necessarios")
+        .eq("ativo", true)
+        .limit(1)
+        .maybeSingle();
+      
+      if (data?.pontos_necessarios && data.pontos_necessarios >= 2) {
+        setPontosNecessarios(data.pontos_necessarios);
+      }
+    };
+
+    fetchPontosNecessarios();
+
+    const channel = supabase
+      .channel('promocoes-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'promocoes' },
+        () => {
+          fetchPontosNecessarios();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
 
   useEffect(() => {
     if (!user) return;
@@ -439,6 +473,7 @@ const Cliente = () => {
               <LoyaltyCard
                 points={points}
                 redemptions={redemptions}
+                pontosNecessarios={pontosNecessarios}
                 onViewDetails={() => setPointsModalOpen(true)}
               />
             </>
@@ -451,6 +486,7 @@ const Cliente = () => {
               <LoyaltyCard
                 points={points}
                 redemptions={redemptions}
+                pontosNecessarios={pontosNecessarios}
                 onViewDetails={() => setPointsModalOpen(true)}
               />
             </>
@@ -458,6 +494,7 @@ const Cliente = () => {
             <LoyaltyCard
               points={points}
               redemptions={redemptions}
+              pontosNecessarios={pontosNecessarios}
               onViewDetails={() => setPointsModalOpen(true)}
             />
           )}
@@ -592,6 +629,7 @@ const Cliente = () => {
         points={points}
         completedAppointments={completedAppointments}
         redemptions={redemptions}
+        pontosNecessarios={pontosNecessarios}
       />
 
       {/* Points Detail Modal */}
@@ -601,6 +639,7 @@ const Cliente = () => {
         points={points}
         completedAppointments={completedAppointments}
         redemptions={redemptions}
+        pontosNecessarios={pontosNecessarios}
       />
 
       {/* Wallet Sheet */}

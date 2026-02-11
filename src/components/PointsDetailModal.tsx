@@ -14,6 +14,7 @@ interface PointsDetailModalProps {
   points: number;
   completedAppointments: number;
   redemptions: number;
+  pontosNecessarios?: number;
 }
 
 export function PointsDetailModal({ 
@@ -21,10 +22,11 @@ export function PointsDetailModal({
   onOpenChange, 
   points, 
   completedAppointments, 
-  redemptions 
+  redemptions,
+  pontosNecessarios = 5
 }: PointsDetailModalProps) {
-  const currentCycleProgress = points % 5;
-  const cutsUntilFree = 5 - currentCycleProgress;
+  const currentCycleProgress = points % pontosNecessarios;
+  const cutsUntilFree = pontosNecessarios - currentCycleProgress;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -50,7 +52,7 @@ export function PointsDetailModal({
             {/* Progress bar visual */}
             <div className="w-full space-y-3">
               <div className="flex items-center justify-between">
-                {Array.from({ length: 5 }, (_, i) => (
+                {Array.from({ length: pontosNecessarios }, (_, i) => (
                   <motion.div
                     key={i}
                     initial={{ scale: 0 }}
@@ -80,7 +82,7 @@ export function PointsDetailModal({
               <div className="relative h-1 bg-muted rounded-full overflow-hidden">
                 <motion.div
                   initial={{ width: 0 }}
-                  animate={{ width: `${(currentCycleProgress / 5) * 100}%` }}
+                  animate={{ width: `${(currentCycleProgress / pontosNecessarios) * 100}%` }}
                   transition={{ delay: 0.3, duration: 0.6, ease: "easeOut" }}
                   className="absolute inset-y-0 left-0 bg-primary rounded-full"
                 />
@@ -129,7 +131,7 @@ export function PointsDetailModal({
             <div className="space-y-1.5">
               {[
                 "A cada corte concluído, ganhe 1 ponto",
-                "Complete 5 pontos e ganhe 1 corte grátis",
+                `Complete ${pontosNecessarios} pontos e ganhe 1 corte grátis`,
                 "Use o resgate no próximo agendamento",
               ].map((item, index) => (
                 <div key={index} className="flex items-center gap-2 text-sm text-muted-foreground">

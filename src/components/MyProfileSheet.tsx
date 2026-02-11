@@ -85,6 +85,7 @@ interface MyProfileSheetProps {
   points?: number;
   completedAppointments?: number;
   redemptions?: number;
+  pontosNecessarios?: number;
 }
 
 export function MyProfileSheet({ 
@@ -96,7 +97,8 @@ export function MyProfileSheet({
   credits = 0,
   points = 0,
   completedAppointments = 0,
-  redemptions = 0
+  redemptions = 0,
+  pontosNecessarios = 5
 }: MyProfileSheetProps) {
   const navigate = useNavigate();
   const [view, setView] = useState<"menu" | "edit">("menu");
@@ -562,6 +564,7 @@ export function MyProfileSheet({
         points={points}
         completedAppointments={completedAppointments}
         redemptions={redemptions}
+        pontosNecessarios={pontosNecessarios}
       />
     </>
   );
