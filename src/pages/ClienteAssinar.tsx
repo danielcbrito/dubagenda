@@ -290,7 +290,7 @@ const ClienteAssinar = () => {
     <div className="min-h-screen bg-background pb-20">
       
       {/* Header */}
-      <div className="sticky top-0 z-10 pt-[env(safe-area-inset-top)] px-4 py-4 bg-background/80 backdrop-blur-xl">
+      <div className="sticky top-0 z-10 px-4 pt-[max(env(safe-area-inset-top),1rem)] pb-3 bg-background/80 backdrop-blur-xl">
         <div className="max-w-2xl mx-auto flex items-center gap-3">
           <button 
             onClick={() => step === 1 ? navigate("/cliente") : setStep(step - 1)}
