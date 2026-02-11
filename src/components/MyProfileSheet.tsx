@@ -332,7 +332,10 @@ export function MyProfileSheet({
                     <ProfileMenuItem
                       icon={Wallet}
                       label="Minha Carteira"
-                      onClick={() => setWalletOpen(true)}
+                      onClick={() => {
+                        onOpenChange(false);
+                        navigate("/cliente/carteira");
+                      }}
                       badge={credits > 0 ? `R$ ${credits}` : undefined}
                     />
                     <ProfileMenuItem
