@@ -2046,21 +2046,89 @@ const ClienteAgendar = () => {
             className="min-h-screen bg-background pb-8"
           >
             {paymentConfirmed ? (
-              <div className="min-h-screen flex flex-col items-center justify-center px-6">
-                <div className="w-16 h-16 bg-success/20 rounded-full flex items-center justify-center mb-6">
-                  <Check className="w-8 h-8 text-success" />
-                </div>
-                <h2 className="text-xl font-bold text-foreground mb-2">Pagamento confirmado!</h2>
-                <p className="text-muted-foreground text-center text-sm mb-8">
-                  Você será redirecionado automaticamente...
-                </p>
-                <button
+              <motion.div 
+                className="min-h-screen flex flex-col items-center justify-center px-6"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.5 }}
+              >
+                {/* Círculo animado de sucesso */}
+                <motion.div
+                  className="relative mb-8"
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ type: "spring", stiffness: 200, damping: 15, delay: 0.2 }}
+                >
+                  <div className="w-24 h-24 rounded-full bg-gradient-to-br from-success/20 to-success/10 flex items-center justify-center border-2 border-success/30">
+                    <motion.div
+                      initial={{ scale: 0, rotate: -90 }}
+                      animate={{ scale: 1, rotate: 0 }}
+                      transition={{ type: "spring", stiffness: 250, damping: 20, delay: 0.5 }}
+                    >
+                      <Check className="w-12 h-12 text-success" strokeWidth={3} />
+                    </motion.div>
+                  </div>
+                  {/* Pulso animado */}
+                  <motion.div
+                    className="absolute inset-0 w-24 h-24 rounded-full border-2 border-success/40"
+                    initial={{ scale: 1, opacity: 0.6 }}
+                    animate={{ scale: 1.6, opacity: 0 }}
+                    transition={{ duration: 1.5, repeat: Infinity, ease: "easeOut" }}
+                  />
+                </motion.div>
+
+                <motion.h2
+                  className="text-2xl font-bold text-foreground mb-2 text-center"
+                  initial={{ opacity: 0, y: 15 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.6 }}
+                >
+                  Pagamento Confirmado!
+                </motion.h2>
+
+                <motion.p
+                  className="text-muted-foreground text-center text-sm mb-2 max-w-xs"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.8 }}
+                >
+                  Seu agendamento foi registrado com sucesso.
+                </motion.p>
+
+                <motion.p
+                  className="text-muted-foreground/60 text-center text-xs mb-10"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 1 }}
+                >
+                  Redirecionando em instantes…
+                </motion.p>
+
+                {/* Barra de progresso do redirecionamento */}
+                <motion.div
+                  className="w-48 h-1 bg-border rounded-full overflow-hidden mb-8"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.9 }}
+                >
+                  <motion.div
+                    className="h-full bg-success rounded-full"
+                    initial={{ width: "0%" }}
+                    animate={{ width: "100%" }}
+                    transition={{ duration: 3.5, delay: 0.5, ease: "linear" }}
+                  />
+                </motion.div>
+
+                <motion.button
                   onClick={() => navigate("/cliente")}
-                  className="px-6 py-3 bg-primary text-primary-foreground font-semibold rounded-xl"
+                  className="px-8 py-3.5 bg-primary text-primary-foreground font-semibold rounded-xl hover:bg-primary/90 transition-all active:scale-[0.97]"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 1.2 }}
                 >
                   Ir para tela inicial
-                </button>
-              </div>
+                </motion.button>
+              </motion.div>
             ) : (
               <>
                 {/* Header PIX */}
