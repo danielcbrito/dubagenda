@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { 
   ArrowLeft, 
+  ArrowRight,
   Check, 
   CreditCard, 
   Copy, 
@@ -375,7 +376,7 @@ const ClienteAssinar = () => {
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: 20 }}
-              className="space-y-4"
+              className="space-y-4 pb-28"
             >
               {/* Cards de Planos */}
               <div className="space-y-4">
@@ -390,14 +391,6 @@ const ClienteAssinar = () => {
                   />
                 ))}
               </div>
-
-              <Button
-                onClick={() => setStep(2)}
-                disabled={!selectedPlan || hasActiveSubscription}
-                className="w-full h-14 text-lg font-semibold bg-primary hover:bg-primary/90"
-              >
-                Continuar
-              </Button>
             </motion.div>
           )}
 
@@ -761,6 +754,71 @@ const ClienteAssinar = () => {
           )}
         </AnimatePresence>
       </div>
+
+      {/* Floating Bottom Bar - same style as booking flow */}
+      <AnimatePresence>
+        {step === 1 && selectedPlan && !hasActiveSubscription && (
+          <motion.div
+            initial={{ y: 80, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 80, opacity: 0 }}
+            transition={{ type: "spring", stiffness: 500, damping: 40 }}
+            className="fixed bottom-0 left-0 right-0 z-40"
+          >
+            <div className="relative px-4 pb-safe">
+              <div className="absolute -top-12 left-0 right-0 h-12 bg-gradient-to-t from-background to-transparent pointer-events-none" />
+              <div 
+                className="relative mx-auto max-w-md"
+                style={{
+                  borderRadius: "16px",
+                  background: "rgba(18, 18, 20, 0.95)",
+                  boxShadow: "0 0 0 1px rgba(255, 255, 255, 0.08), 0 8px 32px -8px rgba(0, 0, 0, 0.6), 0 4px 16px -4px rgba(239, 68, 68, 0.1)",
+                  backdropFilter: "blur(20px)"
+                }}
+              >
+                <div 
+                  className="absolute top-0 left-1/2 -translate-x-1/2 w-24 h-[1px]"
+                  style={{ background: "linear-gradient(90deg, transparent, hsl(var(--primary) / 0.5), transparent)" }}
+                />
+                <div className="flex items-center justify-between px-4 py-3">
+                  <div className="flex items-center gap-3">
+                    <div 
+                      className="flex items-center justify-center w-9 h-9 rounded-xl"
+                      style={{ background: "linear-gradient(135deg, hsl(var(--primary) / 0.15), hsl(var(--primary) / 0.05))" }}
+                    >
+                      <Crown className="w-4 h-4 text-primary" />
+                    </div>
+                    <div>
+                      <div className="text-xs text-muted-foreground/60">{selectedPlan.nome}</div>
+                      <div className="flex items-baseline gap-1 mt-0.5">
+                        <span className="text-[10px] text-muted-foreground/50">R$</span>
+                        <span className="text-base font-semibold text-foreground">
+                          {selectedPlan.preco_mensal.toFixed(2).replace('.', ',')}
+                        </span>
+                        <span className="text-[10px] text-muted-foreground/50">/mês</span>
+                      </div>
+                    </div>
+                  </div>
+                  <motion.button
+                    onClick={() => setStep(2)}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    className="group flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium text-sm text-white"
+                    style={{
+                      background: "linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(0 65% 42%) 100%)",
+                      boxShadow: "0 2px 12px hsl(var(--primary) / 0.35), inset 0 1px 0 rgba(255,255,255,0.15)"
+                    }}
+                  >
+                    <span>Continuar</span>
+                    <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
+                  </motion.button>
+                </div>
+              </div>
+              <div className="h-3" />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
