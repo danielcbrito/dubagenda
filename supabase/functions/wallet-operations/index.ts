@@ -26,12 +26,14 @@ serve(async (req) => {
       );
     }
 
+    const token = authHeader.replace("Bearer ", "");
     const supabaseUser = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!, {
       global: { headers: { Authorization: authHeader } },
     });
 
-    const { data: { user }, error: authError } = await supabaseUser.auth.getUser();
+    const { data: { user }, error: authError } = await supabaseUser.auth.getUser(token);
     if (authError || !user) {
+      console.error("[wallet-operations] Auth error:", authError?.message);
       return new Response(
         JSON.stringify({ error: "Usuário não autenticado" }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
