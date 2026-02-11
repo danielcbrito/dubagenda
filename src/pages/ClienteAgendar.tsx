@@ -1,10 +1,10 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { ArrowLeft, Clock, Check, Copy, Shield, RefreshCw, AlertTriangle, Tag } from "lucide-react";
 import { toast } from "sonner";
 import { ptBR } from "date-fns/locale";
-import { format } from "date-fns";
+import { format, eachDayOfInterval, getDay } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useSlotAvailability } from "@/hooks/useSlotAvailability";
 import { sendNovoAgendamentoEvent, sendRemarcacaoConcluidaEvent } from "@/lib/webhookService";
@@ -88,6 +88,9 @@ const ClienteAgendar = () => {
   const [useRedemption, setUseRedemption] = useState(false);
   const [copied, setCopied] = useState(false);
   const [serviceQuantities, setServiceQuantities] = useState<Record<string, number>>({});
+  
+  // Dias fechados no calendário (barbearia/barbeiro não trabalha)
+  const [closedDates, setClosedDates] = useState<Date[]>([]);
   
   // Estados para cupom de desconto
   const [couponCode, setCouponCode] = useState("");
@@ -497,6 +500,90 @@ const ClienteAgendar = () => {
       }
     });
   };
+
+  /**
+   * Carrega os dias fechados para o mês visível no calendário.
+   */
+  const loadClosedDates = useCallback(async (monthStart: Date, monthEnd: Date) => {
+    try {
+      const barbeiroId = selectedBarber?.id || null;
+      const startStr = format(monthStart, 'yyyy-MM-dd');
+      const endStr = format(monthEnd, 'yyyy-MM-dd');
+      const allDays = eachDayOfInterval({ start: monthStart, end: monthEnd });
+
+      let weeklyClosedDays: number[] = [];
+
+      if (barbeiroId) {
+        const { data: barbeiroConfig } = await supabase
+          .from('configuracoes_horario_barbeiro')
+          .select('dia_semana, aberto')
+          .eq('barbeiro_id', barbeiroId);
+
+        if (barbeiroConfig && barbeiroConfig.length > 0) {
+          weeklyClosedDays = barbeiroConfig
+            .filter(c => c.aberto === false)
+            .map(c => c.dia_semana);
+        } else {
+          const { data: globalConfig } = await supabase
+            .from('configuracoes_horario')
+            .select('dia_semana, aberto');
+          weeklyClosedDays = (globalConfig || [])
+            .filter(c => !c.aberto)
+            .map(c => c.dia_semana);
+        }
+      } else {
+        const { data: globalConfig } = await supabase
+          .from('configuracoes_horario')
+          .select('dia_semana, aberto');
+        weeklyClosedDays = (globalConfig || [])
+          .filter(c => !c.aberto)
+          .map(c => c.dia_semana);
+      }
+
+      const exceptionMap: Record<string, boolean> = {};
+
+      const { data: globalExceptions } = await supabase
+        .from('horarios_excepcionais')
+        .select('data, aberto')
+        .gte('data', startStr)
+        .lte('data', endStr);
+
+      for (const exc of globalExceptions || []) {
+        exceptionMap[exc.data] = exc.aberto;
+      }
+
+      if (barbeiroId) {
+        const { data: barbeiroExceptions } = await supabase
+          .from('horarios_excepcionais_barbeiro')
+          .select('data, aberto')
+          .eq('barbeiro_id', barbeiroId)
+          .gte('data', startStr)
+          .lte('data', endStr);
+
+        for (const exc of barbeiroExceptions || []) {
+          exceptionMap[exc.data] = exc.aberto ?? true;
+        }
+      }
+
+      const closed: Date[] = [];
+      for (const day of allDays) {
+        const dateStr = format(day, 'yyyy-MM-dd');
+        const dayOfWeek = getDay(day);
+
+        if (dateStr in exceptionMap) {
+          if (!exceptionMap[dateStr]) {
+            closed.push(day);
+          }
+        } else if (weeklyClosedDays.includes(dayOfWeek)) {
+          closed.push(day);
+        }
+      }
+
+      setClosedDates(closed);
+    } catch (error) {
+      console.error('[loadClosedDates] Erro:', error);
+    }
+  }, [selectedBarber?.id]);
 
   const incrementServiceQty = (serviceId: string) => {
     setServiceQuantities(q => ({
@@ -1635,6 +1722,8 @@ const ClienteAgendar = () => {
               <PremiumCalendar
                 selectedDate={selectedDate}
                 onSelectDate={setSelectedDate}
+                closedDates={closedDates}
+                onMonthChange={loadClosedDates}
               />
 
               {selectedDate && (
