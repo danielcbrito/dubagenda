@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 interface LoyaltyCardProps {
   points: number;
   redemptions: number;
+  pontosNecessarios?: number;
   onViewDetails: () => void;
 }
 
@@ -31,10 +32,10 @@ function ProgressStep({ filled, index, total }: { filled: boolean; index: number
   );
 }
 
-export function LoyaltyCard({ points, redemptions, onViewDetails }: LoyaltyCardProps) {
-  const currentCycleProgress = points % 5;
-  const cutsUntilFree = 5 - currentCycleProgress;
-  const steps = Array.from({ length: 5 }, (_, i) => i < currentCycleProgress);
+export function LoyaltyCard({ points, redemptions, pontosNecessarios = 5, onViewDetails }: LoyaltyCardProps) {
+  const currentCycleProgress = points % pontosNecessarios;
+  const cutsUntilFree = pontosNecessarios - currentCycleProgress;
+  const steps = Array.from({ length: pontosNecessarios }, (_, i) => i < currentCycleProgress);
 
   return (
     <motion.div
@@ -57,7 +58,7 @@ export function LoyaltyCard({ points, redemptions, onViewDetails }: LoyaltyCardP
               Programa Fidelidade
             </h3>
             <p className="text-muted-foreground text-xs mt-0.5">
-              A cada 5 cortes, ganhe 1 grátis
+              A cada {pontosNecessarios} cortes, ganhe 1 grátis
             </p>
           </div>
 
@@ -78,7 +79,7 @@ export function LoyaltyCard({ points, redemptions, onViewDetails }: LoyaltyCardP
         <div className="mb-4">
           <div className="flex items-start gap-2">
             {steps.map((filled, index) => (
-              <ProgressStep key={index} filled={filled} index={index} total={5} />
+              <ProgressStep key={index} filled={filled} index={index} total={pontosNecessarios} />
             ))}
           </div>
         </div>
