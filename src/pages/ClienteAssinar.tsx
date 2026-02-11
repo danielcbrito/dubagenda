@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -130,6 +130,8 @@ function PlanCard({
 
 const ClienteAssinar = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const resumePlanId = (location.state as any)?.resumePlanId as string | undefined;
   const [plans, setPlans] = useState<Plan[]>([]);
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
   const [loading, setLoading] = useState(false);
@@ -155,6 +157,17 @@ const ClienteAssinar = () => {
     loadPlans();
     checkActiveSubscription();
   }, []);
+
+  // Se veio com resumePlanId, auto-seleciona o plano e pula para step 2
+  useEffect(() => {
+    if (resumePlanId && plans.length > 0 && step === 1) {
+      const plan = plans.find(p => p.id === resumePlanId);
+      if (plan) {
+        setSelectedPlan(plan);
+        setStep(2);
+      }
+    }
+  }, [resumePlanId, plans]);
 
   // Poll for payment confirmation when showing PIX QR Code
   useEffect(() => {

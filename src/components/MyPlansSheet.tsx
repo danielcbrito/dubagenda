@@ -26,6 +26,7 @@ interface Subscription {
   next_billing_date: string | null;
   payment_method: string | null;
   plano: {
+    id: string;
     nome: string;
     descricao: string;
     preco_mensal: number;
@@ -75,6 +76,7 @@ export function MyPlansSheet({ open, onOpenChange, userId, onSubscriptionChanged
           next_billing_date,
           payment_method,
           plano:planos(
+            id,
             nome,
             descricao,
             preco_mensal,
@@ -270,7 +272,9 @@ export function MyPlansSheet({ open, onOpenChange, userId, onSubscriptionChanged
                         <Button
                           onClick={() => {
                             onOpenChange(false);
-                            setTimeout(() => navigate("/cliente/pagamento"), 300);
+                            setTimeout(() => navigate("/cliente/assinar", { 
+                              state: { resumePlanId: subscription.plano?.id || null }
+                            }), 300);
                           }}
                           className="w-full h-12 bg-primary hover:bg-primary/90 font-semibold"
                         >
