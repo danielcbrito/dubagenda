@@ -169,7 +169,7 @@ const ClientePagamento = () => {
     setCardCvv("");
   };
 
-  /** Retorna o ícone da bandeira do cartão */
+  /** Retorna o label da bandeira do cartão */
   const getBrandLabel = (brand: string | null) => {
     if (!brand) return "Cartão";
     const brands: Record<string, string> = {
@@ -183,14 +183,29 @@ const ClientePagamento = () => {
     return brands[brand.toUpperCase()] || brand;
   };
 
+  /** Retorna cores visuais baseadas na bandeira/banco */
+  const getBrandColors = (brand: string | null): { bg: string; accent: string; text: string } => {
+    if (!brand) return { bg: "from-zinc-700 to-zinc-900", accent: "bg-white/10", text: "text-white" };
+    const key = brand.toUpperCase();
+    const map: Record<string, { bg: string; accent: string; text: string }> = {
+      VISA: { bg: "from-blue-700 to-blue-900", accent: "bg-blue-400/20", text: "text-blue-100" },
+      MASTERCARD: { bg: "from-orange-600 to-red-800", accent: "bg-orange-400/20", text: "text-orange-100" },
+      ELO: { bg: "from-yellow-500 to-yellow-700", accent: "bg-yellow-300/20", text: "text-yellow-100" },
+      AMEX: { bg: "from-sky-600 to-sky-900", accent: "bg-sky-400/20", text: "text-sky-100" },
+      HIPERCARD: { bg: "from-red-600 to-red-800", accent: "bg-red-400/20", text: "text-red-100" },
+      DINERS: { bg: "from-slate-600 to-slate-800", accent: "bg-slate-400/20", text: "text-slate-100" },
+    };
+    return map[key] || { bg: "from-zinc-700 to-zinc-900", accent: "bg-white/10", text: "text-white" };
+  };
+
   return (
     <div className="min-h-screen bg-background pb-20">
       {/* Header */}
-      <div className="sticky top-0 z-10 px-4 pt-[max(env(safe-area-inset-top),1rem)] pb-3 bg-background/80 backdrop-blur-xl border-b border-border/30">
+      <div className="px-4 pt-[max(env(safe-area-inset-top),1rem)] pb-3">
         <div className="max-w-2xl mx-auto flex items-center gap-3">
           <button
             onClick={() => navigate("/cliente")}
-            className="w-9 h-9 flex items-center justify-center rounded-full bg-card border border-border/40 hover:bg-muted transition-colors"
+            className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-muted/50 transition-colors"
           >
             <ArrowLeft className="w-4 h-4 text-foreground" />
           </button>
@@ -260,34 +275,45 @@ const ClientePagamento = () => {
               </h3>
 
               {subscription.payment_method === "card" && cardInfo ? (
-                <div className="rounded-2xl border border-primary/20 bg-card p-5">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
-                        <CreditCard className="w-6 h-6 text-primary" />
+                <div className="space-y-3">
+                  {/* Visual card representation */}
+                  <div className={cn(
+                    "relative rounded-2xl p-5 overflow-hidden bg-gradient-to-br shadow-lg",
+                    getBrandColors(cardInfo.brand).bg
+                  )}>
+                    {/* Decorative circles */}
+                    <div className="absolute -top-6 -right-6 w-24 h-24 rounded-full bg-white/5" />
+                    <div className="absolute -bottom-4 -left-4 w-16 h-16 rounded-full bg-white/5" />
+
+                    <div className="relative z-10 flex flex-col gap-4">
+                      <div className="flex items-center justify-between">
+                        <CreditCard className="w-7 h-7 text-white/80" />
+                        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/15 backdrop-blur-sm">
+                          <Check className="w-3 h-3 text-white" />
+                          <span className="text-[11px] font-semibold text-white">Ativo</span>
+                        </div>
                       </div>
-                      <div>
-                        <p className="font-semibold text-foreground">
+
+                      <p className="text-lg tracking-[0.25em] font-mono text-white/90 pt-2">
+                        •••• •••• •••• {cardInfo.lastFourDigits || "****"}
+                      </p>
+
+                      <div className="flex items-end justify-between pt-1">
+                        <div>
+                          <p className="text-[10px] uppercase tracking-wider text-white/50 mb-0.5">Titular</p>
+                          <p className="text-xs font-medium text-white/90 truncate max-w-[180px]">
+                            {cardInfo.holderName || "—"}
+                          </p>
+                        </div>
+                        <p className="text-sm font-bold text-white/90">
                           {getBrandLabel(cardInfo.brand)}
                         </p>
-                        <p className="text-sm text-muted-foreground">
-                          •••• •••• •••• {cardInfo.lastFourDigits || "****"}
-                        </p>
-                        {cardInfo.holderName && (
-                          <p className="text-xs text-muted-foreground mt-0.5">
-                            {cardInfo.holderName}
-                          </p>
-                        )}
                       </div>
-                    </div>
-                    <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10">
-                      <Check className="w-3 h-3 text-primary" />
-                      <span className="text-[11px] font-semibold text-primary">Ativo</span>
                     </div>
                   </div>
 
                   {/* Débito automático badge */}
-                  <div className="mt-4 flex items-center gap-2 px-3 py-2 rounded-lg bg-muted/50 border border-border/30">
+                  <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-muted/50 border border-border/30">
                     <RefreshCw className="w-3.5 h-3.5 text-primary" />
                     <p className="text-xs text-muted-foreground">
                       Cobrança automática ativada — renovação mensal
@@ -334,32 +360,41 @@ const ClientePagamento = () => {
                   setShowCardForm(!showCardForm);
                 }}
                 className={cn(
-                  "w-full rounded-xl border p-4 text-left transition-all",
+                  "w-full rounded-2xl border p-5 text-left transition-all group",
                   showCardForm
-                    ? "bg-primary/5 border-primary/30"
-                    : "bg-card border-border/40 hover:border-border"
+                    ? "bg-primary/5 border-primary/30 shadow-sm"
+                    : "bg-card border-border/40 hover:border-primary/20 hover:shadow-md"
                 )}
               >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-muted/50 flex items-center justify-center">
+                <div className="flex items-center gap-4">
+                  <div className={cn(
+                    "w-12 h-12 rounded-xl flex items-center justify-center transition-colors",
+                    showCardForm
+                      ? "bg-primary/15"
+                      : "bg-muted/60 group-hover:bg-primary/10"
+                  )}>
                     {subscription.payment_method === "card" ? (
-                      <Pencil className="w-4 h-4 text-muted-foreground" />
+                      <Pencil className={cn("w-5 h-5 transition-colors", showCardForm ? "text-primary" : "text-muted-foreground group-hover:text-primary")} />
                     ) : (
-                      <CreditCard className="w-4 h-4 text-muted-foreground" />
+                      <CreditCard className={cn("w-5 h-5 transition-colors", showCardForm ? "text-primary" : "text-muted-foreground group-hover:text-primary")} />
                     )}
                   </div>
-                  <div>
+                  <div className="flex-1">
                     <p className="font-semibold text-sm text-foreground">
                       {subscription.payment_method === "card"
                         ? "Trocar cartão"
                         : "Cadastrar cartão de crédito"}
                     </p>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-xs text-muted-foreground mt-0.5">
                       {subscription.payment_method === "card"
-                        ? "Substituir pelo cartão atual"
-                        : "Ativar cobrança automática mensal"}
+                        ? "Substituir o cartão cadastrado"
+                        : "Ative o débito automático mensal"}
                     </p>
                   </div>
+                  <ArrowLeft className={cn(
+                    "w-4 h-4 rotate-180 text-muted-foreground/40 transition-transform",
+                    showCardForm && "rotate-90"
+                  )} />
                 </div>
               </button>
 
