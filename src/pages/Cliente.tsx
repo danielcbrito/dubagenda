@@ -422,7 +422,9 @@ const Cliente = () => {
             <>
               <PendingSubscriptionBanner
                 planName={(pendingSubscription as any).plano?.nome || "Plano"}
-                onFinalize={() => setPlansSheetOpen(true)}
+                onFinalize={() => navigate("/cliente/assinar", { 
+                  state: { resumePlanId: (pendingSubscription as any).plano_id }
+                })}
               />
               <LoyaltyCard
                 points={points}
