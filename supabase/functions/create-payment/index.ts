@@ -229,6 +229,7 @@ interface CreatePaymentRequest {
     email: string;
     cpf?: string;
     postalCode?: string;
+    remoteIp?: string;
   };
   cardInfo?: {
     holderName: string;
@@ -626,6 +627,8 @@ serve(async (req) => {
         addressNumber: '0',
         phone: (profile?.telefone || '00000000000').replace(/\D/g, ''),
       };
+      // remoteIp é OBRIGATÓRIO para pagamentos com cartão no Asaas (antifraude)
+      asaasPaymentData.remoteIp = customerInfo?.remoteIp || req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || req.headers.get('cf-connecting-ip') || '0.0.0.0';
     }
 
     console.log('Creating Asaas payment:', { 

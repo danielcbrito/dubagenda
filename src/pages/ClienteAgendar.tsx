@@ -654,10 +654,21 @@ const ClienteAgendar = () => {
           ccv: cardCvv.trim(),
         };
 
+        // Capturar IP do cliente para antifraude do Asaas
+        let clientIp = '0.0.0.0';
+        try {
+          const ipResponse = await fetch('https://api.ipify.org?format=json');
+          const ipData = await ipResponse.json();
+          clientIp = ipData.ip || '0.0.0.0';
+        } catch (e) {
+          console.warn('Could not fetch client IP:', e);
+        }
+
         payload.customerInfo = {
           name: cardHolderName.trim(),
           email: session.user.email,
           postalCode: cardCep.replace(/\D/g, ''),
+          remoteIp: clientIp,
         };
       }
 
