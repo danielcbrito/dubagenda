@@ -267,41 +267,22 @@ export function NotificationsSheet({ open, onOpenChange, userId }: Notifications
       <SheetContent side="right" className="w-full p-0 bg-zinc-950 border-zinc-800">
         
         {/* HEADER FIXO */}
-        <div className="sticky top-0 bg-zinc-900 border-b border-zinc-800 px-4 py-4 z-10">
-          <div className="flex items-center gap-3 mb-4">
-            <button 
-              onClick={() => onOpenChange(false)}
-              className="w-8 h-8 flex items-center justify-center rounded-full bg-zinc-800 hover:bg-zinc-700 transition-colors"
-            >
-              <ChevronLeft className="w-5 h-5" />
-            </button>
-            <div className="flex-1">
-              <h2 className="text-xl font-bold">Notificações</h2>
-              <p className="text-sm text-zinc-400">Acompanhe suas atualizações</p>
-            </div>
-            
-            {unreadCount > 0 && (
-              <button 
-                onClick={markAllAsRead}
-                className="text-sm text-red-500 hover:text-red-400 font-medium transition-colors"
-              >
-                Marcar todas
-              </button>
-            )}
-          </div>
-          
-          {/* Badge de contagem */}
+        <div className="flex items-center gap-3 px-4 pt-4 pb-3">
+          <button 
+            onClick={() => onOpenChange(false)}
+            className="w-8 h-8 flex items-center justify-center"
+          >
+            <ChevronLeft className="w-5 h-5 text-foreground" />
+          </button>
+          <h2 className="text-lg font-bold text-foreground">Notificações</h2>
+          <div className="flex-1" />
           {unreadCount > 0 && (
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="flex items-center gap-2 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2"
+            <button 
+              onClick={markAllAsRead}
+              className="text-sm text-primary hover:text-primary/80 font-medium transition-colors"
             >
-              <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
-              <span className="text-sm text-red-400 font-medium">
-                {unreadCount} {unreadCount === 1 ? 'nova notificação' : 'novas notificações'}
-              </span>
-            </motion.div>
+              Marcar todas
+            </button>
           )}
         </div>
 
