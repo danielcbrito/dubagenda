@@ -551,6 +551,7 @@ const Cliente = () => {
         open={plansSheetOpen}
         onOpenChange={setPlansSheetOpen}
         userId={user?.id}
+        onSubscriptionChanged={() => user && loadUserData(user.id)}
       />
 
       {/* Subscribe Plan Sheet */}

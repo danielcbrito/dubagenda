@@ -80,13 +80,25 @@ serve(async (req) => {
       console.log('Asaas subscription canceled successfully');
     }
 
-    // Update subscription status in database
-    const { error: updateError } = await supabase
-      .from('assinaturas')
-      .update({ status: 'cancelled' })
-      .eq('id', subscription.id);
+    // Para assinaturas "suspended" (nunca foram pagas/ativas), deletar o registro
+    // Para assinaturas "active", marcar como cancelled
+    if (subscription.status === 'suspended') {
+      const { error: deleteError } = await supabase
+        .from('assinaturas')
+        .delete()
+        .eq('id', subscription.id);
 
-    if (updateError) throw updateError;
+      if (deleteError) throw deleteError;
+      console.log('Suspended subscription deleted (never activated)');
+    } else {
+      const { error: updateError } = await supabase
+        .from('assinaturas')
+        .update({ status: 'cancelled' })
+        .eq('id', subscription.id);
+
+      if (updateError) throw updateError;
+      console.log('Active subscription cancelled');
+    }
 
     return new Response(
       JSON.stringify({
