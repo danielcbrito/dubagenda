@@ -23,6 +23,7 @@ import { AppointmentHistorySheet } from "@/components/AppointmentHistorySheet";
 import { LoyaltyCard } from "@/components/client/LoyaltyCard";
 import { PlanTrackerCard } from "@/components/client/PlanTrackerCard";
 import { PlanExpiredBanner } from "@/components/client/PlanExpiredBanner";
+import { PendingSubscriptionBanner } from "@/components/client/PendingSubscriptionBanner";
 import { ScheduleButton } from "@/components/client/ScheduleButton";
 import { AppointmentCardPremium } from "@/components/client/AppointmentCardPremium";
 
@@ -72,6 +73,7 @@ const Cliente = () => {
   const [recentCancellations, setRecentCancellations] = useState<Appointment[]>([]);
   const [activeSubscription, setActiveSubscription] = useState<any>(null);
   const [expiredSubscription, setExpiredSubscription] = useState<any>(null);
+  const [pendingSubscription, setPendingSubscription] = useState<any>(null);
   const [planUsageCount, setPlanUsageCount] = useState(0);
   const [dataLoaded, setDataLoaded] = useState(false);
 
@@ -253,6 +255,7 @@ const Cliente = () => {
     if (activeSub) {
       setActiveSubscription(activeSub);
       setExpiredSubscription(null);
+      setPendingSubscription(null);
 
       // Contar usos do plano no mês atual
       const now = new Date();
@@ -268,23 +271,39 @@ const Cliente = () => {
     } else {
       setActiveSubscription(null);
 
-      // Verificar se tem assinatura recém-expirada (cancelled/suspended) nos últimos 30 dias
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-      const thirtyDaysAgoISO = thirtyDaysAgo.toISOString();
-
-      // Apenas assinaturas que foram ativas e depois canceladas (não "suspended" que nunca foram pagas)
-      const { data: expiredSub } = await supabase
+      // Verificar assinatura pendente (suspended = pagamento não finalizado)
+      const { data: pendingSub } = await supabase
         .from("assinaturas")
-        .select("id, status, plano_id, updated_at, plano:planos(nome)")
+        .select("id, status, plano_id, created_at, plano:planos(nome)")
         .eq("user_id", userId)
-        .eq("status", "cancelled")
-        .gte("updated_at", thirtyDaysAgoISO)
-        .order("updated_at", { ascending: false })
+        .eq("status", "suspended")
+        .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();
 
-      setExpiredSubscription(expiredSub);
+      setPendingSubscription(pendingSub);
+
+      // Verificar assinatura cancelada recente (apenas se não há pendente)
+      if (!pendingSub) {
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        const thirtyDaysAgoISO = thirtyDaysAgo.toISOString();
+
+        const { data: expiredSub } = await supabase
+          .from("assinaturas")
+          .select("id, status, plano_id, updated_at, plano:planos(nome)")
+          .eq("user_id", userId)
+          .eq("status", "cancelled")
+          .gte("updated_at", thirtyDaysAgoISO)
+          .order("updated_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        setExpiredSubscription(expiredSub);
+      } else {
+        setExpiredSubscription(null);
+      }
+
       setPlanUsageCount(0);
     }
 
@@ -393,6 +412,18 @@ const Cliente = () => {
               nextBillingDate={activeSubscription.next_billing_date || ""}
               onViewDetails={() => setPlansSheetOpen(true)}
             />
+          ) : pendingSubscription ? (
+            <>
+              <PendingSubscriptionBanner
+                planName={(pendingSubscription as any).plano?.nome || "Plano"}
+                onFinalize={() => setPlansSheetOpen(true)}
+              />
+              <LoyaltyCard
+                points={points}
+                redemptions={redemptions}
+                onViewDetails={() => setPointsModalOpen(true)}
+              />
+            </>
           ) : expiredSubscription ? (
             <>
               <PlanExpiredBanner
