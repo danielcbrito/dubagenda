@@ -291,15 +291,21 @@ const Cliente = () => {
 
         const { data: expiredSub } = await supabase
           .from("assinaturas")
-          .select("id, status, plano_id, updated_at, plano:planos(nome)")
+          .select("id, status, plano_id, updated_at, next_billing_date, plano:planos(nome)")
           .eq("user_id", userId)
           .eq("status", "cancelled")
+          .not("next_billing_date", "is", null)
           .gte("updated_at", thirtyDaysAgoISO)
           .order("updated_at", { ascending: false })
           .limit(1)
           .maybeSingle();
 
-        setExpiredSubscription(expiredSub);
+        // Só mostra banner se a assinatura teve uma data de cobrança que já passou
+        // (indicando que era uma assinatura real, não uma tentativa não finalizada)
+        const isRealExpired = expiredSub?.next_billing_date && 
+          new Date(expiredSub.next_billing_date + "T00:00:00") < new Date();
+
+        setExpiredSubscription(isRealExpired ? expiredSub : null);
       } else {
         setExpiredSubscription(null);
       }
