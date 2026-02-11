@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowLeft, Clock, Check, Copy, Shield, RefreshCw, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Clock, Check, Copy, Shield, RefreshCw, AlertTriangle, Tag } from "lucide-react";
 import { toast } from "sonner";
 import { ptBR } from "date-fns/locale";
 import { format } from "date-fns";
@@ -1829,9 +1829,12 @@ const ClienteAgendar = () => {
 
               {/* Cupom de Desconto */}
               <div className="mt-6">
-                <h3 className="text-sm font-semibold text-foreground mb-3">Cupom de desconto</h3>
+                <label className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+                  <Tag className="w-4 h-4 text-muted-foreground" />
+                  Cupom
+                </label>
                 {appliedCoupon ? (
-                  <div className="flex items-center justify-between bg-emerald-500/10 border border-emerald-500/30 rounded-xl px-4 py-3">
+                  <div className="flex items-center justify-between bg-emerald-500/10 border border-emerald-500/30 rounded-xl px-4 py-3 mt-2">
                     <div className="flex items-center gap-2">
                       <Check className="w-4 h-4 text-emerald-500" />
                       <span className="text-sm font-semibold text-foreground">{appliedCoupon.code}</span>
@@ -1845,15 +1848,15 @@ const ClienteAgendar = () => {
                     </button>
                   </div>
                 ) : (
-                  <div className="relative">
+                  <div className="relative mt-2">
+                    <Tag className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
                     <input
                       type="text"
-                      placeholder="Digite o código do cupom"
+                      placeholder="Insira seu cupom"
                       value={couponCode}
                       onChange={(e) => {
                         const val = e.target.value.toUpperCase();
                         setCouponCode(val);
-                        // Auto-validação com debounce
                         if (val.trim().length >= 3) {
                           clearTimeout((window as any).__couponDebounce);
                           (window as any).__couponDebounce = setTimeout(() => {
@@ -1861,10 +1864,10 @@ const ClienteAgendar = () => {
                           }, 600);
                         }
                       }}
-                      className="w-full px-4 py-3 pr-10 bg-card border border-border/40 rounded-xl text-foreground placeholder-muted-foreground focus:outline-none focus:border-primary/50 text-sm uppercase tracking-wider transition-colors"
+                      className="w-full pl-10 pr-10 py-3 bg-card border border-border/40 rounded-xl text-foreground placeholder-muted-foreground focus:outline-none focus:border-primary/50 text-sm uppercase tracking-wider transition-colors"
                     />
                     {validatingCoupon && (
-                      <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                      <div className="absolute right-3.5 top-1/2 -translate-y-1/2">
                         <div className="w-4 h-4 border-2 border-primary/40 border-t-primary rounded-full animate-spin" />
                       </div>
                     )}
