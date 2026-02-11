@@ -4,8 +4,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Gift, CheckCircle, Clock, X, Sparkles } from "lucide-react";
+import { Gift, X, Scissors, Award } from "lucide-react";
 import { motion } from "framer-motion";
+import { cn } from "@/lib/utils";
 
 interface PointsDetailModalProps {
   open: boolean;
@@ -13,54 +14,6 @@ interface PointsDetailModalProps {
   points: number;
   completedAppointments: number;
   redemptions: number;
-}
-
-function ProgressDot({ filled, index }: { filled: boolean; index: number }) {
-  return (
-    <motion.div
-      initial={{ scale: 0, opacity: 0 }}
-      animate={{ scale: 1, opacity: 1 }}
-      transition={{ delay: index * 0.1, duration: 0.3, ease: "easeOut" }}
-      className={`w-4 h-4 rounded-full transition-all duration-300 ${
-        filled
-          ? "bg-red-500 shadow-lg shadow-red-500/50"
-          : "bg-zinc-700 border-2 border-zinc-600"
-      }`}
-    />
-  );
-}
-
-function StatCard({ 
-  icon: Icon, 
-  value, 
-  label, 
-  highlight = false,
-  delay = 0 
-}: { 
-  icon: React.ElementType; 
-  value: number; 
-  label: string; 
-  highlight?: boolean;
-  delay?: number;
-}) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay, duration: 0.4, ease: "easeOut" }}
-      className={`rounded-xl p-4 text-center space-y-2 ${
-        highlight
-          ? "bg-red-500/10 border border-red-500/30"
-          : "bg-zinc-800/30 border border-zinc-700/50"
-      }`}
-    >
-      <Icon className={`w-5 h-5 mx-auto ${highlight ? "text-red-400" : "text-zinc-400"}`} />
-      <p className={`text-2xl font-bold ${highlight ? "text-red-400" : "text-white"}`}>
-        {value}
-      </p>
-      <p className="text-[11px] text-zinc-400 leading-tight">{label}</p>
-    </motion.div>
-  );
 }
 
 export function PointsDetailModal({ 
@@ -72,134 +25,121 @@ export function PointsDetailModal({
 }: PointsDetailModalProps) {
   const currentCycleProgress = points % 5;
   const cutsUntilFree = 5 - currentCycleProgress;
-  const progressDots = Array.from({ length: 5 }, (_, i) => i < currentCycleProgress);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[95vw] sm:max-w-md p-0 bg-gradient-to-b from-zinc-900 to-zinc-950 border-zinc-800 overflow-hidden">
+      <DialogContent className="max-w-[92vw] sm:max-w-sm p-0 bg-card border-border overflow-hidden rounded-2xl">
         {/* Header */}
-        <DialogHeader className="p-4 pb-0 flex flex-row items-center justify-between">
+        <DialogHeader className="px-5 pt-5 pb-0 flex flex-row items-center justify-between">
           <button
             onClick={() => onOpenChange(false)}
-            className="w-8 h-8 rounded-full bg-zinc-800/80 flex items-center justify-center hover:bg-zinc-700 transition-colors"
+            className="w-8 h-8 rounded-full bg-muted flex items-center justify-center hover:bg-muted/80 transition-colors"
           >
-            <X className="w-4 h-4 text-zinc-400" />
+            <X className="w-4 h-4 text-muted-foreground" />
           </button>
-          <DialogTitle className="flex items-center gap-2 text-base font-semibold text-white">
-            <Gift className="w-4 h-4 text-red-500" />
+          <DialogTitle className="text-sm font-semibold text-foreground">
             Programa Fidelidade
           </DialogTitle>
-          <div className="w-8" /> {/* Spacer for centering */}
+          <div className="w-8" />
         </DialogHeader>
 
-        <motion.div 
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.3 }}
-          className="p-5 pt-4 space-y-6"
-        >
-          {/* Progress Section */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4 }}
-            className="bg-zinc-800/50 backdrop-blur-sm rounded-2xl p-5 border border-zinc-700/50"
-          >
-            <p className="text-xs text-zinc-400 uppercase tracking-wider mb-4 font-medium">
-              Progresso Atual
+        <div className="px-5 pb-6 pt-4 space-y-5">
+          
+          {/* Progress Ring Section */}
+          <div className="flex flex-col items-center gap-4">
+            {/* Progress bar visual */}
+            <div className="w-full space-y-3">
+              <div className="flex items-center justify-between">
+                {Array.from({ length: 5 }, (_, i) => (
+                  <motion.div
+                    key={i}
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ delay: i * 0.08, type: "spring", stiffness: 400, damping: 25 }}
+                    className="flex flex-col items-center gap-1.5"
+                  >
+                    <div className={cn(
+                      "w-10 h-10 rounded-full flex items-center justify-center transition-all border-2",
+                      i < currentCycleProgress
+                        ? "bg-primary/15 border-primary text-primary"
+                        : "bg-muted/50 border-border text-muted-foreground/40"
+                    )}>
+                      <Scissors className="w-4 h-4" />
+                    </div>
+                    <span className={cn(
+                      "text-[10px] font-medium",
+                      i < currentCycleProgress ? "text-primary" : "text-muted-foreground/50"
+                    )}>
+                      {i + 1}
+                    </span>
+                  </motion.div>
+                ))}
+              </div>
+
+              {/* Progress bar */}
+              <div className="relative h-1 bg-muted rounded-full overflow-hidden">
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: `${(currentCycleProgress / 5) * 100}%` }}
+                  transition={{ delay: 0.3, duration: 0.6, ease: "easeOut" }}
+                  className="absolute inset-y-0 left-0 bg-primary rounded-full"
+                />
+              </div>
+            </div>
+
+            {/* Status text */}
+            <p className="text-sm text-muted-foreground text-center">
+              {cutsUntilFree === 0 
+                ? "Resgate disponível" 
+                : <>Faltam <span className="text-primary font-semibold">{cutsUntilFree}</span> {cutsUntilFree === 1 ? 'corte' : 'cortes'} para o grátis</>
+              }
             </p>
-            
-            {/* Progress Dots */}
-            <div className="flex items-center justify-center gap-3 mb-4">
-              {progressDots.map((filled, index) => (
-                <ProgressDot key={index} filled={filled} index={index} />
-              ))}
-            </div>
 
-            {/* Progress Text */}
-            <div className="text-center space-y-1">
-              <p className="text-2xl font-bold text-white">
-                {currentCycleProgress} de 5 <span className="text-lg font-normal text-zinc-400">cortes</span>
-              </p>
-              <p className="text-sm text-zinc-400">
-                Mais <span className="text-red-400 font-semibold">{cutsUntilFree}</span> {cutsUntilFree === 1 ? 'corte' : 'cortes'} para ganhar 1 grátis
-              </p>
-            </div>
-
-            {/* Reward Badge */}
+            {/* Redemption badge */}
             {redemptions > 0 && (
               <motion.div
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                transition={{ delay: 0.5, type: "spring", stiffness: 200 }}
-                className="mt-4 flex items-center justify-center"
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ delay: 0.4, type: "spring", stiffness: 300 }}
+                className="flex items-center gap-2 px-4 py-2 bg-primary/10 rounded-full border border-primary/20"
               >
-                <div className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-red-500/20 to-orange-500/20 rounded-full border border-red-500/30">
-                  <Sparkles className="w-4 h-4 text-yellow-400" />
-                  <span className="text-sm font-semibold text-white">
-                    {redemptions} {redemptions === 1 ? 'corte grátis disponível' : 'cortes grátis disponíveis'}!
-                  </span>
-                </div>
+                <Award className="w-4 h-4 text-primary" />
+                <span className="text-sm font-semibold text-foreground">
+                  {redemptions} {redemptions === 1 ? 'corte grátis' : 'cortes grátis'}
+                </span>
               </motion.div>
             )}
-          </motion.div>
-
-          {/* Stats Grid */}
-          <div className="grid grid-cols-3 gap-3">
-            <StatCard
-              icon={CheckCircle}
-              value={completedAppointments}
-              label="Cortes realizados"
-              delay={0.2}
-            />
-            <StatCard
-              icon={Gift}
-              value={redemptions}
-              label="Prontos para usar"
-              highlight={redemptions > 0}
-              delay={0.3}
-            />
-            <StatCard
-              icon={Clock}
-              value={points}
-              label="Pontos totais"
-              delay={0.4}
-            />
           </div>
 
-          {/* How it works */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5, duration: 0.4 }}
-            className="space-y-3"
-          >
-            <div className="flex items-center gap-2">
-              <h4 className="text-sm font-semibold text-white">Como funciona?</h4>
-              <div className="flex-1 h-px bg-zinc-700" />
+          {/* Stats row */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="rounded-xl bg-muted/30 border border-border/50 p-3.5 text-center">
+              <p className="text-xl font-bold text-foreground">{completedAppointments}</p>
+              <p className="text-[11px] text-muted-foreground mt-0.5">Cortes realizados</p>
             </div>
-            
-            <ul className="space-y-2.5">
+            <div className="rounded-xl bg-muted/30 border border-border/50 p-3.5 text-center">
+              <p className="text-xl font-bold text-foreground">{points}</p>
+              <p className="text-[11px] text-muted-foreground mt-0.5">Pontos acumulados</p>
+            </div>
+          </div>
+
+          {/* How it works - compact */}
+          <div className="space-y-2">
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Como funciona</p>
+            <div className="space-y-1.5">
               {[
-                "Cada corte válido = 1 ponto",
-                "Ao completar 5 pontos, ganhe 1 corte grátis",
-                "Use seus resgates no próximo agendamento",
-                "Resgates não utilizados não expiram"
+                "A cada corte concluído, ganhe 1 ponto",
+                "Complete 5 pontos e ganhe 1 corte grátis",
+                "Use o resgate no próximo agendamento",
               ].map((item, index) => (
-                <motion.li
-                  key={index}
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.6 + index * 0.1 }}
-                  className="flex items-start gap-2.5 text-sm text-zinc-300"
-                >
-                  <span className="text-red-500 mt-0.5">→</span>
+                <div key={index} className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <div className="w-1 h-1 rounded-full bg-primary flex-shrink-0" />
                   {item}
-                </motion.li>
+                </div>
               ))}
-            </ul>
-          </motion.div>
-        </motion.div>
+            </div>
+          </div>
+        </div>
       </DialogContent>
     </Dialog>
   );
