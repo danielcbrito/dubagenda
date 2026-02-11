@@ -460,7 +460,7 @@ export function useSlotAvailability(
       console.error('[useSlotAvailability FALLBACK] Erro:', err);
       setError('Erro ao carregar horários');
     }
-  }, [serviceDuration]);
+  }, [serviceDuration, barbeiroId]);
 
   /**
    * Configurar listeners em tempo real e polling
