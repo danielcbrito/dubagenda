@@ -12,12 +12,12 @@ import {
   CheckCircle2, 
   TrendingDown,
   Sparkles,
-  Zap,
   Crown
 } from "lucide-react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
+import pixIcon from "@/assets/pix-icon.png";
 
 interface Plan {
   id: string;
@@ -443,7 +443,7 @@ const ClienteAssinar = () => {
                     </div>
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
-                        <Zap className="w-4 h-4 text-muted-foreground" />
+                        <img src={pixIcon} alt="PIX" className="w-4 h-4 object-contain" />
                         <h4 className="font-semibold text-foreground">PIX</h4>
                       </div>
                       <p className="text-xs text-muted-foreground">
@@ -553,7 +553,7 @@ const ClienteAssinar = () => {
                 <div className="bg-card border border-border/40 rounded-xl p-6">
                   <div className="flex items-center gap-3 mb-3">
                     <div className="w-10 h-10 bg-emerald-500/15 rounded-full flex items-center justify-center">
-                      <Zap className="w-5 h-5 text-emerald-500" />
+                      <img src={pixIcon} alt="PIX" className="w-5 h-5 object-contain" />
                     </div>
                     <div>
                       <h4 className="font-semibold text-foreground">Pagamento PIX</h4>

@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { useSlotAvailability } from "@/hooks/useSlotAvailability";
 import { sendNovoAgendamentoEvent, sendRemarcacaoConcluidaEvent } from "@/lib/webhookService";
 import { motion, AnimatePresence } from "framer-motion";
+import pixIcon from "@/assets/pix-icon.png";
 
 // Premium Components
 import { ServiceCard } from "@/components/booking/ServiceCard";
@@ -1519,6 +1520,7 @@ const ClienteAgendar = () => {
                   onSelect={() => setPaymentMethod('pix')}
                   title="PIX"
                   description="Pagamento instantâneo via QR Code"
+                  icon={<img src={pixIcon} alt="PIX" className="w-4 h-4 object-contain" />}
                 />
 
                 <PaymentOption
