@@ -5,8 +5,8 @@ import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { z } from "zod";
-import { Loader2, Eye, EyeOff, User, Mail, Phone, Lock } from "lucide-react";
-import { formatPhone, validatePhone } from "@/lib/validators";
+import { Loader2, Eye, EyeOff, User, Mail, Phone, Lock, CreditCard } from "lucide-react";
+import { formatPhone, validatePhone, formatCPF, validateCPF } from "@/lib/validators";
 import { SupportChatBubble } from "@/components/support/SupportChatBubble";
 
 const signupSchema = z.object({
@@ -16,6 +16,10 @@ const signupSchema = z.object({
     .trim()
     .transform(val => val.replace(/\D/g, ''))
     .refine(validatePhone, "Por favor, insira um telefone válido."),
+  cpf: z.string()
+    .trim()
+    .transform(val => val.replace(/\D/g, ''))
+    .refine(val => val.length === 0 || validateCPF(val), "CPF inválido."),
   senha: z.string().min(6, "Senha deve ter pelo menos 6 caracteres"),
 });
 
@@ -35,9 +39,11 @@ const Auth = () => {
     nome: "",
     email: "",
     telefone: "",
+    cpf: "",
     senha: "",
   });
   const [telefoneError, setTelefoneError] = useState("");
+  const [cpfError, setCpfError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
@@ -105,13 +111,27 @@ const Auth = () => {
       }
     }
 
+    if (name === "cpf") {
+      formattedValue = formatCPF(value);
+      const cleanCpf = value.replace(/\D/g, '');
+      if (cleanCpf.length === 11) {
+        if (!validateCPF(cleanCpf)) {
+          setCpfError("CPF inválido.");
+        } else {
+          setCpfError("");
+        }
+      } else {
+        setCpfError("");
+      }
+    }
+
     setFormData(prev => ({ ...prev, [name]: formattedValue }));
   };
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (telefoneError) {
+    if (telefoneError || cpfError) {
       toast.error("Corrija os erros antes de continuar");
       return;
     }
@@ -128,6 +148,7 @@ const Auth = () => {
           data: {
             nome: validated.nome,
             telefone: validated.telefone,
+            cpf: validated.cpf,
           },
         },
       });
@@ -318,6 +339,28 @@ const Auth = () => {
                       <p className="text-xs text-destructive pl-1">{telefoneError}</p>
                     )}
                   </div>
+
+                  {/* CPF */}
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-white/70 block">
+                      CPF
+                    </label>
+                    <div className="relative">
+                      <CreditCard className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
+                      <Input
+                        name="cpf"
+                        type="text"
+                        maxLength={14}
+                        value={formData.cpf}
+                        onChange={handleInputChange}
+                        className={`h-11 pl-10 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/30 rounded-lg focus:border-primary/50 focus:ring-1 focus:ring-primary/20 transition-all text-sm ${cpfError ? 'border-destructive/50 focus:border-destructive/50' : ''}`}
+                        placeholder="000.000.000-00"
+                      />
+                    </div>
+                    {cpfError && (
+                      <p className="text-xs text-destructive pl-1">{cpfError}</p>
+                    )}
+                  </div>
                 </>
               )}
 
@@ -385,7 +428,7 @@ const Auth = () => {
               <Button 
                 type="submit" 
                 className="w-full h-11 mt-4 bg-primary hover:bg-primary/90 text-white font-semibold rounded-lg transition-all duration-200 disabled:opacity-50"
-                disabled={isLoading || cooldownTimer > 0 || (isSignup && !!telefoneError)}
+                disabled={isLoading || cooldownTimer > 0 || (isSignup && (!!telefoneError || !!cpfError))}
               >
                 {isLoading ? (
                   <span className="flex items-center gap-2">
