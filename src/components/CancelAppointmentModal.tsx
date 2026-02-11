@@ -9,6 +9,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { Loader2 } from "lucide-react";
 
 interface CancelAppointmentModalProps {
   open: boolean;
@@ -40,11 +41,14 @@ export function CancelAppointmentModal({
     observacoes?.toLowerCase().includes('crédito do app') ||
     observacoes?.toLowerCase().includes('credito do app');
 
+  // Detecta se foi pago via gateway (cartão ou PIX)
+  const isPaidViaGateway = isPaid && !isPaidWithCredit && 
+    (paymentMethod === 'pix' || paymentMethod === 'card' || paymentMethod === 'credit_card');
+
   // Extrai valor do crédito das observações se necessário
   const getCreditAmount = (): number => {
     if (amount > 0) return amount;
     
-    // Tenta extrair de observações: "Pago com crédito do app: R$ 25.00"
     if (observacoes) {
       const match = observacoes.match(/R\$\s*([\d.,]+)/);
       if (match) {
@@ -61,7 +65,7 @@ export function CancelAppointmentModal({
   const handleCancelDefinitely = async () => {
     setCancelling(true);
     try {
-      // Update appointment status
+      // 1. Cancelar o agendamento
       const { error: updateError } = await supabase
         .from("agendamentos")
         .update({ 
@@ -72,7 +76,7 @@ export function CancelAppointmentModal({
 
       if (updateError) throw updateError;
 
-      // Estorno de crédito: cria novo crédito disponível para o usuário
+      // 2. Estorno de crédito do app
       if (shouldRefundCredit) {
         const { error: creditError } = await supabase
           .from("creditos")
@@ -91,20 +95,38 @@ export function CancelAppointmentModal({
         
         toast.success(`Agendamento cancelado. R$ ${creditAmount.toFixed(2)} estornado para sua carteira.`);
       } 
-      // Estorno de pagamento normal (PIX, cartão, etc)
-      else if (shouldRefundPayment) {
-        const { error: creditError } = await supabase
-          .from("creditos")
-          .insert({
-            user_id: userId,
-            valor: amount,
-            origem: "cancelamento",
-            agendamento_origem_id: appointmentId,
-            usado: false,
-          });
+      // 3. Estorno automático via Asaas (PIX/Cartão)
+      else if (shouldRefundPayment && isPaidViaGateway) {
+        try {
+          const { data: refundResult, error: refundError } = await supabase.functions.invoke(
+            'refund-payment',
+            { body: { agendamento_id: appointmentId } }
+          );
 
-        if (creditError) throw creditError;
-        
+          if (refundError) {
+            console.error("Erro ao chamar refund-payment:", refundError);
+            // Fallback: criar crédito interno
+            await createInternalCredit(userId, amount, appointmentId);
+            toast.success(`Agendamento cancelado. R$ ${amount.toFixed(2)} disponível como crédito.`);
+          } else if (refundResult?.refunded) {
+            if (refundResult.refund_type === 'gateway') {
+              toast.success(`Agendamento cancelado. Estorno de R$ ${amount.toFixed(2)} realizado para sua conta.`);
+            } else {
+              toast.success(`Agendamento cancelado. R$ ${amount.toFixed(2)} disponível como crédito.`);
+            }
+          } else {
+            toast.success("Agendamento cancelado com sucesso.");
+          }
+        } catch (refundErr) {
+          console.error("Erro no estorno:", refundErr);
+          // Fallback: criar crédito interno
+          await createInternalCredit(userId, amount, appointmentId);
+          toast.success(`Agendamento cancelado. R$ ${amount.toFixed(2)} disponível como crédito.`);
+        }
+      }
+      // 4. Pagamento normal sem gateway (fallback crédito)
+      else if (shouldRefundPayment) {
+        await createInternalCredit(userId, amount, appointmentId);
         toast.success(`Agendamento cancelado. Crédito de R$ ${amount.toFixed(2)} disponível para o próximo corte.`);
       } else {
         toast.success("Agendamento cancelado com sucesso.");
@@ -119,6 +141,18 @@ export function CancelAppointmentModal({
       setCancelling(false);
     }
   };
+
+  /** Cria crédito interno como fallback */
+  async function createInternalCredit(userId: string, valor: number, agendamentoId: string) {
+    const { error } = await supabase.from("creditos").insert({
+      user_id: userId,
+      valor,
+      origem: "cancelamento",
+      agendamento_origem_id: agendamentoId,
+      usado: false,
+    });
+    if (error) console.error("Erro ao criar crédito interno:", error);
+  }
 
   const refundAmount = shouldRefundCredit ? creditAmount : (shouldRefundPayment ? amount : 0);
 
@@ -139,6 +173,10 @@ export function CancelAppointmentModal({
                 <>
                   💰 O valor de <strong>R$ {creditAmount.toFixed(2)}</strong> usado do crédito será <strong>estornado</strong> para sua carteira.
                 </>
+              ) : isPaidViaGateway ? (
+                <>
+                  💰 O valor de <strong>R$ {amount.toFixed(2)}</strong> será <strong>estornado automaticamente</strong> para sua conta.
+                </>
               ) : (
                 <>
                   💡 O valor já pago de <strong>R$ {amount.toFixed(2)}</strong> ficará disponível como crédito para o próximo corte.
@@ -152,6 +190,7 @@ export function CancelAppointmentModal({
               onClick={() => onOpenChange(false)}
               variant="outline"
               className="flex-1"
+              disabled={cancelling}
             >
               Voltar
             </Button>
@@ -162,7 +201,14 @@ export function CancelAppointmentModal({
               className="flex-1"
               variant="destructive"
             >
-              {cancelling ? "Cancelando..." : "Confirmar Cancelamento"}
+              {cancelling ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Processando...
+                </>
+              ) : (
+                "Confirmar Cancelamento"
+              )}
             </Button>
           </div>
         </div>
