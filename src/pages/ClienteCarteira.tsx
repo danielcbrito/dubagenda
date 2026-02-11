@@ -387,11 +387,10 @@ export default function ClienteCarteira() {
         )}
 
         {/* Ações rápidas */}
-        <div className="flex items-center justify-around mt-4">
+        <div className="flex items-center justify-evenly mt-4">
           <QuickAction icon={Plus} label="Recarregar" onClick={() => setActiveModal("recharge")} />
           <QuickAction icon={ArrowDownToLine} label="Retirar" onClick={() => setActiveModal("withdraw")} />
           <QuickAction icon={Send} label="Transferir" onClick={() => setActiveModal("transfer")} />
-          <QuickAction icon={ArrowLeftRight} label="Converter" onClick={() => setActiveModal("convert")} />
         </div>
       </div>
 
