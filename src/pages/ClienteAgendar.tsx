@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowLeft, Clock, Check, Copy } from "lucide-react";
+import { ArrowLeft, Clock, Check, Copy, Shield } from "lucide-react";
 import { toast } from "sonner";
 import { ptBR } from "date-fns/locale";
 import { format } from "date-fns";
@@ -1952,76 +1952,97 @@ const ClienteAgendar = () => {
             ) : (
               <>
                 {/* Header PIX */}
-                <div className="bg-background border-b border-border px-4 py-4">
-                  <div className="flex items-center gap-4">
-                    <button onClick={() => setStep(5)} className="w-10 h-10 flex items-center justify-center rounded-full bg-card hover:bg-secondary transition-all">
-                      <ArrowLeft className="w-5 h-5 text-foreground" />
+                <div className="sticky top-0 z-10 bg-background/80 backdrop-blur-xl border-b border-border/30 px-4 pt-[max(env(safe-area-inset-top),0.75rem)] pb-3">
+                  <div className="flex items-center gap-3">
+                    <button onClick={() => setStep(5)} className="w-9 h-9 flex items-center justify-center rounded-full bg-card border border-border/40 hover:bg-secondary transition-all">
+                      <ArrowLeft className="w-4 h-4 text-foreground" />
                     </button>
-                    <div>
-                      <h1 className="text-lg font-semibold text-foreground">
+                    <div className="flex items-center gap-2.5">
+                      <img src={pixIcon} alt="PIX" className="w-5 h-5 object-contain" />
+                      <h1 className="text-base font-semibold text-foreground">
                         Pagamento PIX
                       </h1>
-                      <p className="text-xs text-muted-foreground">
-                        Escaneie ou copie o código
-                      </p>
                     </div>
                   </div>
                 </div>
 
-                <div className="max-w-md mx-auto px-4 py-6">
+                <div className="max-w-md mx-auto px-4 py-6 space-y-5">
                   {/* Valor */}
-                  <div className="text-center mb-6">
-                    <p className="text-xs text-muted-foreground mb-1">Valor a pagar</p>
-                    <p className="text-3xl font-bold text-foreground">
+                  <div className="text-center">
+                    <p className="text-xs text-muted-foreground mb-1 uppercase tracking-wider">Valor a pagar</p>
+                    <p className="text-3xl font-bold text-foreground tracking-tight">
                       R$ {Math.max(0, getTotalPrice() - availableCredits).toFixed(2).replace('.', ',')}
                     </p>
                   </div>
 
-                  {/* QR Code */}
-                  <div className="bg-white rounded-2xl p-6 mb-6 flex justify-center">
-                    <img 
-                      src={`data:image/png;base64,${pixQrCode}`} 
-                      alt="QR Code PIX" 
-                      className="w-52 h-52"
-                    />
-                  </div>
+                  {/* QR Code — design premium */}
+                  <div className="relative">
+                    {/* Accent lines */}
+                    <div className="absolute -top-px left-6 right-6 h-[2px] bg-gradient-to-r from-transparent via-primary/40 to-transparent rounded-full" />
+                    
+                    <div className="bg-card border border-border/40 rounded-2xl p-5">
+                      <div className="relative bg-white rounded-xl p-4 flex justify-center overflow-hidden">
+                        {/* Subtle corner accents */}
+                        <div className="absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-primary/25 rounded-tl-xl" />
+                        <div className="absolute top-0 right-0 w-8 h-8 border-t-2 border-r-2 border-primary/25 rounded-tr-xl" />
+                        <div className="absolute bottom-0 left-0 w-8 h-8 border-b-2 border-l-2 border-primary/25 rounded-bl-xl" />
+                        <div className="absolute bottom-0 right-0 w-8 h-8 border-b-2 border-r-2 border-primary/25 rounded-br-xl" />
+                        
+                        <img 
+                          src={`data:image/png;base64,${pixQrCode}`} 
+                          alt="QR Code PIX" 
+                          className="w-48 h-48 relative z-[1]"
+                        />
+                      </div>
 
-                  {/* Instruções */}
-                  <div className="text-center mb-6">
-                    <p className="text-sm text-muted-foreground">
-                      Abra o app do seu banco e escaneie o código acima
-                    </p>
+                      <p className="text-xs text-muted-foreground text-center mt-3">
+                        Abra o app do seu banco e escaneie o código acima
+                      </p>
+                    </div>
                   </div>
 
                   {/* Código PIX para copiar */}
                   {pixPayload && (
                     <div className="space-y-3">
-                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide text-center">
-                        Ou copie o código
-                      </p>
-                      
-                      <div className="bg-card rounded-xl p-3 border border-border">
-                        <p className="text-xs font-mono text-muted-foreground break-all leading-relaxed">
-                          {pixPayload}
+                      <div className="flex items-center gap-2 justify-center">
+                        <div className="h-px flex-1 bg-border/40" />
+                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                          Ou copie o código
                         </p>
+                        <div className="h-px flex-1 bg-border/40" />
                       </div>
-
+                      
                       <button
                         onClick={handleCopyPix}
-                        className="w-full py-3.5 bg-primary text-primary-foreground font-semibold rounded-xl hover:bg-primary/90 transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+                        className="w-full group relative overflow-hidden py-3.5 bg-primary text-primary-foreground font-semibold rounded-xl hover:bg-primary/90 transition-all active:scale-[0.98] flex items-center justify-center gap-2"
                       >
                         <Copy className="w-4 h-4" />
                         {copied ? 'Copiado!' : 'Copiar Código PIX'}
                       </button>
+                      
+                      <div className="bg-card/50 rounded-xl p-3 border border-border/30">
+                        <p className="text-[10px] font-mono text-muted-foreground/70 break-all leading-relaxed line-clamp-2">
+                          {pixPayload}
+                        </p>
+                      </div>
                     </div>
                   )}
 
                   {/* Status de pagamento */}
-                  <div className="mt-6 text-center">
-                    <div className="inline-flex items-center gap-2 text-xs text-muted-foreground">
-                      <div className="w-2 h-2 bg-gold rounded-full animate-pulse" />
-                      Aguardando confirmação
+                  <div className="flex items-center justify-center gap-3 py-3 px-4 bg-card/50 border border-border/30 rounded-xl">
+                    <div className="relative flex items-center justify-center">
+                      <div className="w-2 h-2 bg-primary rounded-full animate-pulse" />
+                      <div className="absolute w-4 h-4 bg-primary/20 rounded-full animate-ping" />
                     </div>
+                    <p className="text-xs text-muted-foreground">
+                      Aguardando confirmação do pagamento
+                    </p>
+                  </div>
+
+                  {/* Segurança */}
+                  <div className="flex items-center justify-center gap-1.5 text-muted-foreground/50">
+                    <Shield className="w-3 h-3" />
+                    <p className="text-[10px]">Pagamento seguro via PIX</p>
                   </div>
                 </div>
               </>
