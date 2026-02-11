@@ -270,7 +270,7 @@ export function MyPlansSheet({ open, onOpenChange, userId, onSubscriptionChanged
                         <Button
                           onClick={() => {
                             onOpenChange(false);
-                            setTimeout(() => navigate("/cliente/assinar"), 300);
+                            setTimeout(() => navigate("/cliente/pagamento"), 300);
                           }}
                           className="w-full h-12 bg-primary hover:bg-primary/90 font-semibold"
                         >
