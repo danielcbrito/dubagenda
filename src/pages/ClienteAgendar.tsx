@@ -202,7 +202,7 @@ const ClienteAgendar = () => {
 
   // Poll for payment confirmation
   useEffect(() => {
-    if (step === 6 && pixQrCode && pendingBookingId && !paymentConfirmed) {
+    if (step === 7 && pixQrCode && pendingBookingId && !paymentConfirmed) {
       const pollInterval = setInterval(async () => {
         try {
           const { data: pendingBooking, error } = await supabase
@@ -230,7 +230,7 @@ const ClienteAgendar = () => {
 
   // Countdown timer for PIX expiration
   useEffect(() => {
-    if (step !== 6 || !pixExpiresAt || pixExpired || paymentConfirmed) return;
+    if (step !== 7 || !pixExpiresAt || pixExpired || paymentConfirmed) return;
 
     const updateCountdown = () => {
       const now = new Date().getTime();
@@ -416,7 +416,7 @@ const ClienteAgendar = () => {
           setPixExpired(false);
         }
         
-        setStep(6);
+        setStep(7);
         toast.info("Continue o pagamento do seu agendamento PIX");
       } else {
         setStep(4);
@@ -702,7 +702,7 @@ const ClienteAgendar = () => {
         setPixExpiresAt(expiresAt);
         setPixExpired(false);
         toast.success("QR Code gerado! Escaneie para pagar.");
-        setStep(6);
+        setStep(7);
       } else if (paymentMethod === 'card') {
         sessionStorage.removeItem('isRescheduling');
         sessionStorage.removeItem('rescheduleAppointmentId');
@@ -1202,8 +1202,17 @@ const ClienteAgendar = () => {
       // Remarcação: 1=Barbeiro, 2=Data, 3=Horário, 4=Confirmação
       setStep(step - 1);
     } else {
-      // Normal: 1=Barbeiro, 2=Serviços, 3=Data, 4=Horário, 5=Pagamento, 6=Confirmação PIX
-      setStep(step - 1);
+      // Normal: 1=Barbeiro, 2=Serviços, 3=Data, 4=Horário, 5=Pagamento, 6=Confirmação, 7=PIX
+      if (step === 7) {
+        // Voltando do QR Code PIX para confirmação
+        setPixQrCode(null);
+        setPixPayload(null);
+        setPixExpired(false);
+        setPixExpiresAt(null);
+        setStep(6);
+      } else {
+        setStep(step - 1);
+      }
     }
   };
 
@@ -1284,7 +1293,7 @@ const ClienteAgendar = () => {
   const totalSteps = isPlanFlow ? 4 : isRescheduling ? 4 : 6;
   
   // O step visual agora é direto (step 1-N = bolinha 1-N)
-  const currentDisplayStep = step;
+  const currentDisplayStep = Math.min(step, totalSteps);
 
   const pageVariants = {
     initial: { opacity: 0, x: 20 },
@@ -1813,8 +1822,8 @@ const ClienteAgendar = () => {
           </motion.div>
         )}
 
-        {/* Step 6: Confirmação (Usuários normais SEM plano) */}
-        {step === 6 && !isRescheduling && !isPlanFlow && (
+        {/* Step 6: Confirmação (Usuários normais SEM plano) - oculta quando QR Code PIX é gerado */}
+        {step === 6 && !isRescheduling && !isPlanFlow && !pixQrCode && (
           <motion.div
             key="step-5"
             variants={pageVariants}
@@ -2025,8 +2034,8 @@ const ClienteAgendar = () => {
           </motion.div>
         )}
 
-        {/* Step 6: QR Code PIX */}
-        {step === 6 && pixQrCode && (
+        {/* Step 7: QR Code PIX - tela dedicada */}
+        {step === 7 && pixQrCode && (
           <motion.div
             key="step-6"
             variants={pageVariants}
