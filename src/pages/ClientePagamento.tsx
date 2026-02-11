@@ -353,208 +353,187 @@ const ClientePagamento = () => {
             <div className="space-y-3">
               <h3 className="text-sm font-semibold text-foreground">Alterar forma de pagamento</h3>
 
-              {/* Aviso quando não há vínculo com gateway */}
-              {!subscription.has_gateway && (
-                <div className="rounded-2xl border border-amber-500/30 bg-amber-500/5 p-5 space-y-2">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center shrink-0">
-                      <AlertCircle className="w-5 h-5 text-amber-500" />
+              {/* Botão trocar/cadastrar cartão */}
+              <button
+                onClick={() => {
+                  resetCardForm();
+                  setShowCardForm(!showCardForm);
+                }}
+                className={cn(
+                  "w-full rounded-2xl border p-5 text-left transition-all group",
+                  showCardForm
+                    ? "bg-primary/5 border-primary/30 shadow-sm"
+                    : "bg-card border-border/40 hover:border-primary/20 hover:shadow-md"
+                )}
+              >
+                <div className="flex items-center gap-4">
+                  <div className={cn(
+                    "w-12 h-12 rounded-xl flex items-center justify-center transition-colors",
+                    showCardForm
+                      ? "bg-primary/15"
+                      : "bg-muted/60 group-hover:bg-primary/10"
+                  )}>
+                    {subscription.payment_method === "card" ? (
+                      <Pencil className={cn("w-5 h-5 transition-colors", showCardForm ? "text-primary" : "text-muted-foreground group-hover:text-primary")} />
+                    ) : (
+                      <CreditCard className={cn("w-5 h-5 transition-colors", showCardForm ? "text-primary" : "text-muted-foreground group-hover:text-primary")} />
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-semibold text-sm text-foreground">
+                      {subscription.payment_method === "card"
+                        ? "Trocar cartão"
+                        : "Cadastrar cartão de crédito"}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {subscription.payment_method === "card"
+                        ? "Substituir o cartão cadastrado"
+                        : "Ative o débito automático mensal"}
+                    </p>
+                  </div>
+                  <ArrowLeft className={cn(
+                    "w-4 h-4 rotate-180 text-muted-foreground/40 transition-transform",
+                    showCardForm && "rotate-90"
+                  )} />
+                </div>
+              </button>
+
+              {/* Formulário de cartão */}
+              <AnimatePresence>
+                {showCardForm && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="overflow-hidden"
+                  >
+                    <div className="bg-card border border-border/40 rounded-xl p-5 space-y-4">
+                      <div>
+                        <Label htmlFor="cardHolderName" className="text-muted-foreground text-sm">
+                          Nome no Cartão
+                        </Label>
+                        <Input
+                          id="cardHolderName"
+                          placeholder="Como está no cartão"
+                          value={cardHolderName}
+                          onChange={(e) => setCardHolderName(e.target.value)}
+                          className="bg-muted/50 border-border mt-1.5"
+                        />
+                      </div>
+
+                      <div>
+                        <Label htmlFor="cardNumber" className="text-muted-foreground text-sm">
+                          Número do Cartão
+                        </Label>
+                        <Input
+                          id="cardNumber"
+                          placeholder="0000 0000 0000 0000"
+                          value={cardNumber}
+                          onChange={(e) => {
+                            const value = e.target.value.replace(/\D/g, "");
+                            const formatted = value.replace(/(\d{4})(?=\d)/g, "$1 ");
+                            setCardNumber(formatted);
+                          }}
+                          maxLength={19}
+                          className="bg-muted/50 border-border mt-1.5"
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-3">
+                        <div>
+                          <Label className="text-muted-foreground text-sm">Mês</Label>
+                          <Input
+                            placeholder="MM"
+                            value={cardExpiryMonth}
+                            onChange={(e) =>
+                              setCardExpiryMonth(e.target.value.replace(/\D/g, "").slice(0, 2))
+                            }
+                            maxLength={2}
+                            className="bg-muted/50 border-border mt-1.5"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-muted-foreground text-sm">Ano</Label>
+                          <Input
+                            placeholder="AAAA"
+                            value={cardExpiryYear}
+                            onChange={(e) =>
+                              setCardExpiryYear(e.target.value.replace(/\D/g, "").slice(0, 4))
+                            }
+                            maxLength={4}
+                            className="bg-muted/50 border-border mt-1.5"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-muted-foreground text-sm">CVV</Label>
+                          <Input
+                            placeholder="123"
+                            type="password"
+                            value={cardCvv}
+                            onChange={(e) =>
+                              setCardCvv(e.target.value.replace(/\D/g, "").slice(0, 4))
+                            }
+                            maxLength={4}
+                            className="bg-muted/50 border-border mt-1.5"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-1.5 text-muted-foreground/60 mt-2">
+                        <Shield className="w-3 h-3" />
+                        <p className="text-[10px]">
+                          Seus dados são criptografados e processados com segurança
+                        </p>
+                      </div>
+
+                      <Button
+                        onClick={handleUpdateCard}
+                        disabled={saving}
+                        className="w-full h-12 font-semibold bg-primary hover:bg-primary/90"
+                      >
+                        {saving ? (
+                          <div className="flex items-center gap-2">
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            Salvando...
+                          </div>
+                        ) : (
+                          "Salvar Cartão"
+                        )}
+                      </Button>
                     </div>
-                    <div>
-                      <p className="font-semibold text-sm text-foreground">Assinatura sem gateway</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        Sua assinatura foi criada manualmente e não está vinculada ao sistema de cobranças automáticas. Entre em contato com o suporte para vincular.
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Botão trocar para PIX (só aparece se está usando cartão) */}
+              {subscription.payment_method === "card" && (
+                <button
+                  onClick={handleChangeToPix}
+                  disabled={changingToPix}
+                  className="w-full rounded-xl border border-border/40 bg-card hover:border-border p-4 text-left transition-all"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-muted/50 flex items-center justify-center">
+                      <img src={pixIcon} alt="PIX" className="w-5 h-5 object-contain" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-semibold text-sm text-foreground">Usar PIX mensal</p>
+                      <p className="text-xs text-muted-foreground">
+                        Receber QR Code todo mês para pagamento
                       </p>
                     </div>
+                    {changingToPix && (
+                      <Loader2 className="w-4 h-4 text-primary animate-spin" />
+                    )}
                   </div>
-                </div>
+                </button>
               )}
 
-              {/* Botão trocar/cadastrar cartão - só quando há gateway */}
-              {subscription.has_gateway && (
-                <>
-                  <button
-                    onClick={() => {
-                      resetCardForm();
-                      setShowCardForm(!showCardForm);
-                    }}
-                    className={cn(
-                      "w-full rounded-2xl border p-5 text-left transition-all group",
-                      showCardForm
-                        ? "bg-primary/5 border-primary/30 shadow-sm"
-                        : "bg-card border-border/40 hover:border-primary/20 hover:shadow-md"
-                    )}
-                  >
-                    <div className="flex items-center gap-4">
-                      <div className={cn(
-                        "w-12 h-12 rounded-xl flex items-center justify-center transition-colors",
-                        showCardForm
-                          ? "bg-primary/15"
-                          : "bg-muted/60 group-hover:bg-primary/10"
-                      )}>
-                        {subscription.payment_method === "card" ? (
-                          <Pencil className={cn("w-5 h-5 transition-colors", showCardForm ? "text-primary" : "text-muted-foreground group-hover:text-primary")} />
-                        ) : (
-                          <CreditCard className={cn("w-5 h-5 transition-colors", showCardForm ? "text-primary" : "text-muted-foreground group-hover:text-primary")} />
-                        )}
-                      </div>
-                      <div className="flex-1">
-                        <p className="font-semibold text-sm text-foreground">
-                          {subscription.payment_method === "card"
-                            ? "Trocar cartão"
-                            : "Cadastrar cartão de crédito"}
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                          {subscription.payment_method === "card"
-                            ? "Substituir o cartão cadastrado"
-                            : "Ative o débito automático mensal"}
-                        </p>
-                      </div>
-                      <ArrowLeft className={cn(
-                        "w-4 h-4 rotate-180 text-muted-foreground/40 transition-transform",
-                        showCardForm && "rotate-90"
-                      )} />
-                    </div>
-                  </button>
-
-                  {/* Formulário de cartão */}
-                  <AnimatePresence>
-                    {showCardForm && (
-                      <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: "auto" }}
-                        exit={{ opacity: 0, height: 0 }}
-                        className="overflow-hidden"
-                      >
-                        <div className="bg-card border border-border/40 rounded-xl p-5 space-y-4">
-                          <div>
-                            <Label htmlFor="cardHolderName" className="text-muted-foreground text-sm">
-                              Nome no Cartão
-                            </Label>
-                            <Input
-                              id="cardHolderName"
-                              placeholder="Como está no cartão"
-                              value={cardHolderName}
-                              onChange={(e) => setCardHolderName(e.target.value)}
-                              className="bg-muted/50 border-border mt-1.5"
-                            />
-                          </div>
-
-                          <div>
-                            <Label htmlFor="cardNumber" className="text-muted-foreground text-sm">
-                              Número do Cartão
-                            </Label>
-                            <Input
-                              id="cardNumber"
-                              placeholder="0000 0000 0000 0000"
-                              value={cardNumber}
-                              onChange={(e) => {
-                                const value = e.target.value.replace(/\D/g, "");
-                                const formatted = value.replace(/(\d{4})(?=\d)/g, "$1 ");
-                                setCardNumber(formatted);
-                              }}
-                              maxLength={19}
-                              className="bg-muted/50 border-border mt-1.5"
-                            />
-                          </div>
-
-                          <div className="grid grid-cols-3 gap-3">
-                            <div>
-                              <Label className="text-muted-foreground text-sm">Mês</Label>
-                              <Input
-                                placeholder="MM"
-                                value={cardExpiryMonth}
-                                onChange={(e) =>
-                                  setCardExpiryMonth(e.target.value.replace(/\D/g, "").slice(0, 2))
-                                }
-                                maxLength={2}
-                                className="bg-muted/50 border-border mt-1.5"
-                              />
-                            </div>
-                            <div>
-                              <Label className="text-muted-foreground text-sm">Ano</Label>
-                              <Input
-                                placeholder="AAAA"
-                                value={cardExpiryYear}
-                                onChange={(e) =>
-                                  setCardExpiryYear(e.target.value.replace(/\D/g, "").slice(0, 4))
-                                }
-                                maxLength={4}
-                                className="bg-muted/50 border-border mt-1.5"
-                              />
-                            </div>
-                            <div>
-                              <Label className="text-muted-foreground text-sm">CVV</Label>
-                              <Input
-                                placeholder="123"
-                                type="password"
-                                value={cardCvv}
-                                onChange={(e) =>
-                                  setCardCvv(e.target.value.replace(/\D/g, "").slice(0, 4))
-                                }
-                                maxLength={4}
-                                className="bg-muted/50 border-border mt-1.5"
-                              />
-                            </div>
-                          </div>
-
-                          <div className="flex items-center gap-1.5 text-muted-foreground/60 mt-2">
-                            <Shield className="w-3 h-3" />
-                            <p className="text-[10px]">
-                              Seus dados são criptografados e processados com segurança
-                            </p>
-                          </div>
-
-                          <Button
-                            onClick={handleUpdateCard}
-                            disabled={saving}
-                            className="w-full h-12 font-semibold bg-primary hover:bg-primary/90"
-                          >
-                            {saving ? (
-                              <div className="flex items-center gap-2">
-                                <Loader2 className="w-4 h-4 animate-spin" />
-                                Salvando...
-                              </div>
-                            ) : (
-                              "Salvar Cartão"
-                            )}
-                          </Button>
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-
-                  {/* Botão trocar para PIX (só aparece se está usando cartão) */}
-                  {subscription.payment_method === "card" && (
-                    <button
-                      onClick={handleChangeToPix}
-                      disabled={changingToPix}
-                      className="w-full rounded-xl border border-border/40 bg-card hover:border-border p-4 text-left transition-all"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg bg-muted/50 flex items-center justify-center">
-                          <img src={pixIcon} alt="PIX" className="w-5 h-5 object-contain" />
-                        </div>
-                        <div className="flex-1">
-                          <p className="font-semibold text-sm text-foreground">Usar PIX mensal</p>
-                          <p className="text-xs text-muted-foreground">
-                            Receber QR Code todo mês para pagamento
-                          </p>
-                        </div>
-                        {changingToPix && (
-                          <Loader2 className="w-4 h-4 text-primary animate-spin" />
-                        )}
-                      </div>
-                    </button>
-                  )}
-
-                  {/* Botão trocar para cartão (só aparece se está usando PIX e não abriu formulário) */}
-                  {subscription.payment_method === "pix" && !showCardForm && (
-                    <p className="text-xs text-center text-muted-foreground pt-2">
-                      Cadastre um cartão acima para ativar a cobrança automática
-                    </p>
-                  )}
-                </>
+              {/* Dica para quem usa PIX */}
+              {subscription.payment_method === "pix" && !showCardForm && (
+                <p className="text-xs text-center text-muted-foreground pt-2">
+                  Cadastre um cartão acima para ativar a cobrança automática
+                </p>
               )}
             </div>
           </motion.div>
