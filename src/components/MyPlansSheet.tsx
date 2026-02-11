@@ -81,7 +81,9 @@ export function MyPlansSheet({ open, onOpenChange, userId }: MyPlansSheetProps) 
           )
         `)
         .eq("user_id", userId)
-        .eq("status", "active")
+        .in("status", ["active", "suspended"])
+        .order("created_at", { ascending: false })
+        .limit(1)
         .maybeSingle();
 
       if (error) {
@@ -103,12 +105,14 @@ export function MyPlansSheet({ open, onOpenChange, userId }: MyPlansSheetProps) 
   const getStatusBadge = (status: string) => {
     const statusMap: Record<string, { label: string; variant: "default" | "secondary" | "destructive" }> = {
       active: { label: "Ativo", variant: "default" },
-      suspended: { label: "Aguardando Pagamento", variant: "secondary" },
+      suspended: { label: "Pagamento Pendente", variant: "destructive" },
       past_due: { label: "Vencido", variant: "destructive" },
       cancelled: { label: "Cancelado", variant: "secondary" },
     };
     return statusMap[status] || { label: status, variant: "secondary" };
   };
+
+  const isSuspended = subscription?.status === "suspended";
 
   const handleSubscribeClick = () => {
     onOpenChange(false);
@@ -242,14 +246,32 @@ export function MyPlansSheet({ open, onOpenChange, userId }: MyPlansSheetProps) 
                       <span className="text-sm text-muted-foreground">/mês</span>
                     </div>
 
-                    {/* Next billing */}
-                    {subscription.next_billing_date && (
+                    {/* Next billing - only for active */}
+                    {!isSuspended && subscription.next_billing_date && (
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <Calendar className="w-4 h-4" />
                         <span>
                           Próxima cobrança:{" "}
                           {format(new Date(subscription.next_billing_date), "dd 'de' MMMM", { locale: ptBR })}
                         </span>
+                      </div>
+                    )}
+
+                    {/* Suspended: Finalize payment CTA */}
+                    {isSuspended && (
+                      <div className="pt-1">
+                        <p className="text-xs text-muted-foreground mb-3">
+                          Finalize o pagamento para ativar seus benefícios.
+                        </p>
+                        <Button
+                          onClick={() => {
+                            onOpenChange(false);
+                            setTimeout(() => navigate("/cliente/assinar"), 300);
+                          }}
+                          className="w-full h-12 bg-primary hover:bg-primary/90 font-semibold"
+                        >
+                          Finalizar pagamento
+                        </Button>
                       </div>
                     )}
                   </div>
@@ -271,34 +293,36 @@ export function MyPlansSheet({ open, onOpenChange, userId }: MyPlansSheetProps) 
                     </div>
                   )}
 
-                  {/* Gerenciar pagamento */}
-                  <button
-                    onClick={() => {
-                      onOpenChange(false);
-                      setTimeout(() => navigate("/cliente/pagamento"), 300);
-                    }}
-                    className="w-full rounded-2xl border border-border/40 bg-card p-5 flex items-center justify-between hover:bg-muted/50 transition-colors"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                        <CreditCard className="w-5 h-5 text-primary" />
+                  {/* Gerenciar pagamento - only for active */}
+                  {!isSuspended && (
+                    <button
+                      onClick={() => {
+                        onOpenChange(false);
+                        setTimeout(() => navigate("/cliente/pagamento"), 300);
+                      }}
+                      className="w-full rounded-2xl border border-border/40 bg-card p-5 flex items-center justify-between hover:bg-muted/50 transition-colors"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                          <CreditCard className="w-5 h-5 text-primary" />
+                        </div>
+                        <div className="text-left">
+                          <p className="text-sm font-semibold text-foreground">Formas de Pagamento</p>
+                          <p className="text-xs text-muted-foreground">
+                            {subscription.payment_method === 'card' ? 'Cartão de crédito • Débito automático' : 'PIX mensal'}
+                          </p>
+                        </div>
                       </div>
-                      <div className="text-left">
-                        <p className="text-sm font-semibold text-foreground">Formas de Pagamento</p>
-                        <p className="text-xs text-muted-foreground">
-                          {subscription.payment_method === 'card' ? 'Cartão de crédito • Débito automático' : 'PIX mensal'}
-                        </p>
-                      </div>
-                    </div>
-                    <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                  </button>
+                      <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                    </button>
+                  )}
 
                   {/* Cancel */}
                   <button
                     onClick={() => setCancelDialogOpen(true)}
                     className="w-full py-3 text-sm text-destructive hover:text-destructive/80 transition-colors"
                   >
-                    Cancelar assinatura
+                    {isSuspended ? "Cancelar assinatura pendente" : "Cancelar assinatura"}
                   </button>
                 </motion.div>
               )}
