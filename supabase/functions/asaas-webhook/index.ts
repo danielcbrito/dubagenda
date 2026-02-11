@@ -369,11 +369,15 @@ async function handlePaymentConfirmed(supabase: any, payload: AsaasWebhookEvent)
   if (payment) {
     // If payment is for an appointment, update appointment to confirmed (ready for barber)
     if (payment.agendamento_id) {
+      // Manter status 'pending' com barbeiro_confirmou=false
+      // para que o agendamento apareça nas confirmações pendentes do admin
       const { error: appointmentError } = await supabase
         .from('agendamentos')
         .update({ 
-          status: 'confirmed',
-          observacoes: 'Pagamento confirmado - Aguardando confirmação do barbeiro'
+          status: 'pending',
+          barbeiro_confirmou: false,
+          cliente_confirmou: true,
+          observacoes: 'Pagamento via cartão confirmado - Aguardando confirmação do barbeiro'
         })
         .eq('id', payment.agendamento_id);
 
