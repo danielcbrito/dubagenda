@@ -534,6 +534,36 @@ serve(async (req) => {
     if (customerSearchResult.data && customerSearchResult.data.length > 0) {
       customerId = customerSearchResult.data[0].id;
       console.log('Using existing customer:', customerId);
+
+      // Atualizar dados do cliente existente (nome, CPF, email) para garantir que estão atualizados
+      const existingCustomer = customerSearchResult.data[0];
+      const needsUpdate = 
+        (asaasCustomer.cpfCnpj && asaasCustomer.cpfCnpj !== existingCustomer.cpfCnpj) ||
+        (asaasCustomer.name && asaasCustomer.name !== existingCustomer.name) ||
+        (asaasCustomer.email && asaasCustomer.email !== existingCustomer.email);
+
+      if (needsUpdate) {
+        console.log('Updating existing Asaas customer with latest data...');
+        const updateResponse = await fetch(`https://api.asaas.com/v3/customers/${customerId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'access_token': asaasApiKey,
+          },
+          body: JSON.stringify({
+            name: asaasCustomer.name,
+            email: asaasCustomer.email,
+            cpfCnpj: asaasCustomer.cpfCnpj,
+          }),
+        });
+
+        if (updateResponse.ok) {
+          console.log('Customer updated successfully in Asaas');
+        } else {
+          const updateError = await updateResponse.json();
+          console.error('Failed to update customer in Asaas:', updateError);
+        }
+      }
     } else {
       // Create new customer
       const customerCreateResponse = await fetch('https://api.asaas.com/v3/customers', {
