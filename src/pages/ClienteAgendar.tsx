@@ -2160,11 +2160,11 @@ const ClienteAgendar = () => {
                   </div>
                 </div>
 
-                <div className="flex flex-col items-center px-5 pt-4 pb-6 gap-4">
-                  {/* Valor compacto */}
+                <div className="flex flex-col items-center px-5 pt-6 pb-8 gap-6">
+                  {/* Valor com destaque */}
                   <div className="text-center">
-                    <p className="text-[11px] text-muted-foreground uppercase tracking-widest mb-0.5">Valor</p>
-                    <p className="text-2xl font-bold text-foreground tracking-tight">
+                    <p className="text-[10px] text-muted-foreground/60 uppercase tracking-[0.2em] mb-1">Valor a pagar</p>
+                    <p className="text-3xl font-bold text-foreground tracking-tight">
                       R$ {Math.max(0, getTotalPrice() - availableCredits).toFixed(2).replace('.', ',')}
                     </p>
                   </div>
@@ -2187,7 +2187,7 @@ const ClienteAgendar = () => {
                       <button
                         onClick={handleRegeneratePix}
                         disabled={regeneratingPix}
-                        className="w-full py-3 bg-primary text-primary-foreground font-semibold rounded-xl hover:bg-primary/90 transition-all active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-50"
+                        className="w-full py-3.5 bg-primary text-primary-foreground font-semibold rounded-xl hover:bg-primary/90 transition-all active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-50"
                       >
                         <RefreshCw className={cn("w-4 h-4", regeneratingPix && "animate-spin")} />
                         {regeneratingPix ? 'Gerando...' : 'Gerar Novo QR Code'}
@@ -2201,53 +2201,102 @@ const ClienteAgendar = () => {
                       </button>
                     </div>
                   ) : (
-                    /* QR Code ativo */
-                    <div className="w-full max-w-sm flex flex-col items-center gap-4">
-                      {/* QR Code container */}
-                      <div className="bg-white rounded-2xl p-3 shadow-lg shadow-black/10">
-                        <img 
-                          src={`data:image/png;base64,${pixQrCode}`} 
-                          alt="QR Code PIX" 
-                          className="w-56 h-56"
-                        />
+                    /* QR Code ativo — layout premium */
+                    <div className="w-full max-w-sm flex flex-col items-center gap-5">
+                      {/* QR Code com moldura tecnológica */}
+                      <div className="relative p-1">
+                        {/* Linhas decorativas laterais — canto superior esquerdo */}
+                        <div className="absolute -top-1 -left-1 w-8 h-8">
+                          <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-primary to-transparent rounded-full" />
+                          <div className="absolute top-0 left-0 w-[2px] h-full bg-gradient-to-b from-primary to-transparent rounded-full" />
+                        </div>
+                        {/* Canto superior direito */}
+                        <div className="absolute -top-1 -right-1 w-8 h-8">
+                          <div className="absolute top-0 right-0 w-full h-[2px] bg-gradient-to-l from-primary to-transparent rounded-full" />
+                          <div className="absolute top-0 right-0 w-[2px] h-full bg-gradient-to-b from-primary to-transparent rounded-full" />
+                        </div>
+                        {/* Canto inferior esquerdo */}
+                        <div className="absolute -bottom-1 -left-1 w-8 h-8">
+                          <div className="absolute bottom-0 left-0 w-full h-[2px] bg-gradient-to-r from-primary to-transparent rounded-full" />
+                          <div className="absolute bottom-0 left-0 w-[2px] h-full bg-gradient-to-t from-primary to-transparent rounded-full" />
+                        </div>
+                        {/* Canto inferior direito */}
+                        <div className="absolute -bottom-1 -right-1 w-8 h-8">
+                          <div className="absolute bottom-0 right-0 w-full h-[2px] bg-gradient-to-l from-primary to-transparent rounded-full" />
+                          <div className="absolute bottom-0 right-0 w-[2px] h-full bg-gradient-to-t from-primary to-transparent rounded-full" />
+                        </div>
+
+                        {/* Container do QR Code */}
+                        <div className="bg-white rounded-2xl p-3 shadow-lg shadow-primary/5">
+                          <img 
+                            src={`data:image/png;base64,${pixQrCode}`} 
+                            alt="QR Code PIX" 
+                            className="w-56 h-56"
+                          />
+                        </div>
                       </div>
 
-                      <p className="text-xs text-muted-foreground text-center">
-                        Abra o app do seu banco e escaneie o código
+                      {/* Instrução */}
+                      <p className="text-xs text-muted-foreground text-center max-w-[240px]">
+                        Abra o app do seu banco, escolha pagar com PIX e escaneie o código acima
                       </p>
 
+                      {/* Separador com texto */}
+                      <div className="w-full flex items-center gap-3">
+                        <div className="flex-1 h-px bg-border/50" />
+                        <span className="text-[10px] text-muted-foreground/50 uppercase tracking-widest">ou copie o código</span>
+                        <div className="flex-1 h-px bg-border/50" />
+                      </div>
+
                       {pixPayload && (
-                        <div className="w-full space-y-2.5">
-                          <button
-                            onClick={handleCopyPix}
-                            className="w-full py-3 bg-primary text-primary-foreground font-semibold rounded-xl hover:bg-primary/90 transition-all active:scale-[0.98] flex items-center justify-center gap-2"
-                          >
-                            <Copy className="w-4 h-4" />
-                            {copied ? 'Copiado!' : 'Copiar Código PIX'}
-                          </button>
-                          
-                          <div className="bg-card/60 rounded-lg px-3 py-2 border border-border/30">
-                            <p className="text-[10px] font-mono text-muted-foreground/60 break-all leading-relaxed line-clamp-2">
+                        <div className="w-full space-y-3">
+                          {/* Código PIX com caixa */}
+                          <div className="bg-card/60 rounded-xl px-4 py-3 border border-border/30">
+                            <p className="text-[10px] font-mono text-muted-foreground/50 break-all leading-relaxed line-clamp-2">
                               {pixPayload}
                             </p>
                           </div>
+
+                          {/* Botão copiar — centralizado e destacado */}
+                          <button
+                            onClick={handleCopyPix}
+                            className={cn(
+                              "w-full py-3.5 font-semibold rounded-xl transition-all active:scale-[0.98] flex items-center justify-center gap-2",
+                              copied 
+                                ? "bg-success/15 text-success border border-success/30" 
+                                : "bg-primary text-primary-foreground hover:bg-primary/90"
+                            )}
+                          >
+                            {copied ? (
+                              <>
+                                <Check className="w-4 h-4" />
+                                Código copiado
+                              </>
+                            ) : (
+                              <>
+                                <Copy className="w-4 h-4" />
+                                Copiar Código PIX
+                              </>
+                            )}
+                          </button>
                         </div>
                       )}
 
-                      {/* Status aguardando */}
-                      <div className="flex items-center gap-2.5 py-2.5 px-4 bg-card/50 border border-border/30 rounded-full">
+                      {/* Status aguardando — pill premium */}
+                      <div className="flex items-center gap-2.5 py-2.5 px-5 bg-card border border-border/40 rounded-full mt-1">
                         <div className="relative flex items-center justify-center">
-                          <div className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse" />
-                          <div className="absolute w-3 h-3 bg-primary/20 rounded-full animate-ping" />
+                          <div className="w-2 h-2 bg-primary rounded-full animate-pulse" />
+                          <div className="absolute w-4 h-4 bg-primary/15 rounded-full animate-ping" />
                         </div>
-                        <p className="text-[11px] text-muted-foreground">
+                        <p className="text-xs text-muted-foreground font-medium">
                           Aguardando pagamento
                         </p>
                       </div>
 
-                      <div className="flex items-center gap-1.5 text-muted-foreground/40">
-                        <Shield className="w-3 h-3" />
-                        <p className="text-[10px]">Pagamento seguro via PIX</p>
+                      {/* Selo de segurança */}
+                      <div className="flex items-center gap-1.5 text-muted-foreground/40 mt-1">
+                        <Shield className="w-3.5 h-3.5" />
+                        <p className="text-[11px]">Pagamento seguro via PIX</p>
                       </div>
                     </div>
                   )}
