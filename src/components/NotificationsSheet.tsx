@@ -47,13 +47,27 @@ function NotificationCard({
   onMarkAsRead: (id: string) => void;
   onReschedule: (id: string) => void;
 }) {
-  const icons: Record<string, React.ReactNode> = {
-    agendamento_confirmado: <CheckCircle className="w-5 h-5 text-green-500" />,
-    atendimento_concluido: <CheckCircle2 className="w-5 h-5 text-blue-500" />,
-    cancelamento: <XCircle className="w-5 h-5 text-red-500" />,
-    cancelamento_massa: <XCircle className="w-5 h-5 text-red-500" />,
-    remarcacao: <Calendar className="w-5 h-5 text-orange-500" />,
-    lembrete: <Clock className="w-5 h-5 text-primary" />,
+  // Determina o ícone baseado no tipo e título da notificação
+  const getIcon = () => {
+    const tipo = notification.tipo;
+    const titulo = notification.titulo.toLowerCase();
+
+    if (tipo === 'cancelamento' || tipo === 'cancelamento_massa' || titulo.includes('cancelad')) {
+      return <XCircle className="w-5 h-5 text-red-500" />;
+    }
+    if (tipo === 'remarcacao' || titulo.includes('remarc')) {
+      return <Calendar className="w-5 h-5 text-orange-500" />;
+    }
+    if (tipo === 'lembrete' || titulo.includes('lembrete')) {
+      return <Clock className="w-5 h-5 text-primary" />;
+    }
+    if (titulo.includes('concluíd') || titulo.includes('concluido')) {
+      return <CheckCircle2 className="w-5 h-5 text-blue-500" />;
+    }
+    if (titulo.includes('confirmad') || titulo.includes('agendamento')) {
+      return <CheckCircle className="w-5 h-5 text-green-500" />;
+    }
+    return <Bell className="w-5 h-5 text-zinc-400" />;
   };
 
   const needsAction = notification.tipo === 'remarcacao' || notification.tipo === 'cancelamento_massa';
@@ -84,7 +98,7 @@ function NotificationCard({
             "w-10 h-10 rounded-full flex items-center justify-center",
             notification.lida ? "bg-zinc-800" : "bg-zinc-700/50"
           )}>
-            {icons[notification.tipo] || <Bell className="w-5 h-5 text-zinc-400" />}
+            {getIcon()}
           </div>
         </div>
 
