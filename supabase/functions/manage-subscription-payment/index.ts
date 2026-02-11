@@ -132,16 +132,144 @@ Deno.serve(async (req) => {
       // Buscar perfil do usuário para CPF
       const { data: profile } = await supabase
         .from('profiles')
-        .select('nome, cpf')
+        .select('nome, cpf, telefone')
         .eq('id', user.id)
         .single();
 
+      // ===== Se não tem gateway, criar assinatura no Asaas primeiro =====
       if (!subscription.gateway_subscription_id) {
+        console.log('No gateway_subscription_id found. Creating Asaas subscription...');
+
+        // Buscar ou criar customer no Asaas
+        let customerId: string | null = null;
+
+        const customerSearchResponse = await fetch(
+          `https://api.asaas.com/v3/customers?externalReference=${user.id}`,
+          {
+            method: 'GET',
+            headers: { 'Content-Type': 'application/json', 'access_token': asaasApiKey },
+          }
+        );
+        const customerSearchResult = await customerSearchResponse.json();
+
+        if (customerSearchResult.data && customerSearchResult.data.length > 0) {
+          customerId = customerSearchResult.data[0].id;
+          console.log('Using existing Asaas customer:', customerId);
+        } else {
+          const customerCreateResponse = await fetch('https://api.asaas.com/v3/customers', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'access_token': asaasApiKey },
+            body: JSON.stringify({
+              name: profile?.nome || 'Cliente',
+              email: user.email || 'noemail@example.com',
+              cpfCnpj: profile?.cpf || '',
+              externalReference: user.id,
+            }),
+          });
+          const customerCreateResult = await customerCreateResponse.json();
+
+          if (!customerCreateResponse.ok || customerCreateResult.errors) {
+            console.error('Asaas customer creation error:', customerCreateResult);
+            return new Response(
+              JSON.stringify({ error: customerCreateResult.errors?.[0]?.description || 'Erro ao criar cliente no Asaas' }),
+              { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+          customerId = customerCreateResult.id;
+          console.log('Created new Asaas customer:', customerId);
+        }
+
+        // Criar assinatura no Asaas
+        const billingType = changeToMethod === 'pix' ? 'PIX' : 'CREDIT_CARD';
+        const plano = subscription.planos;
+        const nextDueDate = subscription.next_billing_date || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+        const subscriptionData: any = {
+          customer: customerId,
+          billingType,
+          value: plano?.preco_mensal || 0,
+          nextDueDate,
+          cycle: 'MONTHLY',
+          description: `Assinatura ${plano?.nome || 'Plano'}`,
+          externalReference: user.id,
+        };
+
+        if (changeToMethod === 'card' && cardInfo) {
+          subscriptionData.creditCard = {
+            holderName: cardInfo.holderName,
+            number: cardInfo.number.replace(/\s/g, ''),
+            expiryMonth: cardInfo.expiryMonth,
+            expiryYear: cardInfo.expiryYear,
+            ccv: cardInfo.ccv,
+          };
+          subscriptionData.creditCardHolderInfo = {
+            name: cardInfo.holderName,
+            email: user.email,
+            cpfCnpj: profile?.cpf || '00000000000',
+            postalCode: '00000000',
+            addressNumber: '0',
+            phone: profile?.telefone || '0000000000',
+          };
+        }
+
+        console.log('Creating Asaas subscription:', JSON.stringify({
+          customer: customerId,
+          billingType,
+          value: subscriptionData.value,
+          nextDueDate,
+        }));
+
+        const createResponse = await fetch('https://api.asaas.com/v3/subscriptions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'access_token': asaasApiKey },
+          body: JSON.stringify(subscriptionData),
+        });
+
+        const createResult = await createResponse.json();
+        console.log('Asaas create subscription response:', createResponse.status, JSON.stringify(createResult));
+
+        if (!createResponse.ok || createResult.errors) {
+          console.error('Asaas create subscription error:', JSON.stringify(createResult));
+          return new Response(
+            JSON.stringify({ error: createResult.errors?.[0]?.description || 'Erro ao criar assinatura no gateway' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        // Atualizar assinatura no banco com o gateway_subscription_id
+        await supabase
+          .from('assinaturas')
+          .update({
+            gateway_subscription_id: createResult.id,
+            payment_method: changeToMethod === 'pix' ? 'pix' : 'card',
+            status: 'active',
+            next_billing_date: createResult.nextDueDate || nextDueDate,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', subscription.id);
+
+        const responseData: any = {
+          success: true,
+          message: changeToMethod === 'card'
+            ? 'Cartão cadastrado com sucesso! Assinatura vinculada ao gateway.'
+            : 'PIX configurado com sucesso! Assinatura vinculada ao gateway.',
+        };
+
+        if (changeToMethod === 'card' && createResult.creditCard) {
+          responseData.cardInfo = {
+            brand: createResult.creditCard.creditCardBrand || null,
+            lastFourDigits: createResult.creditCard.creditCardNumber || null,
+            holderName: cardInfo?.holderName || null,
+          };
+        }
+
         return new Response(
-          JSON.stringify({ error: 'Assinatura sem vínculo com gateway de pagamento' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          JSON.stringify(responseData),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
+
+      // ===== Gateway já existe: atualizar normalmente =====
 
       // Trocar para cartão com novos dados
       if (changeToMethod === 'card' && cardInfo) {
@@ -160,62 +288,46 @@ Deno.serve(async (req) => {
             cpfCnpj: profile?.cpf || '00000000000',
             postalCode: '00000000',
             addressNumber: '0',
-            phone: '0000000000',
+            phone: profile?.telefone || '0000000000',
           },
         };
 
         console.log('Updating Asaas subscription card:', subscription.gateway_subscription_id);
-        console.log('Update payload:', JSON.stringify({
-          billingType: 'CREDIT_CARD',
-          creditCard: { holderName: cardInfo.holderName, numberLength: cardInfo.number?.length, expiryMonth: cardInfo.expiryMonth, expiryYear: cardInfo.expiryYear },
-          creditCardHolderInfo: { name: cardInfo.holderName, email: user.email, cpfCnpj: profile?.cpf || '00000000000' },
-        }));
 
         const asaasResponse = await fetch(
           `https://api.asaas.com/v3/subscriptions/${subscription.gateway_subscription_id}`,
           {
             method: 'PUT',
-            headers: {
-              'Content-Type': 'application/json',
-              'access_token': asaasApiKey,
-            },
+            headers: { 'Content-Type': 'application/json', 'access_token': asaasApiKey },
             body: JSON.stringify(updateData),
           }
         );
 
         const asaasResult = await asaasResponse.json();
-        console.log('Asaas response status:', asaasResponse.status);
-        console.log('Asaas response body:', JSON.stringify(asaasResult));
+        console.log('Asaas update response:', asaasResponse.status, JSON.stringify(asaasResult));
 
         if (!asaasResponse.ok || asaasResult.errors) {
           console.error('Asaas update error:', JSON.stringify(asaasResult));
           return new Response(
-            JSON.stringify({ 
-              error: asaasResult.errors?.[0]?.description || 'Erro ao atualizar cartão no gateway' 
-            }),
+            JSON.stringify({ error: asaasResult.errors?.[0]?.description || 'Erro ao atualizar cartão no gateway' }),
             { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
 
-        // Atualizar método de pagamento no banco
         await supabase
           .from('assinaturas')
-          .update({ 
-            payment_method: 'card',
-            status: 'active',
-            updated_at: new Date().toISOString(),
-          })
+          .update({ payment_method: 'card', status: 'active', updated_at: new Date().toISOString() })
           .eq('id', subscription.id);
 
         return new Response(
-          JSON.stringify({ 
-            success: true, 
+          JSON.stringify({
+            success: true,
             message: 'Cartão atualizado com sucesso',
             cardInfo: {
               brand: asaasResult.creditCard?.creditCardBrand || null,
               lastFourDigits: asaasResult.creditCard?.creditCardNumber || null,
               holderName: cardInfo.holderName,
-            }
+            },
           }),
           { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
@@ -227,10 +339,7 @@ Deno.serve(async (req) => {
           `https://api.asaas.com/v3/subscriptions/${subscription.gateway_subscription_id}`,
           {
             method: 'PUT',
-            headers: {
-              'Content-Type': 'application/json',
-              'access_token': asaasApiKey,
-            },
+            headers: { 'Content-Type': 'application/json', 'access_token': asaasApiKey },
             body: JSON.stringify({ billingType: 'PIX' }),
           }
         );
@@ -240,19 +349,14 @@ Deno.serve(async (req) => {
         if (!asaasResponse.ok || asaasResult.errors) {
           console.error('Asaas update error:', asaasResult);
           return new Response(
-            JSON.stringify({ 
-              error: asaasResult.errors?.[0]?.description || 'Erro ao alterar para PIX' 
-            }),
+            JSON.stringify({ error: asaasResult.errors?.[0]?.description || 'Erro ao alterar para PIX' }),
             { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
 
         await supabase
           .from('assinaturas')
-          .update({ 
-            payment_method: 'pix',
-            updated_at: new Date().toISOString(),
-          })
+          .update({ payment_method: 'pix', updated_at: new Date().toISOString() })
           .eq('id', subscription.id);
 
         return new Response(
