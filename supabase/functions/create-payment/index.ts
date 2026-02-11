@@ -631,11 +631,13 @@ serve(async (req) => {
       asaasPaymentData.remoteIp = customerInfo?.remoteIp || req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || req.headers.get('cf-connecting-ip') || '0.0.0.0';
     }
 
+    // Log detalhado de diagnóstico
     console.log('Creating Asaas payment:', { 
       customer: customerId,
       billingType: asaasPaymentData.billingType,
       value: asaasPaymentData.value,
       hasCard: metodo === 'card',
+      remoteIp: asaasPaymentData.remoteIp || 'NOT_SET',
       cardDetails: metodo === 'card' ? {
         holderName: asaasPaymentData.creditCard?.holderName,
         numberLength: asaasPaymentData.creditCard?.number?.length,
@@ -650,6 +652,13 @@ serve(async (req) => {
         holderInfoPhone: asaasPaymentData.creditCardHolderInfo?.phone,
       } : undefined
     });
+
+    // Log do payload EXATO enviado ao Asaas (sem dados sensíveis)
+    const sanitizedPayload = { ...asaasPaymentData };
+    if (sanitizedPayload.creditCard) {
+      sanitizedPayload.creditCard = { ...sanitizedPayload.creditCard, number: '[REDACTED]', ccv: '[REDACTED]' };
+    }
+    console.log('FULL Asaas payload:', JSON.stringify(sanitizedPayload));
 
     const asaasUrl = 'https://api.asaas.com/v3/payments';
     console.log('Using Asaas URL:', asaasUrl);
