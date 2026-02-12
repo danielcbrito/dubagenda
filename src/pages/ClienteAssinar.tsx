@@ -240,66 +240,26 @@ const ClienteAssinar = () => {
 
   const handleSubscribe = async () => {
     if (!selectedPlan) return;
-
-    if (paymentMethod === 'card') {
-      if (!cardHolderName || !cardNumber || !cardExpiryMonth || !cardExpiryYear || !cardCvv || !cardCep) {
-        toast.error("Preencha todos os dados do cartão");
-        return;
-      }
-      const cleanCep = cardCep.replace(/\D/g, '');
-      if (cleanCep.length !== 8) {
-        toast.error("CEP inválido. Informe 8 dígitos.");
-        return;
-      }
-    }
-
     setLoading(true);
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      
       if (!session) {
         toast.error("Você precisa estar logado");
         navigate("/auth");
         return;
       }
 
-      const payload: any = {
-        planoId: selectedPlan.id,
-        paymentMethod,
-      };
-
-      if (paymentMethod === 'card') {
-        payload.cardInfo = {
-          holderName: cardHolderName.trim(),
-          number: cardNumber.replace(/\s/g, ''),
-          expiryMonth: cardExpiryMonth.trim(),
-          expiryYear: cardExpiryYear.trim(),
-          ccv: cardCvv.trim(),
-          cep: cardCep.replace(/\D/g, ''),
-        };
-      }
-
-      const { data, error } = await supabase.functions.invoke('create-subscription', {
-        body: payload
+      const { data, error } = await supabase.functions.invoke('create-checkout', {
+        body: { planoId: selectedPlan.id }
       });
 
       if (error) throw error;
-
-      if (paymentMethod === 'pix' && data.asaasSubscription?.firstPayment?.pixQrCode) {
-        setPixQrCode(data.asaasSubscription.firstPayment.pixQrCode.encodedImage);
-        setPixPayload(data.asaasSubscription.firstPayment.pixQrCode.payload);
-        setGatewaySubscriptionId(data.asaasSubscription.id);
-        toast.success("QR Code gerado! Escaneie para pagar.");
-        setStep(4);
-      } else if (paymentMethod === 'card') {
-        const paymentStatus = data.asaasSubscription?.firstPayment?.status;
-        if (paymentStatus === 'CONFIRMED' || paymentStatus === 'PENDING') {
-          toast.success("Assinatura ativada com sucesso! 🎉");
-          navigate("/cliente");
-        } else {
-          toast.error("Pagamento recusado. Verifique os dados do cartão.");
-        }
+      
+      // Redirecionar para Stripe Checkout
+      if (data?.url) {
+        window.open(data.url, '_blank');
+        toast.info("Complete o pagamento na nova aba para ativar sua assinatura");
       }
     } catch (error: any) {
       console.error('Subscription error:', error);
