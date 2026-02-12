@@ -2682,6 +2682,8 @@ export type Database = {
           disparo_ativo: boolean | null
           disparo_webhook_url: string | null
           id: string
+          lembrete_ativo: boolean | null
+          lembrete_webhook_url: string | null
           loja_manutencao_ativa: boolean
           loja_manutencao_aviso_ativo: boolean
           loja_manutencao_aviso_mensagem: string | null
@@ -2710,6 +2712,8 @@ export type Database = {
           disparo_ativo?: boolean | null
           disparo_webhook_url?: string | null
           id?: string
+          lembrete_ativo?: boolean | null
+          lembrete_webhook_url?: string | null
           loja_manutencao_ativa?: boolean
           loja_manutencao_aviso_ativo?: boolean
           loja_manutencao_aviso_mensagem?: string | null
@@ -2738,6 +2742,8 @@ export type Database = {
           disparo_ativo?: boolean | null
           disparo_webhook_url?: string | null
           id?: string
+          lembrete_ativo?: boolean | null
+          lembrete_webhook_url?: string | null
           loja_manutencao_ativa?: boolean
           loja_manutencao_aviso_ativo?: boolean
           loja_manutencao_aviso_mensagem?: string | null

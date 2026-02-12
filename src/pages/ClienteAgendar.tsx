@@ -58,7 +58,7 @@ const ClienteAgendar = () => {
   const [selectedTime, setSelectedTime] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState(1);
-  const [paymentMethod, setPaymentMethod] = useState<'pix' | 'card' | 'cash'>('pix');
+  const [paymentMethod, setPaymentMethod] = useState<'pix' | 'card' | 'cash'>('cash');
   const [processingPayment, setProcessingPayment] = useState(false);
   const [pixQrCode, setPixQrCode] = useState<string | null>(null);
   const [pixPayload, setPixPayload] = useState<string | null>(null);
@@ -1850,19 +1850,23 @@ const ClienteAgendar = () => {
               <div className="space-y-3">
                 <PaymentOption
                   value="pix"
-                  selected={paymentMethod === 'pix'}
-                  onSelect={() => setPaymentMethod('pix')}
+                  selected={false}
+                  onSelect={() => {}}
                   title="PIX"
                   description="Pagamento instantâneo via QR Code"
                   icon={<img src={pixIcon} alt="PIX" className="w-4 h-4 object-contain" />}
+                  disabled={true}
+                  disabledLabel="Em breve"
                 />
 
                 <PaymentOption
                   value="card"
-                  selected={paymentMethod === 'card'}
-                  onSelect={() => setPaymentMethod('card')}
+                  selected={false}
+                  onSelect={() => {}}
                   title="Cartão de Crédito"
                   description="Pagamento aprovado na hora"
+                  disabled={true}
+                  disabledLabel="Em breve"
                 />
 
                 <PaymentOption
