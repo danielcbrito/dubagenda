@@ -62,12 +62,13 @@ export function BarberReviewModal({
         }
       } else {
         toast.success("Avaliação enviada com sucesso!");
-        onSuccess?.();
       }
 
-      onOpenChange(false);
+      // Sempre fecha e chama onSuccess após (mesmo em duplicata)
       setRating(0);
       setComment("");
+      onSuccess?.();
+      onOpenChange(false);
     } catch (err) {
       console.error("Erro ao enviar avaliação:", err);
       toast.error("Erro ao enviar avaliação");
