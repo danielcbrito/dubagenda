@@ -1,18 +1,17 @@
 import { useEffect, useState, useCallback } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
-import { ArrowLeft, Copy, Check, Loader2, Clock, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Copy, Check, Loader2, Clock, AlertCircle, CheckCircle2, ArrowLeft, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
+import pixIcon from "@/assets/pix-icon.png";
 
 /**
- * Tela de checkout PIX com QR Code gerado pelo Asaas.
- * Exibe QR Code, copia-e-cola, timer de expiração e polling de status.
+ * Tela de checkout PIX premium.
+ * QR Code, timer, polling automático (5s) e redirecionamento ao confirmar.
  */
 const ClientePixCheckout = () => {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
 
   const [pixData, setPixData] = useState<{
     pixQrCode: string;
@@ -27,9 +26,9 @@ const ClientePixCheckout = () => {
   const [timeLeft, setTimeLeft] = useState("");
   const [expired, setExpired] = useState(false);
   const [paid, setPaid] = useState(false);
-  const [checking, setChecking] = useState(false);
+  const [progressPct, setProgressPct] = useState(0);
 
-  // Recuperar dados do PIX do sessionStorage
+  // Recuperar dados do sessionStorage
   useEffect(() => {
     const stored = sessionStorage.getItem("pix_checkout_data");
     if (!stored) {
@@ -43,120 +42,82 @@ const ClientePixCheckout = () => {
   // Timer de expiração
   useEffect(() => {
     if (!pixData?.expiresAt) return;
-
     const interval = setInterval(() => {
-      const now = new Date().getTime();
+      const now = Date.now();
       const expires = new Date(pixData.expiresAt).getTime();
       const diff = expires - now;
-
       if (diff <= 0) {
         setExpired(true);
         setTimeLeft("00:00");
         clearInterval(interval);
         return;
       }
-
       const mins = Math.floor(diff / 60000);
       const secs = Math.floor((diff % 60000) / 1000);
       setTimeLeft(`${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`);
     }, 1000);
-
     return () => clearInterval(interval);
   }, [pixData?.expiresAt]);
 
-  // Polling para verificar pagamento (a cada 5s)
+  // Polling automático — verifica pagamento a cada 5s
   useEffect(() => {
     if (!pixData?.pendingBookingId || paid || expired) return;
-
-    const pollInterval = setInterval(async () => {
+    const poll = setInterval(async () => {
       try {
-        // Verificar status via edge function
         const { data, error } = await supabase.functions.invoke("asaas-webhook", {
-          body: {
-            action: "check",
-            pendingBookingId: pixData.pendingBookingId,
-          },
+          body: { action: "check", pendingBookingId: pixData.pendingBookingId },
         });
-
-        if (error) {
-          console.error("Polling error:", error);
-          return;
-        }
-
+        if (error) return;
         if (data?.status === "paid" || data?.status === "already_processed") {
           setPaid(true);
-          clearInterval(pollInterval);
+          clearInterval(poll);
           sessionStorage.removeItem("pix_checkout_data");
-          toast.success("Pagamento confirmado! 🎉");
-          setTimeout(() => navigate("/cliente"), 3000);
-          return;
         }
-
         if (data?.status === "expired") {
           setExpired(true);
-          clearInterval(pollInterval);
+          clearInterval(poll);
           sessionStorage.removeItem("pix_checkout_data");
-          toast.error("Pagamento expirado.");
         }
-      } catch (err) {
-        console.error("Polling error:", err);
-      }
+      } catch { /* silent */ }
     }, 5000);
+    return () => clearInterval(poll);
+  }, [pixData?.pendingBookingId, paid, expired]);
 
-    return () => clearInterval(pollInterval);
-  }, [pixData?.pendingBookingId, paid, expired, navigate]);
+  // Barra de progresso + redirecionamento após pagamento confirmado
+  useEffect(() => {
+    if (!paid) return;
+    const duration = 3500;
+    const step = 50;
+    let elapsed = 0;
+    const interval = setInterval(() => {
+      elapsed += step;
+      setProgressPct(Math.min((elapsed / duration) * 100, 100));
+      if (elapsed >= duration) {
+        clearInterval(interval);
+        navigate("/cliente");
+      }
+    }, step);
+    return () => clearInterval(interval);
+  }, [paid, navigate]);
 
-  /** Copia o código PIX */
+  /** Copiar código PIX */
   const handleCopy = useCallback(async () => {
     if (!pixData?.pixPayload) return;
     try {
       await navigator.clipboard.writeText(pixData.pixPayload);
       setCopied(true);
-      toast.success("Código PIX copiado!");
+      toast.success("Código copiado!");
       setTimeout(() => setCopied(false), 3000);
     } catch {
-      toast.error("Erro ao copiar. Tente selecionar manualmente.");
+      toast.error("Erro ao copiar.");
     }
   }, [pixData?.pixPayload]);
-
-  /** Verificar manualmente */
-  const handleCheckPayment = async () => {
-    if (!pixData?.pendingBookingId) return;
-    setChecking(true);
-    try {
-      const { data, error } = await supabase.functions.invoke("asaas-webhook", {
-        body: {
-          action: "check",
-          pendingBookingId: pixData.pendingBookingId,
-        },
-      });
-
-      if (error) throw error;
-
-      if (data?.status === "paid" || data?.status === "already_processed") {
-        setPaid(true);
-        sessionStorage.removeItem("pix_checkout_data");
-        toast.success("Pagamento confirmado! 🎉");
-        setTimeout(() => navigate("/cliente"), 3000);
-      } else if (data?.status === "expired") {
-        setExpired(true);
-        sessionStorage.removeItem("pix_checkout_data");
-        toast.error("Pagamento expirado.");
-      } else {
-        toast.info("Pagamento ainda não confirmado. Aguarde...");
-      }
-    } catch {
-      toast.error("Erro ao verificar pagamento.");
-    } finally {
-      setChecking(false);
-    }
-  };
 
   // Loading
   if (!pixData) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="w-8 h-8 text-primary animate-spin" />
+        <Loader2 className="w-6 h-6 text-muted-foreground animate-spin" />
       </div>
     );
   }
@@ -164,19 +125,39 @@ const ClientePixCheckout = () => {
   // Pagamento confirmado
   if (paid) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center px-4">
+      <div className="min-h-screen bg-background flex items-center justify-center px-6">
         <motion.div
           initial={{ scale: 0.8, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
-          className="text-center space-y-4"
+          transition={{ type: "spring", stiffness: 200, damping: 20 }}
+          className="text-center space-y-5 w-full max-w-xs"
         >
-          <div className="w-20 h-20 rounded-full bg-green-500/10 flex items-center justify-center mx-auto">
-            <CheckCircle2 className="w-10 h-10 text-green-500" />
+          {/* Ícone com efeito sonar */}
+          <div className="relative w-20 h-20 mx-auto">
+            <motion.div
+              className="absolute inset-0 rounded-full bg-green-500/20"
+              animate={{ scale: [1, 1.6], opacity: [0.5, 0] }}
+              transition={{ duration: 1.5, repeat: Infinity }}
+            />
+            <div className="relative w-20 h-20 rounded-full bg-green-500/10 border border-green-500/20 flex items-center justify-center">
+              <CheckCircle2 className="w-9 h-9 text-green-500" />
+            </div>
           </div>
-          <h2 className="text-xl font-bold text-foreground">Pagamento Confirmado!</h2>
-          <p className="text-sm text-muted-foreground">
-            Seu agendamento foi registrado com sucesso.
-          </p>
+
+          <div>
+            <h2 className="text-lg font-bold text-foreground">Pagamento confirmado</h2>
+            <p className="text-sm text-muted-foreground mt-1">
+              Seu agendamento foi registrado com sucesso.
+            </p>
+          </div>
+
+          {/* Barra de progresso */}
+          <div className="w-full h-1 bg-muted/50 rounded-full overflow-hidden">
+            <motion.div
+              className="h-full bg-green-500 rounded-full"
+              style={{ width: `${progressPct}%` }}
+            />
+          </div>
           <p className="text-xs text-muted-foreground">Redirecionando...</p>
         </motion.div>
       </div>
@@ -184,9 +165,9 @@ const ClientePixCheckout = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-20">
+    <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
-      <div className="px-4 pt-[max(env(safe-area-inset-top),1rem)] pb-3 border-b border-border/30">
+      <div className="px-4 pt-[max(env(safe-area-inset-top),1rem)] pb-3 border-b border-border/20">
         <div className="max-w-lg mx-auto flex items-center gap-3">
           <button
             onClick={() => {
@@ -197,134 +178,126 @@ const ClientePixCheckout = () => {
           >
             <ArrowLeft className="w-4 h-4 text-foreground" />
           </button>
-          <p className="text-sm font-semibold text-foreground tracking-tight">
-            Pagamento via PIX
-          </p>
+          <div className="flex items-center gap-2">
+            <img src={pixIcon} alt="PIX" className="w-5 h-5" />
+            <p className="text-sm font-semibold text-foreground tracking-tight">
+              Pagamento PIX
+            </p>
+          </div>
         </div>
       </div>
 
-      <div className="max-w-lg mx-auto p-4 space-y-5">
-        {/* Timer */}
-        <motion.div
-          initial={{ opacity: 0, y: -8 }}
-          animate={{ opacity: 1, y: 0 }}
-          className={`flex items-center justify-center gap-2 py-3 px-4 rounded-xl border ${
-            expired
-              ? "bg-destructive/10 border-destructive/20"
-              : "bg-yellow-500/10 border-yellow-500/20"
-          }`}
-        >
+      {/* Conteúdo */}
+      <div className="flex-1 flex flex-col items-center justify-center px-4 py-6 max-w-lg mx-auto w-full">
+        <AnimatePresence mode="wait">
           {expired ? (
-            <AlertCircle className="w-4 h-4 text-destructive" />
-          ) : (
-            <Clock className="w-4 h-4 text-yellow-600" />
-          )}
-          <span className={`text-sm font-semibold ${expired ? "text-destructive" : "text-yellow-700"}`}>
-            {expired ? "QR Code expirado" : `Expira em ${timeLeft}`}
-          </span>
-        </motion.div>
-
-        {/* Valor */}
-        <div className="text-center">
-          <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium">
-            Valor a pagar
-          </p>
-          <p className="text-3xl font-bold text-foreground mt-1">
-            R$ {pixData.value.toFixed(2).replace(".", ",")}
-          </p>
-        </div>
-
-        {/* QR Code */}
-        {!expired && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="flex justify-center"
-          >
-            <div className="bg-white rounded-2xl p-4 shadow-lg border border-border/30">
-              <img
-                src={`data:image/png;base64,${pixData.pixQrCode}`}
-                alt="QR Code PIX"
-                className="w-56 h-56 sm:w-64 sm:h-64"
-              />
-            </div>
-          </motion.div>
-        )}
-
-        {/* Copia e cola */}
-        {!expired && (
-          <div className="space-y-2">
-            <p className="text-xs text-muted-foreground text-center font-medium">
-              Ou copie o código PIX
-            </p>
-            <div className="relative">
-              <div className="w-full rounded-xl border border-border/40 bg-card p-3 pr-14 text-xs text-muted-foreground break-all font-mono leading-relaxed max-h-20 overflow-y-auto">
-                {pixData.pixPayload}
+            /* Estado expirado */
+            <motion.div
+              key="expired"
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              className="text-center space-y-5 w-full"
+            >
+              <div className="w-16 h-16 rounded-full bg-destructive/10 border border-destructive/20 flex items-center justify-center mx-auto">
+                <AlertCircle className="w-7 h-7 text-destructive" />
+              </div>
+              <div>
+                <h2 className="text-lg font-bold text-foreground">QR Code expirado</h2>
+                <p className="text-sm text-muted-foreground mt-1">
+                  O tempo para pagamento se encerrou. Tente novamente.
+                </p>
               </div>
               <button
+                onClick={() => {
+                  sessionStorage.removeItem("pix_checkout_data");
+                  navigate("/cliente/agendar");
+                }}
+                className="w-full py-3 bg-primary text-primary-foreground font-semibold rounded-xl hover:bg-primary/90 transition-all active:scale-[0.98]"
+              >
+                Voltar para agendamento
+              </button>
+            </motion.div>
+          ) : (
+            /* Estado ativo — QR Code */
+            <motion.div
+              key="active"
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              className="w-full space-y-6 flex flex-col items-center"
+            >
+              {/* Valor */}
+              <div className="text-center">
+                <p className="text-xs text-muted-foreground uppercase tracking-widest font-medium">
+                  Total
+                </p>
+                <p className="text-3xl font-bold text-foreground mt-0.5">
+                  R$ {pixData.value.toFixed(2).replace(".", ",")}
+                </p>
+              </div>
+
+              {/* QR Code com moldura */}
+              <div className="relative">
+                <div className="bg-white rounded-2xl p-5 shadow-lg shadow-black/10">
+                  <img
+                    src={`data:image/png;base64,${pixData.pixQrCode}`}
+                    alt="QR Code PIX"
+                    className="w-52 h-52 sm:w-56 sm:h-56"
+                  />
+                </div>
+                {/* Badge PIX no canto */}
+                <div className="absolute -bottom-2.5 left-1/2 -translate-x-1/2 bg-card border border-border/30 rounded-full px-3 py-1 flex items-center gap-1.5 shadow-sm">
+                  <img src={pixIcon} alt="" className="w-3.5 h-3.5" />
+                  <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                    Escaneie para pagar
+                  </span>
+                </div>
+              </div>
+
+              {/* Botão copiar compacto */}
+              <button
                 onClick={handleCopy}
-                className="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center rounded-lg bg-primary/10 hover:bg-primary/20 transition-colors"
+                className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-border/30 bg-card hover:bg-muted/50 transition-all active:scale-[0.97]"
               >
                 {copied ? (
-                  <Check className="w-4 h-4 text-green-500" />
+                  <Check className="w-3.5 h-3.5 text-green-500" />
                 ) : (
-                  <Copy className="w-4 h-4 text-primary" />
+                  <Copy className="w-3.5 h-3.5 text-muted-foreground" />
                 )}
+                <span className="text-xs font-medium text-foreground">
+                  {copied ? "Copiado!" : "Copiar código PIX"}
+                </span>
               </button>
-            </div>
-          </div>
-        )}
 
-        {/* Verificar pagamento */}
-        {!expired && (
-          <Button
-            onClick={handleCheckPayment}
-            disabled={checking}
-            variant="default"
-            className="w-full h-12 rounded-xl font-semibold"
-          >
-            {checking ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Verificando...
-              </>
-            ) : (
-              "Já paguei, verificar"
-            )}
-          </Button>
-        )}
+              {/* Timer */}
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <Clock className="w-3.5 h-3.5" />
+                <span className="text-xs font-medium">
+                  Expira em <span className="text-foreground font-semibold">{timeLeft}</span>
+                </span>
+              </div>
 
-        {/* Expirado */}
-        {expired && (
-          <div className="space-y-4 text-center">
-            <p className="text-sm text-muted-foreground">
-              O tempo para pagamento expirou. Volte e tente novamente.
-            </p>
-            <Button
-              onClick={() => {
-                sessionStorage.removeItem("pix_checkout_data");
-                navigate("/cliente/agendar");
-              }}
-              variant="default"
-              className="h-11 px-8 rounded-xl"
-            >
-              Voltar para agendamento
-            </Button>
-          </div>
-        )}
+              {/* Indicador de verificação automática */}
+              <div className="flex items-center gap-2 bg-muted/30 border border-border/20 rounded-xl px-4 py-3 w-full max-w-xs">
+                <div className="relative flex-shrink-0">
+                  <Loader2 className="w-4 h-4 text-primary animate-spin" />
+                </div>
+                <p className="text-xs text-muted-foreground leading-snug">
+                  Aguardando confirmação automática do pagamento...
+                </p>
+              </div>
 
-        {/* Instrução */}
-        {!expired && (
-          <div className="rounded-xl bg-muted/50 border border-border/30 p-4 space-y-2">
-            <p className="text-xs font-semibold text-foreground">Como pagar:</p>
-            <ol className="text-xs text-muted-foreground space-y-1.5 list-decimal list-inside">
-              <li>Abra o app do seu banco</li>
-              <li>Escaneie o QR Code acima ou cole o código</li>
-              <li>Confirme o pagamento</li>
-              <li>Aguarde a confirmação automática aqui</li>
-            </ol>
-          </div>
-        )}
+              {/* Segurança */}
+              <div className="flex items-center gap-1.5 pt-2">
+                <ShieldCheck className="w-3.5 h-3.5 text-muted-foreground/50" />
+                <span className="text-[10px] text-muted-foreground/50 font-medium">
+                  Pagamento seguro via PIX
+                </span>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );
