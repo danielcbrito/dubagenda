@@ -53,27 +53,21 @@ const ForgotPassword = () => {
         ? 'https://dubagenda.lovable.app'
         : window.location.origin;
 
-      // Chamar diretamente o Supabase Auth (SMTP customizado configurado = sem rate limit)
-      const { error } = await supabase.auth.resetPasswordForEmail(
-        validated.email,
-        { redirectTo: `${productionUrl}/resetar-senha` }
-      );
+      // Chamar edge function que gera link via Admin API e envia via Resend
+      const { data, error } = await supabase.functions.invoke('admin-reset-password', {
+        body: {
+          action: 'send_recovery',
+          user_email: validated.email,
+          redirect_to: `${productionUrl}/resetar-senha`,
+        }
+      });
 
       if (error) {
-        // Se timeout do SMTP, o email provavelmente já foi enviado
-        if (error.message?.includes('timeout') || error.message?.includes('504')) {
-          setEmailSent(true);
-          toast.info("O email está sendo enviado. Pode levar alguns segundos para chegar.");
-        } else if (error.message?.includes('rate limit') || error.message?.includes('429')) {
-          setEmailSent(true);
-          toast.info("O email de recuperação já foi enviado! Verifique sua caixa de entrada e spam.");
-        } else {
-          toast.error("Erro ao enviar email: " + error.message);
-        }
+        toast.error("Erro ao solicitar recuperação. Tente novamente.");
         return;
       }
 
-      // Email enviado com sucesso
+      // Sucesso — mostrar tela de confirmação
       setCooldown(60);
       localStorage.setItem('pwd_reset_ts', String(Date.now()));
       setEmailSent(true);
