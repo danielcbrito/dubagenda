@@ -29,19 +29,43 @@ const ResetPassword = () => {
   });
 
   useEffect(() => {
-    // Check if we have a valid session from the reset link
-    const checkSession = async () => {
+    /**
+     * Fluxo de recuperação de senha:
+     * 1. Supabase envia email com link que redireciona para /resetar-senha#access_token=...&type=recovery
+     * 2. O cliente Supabase detecta os tokens no hash e dispara PASSWORD_RECOVERY
+     * 3. Ou os tokens já foram processados via /auth/callback e a sessão já existe
+     */
+    let resolved = false;
+
+    // Listener para o evento PASSWORD_RECOVERY (tokens no hash)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (resolved) return;
+      if (event === 'PASSWORD_RECOVERY' || event === 'SIGNED_IN') {
+        resolved = true;
+        setHasValidToken(true);
+      }
+    });
+
+    // Fallback: verificar se já tem sessão válida (veio do /auth/callback)
+    const checkExistingSession = async () => {
+      // Dar tempo para o Supabase processar os tokens do hash
+      await new Promise(r => setTimeout(r, 1500));
+      if (resolved) return;
+
       const { data: { session }, error } = await supabase.auth.getSession();
-      
-      if (error || !session) {
+      if (!error && session) {
+        resolved = true;
+        setHasValidToken(true);
+      } else {
+        resolved = true;
         setHasValidToken(false);
         toast.error("Link de recuperação inválido ou expirado");
-      } else {
-        setHasValidToken(true);
       }
     };
 
-    checkSession();
+    checkExistingSession();
+
+    return () => subscription.unsubscribe();
   }, []);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -73,7 +97,6 @@ const ResetPassword = () => {
       setPasswordReset(true);
       toast.success("Senha redefinida com sucesso!");
       
-      // Redirect to login after 2 seconds
       setTimeout(() => {
         navigate("/auth");
       }, 2000);
@@ -88,7 +111,7 @@ const ResetPassword = () => {
     }
   };
 
-  // Loading state while checking token
+  // Loading state
   if (hasValidToken === null) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-6">
@@ -100,7 +123,7 @@ const ResetPassword = () => {
     );
   }
 
-  // Invalid token state
+  // Invalid token
   if (hasValidToken === false) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-6">
@@ -126,22 +149,15 @@ const ResetPassword = () => {
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-6">
       <Card className="w-full max-w-md p-8 card-premium">
-        {/* Logo */}
         <div className="flex justify-center mb-6">
           <img src={logoDub} alt="Barbearia DUB" className="w-20 h-20 object-contain" />
         </div>
 
         {!passwordReset ? (
           <>
-            {/* Title */}
-            <h2 className="text-2xl font-bold text-center mb-2">
-              Redefinir senha
-            </h2>
-            <p className="text-sm text-muted-foreground text-center mb-6">
-              Digite sua nova senha
-            </p>
+            <h2 className="text-2xl font-bold text-center mb-2">Redefinir senha</h2>
+            <p className="text-sm text-muted-foreground text-center mb-6">Digite sua nova senha</p>
 
-            {/* Form */}
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <Label htmlFor="password" className="text-sm">Nova senha</Label>
@@ -188,19 +204,16 @@ const ResetPassword = () => {
             </form>
           </>
         ) : (
-          <>
-            {/* Success message */}
-            <div className="text-center">
-              <div className="mx-auto w-16 h-16 bg-primary/20 rounded-full flex items-center justify-center mb-4">
-                <CheckCircle2 className="w-8 h-8 text-primary" />
-              </div>
-              <h2 className="text-2xl font-bold mb-2">Senha redefinida!</h2>
-              <p className="text-sm text-muted-foreground mb-6">
-                Sua senha foi atualizada com sucesso. Redirecionando para o login...
-              </p>
-              <Loader2 className="mx-auto h-6 w-6 animate-spin text-primary" />
+          <div className="text-center">
+            <div className="mx-auto w-16 h-16 bg-primary/20 rounded-full flex items-center justify-center mb-4">
+              <CheckCircle2 className="w-8 h-8 text-primary" />
             </div>
-          </>
+            <h2 className="text-2xl font-bold mb-2">Senha redefinida!</h2>
+            <p className="text-sm text-muted-foreground mb-6">
+              Sua senha foi atualizada com sucesso. Redirecionando para o login...
+            </p>
+            <Loader2 className="mx-auto h-6 w-6 animate-spin text-primary" />
+          </div>
         )}
       </Card>
     </div>
