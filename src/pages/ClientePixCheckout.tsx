@@ -70,15 +70,20 @@ const ClientePixCheckout = () => {
 
     const pollInterval = setInterval(async () => {
       try {
-        // Verificar se o pending_booking ainda existe (se não, pagamento foi confirmado)
-        const { data: pb } = await supabase
-          .from("pending_bookings")
-          .select("id")
-          .eq("id", pixData.pendingBookingId)
-          .maybeSingle();
+        // Verificar status via edge function
+        const { data, error } = await supabase.functions.invoke("asaas-webhook", {
+          body: {
+            action: "check",
+            pendingBookingId: pixData.pendingBookingId,
+          },
+        });
 
-        // Se não existe mais, o webhook do Asaas processou o pagamento
-        if (!pb) {
+        if (error) {
+          console.error("Polling error:", error);
+          return;
+        }
+
+        if (data?.status === "paid" || data?.status === "already_processed") {
           setPaid(true);
           clearInterval(pollInterval);
           sessionStorage.removeItem("pix_checkout_data");
@@ -87,15 +92,12 @@ const ClientePixCheckout = () => {
           return;
         }
 
-        // Verificar se já existe agendamento com este pending_booking
-        const { data: apt } = await supabase
-          .from("agendamentos")
-          .select("id")
-          .eq("user_id", (await supabase.auth.getUser()).data.user?.id || "")
-          .eq("data", new Date().toISOString().split("T")[0])
-          .order("created_at", { ascending: false })
-          .limit(1);
-
+        if (data?.status === "expired") {
+          setExpired(true);
+          clearInterval(pollInterval);
+          sessionStorage.removeItem("pix_checkout_data");
+          toast.error("Pagamento expirado.");
+        }
       } catch (err) {
         console.error("Polling error:", err);
       }
@@ -119,20 +121,27 @@ const ClientePixCheckout = () => {
 
   /** Verificar manualmente */
   const handleCheckPayment = async () => {
-    if (!pixData?.asaasPaymentId) return;
+    if (!pixData?.pendingBookingId) return;
     setChecking(true);
     try {
-      const { data: pb } = await supabase
-        .from("pending_bookings")
-        .select("id")
-        .eq("id", pixData.pendingBookingId)
-        .maybeSingle();
+      const { data, error } = await supabase.functions.invoke("asaas-webhook", {
+        body: {
+          action: "check",
+          pendingBookingId: pixData.pendingBookingId,
+        },
+      });
 
-      if (!pb) {
+      if (error) throw error;
+
+      if (data?.status === "paid" || data?.status === "already_processed") {
         setPaid(true);
         sessionStorage.removeItem("pix_checkout_data");
         toast.success("Pagamento confirmado! 🎉");
         setTimeout(() => navigate("/cliente"), 3000);
+      } else if (data?.status === "expired") {
+        setExpired(true);
+        sessionStorage.removeItem("pix_checkout_data");
+        toast.error("Pagamento expirado.");
       } else {
         toast.info("Pagamento ainda não confirmado. Aguarde...");
       }
