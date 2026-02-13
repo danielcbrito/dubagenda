@@ -125,6 +125,36 @@ const ClienteAgendar = () => {
       await loadUserCredits();
       await loadAvailableRedemptions();
 
+      // Verificar se deve retomar direto para a etapa de pagamento (PIX expirado)
+      const resumePaymentRaw = sessionStorage.getItem("resumeToPaymentStep");
+      if (resumePaymentRaw) {
+        sessionStorage.removeItem("resumeToPaymentStep");
+        try {
+          const resumeData = JSON.parse(resumePaymentRaw);
+          await loadServices();
+
+          // Pré-selecionar barbeiro
+          const barbersList = (await supabase.from("barbeiros").select("id, apelido, foto_url").eq("ativo", true).order("apelido")).data || [];
+          const resumeBarber = barbersList.find((b: Barber) => b.id === resumeData.barberId);
+          if (resumeBarber) setSelectedBarber(resumeBarber);
+
+          // Pré-selecionar serviço
+          const servicesList = (await supabase.from("servicos").select("*").eq("ativo", true).order("preco")).data || [];
+          const resumeService = servicesList.find((s: Service) => s.id === resumeData.servicoId);
+          if (resumeService) setSelectedServices([resumeService]);
+
+          // Pré-selecionar data e hora
+          if (resumeData.date) setSelectedDate(new Date(`${resumeData.date}T12:00:00`));
+          if (resumeData.time) setSelectedTime(resumeData.time);
+
+          // Ir direto para o step 5 (pagamento)
+          setStep(5);
+          return;
+        } catch (e) {
+          console.error("Erro ao restaurar dados de pagamento:", e);
+        }
+      }
+
       const isReschedulingSession = sessionStorage.getItem('isRescheduling');
       const appointmentId = sessionStorage.getItem('rescheduleAppointmentId');
 
