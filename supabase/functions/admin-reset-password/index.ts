@@ -7,93 +7,40 @@ const corsHeaders = {
 };
 
 /**
- * Envia email de recuperação de senha via Resend (bypassa rate limit do Supabase)
+ * Envia email de recuperação usando a API REST do Supabase Auth
+ * com a service_role key (bypassa rate limit por usuário)
+ * O email é enviado pelo SMTP customizado configurado no Supabase
  */
-async function sendRecoveryViaResend(
+async function sendRecoveryViaAuthAPI(
+  supabaseUrl: string,
+  serviceKey: string,
   email: string,
-  recoveryLink: string,
-  resendApiKey: string
+  redirectTo: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const htmlContent = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-</head>
-<body style="margin:0;padding:0;background-color:#0f0f0f;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#0f0f0f;padding:40px 20px;">
-    <tr>
-      <td align="center">
-        <table width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;background-color:#1a1a1a;border-radius:16px;border:1px solid rgba(255,255,255,0.08);overflow:hidden;">
-          <!-- Header -->
-          <tr>
-            <td style="padding:32px 32px 0;text-align:center;">
-              <div style="width:56px;height:56px;margin:0 auto 16px;background:linear-gradient(135deg,#ef4444,#dc2626);border-radius:50%;display:flex;align-items:center;justify-content:center;">
-                <span style="font-size:24px;font-weight:700;color:#fff;">D</span>
-              </div>
-              <h1 style="margin:0 0 8px;font-size:22px;font-weight:600;color:#ffffff;">
-                Recuperação de Senha
-              </h1>
-              <p style="margin:0;font-size:14px;color:rgba(255,255,255,0.5);line-height:1.5;">
-                Você solicitou a redefinição da sua senha na <strong style="color:rgba(255,255,255,0.7);">Barbearia DUB</strong>
-              </p>
-            </td>
-          </tr>
-          <!-- Button -->
-          <tr>
-            <td style="padding:32px;">
-              <a href="${recoveryLink}" 
-                 style="display:block;width:100%;padding:14px 24px;background-color:#ef4444;color:#ffffff;text-align:center;text-decoration:none;font-size:15px;font-weight:600;border-radius:12px;box-sizing:border-box;">
-                Redefinir minha senha
-              </a>
-              <p style="margin:20px 0 0;font-size:12px;color:rgba(255,255,255,0.35);text-align:center;line-height:1.5;">
-                Este link expira em 1 hora.<br>
-                Se você não solicitou isso, ignore este email.
-              </p>
-            </td>
-          </tr>
-          <!-- Footer -->
-          <tr>
-            <td style="padding:0 32px 24px;border-top:1px solid rgba(255,255,255,0.06);">
-              <p style="margin:16px 0 0;font-size:11px;color:rgba(255,255,255,0.25);text-align:center;">
-                Barbearia DUB &mdash; Cuidando do seu estilo
-              </p>
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>`;
-
-    const response = await fetch("https://api.resend.com/emails", {
+    const response = await fetch(`${supabaseUrl}/auth/v1/recover`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${resendApiKey}`,
+        "apikey": serviceKey,
+        "Authorization": `Bearer ${serviceKey}`,
       },
       body: JSON.stringify({
-        from: "Barbearia DUB <onboarding@resend.dev>",
-        to: [email],
-        subject: "Redefinir sua senha — Barbearia DUB",
-        html: htmlContent,
+        email,
+        gotrue_meta_security: {},
       }),
     });
 
     if (!response.ok) {
       const errorBody = await response.text();
-      console.error(`[Resend] Erro ${response.status}:`, errorBody);
-      return { success: false, error: `Falha ao enviar email: ${response.status}` };
+      console.error(`[sendRecovery] Erro ${response.status}:`, errorBody);
+      return { success: false, error: `Erro ${response.status}: ${errorBody}` };
     }
 
-    const data = await response.json();
-    console.log("[Resend] Email enviado com sucesso:", data.id);
+    console.log("[sendRecovery] Email de recuperação enviado com sucesso via SMTP");
     return { success: true };
   } catch (err) {
-    console.error("[Resend] Exceção:", err);
+    console.error("[sendRecovery] Exceção:", err);
     return { success: false, error: "Erro interno ao enviar email" };
   }
 }
@@ -106,7 +53,6 @@ Deno.serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const resendApiKey = Deno.env.get("RESEND_API_KEY");
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
     const body = await req.json();
@@ -114,7 +60,7 @@ Deno.serve(async (req) => {
 
     // ──────────────────────────────────────────────
     // ACTION: send_recovery (público — não requer auth)
-    // Gera link via Admin API + envia email via Resend
+    // Envia email via SMTP usando service_role (sem rate limit)
     // ──────────────────────────────────────────────
     if (action === "send_recovery") {
       if (!user_email || typeof user_email !== "string") {
@@ -124,59 +70,22 @@ Deno.serve(async (req) => {
         });
       }
 
-      if (!resendApiKey) {
-        console.error("[send_recovery] RESEND_API_KEY não configurada");
-        return new Response(JSON.stringify({ 
-          success: true, 
-          message: "Se o email estiver cadastrado, um link de recuperação foi enviado." 
-        }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-
       const emailTrimmed = user_email.trim().toLowerCase();
-      console.log(`[send_recovery] Processando recuperação para: ${emailTrimmed}`);
+      console.log(`[send_recovery] Enviando recuperação para: ${emailTrimmed}`);
 
-      const finalRedirect = redirect_to || "https://dubagenda.lovable.app/resetar-senha";
+      // Usar API REST /auth/v1/recover com service_role key
+      // Isso usa o SMTP customizado configurado no Supabase e bypassa rate limit
+      const result = await sendRecoveryViaAuthAPI(
+        supabaseUrl,
+        supabaseServiceKey,
+        emailTrimmed,
+        redirect_to || "https://dubagenda.lovable.app/resetar-senha"
+      );
 
-      // Gerar link de recuperação via Admin API (não envia email, só gera o link)
-      const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
-        type: "recovery",
-        email: emailTrimmed,
-        options: {
-          redirectTo: finalRedirect,
-        },
-      });
-
-      if (linkError) {
-        // Se o usuário não existe, não revelar isso
-        console.error("[send_recovery] Erro ao gerar link:", linkError.message);
-        return new Response(JSON.stringify({ 
-          success: true, 
-          message: "Se o email estiver cadastrado, um link de recuperação foi enviado." 
-        }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-
-      const recoveryLink = linkData?.properties?.action_link;
-      if (!recoveryLink) {
-        console.error("[send_recovery] Link não gerado");
-        return new Response(JSON.stringify({ 
-          success: true, 
-          message: "Se o email estiver cadastrado, um link de recuperação foi enviado." 
-        }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-
-      console.log("[send_recovery] Link gerado, enviando via Resend...");
-
-      // Enviar email via Resend
-      const emailResult = await sendRecoveryViaResend(emailTrimmed, recoveryLink, resendApiKey);
-
-      if (!emailResult.success) {
-        console.error("[send_recovery] Falha no envio Resend:", emailResult.error);
+      if (!result.success) {
+        console.error("[send_recovery] Falha:", result.error);
+      } else {
+        console.log("[send_recovery] Sucesso! Email deve chegar em breve.");
       }
 
       // Sempre retornar sucesso para não revelar se o email existe
@@ -234,7 +143,6 @@ Deno.serve(async (req) => {
       });
 
       if (error) {
-        console.error("Erro ao gerar link:", error);
         return new Response(JSON.stringify({ error: error.message }), {
           status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -270,7 +178,6 @@ Deno.serve(async (req) => {
       });
 
       if (error) {
-        console.error("Erro ao redefinir senha:", error);
         return new Response(JSON.stringify({ error: error.message }), {
           status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
