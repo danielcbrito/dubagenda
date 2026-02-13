@@ -86,21 +86,24 @@ const Cliente = () => {
     barberName: string;
     barberPhoto: string | null;
   } | null>(null);
+  // Guarda IDs já exibidos ou dispensados para não reabrir o modal
+  const [dismissedReviewIds, setDismissedReviewIds] = useState<Set<string>>(new Set());
 
   const { pendingReviews, refresh: refreshReviews } = usePendingReviews(user?.id || null);
 
-  // Auto-abrir modal de avaliação quando há reviews pendentes
+  // Auto-abrir modal de avaliação apenas uma vez por sessão por appointment
   useEffect(() => {
-    if (pendingReviews.length > 0 && !reviewModalData && dataLoaded) {
-      const first = pendingReviews[0];
+    if (!dataLoaded || reviewModalData) return;
+    const next = pendingReviews.find((r) => !dismissedReviewIds.has(r.appointmentId));
+    if (next) {
       setReviewModalData({
-        appointmentId: first.appointmentId,
-        barberId: first.barberId,
-        barberName: first.barberName,
-        barberPhoto: first.barberPhoto,
+        appointmentId: next.appointmentId,
+        barberId: next.barberId,
+        barberName: next.barberName,
+        barberPhoto: next.barberPhoto,
       });
     }
-  }, [pendingReviews, dataLoaded]);
+  }, [pendingReviews, dataLoaded, dismissedReviewIds]);
 
   useEffect(() => {
     checkAuth();
@@ -750,14 +753,25 @@ const Cliente = () => {
       {/* Modal de Avaliação */}
       <BarberReviewModal
         open={!!reviewModalData}
-        onOpenChange={(open) => !open && setReviewModalData(null)}
+        onOpenChange={(open) => {
+          if (!open && reviewModalData) {
+            // Marca como dispensado para não reabrir
+            setDismissedReviewIds((prev) => new Set(prev).add(reviewModalData.appointmentId));
+            setReviewModalData(null);
+          }
+        }}
         appointmentId={reviewModalData?.appointmentId || ""}
         barberId={reviewModalData?.barberId || ""}
         barberName={reviewModalData?.barberName || ""}
         barberPhoto={reviewModalData?.barberPhoto || null}
         userId={user?.id || ""}
         userName={profile?.nome || "Cliente"}
-        onSuccess={refreshReviews}
+        onSuccess={() => {
+          if (reviewModalData) {
+            setDismissedReviewIds((prev) => new Set(prev).add(reviewModalData.appointmentId));
+          }
+          refreshReviews();
+        }}
       />
 
       {/* Bottom Navigation */}
