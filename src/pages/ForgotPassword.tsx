@@ -53,7 +53,7 @@ const ForgotPassword = () => {
         ? 'https://dubagenda.lovable.app'
         : window.location.origin;
 
-      // Chamar edge function que gera link via Admin API e envia via Resend
+      // Chamar edge function que gera link via Admin API e envia via Gmail SMTP
       const { data, error } = await supabase.functions.invoke('admin-reset-password', {
         body: {
           action: 'send_recovery',
