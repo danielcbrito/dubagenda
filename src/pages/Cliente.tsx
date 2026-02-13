@@ -318,7 +318,7 @@ const Cliente = () => {
       // Verificar assinatura pendente (suspended = pagamento não finalizado)
       const { data: pendingSub } = await supabase
         .from("assinaturas")
-        .select("id, status, plano_id, created_at, plano:planos(nome)")
+        .select("id, status, plano_id, created_at, payment_method, pix_qr_code, pix_payload, asaas_payment_id, pix_expires_at, plano:planos(nome, preco_mensal)")
         .eq("user_id", userId)
         .eq("status", "suspended")
         .order("created_at", { ascending: false })
@@ -508,9 +508,31 @@ const Cliente = () => {
             <>
               <PendingSubscriptionBanner
                 planName={(pendingSubscription as any).plano?.nome || "Plano"}
-                onFinalize={() => navigate("/cliente/assinar", { 
-                  state: { resumePlanId: (pendingSubscription as any).plano_id }
-                })}
+                onFinalize={() => {
+                  const ps = pendingSubscription as any;
+                  // Se tem PIX válido (não expirado), redireciona direto para checkout PIX
+                  if (ps.payment_method === "pix" && ps.pix_qr_code && ps.pix_expires_at) {
+                    const pixExpiresAt = new Date(ps.pix_expires_at).getTime();
+                    if (pixExpiresAt > Date.now()) {
+                      const pixCheckoutData = {
+                        pixQrCode: ps.pix_qr_code,
+                        pixPayload: ps.pix_payload,
+                        subscriptionId: ps.id,
+                        asaasPaymentId: ps.asaas_payment_id,
+                        expiresAt: ps.pix_expires_at,
+                        value: ps.plano?.preco_mensal || 0,
+                        planName: ps.plano?.nome || "Plano",
+                      };
+                      sessionStorage.setItem("subscription_pix_checkout_data", JSON.stringify(pixCheckoutData));
+                      navigate("/cliente/assinatura-pix");
+                      return;
+                    }
+                  }
+                  // PIX expirado ou cartão — vai para tela de assinar com plano pré-selecionado
+                  navigate("/cliente/assinar", { 
+                    state: { resumePlanId: ps.plano_id }
+                  });
+                }}
               />
               <LoyaltyCard
                 points={points}

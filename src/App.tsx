@@ -21,6 +21,7 @@ import ClienteAgendar from "./pages/ClienteAgendar";
 import ClienteAssinar from "./pages/ClienteAssinar";
 import ClientePagamento from "./pages/ClientePagamento";
 import ClientePixCheckout from "./pages/ClientePixCheckout";
+import SubscriptionPixCheckout from "./pages/SubscriptionPixCheckout";
 import ClienteCarteira from "./pages/ClienteCarteira";
 import SupportChat from "./pages/SupportChat";
 import NotFound from "./pages/NotFound";
@@ -155,6 +156,7 @@ function AppRoutes() {
           <Route path="/cliente/assinar" element={<ClienteAssinar />} />
           <Route path="/cliente/pagamento" element={<ClientePagamento />} />
           <Route path="/cliente/pix-checkout" element={<ClientePixCheckout />} />
+          <Route path="/cliente/assinatura-pix" element={<SubscriptionPixCheckout />} />
           <Route path="/cliente/carteira" element={<ClienteCarteira />} />
           <Route path="/suporte" element={<SupportChat />} />
           <Route path="*" element={<NotFound />} />
