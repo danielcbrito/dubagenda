@@ -20,6 +20,7 @@ import Cliente from "./pages/Cliente";
 import ClienteAgendar from "./pages/ClienteAgendar";
 import ClienteAssinar from "./pages/ClienteAssinar";
 import ClientePagamento from "./pages/ClientePagamento";
+import ClientePixCheckout from "./pages/ClientePixCheckout";
 import ClienteCarteira from "./pages/ClienteCarteira";
 import SupportChat from "./pages/SupportChat";
 import NotFound from "./pages/NotFound";
@@ -153,6 +154,7 @@ function AppRoutes() {
           <Route path="/cliente/agendar" element={<ClienteAgendar />} />
           <Route path="/cliente/assinar" element={<ClienteAssinar />} />
           <Route path="/cliente/pagamento" element={<ClientePagamento />} />
+          <Route path="/cliente/pix-checkout" element={<ClientePixCheckout />} />
           <Route path="/cliente/carteira" element={<ClienteCarteira />} />
           <Route path="/suporte" element={<SupportChat />} />
           <Route path="*" element={<NotFound />} />
