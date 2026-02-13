@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Calendar } from "lucide-react";
@@ -87,33 +87,41 @@ const Cliente = () => {
     barberPhoto: string | null;
   } | null>(null);
 
-  // Persistir IDs dispensados em sessionStorage para sobreviver a navegação
-  const [dismissedReviewIds] = useState<Set<string>>(() => {
+  // Ref para garantir que o modal só abre UMA VEZ por montagem do componente
+  const reviewModalShownRef = useRef(false);
+
+  const { pendingReviews, refresh: refreshReviews } = usePendingReviews(user?.id || null);
+
+  /**
+   * Retorna IDs dispensados do localStorage (permanente)
+   */
+  const getDismissedIds = (): Set<string> => {
     try {
-      const stored = sessionStorage.getItem("dismissed_review_ids");
+      const stored = localStorage.getItem("dismissed_review_ids");
       return stored ? new Set(JSON.parse(stored)) : new Set();
     } catch {
       return new Set();
     }
-  });
+  };
 
+  /**
+   * Marca um appointment como dispensado permanentemente
+   */
   const dismissReview = (appointmentId: string) => {
-    dismissedReviewIds.add(appointmentId);
+    const ids = getDismissedIds();
+    ids.add(appointmentId);
     try {
-      sessionStorage.setItem(
-        "dismissed_review_ids",
-        JSON.stringify([...dismissedReviewIds])
-      );
+      localStorage.setItem("dismissed_review_ids", JSON.stringify([...ids]));
     } catch { /* ignore */ }
   };
 
-  const { pendingReviews, refresh: refreshReviews } = usePendingReviews(user?.id || null);
-
-  // Auto-abrir modal de avaliação apenas uma vez por sessão por appointment
+  // Auto-abrir modal de avaliação UMA ÚNICA VEZ
   useEffect(() => {
-    if (!dataLoaded || reviewModalData) return;
-    const next = pendingReviews.find((r) => !dismissedReviewIds.has(r.appointmentId));
+    if (!dataLoaded || reviewModalShownRef.current || reviewModalData) return;
+    const dismissed = getDismissedIds();
+    const next = pendingReviews.find((r) => !dismissed.has(r.appointmentId));
     if (next) {
+      reviewModalShownRef.current = true; // Nunca mais abre nesta montagem
       setReviewModalData({
         appointmentId: next.appointmentId,
         barberId: next.barberId,
