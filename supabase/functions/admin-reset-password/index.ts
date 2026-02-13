@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import nodemailer from "npm:nodemailer@6";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -7,41 +8,87 @@ const corsHeaders = {
 };
 
 /**
- * Envia email de recuperação usando a API REST do Supabase Auth
- * com a service_role key (bypassa rate limit por usuário)
- * O email é enviado pelo SMTP customizado configurado no Supabase
+ * Envia email de recuperação via Gmail SMTP (nodemailer)
+ * Bypassa completamente o rate limit do Supabase
  */
-async function sendRecoveryViaAuthAPI(
-  supabaseUrl: string,
-  serviceKey: string,
+async function sendRecoveryViaGmail(
   email: string,
-  redirectTo: string
+  recoveryLink: string,
+  gmailUser: string,
+  gmailAppPassword: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const response = await fetch(`${supabaseUrl}/auth/v1/recover`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "apikey": serviceKey,
-        "Authorization": `Bearer ${serviceKey}`,
+    const transporter = nodemailer.createTransport({
+      host: "smtp.gmail.com",
+      port: 587,
+      secure: false,
+      auth: {
+        user: gmailUser,
+        pass: gmailAppPassword,
       },
-      body: JSON.stringify({
-        email,
-        gotrue_meta_security: {},
-      }),
     });
 
-    if (!response.ok) {
-      const errorBody = await response.text();
-      console.error(`[sendRecovery] Erro ${response.status}:`, errorBody);
-      return { success: false, error: `Erro ${response.status}: ${errorBody}` };
-    }
+    const htmlContent = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin:0;padding:0;background-color:#0f0f0f;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#0f0f0f;padding:40px 20px;">
+    <tr>
+      <td align="center">
+        <table width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;background-color:#1a1a1a;border-radius:16px;border:1px solid rgba(255,255,255,0.08);overflow:hidden;">
+          <tr>
+            <td style="padding:32px 32px 0;text-align:center;">
+              <div style="font-size:28px;font-weight:700;color:#ef4444;margin-bottom:16px;">DUB</div>
+              <h1 style="margin:0 0 8px;font-size:22px;font-weight:600;color:#ffffff;">
+                Recuperação de Senha
+              </h1>
+              <p style="margin:0;font-size:14px;color:rgba(255,255,255,0.5);line-height:1.5;">
+                Você solicitou a redefinição da sua senha na <strong style="color:rgba(255,255,255,0.7);">Barbearia DUB</strong>
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:32px;">
+              <a href="${recoveryLink}" 
+                 style="display:block;width:100%;padding:14px 24px;background-color:#ef4444;color:#ffffff;text-align:center;text-decoration:none;font-size:15px;font-weight:600;border-radius:12px;box-sizing:border-box;">
+                Redefinir minha senha
+              </a>
+              <p style="margin:20px 0 0;font-size:12px;color:rgba(255,255,255,0.35);text-align:center;line-height:1.5;">
+                Este link expira em 1 hora.<br>
+                Se você não solicitou isso, ignore este email.
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:0 32px 24px;border-top:1px solid rgba(255,255,255,0.06);">
+              <p style="margin:16px 0 0;font-size:11px;color:rgba(255,255,255,0.25);text-align:center;">
+                Barbearia DUB &mdash; Cuidando do seu estilo
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
 
-    console.log("[sendRecovery] Email de recuperação enviado com sucesso via SMTP");
+    await transporter.sendMail({
+      from: `"Barbearia DUB" <${gmailUser}>`,
+      to: email,
+      subject: "Redefinir sua senha — Barbearia DUB",
+      html: htmlContent,
+    });
+
+    console.log(`[Gmail SMTP] Email enviado com sucesso para: ${email}`);
     return { success: true };
   } catch (err) {
-    console.error("[sendRecovery] Exceção:", err);
-    return { success: false, error: "Erro interno ao enviar email" };
+    console.error("[Gmail SMTP] Erro ao enviar:", err);
+    return { success: false, error: String(err) };
   }
 }
 
@@ -53,6 +100,8 @@ Deno.serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const gmailAppPassword = Deno.env.get("GMAIL_APP_PASSWORD");
+    const gmailUser = "barbeariasdub@gmail.com";
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
     const body = await req.json();
@@ -60,7 +109,7 @@ Deno.serve(async (req) => {
 
     // ──────────────────────────────────────────────
     // ACTION: send_recovery (público — não requer auth)
-    // Envia email via SMTP usando service_role (sem rate limit)
+    // Gera link via Admin API + envia via Gmail SMTP
     // ──────────────────────────────────────────────
     if (action === "send_recovery") {
       if (!user_email || typeof user_email !== "string") {
@@ -70,25 +119,63 @@ Deno.serve(async (req) => {
         });
       }
 
-      const emailTrimmed = user_email.trim().toLowerCase();
-      console.log(`[send_recovery] Enviando recuperação para: ${emailTrimmed}`);
-
-      // Usar API REST /auth/v1/recover com service_role key
-      // Isso usa o SMTP customizado configurado no Supabase e bypassa rate limit
-      const result = await sendRecoveryViaAuthAPI(
-        supabaseUrl,
-        supabaseServiceKey,
-        emailTrimmed,
-        redirect_to || "https://dubagenda.lovable.app/resetar-senha"
-      );
-
-      if (!result.success) {
-        console.error("[send_recovery] Falha:", result.error);
-      } else {
-        console.log("[send_recovery] Sucesso! Email deve chegar em breve.");
+      if (!gmailAppPassword) {
+        console.error("[send_recovery] GMAIL_APP_PASSWORD não configurada");
+        return new Response(JSON.stringify({ 
+          success: true, 
+          message: "Se o email estiver cadastrado, um link de recuperação foi enviado." 
+        }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
       }
 
-      // Sempre retornar sucesso para não revelar se o email existe
+      const emailTrimmed = user_email.trim().toLowerCase();
+      console.log(`[send_recovery] Processando para: ${emailTrimmed}`);
+
+      const finalRedirect = redirect_to || "https://dubagenda.lovable.app/resetar-senha";
+
+      // 1. Gerar link via Admin API (não envia email, só gera o token)
+      const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
+        type: "recovery",
+        email: emailTrimmed,
+        options: { redirectTo: finalRedirect },
+      });
+
+      if (linkError) {
+        console.error("[send_recovery] Erro ao gerar link:", linkError.message);
+        return new Response(JSON.stringify({ 
+          success: true, 
+          message: "Se o email estiver cadastrado, um link de recuperação foi enviado." 
+        }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const recoveryLink = linkData?.properties?.action_link;
+      if (!recoveryLink) {
+        console.error("[send_recovery] Link não retornado pela API");
+        return new Response(JSON.stringify({ 
+          success: true, 
+          message: "Se o email estiver cadastrado, um link de recuperação foi enviado." 
+        }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      console.log("[send_recovery] Link gerado, enviando via Gmail SMTP...");
+
+      // 2. Enviar via Gmail SMTP (sem rate limit do Supabase)
+      const emailResult = await sendRecoveryViaGmail(
+        emailTrimmed,
+        recoveryLink,
+        gmailUser,
+        gmailAppPassword
+      );
+
+      if (!emailResult.success) {
+        console.error("[send_recovery] Falha SMTP:", emailResult.error);
+      }
+
       return new Response(JSON.stringify({ 
         success: true, 
         message: "Se o email estiver cadastrado, um link de recuperação foi enviado." 
@@ -118,7 +205,6 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Verificar se é admin
     const { data: roles } = await supabaseAdmin
       .from("user_roles")
       .select("role")
@@ -132,7 +218,6 @@ Deno.serve(async (req) => {
       });
     }
 
-    // ACTION: generate_link (admin)
     if (action === "generate_link") {
       const { data, error } = await supabaseAdmin.auth.admin.generateLink({
         type: "recovery",
@@ -157,7 +242,6 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
 
-    // ACTION: reset_password (admin)
     } else if (action === "reset_password") {
       if (!user_id || !new_password) {
         return new Response(JSON.stringify({ error: "user_id e new_password são obrigatórios" }), {
