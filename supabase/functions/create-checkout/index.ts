@@ -238,9 +238,8 @@ serve(async (req) => {
       }
 
       // Criar sessão do Stripe Checkout para pagamento avulso
-      const stripePaymentMethods: string[] =
-        paymentMethod === "pix" ? ["pix"] : ["card"];
-
+      // Não especificar payment_method_types — Stripe usa automaticamente
+      // os métodos habilitados no dashboard para a moeda BRL
       const session = await stripe.checkout.sessions.create({
         customer: customerId,
         customer_email: customerId ? undefined : user.email,
@@ -257,7 +256,6 @@ serve(async (req) => {
             quantity: 1,
           },
         ],
-        payment_method_types: stripePaymentMethods,
         mode: "payment",
         metadata: {
           type: "booking",
