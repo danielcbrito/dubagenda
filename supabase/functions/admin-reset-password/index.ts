@@ -1,0 +1,131 @@
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+};
+
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
+  }
+
+  try {
+    // Verificar autenticação do admin
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: "Não autorizado" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const token = authHeader.replace("Bearer ", "");
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+
+    // Cliente autenticado para verificar role
+    const supabaseAuth = createClient(supabaseUrl, supabaseServiceKey);
+    const { data: { user: caller }, error: authError } = await supabaseAuth.auth.getUser(token);
+
+    if (authError || !caller) {
+      return new Response(JSON.stringify({ error: "Token inválido" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Verificar se é admin
+    const { data: roles } = await supabaseAuth
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", caller.id)
+      .eq("role", "admin");
+
+    if (!roles || roles.length === 0) {
+      return new Response(JSON.stringify({ error: "Acesso negado. Apenas administradores." }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const body = await req.json();
+    const { action, user_email, user_id, new_password } = body;
+
+    if (action === "generate_link") {
+      // Gerar link de recuperação via Admin API (contorna rate limit de email)
+      const { data, error } = await supabaseAuth.auth.admin.generateLink({
+        type: "recovery",
+        email: user_email,
+        options: {
+          redirectTo: `${supabaseUrl.replace('.supabase.co', '.lovable.app')}/resetar-senha`,
+        },
+      });
+
+      if (error) {
+        console.error("Erro ao gerar link:", error);
+        return new Response(JSON.stringify({ error: error.message }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      return new Response(JSON.stringify({ 
+        success: true, 
+        link: data?.properties?.action_link,
+        message: "Link de recuperação gerado com sucesso" 
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+
+    } else if (action === "reset_password") {
+      // Redefinir senha diretamente
+      if (!user_id || !new_password) {
+        return new Response(JSON.stringify({ error: "user_id e new_password são obrigatórios" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      if (new_password.length < 6) {
+        return new Response(JSON.stringify({ error: "Senha deve ter pelo menos 6 caracteres" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const { error } = await supabaseAuth.auth.admin.updateUserById(user_id, {
+        password: new_password,
+      });
+
+      if (error) {
+        console.error("Erro ao redefinir senha:", error);
+        return new Response(JSON.stringify({ error: error.message }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      return new Response(JSON.stringify({ 
+        success: true, 
+        message: "Senha redefinida com sucesso" 
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+
+    } else {
+      return new Response(JSON.stringify({ error: "Ação inválida. Use 'generate_link' ou 'reset_password'" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+  } catch (err) {
+    console.error("Erro:", err);
+    return new Response(JSON.stringify({ error: "Erro interno do servidor" }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+});
