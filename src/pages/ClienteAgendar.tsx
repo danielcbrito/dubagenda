@@ -14,6 +14,7 @@ import { motion, AnimatePresence } from "framer-motion";
 // Premium Components
 import { ServiceCard } from "@/components/booking/ServiceCard";
 import { BarberCard } from "@/components/booking/BarberCard";
+import { useBarberRatings } from "@/hooks/useBarberRatings";
 import { TimeSlot } from "@/components/booking/TimeSlot";
 import { PaymentOption } from "@/components/booking/PaymentOption";
 import { SummaryRow } from "@/components/booking/SummaryRow";
@@ -93,6 +94,9 @@ const ClienteAgendar = () => {
     (selectedServices?.length ?? 0) === 1 &&
     selectedServices?.[0]?.id === activeSubscription.servico.id &&
     activeSubscription.agendamentos_usados < activeSubscription.limite_agendamentos_mes;
+
+  // Avaliações dos barbeiros
+  const { ratings: barberRatings } = useBarberRatings(barbers.map(b => b.id));
 
   const totalDuration = (selectedServices || []).reduce((sum, s) => sum + s.duracao_minutos * (serviceQuantities[s.id] || 1), 0);
 
@@ -1488,6 +1492,7 @@ const ClienteAgendar = () => {
                       barber={barber}
                       isSelected={selectedBarber?.id === barber.id}
                       onSelect={() => setSelectedBarber(barber)}
+                      rating={barberRatings[barber.id] || null}
                     />
                   ))}
                 </div>
