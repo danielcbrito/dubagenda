@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,21 +19,24 @@ const ForgotPassword = () => {
   const [emailSent, setEmailSent] = useState(false);
   const [cooldown, setCooldown] = useState(0);
 
-  // Cooldown timer
-  useState(() => {
+  // Restaurar cooldown do localStorage ao montar
+  useEffect(() => {
     const lastSent = localStorage.getItem('pwd_reset_ts');
     if (lastSent) {
       const diff = 60 - Math.floor((Date.now() - Number(lastSent)) / 1000);
       if (diff > 0) setCooldown(diff);
     }
-  });
+  }, []);
 
-  // Decrement cooldown
-  useState(() => {
+  // Decrementar cooldown
+  useEffect(() => {
     if (cooldown <= 0) return;
-    const id = setInterval(() => setCooldown(p => p <= 1 ? (clearInterval(id), 0) : p - 1), 1000);
+    const id = setInterval(() => setCooldown(p => {
+      if (p <= 1) { clearInterval(id); return 0; }
+      return p - 1;
+    }), 1000);
     return () => clearInterval(id);
-  });
+  }, [cooldown > 0]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
