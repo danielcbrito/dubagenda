@@ -1416,6 +1416,48 @@ export type Database = {
         }
         Relationships: []
       }
+      mensagem_templates: {
+        Row: {
+          ativo: boolean
+          categoria: string
+          conteudo: string
+          created_at: string
+          descricao: string | null
+          id: string
+          nome: string
+          slug: string
+          updated_at: string
+          updated_by: string | null
+          variaveis_disponiveis: string[] | null
+        }
+        Insert: {
+          ativo?: boolean
+          categoria?: string
+          conteudo: string
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          nome: string
+          slug: string
+          updated_at?: string
+          updated_by?: string | null
+          variaveis_disponiveis?: string[] | null
+        }
+        Update: {
+          ativo?: boolean
+          categoria?: string
+          conteudo?: string
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          nome?: string
+          slug?: string
+          updated_at?: string
+          updated_by?: string | null
+          variaveis_disponiveis?: string[] | null
+        }
+        Relationships: []
+      }
       notificacoes: {
         Row: {
           agendamento_id: string | null

@@ -142,6 +142,34 @@ const Auth = () => {
     try {
       const validated = signupSchema.parse(formData);
 
+      // Verificar duplicidade de CPF, telefone e email
+      try {
+        const { data: dupData, error: dupError } = await supabase.functions.invoke('check-duplicate-signup', {
+          body: {
+            cpf: validated.cpf,
+            telefone: validated.telefone,
+            email: validated.email,
+          }
+        });
+
+        if (!dupError && dupData?.duplicates?.length > 0) {
+          const msgs: Record<string, string> = {
+            cpf: "Este CPF já está cadastrado.",
+            telefone: "Este telefone já está cadastrado.",
+            email: "Este email já está cadastrado.",
+          };
+          const firstDup = dupData.duplicates[0];
+          toast.error(msgs[firstDup] || "Dados já cadastrados.");
+          if (firstDup === 'cpf') setCpfError(msgs.cpf);
+          if (firstDup === 'telefone') setTelefoneError(msgs.telefone);
+          setIsLoading(false);
+          return;
+        }
+      } catch (dupErr) {
+        console.error("Erro ao verificar duplicidade:", dupErr);
+        // Continua com o cadastro se a verificação falhar
+      }
+
       const { data, error } = await supabase.auth.signUp({
         email: validated.email,
         password: validated.senha,
