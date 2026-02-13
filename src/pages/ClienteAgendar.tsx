@@ -1836,10 +1836,22 @@ const ClienteAgendar = () => {
               </div>
 
               <button
-                onClick={() => setStep(6)}
-                className="w-full mt-6 py-3.5 bg-primary text-primary-foreground font-semibold rounded-xl hover:bg-primary/90 transition-all"
+                onClick={() => {
+                  // PIX e Cartão vão direto para pagamento sem tela de confirmação
+                  if (paymentMethod === 'pix' || paymentMethod === 'card') {
+                    handlePayment();
+                  } else {
+                    setStep(6);
+                  }
+                }}
+                disabled={processingPayment}
+                className="w-full mt-6 py-3.5 bg-primary text-primary-foreground font-semibold rounded-xl hover:bg-primary/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]"
               >
-                Continuar
+                {processingPayment ? 'Processando...' :
+                  paymentMethod === 'pix' ? 'Gerar QR Code PIX' :
+                  paymentMethod === 'card' ? 'Ir para Pagamento' :
+                  'Continuar'
+                }
               </button>
             </div>
           </motion.div>
