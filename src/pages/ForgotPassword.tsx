@@ -55,7 +55,9 @@ const ForgotPassword = () => {
         redirectTo: redirectUrl,
       });
 
-      if (error) {
+      // Supabase free tier often returns 504 timeout but still sends the email
+      if (error && !error.message?.includes('timeout') && error.status !== 504) {
+        console.error("Reset password error:", error);
         toast.error("Erro ao solicitar recuperação. Tente novamente.");
         return;
       }
