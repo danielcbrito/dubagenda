@@ -25,6 +25,7 @@ import SubscriptionPixCheckout from "./pages/SubscriptionPixCheckout";
 import ClienteCarteira from "./pages/ClienteCarteira";
 import SupportChat from "./pages/SupportChat";
 import NotFound from "./pages/NotFound";
+import BarberReviews from "./pages/BarberReviews";
 
 const queryClient = new QueryClient();
 
@@ -158,6 +159,7 @@ function AppRoutes() {
           <Route path="/cliente/pix-checkout" element={<ClientePixCheckout />} />
           <Route path="/cliente/assinatura-pix" element={<SubscriptionPixCheckout />} />
           <Route path="/cliente/carteira" element={<ClienteCarteira />} />
+          <Route path="/cliente/barbeiro/:barberId/avaliacoes" element={<BarberReviews />} />
           <Route path="/suporte" element={<SupportChat />} />
           <Route path="*" element={<NotFound />} />
         </Routes>

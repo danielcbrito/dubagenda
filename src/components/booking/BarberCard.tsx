@@ -1,6 +1,7 @@
 import { cn } from "@/lib/utils";
-import { User, Star } from "lucide-react";
+import { User, Star, Eye } from "lucide-react";
 import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 
 interface Barber {
   id: string;
@@ -21,6 +22,13 @@ interface BarberCardProps {
 }
 
 export function BarberCard({ barber, isSelected, onSelect, rating }: BarberCardProps) {
+  const navigate = useNavigate();
+
+  const handleViewReviews = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigate(`/cliente/barbeiro/${barber.id}/avaliacoes`);
+  };
+
   return (
     <motion.button
       onClick={onSelect}
@@ -65,9 +73,9 @@ export function BarberCard({ barber, isSelected, onSelect, rating }: BarberCardP
           <p className="text-sm text-muted-foreground mt-0.5">
             Profissional
           </p>
-          {/* Rating */}
+          {/* Rating + Ver avaliações */}
           {rating && rating.count > 0 && (
-            <div className="flex items-center gap-1.5 mt-1">
+            <div className="flex items-center gap-2 mt-1.5">
               <div className="flex gap-0.5">
                 {[1, 2, 3, 4, 5].map((star) => (
                   <Star
@@ -82,8 +90,15 @@ export function BarberCard({ barber, isSelected, onSelect, rating }: BarberCardP
                 ))}
               </div>
               <span className="text-xs text-muted-foreground font-medium">
-                {rating.average.toFixed(1)} ({rating.count})
+                {rating.average.toFixed(1)}
               </span>
+              <button
+                onClick={handleViewReviews}
+                className="text-xs text-primary font-medium flex items-center gap-1 hover:underline ml-1"
+              >
+                <Eye className="w-3 h-3" />
+                Ver ({rating.count})
+              </button>
             </div>
           )}
         </div>

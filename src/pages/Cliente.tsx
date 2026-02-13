@@ -27,7 +27,6 @@ import { PendingSubscriptionBanner } from "@/components/client/PendingSubscripti
 import { ScheduleButton } from "@/components/client/ScheduleButton";
 import { AppointmentCardPremium } from "@/components/client/AppointmentCardPremium";
 import { BarberReviewModal } from "@/components/client/BarberReviewModal";
-import { PendingReviewBanner } from "@/components/client/PendingReviewBanner";
 import { usePendingReviews } from "@/hooks/usePendingReviews";
 
 interface Appointment {
@@ -89,6 +88,19 @@ const Cliente = () => {
   } | null>(null);
 
   const { pendingReviews, refresh: refreshReviews } = usePendingReviews(user?.id || null);
+
+  // Auto-abrir modal de avaliação quando há reviews pendentes
+  useEffect(() => {
+    if (pendingReviews.length > 0 && !reviewModalData && dataLoaded) {
+      const first = pendingReviews[0];
+      setReviewModalData({
+        appointmentId: first.appointmentId,
+        barberId: first.barberId,
+        barberName: first.barberName,
+        barberPhoto: first.barberPhoto,
+      });
+    }
+  }, [pendingReviews, dataLoaded]);
 
   useEffect(() => {
     checkAuth();
@@ -603,33 +615,6 @@ const Cliente = () => {
               </motion.div>
             )}
           </AnimatePresence>
-
-          {/* Avaliações Pendentes */}
-          {pendingReviews.length > 0 && (
-            <div className="space-y-2">
-              <h3 className="text-sm font-bold text-foreground mb-2 flex items-center gap-2">
-                <span className="w-1 h-4 bg-primary rounded-full" />
-                Avalie seu atendimento
-              </h3>
-              {pendingReviews.slice(0, 2).map((review) => (
-                <PendingReviewBanner
-                  key={review.appointmentId}
-                  barberName={review.barberName}
-                  barberPhoto={review.barberPhoto}
-                  serviceName={review.serviceName}
-                  date={review.data}
-                  onReview={() =>
-                    setReviewModalData({
-                      appointmentId: review.appointmentId,
-                      barberId: review.barberId,
-                      barberName: review.barberName,
-                      barberPhoto: review.barberPhoto,
-                    })
-                  }
-                />
-              ))}
-            </div>
-          )}
 
           {/* Appointments Section */}
           <div>
