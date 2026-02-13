@@ -237,10 +237,9 @@ serve(async (req) => {
         throw new Error("Erro ao reservar horário");
       }
 
-      // Criar sessão do Stripe Checkout para pagamento avulso
-      // Não especificar payment_method_types — Stripe usa automaticamente
-      // os métodos habilitados no dashboard para a moeda BRL
-      const session = await stripe.checkout.sessions.create({
+      // Configurar métodos de pagamento baseado na escolha do cliente
+      // PIX precisa estar ativado no Stripe Dashboard
+      const checkoutParams: any = {
         customer: customerId,
         customer_email: customerId ? undefined : user.email,
         line_items: [
@@ -266,7 +265,34 @@ serve(async (req) => {
         success_url: `${origin}/cliente/agendar?stripe_success=booking&session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${origin}/cliente/agendar?stripe_cancelled=true`,
         expires_at: Math.floor(expiresAt.getTime() / 1000),
-      });
+      };
+
+      // Direcionar para o método correto conforme escolha do cliente
+      if (paymentMethod === "pix") {
+        checkoutParams.payment_method_types = ["pix"];
+      } else if (paymentMethod === "card") {
+        checkoutParams.payment_method_types = ["card"];
+      }
+      // Se nenhum especificado, Stripe usa os métodos do dashboard
+
+      let session;
+      try {
+        session = await stripe.checkout.sessions.create(checkoutParams);
+      } catch (stripeErr: any) {
+        // Se PIX não está ativado, informar o usuário
+        if (stripeErr.message?.includes("pix")) {
+          // Limpar pending booking
+          await supabaseAdmin.from("pending_bookings").delete().eq("id", pendingBooking.id);
+          return new Response(
+            JSON.stringify({ 
+              error: "PIX não está disponível no momento. Por favor, escolha Cartão ou Pagar na Barbearia.",
+              code: "PIX_UNAVAILABLE"
+            }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
+          );
+        }
+        throw stripeErr;
+      }
 
       console.log("[create-checkout] Booking session:", session.id, "method:", paymentMethod);
 
