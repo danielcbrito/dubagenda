@@ -1602,14 +1602,6 @@ const ClienteAgendar = () => {
                   description="Pagamento presencial após confirmação"
                 />
 
-                <PaymentOption
-                  value="cash"
-                  selected={paymentMethod === 'cash'}
-                  onSelect={() => setPaymentMethod('cash')}
-                  title="Pagar na Barbearia"
-                  description="Pagamento presencial após confirmação"
-                />
-
                 {/* Resgate Grátis */}
                 {canUseRedemption && (
                   <div className="relative mt-6">
