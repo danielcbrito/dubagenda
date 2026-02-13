@@ -174,7 +174,7 @@ export function BarberReviewModal({
             onClick={() => onOpenChange(false)}
             className="w-full text-sm text-muted-foreground hover:text-foreground transition-colors py-1"
           >
-            Avaliar depois
+            Não quero avaliar
           </button>
         </div>
       </DialogContent>
