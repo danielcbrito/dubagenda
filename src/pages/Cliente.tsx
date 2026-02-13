@@ -415,8 +415,17 @@ const Cliente = () => {
       }
     }
 
-    // QR Code expirado ou não é PIX — redireciona para escolher forma de pagamento
-    sessionStorage.setItem('resumePendingBookingId', bookingId);
+    // QR Code expirado ou não é PIX — redireciona direto para a etapa de pagamento
+    const resumeData = {
+      pendingBookingId: booking?.id || bookingId,
+      barberId: booking?.barbeiro_id || "",
+      servicoId: booking?.servico_id || "",
+      serviceName: booking?.servico?.nome || "",
+      date: booking?.data || "",
+      time: booking?.hora || "",
+      price: booking?.preco || 0,
+    };
+    sessionStorage.setItem("resumeToPaymentStep", JSON.stringify(resumeData));
     navigate("/cliente/agendar");
   };
 
