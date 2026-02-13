@@ -12,7 +12,70 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Verificar autenticação do admin
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+
+    const body = await req.json();
+    const { action, user_email, user_id, new_password, redirect_to } = body;
+
+    // ──────────────────────────────────────────────
+    // ACTION: send_recovery (público — não requer auth)
+    // Gera link de recuperação via Admin API (sem rate limit de email)
+    // e retorna o link para o frontend redirecionar o usuário
+    // ──────────────────────────────────────────────
+    if (action === "send_recovery") {
+      if (!user_email) {
+        return new Response(JSON.stringify({ error: "Email é obrigatório" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      console.log(`[send_recovery] Gerando link para: ${user_email}`);
+
+      const finalRedirect = redirect_to || `${supabaseUrl.replace('.supabase.co', '.lovable.app')}/resetar-senha`;
+
+      const { data, error } = await supabaseAdmin.auth.admin.generateLink({
+        type: "recovery",
+        email: user_email,
+        options: {
+          redirectTo: finalRedirect,
+        },
+      });
+
+      if (error) {
+        console.error("[send_recovery] Erro ao gerar link:", error);
+        // Se o email não existe, retornar sucesso mesmo assim (prevenir enumeração)
+        if (error.message?.includes("User not found") || error.message?.includes("not found")) {
+          return new Response(JSON.stringify({ 
+            success: true, 
+            message: "Se o email existir, o link foi gerado." 
+          }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        return new Response(JSON.stringify({ error: error.message }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const actionLink = data?.properties?.action_link;
+      console.log("[send_recovery] Link gerado com sucesso");
+
+      return new Response(JSON.stringify({ 
+        success: true, 
+        action_link: actionLink,
+        message: "Link de recuperação gerado com sucesso" 
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // ──────────────────────────────────────────────
+    // ACTIONS protegidas (requerem admin autenticado)
+    // ──────────────────────────────────────────────
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
       return new Response(JSON.stringify({ error: "Não autorizado" }), {
@@ -22,12 +85,7 @@ Deno.serve(async (req) => {
     }
 
     const token = authHeader.replace("Bearer ", "");
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-
-    // Cliente autenticado para verificar role
-    const supabaseAuth = createClient(supabaseUrl, supabaseServiceKey);
-    const { data: { user: caller }, error: authError } = await supabaseAuth.auth.getUser(token);
+    const { data: { user: caller }, error: authError } = await supabaseAdmin.auth.getUser(token);
 
     if (authError || !caller) {
       return new Response(JSON.stringify({ error: "Token inválido" }), {
@@ -37,7 +95,7 @@ Deno.serve(async (req) => {
     }
 
     // Verificar se é admin
-    const { data: roles } = await supabaseAuth
+    const { data: roles } = await supabaseAdmin
       .from("user_roles")
       .select("role")
       .eq("user_id", caller.id)
@@ -50,12 +108,9 @@ Deno.serve(async (req) => {
       });
     }
 
-    const body = await req.json();
-    const { action, user_email, user_id, new_password } = body;
-
+    // ACTION: generate_link (admin)
     if (action === "generate_link") {
-      // Gerar link de recuperação via Admin API (contorna rate limit de email)
-      const { data, error } = await supabaseAuth.auth.admin.generateLink({
+      const { data, error } = await supabaseAdmin.auth.admin.generateLink({
         type: "recovery",
         email: user_email,
         options: {
@@ -79,8 +134,8 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
 
+    // ACTION: reset_password (admin)
     } else if (action === "reset_password") {
-      // Redefinir senha diretamente
       if (!user_id || !new_password) {
         return new Response(JSON.stringify({ error: "user_id e new_password são obrigatórios" }), {
           status: 400,
@@ -95,7 +150,7 @@ Deno.serve(async (req) => {
         });
       }
 
-      const { error } = await supabaseAuth.auth.admin.updateUserById(user_id, {
+      const { error } = await supabaseAdmin.auth.admin.updateUserById(user_id, {
         password: new_password,
       });
 
@@ -115,7 +170,7 @@ Deno.serve(async (req) => {
       });
 
     } else {
-      return new Response(JSON.stringify({ error: "Ação inválida. Use 'generate_link' ou 'reset_password'" }), {
+      return new Response(JSON.stringify({ error: "Ação inválida" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
