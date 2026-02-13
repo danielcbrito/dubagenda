@@ -86,8 +86,26 @@ const Cliente = () => {
     barberName: string;
     barberPhoto: string | null;
   } | null>(null);
-  // Guarda IDs já exibidos ou dispensados para não reabrir o modal
-  const [dismissedReviewIds, setDismissedReviewIds] = useState<Set<string>>(new Set());
+
+  // Persistir IDs dispensados em sessionStorage para sobreviver a navegação
+  const [dismissedReviewIds] = useState<Set<string>>(() => {
+    try {
+      const stored = sessionStorage.getItem("dismissed_review_ids");
+      return stored ? new Set(JSON.parse(stored)) : new Set();
+    } catch {
+      return new Set();
+    }
+  });
+
+  const dismissReview = (appointmentId: string) => {
+    dismissedReviewIds.add(appointmentId);
+    try {
+      sessionStorage.setItem(
+        "dismissed_review_ids",
+        JSON.stringify([...dismissedReviewIds])
+      );
+    } catch { /* ignore */ }
+  };
 
   const { pendingReviews, refresh: refreshReviews } = usePendingReviews(user?.id || null);
 
@@ -103,7 +121,7 @@ const Cliente = () => {
         barberPhoto: next.barberPhoto,
       });
     }
-  }, [pendingReviews, dataLoaded, dismissedReviewIds]);
+  }, [pendingReviews, dataLoaded]);
 
   useEffect(() => {
     checkAuth();
@@ -755,8 +773,7 @@ const Cliente = () => {
         open={!!reviewModalData}
         onOpenChange={(open) => {
           if (!open && reviewModalData) {
-            // Marca como dispensado para não reabrir
-            setDismissedReviewIds((prev) => new Set(prev).add(reviewModalData.appointmentId));
+            dismissReview(reviewModalData.appointmentId);
             setReviewModalData(null);
           }
         }}
@@ -768,7 +785,7 @@ const Cliente = () => {
         userName={profile?.nome || "Cliente"}
         onSuccess={() => {
           if (reviewModalData) {
-            setDismissedReviewIds((prev) => new Set(prev).add(reviewModalData.appointmentId));
+            dismissReview(reviewModalData.appointmentId);
           }
           refreshReviews();
         }}
