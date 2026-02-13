@@ -55,11 +55,15 @@ const ForgotPassword = () => {
         redirectTo: redirectUrl,
       });
 
-      // Supabase free tier often returns 504 timeout but still sends the email
-      if (error && !error.message?.includes('timeout') && error.status !== 504) {
+      if (error) {
         console.error("Reset password error:", error);
-        toast.error("Erro ao solicitar recuperação. Tente novamente.");
-        return;
+        // Supabase SMTP issues (500/504/timeout) - still show success since email may have been queued
+        const isInfraError = error.status === 500 || error.status === 504 || error.message?.includes('timeout');
+        if (!isInfraError) {
+          toast.error("Erro ao solicitar recuperação. Tente novamente.");
+          return;
+        }
+        console.warn("Supabase SMTP infra error (treated as potential success):", error.message);
       }
 
       setCooldown(60);
