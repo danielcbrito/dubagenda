@@ -26,6 +26,9 @@ import { PlanExpiredBanner } from "@/components/client/PlanExpiredBanner";
 import { PendingSubscriptionBanner } from "@/components/client/PendingSubscriptionBanner";
 import { ScheduleButton } from "@/components/client/ScheduleButton";
 import { AppointmentCardPremium } from "@/components/client/AppointmentCardPremium";
+import { BarberReviewModal } from "@/components/client/BarberReviewModal";
+import { PendingReviewBanner } from "@/components/client/PendingReviewBanner";
+import { usePendingReviews } from "@/hooks/usePendingReviews";
 
 interface Appointment {
   id: string;
@@ -78,6 +81,14 @@ const Cliente = () => {
   const [pendingSubscription, setPendingSubscription] = useState<any>(null);
   const [planUsageCount, setPlanUsageCount] = useState(0);
   const [dataLoaded, setDataLoaded] = useState(false);
+  const [reviewModalData, setReviewModalData] = useState<{
+    appointmentId: string;
+    barberId: string;
+    barberName: string;
+    barberPhoto: string | null;
+  } | null>(null);
+
+  const { pendingReviews, refresh: refreshReviews } = usePendingReviews(user?.id || null);
 
   useEffect(() => {
     checkAuth();
@@ -489,7 +500,6 @@ const Cliente = () => {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <AnnouncementModal />
-      
 
       {/* Scrollable Content */}
       <div className="flex-1 overflow-y-auto pb-28">
@@ -593,6 +603,33 @@ const Cliente = () => {
               </motion.div>
             )}
           </AnimatePresence>
+
+          {/* Avaliações Pendentes */}
+          {pendingReviews.length > 0 && (
+            <div className="space-y-2">
+              <h3 className="text-sm font-bold text-foreground mb-2 flex items-center gap-2">
+                <span className="w-1 h-4 bg-primary rounded-full" />
+                Avalie seu atendimento
+              </h3>
+              {pendingReviews.slice(0, 2).map((review) => (
+                <PendingReviewBanner
+                  key={review.appointmentId}
+                  barberName={review.barberName}
+                  barberPhoto={review.barberPhoto}
+                  serviceName={review.serviceName}
+                  date={review.data}
+                  onReview={() =>
+                    setReviewModalData({
+                      appointmentId: review.appointmentId,
+                      barberId: review.barberId,
+                      barberName: review.barberName,
+                      barberPhoto: review.barberPhoto,
+                    })
+                  }
+                />
+              ))}
+            </div>
+          )}
 
           {/* Appointments Section */}
           <div>
@@ -723,6 +760,19 @@ const Cliente = () => {
         open={historySheetOpen}
         onOpenChange={setHistorySheetOpen}
         userId={user?.id}
+      />
+
+      {/* Modal de Avaliação */}
+      <BarberReviewModal
+        open={!!reviewModalData}
+        onOpenChange={(open) => !open && setReviewModalData(null)}
+        appointmentId={reviewModalData?.appointmentId || ""}
+        barberId={reviewModalData?.barberId || ""}
+        barberName={reviewModalData?.barberName || ""}
+        barberPhoto={reviewModalData?.barberPhoto || null}
+        userId={user?.id || ""}
+        userName={profile?.nome || "Cliente"}
+        onSuccess={refreshReviews}
       />
 
       {/* Bottom Navigation */}

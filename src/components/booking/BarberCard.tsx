@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import { User } from "lucide-react";
+import { User, Star } from "lucide-react";
 import { motion } from "framer-motion";
 
 interface Barber {
@@ -8,13 +8,19 @@ interface Barber {
   foto_url: string | null;
 }
 
+interface BarberRating {
+  average: number;
+  count: number;
+}
+
 interface BarberCardProps {
   barber: Barber;
   isSelected: boolean;
   onSelect: () => void;
+  rating?: BarberRating | null;
 }
 
-export function BarberCard({ barber, isSelected, onSelect }: BarberCardProps) {
+export function BarberCard({ barber, isSelected, onSelect, rating }: BarberCardProps) {
   return (
     <motion.button
       onClick={onSelect}
@@ -59,6 +65,27 @@ export function BarberCard({ barber, isSelected, onSelect }: BarberCardProps) {
           <p className="text-sm text-muted-foreground mt-0.5">
             Profissional
           </p>
+          {/* Rating */}
+          {rating && rating.count > 0 && (
+            <div className="flex items-center gap-1.5 mt-1">
+              <div className="flex gap-0.5">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <Star
+                    key={star}
+                    className={cn(
+                      "w-3.5 h-3.5",
+                      star <= Math.round(rating.average)
+                        ? "fill-primary text-primary"
+                        : "text-muted-foreground/30"
+                    )}
+                  />
+                ))}
+              </div>
+              <span className="text-xs text-muted-foreground font-medium">
+                {rating.average.toFixed(1)} ({rating.count})
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Selection Indicator */}
