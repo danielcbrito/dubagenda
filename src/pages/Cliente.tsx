@@ -46,6 +46,7 @@ interface Appointment {
   payment_method?: string | null;
   tipo_agendamento?: string | null;
   is_free?: boolean | null;
+  barbeiro?: { apelido: string } | null;
   pagamentos?: Array<{
     metodo: string;
     status: string;
@@ -218,6 +219,7 @@ const Cliente = () => {
         tipo_agendamento,
         is_free,
         servico:servicos(nome),
+        barbeiro:barbeiros(apelido),
         pagamentos(metodo, status)
       `)
       .eq("user_id", userId)
