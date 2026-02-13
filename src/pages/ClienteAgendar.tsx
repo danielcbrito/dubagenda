@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowLeft, Clock, Check, Copy, Shield, RefreshCw, AlertTriangle, Tag } from "lucide-react";
+import { ArrowLeft, Clock, Check, Tag } from "lucide-react";
 import { toast } from "sonner";
 import { ptBR } from "date-fns/locale";
 import { format, eachDayOfInterval, getDay } from "date-fns";
@@ -9,7 +9,6 @@ import { cn } from "@/lib/utils";
 import { useSlotAvailability } from "@/hooks/useSlotAvailability";
 import { sendNovoAgendamentoEvent, sendRemarcacaoConcluidaEvent } from "@/lib/webhookService";
 import { motion, AnimatePresence } from "framer-motion";
-import pixIcon from "@/assets/pix-icon.png";
 
 // Premium Components
 import { ServiceCard } from "@/components/booking/ServiceCard";
@@ -58,24 +57,8 @@ const ClienteAgendar = () => {
   const [selectedTime, setSelectedTime] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState(1);
-  const [paymentMethod, setPaymentMethod] = useState<'pix' | 'card' | 'cash'>('cash');
+  const [paymentMethod, setPaymentMethod] = useState<'cash'>('cash');
   const [processingPayment, setProcessingPayment] = useState(false);
-  // PIX/Card states kept for compatibility (deprecated - Stripe migration)
-  const [pixQrCode, setPixQrCode] = useState<string | null>(null);
-  const [pixPayload, setPixPayload] = useState<string | null>(null);
-  const [cardHolderName, setCardHolderName] = useState("");
-  const [cardNumber, setCardNumber] = useState("");
-  const [cardExpiryMonth, setCardExpiryMonth] = useState("");
-  const [cardExpiryYear, setCardExpiryYear] = useState("");
-  const [cardCvv, setCardCvv] = useState("");
-  const [cardCep, setCardCep] = useState("");
-  const [resumePendingBookingId, setResumePendingBookingId] = useState<string | null>(null);
-  const [paymentConfirmed, setPaymentConfirmed] = useState(false);
-  const [pendingBookingId, setPendingBookingId] = useState<string | null>(null);
-  const [pixExpiresAt, setPixExpiresAt] = useState<string | null>(null);
-  const [pixExpired, setPixExpired] = useState(false);
-  const [timeRemaining, setTimeRemaining] = useState<string>("");
-  const [regeneratingPix, setRegeneratingPix] = useState(false);
   const [availableCredits, setAvailableCredits] = useState(0);
   const [userId, setUserId] = useState<string | null>(null);
   const [isRescheduling, setIsRescheduling] = useState(false);
@@ -87,7 +70,6 @@ const ClienteAgendar = () => {
   const [subscriptionLimitReached, setSubscriptionLimitReached] = useState(false);
   const [availableRedemptions, setAvailableRedemptions] = useState<{ id: string; promocao_id: string }[]>([]);
   const [useRedemption, setUseRedemption] = useState(false);
-  const [copied, setCopied] = useState(false);
   const [serviceQuantities, setServiceQuantities] = useState<Record<string, number>>({});
   
   // Dias fechados no calendário (barbearia/barbeiro não trabalha)
@@ -140,14 +122,6 @@ const ClienteAgendar = () => {
       await loadBarbers();
       await loadUserCredits();
       await loadAvailableRedemptions();
-
-      const resumeBookingId = sessionStorage.getItem('resumePendingBookingId');
-      if (resumeBookingId) {
-        setResumePendingBookingId(resumeBookingId);
-        sessionStorage.removeItem('resumePendingBookingId');
-        loadPendingBookingDetails(resumeBookingId);
-        return;
-      }
 
       const isReschedulingSession = sessionStorage.getItem('isRescheduling');
       const appointmentId = sessionStorage.getItem('rescheduleAppointmentId');
@@ -353,36 +327,6 @@ const ClienteAgendar = () => {
     } catch (error) {
       console.error("Error loading active subscription:", error);
       return null;
-    }
-  };
-
-  const loadPendingBookingDetails = async (bookingId: string) => {
-    try {
-      const { data: booking, error } = await supabase
-        .from("pending_bookings")
-        .select(`*, servico:servicos(*)`)
-        .eq("id", bookingId)
-        .single();
-
-      if (error) throw error;
-      if (!booking) {
-        toast.error("Reserva não encontrada ou expirada");
-        navigate("/cliente");
-        return;
-      }
-
-      setSelectedServices([booking.servico]);
-      setSelectedDate(new Date(`${booking.data}T12:00:00`));
-      setSelectedTime(booking.hora);
-      setPendingBookingId(booking.id);
-
-      // Resuming pending bookings removed (Asaas PIX flow deprecated)
-      setStep(4);
-      toast.info("Continue o pagamento do seu agendamento");
-    } catch (error) {
-      console.error("Error loading pending booking:", error);
-      toast.error("Erro ao carregar reserva");
-      navigate("/cliente");
     }
   };
 
@@ -642,12 +586,7 @@ const ClienteAgendar = () => {
       return;
     }
 
-    if (paymentMethod === 'card') {
-      if (!cardHolderName || !cardNumber || !cardExpiryMonth || !cardExpiryYear || !cardCvv || !cardCep) {
-        toast.error("Preencha todos os dados do cartão");
-        return;
-      }
-    }
+    // Only cash payments are supported now (PIX/Card via Stripe coming soon)
 
     setProcessingPayment(true);
 
@@ -681,37 +620,10 @@ const ClienteAgendar = () => {
 
       const payload: any = {
         bookingData,
-        metodo: paymentMethod,
+        metodo: 'cash',
         creditsUsed: Math.min(availableCredits, totalPrice),
         rescheduleFromId: isRescheduling ? rescheduleAppointmentId : undefined,
       };
-
-      if (paymentMethod === 'card') {
-        payload.cardInfo = {
-          holderName: cardHolderName.trim(),
-          number: cardNumber.replace(/\s/g, ''),
-          expiryMonth: cardExpiryMonth.trim().padStart(2, '0'),
-          expiryYear: cardExpiryYear.trim().length === 2 ? `20${cardExpiryYear.trim()}` : cardExpiryYear.trim(),
-          ccv: cardCvv.trim(),
-        };
-
-        // Capturar IP do cliente para antifraude do Asaas
-        let clientIp = '0.0.0.0';
-        try {
-          const ipResponse = await fetch('https://api.ipify.org?format=json');
-          const ipData = await ipResponse.json();
-          clientIp = ipData.ip || '0.0.0.0';
-        } catch (e) {
-          console.warn('Could not fetch client IP:', e);
-        }
-
-        payload.customerInfo = {
-          name: cardHolderName.trim(),
-          email: session.user.email,
-          postalCode: cardCep.replace(/\D/g, ''),
-          remoteIp: clientIp,
-        };
-      }
 
       const { data, error } = await supabase.functions.invoke('create-payment', {
         body: payload,
@@ -737,45 +649,24 @@ const ClienteAgendar = () => {
         await registerCouponUsage(data.appointmentId);
       }
 
-      if (paymentMethod === 'cash') {
-        sessionStorage.removeItem('isRescheduling');
-        sessionStorage.removeItem('rescheduleAppointmentId');
-        
-        const { data: profile } = await supabase.from('profiles').select('nome, telefone').eq('id', session.user.id).single();
-        sendNovoAgendamentoEvent({
-          agendamento_id: data.appointmentId || '',
-          cliente_id: session.user.id,
-          cliente_nome: profile?.nome || session.user.email || 'Cliente',
-          cliente_telefone: profile?.telefone,
-          servico: serviceNames,
-          data: format(selectedDate, 'yyyy-MM-dd'),
-          hora: selectedTime,
-          preco: finalPrice
-        });
-        
-        toast.success("Agendamento criado! Pague na barbearia.");
-        navigate("/cliente");
-      } else if (paymentMethod === 'pix' && data.asaasPayment?.pixQrCode) {
-        setPixQrCode(data.asaasPayment.pixQrCode.encodedImage);
-        setPixPayload(data.asaasPayment.pixQrCode.payload);
-        setPendingBookingId(data.pendingBookingId || null);
-        // Set expiration to 30 minutes from now (matching Asaas default)
-        const expiresAt = new Date(Date.now() + 30 * 60 * 1000).toISOString();
-        setPixExpiresAt(expiresAt);
-        setPixExpired(false);
-        toast.success("QR Code gerado! Escaneie para pagar.");
-        setStep(7);
-      } else if (paymentMethod === 'card') {
-        sessionStorage.removeItem('isRescheduling');
-        sessionStorage.removeItem('rescheduleAppointmentId');
-        
-        if (data.asaasPayment?.status === 'CONFIRMED') {
-          toast.success("Pagamento aprovado! Agendamento confirmado.");
-          navigate("/cliente");
-        } else {
-          toast.error("Pagamento recusado. Verifique os dados do cartão.");
-        }
-      }
+      // Cash payment - redirect to home
+      sessionStorage.removeItem('isRescheduling');
+      sessionStorage.removeItem('rescheduleAppointmentId');
+      
+      const { data: profile } = await supabase.from('profiles').select('nome, telefone').eq('id', session.user.id).single();
+      sendNovoAgendamentoEvent({
+        agendamento_id: data.appointmentId || '',
+        cliente_id: session.user.id,
+        cliente_nome: profile?.nome || session.user.email || 'Cliente',
+        cliente_telefone: profile?.telefone,
+        servico: serviceNames,
+        data: format(selectedDate, 'yyyy-MM-dd'),
+        hora: selectedTime,
+        preco: finalPrice
+      });
+      
+      toast.success("Agendamento criado! Pague na barbearia.");
+      navigate("/cliente");
     } catch (error: any) {
       console.error('Payment error:', error);
       
@@ -1356,87 +1247,8 @@ const ClienteAgendar = () => {
       // Remarcação: 1=Barbeiro, 2=Data, 3=Horário, 4=Confirmação
       setStep(step - 1);
     } else {
-      // Normal: 1=Barbeiro, 2=Serviços, 3=Data, 4=Horário, 5=Pagamento, 6=Confirmação, 7=PIX
-      if (step === 7) {
-        // Voltando do QR Code PIX para confirmação
-        setPixQrCode(null);
-        setPixPayload(null);
-        setPixExpired(false);
-        setPixExpiresAt(null);
-        setStep(6);
-      } else {
-        setStep(step - 1);
-      }
-    }
-  };
-
-  const handleCopyPix = () => {
-    if (pixPayload) {
-      navigator.clipboard.writeText(pixPayload);
-      setCopied(true);
-      toast.success("Código PIX copiado!");
-      setTimeout(() => setCopied(false), 3000);
-    }
-  };
-
-  /** Re-generate PIX QR Code for an existing pending booking */
-  const handleRegeneratePix = async () => {
-    if (!pendingBookingId) return;
-    setRegeneratingPix(true);
-    try {
-      const { data: oldBooking } = await supabase
-        .from("pending_bookings")
-        .select("*")
-        .eq("id", pendingBookingId)
-        .single();
-
-      if (!oldBooking) {
-        toast.error("Reserva não encontrada. Crie um novo agendamento.");
-        navigate("/cliente");
-        return;
-      }
-
-      // Delete old pending booking first
-      await supabase.from("pending_bookings").delete().eq("id", pendingBookingId);
-
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
-
-      const bookingData = {
-        servico_id: oldBooking.servico_id,
-        barbeiro_id: oldBooking.barbeiro_id,
-        data: oldBooking.data,
-        hora: oldBooking.hora,
-        duracao: oldBooking.duracao,
-        preco: oldBooking.preco,
-      };
-
-      const payload: any = {
-        bookingData,
-        metodo: 'pix' as const,
-        excludePendingBookingId: pendingBookingId,
-      };
-
-      const { data, error } = await supabase.functions.invoke('create-payment', {
-        body: payload,
-      });
-
-      if (error) throw error;
-
-      if (data.asaasPayment?.pixQrCode) {
-        setPixQrCode(data.asaasPayment.pixQrCode.encodedImage);
-        setPixPayload(data.asaasPayment.pixQrCode.payload);
-        setPendingBookingId(data.pendingBookingId || null);
-        const expiresAt = new Date(Date.now() + 30 * 60 * 1000).toISOString();
-        setPixExpiresAt(expiresAt);
-        setPixExpired(false);
-        toast.success("Novo QR Code gerado!");
-      }
-    } catch (error) {
-      console.error("Error regenerating PIX:", error);
-      toast.error("Erro ao gerar novo QR Code");
-    } finally {
-      setRegeneratingPix(false);
+      // Normal: 1=Barbeiro, 2=Serviços, 3=Data, 4=Horário, 5=Pagamento, 6=Confirmação
+      setStep(step - 1);
     }
   };
 
@@ -1783,24 +1595,11 @@ const ClienteAgendar = () => {
 
               <div className="space-y-3">
                 <PaymentOption
-                  value="pix"
-                  selected={false}
-                  onSelect={() => {}}
-                  title="PIX"
-                  description="Pagamento instantâneo via QR Code"
-                  icon={<img src={pixIcon} alt="PIX" className="w-4 h-4 object-contain" />}
-                  disabled={true}
-                  disabledLabel="Em breve"
-                />
-
-                <PaymentOption
-                  value="card"
-                  selected={false}
-                  onSelect={() => {}}
-                  title="Cartão de Crédito"
-                  description="Pagamento aprovado na hora"
-                  disabled={true}
-                  disabledLabel="Em breve"
+                  value="cash"
+                  selected={paymentMethod === 'cash'}
+                  onSelect={() => setPaymentMethod('cash')}
+                  title="Pagar na Barbearia"
+                  description="Pagamento presencial após confirmação"
                 />
 
                 <PaymentOption
@@ -2038,7 +1837,7 @@ const ClienteAgendar = () => {
         )}
 
         {/* Step 6: Confirmação (Usuários normais SEM plano) - oculta quando QR Code PIX é gerado */}
-        {step === 6 && !isRescheduling && !isPlanFlow && !pixQrCode && (
+        {step === 6 && !isRescheduling && !isPlanFlow && (
           <motion.div
             key="step-5"
             variants={pageVariants}
@@ -2094,8 +1893,6 @@ const ClienteAgendar = () => {
                   value={
                     useRedemption && getTotalPrice() === 0 ? "Resgate de Fidelidade" :
                     availableCredits >= getTotalPrice() ? "Créditos do App" :
-                    paymentMethod === 'pix' ? "PIX" :
-                    paymentMethod === 'card' ? "Cartão de Crédito" :
                     "Pagar na Barbearia"
                   }
                 />
@@ -2121,91 +1918,6 @@ const ClienteAgendar = () => {
                 </div>
               </div>
 
-              {/* Card Dados do Cartão */}
-              {paymentMethod === 'card' && availableCredits < getTotalPrice() && (
-                <div className="bg-card border border-border rounded-2xl p-5 mb-6 space-y-4">
-                  <h3 className="text-base font-semibold text-foreground mb-3">Dados do Cartão</h3>
-                  
-                  <input
-                    type="text"
-                    placeholder="Nome no cartão"
-                    value={cardHolderName}
-                    onChange={(e) => setCardHolderName(e.target.value)}
-                    className="w-full px-4 py-3 bg-secondary border border-border rounded-xl text-foreground placeholder-muted-foreground focus:outline-none focus:border-primary/50"
-                  />
-                  
-                  <input
-                    type="text"
-                    placeholder="Número do cartão"
-                    value={cardNumber}
-                    maxLength={19}
-                    onChange={(e) => {
-                      const value = e.target.value.replace(/\D/g, '').slice(0, 16);
-                      const formatted = value.replace(/(\d{4})(?=\d)/g, '$1 ');
-                      setCardNumber(formatted);
-                    }}
-                    className="w-full px-4 py-3 bg-secondary border border-border rounded-xl text-foreground placeholder-muted-foreground focus:outline-none focus:border-primary/50"
-                  />
-                  
-                  <div className="grid grid-cols-3 gap-3">
-                    <input
-                      type="text"
-                      placeholder="MM"
-                      value={cardExpiryMonth}
-                      maxLength={2}
-                      onChange={(e) => {
-                        const value = e.target.value.replace(/\D/g, '').slice(0, 2);
-                        setCardExpiryMonth(value);
-                      }}
-                      className="px-4 py-3 bg-secondary border border-border rounded-xl text-foreground placeholder-muted-foreground focus:outline-none focus:border-primary/50"
-                    />
-                    <input
-                      type="text"
-                      placeholder="AAAA"
-                      value={cardExpiryYear}
-                      maxLength={4}
-                      onChange={(e) => {
-                        const value = e.target.value.replace(/\D/g, '').slice(0, 4);
-                        setCardExpiryYear(value);
-                      }}
-                      className="px-4 py-3 bg-secondary border border-border rounded-xl text-foreground placeholder-muted-foreground focus:outline-none focus:border-primary/50"
-                    />
-                    <input
-                      type="text"
-                      placeholder="CVV"
-                      value={cardCvv}
-                      maxLength={4}
-                      onChange={(e) => {
-                        const value = e.target.value.replace(/\D/g, '').slice(0, 4);
-                        setCardCvv(value);
-                      }}
-                      className="px-4 py-3 bg-secondary border border-border rounded-xl text-foreground placeholder-muted-foreground focus:outline-none focus:border-primary/50"
-                    />
-                  </div>
-                  
-                  <input
-                    type="text"
-                    placeholder="CEP do titular (ex: 00000-000)"
-                    value={cardCep}
-                    onChange={(e) => {
-                      const value = e.target.value.replace(/\D/g, "").slice(0, 8);
-                      const formatted = value.length > 5 ? `${value.slice(0, 5)}-${value.slice(5)}` : value;
-                      setCardCep(formatted);
-                    }}
-                    maxLength={9}
-                    className="w-full px-4 py-3 bg-secondary border border-border rounded-xl text-foreground placeholder-muted-foreground focus:outline-none focus:border-primary/50"
-                  />
-                </div>
-              )}
-
-              {/* Avisos contextuais */}
-              {paymentMethod === 'pix' && availableCredits < getTotalPrice() && (
-                <div className="bg-gold/10 border border-gold/20 rounded-xl p-4 mb-6">
-                  <p className="text-sm text-gold text-center">
-                    Ao confirmar, o QR Code PIX será gerado
-                  </p>
-                </div>
-              )}
 
               <button
                 onClick={handlePayment}
@@ -2214,7 +1926,6 @@ const ClienteAgendar = () => {
               >
                 {processingPayment ? 'Processando...' : 
                   availableCredits >= getTotalPrice() ? 'Confirmar (usando créditos)' :
-                  paymentMethod === 'pix' ? 'Gerar QR Code PIX' :
                   'Confirmar Agendamento'
                 }
               </button>
