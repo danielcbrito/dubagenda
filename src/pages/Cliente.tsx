@@ -367,6 +367,11 @@ const Cliente = () => {
         preco,
         payment_method,
         created_at,
+        pix_qr_code,
+        pix_payload,
+        asaas_payment_id,
+        expires_at,
+        barbeiro_id,
         servico:servicos(nome)
       `)
       .eq("user_id", userId)
@@ -383,6 +388,34 @@ const Cliente = () => {
   };
 
   const handleResumePayment = (bookingId: string) => {
+    const booking = pendingBookings.find(b => b.id === bookingId);
+
+    // Se tem dados PIX e o QR Code ainda não expirou, redireciona direto para o checkout PIX
+    if (booking?.pix_qr_code && booking?.pix_payload && booking?.expires_at) {
+      const expiresAt = new Date(booking.expires_at).getTime();
+      const now = Date.now();
+
+      if (expiresAt > now) {
+        // QR Code ainda válido — redirecionar direto
+        const pixCheckoutData = {
+          pixQrCode: booking.pix_qr_code,
+          pixPayload: booking.pix_payload,
+          pendingBookingId: booking.id,
+          asaasPaymentId: booking.asaas_payment_id || "",
+          expiresAt: booking.expires_at,
+          value: booking.preco,
+          serviceName: booking.servico?.nome || "Serviço",
+          barberName: "",
+          bookingDate: booking.data ? new Date(`${booking.data}T12:00:00`).toLocaleDateString("pt-BR") : "",
+          bookingTime: booking.hora || "",
+        };
+        sessionStorage.setItem("pix_checkout_data", JSON.stringify(pixCheckoutData));
+        navigate("/cliente/pix-checkout");
+        return;
+      }
+    }
+
+    // QR Code expirado ou não é PIX — redireciona para escolher forma de pagamento
     sessionStorage.setItem('resumePendingBookingId', bookingId);
     navigate("/cliente/agendar");
   };
