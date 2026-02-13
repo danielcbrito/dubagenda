@@ -407,33 +407,45 @@ export type Database = {
       }
       assinaturas: {
         Row: {
+          asaas_payment_id: string | null
           created_at: string | null
           gateway_subscription_id: string | null
           id: string
           next_billing_date: string | null
           payment_method: Database["public"]["Enums"]["payment_method"] | null
+          pix_expires_at: string | null
+          pix_payload: string | null
+          pix_qr_code: string | null
           plano_id: string
           status: Database["public"]["Enums"]["subscription_status"] | null
           updated_at: string | null
           user_id: string
         }
         Insert: {
+          asaas_payment_id?: string | null
           created_at?: string | null
           gateway_subscription_id?: string | null
           id?: string
           next_billing_date?: string | null
           payment_method?: Database["public"]["Enums"]["payment_method"] | null
+          pix_expires_at?: string | null
+          pix_payload?: string | null
+          pix_qr_code?: string | null
           plano_id: string
           status?: Database["public"]["Enums"]["subscription_status"] | null
           updated_at?: string | null
           user_id: string
         }
         Update: {
+          asaas_payment_id?: string | null
           created_at?: string | null
           gateway_subscription_id?: string | null
           id?: string
           next_billing_date?: string | null
           payment_method?: Database["public"]["Enums"]["payment_method"] | null
+          pix_expires_at?: string | null
+          pix_payload?: string | null
+          pix_qr_code?: string | null
           plano_id?: string
           status?: Database["public"]["Enums"]["subscription_status"] | null
           updated_at?: string | null

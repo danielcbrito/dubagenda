@@ -8,10 +8,13 @@ import {
   Check, 
   CheckCircle2, 
   Crown,
+  CreditCard,
+  Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
+import pixIcon from "@/assets/pix-icon.png";
 
 interface Plan {
   id: string;
@@ -119,19 +122,20 @@ const ClienteAssinar = () => {
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState(resumePlanId ? 0 : 1);
   const [hasActiveSubscription, setHasActiveSubscription] = useState(false);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<"pix" | "card" | null>(null);
 
   useEffect(() => {
     loadPlans();
     checkActiveSubscription();
   }, []);
 
-  // Se veio com resumePlanId, auto-seleciona o plano
+  // Se veio com resumePlanId, auto-seleciona o plano e vai direto para pagamento
   useEffect(() => {
     if (resumePlanId && plans.length > 0 && (step === 0 || step === 1)) {
       const plan = plans.find(p => p.id === resumePlanId);
       if (plan) {
         setSelectedPlan(plan);
-        setStep(1);
+        setStep(2); // Ir direto para escolha de pagamento
       } else {
         setStep(1);
       }
@@ -164,9 +168,15 @@ const ClienteAssinar = () => {
     setPlans(data || []);
   };
 
-  /** Redireciona para Stripe Checkout */
-  const handleSubscribe = async () => {
+  /** Avançar para pagamento */
+  const handleProceedToPayment = () => {
     if (!selectedPlan) return;
+    setStep(2);
+  };
+
+  /** Finalizar pagamento com o método escolhido */
+  const handlePayment = async () => {
+    if (!selectedPlan || !selectedPaymentMethod) return;
     setLoading(true);
 
     try {
@@ -177,23 +187,51 @@ const ClienteAssinar = () => {
         return;
       }
 
-      const { data, error } = await supabase.functions.invoke('create-checkout', {
-        body: { planoId: selectedPlan.id }
-      });
+      if (selectedPaymentMethod === "card") {
+        // Stripe Checkout
+        const { data, error } = await supabase.functions.invoke('create-checkout', {
+          body: { planoId: selectedPlan.id }
+        });
 
-      if (error) throw error;
-      
-      if (data?.url) {
-        window.open(data.url, '_blank');
-        toast.info("Complete o pagamento na nova aba para ativar sua assinatura");
+        if (error) throw error;
+        
+        if (data?.url) {
+          window.open(data.url, '_blank');
+          toast.info("Complete o pagamento na nova aba para ativar sua assinatura");
+        }
+      } else {
+        // PIX via Asaas
+        const { data, error } = await supabase.functions.invoke('create-subscription-pix', {
+          body: { planoId: selectedPlan.id }
+        });
+
+        if (error) throw error;
+
+        if (data?.success) {
+          // Salvar dados do PIX e redirecionar para checkout PIX
+          const pixCheckoutData = {
+            pixQrCode: data.pixQrCode,
+            pixPayload: data.pixPayload,
+            subscriptionId: data.subscriptionId,
+            asaasPaymentId: data.asaasPaymentId,
+            expiresAt: data.expiresAt,
+            value: data.value,
+            planName: data.planName,
+          };
+          sessionStorage.setItem("subscription_pix_checkout_data", JSON.stringify(pixCheckoutData));
+          navigate("/cliente/assinatura-pix");
+        }
       }
     } catch (error: any) {
-      console.error('Subscription error:', error);
-      toast.error("Erro ao criar assinatura: " + error.message);
+      console.error('Payment error:', error);
+      toast.error(error.message || "Erro ao processar pagamento");
     } finally {
       setLoading(false);
     }
   };
+
+  /** Título do header conforme o step */
+  const headerTitle = step === 1 ? "Escolha o melhor para você" : "Forma de pagamento";
 
   return (
     <div className="min-h-screen bg-background pb-20">
@@ -202,17 +240,25 @@ const ClienteAssinar = () => {
       <div className="sticky top-0 z-10 px-4 pt-[max(env(safe-area-inset-top),1rem)] pb-3 bg-background/80 backdrop-blur-xl">
         <div className="max-w-2xl mx-auto flex items-center gap-3">
           <button 
-            onClick={() => navigate("/cliente")}
+            onClick={() => {
+              if (step === 2) {
+                setStep(1);
+                setSelectedPaymentMethod(null);
+              } else {
+                navigate("/cliente");
+              }
+            }}
             className="w-9 h-9 flex items-center justify-center rounded-full bg-card border border-border/40 hover:bg-muted transition-colors"
           >
             <ArrowLeft className="w-4 h-4 text-foreground" />
           </button>
           <motion.p 
+            key={headerTitle}
             initial={{ opacity: 0, x: -8 }}
             animate={{ opacity: 1, x: 0 }}
             className="text-sm font-semibold text-foreground tracking-tight"
           >
-            Escolha o melhor para você
+            {headerTitle}
           </motion.p>
         </div>
       </div>
@@ -269,13 +315,118 @@ const ClienteAssinar = () => {
               </div>
             </motion.div>
           )}
+
+          {/* Step 2: Escolha de Forma de Pagamento */}
+          {step === 2 && selectedPlan && (
+            <motion.div
+              key="step2"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              className="space-y-5 pb-28"
+            >
+              {/* Resumo do plano selecionado */}
+              <div className="rounded-2xl border border-border/40 bg-card p-5">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium mb-1">
+                      Plano selecionado
+                    </p>
+                    <p className="text-lg font-bold text-foreground">{selectedPlan.nome}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-2xl font-bold text-primary">
+                      R$ {selectedPlan.preco_mensal.toFixed(2).replace('.', ',')}
+                    </p>
+                    <p className="text-xs text-muted-foreground">/mês</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Opções de pagamento */}
+              <div className="space-y-3">
+                <p className="text-sm font-semibold text-foreground">
+                  Como deseja pagar?
+                </p>
+
+                {/* PIX */}
+                <motion.button
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => setSelectedPaymentMethod("pix")}
+                  className={cn(
+                    "w-full rounded-2xl border p-5 text-left transition-all",
+                    selectedPaymentMethod === "pix"
+                      ? "border-primary/50 bg-card ring-2 ring-primary/30"
+                      : "border-border/40 bg-card hover:border-border"
+                  )}
+                >
+                  <div className="flex items-center gap-4">
+                    <div className={cn(
+                      "w-12 h-12 rounded-xl flex items-center justify-center transition-colors",
+                      selectedPaymentMethod === "pix" ? "bg-primary/15" : "bg-muted/60"
+                    )}>
+                      <img src={pixIcon} alt="PIX" className="w-6 h-6" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-semibold text-sm text-foreground">Pix</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Pagamento instantâneo via QR Code
+                      </p>
+                    </div>
+                    {selectedPaymentMethod === "pix" && (
+                      <div className="w-6 h-6 bg-primary rounded-full flex items-center justify-center">
+                        <Check className="w-3.5 h-3.5 text-primary-foreground" />
+                      </div>
+                    )}
+                  </div>
+                </motion.button>
+
+                {/* Cartão */}
+                <motion.button
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => setSelectedPaymentMethod("card")}
+                  className={cn(
+                    "w-full rounded-2xl border p-5 text-left transition-all",
+                    selectedPaymentMethod === "card"
+                      ? "border-primary/50 bg-card ring-2 ring-primary/30"
+                      : "border-border/40 bg-card hover:border-border"
+                  )}
+                >
+                  <div className="flex items-center gap-4">
+                    <div className={cn(
+                      "w-12 h-12 rounded-xl flex items-center justify-center transition-colors",
+                      selectedPaymentMethod === "card" ? "bg-primary/15" : "bg-muted/60"
+                    )}>
+                      <CreditCard className={cn(
+                        "w-6 h-6 transition-colors",
+                        selectedPaymentMethod === "card" ? "text-primary" : "text-muted-foreground"
+                      )} />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-semibold text-sm text-foreground">Cartão de Crédito</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Pagamento seguro via Stripe
+                      </p>
+                    </div>
+                    {selectedPaymentMethod === "card" && (
+                      <div className="w-6 h-6 bg-primary rounded-full flex items-center justify-center">
+                        <Check className="w-3.5 h-3.5 text-primary-foreground" />
+                      </div>
+                    )}
+                  </div>
+                </motion.button>
+              </div>
+            </motion.div>
+          )}
         </AnimatePresence>
       </div>
 
       {/* Floating Bottom Bar */}
       <AnimatePresence>
+        {/* Step 1 — Avançar para pagamento */}
         {step === 1 && selectedPlan && !hasActiveSubscription && (
           <motion.div
+            key="bar-step1"
             initial={{ y: 80, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 80, opacity: 0 }}
@@ -317,7 +468,76 @@ const ClienteAssinar = () => {
                     </div>
                   </div>
                   <motion.button
-                    onClick={handleSubscribe}
+                    onClick={handleProceedToPayment}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    className="group flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium text-sm text-white"
+                    style={{
+                      background: "linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(0 65% 42%) 100%)",
+                      boxShadow: "0 2px 12px hsl(var(--primary) / 0.35), inset 0 1px 0 rgba(255,255,255,0.15)"
+                    }}
+                  >
+                    <span>Continuar</span>
+                    <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
+                  </motion.button>
+                </div>
+              </div>
+              <div className="h-3" />
+            </div>
+          </motion.div>
+        )}
+
+        {/* Step 2 — Confirmar pagamento */}
+        {step === 2 && selectedPaymentMethod && !hasActiveSubscription && (
+          <motion.div
+            key="bar-step2"
+            initial={{ y: 80, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 80, opacity: 0 }}
+            transition={{ type: "spring", stiffness: 500, damping: 40 }}
+            className="fixed bottom-0 left-0 right-0 z-40"
+          >
+            <div className="relative px-4 pb-safe">
+              <div className="absolute -top-12 left-0 right-0 h-12 bg-gradient-to-t from-background to-transparent pointer-events-none" />
+              <div 
+                className="relative mx-auto max-w-md"
+                style={{
+                  borderRadius: "16px",
+                  background: "rgba(18, 18, 20, 0.95)",
+                  boxShadow: "0 0 0 1px rgba(255, 255, 255, 0.08), 0 8px 32px -8px rgba(0, 0, 0, 0.6), 0 4px 16px -4px rgba(239, 68, 68, 0.1)",
+                  backdropFilter: "blur(20px)"
+                }}
+              >
+                <div 
+                  className="absolute top-0 left-1/2 -translate-x-1/2 w-24 h-[1px]"
+                  style={{ background: "linear-gradient(90deg, transparent, hsl(var(--primary) / 0.5), transparent)" }}
+                />
+                <div className="flex items-center justify-between px-4 py-3">
+                  <div className="flex items-center gap-3">
+                    <div 
+                      className="flex items-center justify-center w-9 h-9 rounded-xl"
+                      style={{ background: "linear-gradient(135deg, hsl(var(--primary) / 0.15), hsl(var(--primary) / 0.05))" }}
+                    >
+                      {selectedPaymentMethod === "pix" ? (
+                        <img src={pixIcon} alt="PIX" className="w-4 h-4" />
+                      ) : (
+                        <CreditCard className="w-4 h-4 text-primary" />
+                      )}
+                    </div>
+                    <div>
+                      <div className="text-xs text-muted-foreground/60">
+                        {selectedPaymentMethod === "pix" ? "Pagar via Pix" : "Pagar via Cartão"}
+                      </div>
+                      <div className="flex items-baseline gap-1 mt-0.5">
+                        <span className="text-[10px] text-muted-foreground/50">R$</span>
+                        <span className="text-base font-semibold text-foreground">
+                          {selectedPlan?.preco_mensal.toFixed(2).replace('.', ',')}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <motion.button
+                    onClick={handlePayment}
                     disabled={loading}
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
@@ -328,7 +548,7 @@ const ClienteAssinar = () => {
                     }}
                   >
                     {loading ? (
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      <Loader2 className="w-4 h-4 animate-spin" />
                     ) : (
                       <>
                         <span>Assinar</span>
