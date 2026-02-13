@@ -87,14 +87,39 @@ const Cliente = () => {
     barberPhoto: string | null;
   } | null>(null);
 
-  // Ref para garantir que o modal só abre UMA VEZ por montagem do componente
-  const reviewModalShownRef = useRef(false);
+  // Flag para garantir que o modal só abre UMA VEZ por montagem
+  const reviewTriggeredRef = useRef(false);
+  // Flag para bloquear qualquer reabertura após fechar
+  const reviewClosedRef = useRef(false);
 
   const { pendingReviews, refresh: refreshReviews } = usePendingReviews(user?.id || null);
 
   /**
-   * Retorna IDs dispensados do localStorage (permanente)
+   * Lógica de exibição do modal de avaliação:
+   * - Só aparece a cada 3 cortes concluídos (não avaliados)
+   * - Se dispensado ("Não quero avaliar"), NUNCA mais aparece para esse appointment
+   * - Usa localStorage para persistência permanente
    */
+  const REVIEW_INTERVAL = 3; // A cada 3 cortes concluídos sem avaliar
+
+  const shouldShowReview = (): boolean => {
+    // Buscar contador de cortes concluídos desde última avaliação/dispensa
+    try {
+      const lastReviewCount = parseInt(localStorage.getItem("review_completed_count") || "0", 10);
+      const dismissed = getDismissedIds();
+      const eligible = pendingReviews.filter((r) => !dismissed.has(r.appointmentId));
+      
+      // Total de cortes concluídos sem avaliar
+      const totalUnreviewed = eligible.length;
+      
+      // Só mostra se atingiu o intervalo
+      return totalUnreviewed > 0 && totalUnreviewed >= REVIEW_INTERVAL && 
+             (totalUnreviewed % REVIEW_INTERVAL === 0 || totalUnreviewed === REVIEW_INTERVAL);
+    } catch {
+      return false;
+    }
+  };
+
   const getDismissedIds = (): Set<string> => {
     try {
       const stored = localStorage.getItem("dismissed_review_ids");
@@ -104,9 +129,6 @@ const Cliente = () => {
     }
   };
 
-  /**
-   * Marca um appointment como dispensado permanentemente
-   */
   const dismissReview = (appointmentId: string) => {
     const ids = getDismissedIds();
     ids.add(appointmentId);
@@ -115,18 +137,22 @@ const Cliente = () => {
     } catch { /* ignore */ }
   };
 
-  // Auto-abrir modal de avaliação UMA ÚNICA VEZ
+  // Auto-abrir modal — UMA ÚNICA VEZ, com intervalo de 3 cortes
   useEffect(() => {
-    if (!dataLoaded || reviewModalShownRef.current || reviewModalData) return;
+    if (!dataLoaded || reviewTriggeredRef.current || reviewClosedRef.current) return;
+    
     const dismissed = getDismissedIds();
-    const next = pendingReviews.find((r) => !dismissed.has(r.appointmentId));
-    if (next) {
-      reviewModalShownRef.current = true; // Nunca mais abre nesta montagem
+    const eligible = pendingReviews.filter((r) => !dismissed.has(r.appointmentId));
+    
+    // Só mostra a cada REVIEW_INTERVAL cortes não avaliados
+    if (eligible.length > 0 && eligible.length % REVIEW_INTERVAL === 0) {
+      reviewTriggeredRef.current = true;
+      const pick = eligible[0];
       setReviewModalData({
-        appointmentId: next.appointmentId,
-        barberId: next.barberId,
-        barberName: next.barberName,
-        barberPhoto: next.barberPhoto,
+        appointmentId: pick.appointmentId,
+        barberId: pick.barberId,
+        barberName: pick.barberName,
+        barberPhoto: pick.barberPhoto,
       });
     }
   }, [pendingReviews, dataLoaded]);
@@ -780,8 +806,12 @@ const Cliente = () => {
       <BarberReviewModal
         open={!!reviewModalData}
         onOpenChange={(open) => {
-          if (!open && reviewModalData) {
-            dismissReview(reviewModalData.appointmentId);
+          if (!open) {
+            // Bloqueia QUALQUER reabertura
+            reviewClosedRef.current = true;
+            if (reviewModalData) {
+              dismissReview(reviewModalData.appointmentId);
+            }
             setReviewModalData(null);
           }
         }}
@@ -792,6 +822,7 @@ const Cliente = () => {
         userId={user?.id || ""}
         userName={profile?.nome || "Cliente"}
         onSuccess={() => {
+          reviewClosedRef.current = true;
           if (reviewModalData) {
             dismissReview(reviewModalData.appointmentId);
           }
