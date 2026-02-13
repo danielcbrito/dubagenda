@@ -62,7 +62,7 @@ const ForgotPassword = () => {
 
       if (error) {
         if (error.message?.includes('rate limit') || error.message?.includes('429')) {
-          // O email JÁ foi enviado antes — mostrar tela de sucesso
+          // Rate limit atingido — mostrar sucesso pois o email já foi enviado anteriormente
           setEmailSent(true);
           toast.info("O email de recuperação já foi enviado! Verifique sua caixa de entrada e spam.");
         } else {
@@ -71,8 +71,8 @@ const ForgotPassword = () => {
         return;
       }
 
-      localStorage.setItem('pwd_reset_ts', String(Date.now()));
       setCooldown(60);
+      localStorage.setItem('pwd_reset_ts', String(Date.now()));
       setEmailSent(true);
       toast.success("Email de recuperação enviado! Verifique sua caixa de entrada e spam.");
     } catch (error) {

@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { Search, User, Mail, Phone, Award, MoreVertical, Ban, CheckCircle, Eye, Trash2 } from "lucide-react";
+import { Search, User, Mail, Phone, Award, MoreVertical, Ban, CheckCircle, Eye, Trash2, KeyRound, Loader2, Copy } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,6 +21,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 
 interface Client {
@@ -41,6 +49,12 @@ export function AdminClientes() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [clientToDelete, setClientToDelete] = useState<Client | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+  // Estado para modal de redefinir senha
+  const [resetPasswordOpen, setResetPasswordOpen] = useState(false);
+  const [resetPasswordClient, setResetPasswordClient] = useState<Client | null>(null);
+  const [newPassword, setNewPassword] = useState("");
+  const [resettingPassword, setResettingPassword] = useState(false);
 
   useEffect(() => {
     loadClients();
@@ -170,6 +184,35 @@ export function AdminClientes() {
       } catch (e) {
         console.log('Could not fetch email:', e);
       }
+    }
+  };
+
+  const handleResetPassword = async () => {
+    if (!resetPasswordClient || !newPassword) return;
+    if (newPassword.length < 6) {
+      toast.error("Senha deve ter pelo menos 6 caracteres");
+      return;
+    }
+    setResettingPassword(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('admin-reset-password', {
+        body: {
+          action: 'reset_password',
+          user_id: resetPasswordClient.id,
+          new_password: newPassword,
+        }
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast.success(`Senha de ${resetPasswordClient.nome} redefinida com sucesso!`);
+      setResetPasswordOpen(false);
+      setResetPasswordClient(null);
+      setNewPassword("");
+    } catch (err: any) {
+      console.error("Erro ao redefinir senha:", err);
+      toast.error("Erro ao redefinir senha: " + (err?.message || "Tente novamente"));
+    } finally {
+      setResettingPassword(false);
     }
   };
 
@@ -316,6 +359,17 @@ export function AdminClientes() {
                             )}
                           </DropdownMenuItem>
                           <DropdownMenuItem 
+                            className="gap-2 text-primary"
+                            onClick={() => {
+                              setResetPasswordClient(client);
+                              setNewPassword("");
+                              setResetPasswordOpen(true);
+                            }}
+                          >
+                            <KeyRound className="w-4 h-4" />
+                            Redefinir senha
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
                             className="gap-2 text-destructive focus:text-destructive"
                             onClick={() => openDeleteDialog(client)}
                           >
@@ -366,6 +420,67 @@ export function AdminClientes() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Modal de redefinir senha */}
+      <Dialog open={resetPasswordOpen} onOpenChange={setResetPasswordOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <KeyRound className="w-5 h-5 text-primary" />
+              Redefinir senha
+            </DialogTitle>
+            <DialogDescription>
+              Defina uma nova senha para <span className="font-semibold text-foreground">{resetPasswordClient?.nome}</span>
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 pt-2">
+            {resetPasswordClient?.email && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground bg-secondary/30 rounded-lg p-3">
+                <Mail className="w-4 h-4 flex-shrink-0" />
+                <span>{resetPasswordClient.email}</span>
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <Label htmlFor="new-client-password">Nova senha</Label>
+              <Input
+                id="new-client-password"
+                type="text"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="Mínimo 6 caracteres"
+                className="input-premium"
+              />
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => setResetPasswordOpen(false)}
+                disabled={resettingPassword}
+              >
+                Cancelar
+              </Button>
+              <Button
+                className="flex-1 bg-primary hover:bg-primary/90"
+                onClick={handleResetPassword}
+                disabled={resettingPassword || newPassword.length < 6}
+              >
+                {resettingPassword ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Redefinindo...
+                  </>
+                ) : (
+                  "Redefinir senha"
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
