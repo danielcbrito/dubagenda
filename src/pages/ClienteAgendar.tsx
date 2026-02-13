@@ -1711,32 +1711,111 @@ const ClienteAgendar = () => {
               </div>
 
               <div className="space-y-3">
-                <PaymentOption
-                  value="cash"
-                  selected={paymentMethod === 'cash'}
-                  onSelect={() => setPaymentMethod('cash')}
-                  title="Pagar na Barbearia"
-                  description="Pagamento presencial após confirmação"
-                  icon={<Landmark className="w-5 h-5 text-muted-foreground" />}
-                />
+                <p className="text-sm font-semibold text-foreground">
+                  Como deseja pagar?
+                </p>
 
-                <PaymentOption
-                  value="card"
-                  selected={paymentMethod === 'card'}
-                  onSelect={() => setPaymentMethod('card')}
-                  title="Cartão de Crédito / Débito"
-                  description="Pagamento seguro via Stripe"
-                  icon={<CreditCard className="w-5 h-5 text-muted-foreground" />}
-                />
+                {/* Pagar na Barbearia */}
+                <motion.button
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => { setPaymentMethod('cash'); setUseRedemption(false); }}
+                  className={cn(
+                    "w-full rounded-2xl border p-5 text-left transition-all",
+                    paymentMethod === 'cash' && !useRedemption
+                      ? "border-primary/50 bg-card ring-2 ring-primary/30"
+                      : "border-border/40 bg-card hover:border-border"
+                  )}
+                >
+                  <div className="flex items-center gap-4">
+                    <div className={cn(
+                      "w-12 h-12 rounded-xl flex items-center justify-center transition-colors",
+                      paymentMethod === 'cash' && !useRedemption ? "bg-primary/15" : "bg-muted/60"
+                    )}>
+                      <Landmark className={cn(
+                        "w-6 h-6 transition-colors",
+                        paymentMethod === 'cash' && !useRedemption ? "text-primary" : "text-muted-foreground"
+                      )} />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-semibold text-sm text-foreground">Pagar na Barbearia</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Pagamento presencial após confirmação
+                      </p>
+                    </div>
+                    {paymentMethod === 'cash' && !useRedemption && (
+                      <div className="w-6 h-6 bg-primary rounded-full flex items-center justify-center">
+                        <Check className="w-3.5 h-3.5 text-primary-foreground" />
+                      </div>
+                    )}
+                  </div>
+                </motion.button>
 
-                <PaymentOption
-                  value="pix"
-                  selected={paymentMethod === 'pix'}
-                  onSelect={() => setPaymentMethod('pix')}
-                  title="PIX"
-                  description="Pagamento instantâneo via QR Code"
-                  icon={<img src={pixIcon} alt="PIX" className="w-5 h-5 object-contain" />}
-                />
+                {/* PIX */}
+                <motion.button
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => { setPaymentMethod('pix'); setUseRedemption(false); }}
+                  className={cn(
+                    "w-full rounded-2xl border p-5 text-left transition-all",
+                    paymentMethod === 'pix'
+                      ? "border-primary/50 bg-card ring-2 ring-primary/30"
+                      : "border-border/40 bg-card hover:border-border"
+                  )}
+                >
+                  <div className="flex items-center gap-4">
+                    <div className={cn(
+                      "w-12 h-12 rounded-xl flex items-center justify-center transition-colors",
+                      paymentMethod === 'pix' ? "bg-primary/15" : "bg-muted/60"
+                    )}>
+                      <img src={pixIcon} alt="PIX" className="w-6 h-6 object-contain" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-semibold text-sm text-foreground">Pix</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Pagamento instantâneo via QR Code
+                      </p>
+                    </div>
+                    {paymentMethod === 'pix' && (
+                      <div className="w-6 h-6 bg-primary rounded-full flex items-center justify-center">
+                        <Check className="w-3.5 h-3.5 text-primary-foreground" />
+                      </div>
+                    )}
+                  </div>
+                </motion.button>
+
+                {/* Cartão de Crédito */}
+                <motion.button
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => { setPaymentMethod('card'); setUseRedemption(false); }}
+                  className={cn(
+                    "w-full rounded-2xl border p-5 text-left transition-all",
+                    paymentMethod === 'card'
+                      ? "border-primary/50 bg-card ring-2 ring-primary/30"
+                      : "border-border/40 bg-card hover:border-border"
+                  )}
+                >
+                  <div className="flex items-center gap-4">
+                    <div className={cn(
+                      "w-12 h-12 rounded-xl flex items-center justify-center transition-colors",
+                      paymentMethod === 'card' ? "bg-primary/15" : "bg-muted/60"
+                    )}>
+                      <CreditCard className={cn(
+                        "w-6 h-6 transition-colors",
+                        paymentMethod === 'card' ? "text-primary" : "text-muted-foreground"
+                      )} />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-semibold text-sm text-foreground">Cartão de Crédito</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Pagamento seguro via Stripe
+                      </p>
+                    </div>
+                    {paymentMethod === 'card' && (
+                      <div className="w-6 h-6 bg-primary rounded-full flex items-center justify-center">
+                        <Check className="w-3.5 h-3.5 text-primary-foreground" />
+                      </div>
+                    )}
+                  </div>
+                </motion.button>
 
                 {/* Resgate Grátis */}
                 {canUseRedemption && (
