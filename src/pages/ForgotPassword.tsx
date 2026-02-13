@@ -19,7 +19,6 @@ const ForgotPassword = () => {
   const [emailSent, setEmailSent] = useState(false);
   const [cooldown, setCooldown] = useState(0);
 
-  // Restaurar cooldown do localStorage ao montar
   useEffect(() => {
     const lastSent = localStorage.getItem('pwd_reset_ts');
     if (lastSent) {
@@ -28,7 +27,6 @@ const ForgotPassword = () => {
     }
   }, []);
 
-  // Decrementar cooldown
   useEffect(() => {
     if (cooldown <= 0) return;
     const id = setInterval(() => setCooldown(p => {
@@ -49,17 +47,12 @@ const ForgotPassword = () => {
     try {
       const validated = emailSchema.parse({ email });
 
-      const productionUrl = window.location.origin.includes('localhost') 
-        ? 'https://dubagenda.lovable.app'
-        : window.location.origin;
+      const redirectUrl = window.location.origin.includes('localhost')
+        ? 'https://dubagenda.lovable.app/resetar-senha'
+        : `${window.location.origin}/resetar-senha`;
 
-      // Chamar edge function que gera link via Admin API e envia via Gmail SMTP
-      const { data, error } = await supabase.functions.invoke('admin-reset-password', {
-        body: {
-          action: 'send_recovery',
-          user_email: validated.email,
-          redirect_to: `${productionUrl}/resetar-senha`,
-        }
+      const { error } = await supabase.auth.resetPasswordForEmail(validated.email, {
+        redirectTo: redirectUrl,
       });
 
       if (error) {
@@ -67,7 +60,6 @@ const ForgotPassword = () => {
         return;
       }
 
-      // Sucesso — mostrar tela de confirmação
       setCooldown(60);
       localStorage.setItem('pwd_reset_ts', String(Date.now()));
       setEmailSent(true);
@@ -85,7 +77,6 @@ const ForgotPassword = () => {
 
   return (
     <div className="min-h-screen min-h-[100dvh] flex flex-col bg-black">
-      {/* Background Effects */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div 
           className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[600px] rounded-full opacity-20"
@@ -96,11 +87,9 @@ const ForgotPassword = () => {
         />
       </div>
 
-      {/* Main Content */}
       <div className="flex-1 flex items-center justify-center px-5 py-8 sm:py-12 overflow-y-auto">
         <div className="w-full max-w-[400px] relative z-10">
           
-          {/* Logo */}
           <div className="flex justify-center mb-8">
             <div className="relative">
               <div 
@@ -111,21 +100,14 @@ const ForgotPassword = () => {
                   transform: 'scale(1.5)',
                 }}
               />
-              <img 
-                src={logoDub} 
-                alt="DUB" 
-                className="relative w-16 h-16 sm:w-20 sm:h-20 object-contain"
-              />
+              <img src={logoDub} alt="DUB" className="relative w-16 h-16 sm:w-20 sm:h-20 object-contain" />
             </div>
           </div>
 
-          {/* Card */}
           <div className="relative">
             <div 
               className="absolute -inset-px rounded-2xl opacity-50"
-              style={{
-                background: 'linear-gradient(180deg, hsl(var(--primary) / 0.3) 0%, transparent 50%)',
-              }}
+              style={{ background: 'linear-gradient(180deg, hsl(var(--primary) / 0.3) 0%, transparent 50%)' }}
             />
             
             <div 
@@ -139,14 +121,12 @@ const ForgotPassword = () => {
 
               {!emailSent ? (
                 <>
-                  {/* Icon */}
                   <div className="flex justify-center mb-6">
                     <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center border border-primary/20">
                       <Mail className="w-8 h-8 text-primary" />
                     </div>
                   </div>
 
-                  {/* Title */}
                   <div className="text-center mb-8">
                     <h1 className="text-2xl sm:text-[26px] font-semibold text-white tracking-tight">
                       Recuperar senha
@@ -156,12 +136,9 @@ const ForgotPassword = () => {
                     </p>
                   </div>
 
-                  {/* Form */}
                   <form onSubmit={handleSubmit} className="space-y-4">
                     <div className="space-y-2">
-                      <label className="text-sm font-medium text-white/80 block">
-                        Email
-                      </label>
+                      <label className="text-sm font-medium text-white/80 block">Email</label>
                       <div className="relative">
                         <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-[18px] h-[18px] text-white/30" />
                         <Input
@@ -195,7 +172,6 @@ const ForgotPassword = () => {
                 </>
               ) : (
                 <>
-                  {/* Success State */}
                   <div className="flex justify-center mb-6">
                     <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center border border-primary/20 animate-scale-in">
                       <CheckCircle2 className="w-10 h-10 text-primary" />
@@ -203,9 +179,7 @@ const ForgotPassword = () => {
                   </div>
 
                   <div className="text-center">
-                    <h1 className="text-2xl font-semibold text-white mb-3">
-                      Email enviado!
-                    </h1>
+                    <h1 className="text-2xl font-semibold text-white mb-3">Email enviado!</h1>
                     <p className="text-sm text-white/50 mb-6 leading-relaxed">
                       Verifique sua caixa de entrada em<br />
                       <span className="text-primary font-medium">{email}</span>
@@ -220,7 +194,6 @@ const ForgotPassword = () => {
                 </>
               )}
 
-              {/* Back Link */}
               {!emailSent && (
                 <div className="mt-6 pt-6 border-t border-white/[0.06] text-center">
                   <button
