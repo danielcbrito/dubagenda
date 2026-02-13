@@ -6,6 +6,42 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
+/**
+ * Envia email de recuperação usando a API REST do Supabase Auth diretamente
+ * com a service_role key, contornando o rate limit por usuário.
+ */
+async function sendRecoveryEmail(
+  supabaseUrl: string,
+  serviceKey: string,
+  email: string,
+  redirectTo: string
+): Promise<{ success: boolean; error?: string }> {
+  // Chamar a API REST /auth/v1/recover diretamente com service_role
+  // A service_role key bypassa rate limits de email
+  const response = await fetch(`${supabaseUrl}/auth/v1/recover`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "apikey": serviceKey,
+      "Authorization": `Bearer ${serviceKey}`,
+    },
+    body: JSON.stringify({
+      email,
+      gotrue_meta_security: { captcha_token: "" },
+      code_challenge: "",
+      code_challenge_method: "",
+    }),
+  });
+
+  if (!response.ok) {
+    const errorBody = await response.text();
+    console.error(`[sendRecoveryEmail] Erro ${response.status}:`, errorBody);
+    return { success: false, error: `Erro ao enviar email: ${response.status}` };
+  }
+
+  return { success: true };
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -21,53 +57,33 @@ Deno.serve(async (req) => {
 
     // ──────────────────────────────────────────────
     // ACTION: send_recovery (público — não requer auth)
-    // Gera link de recuperação via Admin API (sem rate limit de email)
-    // e retorna o link para o frontend redirecionar o usuário
+    // Envia email REAL de recuperação via service_role (sem rate limit)
+    // O usuário PRECISA clicar no link do email para provar que é dono da conta
     // ──────────────────────────────────────────────
     if (action === "send_recovery") {
-      if (!user_email) {
+      if (!user_email || typeof user_email !== "string") {
         return new Response(JSON.stringify({ error: "Email é obrigatório" }), {
           status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
 
-      console.log(`[send_recovery] Gerando link para: ${user_email}`);
+      const emailTrimmed = user_email.trim().toLowerCase();
+      console.log(`[send_recovery] Enviando email de recuperação para: ${emailTrimmed}`);
 
       const finalRedirect = redirect_to || `${supabaseUrl.replace('.supabase.co', '.lovable.app')}/resetar-senha`;
 
-      const { data, error } = await supabaseAdmin.auth.admin.generateLink({
-        type: "recovery",
-        email: user_email,
-        options: {
-          redirectTo: finalRedirect,
-        },
-      });
+      // Enviar email real via API REST com service_role (bypassa rate limit)
+      const result = await sendRecoveryEmail(supabaseUrl, supabaseServiceKey, emailTrimmed, finalRedirect);
 
-      if (error) {
-        console.error("[send_recovery] Erro ao gerar link:", error);
-        // Se o email não existe, retornar sucesso mesmo assim (prevenir enumeração)
-        if (error.message?.includes("User not found") || error.message?.includes("not found")) {
-          return new Response(JSON.stringify({ 
-            success: true, 
-            message: "Se o email existir, o link foi gerado." 
-          }), {
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          });
-        }
-        return new Response(JSON.stringify({ error: error.message }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+      if (!result.success) {
+        console.error("[send_recovery] Falha:", result.error);
       }
 
-      const actionLink = data?.properties?.action_link;
-      console.log("[send_recovery] Link gerado com sucesso");
-
+      // Sempre retornar sucesso para não revelar se o email existe ou não
       return new Response(JSON.stringify({ 
         success: true, 
-        action_link: actionLink,
-        message: "Link de recuperação gerado com sucesso" 
+        message: "Se o email estiver cadastrado, um link de recuperação foi enviado." 
       }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
