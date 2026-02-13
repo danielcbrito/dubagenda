@@ -53,7 +53,7 @@ const ForgotPassword = () => {
         ? 'https://dubagenda.lovable.app'
         : window.location.origin;
 
-      // Usar edge function com Admin API para contornar rate limit do Supabase
+      // Usar edge function com Admin API para enviar email real (sem rate limit)
       const { data, error } = await supabase.functions.invoke('admin-reset-password', {
         body: {
           action: 'send_recovery',
@@ -72,22 +72,11 @@ const ForgotPassword = () => {
         return;
       }
 
-      // Se recebeu o action_link, redirecionar o usuário diretamente
-      if (data?.action_link) {
-        setCooldown(60);
-        localStorage.setItem('pwd_reset_ts', String(Date.now()));
-        toast.success("Redirecionando para redefinição de senha...");
-        // Redirecionar para o link de verificação do Supabase
-        // que processará o token e redirecionará para /resetar-senha
-        window.location.href = data.action_link;
-        return;
-      }
-
-      // Fallback: mostrar tela de sucesso
+      // Email enviado com sucesso — mostrar tela de confirmação
       setCooldown(60);
       localStorage.setItem('pwd_reset_ts', String(Date.now()));
       setEmailSent(true);
-      toast.success("Recuperação solicitada com sucesso!");
+      toast.success("Email de recuperação enviado! Verifique sua caixa de entrada e spam.");
     } catch (error) {
       if (error instanceof z.ZodError) {
         toast.error(error.errors[0].message);
