@@ -662,12 +662,33 @@ const ClienteAgendar = () => {
           : undefined,
       };
 
-      // === PIX ou Cartão via Stripe Checkout ===
-      if (paymentMethod === 'card' || paymentMethod === 'pix') {
+      // === PIX via Asaas (QR Code inline) ===
+      if (paymentMethod === 'pix') {
+        const { data, error } = await supabase.functions.invoke('create-asaas-pix', {
+          body: {
+            bookingData,
+            rescheduleFromId: isRescheduling ? rescheduleAppointmentId : undefined,
+          },
+        });
+
+        if (error) throw error;
+        if (data?.error) throw new Error(data.error);
+
+        if (data?.pixQrCode && data?.pixPayload) {
+          // Salvar dados do PIX no sessionStorage e redirecionar
+          sessionStorage.setItem('pix_checkout_data', JSON.stringify(data));
+          navigate('/cliente/pix-checkout');
+          return;
+        }
+        throw new Error("Não foi possível gerar o QR Code PIX.");
+      }
+
+      // === Cartão via Stripe Checkout ===
+      if (paymentMethod === 'card') {
         const { data, error } = await supabase.functions.invoke('create-checkout', {
           body: {
             bookingData,
-            paymentMethod,
+            paymentMethod: 'card',
             rescheduleFromId: isRescheduling ? rescheduleAppointmentId : undefined,
           },
         });
