@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Calendar, Clock, Check, AlertCircle, ChevronRight, X, Crown, Gift } from "lucide-react";
+import { Calendar, Clock, Check, AlertCircle, ChevronRight, X, Crown, Gift, Scissors } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { motion } from "framer-motion";
@@ -26,6 +26,7 @@ interface Appointment {
   payment_method?: string | null;
   tipo_agendamento?: string | null;
   is_free?: boolean | null;
+  barbeiro?: { apelido: string } | null;
   pagamentos?: Array<{
     metodo: string;
     status: string;
@@ -141,6 +142,14 @@ export function AppointmentCardPremium({
               <h3 className="font-bold text-foreground text-base mb-1">
                 {appointment.servico?.nome || "Serviço"}
               </h3>
+              {appointment.barbeiro?.apelido && (
+                <div className="flex items-center gap-1.5 mb-1">
+                  <Scissors className="w-3 h-3 text-muted-foreground" />
+                  <span className="text-xs text-muted-foreground font-medium">
+                    {appointment.barbeiro.apelido}
+                  </span>
+                </div>
+              )}
               <div 
                 className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold"
                 style={{
