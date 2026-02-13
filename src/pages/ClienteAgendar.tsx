@@ -1,7 +1,8 @@
 import { useEffect, useState, useRef, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowLeft, Clock, Check, Tag } from "lucide-react";
+import { ArrowLeft, Clock, Check, Tag, CreditCard, Landmark } from "lucide-react";
+import pixIcon from "@/assets/pix-icon.png";
 import { toast } from "sonner";
 import { ptBR } from "date-fns/locale";
 import { format, eachDayOfInterval, getDay } from "date-fns";
@@ -49,6 +50,7 @@ interface ActiveSubscription {
 
 const ClienteAgendar = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [barbers, setBarbers] = useState<Barber[]>([]);
   const [selectedBarber, setSelectedBarber] = useState<Barber | null>(null);
   const [services, setServices] = useState<Service[]>([]);
@@ -57,7 +59,7 @@ const ClienteAgendar = () => {
   const [selectedTime, setSelectedTime] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState(1);
-  const [paymentMethod, setPaymentMethod] = useState<'cash'>('cash');
+  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'pix'>('cash');
   const [processingPayment, setProcessingPayment] = useState(false);
   const [availableCredits, setAvailableCredits] = useState(0);
   const [userId, setUserId] = useState<string | null>(null);
@@ -183,7 +185,50 @@ const ClienteAgendar = () => {
     }
   }, [selectedDate]);
 
-  // Removed: PIX payment polling and countdown (migrated to Stripe)
+  // Verificar retorno do Stripe Checkout (booking)
+  useEffect(() => {
+    const stripeSuccess = searchParams.get("stripe_success");
+    const sessionId = searchParams.get("session_id");
+    const stripeCancelled = searchParams.get("stripe_cancelled");
+
+    if (stripeCancelled) {
+      toast.info("Pagamento cancelado. Escolha outra forma de pagamento.");
+      searchParams.delete("stripe_cancelled");
+      setSearchParams(searchParams, { replace: true });
+      return;
+    }
+
+    if (stripeSuccess === "booking" && sessionId) {
+      const verifySession = async () => {
+        setProcessingPayment(true);
+        try {
+          const { data, error } = await supabase.functions.invoke("verify-stripe-session", {
+            body: { session_id: sessionId },
+          });
+
+          if (error) throw error;
+
+          if (data?.success) {
+            sessionStorage.removeItem("isRescheduling");
+            sessionStorage.removeItem("rescheduleAppointmentId");
+            toast.success(data.message || "Agendamento confirmado!");
+            navigate("/cliente");
+          } else {
+            toast.error(data?.message || "Pagamento não confirmado.");
+          }
+        } catch (err: any) {
+          console.error("Stripe verification error:", err);
+          toast.error("Erro ao verificar pagamento: " + (err.message || ""));
+        } finally {
+          setProcessingPayment(false);
+          searchParams.delete("stripe_success");
+          searchParams.delete("session_id");
+          setSearchParams(searchParams, { replace: true });
+        }
+      };
+      verifySession();
+    }
+  }, []);
 
   const loadServices = async () => {
     const { data } = await supabase
@@ -586,8 +631,6 @@ const ClienteAgendar = () => {
       return;
     }
 
-    // Only cash payments are supported now (PIX/Card via Stripe coming soon)
-
     setProcessingPayment(true);
 
     try {
@@ -613,11 +656,33 @@ const ClienteAgendar = () => {
         hora: selectedTime,
         duracao: totalDuration,
         preco: finalPrice,
+        serviceName: serviceNames,
         observacoes: selectedServices.length > 1 
           ? `Serviços: ${serviceNames}` 
           : undefined,
       };
 
+      // === PIX ou Cartão via Stripe Checkout ===
+      if (paymentMethod === 'card' || paymentMethod === 'pix') {
+        const { data, error } = await supabase.functions.invoke('create-checkout', {
+          body: {
+            bookingData,
+            paymentMethod,
+            rescheduleFromId: isRescheduling ? rescheduleAppointmentId : undefined,
+          },
+        });
+
+        if (error) throw error;
+        if (data?.error) throw new Error(data.error);
+
+        if (data?.url) {
+          window.location.href = data.url;
+          return;
+        }
+        throw new Error("Não foi possível iniciar o pagamento.");
+      }
+
+      // === Pagamento na Barbearia (cash) ===
       const payload: any = {
         bookingData,
         metodo: 'cash',
@@ -630,11 +695,7 @@ const ClienteAgendar = () => {
       });
 
       if (error) throw error;
-
-      // Tratar erros retornados pelo gateway (status 400)
-      if (data?.error) {
-        throw new Error(data.error);
-      }
+      if (data?.error) throw new Error(data.error);
 
       if (availableCredits > 0 && data.appointmentId) {
         await useCredits(Math.min(availableCredits, totalPrice), data.appointmentId);
@@ -644,12 +705,10 @@ const ClienteAgendar = () => {
         await markRedemptionAsUsed(data.appointmentId);
       }
 
-      // Registra uso do cupom se aplicado
       if (appliedCoupon && data.appointmentId) {
         await registerCouponUsage(data.appointmentId);
       }
 
-      // Cash payment - redirect to home
       sessionStorage.removeItem('isRescheduling');
       sessionStorage.removeItem('rescheduleAppointmentId');
       
@@ -1600,6 +1659,25 @@ const ClienteAgendar = () => {
                   onSelect={() => setPaymentMethod('cash')}
                   title="Pagar na Barbearia"
                   description="Pagamento presencial após confirmação"
+                  icon={<Landmark className="w-5 h-5 text-muted-foreground" />}
+                />
+
+                <PaymentOption
+                  value="card"
+                  selected={paymentMethod === 'card'}
+                  onSelect={() => setPaymentMethod('card')}
+                  title="Cartão de Crédito / Débito"
+                  description="Pagamento seguro via Stripe"
+                  icon={<CreditCard className="w-5 h-5 text-muted-foreground" />}
+                />
+
+                <PaymentOption
+                  value="pix"
+                  selected={paymentMethod === 'pix'}
+                  onSelect={() => setPaymentMethod('pix')}
+                  title="PIX"
+                  description="Pagamento instantâneo via QR Code"
+                  icon={<img src={pixIcon} alt="PIX" className="w-5 h-5 object-contain" />}
                 />
 
                 {/* Resgate Grátis */}
