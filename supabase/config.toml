@@ -23,3 +23,6 @@ verify_jwt = false
 
 [functions.asaas-webhook]
 verify_jwt = false
+
+[functions.admin-reset-password]
+verify_jwt = false

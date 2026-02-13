@@ -50,31 +50,44 @@ const ForgotPassword = () => {
       const validated = emailSchema.parse({ email });
 
       const productionUrl = window.location.origin.includes('localhost') 
-        ? 'https://djtpzvujzmrrslirzwun.lovable.app'
+        ? 'https://dubagenda.lovable.app'
         : window.location.origin;
 
-      const { error } = await supabase.auth.resetPasswordForEmail(
-        validated.email,
-        {
-          redirectTo: `${productionUrl}/resetar-senha`,
+      // Usar edge function com Admin API para contornar rate limit do Supabase
+      const { data, error } = await supabase.functions.invoke('admin-reset-password', {
+        body: {
+          action: 'send_recovery',
+          user_email: validated.email,
+          redirect_to: `${productionUrl}/resetar-senha`,
         }
-      );
+      });
 
       if (error) {
-        if (error.message?.includes('rate limit') || error.message?.includes('429')) {
-          // Rate limit atingido — mostrar sucesso pois o email já foi enviado anteriormente
-          setEmailSent(true);
-          toast.info("O email de recuperação já foi enviado! Verifique sua caixa de entrada e spam.");
-        } else {
-          toast.error("Erro ao enviar email: " + error.message);
-        }
+        toast.error("Erro ao solicitar recuperação. Tente novamente.");
         return;
       }
 
+      if (data?.error) {
+        toast.error(data.error);
+        return;
+      }
+
+      // Se recebeu o action_link, redirecionar o usuário diretamente
+      if (data?.action_link) {
+        setCooldown(60);
+        localStorage.setItem('pwd_reset_ts', String(Date.now()));
+        toast.success("Redirecionando para redefinição de senha...");
+        // Redirecionar para o link de verificação do Supabase
+        // que processará o token e redirecionará para /resetar-senha
+        window.location.href = data.action_link;
+        return;
+      }
+
+      // Fallback: mostrar tela de sucesso
       setCooldown(60);
       localStorage.setItem('pwd_reset_ts', String(Date.now()));
       setEmailSent(true);
-      toast.success("Email de recuperação enviado! Verifique sua caixa de entrada e spam.");
+      toast.success("Recuperação solicitada com sucesso!");
     } catch (error) {
       if (error instanceof z.ZodError) {
         toast.error(error.errors[0].message);
