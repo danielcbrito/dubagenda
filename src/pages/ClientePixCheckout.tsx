@@ -1,27 +1,33 @@
 import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Copy, Check, Loader2, Clock, AlertCircle, CheckCircle2, ArrowLeft, ShieldCheck } from "lucide-react";
+import { Copy, Check, Loader2, Clock, AlertCircle, CheckCircle2, ArrowLeft, ShieldCheck, Scissors, User, CalendarDays } from "lucide-react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import pixIcon from "@/assets/pix-icon.png";
+import logo from "@/assets/logo-dub.png";
+
+interface PixCheckoutData {
+  pixQrCode: string;
+  pixPayload: string;
+  pendingBookingId: string;
+  asaasPaymentId: string;
+  expiresAt: string;
+  value: number;
+  serviceName?: string;
+  barberName?: string;
+  bookingDate?: string;
+  bookingTime?: string;
+}
 
 /**
  * Tela de checkout PIX premium.
- * QR Code, timer, polling automático (5s) e redirecionamento ao confirmar.
+ * Identidade visual, resumo do pedido, QR Code, polling automático e redirecionamento.
  */
 const ClientePixCheckout = () => {
   const navigate = useNavigate();
 
-  const [pixData, setPixData] = useState<{
-    pixQrCode: string;
-    pixPayload: string;
-    pendingBookingId: string;
-    asaasPaymentId: string;
-    expiresAt: string;
-    value: number;
-  } | null>(null);
-
+  const [pixData, setPixData] = useState<PixCheckoutData | null>(null);
   const [copied, setCopied] = useState(false);
   const [timeLeft, setTimeLeft] = useState("");
   const [expired, setExpired] = useState(false);
@@ -113,6 +119,11 @@ const ClientePixCheckout = () => {
     }
   }, [pixData?.pixPayload]);
 
+  const goBack = () => {
+    sessionStorage.removeItem("pix_checkout_data");
+    navigate("/cliente/agendar");
+  };
+
   // Loading
   if (!pixData) {
     return (
@@ -132,7 +143,6 @@ const ClientePixCheckout = () => {
           transition={{ type: "spring", stiffness: 200, damping: 20 }}
           className="text-center space-y-5 w-full max-w-xs"
         >
-          {/* Ícone com efeito sonar */}
           <div className="relative w-20 h-20 mx-auto">
             <motion.div
               className="absolute inset-0 rounded-full bg-green-500/20"
@@ -143,15 +153,12 @@ const ClientePixCheckout = () => {
               <CheckCircle2 className="w-9 h-9 text-green-500" />
             </div>
           </div>
-
           <div>
             <h2 className="text-lg font-bold text-foreground">Pagamento confirmado</h2>
             <p className="text-sm text-muted-foreground mt-1">
               Seu agendamento foi registrado com sucesso.
             </p>
           </div>
-
-          {/* Barra de progresso */}
           <div className="w-full h-1 bg-muted/50 rounded-full overflow-hidden">
             <motion.div
               className="h-full bg-green-500 rounded-full"
@@ -166,38 +173,36 @@ const ClientePixCheckout = () => {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      {/* Header */}
-      <div className="px-4 pt-[max(env(safe-area-inset-top),1rem)] pb-3 border-b border-border/20">
+      {/* Header com branding */}
+      <div className="px-4 pt-[max(env(safe-area-inset-top),0.75rem)] pb-3 border-b border-border/20">
         <div className="max-w-lg mx-auto flex items-center gap-3">
           <button
-            onClick={() => {
-              sessionStorage.removeItem("pix_checkout_data");
-              navigate("/cliente/agendar");
-            }}
+            onClick={goBack}
             className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-muted/50 transition-colors"
           >
             <ArrowLeft className="w-4 h-4 text-foreground" />
           </button>
-          <div className="flex items-center gap-2">
-            <img src={pixIcon} alt="PIX" className="w-5 h-5" />
-            <p className="text-sm font-semibold text-foreground tracking-tight">
-              Pagamento PIX
-            </p>
+          <div className="flex items-center gap-2.5 flex-1">
+            <img src={logo} alt="Logo" className="w-6 h-6 rounded-full object-cover" />
+            <div className="flex flex-col">
+              <span className="text-sm font-semibold text-foreground leading-tight">Pagamento via Pix</span>
+              <span className="text-[10px] text-muted-foreground leading-tight">Ambiente seguro</span>
+            </div>
           </div>
+          <img src={pixIcon} alt="PIX" className="w-5 h-5 opacity-60" />
         </div>
       </div>
 
       {/* Conteúdo */}
-      <div className="flex-1 flex flex-col items-center justify-center px-4 py-6 max-w-lg mx-auto w-full">
+      <div className="flex-1 flex flex-col items-center px-4 py-5 max-w-lg mx-auto w-full overflow-y-auto">
         <AnimatePresence mode="wait">
           {expired ? (
-            /* Estado expirado */
             <motion.div
               key="expired"
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0 }}
-              className="text-center space-y-5 w-full"
+              className="text-center space-y-5 w-full mt-12"
             >
               <div className="w-16 h-16 rounded-full bg-destructive/10 border border-destructive/20 flex items-center justify-center mx-auto">
                 <AlertCircle className="w-7 h-7 text-destructive" />
@@ -209,65 +214,104 @@ const ClientePixCheckout = () => {
                 </p>
               </div>
               <button
-                onClick={() => {
-                  sessionStorage.removeItem("pix_checkout_data");
-                  navigate("/cliente/agendar");
-                }}
+                onClick={goBack}
                 className="w-full py-3 bg-primary text-primary-foreground font-semibold rounded-xl hover:bg-primary/90 transition-all active:scale-[0.98]"
               >
                 Voltar para agendamento
               </button>
             </motion.div>
           ) : (
-            /* Estado ativo — QR Code */
             <motion.div
               key="active"
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0 }}
-              className="w-full space-y-6 flex flex-col items-center"
+              className="w-full space-y-4 flex flex-col items-center"
             >
-              {/* Valor */}
-              <div className="text-center">
-                <p className="text-xs text-muted-foreground uppercase tracking-widest font-medium">
-                  Total
+              {/* Resumo do pedido */}
+              <div className="w-full rounded-xl border border-border/30 bg-card/50 p-4 space-y-3">
+                <p className="text-[11px] text-muted-foreground uppercase tracking-widest font-semibold">
+                  Resumo do pedido
                 </p>
-                <p className="text-3xl font-bold text-foreground mt-0.5">
-                  R$ {pixData.value.toFixed(2).replace(".", ",")}
-                </p>
-              </div>
-
-              {/* QR Code com moldura */}
-              <div className="relative">
-                <div className="bg-white rounded-2xl p-5 shadow-lg shadow-black/10">
-                  <img
-                    src={`data:image/png;base64,${pixData.pixQrCode}`}
-                    alt="QR Code PIX"
-                    className="w-52 h-52 sm:w-56 sm:h-56"
-                  />
+                <div className="space-y-2.5">
+                  {pixData.serviceName && (
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                        <Scissors className="w-3.5 h-3.5 text-primary" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs text-muted-foreground">Serviço</p>
+                        <p className="text-sm font-medium text-foreground truncate">{pixData.serviceName}</p>
+                      </div>
+                    </div>
+                  )}
+                  {pixData.barberName && (
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                        <User className="w-3.5 h-3.5 text-primary" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs text-muted-foreground">Profissional</p>
+                        <p className="text-sm font-medium text-foreground">{pixData.barberName}</p>
+                      </div>
+                    </div>
+                  )}
+                  {pixData.bookingDate && pixData.bookingTime && (
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                        <CalendarDays className="w-3.5 h-3.5 text-primary" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs text-muted-foreground">Data e horário</p>
+                        <p className="text-sm font-medium text-foreground">
+                          {pixData.bookingDate} às {pixData.bookingTime}
+                        </p>
+                      </div>
+                    </div>
+                  )}
                 </div>
-                {/* Badge PIX no canto */}
-                <div className="absolute -bottom-2.5 left-1/2 -translate-x-1/2 bg-card border border-border/30 rounded-full px-3 py-1 flex items-center gap-1.5 shadow-sm">
-                  <img src={pixIcon} alt="" className="w-3.5 h-3.5" />
-                  <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-                    Escaneie para pagar
+
+                {/* Valor total */}
+                <div className="border-t border-border/20 pt-3 flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Total</span>
+                  <span className="text-xl font-bold text-foreground">
+                    R$ {pixData.value.toFixed(2).replace(".", ",")}
                   </span>
                 </div>
               </div>
 
-              {/* Botão copiar compacto */}
+              {/* QR Code */}
+              <div className="relative pt-1">
+                <div className="bg-[#F5F5F5] rounded-2xl p-4 shadow-md">
+                  <img
+                    src={`data:image/png;base64,${pixData.pixQrCode}`}
+                    alt="QR Code PIX"
+                    className="w-44 h-44 sm:w-48 sm:h-48"
+                  />
+                </div>
+                <div className="absolute -bottom-2.5 left-1/2 -translate-x-1/2 bg-card border border-border/30 rounded-full px-3 py-1 flex items-center gap-1.5 shadow-sm">
+                  <span className="text-[10px] font-medium text-muted-foreground">
+                    Escaneie com seu app de banco
+                  </span>
+                </div>
+              </div>
+
+              {/* Botão copiar */}
               <button
                 onClick={handleCopy}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-border/30 bg-card hover:bg-muted/50 transition-all active:scale-[0.97]"
+                className="flex items-center justify-center gap-2 w-full max-w-xs py-3 rounded-xl bg-primary text-primary-foreground font-semibold text-sm hover:bg-primary/90 transition-all active:scale-[0.98] mt-2"
               >
                 {copied ? (
-                  <Check className="w-3.5 h-3.5 text-green-500" />
+                  <>
+                    <Check className="w-4 h-4" />
+                    Copiado!
+                  </>
                 ) : (
-                  <Copy className="w-3.5 h-3.5 text-muted-foreground" />
+                  <>
+                    <Copy className="w-4 h-4" />
+                    Copiar código Pix
+                  </>
                 )}
-                <span className="text-xs font-medium text-foreground">
-                  {copied ? "Copiado!" : "Copiar código PIX"}
-                </span>
               </button>
 
               {/* Timer */}
@@ -278,21 +322,19 @@ const ClientePixCheckout = () => {
                 </span>
               </div>
 
-              {/* Indicador de verificação automática */}
-              <div className="flex items-center gap-2 bg-muted/30 border border-border/20 rounded-xl px-4 py-3 w-full max-w-xs">
-                <div className="relative flex-shrink-0">
-                  <Loader2 className="w-4 h-4 text-primary animate-spin" />
-                </div>
+              {/* Status de verificação */}
+              <div className="flex items-center gap-2.5 bg-muted/30 border border-border/20 rounded-xl px-4 py-3 w-full max-w-xs">
+                <Loader2 className="w-4 h-4 text-primary animate-spin flex-shrink-0" />
                 <p className="text-xs text-muted-foreground leading-snug">
-                  Aguardando confirmação automática do pagamento...
+                  Aguardando confirmação automática do pagamento
                 </p>
               </div>
 
-              {/* Segurança */}
-              <div className="flex items-center gap-1.5 pt-2">
+              {/* Badge de segurança */}
+              <div className="flex items-center gap-1.5 pt-1 pb-4">
                 <ShieldCheck className="w-3.5 h-3.5 text-muted-foreground/50" />
                 <span className="text-[10px] text-muted-foreground/50 font-medium">
-                  Pagamento seguro via PIX
+                  Pagamento seguro via Pix
                 </span>
               </div>
             </motion.div>

@@ -675,8 +675,15 @@ const ClienteAgendar = () => {
         if (data?.error) throw new Error(data.error);
 
         if (data?.pixQrCode && data?.pixPayload) {
-          // Salvar dados do PIX no sessionStorage e redirecionar
-          sessionStorage.setItem('pix_checkout_data', JSON.stringify(data));
+          // Enriquecer dados com informações do agendamento para a tela de checkout
+          const enrichedData = {
+            ...data,
+            serviceName: serviceNames,
+            barberName: selectedBarber?.apelido || "Profissional",
+            bookingDate: format(selectedDate, "dd/MM/yyyy"),
+            bookingTime: selectedTime,
+          };
+          sessionStorage.setItem('pix_checkout_data', JSON.stringify(enrichedData));
           navigate('/cliente/pix-checkout');
           return;
         }
