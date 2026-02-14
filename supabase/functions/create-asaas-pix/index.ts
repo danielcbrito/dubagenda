@@ -26,7 +26,8 @@ async function checkTimeSlotAvailability(
   hora: string,
   duracao: number,
   excludeAppointmentId?: string,
-  barbeiro_id?: string | null
+  barbeiro_id?: string | null,
+  currentUserId?: string
 ): Promise<{ available: boolean; message: string }> {
   const startTimeInMinutes = timeToMinutes(hora);
   const endTimeInMinutes = startTimeInMinutes + duracao;
@@ -103,11 +104,15 @@ async function checkTimeSlotAvailability(
     }
   }
 
-  const { data: pending } = await supabase
+  let pendingQuery = supabase
     .from("pending_bookings")
     .select("id, hora, duracao")
     .eq("data", data)
     .gt("expires_at", new Date().toISOString());
+  if (barbeiro_id) pendingQuery = pendingQuery.eq("barbeiro_id", barbeiro_id);
+  if (currentUserId) pendingQuery = pendingQuery.neq("user_id", currentUserId);
+
+  const { data: pending } = await pendingQuery;
 
   for (const pb of pending || []) {
     const pbStart = timeToMinutes(pb.hora);
@@ -211,7 +216,8 @@ serve(async (req) => {
       bookingData.hora,
       bookingData.duracao,
       rescheduleFromId,
-      bookingData.barbeiro_id
+      bookingData.barbeiro_id,
+      user.id
     );
 
     if (!avail.available) {
