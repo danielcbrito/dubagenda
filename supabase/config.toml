@@ -26,3 +26,6 @@ verify_jwt = false
 
 [functions.admin-reset-password]
 verify_jwt = false
+
+[functions.create-asaas-customer]
+verify_jwt = false
