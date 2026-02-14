@@ -1755,22 +1755,40 @@ const ClienteAgendar = () => {
                   </div>
                 </motion.button>
 
-                {/* PIX - Temporariamente indisponível */}
-                <div
-                  className="w-full rounded-2xl border p-5 text-left border-border/20 bg-card/50 opacity-50 cursor-not-allowed"
+                {/* PIX */}
+                <motion.button
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => { setPaymentMethod('pix'); setUseRedemption(false); }}
+                  className={cn(
+                    "w-full rounded-2xl border p-5 text-left transition-all",
+                    paymentMethod === 'pix'
+                      ? "border-primary/50 bg-card ring-2 ring-primary/30"
+                      : "border-border/40 bg-card hover:border-border"
+                  )}
                 >
                   <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-muted/40">
-                      <img src={pixIcon} alt="PIX" className="w-6 h-6 object-contain grayscale" />
+                    <div className={cn(
+                      "w-12 h-12 rounded-xl flex items-center justify-center transition-colors",
+                      paymentMethod === 'pix' ? "bg-primary/15" : "bg-muted/60"
+                    )}>
+                      <img src={pixIcon} alt="PIX" className={cn(
+                        "w-6 h-6 object-contain transition-all",
+                        paymentMethod === 'pix' ? "" : "grayscale opacity-60"
+                      )} />
                     </div>
                     <div className="flex-1">
-                      <p className="font-semibold text-sm text-muted-foreground">Pix</p>
-                      <p className="text-xs text-muted-foreground/70 mt-0.5">
-                        Temporariamente indisponível
+                      <p className="font-semibold text-sm text-foreground">Pix</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Pagamento instantâneo via QR Code
                       </p>
                     </div>
+                    {paymentMethod === 'pix' && !useRedemption && (
+                      <div className="w-6 h-6 bg-primary rounded-full flex items-center justify-center">
+                        <Check className="w-3.5 h-3.5 text-primary-foreground" />
+                      </div>
+                    )}
                   </div>
-                </div>
+                </motion.button>
 
                 {/* Cartão de Crédito */}
                 <motion.button
