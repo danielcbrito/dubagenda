@@ -185,7 +185,7 @@ async function convertPendingToAppointment(
       status: "pending",
       barbeiro_confirmou: false,
       cliente_confirmou: true,
-      payment_method: "pix",
+      payment_method: pb.payment_method || "pix",
     })
     .select()
     .single();

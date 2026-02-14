@@ -219,48 +219,43 @@ const ClienteAgendar = () => {
     }
   }, [selectedDate]);
 
-  // Verificar retorno do Stripe Checkout (booking)
+  // Verificar retorno do Asaas Checkout (cartão - booking)
   useEffect(() => {
-    const stripeSuccess = searchParams.get("stripe_success");
-    const sessionId = searchParams.get("session_id");
-    const stripeCancelled = searchParams.get("stripe_cancelled");
+    const asaasSuccess = searchParams.get("asaas_success");
+    const pendingId = searchParams.get("pending_id");
 
-    if (stripeCancelled) {
-      toast.info("Pagamento cancelado. Escolha outra forma de pagamento.");
-      searchParams.delete("stripe_cancelled");
-      setSearchParams(searchParams, { replace: true });
-      return;
-    }
-
-    if (stripeSuccess === "booking" && sessionId) {
-      const verifySession = async () => {
+    if (asaasSuccess === "booking" && pendingId) {
+      const verifyPayment = async () => {
         setProcessingPayment(true);
         try {
-          const { data, error } = await supabase.functions.invoke("verify-stripe-session", {
-            body: { session_id: sessionId },
+          // Polling para verificar se o pagamento foi confirmado via webhook
+          const { data, error } = await supabase.functions.invoke("asaas-webhook", {
+            body: { action: "check", pendingBookingId: pendingId },
           });
 
           if (error) throw error;
 
-          if (data?.success) {
+          if (data?.status === "paid" || data?.status === "already_processed") {
             sessionStorage.removeItem("isRescheduling");
             sessionStorage.removeItem("rescheduleAppointmentId");
-            toast.success(data.message || "Agendamento confirmado!");
+            toast.success("Agendamento confirmado com sucesso!");
             navigate("/cliente");
           } else {
-            toast.error(data?.message || "Pagamento não confirmado.");
+            // Pagamento ainda pendente - mostrar mensagem e iniciar polling
+            toast.info("Pagamento sendo processado. Aguarde a confirmação.");
+            navigate("/cliente");
           }
         } catch (err: any) {
-          console.error("Stripe verification error:", err);
+          console.error("Asaas verification error:", err);
           toast.error("Erro ao verificar pagamento: " + (err.message || ""));
         } finally {
           setProcessingPayment(false);
-          searchParams.delete("stripe_success");
-          searchParams.delete("session_id");
+          searchParams.delete("asaas_success");
+          searchParams.delete("pending_id");
           setSearchParams(searchParams, { replace: true });
         }
       };
-      verifySession();
+      verifyPayment();
     }
   }, []);
 
@@ -724,12 +719,11 @@ const ClienteAgendar = () => {
         throw new Error("Não foi possível gerar o QR Code PIX.");
       }
 
-      // === Cartão via Stripe Checkout ===
+      // === Cartão via Asaas Checkout ===
       if (paymentMethod === 'card') {
-        const { data, error } = await supabase.functions.invoke('create-checkout', {
+        const { data, error } = await supabase.functions.invoke('create-asaas-card', {
           body: {
             bookingData,
-            paymentMethod: 'card',
             rescheduleFromId: isRescheduling ? rescheduleAppointmentId : undefined,
           },
         });
@@ -1812,9 +1806,9 @@ const ClienteAgendar = () => {
                       )} />
                     </div>
                     <div className="flex-1">
-                      <p className="font-semibold text-sm text-foreground">Cartão de Crédito</p>
+                      <p className="font-semibold text-sm text-foreground">Cartão de Crédito/Débito</p>
                       <p className="text-xs text-muted-foreground mt-0.5">
-                        Pagamento seguro via Stripe
+                        Pagamento seguro via checkout
                       </p>
                     </div>
                     {paymentMethod === 'card' && (
