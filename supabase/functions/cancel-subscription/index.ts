@@ -1,11 +1,13 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient } from "npm:@supabase/supabase-js@2.57.2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
+
+const ASAAS_BASE_URL = "https://api.asaas.com/v3";
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -13,6 +15,9 @@ serve(async (req) => {
   }
 
   try {
+    const asaasApiKey = Deno.env.get("ASAAS_API_KEY");
+    if (!asaasApiKey) throw new Error("ASAAS_API_KEY não configurada");
+
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
@@ -37,18 +42,31 @@ serve(async (req) => {
     if (subError) throw new Error("Erro ao buscar assinatura");
     if (!subscription) throw new Error("Nenhuma assinatura encontrada para cancelar");
 
-    // Cancelar no Stripe se tiver gateway_subscription_id
+    // Cancelar assinatura recorrente no Asaas
     if (subscription.gateway_subscription_id) {
       try {
-        const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
-          apiVersion: "2025-08-27.basil",
-        });
+        const cancelRes = await fetch(
+          `${ASAAS_BASE_URL}/subscriptions/${subscription.gateway_subscription_id}`,
+          {
+            method: "DELETE",
+            headers: {
+              "Content-Type": "application/json",
+              access_token: asaasApiKey,
+            },
+          }
+        );
 
-        await stripe.subscriptions.cancel(subscription.gateway_subscription_id);
-        console.log("[cancel-subscription] Stripe subscription cancelled:", subscription.gateway_subscription_id);
-      } catch (stripeError) {
-        console.error("[cancel-subscription] Stripe cancellation error:", stripeError);
-        // Continuar mesmo se falhar no Stripe
+        const cancelData = await cancelRes.json();
+        console.log("[cancel-subscription] Asaas response:", JSON.stringify(cancelData));
+
+        if (!cancelRes.ok && cancelRes.status !== 404) {
+          console.error("[cancel-subscription] Asaas cancellation failed:", cancelData);
+        } else {
+          console.log("[cancel-subscription] Asaas subscription cancelled:", subscription.gateway_subscription_id);
+        }
+      } catch (asaasError) {
+        console.error("[cancel-subscription] Asaas cancellation error:", asaasError);
+        // Continuar mesmo se falhar no Asaas para não bloquear o usuário
       }
     }
 
