@@ -58,7 +58,7 @@ serve(async (req) => {
       }
 
       // Consultar status no Asaas
-      const paymentRes = await fetch(`https://api.asaas.com/api/v3/payments/${pb.asaas_payment_id}`, {
+      const paymentRes = await fetch(`https://api.asaas.com/v3/payments/${pb.asaas_payment_id}`, {
         headers: { access_token: asaasApiKey },
       });
       const paymentData = await paymentRes.json();
