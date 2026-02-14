@@ -57,8 +57,9 @@ async function getOrCreateAsaasCustomer(
 }
 
 /**
- * Edge Function: Cria cobrança via Cartão de Crédito no Asaas para assinatura de plano.
- * Retorna a invoiceUrl para redirect do cliente.
+ * Edge Function: Cria ASSINATURA RECORRENTE via Cartão de Crédito no Asaas.
+ * Usa o endpoint /v3/subscriptions para cobranças mensais automáticas.
+ * Redireciona o cliente para a invoiceUrl da primeira cobrança.
  */
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -92,7 +93,7 @@ serve(async (req) => {
 
     const origin = req.headers.get("origin") || "https://dubagenda.lovable.app";
 
-    console.log("[create-subscription-card] Iniciando cartão para plano:", planoId);
+    console.log("[create-subscription-card] Iniciando assinatura recorrente para plano:", planoId);
 
     // Buscar dados do plano
     const { data: plano, error: planoError } = await supabaseAdmin
@@ -125,14 +126,11 @@ serve(async (req) => {
     const customerId = await getOrCreateAsaasCustomer(asaasApiKey, user);
     console.log("[create-subscription-card] Asaas customer:", customerId);
 
-    // Criar cobrança CREDIT_CARD no Asaas
-    const dueDate = new Date();
-    dueDate.setDate(dueDate.getDate() + 1);
-    const dueDateStr = dueDate.toISOString().split("T")[0];
+    // Data de início: hoje
+    const nextDueDate = new Date().toISOString().split("T")[0];
 
-    const callbackUrl = `${origin}/cliente?asaas_success=subscription&plan_id=${planoId}`;
-
-    const paymentRes = await fetch(`${ASAAS_BASE_URL}/payments`, {
+    // Criar ASSINATURA RECORRENTE no Asaas via /v3/subscriptions
+    const subscriptionRes = await fetch(`${ASAAS_BASE_URL}/subscriptions`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -142,25 +140,48 @@ serve(async (req) => {
         customer: customerId,
         billingType: "CREDIT_CARD",
         value: plano.preco_mensal,
-        dueDate: dueDateStr,
-        description: `Assinatura: ${plano.nome} (1º mês)`,
+        nextDueDate: nextDueDate,
+        cycle: "MONTHLY",
+        description: `Assinatura: ${plano.nome}`,
         externalReference: `sub_${user.id}_${planoId}`,
-        callback: {
-          successUrl: callbackUrl,
-          autoRedirect: true,
-        },
       }),
     });
 
-    const paymentData = await paymentRes.json();
-    if (paymentData.errors) {
-      console.error("[create-subscription-card] Payment error:", paymentData.errors);
-      throw new Error("Erro ao gerar cobrança via cartão: " + JSON.stringify(paymentData.errors));
+    const subscriptionData = await subscriptionRes.json();
+    if (subscriptionData.errors) {
+      console.error("[create-subscription-card] Subscription error:", subscriptionData.errors);
+      throw new Error("Erro ao criar assinatura recorrente: " + JSON.stringify(subscriptionData.errors));
     }
 
-    console.log("[create-subscription-card] Payment created:", paymentData.id);
+    const asaasSubscriptionId = subscriptionData.id; // sub_XXXXX
+    console.log("[create-subscription-card] Asaas subscription created:", asaasSubscriptionId);
 
-    // Criar assinatura com status "suspended" (será ativada pelo webhook)
+    // Buscar a primeira cobrança gerada pela assinatura para obter invoiceUrl
+    const paymentsRes = await fetch(
+      `${ASAAS_BASE_URL}/subscriptions/${asaasSubscriptionId}/payments`,
+      {
+        headers: {
+          "Content-Type": "application/json",
+          access_token: asaasApiKey,
+        },
+      }
+    );
+
+    const paymentsData = await paymentsRes.json();
+    const firstPayment = paymentsData.data?.[0];
+
+    if (!firstPayment) {
+      console.error("[create-subscription-card] No payment found for subscription");
+      throw new Error("Erro ao localizar primeira cobrança da assinatura");
+    }
+
+    console.log("[create-subscription-card] First payment:", firstPayment.id, "invoiceUrl:", firstPayment.invoiceUrl);
+
+    // Calcular próxima data de cobrança (1 mês)
+    const nextBilling = new Date();
+    nextBilling.setMonth(nextBilling.getMonth() + 1);
+
+    // Criar assinatura no banco com status "suspended" (será ativada pelo webhook)
     const { data: subscription, error: subError } = await supabaseAdmin
       .from("assinaturas")
       .insert({
@@ -168,22 +189,25 @@ serve(async (req) => {
         plano_id: planoId,
         status: "suspended",
         payment_method: "credit_card",
-        asaas_payment_id: paymentData.id,
+        asaas_payment_id: firstPayment.id,
+        gateway_subscription_id: asaasSubscriptionId,
+        next_billing_date: nextBilling.toISOString().split("T")[0],
       })
       .select()
       .single();
 
     if (subError) {
-      console.error("[create-subscription-card] Subscription insert error:", subError);
+      console.error("[create-subscription-card] DB insert error:", subError);
       throw new Error("Erro ao criar assinatura pendente");
     }
 
     return new Response(
       JSON.stringify({
         success: true,
-        url: paymentData.invoiceUrl,
+        url: firstPayment.invoiceUrl,
         subscriptionId: subscription.id,
-        asaasPaymentId: paymentData.id,
+        asaasSubscriptionId: asaasSubscriptionId,
+        asaasPaymentId: firstPayment.id,
         value: plano.preco_mensal,
         planName: plano.nome,
       }),
