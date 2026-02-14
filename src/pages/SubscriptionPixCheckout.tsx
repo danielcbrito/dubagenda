@@ -115,7 +115,22 @@ const SubscriptionPixCheckout = () => {
     }
   }, [pixData?.pixPayload]);
 
-  const goBack = () => {
+  const goBack = async () => {
+    // Cancelar cobrança no Asaas e limpar assinatura pendente
+    if (pixData?.asaasPaymentId) {
+      try {
+        await supabase.functions.invoke('cleanup-pending-payments', {
+          body: { 
+            action: 'cancel',
+            asaasPaymentId: pixData.asaasPaymentId,
+            subscriptionId: pixData.subscriptionId,
+            type: 'subscription'
+          }
+        });
+      } catch (err) {
+        console.error("Erro ao cancelar cobrança:", err);
+      }
+    }
     sessionStorage.removeItem("subscription_pix_checkout_data");
     navigate("/cliente/assinar");
   };
