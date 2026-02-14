@@ -227,7 +227,24 @@ serve(async (req) => {
       );
     }
 
-    // 2. Criar pending_booking para reservar horário (30 min)
+    // 2. Limpar pending_bookings expirados ou do mesmo usuário para este slot
+    await supabaseAdmin
+      .from("pending_bookings")
+      .delete()
+      .eq("user_id", user.id)
+      .eq("data", bookingData.data)
+      .eq("barbeiro_id", bookingData.barbeiro_id);
+
+    // Limpar expirados globalmente para este slot
+    await supabaseAdmin
+      .from("pending_bookings")
+      .delete()
+      .eq("data", bookingData.data)
+      .eq("hora", bookingData.hora)
+      .eq("barbeiro_id", bookingData.barbeiro_id)
+      .lt("expires_at", new Date().toISOString());
+
+    // Criar pending_booking para reservar horário (30 min)
     const expiresAt = new Date();
     expiresAt.setMinutes(expiresAt.getMinutes() + 30);
 
