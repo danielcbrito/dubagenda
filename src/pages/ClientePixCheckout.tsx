@@ -118,7 +118,22 @@ const ClientePixCheckout = () => {
     }
   }, [pixData?.pixPayload]);
 
-  const goBack = () => {
+  const goBack = async () => {
+    // Cancelar cobrança no Asaas e limpar pending_booking
+    if (pixData?.asaasPaymentId) {
+      try {
+        await supabase.functions.invoke('cleanup-pending-payments', {
+          body: { 
+            action: 'cancel',
+            asaasPaymentId: pixData.asaasPaymentId,
+            pendingBookingId: pixData.pendingBookingId,
+            type: 'booking'
+          }
+        });
+      } catch (err) {
+        console.error("Erro ao cancelar cobrança:", err);
+      }
+    }
     sessionStorage.removeItem("pix_checkout_data");
     navigate("/cliente/agendar");
   };

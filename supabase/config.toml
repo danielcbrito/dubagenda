@@ -35,3 +35,6 @@ verify_jwt = false
 
 [functions.create-subscription-card]
 verify_jwt = false
+
+[functions.cleanup-pending-payments]
+verify_jwt = false
