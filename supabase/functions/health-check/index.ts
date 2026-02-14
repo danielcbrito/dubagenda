@@ -44,7 +44,7 @@ serve(async (req) => {
     const asaasKey = Deno.env.get("ASAAS_API_KEY");
     if (asaasKey) {
       try {
-        const response = await fetch("https://api.asaas.com/v3/customers?limit=1", {
+        const response = await fetch("https://sandbox.asaas.com/api/v3/customers?limit=1", {
           headers: { "access_token": asaasKey },
         });
         const asaasTime = Date.now() - asaasStart;
