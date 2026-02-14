@@ -188,16 +188,17 @@ const ClienteAssinar = () => {
       }
 
       if (selectedPaymentMethod === "card") {
-        // Stripe Checkout
-        const { data, error } = await supabase.functions.invoke('create-checkout', {
+        // Asaas Checkout (Cartão)
+        const { data, error } = await supabase.functions.invoke('create-subscription-card', {
           body: { planoId: selectedPlan.id }
         });
 
         if (error) throw error;
+        if (data?.error) throw new Error(data.error);
         
         if (data?.url) {
-          window.open(data.url, '_blank');
-          toast.info("Complete o pagamento na nova aba para ativar sua assinatura");
+          window.location.href = data.url;
+          toast.info("Complete o pagamento para ativar sua assinatura");
         }
       } else {
         // PIX via Asaas
@@ -406,9 +407,9 @@ const ClienteAssinar = () => {
                       )} />
                     </div>
                     <div className="flex-1">
-                      <p className="font-semibold text-sm text-foreground">Cartão de Crédito</p>
+                      <p className="font-semibold text-sm text-foreground">Cartão de Crédito/Débito</p>
                       <p className="text-xs text-muted-foreground mt-0.5">
-                        Pagamento seguro via Stripe
+                        Pagamento seguro via checkout
                       </p>
                     </div>
                     {selectedPaymentMethod === "card" && (

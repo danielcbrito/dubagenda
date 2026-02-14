@@ -29,3 +29,9 @@ verify_jwt = false
 
 [functions.create-asaas-customer]
 verify_jwt = false
+
+[functions.create-asaas-card]
+verify_jwt = false
+
+[functions.create-subscription-card]
+verify_jwt = false
