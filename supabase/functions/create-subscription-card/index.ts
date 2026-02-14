@@ -188,7 +188,7 @@ serve(async (req) => {
         user_id: user.id,
         plano_id: planoId,
         status: "suspended",
-        payment_method: "credit_card",
+        payment_method: "card",
         asaas_payment_id: firstPayment.id,
         gateway_subscription_id: asaasSubscriptionId,
         next_billing_date: nextBilling.toISOString().split("T")[0],
