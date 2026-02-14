@@ -366,10 +366,7 @@ const ClienteAssinar = () => {
                       "w-12 h-12 rounded-xl flex items-center justify-center transition-colors",
                       selectedPaymentMethod === "pix" ? "bg-primary/15" : "bg-muted/60"
                     )}>
-                      <img src={pixIcon} alt="PIX" className={cn(
-                        "w-6 h-6 transition-all",
-                        selectedPaymentMethod === "pix" ? "" : "grayscale opacity-60"
-                      )} />
+                      <img src={pixIcon} alt="PIX" className="w-6 h-6" />
                     </div>
                     <div className="flex-1">
                       <p className="font-semibold text-sm text-foreground">Pix</p>
