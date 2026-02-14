@@ -6,7 +6,7 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-const ASAAS_BASE_URL = "https://api.asaas.com/api/v3";
+const ASAAS_BASE_URL = "https://api.asaas.com/v3";
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
