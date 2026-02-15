@@ -285,9 +285,6 @@ serve(async (req) => {
     dueDate.setDate(dueDate.getDate() + 1); // Vencimento em 1 dia
     const dueDateStr = dueDate.toISOString().split("T")[0];
 
-    // URL de callback para retorno ao app após pagamento
-    const callbackUrl = `${origin}/cliente/agendar?asaas_success=booking&pending_id=${pendingBooking.id}`;
-
     const paymentRes = await fetch(`${ASAAS_BASE_URL}/payments`, {
       method: "POST",
       headers: {
@@ -301,10 +298,6 @@ serve(async (req) => {
         dueDate: dueDateStr,
         description: `Agendamento: ${bookingData.serviceName || "Serviço"} - ${bookingData.data} às ${bookingData.hora}`,
         externalReference: pendingBooking.id,
-        callback: {
-          successUrl: callbackUrl,
-          autoRedirect: true,
-        },
       }),
     });
 

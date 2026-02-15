@@ -677,6 +677,57 @@ export type Database = {
         }
         Relationships: []
       }
+      chaves_pix: {
+        Row: {
+          apelido: string | null
+          barbeiro_id: string | null
+          chave: string
+          created_at: string
+          id: string
+          is_default: boolean | null
+          tipo: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          apelido?: string | null
+          barbeiro_id?: string | null
+          chave: string
+          created_at?: string
+          id?: string
+          is_default?: boolean | null
+          tipo: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          apelido?: string | null
+          barbeiro_id?: string | null
+          chave?: string
+          created_at?: string
+          id?: string
+          is_default?: boolean | null
+          tipo?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chaves_pix_barbeiro_id_fkey"
+            columns: ["barbeiro_id"]
+            isOneToOne: false
+            referencedRelation: "barbeiros"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chaves_pix_barbeiro_id_fkey"
+            columns: ["barbeiro_id"]
+            isOneToOne: false
+            referencedRelation: "barbeiros_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       comissoes: {
         Row: {
           appointment_id: string
@@ -860,6 +911,66 @@ export type Database = {
           valor?: number
         }
         Relationships: []
+      }
+      depositos: {
+        Row: {
+          barbeiro_id: string | null
+          confirmado_em: string | null
+          created_at: string
+          expires_at: string | null
+          gateway_payment_id: string | null
+          id: string
+          pix_payload: string | null
+          pix_qr_code: string | null
+          status: string
+          updated_at: string
+          user_id: string
+          valor: number
+        }
+        Insert: {
+          barbeiro_id?: string | null
+          confirmado_em?: string | null
+          created_at?: string
+          expires_at?: string | null
+          gateway_payment_id?: string | null
+          id?: string
+          pix_payload?: string | null
+          pix_qr_code?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+          valor: number
+        }
+        Update: {
+          barbeiro_id?: string | null
+          confirmado_em?: string | null
+          created_at?: string
+          expires_at?: string | null
+          gateway_payment_id?: string | null
+          id?: string
+          pix_payload?: string | null
+          pix_qr_code?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "depositos_barbeiro_id_fkey"
+            columns: ["barbeiro_id"]
+            isOneToOne: false
+            referencedRelation: "barbeiros"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "depositos_barbeiro_id_fkey"
+            columns: ["barbeiro_id"]
+            isOneToOne: false
+            referencedRelation: "barbeiros_public"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       discount_coupon_redemptions: {
         Row: {
@@ -1121,6 +1232,27 @@ export type Database = {
           last_used_at?: string | null
           token_hash?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      financeiro_marco_zero: {
+        Row: {
+          created_at: string | null
+          criado_por: string | null
+          data_corte: string
+          id: string
+        }
+        Insert: {
+          created_at?: string | null
+          criado_por?: string | null
+          data_corte?: string
+          id?: string
+        }
+        Update: {
+          created_at?: string | null
+          criado_por?: string | null
+          data_corte?: string
+          id?: string
         }
         Relationships: []
       }
@@ -1809,6 +1941,30 @@ export type Database = {
           },
         ]
       }
+      pin_financeiro: {
+        Row: {
+          created_at: string
+          id: string
+          pin_hash: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          pin_hash: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          pin_hash?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       plano_agendamentos_usos: {
         Row: {
           agendamento_id: string
@@ -2260,6 +2416,73 @@ export type Database = {
             columns: ["promocao_id"]
             isOneToOne: false
             referencedRelation: "promocoes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      saques: {
+        Row: {
+          barbeiro_id: string | null
+          chave_pix_id: string | null
+          chave_pix_tipo: string
+          chave_pix_valor: string
+          created_at: string
+          id: string
+          motivo_cancelamento: string | null
+          processado_em: string | null
+          status: string
+          updated_at: string
+          user_id: string
+          valor: number
+        }
+        Insert: {
+          barbeiro_id?: string | null
+          chave_pix_id?: string | null
+          chave_pix_tipo: string
+          chave_pix_valor: string
+          created_at?: string
+          id?: string
+          motivo_cancelamento?: string | null
+          processado_em?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+          valor: number
+        }
+        Update: {
+          barbeiro_id?: string | null
+          chave_pix_id?: string | null
+          chave_pix_tipo?: string
+          chave_pix_valor?: string
+          created_at?: string
+          id?: string
+          motivo_cancelamento?: string | null
+          processado_em?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "saques_barbeiro_id_fkey"
+            columns: ["barbeiro_id"]
+            isOneToOne: false
+            referencedRelation: "barbeiros"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "saques_barbeiro_id_fkey"
+            columns: ["barbeiro_id"]
+            isOneToOne: false
+            referencedRelation: "barbeiros_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "saques_chave_pix_id_fkey"
+            columns: ["chave_pix_id"]
+            isOneToOne: false
+            referencedRelation: "chaves_pix"
             referencedColumns: ["id"]
           },
         ]
@@ -2923,6 +3146,16 @@ export type Database = {
     }
     Functions: {
       auto_hide_old_cancelled_appointments: { Args: never; Returns: undefined }
+      calcular_saldo_barbeiro: {
+        Args: { p_barbeiro_id?: string; p_user_id: string }
+        Returns: {
+          saldo_disponivel: number
+          saldo_processando: number
+          total_depositos: number
+          total_entradas: number
+          total_saques: number
+        }[]
+      }
       clean_expired_pending_bookings: { Args: never; Returns: undefined }
       clean_expired_verification_codes: { Args: never; Returns: undefined }
       create_barber_with_user: {
@@ -3030,6 +3263,14 @@ export type Database = {
       use_credits_atomic: {
         Args: { p_amount: number; p_appointment_id: string; p_user_id: string }
         Returns: Json
+      }
+      validar_saque: {
+        Args: { p_barbeiro_id: string; p_user_id: string; p_valor: number }
+        Returns: {
+          motivo: string
+          permitido: boolean
+          saldo_atual: number
+        }[]
       }
     }
     Enums: {
