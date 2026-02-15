@@ -10,16 +10,27 @@ const corsHeaders = {
 const ASAAS_BASE_URL = "https://api.asaas.com/v3";
 
 /**
- * Busca ou cria customer no Asaas
+ * Busca ou cria customer no Asaas, sincronizando dados do profile
  */
 async function getOrCreateAsaasCustomer(
   apiKey: string,
-  user: { id: string; email: string; user_metadata?: any }
+  user: { id: string; email: string; user_metadata?: any },
+  supabaseAdmin: any
 ): Promise<string> {
   const headers = {
     "Content-Type": "application/json",
     access_token: apiKey,
   };
+
+  // Buscar dados atualizados do profile (fonte real de CPF/nome)
+  const { data: profile } = await supabaseAdmin
+    .from("profiles")
+    .select("nome, cpf, telefone")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  const name = profile?.nome || user.user_metadata?.nome || user.user_metadata?.full_name || user.email.split("@")[0];
+  const cpf = profile?.cpf?.replace(/\D/g, "") || user.user_metadata?.cpf || undefined;
 
   const searchRes = await fetch(
     `${ASAAS_BASE_URL}/customers?email=${encodeURIComponent(user.email)}`,
@@ -28,14 +39,19 @@ async function getOrCreateAsaasCustomer(
   const searchData = await searchRes.json();
 
   if (searchData.data?.length > 0) {
-    return searchData.data[0].id;
-  }
+    const existingCustomer = searchData.data[0];
 
-  const name =
-    user.user_metadata?.nome ||
-    user.user_metadata?.full_name ||
-    user.email.split("@")[0];
-  const cpf = user.user_metadata?.cpf || undefined;
+    if (cpf && (!existingCustomer.cpfCnpj || existingCustomer.cpfCnpj !== cpf || existingCustomer.name !== name)) {
+      console.log("[create-subscription-card] Atualizando customer no Asaas:", existingCustomer.id);
+      await fetch(`${ASAAS_BASE_URL}/customers/${existingCustomer.id}`, {
+        method: "PUT",
+        headers,
+        body: JSON.stringify({ name, cpfCnpj: cpf }),
+      });
+    }
+
+    return existingCustomer.id;
+  }
 
   const createRes = await fetch(`${ASAAS_BASE_URL}/customers`, {
     method: "POST",
@@ -123,7 +139,7 @@ serve(async (req) => {
       .eq("status", "suspended");
 
     // Buscar/criar customer no Asaas
-    const customerId = await getOrCreateAsaasCustomer(asaasApiKey, user);
+    const customerId = await getOrCreateAsaasCustomer(asaasApiKey, user, supabaseAdmin);
     console.log("[create-subscription-card] Asaas customer:", customerId);
 
     // Data de início: hoje
