@@ -281,6 +281,22 @@ async function convertPendingToAppointment(
 ): Promise<string> {
   console.log("[asaas-webhook] Converting pending_booking:", pb.id);
 
+  // ═══ IDEMPOTÊNCIA: Verificar se já existe agendamento para este pagamento ═══
+  if (gatewayPaymentId) {
+    const { data: existingPayment } = await supabase
+      .from("pagamentos")
+      .select("agendamento_id")
+      .eq("gateway_payment_id", gatewayPaymentId)
+      .maybeSingle();
+
+    if (existingPayment?.agendamento_id) {
+      console.log("[asaas-webhook] Payment already processed, skipping. Existing appointment:", existingPayment.agendamento_id);
+      // Limpar pending_booking caso ainda exista
+      await supabase.from("pending_bookings").delete().eq("id", pb.id);
+      return existingPayment.agendamento_id;
+    }
+  }
+
   // Criar agendamento
   const { data: appointment, error: aptError } = await supabase
     .from("agendamentos")
