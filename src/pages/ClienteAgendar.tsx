@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowLeft, ArrowRight, Clock, Check, Tag, CreditCard, Landmark, Loader2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, Clock, Check, Tag, CreditCard, Landmark, Loader2, Calendar as CalendarIcon } from "lucide-react";
 import pixIcon from "@/assets/pix-icon.png";
 import { toast } from "sonner";
 import { ptBR } from "date-fns/locale";
@@ -22,6 +22,7 @@ import { PremiumCalendar } from "@/components/booking/PremiumCalendar";
 import { StepDots } from "@/components/booking/StepDots";
 import { BookingBottomBar } from "@/components/booking/BookingBottomBar";
 import { TimeSelectionBar } from "@/components/booking/TimeSelectionBar";
+import { FloatingActionBar } from "@/components/booking/FloatingActionBar";
 
 interface Barber {
   id: string;
@@ -1488,21 +1489,23 @@ const ClienteAgendar = () => {
                 </div>
               )}
 
-              {selectedBarber && (
-                <motion.div
-                  initial={{ opacity: 0, y: 6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                >
-                  <button
-                    onClick={() => setStep(2)}
-                    className="w-full mt-5 h-10 bg-primary/90 text-primary-foreground text-[12px] font-semibold rounded-lg transition-all active:scale-[0.98]"
-                    style={{ boxShadow: "0 4px 14px -3px hsl(var(--primary) / 0.3)" }}
-                  >
-                    Continuar com {selectedBarber.apelido}
-                  </button>
-                </motion.div>
-              )}
             </div>
+
+            <FloatingActionBar
+              isVisible={!!selectedBarber}
+              onContinue={() => setStep(2)}
+              label={`Continuar`}
+              subtitle={selectedBarber ? selectedBarber.apelido : ""}
+              icon={
+                selectedBarber?.foto_url ? (
+                  <img src={selectedBarber.foto_url} alt="" className="w-6 h-6 rounded-full object-cover" />
+                ) : (
+                  <div className="w-6 h-6 rounded-full bg-primary/30 flex items-center justify-center text-[10px] font-bold text-primary">
+                    {selectedBarber?.apelido?.charAt(0)}
+                  </div>
+                )
+              }
+            />
           </motion.div>
         )}
 
@@ -1589,14 +1592,15 @@ const ClienteAgendar = () => {
                 onMonthChange={loadClosedDates}
               />
 
-              {selectedDate && (
-                <button
-                  onClick={handleNextStep}
-                  className="w-full mt-6 py-3.5 bg-primary text-primary-foreground font-semibold rounded-xl hover:bg-primary/90 transition-all"
-                >
-                  Continuar
-                </button>
-              )}
+
+
+            <FloatingActionBar
+              isVisible={!!selectedDate}
+              onContinue={handleNextStep}
+              label="Continuar"
+              subtitle={selectedDate ? format(selectedDate, "dd 'de' MMMM", { locale: ptBR }) : ""}
+              icon={<CalendarIcon className="w-4 h-4 text-primary" />}
+            />
             </div>
           </motion.div>
         )}
@@ -2029,13 +2033,15 @@ const ClienteAgendar = () => {
                 </div>
               </div>
 
-              <button
-                onClick={handlePayment}
-                disabled={processingPayment}
-                className="w-full py-4 bg-primary text-primary-foreground text-base font-semibold rounded-xl hover:bg-primary/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]"
-              >
-                {processingPayment ? 'Agendando...' : 'Confirmar Agendamento'}
-              </button>
+              <FloatingActionBar
+                isVisible={true}
+                onContinue={handlePayment}
+                label={processingPayment ? 'Agendando...' : 'Confirmar'}
+                isLoading={processingPayment}
+                loadingLabel="Agendando..."
+                icon={<Check className="w-4 h-4 text-primary" />}
+                subtitle={activeSubscription?.plano_nome}
+              />
             </div>
           </motion.div>
         )}
@@ -2122,17 +2128,15 @@ const ClienteAgendar = () => {
                 </div>
               </div>
 
-
-              <button
-                onClick={handlePayment}
-                disabled={processingPayment}
-                className="w-full py-4 bg-primary text-primary-foreground text-base font-semibold rounded-xl hover:bg-primary/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]"
-              >
-                {processingPayment ? 'Processando...' : 
-                  availableCredits >= getTotalPrice() ? 'Confirmar (usando créditos)' :
-                  'Confirmar Agendamento'
-                }
-              </button>
+              <FloatingActionBar
+                isVisible={true}
+                onContinue={handlePayment}
+                label={processingPayment ? 'Processando...' : 'Confirmar'}
+                isLoading={processingPayment}
+                loadingLabel="Processando..."
+                icon={<Check className="w-4 h-4 text-primary" />}
+                subtitle={`R$ ${Math.max(0, getTotalPrice() - availableCredits).toFixed(2).replace('.', ',')}`}
+              />
             </div>
           </motion.div>
         )}
@@ -2186,13 +2190,15 @@ const ClienteAgendar = () => {
                 </p>
               </div>
 
-              <button
-                onClick={handleRescheduleUpdate}
-                disabled={processingPayment}
-                className="w-full py-4 bg-primary text-primary-foreground text-base font-semibold rounded-xl hover:bg-primary/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]"
-              >
-                {processingPayment ? 'Remarcando...' : 'Confirmar Remarcação'}
-              </button>
+              <FloatingActionBar
+                isVisible={true}
+                onContinue={handleRescheduleUpdate}
+                label={processingPayment ? 'Remarcando...' : 'Confirmar'}
+                isLoading={processingPayment}
+                loadingLabel="Remarcando..."
+                icon={<Check className="w-4 h-4 text-primary" />}
+                subtitle="Remarcação"
+              />
             </div>
           </motion.div>
         )}
