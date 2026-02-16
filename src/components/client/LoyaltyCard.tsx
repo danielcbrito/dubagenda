@@ -53,13 +53,13 @@ export function LoyaltyCard({ points, redemptions, pontosNecessarios = 5, onView
 
       <div className="relative z-10 p-5">
         {/* Header */}
-        <div className="flex items-center justify-between mb-5">
+        <div className="flex items-center justify-between mb-4">
           <div>
-            <p className="text-[10px] font-semibold text-muted-foreground/50 uppercase tracking-widest mb-0.5">
+            <p className="text-[9px] font-medium text-muted-foreground/50 uppercase tracking-widest mb-0.5">
               PROGRAMA FIDELIDADE
             </p>
-            <p className="text-foreground font-semibold text-sm tracking-tight">
-              A cada {pontosNecessarios} cortes, ganhe 1 grátis
+            <p className="text-foreground font-semibold text-sm font-display tracking-tight">
+              A cada {pontosNecessarios} cortes, 1 grátis
             </p>
           </div>
 
@@ -67,10 +67,10 @@ export function LoyaltyCard({ points, redemptions, pontosNecessarios = 5, onView
             <motion.div
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
-              className="px-2.5 py-1 rounded-lg bg-primary/10 border border-primary/20"
+              className="px-2 py-0.5 rounded-md bg-primary/10 border border-primary/20"
             >
-              <span className="text-primary text-xs font-bold tabular-nums">
-                {redemptions} {redemptions === 1 ? "resgate" : "resgates"}
+              <span className="text-primary text-[10px] font-bold tabular-nums">
+                {redemptions}x resgate
               </span>
             </motion.div>
           )}
