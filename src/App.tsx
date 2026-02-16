@@ -25,6 +25,7 @@ import SubscriptionPixCheckout from "./pages/SubscriptionPixCheckout";
 import ClienteCarteira from "./pages/ClienteCarteira";
 import ClientePerfil from "./pages/ClientePerfil";
 import ClienteDadosPessoais from "./pages/ClienteDadosPessoais";
+import ClienteSeguranca from "./pages/ClienteSeguranca";
 import SupportChat from "./pages/SupportChat";
 import NotFound from "./pages/NotFound";
 import BarberReviews from "./pages/BarberReviews";
@@ -163,6 +164,7 @@ function AppRoutes() {
           <Route path="/cliente/carteira" element={<ClienteCarteira />} />
           <Route path="/cliente/perfil" element={<ClientePerfil />} />
           <Route path="/cliente/dados-pessoais" element={<ClienteDadosPessoais />} />
+          <Route path="/cliente/seguranca" element={<ClienteSeguranca />} />
           <Route path="/cliente/barbeiro/:barberId/avaliacoes" element={<BarberReviews />} />
           <Route path="/suporte" element={<SupportChat />} />
           <Route path="*" element={<NotFound />} />
