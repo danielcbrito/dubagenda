@@ -252,32 +252,32 @@ const ClientePixCheckout = () => {
               >
                 {/* Valor centralizado */}
                 <div className="text-center pt-1">
-                  <p className="text-[9px] uppercase tracking-[0.15em] text-muted-foreground/50 font-medium">Total</p>
+                  <p className="text-[9px] uppercase tracking-[0.15em] text-muted-foreground/70 font-medium">Total</p>
                   <p className="text-xl font-bold text-foreground tracking-tight mt-0.5">
                     R$ {pixData.value.toFixed(2).replace(".", ",")}
                   </p>
                 </div>
 
                 {/* QR Code Card — compacto */}
-                <div className="rounded-xl border border-border/30 bg-card/60 backdrop-blur-sm overflow-hidden">
+                <div className="rounded-xl border border-border/40 bg-card/70 backdrop-blur-sm overflow-hidden">
                   {/* QR Code */}
                   <div className="p-4 flex flex-col items-center gap-2">
-                    <p className="text-[9px] uppercase tracking-[0.12em] text-muted-foreground/40 font-medium">
+                    <p className="text-[9px] uppercase tracking-[0.12em] text-muted-foreground/60 font-medium">
                       Escaneie com seu banco
                     </p>
                     <div className="relative">
-                      <div className="absolute -top-1 -left-1 w-3 h-3 border-t-2 border-l-2 border-primary/30 rounded-tl-sm" />
-                      <div className="absolute -top-1 -right-1 w-3 h-3 border-t-2 border-r-2 border-primary/30 rounded-tr-sm" />
-                      <div className="absolute -bottom-1 -left-1 w-3 h-3 border-b-2 border-l-2 border-primary/30 rounded-bl-sm" />
-                      <div className="absolute -bottom-1 -right-1 w-3 h-3 border-b-2 border-r-2 border-primary/30 rounded-br-sm" />
+                      <div className="absolute -top-1 -left-1 w-3 h-3 border-t-2 border-l-2 border-primary/40 rounded-tl-sm" />
+                      <div className="absolute -top-1 -right-1 w-3 h-3 border-t-2 border-r-2 border-primary/40 rounded-tr-sm" />
+                      <div className="absolute -bottom-1 -left-1 w-3 h-3 border-b-2 border-l-2 border-primary/40 rounded-bl-sm" />
+                      <div className="absolute -bottom-1 -right-1 w-3 h-3 border-b-2 border-r-2 border-primary/40 rounded-br-sm" />
                       <div className="rounded-md p-2" style={{ background: "hsl(0 0% 95%)" }}>
                         <img src={`data:image/png;base64,${pixData.pixQrCode}`} alt="QR Code PIX" className="w-32 h-32" />
                       </div>
                     </div>
                     {/* Timer abaixo do QR */}
-                    <div className="flex items-center gap-1.5 bg-muted/20 px-2.5 py-1 rounded-full">
-                      <Clock className="w-2.5 h-2.5 text-muted-foreground/50" />
-                      <span className="text-[9px] text-muted-foreground/60">Expira em</span>
+                    <div className="flex items-center gap-1.5 bg-muted/30 px-2.5 py-1 rounded-full">
+                      <Clock className="w-2.5 h-2.5 text-muted-foreground/70" />
+                      <span className="text-[9px] text-muted-foreground/80">Expira em</span>
                       <span className="text-[10px] text-foreground font-bold tabular-nums">{timeLeft}</span>
                     </div>
                   </div>
@@ -294,8 +294,8 @@ const ClientePixCheckout = () => {
                     {pixData.serviceName && (
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-1.5">
-                          <Scissors className="w-2.5 h-2.5 text-muted-foreground/40" />
-                          <span className="text-[10px] text-muted-foreground/60">Serviço</span>
+                          <Scissors className="w-2.5 h-2.5 text-muted-foreground/60" />
+                          <span className="text-[10px] text-muted-foreground/80">Serviço</span>
                         </div>
                         <span className="text-[10px] font-medium text-foreground">{pixData.serviceName}</span>
                       </div>
@@ -303,8 +303,8 @@ const ClientePixCheckout = () => {
                     {pixData.barberName && (
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-1.5">
-                          <User className="w-2.5 h-2.5 text-muted-foreground/40" />
-                          <span className="text-[10px] text-muted-foreground/60">Profissional</span>
+                          <User className="w-2.5 h-2.5 text-muted-foreground/60" />
+                          <span className="text-[10px] text-muted-foreground/80">Profissional</span>
                         </div>
                         <span className="text-[10px] font-medium text-foreground">{pixData.barberName}</span>
                       </div>
@@ -312,8 +312,8 @@ const ClientePixCheckout = () => {
                     {pixData.bookingDate && pixData.bookingTime && (
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-1.5">
-                          <CalendarDays className="w-2.5 h-2.5 text-muted-foreground/40" />
-                          <span className="text-[10px] text-muted-foreground/60">Data</span>
+                          <CalendarDays className="w-2.5 h-2.5 text-muted-foreground/60" />
+                          <span className="text-[10px] text-muted-foreground/80">Data</span>
                         </div>
                         <span className="text-[10px] font-medium text-foreground">
                           {pixData.bookingDate} • {pixData.bookingTime}
@@ -331,14 +331,14 @@ const ClientePixCheckout = () => {
                     "w-full rounded-lg border px-3 py-2.5 flex items-center gap-2 transition-all duration-200 group",
                     copied
                       ? "border-emerald-500/30 bg-emerald-500/5"
-                      : "border-border/20 bg-card/30 hover:bg-card/50"
+                      : "border-border/30 bg-card/40 hover:bg-card/60"
                   )}
                 >
                   <div className="flex-1 min-w-0 text-left">
-                    <p className="text-[9px] uppercase tracking-wider text-muted-foreground/40 font-medium mb-0.5">
+                    <p className="text-[9px] uppercase tracking-wider text-muted-foreground/60 font-medium mb-0.5">
                       Código Pix Copia e Cola
                     </p>
-                    <p className="text-[11px] font-mono text-muted-foreground/70 truncate">
+                    <p className="text-[11px] font-mono text-muted-foreground truncate">
                       {pixData.pixPayload}
                     </p>
                   </div>
@@ -346,7 +346,7 @@ const ClientePixCheckout = () => {
                     "flex-shrink-0 w-7 h-7 rounded-md flex items-center justify-center transition-colors",
                     copied
                       ? "bg-emerald-500/15 text-emerald-500"
-                      : "bg-muted/30 text-muted-foreground/50 group-hover:text-foreground"
+                      : "bg-muted/40 text-muted-foreground/70 group-hover:text-foreground"
                   )}>
                     {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
                   </div>
@@ -358,25 +358,25 @@ const ClientePixCheckout = () => {
                     <div className="w-1.5 h-1.5 rounded-full bg-amber-400" />
                     <div className="absolute inset-0 w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping opacity-40" />
                   </div>
-                  <p className="text-[9px] text-muted-foreground/50">Aguardando confirmação do pagamento</p>
+                  <p className="text-[9px] text-muted-foreground/70">Aguardando confirmação do pagamento</p>
                 </div>
 
                 {/* Segurança compacta */}
-                <div className="rounded-lg border border-border/10 bg-card/15 px-3 py-2.5 space-y-2">
+                <div className="rounded-lg border border-border/20 bg-card/25 px-3 py-2.5 space-y-2">
                   <div className="flex items-center gap-1.5">
-                    <ShieldCheck className="w-3 h-3 text-primary/40" />
-                    <span className="text-[9px] font-semibold text-muted-foreground/50 uppercase tracking-wider">Pagamento Seguro</span>
+                    <ShieldCheck className="w-3 h-3 text-primary/50" />
+                    <span className="text-[9px] font-semibold text-muted-foreground/70 uppercase tracking-wider">Pagamento Seguro</span>
                   </div>
-                  <p className="text-[9px] text-muted-foreground/30 leading-relaxed">
-                    Pix — Banco Central do Brasil • Criptografia E2E • Gateway <span className="text-muted-foreground/50 font-medium">PCI-DSS</span> • Dados bancários nunca armazenados.
+                  <p className="text-[9px] text-muted-foreground/50 leading-relaxed">
+                    Pix — Banco Central do Brasil • Criptografia E2E • Gateway <span className="text-muted-foreground/70 font-medium">PCI-DSS</span> • Dados bancários nunca armazenados.
                   </p>
-                  <div className="h-px bg-border/8" />
+                  <div className="h-px bg-border/15" />
                   <div className="flex items-center gap-1.5">
-                    <img src={logo} alt="Logo" className="w-3.5 h-3.5 rounded-full object-cover opacity-40" />
-                    <span className="text-[9px] text-muted-foreground/40 font-medium">Barbearia DUB</span>
-                    <span className="text-[8px] text-muted-foreground/25 ml-auto">CNPJ 00.000.000/0001-00</span>
+                    <img src={logo} alt="Logo" className="w-3.5 h-3.5 rounded-full object-cover opacity-50" />
+                    <span className="text-[9px] text-muted-foreground/60 font-medium">Barbearia DUB</span>
+                    <span className="text-[8px] text-muted-foreground/40 ml-auto">CNPJ 00.000.000/0001-00</span>
                   </div>
-                  <p className="text-[8px] text-muted-foreground/20 pl-5">
+                  <p className="text-[8px] text-muted-foreground/35 pl-5">
                     Rua Ferrador, 108 — São Paulo – SP • barbeariasdub@gmail.com • (11) 95226-3002
                   </p>
                 </div>
