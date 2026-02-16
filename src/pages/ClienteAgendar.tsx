@@ -1430,17 +1430,13 @@ const ClienteAgendar = () => {
       {/* Header — Seta + Dots apenas */}
       <div className="fixed top-0 left-0 right-0 z-50 bg-background/90 backdrop-blur-xl">
         <div className="max-w-2xl mx-auto px-4 py-3">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center">
             <button 
               onClick={handleBack}
               className="w-8 h-8 flex items-center justify-center rounded-lg bg-card/60 hover:bg-card transition-all active:scale-90"
             >
               <ArrowLeft className="w-4 h-4 text-foreground/70" />
             </button>
-
-            <StepDots currentStep={currentDisplayStep} totalSteps={totalSteps} />
-
-            <div className="w-8" />
           </div>
         </div>
       </div>
