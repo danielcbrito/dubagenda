@@ -25,66 +25,62 @@ export function TimeSelectionBar({
     <AnimatePresence>
       {isVisible && (
         <motion.div
-          initial={{ y: 60, opacity: 0 }}
+          initial={{ y: 40, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
-          exit={{ y: 60, opacity: 0 }}
-          transition={{ duration: 0.35, ease: [0.25, 0.1, 0.25, 1] }}
+          exit={{ y: 40, opacity: 0 }}
+          transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
           className={cn("fixed bottom-0 left-0 right-0 z-40", className)}
         >
-          <div className="pb-safe" style={{ background: "linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.4) 15%, rgba(0,0,0,0.85) 35%, #000000 55%)" }}>
-            <div className="w-full px-5 pt-12 pb-5">
-              
-              <div className="flex items-center justify-between">
-                
-                <div className="flex items-center gap-3">
-                  <div 
-                    className="flex items-center justify-center w-9 h-9 rounded-xl"
-                    style={{
-                      background: "linear-gradient(135deg, rgba(34, 197, 94, 0.15), rgba(34, 197, 94, 0.05))"
-                    }}
-                  >
-                    <Check className="w-4 h-4 text-green-500" />
-                  </div>
-                  
-                  <div className="flex items-center gap-2">
-                    <span className="text-[15px] font-bold text-foreground tabular-nums">{selectedTime}</span>
-                    <span className="text-[11px] text-muted-foreground/50">•</span>
-                    <span className="text-[13px] text-muted-foreground/70">{formattedDate}</span>
-                  </div>
-                </div>
+          {/* Subtle top fade */}
+          <div 
+            className="h-16 pointer-events-none"
+            style={{ background: "linear-gradient(to bottom, transparent, hsl(var(--background)))" }}
+          />
 
-                {/* Right: CTA Button */}
-                <motion.button
-                  onClick={onContinue}
-                  disabled={isLoading}
-                  whileHover={{ scale: isLoading ? 1 : 1.02 }}
-                  whileTap={{ scale: isLoading ? 1 : 0.95 }}
-                  className={cn(
-                    "group flex items-center gap-1.5 px-4 py-2 rounded-xl font-semibold text-[13px] text-white",
-                    isLoading && "cursor-wait opacity-70"
-                  )}
-                  style={{
-                    background: "linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(0 65% 42%) 100%)",
-                    boxShadow: "0 2px 8px hsl(var(--primary) / 0.3), inset 0 1px 0 rgba(255,255,255,0.12)"
-                  }}
-                >
-                  {isLoading ? (
-                    <>
-                      <motion.div 
-                        className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full"
-                        animate={{ rotate: 360 }}
-                        transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                      />
-                      <span>Verificando...</span>
-                    </>
-                  ) : (
-                    <>
-                      <span>Continuar</span>
-                      <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
-                    </>
-                  )}
-                </motion.button>
+          {/* Bar content */}
+          <div className="bg-background border-t border-border/40 px-5 pb-safe">
+            <div className="pt-3.5 pb-4 space-y-3">
+              {/* Info row */}
+              <div className="flex items-center gap-2.5 px-0.5">
+                <Check className="w-4 h-4 text-success flex-shrink-0" />
+                <span className="text-[15px] font-bold text-foreground tabular-nums">{selectedTime}</span>
+                <span className="text-[10px] text-muted-foreground/40">•</span>
+                <span className="text-[12px] text-muted-foreground/70">{formattedDate}</span>
               </div>
+
+              {/* Full-width CTA */}
+              <motion.button
+                onClick={onContinue}
+                disabled={isLoading}
+                whileTap={{ scale: isLoading ? 1 : 0.985 }}
+                className={cn(
+                  "w-full flex items-center justify-center gap-2",
+                  "h-[50px] rounded-xl",
+                  "font-semibold text-[14px] text-primary-foreground",
+                  "bg-primary",
+                  "active:brightness-90 transition-all duration-150",
+                  isLoading && "opacity-70 cursor-wait"
+                )}
+                style={{
+                  boxShadow: "0 4px 16px hsl(var(--primary) / 0.25)"
+                }}
+              >
+                {isLoading ? (
+                  <>
+                    <motion.div 
+                      className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full"
+                      animate={{ rotate: 360 }}
+                      transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                    />
+                    <span>Verificando...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>Continuar</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </>
+                )}
+              </motion.button>
             </div>
           </div>
         </motion.div>

@@ -2202,67 +2202,82 @@ const ClienteAgendar = () => {
         {step === 5 && !isRescheduling && !isPlanFlow && paymentMethod && (
           <motion.div
             key="bar-payment"
-            initial={{ y: 60, opacity: 0 }}
+            initial={{ y: 40, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
-            exit={{ y: 60, opacity: 0 }}
-            transition={{ duration: 0.35, ease: [0.25, 0.1, 0.25, 1] }}
+            exit={{ y: 40, opacity: 0 }}
+            transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
             className="fixed bottom-0 left-0 right-0 z-40"
           >
-            <div className="pb-safe" style={{ background: "linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.4) 15%, rgba(0,0,0,0.85) 35%, #000000 55%)" }}>
-              <div className="w-full px-5 pt-12 pb-5">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
+            {/* Subtle top fade */}
+            <div 
+              className="h-16 pointer-events-none"
+              style={{ background: "linear-gradient(to bottom, transparent, hsl(var(--background)))" }}
+            />
+
+            {/* Bar content */}
+            <div className="bg-background border-t border-border/40 px-5 pb-safe">
+              <div className="pt-3.5 pb-4 space-y-3">
+                {/* Info row */}
+                <div className="flex items-center justify-between px-0.5">
+                  <div className="flex items-center gap-2.5">
                     {paymentMethod === "pix" ? (
-                      <img src={pixIcon} alt="PIX" className="w-6 h-6 object-contain" />
+                      <img src={pixIcon} alt="PIX" className="w-5 h-5 object-contain" />
                     ) : paymentMethod === "card" ? (
-                      <CreditCard className="w-6 h-6 text-primary" />
+                      <CreditCard className="w-5 h-5 text-primary" />
                     ) : (
-                      <Landmark className="w-6 h-6 text-primary" />
+                      <Landmark className="w-5 h-5 text-primary" />
                     )}
-                    <div className="flex items-center gap-2">
-                      <span className="text-[13px] text-muted-foreground/70">
-                        {paymentMethod === "pix" ? "Pagar via Pix" : paymentMethod === "card" ? "Pagar via Cartão" : "Pagar na Barbearia"}
-                      </span>
-                      <span className="text-[11px] text-muted-foreground/40">•</span>
-                      <div className="flex items-baseline gap-0.5">
-                        <span className="text-[10px] text-muted-foreground/50">R$</span>
-                        <span className="text-[15px] font-bold text-foreground tabular-nums">
-                          {Math.max(0, getTotalPrice() - availableCredits).toFixed(2).replace('.', ',')}
-                        </span>
-                      </div>
-                    </div>
+                    <span className="text-[12px] text-muted-foreground/70">
+                      {paymentMethod === "pix" ? "Pagar via Pix" : paymentMethod === "card" ? "Pagar via Cartão" : "Pagar na Barbearia"}
+                    </span>
                   </div>
-                  <motion.button
-                    onClick={() => {
-                      if (paymentMethod === 'pix' || paymentMethod === 'card') {
-                        handlePayment();
-                      } else {
-                        setStep(6);
-                      }
-                    }}
-                    disabled={processingPayment}
-                    whileHover={{ scale: processingPayment ? 1 : 1.02 }}
-                    whileTap={{ scale: processingPayment ? 1 : 0.95 }}
-                    className="group flex items-center gap-1.5 px-4 py-2 rounded-xl font-semibold text-[13px] text-white disabled:opacity-50"
-                    style={{
-                      background: "linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(0 65% 42%) 100%)",
-                      boxShadow: "0 2px 8px hsl(var(--primary) / 0.3), inset 0 1px 0 rgba(255,255,255,0.12)"
-                    }}
-                  >
-                    {processingPayment ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <>
-                        <span>
-                          {paymentMethod === 'pix' ? 'Gerar PIX' :
-                           paymentMethod === 'card' ? 'Pagar' :
-                           'Continuar'}
-                        </span>
-                        <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
-                      </>
-                    )}
-                  </motion.button>
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-[10px] text-muted-foreground/50 font-medium">R$</span>
+                    <span className="text-[17px] font-bold text-foreground tabular-nums tracking-tight">
+                      {Math.max(0, getTotalPrice() - availableCredits).toFixed(2).replace('.', ',')}
+                    </span>
+                  </div>
                 </div>
+
+                {/* Full-width CTA */}
+                <motion.button
+                  onClick={() => {
+                    if (paymentMethod === 'pix' || paymentMethod === 'card') {
+                      handlePayment();
+                    } else {
+                      setStep(6);
+                    }
+                  }}
+                  disabled={processingPayment}
+                  whileTap={{ scale: processingPayment ? 1 : 0.985 }}
+                  className={cn(
+                    "w-full flex items-center justify-center gap-2",
+                    "h-[50px] rounded-xl",
+                    "font-semibold text-[14px] text-primary-foreground",
+                    "bg-primary",
+                    "active:brightness-90 transition-all duration-150",
+                    processingPayment && "opacity-70 cursor-wait"
+                  )}
+                  style={{
+                    boxShadow: "0 4px 16px hsl(var(--primary) / 0.25)"
+                  }}
+                >
+                  {processingPayment ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Processando...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>
+                        {paymentMethod === 'pix' ? 'Gerar PIX' :
+                         paymentMethod === 'card' ? 'Pagar' :
+                         'Continuar'}
+                      </span>
+                      <ArrowRight className="w-4 h-4" />
+                    </>
+                  )}
+                </motion.button>
               </div>
             </div>
           </motion.div>
