@@ -38,7 +38,7 @@ export function FloatingActionBar({
           className={cn("fixed bottom-0 left-0 right-0 z-40", className)}
         >
           <div className="pb-safe" style={{ background: "linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.4) 15%, rgba(0,0,0,0.85) 35%, #000000 55%)" }}>
-            <div className="w-full px-5 pt-8 pb-5">
+            <div className="w-full px-5 pt-12 pb-5">
               
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
