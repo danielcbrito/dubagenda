@@ -2199,6 +2199,12 @@ export type Database = {
           cep: string | null
           cpf: string | null
           created_at: string | null
+          data_nascimento: string | null
+          endereco_bairro: string | null
+          endereco_cidade: string | null
+          endereco_numero: string | null
+          endereco_rua: string | null
+          endereco_uf: string | null
           id: string
           nome: string
           telefone: string | null
@@ -2210,6 +2216,12 @@ export type Database = {
           cep?: string | null
           cpf?: string | null
           created_at?: string | null
+          data_nascimento?: string | null
+          endereco_bairro?: string | null
+          endereco_cidade?: string | null
+          endereco_numero?: string | null
+          endereco_rua?: string | null
+          endereco_uf?: string | null
           id: string
           nome: string
           telefone?: string | null
@@ -2221,6 +2233,12 @@ export type Database = {
           cep?: string | null
           cpf?: string | null
           created_at?: string | null
+          data_nascimento?: string | null
+          endereco_bairro?: string | null
+          endereco_cidade?: string | null
+          endereco_numero?: string | null
+          endereco_rua?: string | null
+          endereco_uf?: string | null
           id?: string
           nome?: string
           telefone?: string | null
