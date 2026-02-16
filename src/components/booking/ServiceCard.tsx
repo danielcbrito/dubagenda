@@ -1,4 +1,4 @@
-import { Check, Plus, Minus } from "lucide-react";
+import { Check, Plus, Minus, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -30,39 +30,44 @@ export function ServiceCard({
   return (
     <div
       className={cn(
-        "w-full text-left rounded-lg p-3 transition-all duration-200 border",
+        "w-full text-left rounded-xl p-3.5 transition-all duration-200 border",
+        "active:scale-[0.99]",
         isSelected 
-          ? "bg-primary/10 border-primary/50" 
-          : "bg-card border-border hover:bg-secondary"
+          ? "bg-primary/5 border-primary/30 ring-1 ring-primary/10" 
+          : "bg-card border-border/30 hover:border-border/50"
       )}
     >
-      <div className="flex items-start justify-between gap-2">
+      <div className="flex items-start justify-between gap-3">
         {/* Info — clicável para toggle */}
         <button
           onClick={onToggle}
           className="flex-1 text-left"
         >
-          <h3 className="text-sm font-semibold text-foreground mb-0.5">
+          <h3 className="text-[14px] font-semibold text-foreground mb-0.5">
             {service.nome}
           </h3>
           {service.descricao && (
-            <p className="text-[11px] text-muted-foreground mb-1.5 line-clamp-1">
+            <p className="text-[11px] text-muted-foreground/60 mb-2 line-clamp-1">
               {service.descricao}
             </p>
           )}
           
-          <div className="flex items-center gap-2.5 text-[11px]">
-            <span className="text-muted-foreground">
-              {service.duracao_minutos * (quantity || 1)} min
-            </span>
-            <span className="text-primary font-semibold">
-              R$ {(service.preco * (quantity || 1)).toFixed(2).replace('.', ',')}
-            </span>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1 text-[11px] text-muted-foreground/50">
+              <Clock className="w-3 h-3" />
+              <span>{service.duracao_minutos * (quantity || 1)} min</span>
+            </div>
+            <div className="flex items-baseline gap-0.5">
+              <span className="text-[10px] text-muted-foreground/40">R$</span>
+              <span className="text-[13px] font-semibold text-foreground tabular-nums">
+                {(service.preco * (quantity || 1)).toFixed(2).replace('.', ',')}
+              </span>
+            </div>
           </div>
         </button>
 
         {/* Controle de seleção / quantidade */}
-        <div className="flex-shrink-0 flex items-center gap-1.5 mt-0.5">
+        <div className="flex-shrink-0 flex items-center gap-1.5 mt-1">
           <AnimatePresence mode="wait">
             {isSelected ? (
               <motion.div
@@ -80,7 +85,7 @@ export function ServiceCard({
                   }}
                   className={cn(
                     "w-7 h-7 rounded-lg flex items-center justify-center transition-colors",
-                    "bg-muted hover:bg-destructive/20 text-muted-foreground hover:text-destructive"
+                    "bg-muted/50 hover:bg-destructive/20 text-muted-foreground hover:text-destructive"
                   )}
                   aria-label="Diminuir quantidade"
                 >
@@ -98,7 +103,7 @@ export function ServiceCard({
                   }}
                   className={cn(
                     "w-7 h-7 rounded-lg flex items-center justify-center transition-colors",
-                    "bg-primary/20 hover:bg-primary/30 text-primary"
+                    "bg-primary/15 hover:bg-primary/25 text-primary"
                   )}
                   aria-label="Aumentar quantidade"
                 >
@@ -115,7 +120,7 @@ export function ServiceCard({
                 onClick={onToggle}
                 className={cn(
                   "w-5 h-5 rounded-full border-2 transition-all flex items-center justify-center",
-                  "border-muted-foreground/30"
+                  "border-muted-foreground/20"
                 )}
                 aria-label="Selecionar serviço"
               />

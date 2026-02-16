@@ -1468,10 +1468,10 @@ const ClienteAgendar = () => {
             <div className="max-w-2xl mx-auto">
               <div className="mb-6 pt-1">
                 <h2 className="text-xl font-semibold text-foreground">
-                  Escolha o Barbeiro
+                  Seu Profissional
                 </h2>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Selecione o profissional
+                <p className="text-[12px] text-muted-foreground/60 mt-1">
+                  Quem vai cuidar de você hoje?
                 </p>
               </div>
 
@@ -1531,9 +1531,9 @@ const ClienteAgendar = () => {
               {/* Título da Etapa */}
               <div className="mb-6 pt-1">
                 <h2 className="text-xl font-semibold text-foreground">
-                  Escolha os Serviços
+                  O que deseja?
                 </h2>
-                <p className="text-sm text-muted-foreground mt-1">
+                <p className="text-[12px] text-muted-foreground/60 mt-1">
                   Selecione um ou mais serviços
                 </p>
               </div>
@@ -1579,13 +1579,13 @@ const ClienteAgendar = () => {
               {/* Título da Etapa */}
               <div className="mb-6 pt-1">
                 <h2 className="text-xl font-semibold text-foreground">
-                  Escolha a Data
+                  Melhor dia pra você
                 </h2>
-                <p className="text-sm text-muted-foreground mt-1">
+                <p className="text-[12px] text-muted-foreground/60 mt-1">
                   {isPlanFlow && activeSubscription ? (
-                    <>Serviço: <span className="text-primary font-medium">{activeSubscription.servico?.nome}</span> • Barbeiro: <span className="text-primary font-medium">{selectedBarber?.apelido}</span></>
+                    <>{activeSubscription.servico?.nome} • {selectedBarber?.apelido}</>
                   ) : selectedBarber ? (
-                    <>Barbeiro: <span className="text-primary font-medium">{selectedBarber.apelido}</span></>
+                    <>com {selectedBarber.apelido}</>
                   ) : (
                     "Selecione o dia desejado"
                   )}
@@ -1627,9 +1627,9 @@ const ClienteAgendar = () => {
               {/* Título da Etapa */}
               <div className="mb-6 pt-1">
                 <h2 className="text-xl font-semibold text-foreground">
-                  Escolha o Horário
+                  Que horas fica bom?
                 </h2>
-                <p className="text-sm text-muted-foreground mt-1">
+                <p className="text-[12px] text-muted-foreground/60 mt-1">
                   {selectedDate ? format(selectedDate, "EEEE, d 'de' MMMM", { locale: ptBR }) : ""} • {selectedBarber?.apelido}
                 </p>
               </div>
@@ -1714,27 +1714,30 @@ const ClienteAgendar = () => {
               {/* Header */}
               <div className="mb-6 pt-1">
                 <h2 className="text-xl font-semibold text-foreground">
-                  Pagamento
+                  Como prefere pagar?
                 </h2>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Escolha como deseja pagar
+                <p className="text-[12px] text-muted-foreground/60 mt-1">
+                  Escolha a forma mais confortável
                 </p>
               </div>
 
               {/* Resumo do serviço */}
-              <div className="bg-card border border-border/40 rounded-xl p-4 mb-6">
+              <div className="bg-card border border-border/30 rounded-xl p-4 mb-6">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-[13px] font-medium text-foreground">
                       {getFormattedServiceNames()}
                     </p>
-                    <p className="text-[11px] text-muted-foreground mt-0.5">
-                      {getTotalDuration()} min • {selectedBarber?.apelido}
+                    <p className="text-[11px] text-muted-foreground/50 mt-0.5">
+                      {getTotalDuration()} min • {selectedBarber?.apelido} • {selectedDate ? format(selectedDate, "dd/MM", { locale: ptBR }) : ""} às {selectedTime}
                     </p>
                   </div>
-                  <p className="text-base font-bold text-foreground tabular-nums">
-                    R$ {selectedServices.reduce((sum, s) => sum + s.preco * (serviceQuantities[s.id] || 1), 0).toFixed(2).replace('.', ',')}
-                  </p>
+                  <div className="flex items-baseline gap-0.5">
+                    <span className="text-[10px] text-muted-foreground/40">R$</span>
+                    <span className="text-[15px] font-bold text-foreground tabular-nums">
+                      {selectedServices.reduce((sum, s) => sum + s.preco * (serviceQuantities[s.id] || 1), 0).toFixed(2).replace('.', ',')}
+                    </span>
+                  </div>
                 </div>
               </div>
 
@@ -2052,10 +2055,10 @@ const ClienteAgendar = () => {
               {/* Título da Etapa */}
               <div className="mb-6 pt-1">
                 <h2 className="text-xl font-semibold text-foreground">
-                  Confirmar Agendamento
+                  Tudo certo?
                 </h2>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Revise os detalhes antes de finalizar
+                <p className="text-[12px] text-muted-foreground/60 mt-1">
+                  Revise e confirme seu agendamento
                 </p>
               </div>
 
@@ -2111,10 +2114,13 @@ const ClienteAgendar = () => {
                 
                 <div className="border-t border-border mt-4 pt-4">
                   <div className="flex items-center justify-between">
-                    <span className="font-semibold text-foreground">Total</span>
-                    <span className="text-2xl font-bold text-primary">
-                      R$ {Math.max(0, getTotalPrice() - availableCredits).toFixed(2).replace('.', ',')}
-                    </span>
+                    <span className="text-[13px] font-medium text-muted-foreground">Total</span>
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-[11px] text-muted-foreground/50">R$</span>
+                      <span className="text-lg font-bold text-foreground tabular-nums">
+                        {Math.max(0, getTotalPrice() - availableCredits).toFixed(2).replace('.', ',')}
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
