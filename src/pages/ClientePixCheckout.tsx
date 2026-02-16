@@ -244,23 +244,46 @@ const ClientePixCheckout = () => {
                 exit={{ opacity: 0 }}
                 className="w-full space-y-4"
               >
-                {/* Valor + Timer inline */}
-                <div className="flex items-center justify-between pt-1">
-                  <div>
-                    <p className="text-[9px] uppercase tracking-[0.15em] text-muted-foreground/50 font-medium">Total</p>
-                    <p className="text-xl font-bold text-foreground tracking-tight">
-                      R$ {pixData.value.toFixed(2).replace(".", ",")}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-1.5 bg-muted/20 px-2.5 py-1 rounded-full">
-                    <Clock className="w-2.5 h-2.5 text-muted-foreground/50" />
-                    <span className="text-[10px] text-foreground font-bold tabular-nums">{timeLeft}</span>
-                  </div>
+                {/* Valor centralizado */}
+                <div className="text-center pt-1">
+                  <p className="text-[9px] uppercase tracking-[0.15em] text-muted-foreground/50 font-medium">Total</p>
+                  <p className="text-xl font-bold text-foreground tracking-tight mt-0.5">
+                    R$ {pixData.value.toFixed(2).replace(".", ",")}
+                  </p>
                 </div>
 
                 {/* QR Code Card — compacto */}
                 <div className="rounded-xl border border-border/30 bg-card/60 backdrop-blur-sm overflow-hidden">
-                  {/* Detalhes do pedido */}
+                  {/* QR Code */}
+                  <div className="p-4 flex flex-col items-center gap-2">
+                    <p className="text-[9px] uppercase tracking-[0.12em] text-muted-foreground/40 font-medium">
+                      Escaneie com seu banco
+                    </p>
+                    <div className="relative">
+                      <div className="absolute -top-1 -left-1 w-3 h-3 border-t-2 border-l-2 border-primary/30 rounded-tl-sm" />
+                      <div className="absolute -top-1 -right-1 w-3 h-3 border-t-2 border-r-2 border-primary/30 rounded-tr-sm" />
+                      <div className="absolute -bottom-1 -left-1 w-3 h-3 border-b-2 border-l-2 border-primary/30 rounded-bl-sm" />
+                      <div className="absolute -bottom-1 -right-1 w-3 h-3 border-b-2 border-r-2 border-primary/30 rounded-br-sm" />
+                      <div className="rounded-md p-2" style={{ background: "hsl(0 0% 95%)" }}>
+                        <img src={`data:image/png;base64,${pixData.pixQrCode}`} alt="QR Code PIX" className="w-32 h-32" />
+                      </div>
+                    </div>
+                    {/* Timer abaixo do QR */}
+                    <div className="flex items-center gap-1.5 bg-muted/20 px-2.5 py-1 rounded-full">
+                      <Clock className="w-2.5 h-2.5 text-muted-foreground/50" />
+                      <span className="text-[9px] text-muted-foreground/60">Expira em</span>
+                      <span className="text-[10px] text-foreground font-bold tabular-nums">{timeLeft}</span>
+                    </div>
+                  </div>
+
+                  {/* Separador ticket */}
+                  <div className="relative h-px">
+                    <div className="absolute inset-0 bg-border/20" style={{ backgroundImage: "repeating-linear-gradient(90deg, transparent, transparent 4px, hsl(var(--background)) 4px, hsl(var(--background)) 8px)" }} />
+                    <div className="absolute -left-2.5 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-background" />
+                    <div className="absolute -right-2.5 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-background" />
+                  </div>
+
+                  {/* Detalhes do pedido abaixo do QR */}
                   <div className="px-3.5 py-2.5 space-y-1.5">
                     {pixData.serviceName && (
                       <div className="flex items-center justify-between">
@@ -291,29 +314,6 @@ const ClientePixCheckout = () => {
                         </span>
                       </div>
                     )}
-                  </div>
-
-                  {/* Separador ticket */}
-                  <div className="relative h-px">
-                    <div className="absolute inset-0 bg-border/20" style={{ backgroundImage: "repeating-linear-gradient(90deg, transparent, transparent 4px, hsl(var(--background)) 4px, hsl(var(--background)) 8px)" }} />
-                    <div className="absolute -left-2.5 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-background" />
-                    <div className="absolute -right-2.5 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-background" />
-                  </div>
-
-                  {/* QR Code */}
-                  <div className="p-4 flex flex-col items-center gap-2">
-                    <p className="text-[9px] uppercase tracking-[0.12em] text-muted-foreground/40 font-medium">
-                      Escaneie com seu banco
-                    </p>
-                    <div className="relative">
-                      <div className="absolute -top-1 -left-1 w-3 h-3 border-t-2 border-l-2 border-primary/30 rounded-tl-sm" />
-                      <div className="absolute -top-1 -right-1 w-3 h-3 border-t-2 border-r-2 border-primary/30 rounded-tr-sm" />
-                      <div className="absolute -bottom-1 -left-1 w-3 h-3 border-b-2 border-l-2 border-primary/30 rounded-bl-sm" />
-                      <div className="absolute -bottom-1 -right-1 w-3 h-3 border-b-2 border-r-2 border-primary/30 rounded-br-sm" />
-                      <div className="rounded-md p-2" style={{ background: "hsl(0 0% 95%)" }}>
-                        <img src={`data:image/png;base64,${pixData.pixQrCode}`} alt="QR Code PIX" className="w-32 h-32" />
-                      </div>
-                    </div>
                   </div>
                 </div>
 
