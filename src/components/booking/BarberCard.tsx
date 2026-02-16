@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import { User, Star, Eye } from "lucide-react";
+import { User, Star, ChevronRight } from "lucide-react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 
@@ -34,20 +34,18 @@ export function BarberCard({ barber, isSelected, onSelect, rating }: BarberCardP
       onClick={onSelect}
       whileTap={{ scale: 0.98 }}
       className={cn(
-        "w-full text-left rounded-2xl p-5 transition-all duration-300 border",
-        "bg-card hover:bg-secondary/50",
+        "w-full text-left rounded-xl p-3.5 transition-all duration-200 border",
+        "bg-card/60 active:scale-[0.99]",
         isSelected
-          ? "border-primary shadow-lg shadow-primary/20 ring-2 ring-primary/30"
-          : "border-border hover:border-primary/50"
+          ? "border-primary/40 bg-primary/5"
+          : "border-border/25 hover:border-border/50"
       )}
     >
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-3">
         {/* Avatar */}
         <div className={cn(
-          "relative w-16 h-16 rounded-full overflow-hidden flex-shrink-0 transition-all duration-300",
-          isSelected 
-            ? "ring-2 ring-primary ring-offset-2 ring-offset-background" 
-            : ""
+          "relative w-11 h-11 rounded-full overflow-hidden flex-shrink-0 transition-all duration-200",
+          isSelected ? "ring-[1.5px] ring-primary/50 ring-offset-1 ring-offset-background" : ""
         )}>
           {barber.foto_url ? (
             <img
@@ -56,8 +54,8 @@ export function BarberCard({ barber, isSelected, onSelect, rating }: BarberCardP
               className="w-full h-full object-cover"
             />
           ) : (
-            <div className="w-full h-full bg-secondary flex items-center justify-center">
-              <User className="w-8 h-8 text-muted-foreground" />
+            <div className="w-full h-full bg-muted/20 flex items-center justify-center">
+              <User className="w-5 h-5 text-muted-foreground/40" />
             </div>
           )}
         </div>
@@ -65,56 +63,58 @@ export function BarberCard({ barber, isSelected, onSelect, rating }: BarberCardP
         {/* Info */}
         <div className="flex-1 min-w-0">
           <h3 className={cn(
-            "text-lg font-semibold truncate transition-colors",
-            isSelected ? "text-primary" : "text-foreground"
+            "text-[13px] font-semibold truncate transition-colors",
+            isSelected ? "text-primary" : "text-foreground/80"
           )}>
             {barber.apelido}
           </h3>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            Profissional
-          </p>
-          {/* Rating + Ver avaliações */}
-          {rating && rating.count > 0 && (
-            <div className="flex items-center gap-2 mt-1.5">
-              <div className="flex gap-0.5">
+
+          {/* Rating */}
+          {rating && rating.count > 0 ? (
+            <div className="flex items-center gap-1.5 mt-0.5">
+              <div className="flex gap-px">
                 {[1, 2, 3, 4, 5].map((star) => (
                   <Star
                     key={star}
                     className={cn(
-                      "w-3.5 h-3.5",
+                      "w-2.5 h-2.5",
                       star <= Math.round(rating.average)
-                        ? "fill-primary text-primary"
-                        : "text-muted-foreground/30"
+                        ? "fill-primary/70 text-primary/70"
+                        : "text-muted-foreground/15"
                     )}
                   />
                 ))}
               </div>
-              <span className="text-xs text-muted-foreground font-medium">
+              <span className="text-[10px] text-muted-foreground/50 tabular-nums">
                 {rating.average.toFixed(1)}
               </span>
               <button
                 onClick={handleViewReviews}
-                className="text-xs text-primary font-medium flex items-center gap-1 hover:underline ml-1"
+                className="text-[10px] text-muted-foreground/40 hover:text-muted-foreground/70 flex items-center gap-0.5 transition-colors ml-0.5"
               >
-                <Eye className="w-3 h-3" />
-                Ver ({rating.count})
+                <span>{rating.count} avaliações</span>
+                <ChevronRight className="w-2.5 h-2.5" />
               </button>
             </div>
+          ) : (
+            <p className="text-[10px] text-muted-foreground/30 mt-0.5">
+              Profissional
+            </p>
           )}
         </div>
 
         {/* Selection Indicator */}
         <div className={cn(
-          "flex-shrink-0 w-6 h-6 rounded-full border-2 transition-all duration-200 flex items-center justify-center",
+          "flex-shrink-0 w-5 h-5 rounded-full border-[1.5px] transition-all duration-200 flex items-center justify-center",
           isSelected 
             ? "bg-primary border-primary"
-            : "border-muted-foreground/30"
+            : "border-muted-foreground/20"
         )}>
           {isSelected && (
             <motion.div
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
-              className="w-2.5 h-2.5 rounded-full bg-primary-foreground"
+              className="w-2 h-2 rounded-full bg-primary-foreground"
             />
           )}
         </div>

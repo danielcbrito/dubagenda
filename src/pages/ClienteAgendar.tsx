@@ -1426,30 +1426,27 @@ const ClienteAgendar = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header Minimalista - Apenas Setinha + Bolinhas */}
-      <div className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-md border-b border-border/50">
-        <div className="max-w-2xl mx-auto px-4 py-4">
+      {/* Header — Seta + Dots apenas */}
+      <div className="fixed top-0 left-0 right-0 z-50 bg-background/90 backdrop-blur-xl">
+        <div className="max-w-2xl mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
-            {/* Botão Voltar */}
             <button 
               onClick={handleBack}
-              className="w-10 h-10 flex items-center justify-center rounded-full bg-card hover:bg-secondary transition-all"
+              className="w-8 h-8 flex items-center justify-center rounded-lg bg-card/60 hover:bg-card transition-all active:scale-90"
             >
-              <ArrowLeft className="w-5 h-5 text-foreground" />
+              <ArrowLeft className="w-4 h-4 text-foreground/70" />
             </button>
 
-            {/* Bolinhas de Etapas */}
             <StepDots currentStep={currentDisplayStep} totalSteps={totalSteps} />
 
-            {/* Espaço vazio para balancear */}
-            <div className="w-10" />
+            <div className="w-8" />
           </div>
         </div>
       </div>
 
       {/* Content */}
       <AnimatePresence mode="wait">
-        {/* STEP 1: ESCOLHER BARBEIRO (para TODOS os usuários) */}
+        {/* STEP 1: ESCOLHER BARBEIRO */}
         {step === 1 && (
           <motion.div
             key="step-1-barber"
@@ -1457,29 +1454,28 @@ const ClienteAgendar = () => {
             initial="initial"
             animate="animate"
             exit="exit"
-            transition={{ duration: 0.3 }}
-            className="min-h-screen pt-20 pb-32 px-4"
+            transition={{ duration: 0.25 }}
+            className="min-h-screen pt-16 pb-28 px-4"
           >
             <div className="max-w-2xl mx-auto">
-              {/* Título da Etapa */}
-              <div className="mb-6 pt-4">
-                <h2 className="text-xl font-semibold text-foreground">
+              <div className="mb-5 pt-3">
+                <p className="text-[8px] font-semibold text-muted-foreground/30 uppercase tracking-[0.2em] mb-1">
+                  Etapa 1
+                </p>
+                <h2 className="text-[15px] font-semibold text-foreground/90 font-display tracking-tight">
                   Escolha o Barbeiro
                 </h2>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Selecione o profissional de sua preferência
-                </p>
               </div>
 
               {barbers.length === 0 ? (
-                <div className="bg-card border border-border rounded-2xl p-8 text-center">
-                  <div className="w-12 h-12 rounded-full bg-primary/20 mx-auto flex items-center justify-center mb-4">
-                    <Clock className="w-6 h-6 text-primary animate-spin" />
+                <div className="rounded-xl border border-border/20 p-6 text-center bg-card/30">
+                  <div className="w-8 h-8 rounded-lg bg-muted/10 mx-auto flex items-center justify-center mb-3">
+                    <Clock className="w-4 h-4 text-muted-foreground/30 animate-spin" />
                   </div>
-                  <p className="text-sm text-muted-foreground">Carregando barbeiros...</p>
+                  <p className="text-[11px] text-muted-foreground/40">Carregando...</p>
                 </div>
               ) : (
-                <div className="space-y-3">
+                <div className="space-y-2.5">
                   {barbers.map((barber) => (
                     <BarberCard
                       key={barber.id}
@@ -1492,14 +1488,19 @@ const ClienteAgendar = () => {
                 </div>
               )}
 
-              {/* Botão Continuar */}
               {selectedBarber && (
-                <button
-                  onClick={() => setStep(2)}
-                  className="w-full mt-6 py-3.5 bg-primary text-primary-foreground font-semibold rounded-xl hover:bg-primary/90 transition-all"
+                <motion.div
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
                 >
-                  Continuar com {selectedBarber.apelido}
-                </button>
+                  <button
+                    onClick={() => setStep(2)}
+                    className="w-full mt-5 h-10 bg-primary/90 text-primary-foreground text-[12px] font-semibold rounded-lg transition-all active:scale-[0.98]"
+                    style={{ boxShadow: "0 4px 14px -3px hsl(var(--primary) / 0.3)" }}
+                  >
+                    Continuar com {selectedBarber.apelido}
+                  </button>
+                </motion.div>
               )}
             </div>
           </motion.div>
