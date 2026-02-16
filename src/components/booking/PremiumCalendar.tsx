@@ -55,39 +55,39 @@ export function PremiumCalendar({ selectedDate, onSelectDate, disabledDates = []
   };
 
   return (
-    <div className="bg-white/[0.02] border border-white/5 rounded-3xl p-6 backdrop-blur-xl">
+    <div className="bg-card/30 border border-border/30 rounded-2xl p-4 backdrop-blur-xl">
       {/* Header do calendário */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-4">
         <button 
           onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}
-          className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-white/5 transition-colors"
+          className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-secondary transition-colors"
         >
-          <ChevronLeft className="w-5 h-5 text-white" />
+          <ChevronLeft className="w-4 h-4 text-foreground/70" />
         </button>
         
-        <h3 className="text-xl font-bold text-white capitalize">
+        <h3 className="text-base font-bold text-foreground capitalize">
           {format(currentMonth, 'MMMM yyyy', { locale: ptBR })}
         </h3>
         
         <button 
           onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}
-          className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-white/5 transition-colors"
+          className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-secondary transition-colors"
         >
-          <ChevronRight className="w-5 h-5 text-white" />
+          <ChevronRight className="w-4 h-4 text-foreground/70" />
         </button>
       </div>
 
       {/* Dias da semana */}
-      <div className="grid grid-cols-7 gap-2 mb-2">
+      <div className="grid grid-cols-7 gap-1.5 mb-1.5">
         {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map(day => (
-          <div key={day} className="text-center text-xs font-medium text-zinc-500 py-2">
+          <div key={day} className="text-center text-[10px] font-medium text-muted-foreground/60 py-1.5">
             {day}
           </div>
         ))}
       </div>
 
       {/* Grid de dias */}
-      <div className="grid grid-cols-7 gap-2">
+      <div className="grid grid-cols-7 gap-1.5">
         {calendarDays.map((day, index) => {
           if (!day) {
             return <div key={`empty-${index}`} className="aspect-square" />;
@@ -105,13 +105,13 @@ export function PremiumCalendar({ selectedDate, onSelectDate, disabledDates = []
               onClick={() => !isDisabled && onSelectDate(day)}
               disabled={isDisabled}
               className={cn(
-                "aspect-square rounded-xl text-sm font-medium transition-all flex items-center justify-center",
+                "aspect-square rounded-lg text-[13px] font-medium transition-all flex items-center justify-center",
                 !isCurrentMonth && "opacity-30",
-                isClosed && "opacity-20 cursor-not-allowed line-through text-zinc-600",
+                isClosed && "opacity-20 cursor-not-allowed line-through text-muted-foreground",
                 isDisabled && !isClosed && "opacity-30 cursor-not-allowed",
-                !isDisabled && !isSelected && "hover:bg-white/5 text-white",
+                !isDisabled && !isSelected && "hover:bg-secondary text-foreground",
                 isCurrentDay && !isSelected && !isClosed && "ring-1 ring-primary/50",
-                isSelected && "bg-gradient-to-br from-primary to-primary/80 text-white shadow-lg shadow-primary/25 scale-105"
+                isSelected && "bg-gradient-to-br from-primary to-primary/80 text-primary-foreground shadow-lg shadow-primary/25 scale-105"
               )}
             >
               {format(day, 'd')}

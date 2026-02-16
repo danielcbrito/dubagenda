@@ -13,7 +13,7 @@ export function TimeSlot({ time, isSelected, isDisabled, onSelect }: TimeSlotPro
       onClick={onSelect}
       disabled={isDisabled}
       className={cn(
-        "py-3 rounded-xl font-medium transition-all text-sm border",
+        "py-2.5 rounded-lg font-medium transition-all text-[13px] border",
         isDisabled && "opacity-30 cursor-not-allowed",
         isSelected
           ? "bg-primary text-primary-foreground border-primary"

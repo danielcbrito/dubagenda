@@ -34,17 +34,17 @@ export function BarberCard({ barber, isSelected, onSelect, rating }: BarberCardP
       onClick={onSelect}
       whileTap={{ scale: 0.98 }}
       className={cn(
-        "w-full text-left rounded-xl p-3.5 transition-all duration-200 border",
+        "w-full text-left rounded-lg p-3 transition-all duration-200 border",
         "bg-card/60 active:scale-[0.99]",
         isSelected
           ? "border-primary/40 bg-primary/5"
           : "border-border/25 hover:border-border/50"
       )}
     >
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2.5">
         {/* Avatar */}
         <div className={cn(
-          "relative w-11 h-11 rounded-full overflow-hidden flex-shrink-0 transition-all duration-200",
+          "relative w-9 h-9 rounded-full overflow-hidden flex-shrink-0 transition-all duration-200",
           isSelected ? "ring-[1.5px] ring-primary/50 ring-offset-1 ring-offset-background" : ""
         )}>
           {barber.foto_url ? (

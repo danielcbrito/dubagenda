@@ -29,15 +29,15 @@ export function PaymentOption({
       onClick={disabled ? undefined : onSelect}
       disabled={disabled}
       className={cn(
-        "w-full text-left rounded-xl p-4 transition-all duration-200 border relative",
+        "w-full text-left rounded-lg p-3 transition-all duration-200 border relative",
         disabled && "opacity-50 cursor-not-allowed bg-muted border-border",
         !disabled && highlight && "bg-gold/5 border-gold/30",
         !disabled && !highlight && selected && "bg-primary/10 border-primary/50",
         !disabled && !highlight && !selected && "bg-card border-border hover:bg-secondary"
       )}
     >
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex items-start gap-3 flex-1">
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex items-start gap-2.5 flex-1">
           {icon && (
             <div className={cn("flex-shrink-0 mt-0.5", disabled && "grayscale")}>{icon}</div>
           )}
