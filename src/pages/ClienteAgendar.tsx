@@ -1427,13 +1427,13 @@ const ClienteAgendar = () => {
 
   return (
     <div className="min-h-screen">
-      {/* Header — Seta + Dots, sem barra de fundo */}
-      <div className="fixed top-0 left-0 right-0 z-50">
+      {/* Header fixo — Seta + Dots com fundo sólido */}
+      <div className="fixed top-0 left-0 right-0 z-50 bg-background">
         <div className="max-w-2xl mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
             <button 
               onClick={handleBack}
-              className="w-8 h-8 flex items-center justify-center rounded-lg bg-card/60 backdrop-blur-sm hover:bg-card transition-all active:scale-90"
+              className="w-8 h-8 flex items-center justify-center rounded-lg bg-card/60 hover:bg-card transition-all active:scale-90"
             >
               <ArrowLeft className="w-4 h-4 text-foreground/70" />
             </button>
@@ -1443,6 +1443,11 @@ const ClienteAgendar = () => {
             <div className="w-8" />
           </div>
         </div>
+        {/* Fade mask — cards somem suavemente ao subir */}
+        <div 
+          className="h-6 pointer-events-none"
+          style={{ background: "linear-gradient(to bottom, hsl(var(--background)), transparent)" }}
+        />
       </div>
 
       {/* Content */}
