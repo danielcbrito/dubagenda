@@ -37,15 +37,14 @@ export function FloatingActionBar({
           }}
           className={cn("fixed bottom-0 left-0 right-0 z-40", className)}
         >
-          <div className="px-0 pb-safe" style={{ background: "#0a0a0c" }}>
-            <div className="w-full px-5 pt-5 pb-4" style={{ background: "#0a0a0c" }}>
+          <div className="pb-safe backdrop-blur-2xl" style={{ background: "rgba(10,10,12,0.85)" }}>
+            <div className="w-full px-5 pt-4 pb-4">
               
-              <div className="flex items-center justify-between px-3.5 py-2.5">
-                {/* Left: Icon + info inline */}
-                <div className="flex items-center gap-2.5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
                   {icon && (
                     <div 
-                      className="flex items-center justify-center w-7 h-7 rounded-lg"
+                      className="flex items-center justify-center w-9 h-9 rounded-xl"
                       style={{
                         background: "linear-gradient(135deg, hsl(var(--primary) / 0.15), hsl(var(--primary) / 0.05))"
                       }}
@@ -55,7 +54,7 @@ export function FloatingActionBar({
                   )}
                   
                   {subtitle && (
-                    <span className="text-[11px] text-muted-foreground/60">{subtitle}</span>
+                    <span className="text-[13px] text-muted-foreground/70">{subtitle}</span>
                   )}
                 </div>
 

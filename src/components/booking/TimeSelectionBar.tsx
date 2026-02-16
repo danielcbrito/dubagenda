@@ -35,26 +35,25 @@ export function TimeSelectionBar({
           }}
           className={cn("fixed bottom-0 left-0 right-0 z-40", className)}
         >
-          <div className="px-0 pb-safe" style={{ background: "#0a0a0c" }}>
-            <div className="w-full px-5 pt-5 pb-4" style={{ background: "#0a0a0c" }}>
+          <div className="pb-safe backdrop-blur-2xl" style={{ background: "rgba(10,10,12,0.85)" }}>
+            <div className="w-full px-5 pt-4 pb-4">
               
-              <div className="flex items-center justify-between px-3.5 py-2.5">
+              <div className="flex items-center justify-between">
                 
-                {/* Left: Time + date inline */}
-                <div className="flex items-center gap-2.5">
+                <div className="flex items-center gap-3">
                   <div 
-                    className="flex items-center justify-center w-7 h-7 rounded-lg"
+                    className="flex items-center justify-center w-9 h-9 rounded-xl"
                     style={{
                       background: "linear-gradient(135deg, rgba(34, 197, 94, 0.15), rgba(34, 197, 94, 0.05))"
                     }}
                   >
-                    <Check className="w-3.5 h-3.5 text-green-500" />
+                    <Check className="w-4 h-4 text-green-500" />
                   </div>
                   
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[13px] font-semibold text-foreground tabular-nums">{selectedTime}</span>
-                    <span className="text-[10px] text-muted-foreground/50">•</span>
-                    <span className="text-[11px] text-muted-foreground/60">{formattedDate}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[15px] font-bold text-foreground tabular-nums">{selectedTime}</span>
+                    <span className="text-[11px] text-muted-foreground/50">•</span>
+                    <span className="text-[13px] text-muted-foreground/70">{formattedDate}</span>
                   </div>
                 </div>
 
