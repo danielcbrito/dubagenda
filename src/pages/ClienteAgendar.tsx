@@ -1386,7 +1386,7 @@ const ClienteAgendar = () => {
   // Tela de Limite Atingido - para quando o usuário já usou todos os agendamentos do plano
   if (subscriptionLimitReached) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center px-4">
+      <div className="min-h-screen flex items-center justify-center px-4">
         <div className="max-w-md w-full text-center">
           <div className="w-20 h-20 mx-auto mb-6 bg-destructive/10 rounded-full flex items-center justify-center">
             <Clock className="w-10 h-10 text-destructive" />
@@ -1426,7 +1426,7 @@ const ClienteAgendar = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen">
       {/* Header — Seta + Dots apenas */}
       <div className="fixed top-0 left-0 right-0 z-50 bg-background/90 backdrop-blur-xl">
         <div className="max-w-2xl mx-auto px-4 py-3">

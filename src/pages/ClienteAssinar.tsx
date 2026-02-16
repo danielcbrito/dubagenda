@@ -235,7 +235,7 @@ const ClienteAssinar = () => {
   const headerTitle = step === 1 ? "Escolha o melhor para você" : "Forma de pagamento";
 
   return (
-    <div className="min-h-screen bg-background pb-20">
+    <div className="min-h-screen pb-20">
       
       {/* Header */}
       <div className="sticky top-0 z-10 px-4 pt-[max(env(safe-area-inset-top),1rem)] pb-3 bg-background/80 backdrop-blur-xl">

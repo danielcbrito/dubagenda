@@ -238,7 +238,7 @@ export default function ClienteDadosPessoais() {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-24">
+    <div className="min-h-screen pb-24">
       {/* Header */}
       <div className="flex items-center gap-3 px-4 pt-4 pb-3">
         <button

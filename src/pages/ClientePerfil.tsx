@@ -188,7 +188,7 @@ export default function ClientePerfil() {
     : null;
 
   return (
-    <div className="min-h-screen bg-background pb-20">
+    <div className="min-h-screen pb-20">
       <div className="pt-10 pb-8 space-y-6">
         {/* Identity Section */}
         <motion.div

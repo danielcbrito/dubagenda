@@ -566,7 +566,7 @@ const Cliente = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="min-h-screen flex flex-col">
       <AnnouncementModal />
 
       {/* Scrollable Content */}

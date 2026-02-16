@@ -83,7 +83,7 @@ const ClientePagamento = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background pb-20">
+    <div className="min-h-screen pb-20">
       {/* Header */}
       <div className="px-4 pt-[max(env(safe-area-inset-top),1rem)] pb-3">
         <div className="max-w-2xl mx-auto flex items-center gap-3">
