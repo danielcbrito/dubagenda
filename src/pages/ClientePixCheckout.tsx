@@ -20,9 +20,6 @@ interface PixCheckoutData {
   bookingTime?: string;
 }
 
-/**
- * Checkout PIX premium — estética fintech, confiança e tecnologia.
- */
 const ClientePixCheckout = () => {
   const navigate = useNavigate();
 
@@ -159,12 +156,12 @@ const ClientePixCheckout = () => {
         >
           <div className="relative w-20 h-20 mx-auto">
             <motion.div
-              className="absolute inset-0 rounded-full bg-green-500/20"
+              className="absolute inset-0 rounded-full bg-emerald-500/20"
               animate={{ scale: [1, 1.6], opacity: [0.5, 0] }}
               transition={{ duration: 1.5, repeat: Infinity }}
             />
-            <div className="relative w-20 h-20 rounded-full bg-green-500/10 border border-green-500/20 flex items-center justify-center">
-              <CheckCircle2 className="w-9 h-9 text-green-500" />
+            <div className="relative w-20 h-20 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
+              <CheckCircle2 className="w-9 h-9 text-emerald-500" />
             </div>
           </div>
           <div>
@@ -175,7 +172,7 @@ const ClientePixCheckout = () => {
           </div>
           <div className="w-full h-1 bg-muted/50 rounded-full overflow-hidden">
             <motion.div
-              className="h-full bg-green-500 rounded-full"
+              className="h-full bg-emerald-500 rounded-full"
               style={{ width: `${progressPct}%` }}
             />
           </div>
@@ -187,14 +184,9 @@ const ClientePixCheckout = () => {
 
   return (
     <div className="min-h-screen bg-background relative overflow-y-auto">
-      {/* Gradiente radial sutil de fundo */}
-      <div className="fixed inset-0 pointer-events-none" style={{
-        background: "radial-gradient(ellipse at 50% 0%, hsl(var(--primary) / 0.04) 0%, transparent 60%)"
-      }} />
-
       <div className="relative z-10 flex flex-col min-h-screen">
-        {/* Header flutuante minimalista */}
-        <div className="px-5 pt-[max(env(safe-area-inset-top),1rem)] pb-4">
+        {/* Header — Logo + PIX */}
+        <div className="px-5 pt-[max(env(safe-area-inset-top),1rem)] pb-3">
           <div className="max-w-md mx-auto flex items-center justify-between">
             <button
               onClick={goBack}
@@ -203,14 +195,15 @@ const ClientePixCheckout = () => {
             >
               <ArrowLeft className="w-4 h-4" />
             </button>
-            <div className="flex items-center gap-2">
-              <img src={logo} alt="Logo" className="w-7 h-7 rounded-full object-cover" />
-              <img src={pixIcon} alt="PIX" className="w-4 h-4 opacity-50" />
+            <div className="flex items-center gap-2.5">
+              <img src={logo} alt="Logo" className="w-6 h-6 rounded-full object-cover" />
+              <div className="w-px h-4 bg-border/40" />
+              <img src={pixIcon} alt="PIX" className="w-4 h-4" />
             </div>
           </div>
         </div>
 
-        {/* Conteúdo central */}
+        {/* Conteúdo */}
         <div className="flex-1 flex flex-col items-center px-5 pb-8 max-w-md mx-auto w-full">
           <AnimatePresence mode="wait">
             {expired ? (
@@ -221,18 +214,18 @@ const ClientePixCheckout = () => {
                 exit={{ opacity: 0 }}
                 className="text-center space-y-5 w-full mt-16"
               >
-                <div className="w-16 h-16 rounded-full bg-destructive/10 border border-destructive/20 flex items-center justify-center mx-auto">
-                  <AlertCircle className="w-7 h-7 text-destructive" />
+                <div className="w-14 h-14 rounded-full bg-destructive/10 border border-destructive/20 flex items-center justify-center mx-auto">
+                  <AlertCircle className="w-6 h-6 text-destructive" />
                 </div>
                 <div>
-                  <h2 className="text-lg font-bold text-foreground">QR Code expirado</h2>
+                  <h2 className="text-base font-bold text-foreground">QR Code expirado</h2>
                   <p className="text-sm text-muted-foreground mt-1">
                     O tempo para pagamento se encerrou.
                   </p>
                 </div>
                 <button
                   onClick={goBack}
-                  className="w-full py-3 bg-primary text-primary-foreground font-semibold rounded-xl hover:bg-primary/90 transition-all active:scale-[0.98]"
+                  className="w-full py-3 bg-primary text-primary-foreground font-semibold text-sm rounded-xl hover:bg-primary/90 transition-all active:scale-[0.98]"
                 >
                   Tentar novamente
                 </button>
@@ -243,121 +236,110 @@ const ClientePixCheckout = () => {
                 initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0 }}
-                className="w-full space-y-5"
+                className="w-full space-y-4"
               >
-                {/* Card principal */}
-                <div className="rounded-2xl border border-border/40 bg-gradient-to-b from-card/80 to-card/40 backdrop-blur-sm overflow-hidden">
-                  {/* Valor + Resumo */}
-                  <div className="p-5 space-y-4">
-                    {/* Total em destaque */}
-                    <div className="text-center">
-                      <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-medium mb-1">
-                        Total a pagar
-                      </p>
-                      <p className="text-3xl font-bold text-foreground tracking-tight">
-                        R$ {pixData.value.toFixed(2).replace(".", ",")}
-                      </p>
-                    </div>
+                {/* Valor */}
+                <div className="text-center pt-2 pb-1">
+                  <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground/60 font-medium">
+                    Total
+                  </p>
+                  <p className="text-2xl font-bold text-foreground tracking-tight mt-0.5">
+                    R$ {pixData.value.toFixed(2).replace(".", ",")}
+                  </p>
+                </div>
 
-                    {/* Separador fino */}
-                    <div className="h-px bg-border/30" />
-
-                    {/* Resumo do pedido */}
-                    <div className="space-y-2.5">
-                      {pixData.serviceName && (
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2.5">
-                            <Scissors className="w-3.5 h-3.5 text-muted-foreground" />
-                            <span className="text-xs text-muted-foreground">Serviço</span>
-                          </div>
-                          <span className="text-xs font-medium text-foreground">{pixData.serviceName}</span>
+                {/* QR Code Card */}
+                <div className="rounded-2xl border border-border/30 bg-card/60 backdrop-blur-sm overflow-hidden">
+                  {/* Detalhes do pedido */}
+                  <div className="px-4 py-3 space-y-2">
+                    {pixData.serviceName && (
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Scissors className="w-3 h-3 text-muted-foreground/50" />
+                          <span className="text-[11px] text-muted-foreground">Serviço</span>
                         </div>
-                      )}
-                      {pixData.barberName && (
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2.5">
-                            <User className="w-3.5 h-3.5 text-muted-foreground" />
-                            <span className="text-xs text-muted-foreground">Profissional</span>
-                          </div>
-                          <span className="text-xs font-medium text-foreground">{pixData.barberName}</span>
+                        <span className="text-[11px] font-medium text-foreground">{pixData.serviceName}</span>
+                      </div>
+                    )}
+                    {pixData.barberName && (
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <User className="w-3 h-3 text-muted-foreground/50" />
+                          <span className="text-[11px] text-muted-foreground">Profissional</span>
                         </div>
-                      )}
-                      {pixData.bookingDate && pixData.bookingTime && (
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2.5">
-                            <CalendarDays className="w-3.5 h-3.5 text-muted-foreground" />
-                            <span className="text-xs text-muted-foreground">Agendamento</span>
-                          </div>
-                          <span className="text-xs font-medium text-foreground">
-                            {pixData.bookingDate} às {pixData.bookingTime}
-                          </span>
+                        <span className="text-[11px] font-medium text-foreground">{pixData.barberName}</span>
+                      </div>
+                    )}
+                    {pixData.bookingDate && pixData.bookingTime && (
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <CalendarDays className="w-3 h-3 text-muted-foreground/50" />
+                          <span className="text-[11px] text-muted-foreground">Data</span>
                         </div>
-                      )}
-                    </div>
+                        <span className="text-[11px] font-medium text-foreground">
+                          {pixData.bookingDate} • {pixData.bookingTime}
+                        </span>
+                      </div>
+                    )}
                   </div>
 
-                  {/* Separador com recorte visual */}
-                  <div className="relative h-px">
-                    <div className="absolute inset-0 bg-border/30" />
+                  {/* Separador ticket-style */}
+                  <div className="relative h-px my-0">
+                    <div className="absolute inset-0 bg-border/20" style={{ backgroundImage: "repeating-linear-gradient(90deg, transparent, transparent 4px, hsl(var(--background)) 4px, hsl(var(--background)) 8px)" }} />
                     <div className="absolute -left-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-background" />
                     <div className="absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-background" />
                   </div>
 
-                  {/* QR Code com moldura tech */}
-                  <div className="p-5 flex flex-col items-center space-y-4">
-                    <p className="text-[10px] uppercase tracking-[0.15em] text-muted-foreground font-medium">
-                      Escaneie com seu app de banco
+                  {/* QR Code */}
+                  <div className="p-5 flex flex-col items-center space-y-3">
+                    <p className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground/50 font-medium">
+                      Escaneie com seu banco
                     </p>
 
-                    {/* Moldura tecnológica */}
                     <div className="relative">
-                      {/* Cantos HUD */}
-                      <div className="absolute -top-1 -left-1 w-5 h-5 border-t-2 border-l-2 border-primary/60 rounded-tl-sm" />
-                      <div className="absolute -top-1 -right-1 w-5 h-5 border-t-2 border-r-2 border-primary/60 rounded-tr-sm" />
-                      <div className="absolute -bottom-1 -left-1 w-5 h-5 border-b-2 border-l-2 border-primary/60 rounded-bl-sm" />
-                      <div className="absolute -bottom-1 -right-1 w-5 h-5 border-b-2 border-r-2 border-primary/60 rounded-br-sm" />
+                      {/* Cantos */}
+                      <div className="absolute -top-1.5 -left-1.5 w-4 h-4 border-t-2 border-l-2 border-primary/40 rounded-tl-sm" />
+                      <div className="absolute -top-1.5 -right-1.5 w-4 h-4 border-t-2 border-r-2 border-primary/40 rounded-tr-sm" />
+                      <div className="absolute -bottom-1.5 -left-1.5 w-4 h-4 border-b-2 border-l-2 border-primary/40 rounded-bl-sm" />
+                      <div className="absolute -bottom-1.5 -right-1.5 w-4 h-4 border-b-2 border-r-2 border-primary/40 rounded-br-sm" />
 
-                      {/* Brilho radial sutil atrás */}
-                      <div className="absolute inset-0 -m-4 rounded-2xl pointer-events-none" style={{
-                        background: "radial-gradient(circle, hsl(var(--primary) / 0.06) 0%, transparent 70%)"
-                      }} />
-
-                      {/* QR Code */}
-                      <div className="relative bg-[#F3F3F3] rounded-lg p-3">
+                      <div className="relative rounded-lg p-2.5" style={{ background: "hsl(0 0% 95%)" }}>
                         <img
                           src={`data:image/png;base64,${pixData.pixQrCode}`}
                           alt="QR Code PIX"
-                          className="w-40 h-40"
+                          className="w-36 h-36"
                         />
                       </div>
                     </div>
 
                     {/* Timer */}
-                    <div className="flex items-center gap-1.5">
-                      <Clock className="w-3 h-3 text-muted-foreground/70" />
-                      <span className="text-[11px] text-muted-foreground">
-                        Expira em <span className="text-foreground font-semibold tabular-nums">{timeLeft}</span>
+                    <div className="flex items-center gap-1.5 bg-muted/30 px-3 py-1.5 rounded-full">
+                      <Clock className="w-3 h-3 text-muted-foreground/60" />
+                      <span className="text-[10px] text-muted-foreground/70">
+                        Expira em
                       </span>
+                      <span className="text-[11px] text-foreground font-bold tabular-nums">{timeLeft}</span>
                     </div>
                   </div>
                 </div>
 
-                {/* Botão copiar — fora do card */}
-                <button
+                {/* Botão copiar */}
+                <motion.button
                   onClick={handleCopy}
+                  whileTap={{ scale: 0.97 }}
                   className={`
-                    flex items-center justify-center gap-2 w-full py-3.5 rounded-xl font-semibold text-sm
-                    transition-all duration-200 active:scale-[0.98]
+                    flex items-center justify-center gap-2 w-full py-3 rounded-xl font-semibold text-[13px]
+                    transition-all duration-200
                     ${copied
-                      ? "bg-green-500/15 text-green-500 border border-green-500/20"
-                      : "bg-primary text-primary-foreground shadow-lg shadow-primary/20 hover:shadow-primary/30"
+                      ? "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20"
+                      : "bg-primary text-primary-foreground"
                     }
                   `}
                 >
                   {copied ? (
                     <>
                       <Check className="w-4 h-4" />
-                      Copiado!
+                      Código copiado
                     </>
                   ) : (
                     <>
@@ -365,39 +347,25 @@ const ClientePixCheckout = () => {
                       Copiar código Pix
                     </>
                   )}
-                </button>
+                </motion.button>
 
-                {/* Status de verificação */}
-                <div className="flex items-center gap-3 rounded-xl border border-border/30 bg-card/40 px-4 py-3">
+                {/* Status */}
+                <div className="flex items-center gap-2.5 rounded-xl border border-border/20 bg-card/30 px-3.5 py-2.5">
                   <div className="relative flex-shrink-0">
-                    <div className="w-2 h-2 rounded-full bg-amber-400" />
-                    <div className="absolute inset-0 w-2 h-2 rounded-full bg-amber-400 animate-ping opacity-40" />
+                    <div className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                    <div className="absolute inset-0 w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping opacity-40" />
                   </div>
-                  <p className="text-[11px] text-muted-foreground leading-snug">
-                    Aguardando confirmação automática do pagamento
+                  <p className="text-[10px] text-muted-foreground/60 leading-snug">
+                    Aguardando confirmação do pagamento
                   </p>
                 </div>
 
-                {/* Bloco de segurança */}
-                <div className="pt-2 space-y-3">
-                  <div className="h-px bg-border/20" />
-                  <div className="flex flex-col items-center gap-2 text-center">
-                    <div className="flex items-center gap-1.5">
-                      <Lock className="w-3 h-3 text-muted-foreground/50" />
-                      <span className="text-[10px] text-muted-foreground/60 font-medium tracking-wide uppercase">
-                        Ambiente seguro
-                      </span>
-                    </div>
-                    <p className="text-[10px] text-muted-foreground/40 leading-relaxed max-w-[260px]">
-                      Processado via Pix — Banco Central do Brasil. Criptografia de ponta a ponta.
-                    </p>
-                    <div className="flex items-center gap-1 mt-0.5">
-                      <ShieldCheck className="w-3 h-3 text-muted-foreground/30" />
-                      <span className="text-[9px] text-muted-foreground/30">
-                        Pagamento instantâneo verificado
-                      </span>
-                    </div>
-                  </div>
+                {/* Segurança — compacto */}
+                <div className="flex items-center justify-center gap-1.5 pt-1">
+                  <Lock className="w-2.5 h-2.5 text-muted-foreground/20" />
+                  <span className="text-[9px] text-muted-foreground/20 tracking-wide">
+                    Pix • Banco Central • Criptografia E2E
+                  </span>
                 </div>
               </motion.div>
             )}
