@@ -129,15 +129,15 @@ export function AppointmentCardPremium({
         transition={{ delay: index * 0.06, duration: 0.25 }}
         className="rounded-xl overflow-hidden border border-border/25 bg-card/60 active:scale-[0.99] transition-transform"
       >
-        <div className="p-4">
+        <div className="p-3.5">
           {/* Header */}
-          <div className="flex items-start justify-between mb-3">
+          <div className="flex items-start justify-between mb-2.5">
             <div className="flex-1 min-w-0">
-              <h3 className="font-semibold text-foreground/85 text-[14px] mb-1.5 truncate">
+              <h3 className="font-semibold text-foreground/85 text-[13px] mb-1 truncate">
                 {appointment.servico?.nome || "Serviço"}
               </h3>
               <div 
-                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold uppercase tracking-wider"
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[9px] font-semibold uppercase tracking-wider"
                 style={{
                   background: statusConfig.bgColor,
                   color: statusConfig.color,
@@ -153,13 +153,13 @@ export function AppointmentCardPremium({
               {appointment.barbeiro?.apelido && (
                 <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-muted/15">
                   <Scissors className="w-2.5 h-2.5 text-muted-foreground/40" />
-                  <span className="text-[11px] text-foreground/60 font-medium">
+                  <span className="text-[10px] text-foreground/60 font-medium">
                     {appointment.barbeiro.apelido}
                   </span>
                 </div>
               )}
               <div className="text-center px-2 py-1 rounded-lg bg-muted/15">
-                <p className="text-[9px] text-muted-foreground/40 uppercase font-medium tracking-wider">
+                <p className="text-[8px] text-muted-foreground/40 uppercase font-medium tracking-wider">
                   {format(new Date(`${appointment.data}T12:00:00`), "MMM", { locale: ptBR })}
                 </p>
                 <p className="text-sm font-bold text-foreground/80 leading-none tabular-nums">
@@ -170,7 +170,7 @@ export function AppointmentCardPremium({
           </div>
 
           {/* Details */}
-          <div className="flex items-center gap-3 text-[12px] text-muted-foreground/50 mb-3.5">
+          <div className="flex items-center gap-3 text-[11px] text-muted-foreground/50 mb-3">
             <div className="flex items-center gap-1">
               <Clock className="w-3 h-3 text-muted-foreground/30" />
               <span className="font-medium tabular-nums">{appointment.hora}</span>
@@ -178,12 +178,12 @@ export function AppointmentCardPremium({
             {isPlanAppointment ? (
               <div className="flex items-center gap-1">
                 <Crown className="w-3 h-3 text-primary/60" />
-                <span className="text-[11px] font-semibold text-primary/60">Plano</span>
+                <span className="text-[10px] font-semibold text-primary/60">Plano</span>
               </div>
             ) : isFreeAppointment ? (
               <div className="flex items-center gap-1">
                 <Gift className="w-3 h-3 text-emerald-500/60" />
-                <span className="text-[11px] font-semibold text-emerald-500/60">Grátis</span>
+                <span className="text-[10px] font-semibold text-emerald-500/60">Grátis</span>
               </div>
             ) : appointment.preco ? (
               <div className="flex items-center gap-1">
