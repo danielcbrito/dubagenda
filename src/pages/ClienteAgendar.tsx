@@ -2206,24 +2206,11 @@ const ClienteAgendar = () => {
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 80, opacity: 0 }}
             transition={{ type: "spring", stiffness: 500, damping: 40 }}
-            className="fixed bottom-4 left-0 right-0 z-40"
+            className="fixed bottom-0 left-0 right-0 z-40"
           >
-            <div className="relative px-4 pb-safe">
-              <div className="absolute -top-12 left-0 right-0 h-12 bg-gradient-to-t from-background to-transparent pointer-events-none" />
-              <div 
-                className="relative mx-auto max-w-md"
-                style={{
-                  borderRadius: "16px",
-                  background: "rgba(18, 18, 20, 0.95)",
-                  boxShadow: "0 0 0 1px rgba(255, 255, 255, 0.08), 0 8px 32px -8px rgba(0, 0, 0, 0.6), 0 4px 16px -4px rgba(239, 68, 68, 0.1)",
-                  backdropFilter: "blur(20px)"
-                }}
-              >
-                <div 
-                  className="absolute top-0 left-1/2 -translate-x-1/2 w-24 h-[1px]"
-                  style={{ background: "linear-gradient(90deg, transparent, hsl(var(--primary) / 0.5), transparent)" }}
-                />
-                <div className="flex items-center justify-between px-4 py-3">
+            <div className="pb-safe backdrop-blur-2xl" style={{ background: "linear-gradient(to bottom, transparent 0%, rgba(10,10,12,0.7) 20%, rgba(10,10,12,0.95) 40%, #0a0a0c 60%)" }}>
+              <div className="w-full px-5 pt-8 pb-5">
+                <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div 
                       className="flex items-center justify-center w-9 h-9 rounded-xl"
@@ -2238,12 +2225,12 @@ const ClienteAgendar = () => {
                       )}
                     </div>
                     <div>
-                      <div className="text-xs text-muted-foreground/60">
+                      <div className="text-[11px] text-muted-foreground/60">
                         {paymentMethod === "pix" ? "Pagar via Pix" : paymentMethod === "card" ? "Pagar via Cartão" : "Pagar na Barbearia"}
                       </div>
-                      <div className="flex items-baseline gap-1 mt-0.5">
+                      <div className="flex items-baseline gap-0.5 mt-0.5">
                         <span className="text-[10px] text-muted-foreground/50">R$</span>
-                        <span className="text-base font-semibold text-foreground">
+                        <span className="text-[15px] font-bold text-foreground tabular-nums">
                           {Math.max(0, getTotalPrice() - availableCredits).toFixed(2).replace('.', ',')}
                         </span>
                       </div>
@@ -2259,11 +2246,11 @@ const ClienteAgendar = () => {
                     }}
                     disabled={processingPayment}
                     whileHover={{ scale: processingPayment ? 1 : 1.02 }}
-                    whileTap={{ scale: processingPayment ? 1 : 0.98 }}
-                    className="group flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium text-sm text-white disabled:opacity-50"
+                    whileTap={{ scale: processingPayment ? 1 : 0.95 }}
+                    className="group flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-[14px] text-white disabled:opacity-50"
                     style={{
                       background: "linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(0 65% 42%) 100%)",
-                      boxShadow: "0 2px 12px hsl(var(--primary) / 0.35), inset 0 1px 0 rgba(255,255,255,0.15)"
+                      boxShadow: "0 2px 8px hsl(var(--primary) / 0.3), inset 0 1px 0 rgba(255,255,255,0.12)"
                     }}
                   >
                     {processingPayment ? (
@@ -2281,7 +2268,6 @@ const ClienteAgendar = () => {
                   </motion.button>
                 </div>
               </div>
-              <div className="h-3" />
             </div>
           </motion.div>
         )}

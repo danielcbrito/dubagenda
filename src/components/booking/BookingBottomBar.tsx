@@ -41,23 +41,23 @@ export function BookingBottomBar({
                 {/* Left: Summary inline */}
                 <div className="flex items-center gap-3">
                   <div 
-                    className="flex items-center justify-center w-10 h-10 rounded-xl"
+                    className="flex items-center justify-center w-9 h-9 rounded-xl"
                     style={{
                       background: "linear-gradient(135deg, hsl(var(--primary) / 0.15), hsl(var(--primary) / 0.05))"
                     }}
                   >
-                    <span className="text-[13px] font-bold text-primary">{serviceCount}</span>
+                    <span className="text-[12px] font-bold text-primary">{serviceCount}</span>
                   </div>
                   
                   <div className="flex items-center gap-2">
-                    <div className="flex items-center gap-1 text-[13px] text-muted-foreground/70">
+                    <div className="flex items-center gap-1 text-[12px] text-muted-foreground/70">
                       <Clock className="w-3.5 h-3.5" />
                       <span>{totalDuration}min</span>
                     </div>
-                    <span className="text-[11px] text-muted-foreground/50">•</span>
+                    <span className="text-[10px] text-muted-foreground/50">•</span>
                     <div className="flex items-baseline gap-0.5">
-                      <span className="text-[11px] text-muted-foreground/60">R$</span>
-                      <span className="text-[15px] font-bold text-foreground tabular-nums">
+                      <span className="text-[10px] text-muted-foreground/60">R$</span>
+                      <span className="text-[14px] font-semibold text-foreground tabular-nums">
                         {totalPrice.toFixed(2).replace('.', ',')}
                       </span>
                     </div>
