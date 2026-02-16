@@ -27,7 +27,7 @@ interface Plan {
   limite_agendamentos_mes: number;
 }
 
-/** Card de plano compacto e persuasivo */
+/** Card de plano — premium, moderno e persuasivo */
 function PlanCard({ 
   plan, 
   isSelected,
@@ -48,84 +48,111 @@ function PlanCard({
     <motion.div
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      whileTap={{ scale: disabled ? 1 : 0.98 }}
+      whileTap={{ scale: disabled ? 1 : 0.97 }}
       onClick={() => !disabled && onSelect()}
       className={cn(
-        "relative rounded-xl border transition-all cursor-pointer overflow-hidden active:scale-[0.99]",
+        "relative rounded-2xl border-2 transition-all cursor-pointer overflow-hidden",
         isSelected
-          ? "border-primary/50 bg-card ring-2 ring-primary/20"
+          ? "border-primary bg-primary/[0.03] shadow-[0_0_24px_-4px_hsl(var(--primary)/0.15)]"
           : isMostPopular
-            ? "border-primary/20 bg-card hover:border-primary/40"
-            : "border-border/40 bg-card hover:border-border",
+            ? "border-primary/30 bg-card hover:border-primary/50 hover:shadow-md"
+            : "border-border/50 bg-card hover:border-border hover:shadow-sm",
         disabled && "opacity-50 cursor-not-allowed"
       )}
     >
+      {/* Top accent */}
       {(isSelected || isMostPopular) && (
-        <div className="h-0.5 bg-gradient-to-r from-primary via-primary/60 to-transparent" />
+        <div className="h-1 bg-gradient-to-r from-primary via-primary/70 to-primary/20" />
       )}
 
-      <div className="p-4">
-        {/* Popular badge */}
-        {isMostPopular && !isSelected && (
-          <div className="flex items-center gap-1.5 mb-2">
-            <Sparkles className="w-3 h-3 text-primary" />
-            <span className="text-[10px] font-bold uppercase tracking-widest text-primary">
-              Mais Popular
-            </span>
+      <div className="p-5">
+        {/* Popular badge — mais visível */}
+        {isMostPopular && (
+          <div className="flex items-center gap-1.5 mb-3">
+            <div className="flex items-center gap-1.5 bg-primary/10 px-2.5 py-1 rounded-full">
+              <Sparkles className="w-3 h-3 text-primary" />
+              <span className="text-[10px] font-bold uppercase tracking-widest text-primary">
+                Mais Popular
+              </span>
+            </div>
           </div>
         )}
 
-        {/* Check indicator */}
+        {/* Check indicator — mais destacado */}
         {isSelected && (
-          <div className="absolute top-4 right-4">
-            <div className="w-6 h-6 bg-primary rounded-full flex items-center justify-center">
-              <Check className="w-3.5 h-3.5 text-primary-foreground" />
-            </div>
+          <div className="absolute top-5 right-5">
+            <motion.div 
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              className="w-7 h-7 bg-primary rounded-full flex items-center justify-center shadow-lg shadow-primary/30"
+            >
+              <Check className="w-4 h-4 text-primary-foreground" strokeWidth={3} />
+            </motion.div>
           </div>
         )}
 
         {/* Name + description */}
-        <div className="mb-3 pr-8">
-          <h3 className="text-base font-bold text-foreground">{plan.nome}</h3>
-          <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{plan.descricao}</p>
+        <div className="mb-4 pr-10">
+          <h3 className="text-lg font-bold text-foreground tracking-tight">{plan.nome}</h3>
+          <p className="text-[13px] text-muted-foreground mt-1 leading-relaxed line-clamp-2">{plan.descricao}</p>
         </div>
 
-        {/* Price */}
-        <div className="mb-3">
-          <div className="flex items-baseline gap-0.5">
-            <span className="text-2xl font-bold text-primary tabular-nums">
-              R$ {plan.preco_mensal.toFixed(2).replace('.', ',')}
+        {/* Price — destaque visual forte */}
+        <div className="mb-4">
+          <div className="flex items-baseline gap-1">
+            <span className="text-[11px] text-muted-foreground font-medium">R$</span>
+            <span className="text-3xl font-extrabold text-primary tabular-nums tracking-tight">
+              {plan.preco_mensal.toFixed(2).replace('.', ',')}
             </span>
-            <span className="text-xs text-muted-foreground">/mês</span>
+            <span className="text-[11px] text-muted-foreground font-medium">/mês</span>
           </div>
         </div>
 
-        {/* Benefits — compacto */}
-        <div className="space-y-1.5 pt-3 border-t border-border/30">
-          <div className="flex items-center gap-2">
-            <CheckCircle2 className="w-3.5 h-3.5 text-primary flex-shrink-0" />
-            <span className="text-xs text-muted-foreground">
+        {/* Benefits — espaçados e legíveis */}
+        <div className="space-y-2.5 pt-4 border-t border-border/40">
+          <div className="flex items-center gap-2.5">
+            <div className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+              <CheckCircle2 className="w-3 h-3 text-primary" />
+            </div>
+            <span className="text-[13px] text-foreground font-medium">
               {plan.limite_agendamentos_mes} agendamentos/mês
             </span>
           </div>
           
-          {benefits.slice(0, 3).map((beneficio: string, index: number) => (
-            <div key={index} className="flex items-center gap-2">
-              <CheckCircle2 className="w-3.5 h-3.5 text-primary flex-shrink-0" />
-              <span className="text-xs text-muted-foreground line-clamp-1">{beneficio}</span>
+          {benefits.slice(0, 4).map((beneficio: string, index: number) => (
+            <div key={index} className="flex items-center gap-2.5">
+              <div className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                <CheckCircle2 className="w-3 h-3 text-primary" />
+              </div>
+              <span className="text-[13px] text-muted-foreground line-clamp-1">{beneficio}</span>
             </div>
           ))}
-          {benefits.length > 3 && (
-            <p className="text-[10px] text-primary/70 pl-5.5 font-medium">
-              +{benefits.length - 3} benefícios
+          {benefits.length > 4 && (
+            <p className="text-[11px] text-primary font-semibold pl-[30px]">
+              +{benefits.length - 4} benefícios inclusos
             </p>
           )}
         </div>
+
+        {/* CTA sutil — texto ao invés de botão para não conflitar com a floating bar */}
+        {!isSelected && (
+          <div className="mt-4 pt-3 border-t border-border/20">
+            <p className="text-[11px] text-center text-muted-foreground/60 font-medium">
+              Toque para selecionar
+            </p>
+          </div>
+        )}
+        {isSelected && (
+          <div className="mt-4 pt-3 border-t border-primary/20">
+            <p className="text-[11px] text-center text-primary font-semibold">
+              ✓ Plano selecionado
+            </p>
+          </div>
+        )}
       </div>
     </motion.div>
   );
 }
-
 const ClienteAssinar = () => {
   const navigate = useNavigate();
   const location = useLocation();
