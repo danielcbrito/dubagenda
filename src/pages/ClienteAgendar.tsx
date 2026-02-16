@@ -1456,16 +1456,16 @@ const ClienteAgendar = () => {
             animate="animate"
             exit="exit"
             transition={{ duration: 0.25 }}
-            className="min-h-screen pt-16 pb-28 px-4"
+            className="min-h-screen pt-20 pb-32 px-4"
           >
             <div className="max-w-2xl mx-auto">
-              <div className="mb-5 pt-3">
-                <p className="text-[8px] font-semibold text-muted-foreground/30 uppercase tracking-[0.2em] mb-1">
-                  Etapa 1
-                </p>
-                <h2 className="text-[15px] font-semibold text-foreground/90 font-display tracking-tight">
+              <div className="mb-6 pt-4">
+                <h2 className="text-xl font-semibold text-foreground">
                   Escolha o Barbeiro
                 </h2>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Selecione o profissional
+                </p>
               </div>
 
               {barbers.length === 0 ? (
