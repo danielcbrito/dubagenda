@@ -23,17 +23,17 @@ All colors MUST be HSL. */
     /* 🎨 PURE BLACK PREMIUM THEME (default = dark) */
     
     /* Backgrounds - Preto suave */
-    --background: 0 0% 6%;     /* #0F0F0F - Preto mais suave */
-    --background-elevated: 0 0% 11%;
-    --foreground: 0 0% 95%;
+    --background: 0 0% 7%;     /* #121212 */
+    --background-elevated: 0 0% 13%;
+    --foreground: 0 0% 96%;
 
-    /* Cards — mais claros para contraste */
-    --card: 0 0% 13%;
-    --card-elevated: 0 0% 16%;
-    --card-foreground: 0 0% 95%;
+    /* Cards — claros para destaque */
+    --card: 0 0% 15%;
+    --card-elevated: 0 0% 18%;
+    --card-foreground: 0 0% 96%;
 
-    --popover: 0 0% 12%;
-    --popover-foreground: 0 0% 95%;
+    --popover: 0 0% 14%;
+    --popover-foreground: 0 0% 96%;
 
     /* Vermelho Premium */
     --primary: 0 78% 57%;
@@ -41,11 +41,11 @@ All colors MUST be HSL. */
     --primary-foreground: 0 0% 100%;
 
     /* Secondary */
-    --secondary: 0 0% 17%;
-    --secondary-foreground: 0 0% 90%;
+    --secondary: 0 0% 19%;
+    --secondary-foreground: 0 0% 92%;
 
-    --muted: 0 0% 19%;
-    --muted-foreground: 0 0% 62%;
+    --muted: 0 0% 21%;
+    --muted-foreground: 0 0% 66%;
 
     --accent: 0 78% 57%;
     --accent-foreground: 0 0% 100%;
@@ -61,10 +61,10 @@ All colors MUST be HSL. */
     --success: 142 76% 45%;
     --success-foreground: 0 0% 98%;
 
-    /* Bordas — mais visíveis */
-    --border: 0 0% 22%;
+    /* Bordas — bem visíveis */
+    --border: 0 0% 25%;
     --border-glow: 0 78% 57% / 0.4;
-    --input: 0 0% 17%;
+    --input: 0 0% 19%;
     --ring: 0 78% 55%;
 
     --radius: 0.875rem;
