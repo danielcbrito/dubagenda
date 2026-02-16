@@ -89,25 +89,25 @@ export function FloatingActionBar({
                   onClick={onContinue}
                   disabled={isLoading}
                   whileHover={{ scale: isLoading ? 1 : 1.02 }}
-                  whileTap={{ scale: isLoading ? 1 : 0.98 }}
+                  whileTap={{ scale: isLoading ? 1 : 0.95 }}
                   className={cn(
-                    "group flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium text-sm text-white",
+                    "group flex items-center gap-1.5 px-3.5 py-2 rounded-lg font-medium text-[12px] text-white",
                     isLoading && "cursor-wait opacity-70"
                   )}
                   style={{
                     background: "linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(0 65% 42%) 100%)",
-                    boxShadow: "0 2px 12px hsl(var(--primary) / 0.35), inset 0 1px 0 rgba(255,255,255,0.15)"
+                    boxShadow: "0 2px 8px hsl(var(--primary) / 0.3), inset 0 1px 0 rgba(255,255,255,0.12)"
                   }}
                 >
                   {isLoading ? (
                     <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
                       <span>{loadingLabel}</span>
                     </>
                   ) : (
                     <>
                       <span>{label}</span>
-                      <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
+                      <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" />
                     </>
                   )}
                 </motion.button>
