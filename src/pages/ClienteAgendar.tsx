@@ -1710,163 +1710,135 @@ const ClienteAgendar = () => {
                   Pagamento
                 </h2>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Escolha a forma mais conveniente
+                  Escolha como deseja pagar
                 </p>
               </div>
 
-              {/* Resumo compacto do serviço no topo */}
-              <div className="bg-card/60 border border-border/30 rounded-xl p-3.5 mb-5 flex items-center justify-between">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                    <Clock className="w-3.5 h-3.5 text-primary" />
-                  </div>
+              {/* Resumo do serviço */}
+              <div className="bg-card border border-border/40 rounded-xl p-4 mb-6">
+                <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-[12px] font-medium text-foreground leading-tight">
+                    <p className="text-[13px] font-medium text-foreground">
                       {getFormattedServiceNames()}
                     </p>
-                    <p className="text-[10px] text-muted-foreground/60 mt-0.5">
+                    <p className="text-[11px] text-muted-foreground mt-0.5">
                       {getTotalDuration()} min • {selectedBarber?.apelido}
                     </p>
                   </div>
-                </div>
-                <div className="text-right">
-                  <p className="text-[10px] text-muted-foreground/50 uppercase tracking-wider">Total</p>
-                  <p className="text-sm font-bold text-foreground tabular-nums">
+                  <p className="text-base font-bold text-foreground tabular-nums">
                     R$ {selectedServices.reduce((sum, s) => sum + s.preco * (serviceQuantities[s.id] || 1), 0).toFixed(2).replace('.', ',')}
                   </p>
                 </div>
               </div>
 
-              {/* Seção: Pagamento Digital — destaque estratégico */}
-              <div className="mb-4">
-                <div className="flex items-center gap-2 mb-3">
-                  <Zap className="w-3.5 h-3.5 text-primary" />
-                  <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
-                    Pagamento rápido
-                  </p>
-                </div>
-
-                <div className="space-y-2.5">
-                  {/* PIX — Destaque principal */}
-                  <motion.button
-                    whileTap={{ scale: 0.98 }}
-                    onClick={() => { setPaymentMethod('pix'); setUseRedemption(false); }}
-                    className={cn(
-                      "w-full rounded-xl border p-4 text-left transition-all relative overflow-hidden",
-                      paymentMethod === 'pix'
-                        ? "border-primary/50 bg-card ring-1 ring-primary/20"
-                        : "border-border/30 bg-card/80 hover:border-border/60"
-                    )}
-                  >
-                    {/* Badge recomendado */}
-                    <div className="absolute top-2.5 right-3">
-                      <span className="text-[9px] font-bold uppercase tracking-wider bg-primary/15 text-primary px-2 py-0.5 rounded-full">
-                        Recomendado
-                      </span>
+              {/* Métodos de pagamento digital */}
+              <div className="space-y-3 mb-4">
+                {/* PIX */}
+                <motion.button
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => { setPaymentMethod('pix'); setUseRedemption(false); }}
+                  className={cn(
+                    "w-full rounded-xl border p-4 text-left transition-all",
+                    paymentMethod === 'pix'
+                      ? "border-primary/50 bg-primary/5 ring-1 ring-primary/20"
+                      : "border-border/30 bg-card hover:border-border/50"
+                  )}
+                >
+                  <div className="flex items-center gap-3.5">
+                    <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+                      <img src={pixIcon} alt="PIX" className="w-5 h-5 object-contain" />
                     </div>
-
-                    <div className="flex items-center gap-3.5">
-                      <div className={cn(
-                        "w-10 h-10 rounded-xl flex items-center justify-center transition-colors flex-shrink-0",
-                        paymentMethod === 'pix' ? "bg-primary/15" : "bg-muted/40"
-                      )}>
-                        <img src={pixIcon} alt="PIX" className="w-5 h-5 object-contain" />
-                      </div>
-                      <div className="flex-1 min-w-0">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
                         <p className="text-[13px] font-semibold text-foreground">Pix</p>
-                        <p className="text-[11px] text-muted-foreground/70 mt-0.5">
-                          Confirmação instantânea • Sem taxa
-                        </p>
+                        <span className="text-[9px] font-bold uppercase tracking-wider bg-primary/10 text-primary px-1.5 py-px rounded">
+                          Recomendado
+                        </span>
                       </div>
-                      <div className={cn(
-                        "w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all",
-                        paymentMethod === 'pix'
-                          ? "bg-primary border-primary"
-                          : "border-border/50"
-                      )}>
-                        {paymentMethod === 'pix' && <Check className="w-3 h-3 text-primary-foreground" strokeWidth={3} />}
-                      </div>
+                      <p className="text-[11px] text-muted-foreground mt-0.5">
+                        Confirmação instantânea • Sem taxa
+                      </p>
                     </div>
-                  </motion.button>
+                    <div className={cn(
+                      "w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all",
+                      paymentMethod === 'pix'
+                        ? "bg-primary border-primary"
+                        : "border-muted-foreground/30"
+                    )}>
+                      {paymentMethod === 'pix' && <Check className="w-3 h-3 text-primary-foreground" strokeWidth={3} />}
+                    </div>
+                  </div>
+                </motion.button>
 
-                  {/* Cartão */}
-                  <motion.button
-                    whileTap={{ scale: 0.98 }}
-                    onClick={() => { setPaymentMethod('card'); setUseRedemption(false); }}
-                    className={cn(
-                      "w-full rounded-xl border p-4 text-left transition-all",
+                {/* Cartão */}
+                <motion.button
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => { setPaymentMethod('card'); setUseRedemption(false); }}
+                  className={cn(
+                    "w-full rounded-xl border p-4 text-left transition-all",
+                    paymentMethod === 'card'
+                      ? "border-primary/50 bg-primary/5 ring-1 ring-primary/20"
+                      : "border-border/30 bg-card hover:border-border/50"
+                  )}
+                >
+                  <div className="flex items-center gap-3.5">
+                    <div className={cn(
+                      "w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0",
+                      paymentMethod === 'card' ? "bg-primary/10" : "bg-muted/30"
+                    )}>
+                      <CreditCard className={cn(
+                        "w-5 h-5 transition-colors",
+                        paymentMethod === 'card' ? "text-primary" : "text-muted-foreground/50"
+                      )} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[13px] font-semibold text-foreground">Cartão</p>
+                      <p className="text-[11px] text-muted-foreground mt-0.5">
+                        Crédito ou débito • Checkout seguro
+                      </p>
+                    </div>
+                    <div className={cn(
+                      "w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all",
                       paymentMethod === 'card'
-                        ? "border-primary/50 bg-card ring-1 ring-primary/20"
-                        : "border-border/30 bg-card/80 hover:border-border/60"
-                    )}
-                  >
-                    <div className="flex items-center gap-3.5">
-                      <div className={cn(
-                        "w-10 h-10 rounded-xl flex items-center justify-center transition-colors flex-shrink-0",
-                        paymentMethod === 'card' ? "bg-primary/15" : "bg-muted/40"
-                      )}>
-                        <CreditCard className={cn(
-                          "w-5 h-5 transition-colors",
-                          paymentMethod === 'card' ? "text-primary" : "text-muted-foreground/60"
-                        )} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[13px] font-semibold text-foreground">Cartão</p>
-                        <p className="text-[11px] text-muted-foreground/70 mt-0.5">
-                          Crédito ou débito • Checkout seguro
-                        </p>
-                      </div>
-                      <div className={cn(
-                        "w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all",
-                        paymentMethod === 'card'
-                          ? "bg-primary border-primary"
-                          : "border-border/50"
-                      )}>
-                        {paymentMethod === 'card' && <Check className="w-3 h-3 text-primary-foreground" strokeWidth={3} />}
-                      </div>
+                        ? "bg-primary border-primary"
+                        : "border-muted-foreground/30"
+                    )}>
+                      {paymentMethod === 'card' && <Check className="w-3 h-3 text-primary-foreground" strokeWidth={3} />}
                     </div>
-                  </motion.button>
-                </div>
-
-                {/* Trust badge discreto */}
-                <div className="flex items-center justify-center gap-1.5 mt-3">
-                  <Shield className="w-3 h-3 text-muted-foreground/30" />
-                  <p className="text-[9px] text-muted-foreground/30 tracking-wide">
-                    Pagamento protegido e criptografado
-                  </p>
-                </div>
+                  </div>
+                </motion.button>
               </div>
 
-              {/* Separador visual */}
-              <div className="flex items-center gap-3 my-4">
+              {/* Divisor */}
+              <div className="flex items-center gap-3 my-5">
                 <div className="flex-1 h-px bg-border/30" />
                 <span className="text-[10px] text-muted-foreground/40 uppercase tracking-widest">ou</span>
                 <div className="flex-1 h-px bg-border/30" />
               </div>
 
-              {/* Pagar na Barbearia — opção secundária */}
+              {/* Pagar na Barbearia */}
               <motion.button
                 whileTap={{ scale: 0.98 }}
                 onClick={() => { setPaymentMethod('cash'); setUseRedemption(false); }}
                 className={cn(
                   "w-full rounded-xl border p-4 text-left transition-all",
                   paymentMethod === 'cash' && !useRedemption
-                    ? "border-primary/50 bg-card ring-1 ring-primary/20"
-                    : "border-border/20 bg-card/40 hover:border-border/40"
+                    ? "border-primary/50 bg-primary/5 ring-1 ring-primary/20"
+                    : "border-border/20 bg-card/50 hover:border-border/40"
                 )}
               >
                 <div className="flex items-center gap-3.5">
                   <div className={cn(
-                    "w-10 h-10 rounded-xl flex items-center justify-center transition-colors flex-shrink-0",
-                    paymentMethod === 'cash' && !useRedemption ? "bg-primary/15" : "bg-muted/20"
+                    "w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0",
+                    paymentMethod === 'cash' && !useRedemption ? "bg-primary/10" : "bg-muted/20"
                   )}>
                     <Landmark className={cn(
                       "w-5 h-5 transition-colors",
-                      paymentMethod === 'cash' && !useRedemption ? "text-primary" : "text-muted-foreground/40"
+                      paymentMethod === 'cash' && !useRedemption ? "text-primary" : "text-muted-foreground/30"
                     )} />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-[13px] font-semibold text-foreground/80">Pagar na Barbearia</p>
+                    <p className="text-[13px] font-semibold text-foreground/70">Pagar na Barbearia</p>
                     <p className="text-[11px] text-muted-foreground/50 mt-0.5">
                       Pagamento presencial no dia
                     </p>
@@ -1875,7 +1847,7 @@ const ClienteAgendar = () => {
                     "w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all",
                     paymentMethod === 'cash' && !useRedemption
                       ? "bg-primary border-primary"
-                      : "border-border/30"
+                      : "border-muted-foreground/20"
                   )}>
                     {paymentMethod === 'cash' && !useRedemption && <Check className="w-3 h-3 text-primary-foreground" strokeWidth={3} />}
                   </div>
@@ -1884,39 +1856,36 @@ const ClienteAgendar = () => {
 
               {/* Resgate Grátis */}
               {canUseRedemption && (
-                <div className="relative mt-5">
-                  <div className="absolute -top-2.5 left-4 z-10">
-                    <span className="text-[9px] font-bold uppercase tracking-wider bg-secondary text-secondary-foreground px-2.5 py-0.5 rounded-full">
-                      Resgate disponível
-                    </span>
-                  </div>
-                  
+                <div className="mt-5">
                   <button
                     onClick={() => setUseRedemption(!useRedemption)}
                     className={cn(
-                      "w-full text-left rounded-xl p-4 transition-all duration-200 border",
+                      "w-full text-left rounded-xl p-4 transition-all border",
                       useRedemption 
-                        ? "bg-emerald-500/5 border-emerald-500/30" 
-                        : "bg-card/40 border-secondary/20 hover:border-secondary/40"
+                        ? "bg-emerald-500/5 border-emerald-500/30 ring-1 ring-emerald-500/10" 
+                        : "bg-card/50 border-secondary/20 hover:border-secondary/40"
                     )}
                   >
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-secondary/10 flex items-center justify-center flex-shrink-0">
-                          <Star className="w-5 h-5 text-secondary" />
-                        </div>
-                        <div>
+                    <div className="flex items-center gap-3.5">
+                      <div className="w-10 h-10 rounded-xl bg-secondary/10 flex items-center justify-center flex-shrink-0">
+                        <Star className="w-5 h-5 text-secondary" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
                           <p className="text-[13px] font-semibold text-foreground">Corte Grátis</p>
-                          <p className="text-[11px] text-muted-foreground/60 mt-0.5">
-                            {availableRedemptions.length} resgate{availableRedemptions.length > 1 ? 's' : ''} de fidelidade
-                          </p>
+                          <span className="text-[9px] font-bold uppercase tracking-wider bg-secondary/10 text-secondary px-1.5 py-px rounded">
+                            Disponível
+                          </span>
                         </div>
+                        <p className="text-[11px] text-muted-foreground/60 mt-0.5">
+                          {availableRedemptions.length} resgate{availableRedemptions.length > 1 ? 's' : ''} de fidelidade
+                        </p>
                       </div>
                       <div className={cn(
                         "w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all",
                         useRedemption 
                           ? "bg-emerald-500 border-emerald-500"
-                          : "border-secondary/40"
+                          : "border-secondary/30"
                       )}>
                         {useRedemption && <Check className="w-3 h-3 text-primary-foreground" strokeWidth={3} />}
                       </div>
@@ -1925,27 +1894,29 @@ const ClienteAgendar = () => {
                 </div>
               )}
 
-              {/* Cupom de Desconto — compacto e limpo */}
+              {/* Cupom de Desconto */}
               <div className="mt-5">
                 {appliedCoupon ? (
-                  <div className="flex items-center justify-between bg-emerald-500/8 border border-emerald-500/20 rounded-xl px-3.5 py-2.5">
-                    <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 rounded-md bg-emerald-500/15 flex items-center justify-center">
-                        <Check className="w-3 h-3 text-emerald-500" />
+                  <div className="flex items-center justify-between bg-emerald-500/5 border border-emerald-500/20 rounded-xl px-4 py-3">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-7 h-7 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+                        <Check className="w-3.5 h-3.5 text-emerald-500" />
                       </div>
-                      <span className="text-[12px] font-semibold text-foreground">{appliedCoupon.code}</span>
-                      <span className="text-[10px] text-emerald-400/80">-{appliedCoupon.percent}%</span>
+                      <div>
+                        <span className="text-[12px] font-semibold text-foreground">{appliedCoupon.code}</span>
+                        <span className="text-[10px] text-emerald-400/80 ml-1.5">-{appliedCoupon.percent}%</span>
+                      </div>
                     </div>
                     <button
                       onClick={removeCoupon}
-                      className="text-[10px] text-muted-foreground/50 hover:text-destructive transition-colors font-medium"
+                      className="text-[11px] text-muted-foreground/50 hover:text-destructive transition-colors font-medium px-2 py-1"
                     >
                       Remover
                     </button>
                   </div>
                 ) : (
                   <div className="relative">
-                    <Tag className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground/30 pointer-events-none" />
+                    <Tag className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground/30 pointer-events-none" />
                     <input
                       type="text"
                       placeholder="Tem um cupom? Insira aqui"
@@ -1960,10 +1931,10 @@ const ClienteAgendar = () => {
                           }, 600);
                         }
                       }}
-                      className="w-full pl-9 pr-9 py-2.5 bg-card/40 border border-border/20 rounded-xl text-foreground placeholder-muted-foreground/30 focus:outline-none focus:border-primary/30 text-[12px] uppercase tracking-wider transition-colors"
+                      className="w-full pl-10 pr-10 py-3 bg-card border border-border/30 rounded-xl text-foreground placeholder-muted-foreground/30 focus:outline-none focus:border-primary/40 text-[12px] uppercase tracking-wider transition-colors"
                     />
                     {validatingCoupon && (
-                      <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                      <div className="absolute right-3.5 top-1/2 -translate-y-1/2">
                         <div className="w-3.5 h-3.5 border-2 border-primary/40 border-t-primary rounded-full animate-spin" />
                       </div>
                     )}
@@ -1971,11 +1942,11 @@ const ClienteAgendar = () => {
                 )}
               </div>
 
-              {/* Resumo financeiro — clean */}
-              <div className="mt-5 bg-card/60 border border-border/20 rounded-xl p-4">
-                <div className="space-y-2">
+              {/* Resumo financeiro */}
+              <div className="mt-6 border-t border-border/20 pt-5">
+                <div className="space-y-2.5">
                   <div className="flex items-center justify-between">
-                    <span className="text-[11px] text-muted-foreground/60">Serviço</span>
+                    <span className="text-[12px] text-muted-foreground">Serviço</span>
                     <span className={cn(
                       "text-[12px] font-medium text-foreground tabular-nums",
                       (useRedemption && getCorteService()) && "line-through text-muted-foreground/40"
@@ -1986,36 +1957,41 @@ const ClienteAgendar = () => {
                   
                   {useRedemption && getRedemptionDiscount() > 0 && (
                     <div className="flex items-center justify-between">
-                      <span className="text-[11px] text-emerald-400/80">Resgate fidelidade</span>
+                      <span className="text-[12px] text-emerald-400">Resgate fidelidade</span>
                       <span className="text-[12px] font-medium text-emerald-400 tabular-nums">-R$ {getRedemptionDiscount().toFixed(2).replace('.', ',')}</span>
                     </div>
                   )}
 
                   {appliedCoupon && getCouponDiscount() > 0 && (
                     <div className="flex items-center justify-between">
-                      <span className="text-[11px] text-emerald-400/80">Cupom {appliedCoupon.code}</span>
+                      <span className="text-[12px] text-emerald-400">Cupom {appliedCoupon.code}</span>
                       <span className="text-[12px] font-medium text-emerald-400 tabular-nums">-R$ {getCouponDiscount().toFixed(2).replace('.', ',')}</span>
                     </div>
                   )}
 
                   {availableCredits > 0 && getTotalPrice() > 0 && (
                     <div className="flex items-center justify-between">
-                      <span className="text-[11px] text-emerald-400/80">Créditos</span>
+                      <span className="text-[12px] text-emerald-400">Créditos</span>
                       <span className="text-[12px] font-medium text-emerald-400 tabular-nums">-R$ {Math.min(availableCredits, getTotalPrice()).toFixed(2).replace('.', ',')}</span>
                     </div>
                   )}
                 </div>
                 
-                <div className="border-t border-border/20 mt-3 pt-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[12px] font-semibold text-foreground">Valor a pagar</span>
-                    <span className="text-lg font-bold text-primary tabular-nums">
-                      R$ {Math.max(0, getTotalPrice() - availableCredits).toFixed(2).replace('.', ',')}
-                    </span>
-                  </div>
+                <div className="flex items-center justify-between mt-4 pt-4 border-t border-border/20">
+                  <span className="text-[13px] font-semibold text-foreground">Total a pagar</span>
+                  <span className="text-xl font-bold text-primary tabular-nums">
+                    R$ {Math.max(0, getTotalPrice() - availableCredits).toFixed(2).replace('.', ',')}
+                  </span>
+                </div>
+
+                {/* Trust indicator */}
+                <div className="flex items-center justify-center gap-1.5 mt-4">
+                  <Shield className="w-3 h-3 text-muted-foreground/25" />
+                  <p className="text-[10px] text-muted-foreground/25">
+                    Pagamento seguro e criptografado
+                  </p>
                 </div>
               </div>
-
             </div>
           </motion.div>
         )}
