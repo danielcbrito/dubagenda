@@ -237,7 +237,7 @@ const ClienteAssinar = () => {
     <div className="min-h-screen pb-20">
       
       {/* Header — compacto, seta + título */}
-      <div className="sticky top-0 z-10 px-4 pt-[max(env(safe-area-inset-top),0.75rem)] pb-3 bg-background/80 backdrop-blur-xl">
+      <div className="sticky top-0 z-10 px-4 pt-[max(env(safe-area-inset-top),0.75rem)] pb-3 mb-4 bg-background/80 backdrop-blur-xl">
         <div className="max-w-2xl mx-auto flex items-center gap-3">
           <button 
             onClick={() => {
