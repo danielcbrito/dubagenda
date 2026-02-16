@@ -19,16 +19,16 @@ All colors MUST be HSL. */
     /* 🎨 PURE BLACK PREMIUM THEME */
     
     /* Backgrounds - Pure Black */
-    --background: 0 0% 3%;     /* #080808 - Preto puro profundo */
-    --background-elevated: 0 0% 7%;  /* #121212 */
+    --background: 0 0% 6%;     /* #0F0F0F - Preto suave */
+    --background-elevated: 0 0% 9%;  /* #171717 */
     --foreground: 0 0% 93%;    /* #EDEDED */
 
     /* Cards - Sutil elevation */
-    --card: 0 0% 7%;           /* #121212 */
-    --card-elevated: 0 0% 10%;
+    --card: 0 0% 10%;          /* #1A1A1A */
+    --card-elevated: 0 0% 13%;
     --card-foreground: 0 0% 93%;
 
-    --popover: 0 0% 6%;
+    --popover: 0 0% 9%;
     --popover-foreground: 0 0% 93%;
 
     /* Vermelho Premium */
@@ -37,11 +37,11 @@ All colors MUST be HSL. */
     --primary-foreground: 0 0% 100%;
 
     /* Secondary */
-    --secondary: 0 0% 11%;
+    --secondary: 0 0% 14%;
     --secondary-foreground: 0 0% 85%;
 
-    --muted: 0 0% 14%;
-    --muted-foreground: 0 0% 50%;
+    --muted: 0 0% 16%;
+    --muted-foreground: 0 0% 55%;
 
     --accent: 0 78% 55%;
     --accent-foreground: 0 0% 100%;
@@ -58,9 +58,9 @@ All colors MUST be HSL. */
     --success-foreground: 0 0% 98%;
 
     /* Bordas */
-    --border: 0 0% 14%;
+    --border: 0 0% 17%;
     --border-glow: 0 78% 55% / 0.4;
-    --input: 0 0% 11%;
+    --input: 0 0% 14%;
     --ring: 0 78% 55%;
 
     --radius: 0.875rem;
@@ -131,8 +131,10 @@ body {
     letter-spacing: 0.01em;
     min-height: 100vh;
     background: 
-      radial-gradient(ellipse 80% 50% at 50% 0%, hsl(0 78% 55% / 0.06) 0%, transparent 60%),
-      radial-gradient(ellipse 60% 40% at 80% 100%, hsl(0 78% 55% / 0.04) 0%, transparent 50%),
+      radial-gradient(ellipse 90% 40% at 50% -5%, hsl(0 78% 55% / 0.08) 0%, transparent 50%),
+      radial-gradient(ellipse 70% 50% at 20% 50%, hsl(0 0% 14% / 0.6) 0%, transparent 60%),
+      radial-gradient(ellipse 50% 30% at 85% 90%, hsl(0 78% 55% / 0.05) 0%, transparent 50%),
+      radial-gradient(ellipse 100% 60% at 50% 100%, hsl(0 0% 12% / 0.5) 0%, transparent 40%),
       hsl(var(--background));
     background-attachment: fixed;
   }
