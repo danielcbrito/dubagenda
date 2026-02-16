@@ -8,24 +8,24 @@ interface LoyaltyCardProps {
   onViewDetails: () => void;
 }
 
-function ProgressStep({ filled, index, total }: { filled: boolean; index: number; total: number }) {
+function ProgressStep({ filled, index }: { filled: boolean; index: number }) {
   return (
     <motion.div
-      initial={{ opacity: 0, scale: 0.5 }}
+      initial={{ opacity: 0, scale: 0.6 }}
       animate={{ opacity: 1, scale: 1 }}
-      transition={{ delay: index * 0.05, duration: 0.25 }}
-      className="flex flex-col items-center gap-1 flex-1"
+      transition={{ delay: index * 0.04, duration: 0.2 }}
+      className="flex-1 flex justify-center"
     >
-      {/* Icon circle */}
       <div
-        className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-500 ${
+        className={`w-7 h-7 rounded-full flex items-center justify-center transition-all duration-300 ${
           filled
-            ? "bg-primary shadow-[0_0_12px_hsl(var(--primary)/0.4)]"
-            : "bg-muted/40 border border-border/60"
+            ? "bg-primary/90"
+            : "bg-muted/20 border border-border/40"
         }`}
+        style={filled ? { boxShadow: "0 0 8px hsl(var(--primary) / 0.25)" } : undefined}
       >
-        <Scissors className={`w-3.5 h-3.5 transition-colors ${
-          filled ? "text-primary-foreground" : "text-muted-foreground/30"
+        <Scissors className={`w-3 h-3 transition-colors ${
+          filled ? "text-primary-foreground" : "text-muted-foreground/20"
         }`} />
       </div>
     </motion.div>
@@ -40,75 +40,60 @@ export function LoyaltyCard({ points, redemptions, pontosNecessarios = 5, onView
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 12 }}
+      initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, ease: "easeOut" }}
-      className="relative overflow-hidden rounded-2xl border border-border/50 bg-card"
-      style={{
-        boxShadow: "0 8px 32px -8px rgba(0, 0, 0, 0.3)",
-      }}
+      transition={{ duration: 0.35, ease: "easeOut" }}
+      className="relative rounded-xl border border-border/30 bg-card/80"
     >
-      {/* Top accent */}
-      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
-
-      <div className="relative z-10 p-5">
+      <div className="p-4">
         {/* Header */}
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-3.5">
           <div>
-            <p className="text-[9px] font-medium text-muted-foreground/50 uppercase tracking-widest mb-0.5">
-              PROGRAMA FIDELIDADE
+            <p className="text-[8px] font-semibold text-muted-foreground/35 uppercase tracking-[0.2em] mb-0.5">
+              Fidelidade
             </p>
-            <p className="text-foreground font-semibold text-sm font-display tracking-tight">
-              A cada {pontosNecessarios} cortes, 1 grátis
+            <p className="text-foreground/80 font-medium text-[13px] tracking-tight">
+              {pontosNecessarios} cortes → 1 grátis
             </p>
           </div>
 
           {redemptions > 0 && (
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              className="px-2 py-0.5 rounded-md bg-primary/10 border border-primary/20"
-            >
-              <span className="text-primary text-[10px] font-bold tabular-nums">
-                {redemptions}x resgate
+            <div className="px-2 py-0.5 rounded-md bg-primary/8 border border-primary/15">
+              <span className="text-primary/80 text-[9px] font-bold tabular-nums">
+                {redemptions}x
               </span>
-            </motion.div>
+            </div>
           )}
         </div>
 
         {/* Progress Icons */}
-        <div className="mb-3">
-          <div className="flex items-center gap-1.5">
-            {steps.map((filled, index) => (
-              <ProgressStep key={index} filled={filled} index={index} total={pontosNecessarios} />
-            ))}
-          </div>
+        <div className="flex items-center gap-1 mb-3">
+          {steps.map((filled, index) => (
+            <ProgressStep key={index} filled={filled} index={index} />
+          ))}
         </div>
 
         {/* Progress bar */}
-        <div className="mb-4">
-          <div className="h-1 rounded-full bg-muted/30 overflow-hidden">
+        <div className="mb-3">
+          <div className="h-[3px] rounded-full bg-muted/15 overflow-hidden">
             <motion.div
               initial={{ width: 0 }}
               animate={{ width: `${progressPercent}%` }}
-              transition={{ delay: 0.3, duration: 0.6, ease: "easeOut" }}
-              className="h-full rounded-full bg-primary"
-              style={{
-                boxShadow: progressPercent > 0 ? "0 0 8px hsl(var(--primary) / 0.5)" : "none",
-              }}
+              transition={{ delay: 0.25, duration: 0.5, ease: "easeOut" }}
+              className="h-full rounded-full bg-primary/70"
             />
           </div>
         </div>
 
         {/* Status + details */}
         <div className="flex items-center justify-between">
-          <p className="text-xs text-muted-foreground">
+          <p className="text-[11px] text-muted-foreground/60">
             {cutsUntilFree === 0 ? (
-              <span className="text-primary font-bold">Resgate disponível!</span>
+              <span className="text-primary font-semibold">Resgate disponível</span>
             ) : (
               <>
                 Faltam{" "}
-                <span className="text-foreground font-bold tabular-nums text-sm">{cutsUntilFree}</span>
+                <span className="text-foreground/80 font-semibold tabular-nums">{cutsUntilFree}</span>
                 {" "}corte{cutsUntilFree > 1 ? "s" : ""}
               </>
             )}
@@ -116,10 +101,10 @@ export function LoyaltyCard({ points, redemptions, pontosNecessarios = 5, onView
 
           <button
             onClick={onViewDetails}
-            className="flex items-center gap-0.5 text-xs text-muted-foreground hover:text-foreground transition-colors group active:scale-95"
+            className="flex items-center gap-0.5 text-[10px] text-muted-foreground/40 hover:text-muted-foreground/70 transition-colors group active:scale-95"
           >
             <span>Detalhes</span>
-            <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+            <ChevronRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
           </button>
         </div>
       </div>

@@ -570,24 +570,21 @@ const Cliente = () => {
       <AnnouncementModal />
 
       {/* Scrollable Content */}
-      <div className="flex-1 overflow-y-auto overscroll-contain pb-28">
-        <div className="max-w-lg mx-auto px-4 pt-5 pb-6">
+      <div className="flex-1 overflow-y-auto overscroll-contain pb-24">
+        <div className="max-w-lg mx-auto px-4 pt-4 pb-6">
           
-          {/* Header - Greeting */}
-          <div className="mb-6">
+          {/* Header */}
+          <div className="mb-5">
             <ClientHeader
               profileName={profile?.nome}
               email={user?.email}
             />
           </div>
-
-          {/* Separator line */}
-          <div className="h-px bg-border/40 mb-6" />
           
           {/* Plan Tracker ou Loyalty Card */}
-          <div className="mb-6">
+          <div className="mb-5">
             {!dataLoaded ? (
-              <div className="rounded-2xl h-[180px] bg-muted/20 animate-pulse" />
+              <div className="rounded-xl h-[140px] bg-muted/10 animate-pulse" />
             ) : activeSubscription ? (
               <PlanTrackerCard
                 planName={(activeSubscription as any).plano?.nome || "Meu Plano"}
@@ -655,7 +652,7 @@ const Cliente = () => {
           </div>
 
           {/* Schedule Button */}
-          <div className="mb-8">
+          <div className="mb-6">
             <ScheduleButton onClick={() => navigate("/cliente/agendar")} />
           </div>
 
@@ -666,10 +663,10 @@ const Cliente = () => {
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: "auto" }}
                 exit={{ opacity: 0, height: 0 }}
-                className="mb-6"
+                className="mb-5"
               >
-                <p className="text-[10px] font-semibold text-muted-foreground/50 uppercase tracking-widest mb-3">
-                  PAGAMENTOS PENDENTES
+                <p className="text-[8px] font-semibold text-muted-foreground/30 uppercase tracking-[0.2em] mb-2.5">
+                  Pagamentos Pendentes
                 </p>
                 <div className="space-y-3">
                   {pendingBookings.map((booking) => (
@@ -687,8 +684,8 @@ const Cliente = () => {
 
           {/* Appointments Section */}
           <div>
-            <p className="text-[10px] font-semibold text-muted-foreground/50 uppercase tracking-widest mb-3">
-              MEUS AGENDAMENTOS
+            <p className="text-[8px] font-semibold text-muted-foreground/30 uppercase tracking-[0.2em] mb-2.5">
+              Meus Agendamentos
             </p>
             
             {/* Recent Cancellation Banners */}
@@ -717,20 +714,18 @@ const Cliente = () => {
             
             {appointments.length === 0 && pendingBookings.length === 0 ? (
               <motion.div
-                initial={{ opacity: 0, y: 12 }}
+                initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 }}
-                className="rounded-2xl border border-dashed border-border/40 p-8 text-center bg-card/30"
+                transition={{ delay: 0.15 }}
+                className="rounded-xl border border-dashed border-border/20 p-6 text-center bg-card/20"
               >
-                <div 
-                  className="w-14 h-14 mx-auto mb-4 rounded-2xl flex items-center justify-center bg-primary/10"
-                >
-                  <Calendar className="w-7 h-7 text-primary/40" />
+                <div className="w-10 h-10 mx-auto mb-3 rounded-xl flex items-center justify-center bg-muted/10">
+                  <Calendar className="w-5 h-5 text-muted-foreground/20" />
                 </div>
-                <p className="text-sm text-muted-foreground font-medium">
+                <p className="text-[12px] text-muted-foreground/50 font-medium">
                   Nenhum agendamento
                 </p>
-                <p className="text-xs text-muted-foreground/50 mt-1">
+                <p className="text-[10px] text-muted-foreground/30 mt-0.5">
                   Toque em "Agendar Horário" acima
                 </p>
               </motion.div>
