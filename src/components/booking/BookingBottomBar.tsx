@@ -59,30 +59,28 @@ export function BookingBottomBar({
                 }}
               />
               
-              {/* Content - compact layout */}
-              <div className="flex items-center justify-between px-4 py-3">
+              <div className="flex items-center justify-between px-3.5 py-2.5">
                 
-                {/* Left: Summary info */}
-                <div className="flex items-center gap-3">
-                  {/* Service count badge */}
+                {/* Left: Summary inline */}
+                <div className="flex items-center gap-2.5">
                   <div 
-                    className="flex items-center justify-center w-9 h-9 rounded-xl"
+                    className="flex items-center justify-center w-7 h-7 rounded-lg"
                     style={{
                       background: "linear-gradient(135deg, hsl(var(--primary) / 0.15), hsl(var(--primary) / 0.05))"
                     }}
                   >
-                    <span className="text-sm font-bold text-primary">{serviceCount}</span>
+                    <span className="text-[11px] font-bold text-primary">{serviceCount}</span>
                   </div>
                   
-                  {/* Info */}
-                  <div>
-                    <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground/60">
+                  <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-1 text-[11px] text-muted-foreground/60">
                       <Clock className="w-3 h-3" />
-                      <span>{totalDuration} min</span>
+                      <span>{totalDuration}min</span>
                     </div>
-                    <div className="flex items-baseline gap-1 mt-0.5">
+                    <span className="text-[10px] text-muted-foreground/50">•</span>
+                    <div className="flex items-baseline gap-0.5">
                       <span className="text-[10px] text-muted-foreground/50">R$</span>
-                      <span className="text-base font-semibold text-foreground">
+                      <span className="text-[13px] font-semibold text-foreground tabular-nums">
                         {totalPrice.toFixed(2).replace('.', ',')}
                       </span>
                     </div>

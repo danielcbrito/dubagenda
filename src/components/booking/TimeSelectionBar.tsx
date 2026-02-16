@@ -61,25 +61,23 @@ export function TimeSelectionBar({
                 }}
               />
               
-              {/* Content - compact layout */}
-              <div className="flex items-center justify-between px-4 py-3">
+              <div className="flex items-center justify-between px-3.5 py-2.5">
                 
-                {/* Left: Time info */}
-                <div className="flex items-center gap-3">
-                  {/* Check icon */}
+                {/* Left: Time + date inline */}
+                <div className="flex items-center gap-2.5">
                   <div 
-                    className="flex items-center justify-center w-9 h-9 rounded-xl"
+                    className="flex items-center justify-center w-7 h-7 rounded-lg"
                     style={{
                       background: "linear-gradient(135deg, rgba(34, 197, 94, 0.15), rgba(34, 197, 94, 0.05))"
                     }}
                   >
-                    <Check className="w-4 h-4 text-green-500" />
+                    <Check className="w-3.5 h-3.5 text-green-500" />
                   </div>
                   
-                  {/* Time and date */}
-                  <div>
-                    <span className="text-base font-semibold text-foreground">{selectedTime}</span>
-                    <p className="text-[11px] text-muted-foreground/60 mt-0.5">{formattedDate}</p>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[13px] font-semibold text-foreground tabular-nums">{selectedTime}</span>
+                    <span className="text-[10px] text-muted-foreground/50">•</span>
+                    <span className="text-[11px] text-muted-foreground/60">{formattedDate}</span>
                   </div>
                 </div>
 
