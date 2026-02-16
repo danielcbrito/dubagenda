@@ -13,11 +13,12 @@ export function TimeSlot({ time, isSelected, isDisabled, onSelect }: TimeSlotPro
       onClick={onSelect}
       disabled={isDisabled}
       className={cn(
-        "py-2.5 rounded-lg font-medium transition-all text-[13px] border",
-        isDisabled && "opacity-30 cursor-not-allowed",
+        "py-3 rounded-xl font-medium transition-all text-[14px] border tabular-nums",
+        "active:scale-[0.97]",
+        isDisabled && "opacity-25 cursor-not-allowed",
         isSelected
-          ? "bg-primary text-primary-foreground border-primary"
-          : "bg-card border-border text-foreground hover:bg-secondary"
+          ? "bg-primary text-primary-foreground border-primary shadow-[0_2px_12px_hsl(var(--primary)/0.2)]"
+          : "bg-card border-border/40 text-foreground hover:border-border"
       )}
     >
       {time}
