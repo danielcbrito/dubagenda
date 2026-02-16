@@ -39,7 +39,7 @@ export function BookingBottomBar({
               style={{
                 borderRadius: "14px",
                 background: "#000000",
-                boxShadow: "0 16px 60px 20px rgba(0,0,0,1), 0 8px 30px 10px rgba(0,0,0,0.95), 0 0 0 1px rgba(255,255,255,0.04)",
+                boxShadow: "0 20px 80px 30px rgba(0,0,0,1), 0 10px 50px 20px rgba(0,0,0,1), 0 4px 20px 10px rgba(0,0,0,1), 0 0 0 1px rgba(255,255,255,0.04)",
               }}
             >
               
