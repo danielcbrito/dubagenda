@@ -63,12 +63,12 @@ export function FloatingActionBar({
                 }}
               />
               
-              <div className="flex items-center justify-between px-4 py-3">
-                {/* Left: Icon + info */}
-                <div className="flex items-center gap-3">
+              <div className="flex items-center justify-between px-3.5 py-2.5">
+                {/* Left: Icon + info inline */}
+                <div className="flex items-center gap-2.5">
                   {icon && (
                     <div 
-                      className="flex items-center justify-center w-9 h-9 rounded-xl"
+                      className="flex items-center justify-center w-7 h-7 rounded-lg"
                       style={{
                         background: "linear-gradient(135deg, hsl(var(--primary) / 0.15), hsl(var(--primary) / 0.05))"
                       }}
@@ -78,9 +78,7 @@ export function FloatingActionBar({
                   )}
                   
                   {subtitle && (
-                    <div>
-                      <p className="text-[11px] text-muted-foreground/60 leading-tight">{subtitle}</p>
-                    </div>
+                    <span className="text-[11px] text-muted-foreground/60">{subtitle}</span>
                   )}
                 </div>
 
