@@ -184,8 +184,13 @@ const ClientePixCheckout = () => {
 
   return (
     <div className="min-h-screen bg-background relative overflow-y-auto">
+      {/* Glow vermelho ambiente */}
+      <div className="fixed inset-0 pointer-events-none z-0" style={{
+        background: "radial-gradient(ellipse 80% 50% at 50% 0%, hsl(0 78% 55% / 0.07) 0%, transparent 55%), radial-gradient(ellipse 60% 40% at 80% 100%, hsl(0 78% 55% / 0.04) 0%, transparent 50%)"
+      }} />
+
       <div className="relative z-10 flex flex-col min-h-screen">
-        {/* Header — Logo + PIX */}
+        {/* Header */}
         <div className="px-5 pt-[max(env(safe-area-inset-top),1rem)] pb-3">
           <div className="max-w-md mx-auto flex items-center justify-between">
             <button
@@ -297,7 +302,6 @@ const ClientePixCheckout = () => {
                     </p>
 
                     <div className="relative">
-                      {/* Cantos */}
                       <div className="absolute -top-1.5 -left-1.5 w-4 h-4 border-t-2 border-l-2 border-primary/40 rounded-tl-sm" />
                       <div className="absolute -top-1.5 -right-1.5 w-4 h-4 border-t-2 border-r-2 border-primary/40 rounded-tr-sm" />
                       <div className="absolute -bottom-1.5 -left-1.5 w-4 h-4 border-b-2 border-l-2 border-primary/40 rounded-bl-sm" />
@@ -315,9 +319,7 @@ const ClientePixCheckout = () => {
                     {/* Timer */}
                     <div className="flex items-center gap-1.5 bg-muted/30 px-3 py-1.5 rounded-full">
                       <Clock className="w-3 h-3 text-muted-foreground/60" />
-                      <span className="text-[10px] text-muted-foreground/70">
-                        Expira em
-                      </span>
+                      <span className="text-[10px] text-muted-foreground/70">Expira em</span>
                       <span className="text-[11px] text-foreground font-bold tabular-nums">{timeLeft}</span>
                     </div>
                   </div>
@@ -360,12 +362,57 @@ const ClientePixCheckout = () => {
                   </p>
                 </div>
 
-                {/* Segurança — compacto */}
-                <div className="flex items-center justify-center gap-1.5 pt-1">
-                  <Lock className="w-2.5 h-2.5 text-muted-foreground/20" />
-                  <span className="text-[9px] text-muted-foreground/20 tracking-wide">
-                    Pix • Banco Central • Criptografia E2E
-                  </span>
+                {/* Bloco de Segurança & Informações Institucionais */}
+                <div className="mt-2 rounded-xl border border-border/15 bg-card/20 p-4 space-y-3">
+                  {/* Título */}
+                  <div className="flex items-center gap-2">
+                    <ShieldCheck className="w-3.5 h-3.5 text-primary/50" />
+                    <span className="text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-wider">
+                      Pagamento Seguro
+                    </span>
+                  </div>
+
+                  <div className="h-px bg-border/10" />
+
+                  {/* Informações */}
+                  <div className="space-y-2">
+                    <div className="flex items-start gap-2">
+                      <Lock className="w-3 h-3 text-muted-foreground/30 mt-0.5 flex-shrink-0" />
+                      <p className="text-[10px] text-muted-foreground/40 leading-relaxed">
+                        Transação processada via <span className="text-muted-foreground/60 font-medium">Pix — Banco Central do Brasil</span>. Criptografia de ponta a ponta. Confirmação instantânea.
+                      </p>
+                    </div>
+
+                    <div className="flex items-start gap-2">
+                      <ShieldCheck className="w-3 h-3 text-muted-foreground/30 mt-0.5 flex-shrink-0" />
+                      <p className="text-[10px] text-muted-foreground/40 leading-relaxed">
+                        Gateway de pagamento certificado com <span className="text-muted-foreground/60 font-medium">PCI-DSS</span>. Seus dados bancários nunca são armazenados.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="h-px bg-border/10" />
+
+                  {/* Dados da empresa */}
+                  <div className="space-y-1.5">
+                    <div className="flex items-center gap-2">
+                      <img src={logo} alt="Logo" className="w-4 h-4 rounded-full object-cover opacity-50" />
+                      <span className="text-[10px] font-semibold text-muted-foreground/50">
+                        Barbearia DUB
+                      </span>
+                    </div>
+                    <div className="pl-6 space-y-0.5">
+                      <p className="text-[9px] text-muted-foreground/30">
+                        CNPJ: 00.000.000/0001-00
+                      </p>
+                      <p className="text-[9px] text-muted-foreground/30">
+                        Rua Ferrador, 108 — Cidade Ipava, São Paulo – SP
+                      </p>
+                      <p className="text-[9px] text-muted-foreground/30">
+                        barbeariasdub@gmail.com • (11) 95226-3002
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </motion.div>
             )}
