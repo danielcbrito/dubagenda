@@ -113,28 +113,28 @@ All colors MUST be HSL. */
 
   /* ☀️ LIGHT THEME — Premium Branco Elegante */
   .light {
-    --background: 0 0% 96%;       /* #F5F5F5 - Fundo claro para bom contraste ao sol */
+    --background: 0 0% 97%;       /* #F7F7F7 - Fundo suave */
     --background-elevated: 0 0% 100%;
-    --foreground: 0 0% 3%;        /* #080808 - Texto preto forte — legível no sol */
+    --foreground: 0 0% 8%;        /* #141414 - Texto forte */
 
     --card: 0 0% 100%;
-    --card-elevated: 0 0% 99%;
-    --card-foreground: 0 0% 3%;
+    --card-elevated: 0 0% 100%;
+    --card-foreground: 0 0% 8%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 3%;
+    --popover-foreground: 0 0% 8%;
 
-    /* Vermelho Premium — saturado e escuro para sol */
+    /* Vermelho Premium — saturado para presença */
     --primary: 0 82% 45%;
     --primary-glow: 0 82% 55%;
     --primary-foreground: 0 0% 100%;
 
-    /* Secondary — contraste forte */
-    --secondary: 0 0% 89%;
-    --secondary-foreground: 0 0% 8%;
+    /* Secondary — definido */
+    --secondary: 0 0% 93%;
+    --secondary-foreground: 0 0% 12%;
 
-    --muted: 0 0% 90%;
-    --muted-foreground: 0 0% 22%;  /* Escuro — legível sob sol forte */
+    --muted: 0 0% 94%;
+    --muted-foreground: 0 0% 38%;  /* Forte — legível em qualquer tela */
 
     --accent: 0 82% 45%;
     --accent-foreground: 0 0% 100%;
@@ -150,38 +150,38 @@ All colors MUST be HSL. */
     --success: 142 76% 36%;
     --success-foreground: 0 0% 100%;
 
-    /* Bordas — fortes para definição em qualquer tela */
-    --border: 0 0% 76%;
+    /* Bordas — presentes e definidas */
+    --border: 0 0% 86%;
     --border-glow: 0 82% 45% / 0.2;
-    --input: 0 0% 86%;
+    --input: 0 0% 91%;
     --ring: 0 82% 45%;
 
     /* GRADIENTES LIGHT */
-    --gradient-titanium: linear-gradient(180deg, hsl(0 0% 98%), hsl(0 0% 94%));
-    --gradient-metallic: linear-gradient(135deg, hsl(0 0% 96%), hsl(0 0% 91%));
-    --gradient-glass: linear-gradient(135deg, rgba(255,255,255,0.85), rgba(255,255,255,0.6));
+    --gradient-titanium: linear-gradient(180deg, hsl(0 0% 100%), hsl(0 0% 97%));
+    --gradient-metallic: linear-gradient(135deg, hsl(0 0% 98%), hsl(0 0% 94%));
+    --gradient-glass: linear-gradient(135deg, rgba(255,255,255,0.9), rgba(255,255,255,0.7));
     --gradient-glass-dark: linear-gradient(135deg, rgba(255,255,255,0.95), rgba(245,245,245,0.98));
-    --gradient-red-neon: linear-gradient(90deg, transparent, hsl(0 80% 48% / 0.12), transparent);
+    --gradient-red-neon: linear-gradient(90deg, transparent, hsl(0 80% 48% / 0.08), transparent);
     --gradient-shine: linear-gradient(135deg, transparent 30%, rgba(255,255,255,0.7) 50%, transparent 70%);
 
     /* GLASSMORPHISM LIGHT */
-    --glass-bg: rgba(255, 255, 255, 0.75);
-    --glass-bg-hover: rgba(255, 255, 255, 0.9);
-    --glass-border: rgba(0, 0, 0, 0.08);
-    --glass-border-bright: rgba(0, 0, 0, 0.13);
+    --glass-bg: rgba(255, 255, 255, 0.85);
+    --glass-bg-hover: rgba(255, 255, 255, 0.95);
+    --glass-border: rgba(0, 0, 0, 0.06);
+    --glass-border-bright: rgba(0, 0, 0, 0.10);
 
-    /* SHADOWS LIGHT — Sombras mais presentes */
-    --shadow-premium: 0 10px 40px -10px rgba(0, 0, 0, 0.10), 0 4px 20px rgba(0, 0, 0, 0.05);
-    --shadow-premium-hover: 0 20px 60px -10px rgba(0, 0, 0, 0.14), 0 8px 30px rgba(0, 0, 0, 0.07);
-    --shadow-glow-red: 0 0 30px rgba(200, 40, 40, 0.10), 0 0 60px rgba(200, 40, 40, 0.05);
-    --shadow-glow-red-intense: 0 0 40px rgba(200, 40, 40, 0.15), 0 0 80px rgba(200, 40, 40, 0.08);
-    --shadow-glow-gold: 0 0 20px rgba(180, 140, 50, 0.12), 0 0 40px rgba(180, 140, 50, 0.06);
-    --shadow-inset-glass: inset 0 1px 0 rgba(255, 255, 255, 1), inset 0 -1px 0 rgba(0, 0, 0, 0.04);
-    --shadow-soft: 0 4px 24px rgba(0, 0, 0, 0.08);
-    --shadow-card: 0 2px 16px rgba(0, 0, 0, 0.07), 0 1px 4px rgba(0, 0, 0, 0.05);
-    --shadow-elegant: 0 25px 50px -12px rgba(0, 0, 0, 0.12);
-    --shadow-glow: 0 0 40px rgba(200, 40, 40, 0.10);
-    --shadow-inset-titanium: inset 0 1px 0 rgba(255,255,255,0.9);
+    /* SHADOWS LIGHT — Sombras definidas para profundidade */
+    --shadow-premium: 0 4px 24px -4px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04);
+    --shadow-premium-hover: 0 8px 32px -4px rgba(0, 0, 0, 0.12), 0 4px 12px rgba(0, 0, 0, 0.06);
+    --shadow-glow-red: 0 0 20px rgba(200, 40, 40, 0.08), 0 0 40px rgba(200, 40, 40, 0.04);
+    --shadow-glow-red-intense: 0 0 30px rgba(200, 40, 40, 0.12), 0 0 60px rgba(200, 40, 40, 0.06);
+    --shadow-glow-gold: 0 0 20px rgba(180, 140, 50, 0.10), 0 0 40px rgba(180, 140, 50, 0.05);
+    --shadow-inset-glass: inset 0 1px 0 rgba(255, 255, 255, 1), inset 0 -1px 0 rgba(0, 0, 0, 0.03);
+    --shadow-soft: 0 2px 12px rgba(0, 0, 0, 0.06);
+    --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.03);
+    --shadow-elegant: 0 12px 40px -12px rgba(0, 0, 0, 0.10);
+    --shadow-glow: 0 0 30px rgba(200, 40, 40, 0.08);
+    --shadow-inset-titanium: inset 0 1px 0 rgba(255,255,255,0.95);
   }
 }
 
@@ -239,16 +239,10 @@ body {
     background-attachment: fixed;
   }
 
-  /* ☀️ Light mode body background */
+  /* ☀️ Light mode body background — limpo e definido */
   .light body,
   body.light {
-    background: 
-      radial-gradient(ellipse 100% 50% at 50% -10%, hsl(0 78% 55% / 0.05) 0%, transparent 55%),
-      radial-gradient(ellipse 60% 40% at 10% 30%, hsl(0 78% 55% / 0.03) 0%, transparent 50%),
-      radial-gradient(ellipse 70% 50% at 90% 60%, hsl(0 78% 55% / 0.02) 0%, transparent 50%),
-      radial-gradient(ellipse 80% 45% at 50% 100%, hsl(0 78% 55% / 0.04) 0%, transparent 50%),
-      radial-gradient(ellipse 40% 35% at 75% 15%, hsl(0 78% 55% / 0.02) 0%, transparent 45%),
-      hsl(var(--background));
+    background: hsl(var(--background));
     background-attachment: fixed;
   }
   

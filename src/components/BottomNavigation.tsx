@@ -20,13 +20,13 @@ function NavItem({ icon: Icon, label, isActive, onClick }: NavItemProps) {
     >
       <Icon
         className={`w-[18px] h-[18px] transition-colors duration-200 ${
-          isActive ? "text-primary" : "text-muted-foreground/50"
+          isActive ? "text-primary" : "text-muted-foreground/70"
         }`}
         strokeWidth={isActive ? 2.2 : 1.8}
       />
       <span
         className={`text-[9px] tracking-wide transition-colors duration-200 ${
-          isActive ? "text-primary font-semibold" : "text-muted-foreground/40 font-medium"
+          isActive ? "text-primary font-semibold" : "text-muted-foreground/60 font-medium"
         }`}
       >
         {label}
@@ -53,7 +53,7 @@ export function BottomNavigation({
   return (
     <>
       <nav
-        className="fixed bottom-0 left-0 right-0 z-50 border-t border-border/20 bg-background/95 backdrop-blur-2xl"
+        className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-background/98 backdrop-blur-2xl"
         style={{
           paddingBottom: "env(safe-area-inset-bottom, 0px)",
         }}
