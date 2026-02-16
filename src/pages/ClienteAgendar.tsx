@@ -1456,10 +1456,10 @@ const ClienteAgendar = () => {
             animate="animate"
             exit="exit"
             transition={{ duration: 0.25 }}
-            className="min-h-screen pt-20 pb-32 px-4"
+            className="min-h-screen pt-16 pb-32 px-4"
           >
             <div className="max-w-2xl mx-auto">
-              <div className="mb-6 pt-4">
+              <div className="mb-6 pt-1">
                 <h2 className="text-xl font-semibold text-foreground">
                   Escolha o Barbeiro
                 </h2>
@@ -1518,11 +1518,11 @@ const ClienteAgendar = () => {
             animate="animate"
             exit="exit"
             transition={{ duration: 0.3 }}
-            className="min-h-screen pt-20 pb-32 px-4"
+            className="min-h-screen pt-16 pb-32 px-4"
           >
             <div className="max-w-2xl mx-auto">
               {/* Título da Etapa */}
-              <div className="mb-6 pt-4">
+              <div className="mb-6 pt-1">
                 <h2 className="text-xl font-semibold text-foreground">
                   Escolha os Serviços
                 </h2>
@@ -1566,11 +1566,11 @@ const ClienteAgendar = () => {
             animate="animate"
             exit="exit"
             transition={{ duration: 0.3 }}
-            className="min-h-screen pt-20 pb-24 px-4"
+            className="min-h-screen pt-16 pb-24 px-4"
           >
             <div className="max-w-2xl mx-auto">
               {/* Título da Etapa */}
-              <div className="mb-6 pt-4">
+              <div className="mb-6 pt-1">
                 <h2 className="text-xl font-semibold text-foreground">
                   Escolha a Data
                 </h2>
@@ -1614,11 +1614,11 @@ const ClienteAgendar = () => {
             animate="animate"
             exit="exit"
             transition={{ duration: 0.3 }}
-            className="min-h-screen pt-20 pb-32 px-4"
+            className="min-h-screen pt-16 pb-32 px-4"
           >
             <div className="max-w-2xl mx-auto">
               {/* Título da Etapa */}
-              <div className="mb-6 pt-4">
+              <div className="mb-6 pt-1">
                 <h2 className="text-xl font-semibold text-foreground">
                   Escolha o Horário
                 </h2>
@@ -1701,11 +1701,11 @@ const ClienteAgendar = () => {
             animate="animate"
             exit="exit"
             transition={{ duration: 0.3 }}
-            className="min-h-screen pt-20 pb-24 px-4"
+            className="min-h-screen pt-16 pb-24 px-4"
           >
             <div className="max-w-2xl mx-auto">
               {/* Header */}
-              <div className="mb-6 pt-4">
+              <div className="mb-6 pt-1">
                 <h2 className="text-xl font-semibold text-foreground">
                   Pagamento
                 </h2>
@@ -1955,11 +1955,11 @@ const ClienteAgendar = () => {
             animate="animate"
             exit="exit"
             transition={{ duration: 0.3 }}
-            className="min-h-screen pt-20 pb-24 px-4"
+            className="min-h-screen pt-16 pb-24 px-4"
           >
             <div className="max-w-2xl mx-auto">
               {/* Título da Etapa */}
-              <div className="mb-6 pt-4">
+              <div className="mb-6 pt-1">
                 <h2 className="text-xl font-semibold text-foreground">
                   Confirmar Agendamento
                 </h2>
@@ -2039,11 +2039,11 @@ const ClienteAgendar = () => {
             animate="animate"
             exit="exit"
             transition={{ duration: 0.3 }}
-            className="min-h-screen pt-20 pb-24 px-4"
+            className="min-h-screen pt-16 pb-24 px-4"
           >
             <div className="max-w-2xl mx-auto">
               {/* Título da Etapa */}
-              <div className="mb-6 pt-4">
+              <div className="mb-6 pt-1">
                 <h2 className="text-xl font-semibold text-foreground">
                   Confirmar Agendamento
                 </h2>
@@ -2134,11 +2134,11 @@ const ClienteAgendar = () => {
             animate="animate"
             exit="exit"
             transition={{ duration: 0.3 }}
-            className="min-h-screen pt-20 pb-24 px-4"
+            className="min-h-screen pt-16 pb-24 px-4"
           >
             <div className="max-w-2xl mx-auto">
               {/* Título da Etapa */}
-              <div className="mb-6 pt-4">
+              <div className="mb-6 pt-1">
                 <h2 className="text-xl font-semibold text-foreground">
                   Confirmar Remarcação
                 </h2>
