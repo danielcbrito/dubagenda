@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Smartphone } from "lucide-react";
 import {
   User,
   Shield,
@@ -77,47 +76,30 @@ function ProfileItem({ icon: Icon, label, onClick, trailing, badge, danger }: Pr
 }
 
 function ThemeToggleItem() {
-  const { theme, setTheme } = useTheme();
-
-  const options = [
-    { value: "light", label: "Claro", icon: Sun },
-    { value: "dark", label: "Escuro", icon: Moon },
-    { value: "system", label: "Auto", icon: Smartphone },
-  ] as const;
+  const { resolvedTheme, setTheme } = useTheme();
+  const isDark = resolvedTheme === "dark";
 
   return (
-    <div className="w-full flex flex-col gap-2.5 px-4 py-3">
-      <div className="flex items-center gap-3">
-        {theme === "dark" ? (
-          <Moon className="h-[18px] w-[18px] text-muted-foreground" strokeWidth={1.8} />
-        ) : theme === "light" ? (
-          <Sun className="h-[18px] w-[18px] text-muted-foreground" strokeWidth={1.8} />
-        ) : (
-          <Smartphone className="h-[18px] w-[18px] text-muted-foreground" strokeWidth={1.8} />
+    <div className="w-full flex items-center gap-3 px-4 py-3">
+      {isDark ? (
+        <Moon className="h-[18px] w-[18px] text-muted-foreground" strokeWidth={1.8} />
+      ) : (
+        <Sun className="h-[18px] w-[18px] text-muted-foreground" strokeWidth={1.8} />
+      )}
+      <span className="flex-1 text-left text-[13px] font-medium text-foreground">Tema</span>
+      <button
+        onClick={() => setTheme(isDark ? "light" : "dark")}
+        className={cn(
+          "relative w-10 h-[22px] rounded-full transition-colors duration-200",
+          isDark ? "bg-primary" : "bg-muted"
         )}
-        <span className="flex-1 text-left text-[13px] font-medium text-foreground">Tema</span>
-      </div>
-      <div className="flex rounded-lg bg-secondary/50 p-0.5 gap-0.5">
-        {options.map((opt) => {
-          const Icon = opt.icon;
-          const isActive = theme === opt.value;
-          return (
-            <button
-              key={opt.value}
-              onClick={() => setTheme(opt.value)}
-              className={cn(
-                "flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-md text-[11px] font-medium transition-all duration-200",
-                isActive
-                  ? "bg-primary text-primary-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              <Icon className="h-3.5 w-3.5" strokeWidth={2} />
-              {opt.label}
-            </button>
-          );
-        })}
-      </div>
+      >
+        <motion.div
+          className="absolute top-[2px] left-[2px] w-[18px] h-[18px] rounded-full bg-primary-foreground shadow-sm"
+          animate={{ x: isDark ? 18 : 0 }}
+          transition={{ type: "spring", stiffness: 500, damping: 30 }}
+        />
+      </button>
     </div>
   );
 }
