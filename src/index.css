@@ -22,32 +22,32 @@ All colors MUST be HSL. */
   :root {
     /* 🎨 PURE BLACK PREMIUM THEME (default = dark) */
     
-    /* Backgrounds - Pure Black */
-    --background: 0 0% 2%;     /* #050505 - Preto puro */
-    --background-elevated: 0 0% 9%;
-    --foreground: 0 0% 93%;
+    /* Backgrounds - Preto suave */
+    --background: 0 0% 6%;     /* #0F0F0F - Preto mais suave */
+    --background-elevated: 0 0% 11%;
+    --foreground: 0 0% 95%;
 
-    /* Cards */
-    --card: 0 0% 10%;
-    --card-elevated: 0 0% 13%;
-    --card-foreground: 0 0% 93%;
+    /* Cards — mais claros para contraste */
+    --card: 0 0% 13%;
+    --card-elevated: 0 0% 16%;
+    --card-foreground: 0 0% 95%;
 
-    --popover: 0 0% 9%;
-    --popover-foreground: 0 0% 93%;
+    --popover: 0 0% 12%;
+    --popover-foreground: 0 0% 95%;
 
     /* Vermelho Premium */
-    --primary: 0 78% 55%;
-    --primary-glow: 0 78% 65%;
+    --primary: 0 78% 57%;
+    --primary-glow: 0 78% 67%;
     --primary-foreground: 0 0% 100%;
 
     /* Secondary */
-    --secondary: 0 0% 14%;
-    --secondary-foreground: 0 0% 85%;
+    --secondary: 0 0% 17%;
+    --secondary-foreground: 0 0% 90%;
 
-    --muted: 0 0% 16%;
-    --muted-foreground: 0 0% 55%;
+    --muted: 0 0% 19%;
+    --muted-foreground: 0 0% 62%;
 
-    --accent: 0 78% 55%;
+    --accent: 0 78% 57%;
     --accent-foreground: 0 0% 100%;
 
     /* Dourado */
@@ -61,10 +61,10 @@ All colors MUST be HSL. */
     --success: 142 76% 45%;
     --success-foreground: 0 0% 98%;
 
-    /* Bordas */
-    --border: 0 0% 17%;
-    --border-glow: 0 78% 55% / 0.4;
-    --input: 0 0% 14%;
+    /* Bordas — mais visíveis */
+    --border: 0 0% 22%;
+    --border-glow: 0 78% 57% / 0.4;
+    --input: 0 0% 17%;
     --ring: 0 78% 55%;
 
     --radius: 0.875rem;
