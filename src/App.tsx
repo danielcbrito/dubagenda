@@ -175,8 +175,32 @@ function AppRoutes() {
   );
 }
 
+function ThemeColorSync() {
+  useEffect(() => {
+    const observer = new MutationObserver(() => {
+      const isDark = document.documentElement.classList.contains("dark");
+      const color = isDark ? "#121212" : "#F5F5F5";
+      document
+        .querySelectorAll('meta[name="theme-color"]')
+        .forEach((meta) => meta.setAttribute("content", color));
+    });
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
+
+    // Set initial value
+    const isDark = document.documentElement.classList.contains("dark");
+    const color = isDark ? "#121212" : "#F5F5F5";
+    document
+      .querySelectorAll('meta[name="theme-color"]')
+      .forEach((meta) => meta.setAttribute("content", color));
+
+    return () => observer.disconnect();
+  }, []);
+  return null;
+}
+
 const App = () => (
   <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+    <ThemeColorSync />
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <Toaster />
