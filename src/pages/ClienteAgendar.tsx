@@ -1427,26 +1427,28 @@ const ClienteAgendar = () => {
 
   return (
     <div className="min-h-screen">
-      {/* Header fixo — Seta + Dots com fundo sólido */}
-      <div className="fixed top-0 left-0 right-0 z-50 bg-background">
-        <div className="max-w-2xl mx-auto px-4 py-3">
-          <div className="flex items-center justify-between">
-            <button 
-              onClick={handleBack}
-              className="w-8 h-8 flex items-center justify-center rounded-lg bg-card/60 hover:bg-card transition-all active:scale-90"
-            >
-              <ArrowLeft className="w-4 h-4 text-foreground/70" />
-            </button>
+      {/* Header fixo — Seta + Dots */}
+      <div className="fixed top-0 left-0 right-0 z-50">
+        <div className="bg-background/90 backdrop-blur-xl">
+          <div className="max-w-2xl mx-auto px-4 py-3">
+            <div className="flex items-center justify-between">
+              <button 
+                onClick={handleBack}
+                className="w-8 h-8 flex items-center justify-center rounded-lg bg-card/60 hover:bg-card transition-all active:scale-90"
+              >
+                <ArrowLeft className="w-4 h-4 text-foreground/70" />
+              </button>
 
-            <StepDots currentStep={currentDisplayStep} totalSteps={totalSteps} />
+              <StepDots currentStep={currentDisplayStep} totalSteps={totalSteps} />
 
-            <div className="w-8" />
+              <div className="w-8" />
+            </div>
           </div>
         </div>
-        {/* Fade mask — cards somem suavemente ao subir */}
+        {/* Fade mask — cards desaparecem suavemente ao rolar */}
         <div 
-          className="h-6 pointer-events-none"
-          style={{ background: "linear-gradient(to bottom, hsl(var(--background)), transparent)" }}
+          className="h-8 pointer-events-none -mt-[1px]"
+          style={{ background: "linear-gradient(to bottom, hsl(var(--background) / 0.85), transparent)" }}
         />
       </div>
 
