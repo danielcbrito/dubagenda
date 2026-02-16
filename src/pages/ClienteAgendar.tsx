@@ -2247,7 +2247,7 @@ const ClienteAgendar = () => {
                     disabled={processingPayment}
                     whileHover={{ scale: processingPayment ? 1 : 1.02 }}
                     whileTap={{ scale: processingPayment ? 1 : 0.95 }}
-                    className="group flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-[14px] text-white disabled:opacity-50"
+                    className="group flex items-center gap-1.5 px-4 py-2 rounded-xl font-semibold text-[13px] text-white disabled:opacity-50"
                     style={{
                       background: "linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(0 65% 42%) 100%)",
                       boxShadow: "0 2px 8px hsl(var(--primary) / 0.3), inset 0 1px 0 rgba(255,255,255,0.12)"
