@@ -566,7 +566,7 @@ const Cliente = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="h-dvh flex flex-col overflow-hidden">
       <AnnouncementModal />
 
       {/* Scrollable Content */}
