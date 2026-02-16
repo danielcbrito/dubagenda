@@ -36,15 +36,15 @@ export function TimeSelectionBar({
           className={cn("fixed bottom-0 left-0 right-0 z-40", className)}
         >
           <div className="relative px-4 pb-safe">
-            <div className="absolute -top-8 left-0 right-0 h-8 bg-gradient-to-t from-background/80 to-transparent pointer-events-none" />
+            <div className="absolute -top-10 left-0 right-0 h-10 pointer-events-none" style={{ background: "linear-gradient(to top, rgba(0,0,0,0.6), transparent)" }} />
             
             {/* Compact floating bar */}
             <div 
               className="relative mx-auto max-w-md"
               style={{
                 borderRadius: "14px",
-                background: "rgba(18, 18, 20, 0.92)",
-                boxShadow: "0 -2px 20px -6px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.06)",
+                background: "rgba(12, 12, 14, 0.95)",
+                boxShadow: "0 -4px 24px -4px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05)",
                 backdropFilter: "blur(20px)"
               }}
             >
