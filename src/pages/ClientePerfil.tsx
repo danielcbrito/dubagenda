@@ -10,12 +10,21 @@ import {
   LogOut,
   Sun,
   Moon,
+  Wallet,
+  CreditCard,
+  History,
+  Gift,
+  HelpCircle,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useTheme } from "next-themes";
 import { cn } from "@/lib/utils";
 import { BottomNavigation } from "@/components/BottomNavigation";
+import { MyPlansSheet } from "@/components/MyPlansSheet";
+import { NotificationsSheet } from "@/components/NotificationsSheet";
+import { AppointmentHistorySheet } from "@/components/AppointmentHistorySheet";
+import { PointsDetailModal } from "@/components/PointsDetailModal";
 
 /* ─── Reusable sub-components ─── */
 
@@ -41,9 +50,10 @@ interface ProfileItemProps {
   label: string;
   onClick?: () => void;
   trailing?: React.ReactNode;
+  badge?: string;
   danger?: boolean;
 }
-function ProfileItem({ icon: Icon, label, onClick, trailing, danger }: ProfileItemProps) {
+function ProfileItem({ icon: Icon, label, onClick, trailing, badge, danger }: ProfileItemProps) {
   return (
     <button
       onClick={onClick}
@@ -55,6 +65,11 @@ function ProfileItem({ icon: Icon, label, onClick, trailing, danger }: ProfileIt
     >
       <Icon className={cn("h-[18px] w-[18px]", danger ? "text-destructive" : "text-muted-foreground")} strokeWidth={1.8} />
       <span className={cn("flex-1 text-left text-[13px] font-medium", danger ? "text-destructive" : "text-foreground")}>{label}</span>
+      {badge && (
+        <span className="px-1.5 py-0.5 bg-primary text-primary-foreground text-[9px] font-bold rounded-full min-w-[20px] text-center">
+          {badge}
+        </span>
+      )}
       {trailing || <ChevronRight className="h-4 w-4 text-muted-foreground/50" />}
     </button>
   );
@@ -95,8 +110,22 @@ export default function ClientePerfil() {
   const navigate = useNavigate();
   const [profile, setProfile] = useState<any>(null);
   const [userEmail, setUserEmail] = useState("");
+  const [userId, setUserId] = useState<string>();
   const [userRole, setUserRole] = useState("cliente");
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  // Data for badges
+  const [availableCredits, setAvailableCredits] = useState(0);
+  const [points, setPoints] = useState(0);
+  const [completedAppointments, setCompletedAppointments] = useState(0);
+  const [redemptions, setRedemptions] = useState(0);
+  const [pontosNecessarios, setPontosNecessarios] = useState(5);
+
+  // Sub-sheets
+  const [plansOpen, setPlansOpen] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [pointsModalOpen, setPointsModalOpen] = useState(false);
 
   useEffect(() => {
     loadProfile();
@@ -106,6 +135,7 @@ export default function ClientePerfil() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { navigate("/auth"); return; }
 
+    setUserId(user.id);
     setUserEmail(user.email || "");
 
     const { data: prof } = await supabase.from("profiles").select("*").eq("id", user.id).single();
@@ -113,6 +143,28 @@ export default function ClientePerfil() {
 
     const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", user.id);
     if (roles?.[0]) setUserRole(roles[0].role);
+
+    // Load credits
+    const { data: creditsData } = await supabase.rpc("get_user_available_credits", { p_user_id: user.id });
+    if (creditsData !== null) setAvailableCredits(Number(creditsData));
+
+    // Load points
+    const { data: pontosData } = await supabase.from("pontos").select("pontos").eq("user_id", user.id).maybeSingle();
+    if (pontosData) setPoints(pontosData.pontos);
+
+    // Load completed appointments count
+    const { count } = await supabase.from("agendamentos").select("*", { count: "exact", head: true })
+      .eq("user_id", user.id).eq("status", "completed");
+    setCompletedAppointments(count || 0);
+
+    // Load redemptions
+    const { data: resgates } = await supabase.from("resgates").select("id")
+      .eq("user_id", user.id).eq("status", "available");
+    setRedemptions(resgates?.length || 0);
+
+    // Load pontos necessários
+    const { data: promo } = await supabase.from("promocoes").select("pontos_necessarios").eq("ativo", true).limit(1).maybeSingle();
+    if (promo?.pontos_necessarios) setPontosNecessarios(promo.pontos_necessarios);
   };
 
   const getInitials = (name: string) =>
@@ -170,6 +222,17 @@ export default function ClientePerfil() {
         {/* Conta */}
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
           <ProfileSection title="Conta">
+            <ProfileItem
+              icon={Wallet}
+              label="Minha Carteira"
+              badge={availableCredits > 0 ? `R$ ${availableCredits}` : undefined}
+              onClick={() => navigate("/cliente/carteira")}
+            />
+            <ProfileItem
+              icon={CreditCard}
+              label="Meus Planos"
+              onClick={() => setPlansOpen(true)}
+            />
             <ProfileItem icon={User} label="Meus Dados" onClick={() => navigate("/cliente/dados-pessoais")} />
             <ProfileItem icon={Shield} label="Segurança" onClick={() => toast.info("Em breve")} />
           </ProfileSection>
@@ -178,17 +241,32 @@ export default function ClientePerfil() {
         {/* Preferências */}
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
           <ProfileSection title="Preferências">
-            <ProfileItem icon={Wrench} label="Configurações" onClick={() => toast.info("Em breve")} />
+            <ProfileItem
+              icon={Bell}
+              label="Notificações"
+              onClick={() => setNotificationsOpen(true)}
+            />
             <ThemeToggleItem />
           </ProfileSection>
         </motion.div>
 
-        {/* Ajuda */}
+        {/* Mais */}
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
-          <ProfileSection title="Ajuda">
+          <ProfileSection title="Mais">
             <ProfileItem
-              icon={Bell}
-              label="Central de ajuda"
+              icon={History}
+              label="Histórico de Agendamentos"
+              onClick={() => setHistoryOpen(true)}
+            />
+            <ProfileItem
+              icon={Gift}
+              label="Programa de Pontos"
+              badge={redemptions > 0 ? `${redemptions} disponível` : undefined}
+              onClick={() => setPointsModalOpen(true)}
+            />
+            <ProfileItem
+              icon={HelpCircle}
+              label="Central de Ajuda"
               trailing={
                 <span className="text-[9px] uppercase tracking-wider text-muted-foreground/40 bg-muted/50 px-1.5 py-0.5 rounded font-medium">
                   Em breve
@@ -220,6 +298,19 @@ export default function ClientePerfil() {
       <BottomNavigation
         onProfileClick={() => {}}
         onSupportClick={() => navigate("/suporte")}
+      />
+
+      {/* Sub-sheets */}
+      <MyPlansSheet open={plansOpen} onOpenChange={setPlansOpen} userId={userId} />
+      <NotificationsSheet open={notificationsOpen} onOpenChange={setNotificationsOpen} userId={userId} />
+      <AppointmentHistorySheet open={historyOpen} onOpenChange={setHistoryOpen} userId={userId} />
+      <PointsDetailModal
+        open={pointsModalOpen}
+        onOpenChange={setPointsModalOpen}
+        points={points}
+        completedAppointments={completedAppointments}
+        redemptions={redemptions}
+        pontosNecessarios={pontosNecessarios}
       />
     </div>
   );
