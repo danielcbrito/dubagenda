@@ -35,18 +35,10 @@ export function FloatingActionBar({
             stiffness: 500, 
             damping: 40
           }}
-          className={cn("fixed bottom-6 left-0 right-0 z-40", className)}
+          className={cn("fixed bottom-0 left-0 right-0 z-40", className)}
         >
-          <div className="relative px-4 pb-safe">
-            {/* Floating bar */}
-            <div 
-              className="relative mx-auto max-w-md overflow-hidden"
-              style={{
-                borderRadius: "14px",
-                background: "#1a1a1e",
-                boxShadow: "0 20px 80px 30px rgba(0,0,0,1), 0 10px 50px 20px rgba(0,0,0,1), 0 4px 20px 10px rgba(0,0,0,1), 0 0 0 1px rgba(255,255,255,0.04)",
-              }}
-            >
+          <div className="px-0 pb-safe" style={{ background: "#0a0a0c" }}>
+            <div className="w-full" style={{ background: "#0a0a0c" }}>
               
               <div className="flex items-center justify-between px-3.5 py-2.5">
                 {/* Left: Icon + info inline */}
@@ -96,8 +88,6 @@ export function FloatingActionBar({
                 </motion.button>
               </div>
             </div>
-            
-            <div className="h-3" />
           </div>
         </motion.div>
       )}
