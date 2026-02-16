@@ -234,7 +234,7 @@ export default function ClientePerfil() {
               onClick={() => setPlansOpen(true)}
             />
             <ProfileItem icon={User} label="Meus Dados" onClick={() => navigate("/cliente/dados-pessoais")} />
-            <ProfileItem icon={Shield} label="Segurança" onClick={() => toast.info("Em breve")} />
+            <ProfileItem icon={Shield} label="Segurança" onClick={() => navigate("/cliente/seguranca")} />
           </ProfileSection>
         </motion.div>
 

@@ -38,3 +38,6 @@ verify_jwt = false
 
 [functions.cleanup-pending-payments]
 verify_jwt = false
+
+[functions.wallet-pin]
+verify_jwt = false
