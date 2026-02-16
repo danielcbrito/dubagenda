@@ -2208,7 +2208,7 @@ const ClienteAgendar = () => {
             transition={{ type: "spring", stiffness: 500, damping: 40 }}
             className="fixed bottom-0 left-0 right-0 z-40"
           >
-            <div className="pb-safe backdrop-blur-2xl" style={{ background: "linear-gradient(to bottom, transparent 0%, rgba(10,10,12,0.7) 20%, rgba(10,10,12,0.95) 40%, #0a0a0c 60%)" }}>
+            <div className="pb-safe backdrop-blur-2xl" style={{ background: "linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.75) 25%, rgba(0,0,0,0.95) 45%, #000000 65%)" }}>
               <div className="w-full px-5 pt-8 pb-5">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
