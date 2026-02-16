@@ -116,7 +116,13 @@ const ClientePixCheckout = () => {
     }
   }, [pixData?.pixPayload]);
 
-  const goBack = async () => {
+  const goBack = () => {
+    // Apenas volta sem cancelar — o pending_booking permanece para aparecer na home
+    sessionStorage.removeItem("pix_checkout_data");
+    navigate("/cliente");
+  };
+
+  const handleCancel = async () => {
     // Cancelar cobrança no Asaas e limpar pending_booking
     if (pixData?.asaasPaymentId) {
       try {
@@ -133,7 +139,7 @@ const ClientePixCheckout = () => {
       }
     }
     sessionStorage.removeItem("pix_checkout_data");
-    navigate("/cliente/agendar");
+    navigate("/cliente");
   };
 
   // Loading
@@ -230,7 +236,7 @@ const ClientePixCheckout = () => {
                   </p>
                 </div>
                 <button
-                  onClick={goBack}
+                  onClick={handleCancel}
                   className="w-full py-3 bg-primary text-primary-foreground font-semibold text-sm rounded-xl hover:bg-primary/90 transition-all active:scale-[0.98]"
                 >
                   Tentar novamente
