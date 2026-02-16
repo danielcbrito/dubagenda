@@ -36,25 +36,12 @@ export function TimeSelectionBar({
           className={cn("fixed bottom-6 left-0 right-0 z-40", className)}
         >
           <div className="relative px-4 pb-safe">
-            {/* Shadow that obscures content below */}
-            <div 
-              className="absolute bottom-full left-0 right-0 h-28 pointer-events-none"
-              style={{ background: "linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.4) 50%, transparent 100%)" }}
-            />
-            <div 
-              className="absolute -bottom-4 left-4 right-4 h-10 rounded-2xl pointer-events-none"
-              style={{ 
-                background: "radial-gradient(ellipse at center, rgba(0,0,0,0.8) 0%, transparent 70%)",
-                filter: "blur(10px)"
-              }}
-            />
-            
             <div 
               className="relative mx-auto max-w-md overflow-hidden"
               style={{
                 borderRadius: "14px",
                 background: "#000000",
-                boxShadow: "0 8px 40px -4px rgba(0, 0, 0, 0.9), 0 0 0 1px rgba(255, 255, 255, 0.04)",
+                boxShadow: "0 12px 40px 8px rgba(0,0,0,0.85), 0 4px 16px 0px rgba(0,0,0,0.6), 0 0 0 1px rgba(255, 255, 255, 0.04)",
               }}
             >
               
