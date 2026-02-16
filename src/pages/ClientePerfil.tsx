@@ -189,7 +189,7 @@ export default function ClientePerfil() {
 
   return (
     <div className="min-h-screen bg-background pb-20">
-      <div className="pt-6 pb-8 space-y-6">
+      <div className="pt-10 pb-8 space-y-6">
         {/* Identity Section */}
         <motion.div
           initial={{ opacity: 0, y: 12 }}
