@@ -127,13 +127,14 @@ export function AppointmentCardPremium({
         initial={{ opacity: 0, y: 6 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: index * 0.06, duration: 0.25 }}
-        className="rounded-xl overflow-hidden border border-border/25 bg-card/60 active:scale-[0.99] transition-transform"
+        className="rounded-xl overflow-hidden border border-border bg-card active:scale-[0.99] transition-transform"
+        style={{ boxShadow: "var(--shadow-card)" }}
       >
-        <div className="p-3.5">
+        <div className="p-4">
           {/* Header */}
           <div className="flex items-start justify-between mb-2.5">
             <div className="flex-1 min-w-0">
-              <h3 className="font-semibold text-foreground/85 text-[13px] mb-1 truncate">
+              <h3 className="font-semibold text-foreground text-[13px] mb-1 truncate">
                 {appointment.servico?.nome || "Serviço"}
               </h3>
               <div 
@@ -151,18 +152,18 @@ export function AppointmentCardPremium({
 
             <div className="flex items-center gap-2">
               {appointment.barbeiro?.apelido && (
-                <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-muted/15">
-                  <Scissors className="w-2.5 h-2.5 text-muted-foreground/40" />
-                  <span className="text-[10px] text-foreground/60 font-medium">
+                <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-muted/60">
+                  <Scissors className="w-2.5 h-2.5 text-muted-foreground/60" />
+                  <span className="text-[10px] text-foreground/70 font-medium">
                     {appointment.barbeiro.apelido}
                   </span>
                 </div>
               )}
-              <div className="text-center px-2 py-1 rounded-lg bg-muted/15">
-                <p className="text-[8px] text-muted-foreground/40 uppercase font-medium tracking-wider">
+              <div className="text-center px-2.5 py-1.5 rounded-lg bg-muted/60">
+                <p className="text-[8px] text-muted-foreground uppercase font-semibold tracking-wider">
                   {format(new Date(`${appointment.data}T12:00:00`), "MMM", { locale: ptBR })}
                 </p>
-                <p className="text-sm font-bold text-foreground/80 leading-none tabular-nums">
+                <p className="text-sm font-bold text-foreground leading-none tabular-nums">
                   {format(new Date(`${appointment.data}T12:00:00`), "dd", { locale: ptBR })}
                 </p>
               </div>
@@ -170,9 +171,9 @@ export function AppointmentCardPremium({
           </div>
 
           {/* Details */}
-          <div className="flex items-center gap-3 text-[11px] text-muted-foreground/50 mb-3">
+          <div className="flex items-center gap-3 text-[11px] text-muted-foreground mb-3">
             <div className="flex items-center gap-1">
-              <Clock className="w-3 h-3 text-muted-foreground/30" />
+              <Clock className="w-3 h-3 text-muted-foreground/60" />
               <span className="font-medium tabular-nums">{appointment.hora}</span>
             </div>
             {isPlanAppointment ? (
@@ -187,11 +188,11 @@ export function AppointmentCardPremium({
               </div>
             ) : appointment.preco ? (
               <div className="flex items-center gap-1">
-                <span className="font-semibold text-foreground/70 tabular-nums">
+                <span className="font-semibold text-foreground tabular-nums">
                   R$ {appointment.preco.toFixed(2)}
                 </span>
                 {isPaid && (
-                  <span className="text-[8px] text-emerald-500/60 font-medium uppercase tracking-wider">Pago</span>
+                  <span className="text-[8px] text-emerald-600 dark:text-emerald-400 font-semibold uppercase tracking-wider">Pago</span>
                 )}
               </div>
             ) : null}
