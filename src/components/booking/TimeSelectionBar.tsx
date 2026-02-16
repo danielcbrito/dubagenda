@@ -36,7 +36,7 @@ export function TimeSelectionBar({
           className={cn("fixed bottom-0 left-0 right-0 z-40", className)}
         >
           <div className="px-0 pb-safe" style={{ background: "#0a0a0c" }}>
-            <div className="w-full" style={{ background: "#0a0a0c" }}>
+            <div className="w-full px-5 pt-5 pb-4" style={{ background: "#0a0a0c" }}>
               
               <div className="flex items-center justify-between px-3.5 py-2.5">
                 
