@@ -80,8 +80,8 @@ function NotificationCard({
       className={cn(
         "relative rounded-xl p-4 border transition-all",
         notification.lida 
-          ? "bg-zinc-900/30 border-zinc-800" 
-          : "bg-zinc-800/50 border-red-500/30 shadow-lg shadow-red-500/5"
+          ? "bg-card/50 border-border" 
+          : "bg-card border-primary/20 shadow-sm"
       )}
     >
       {/* Indicador de nova notificação */}
@@ -96,7 +96,7 @@ function NotificationCard({
         <div className="flex-shrink-0 mt-0.5">
           <div className={cn(
             "w-10 h-10 rounded-full flex items-center justify-center",
-            notification.lida ? "bg-zinc-800" : "bg-zinc-700/50"
+            notification.lida ? "bg-muted" : "bg-muted/80"
           )}>
             {getIcon()}
           </div>
@@ -106,27 +106,27 @@ function NotificationCard({
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-2 mb-1">
             <h4 className={cn(
-              "font-semibold",
-              notification.lida ? "text-zinc-400" : "text-white"
+              "font-semibold text-sm",
+              notification.lida ? "text-muted-foreground" : "text-foreground"
             )}>
               {notification.titulo}
             </h4>
             {!notification.lida && (
-              <span className="text-xs bg-red-500 text-white px-2 py-0.5 rounded-full font-medium flex-shrink-0">
+              <span className="text-[10px] bg-primary text-primary-foreground px-2 py-0.5 rounded-full font-semibold flex-shrink-0">
                 Nova
               </span>
             )}
           </div>
 
           <p className={cn(
-            "text-sm mb-2 line-clamp-2",
-            notification.lida ? "text-zinc-500" : "text-zinc-400"
+            "text-[13px] mb-2 line-clamp-2 leading-relaxed",
+            notification.lida ? "text-muted-foreground/60" : "text-muted-foreground"
           )}>
             {notification.mensagem}
           </p>
 
           <div className="flex items-center justify-between flex-wrap gap-2">
-            <span className="text-xs text-zinc-500">
+            <span className="text-[11px] text-muted-foreground/50">
               {formatDistanceToNow(new Date(notification.created_at), {
                 addSuffix: true,
                 locale: ptBR
@@ -137,7 +137,7 @@ function NotificationCard({
               {needsAction && (
                 <button
                   onClick={() => onReschedule(notification.id)}
-                  className="text-xs bg-red-500/20 text-red-400 px-3 py-1.5 rounded-lg font-medium hover:bg-red-500/30 transition-colors"
+                  className="text-[11px] bg-primary/10 text-primary px-3 py-1.5 rounded-lg font-semibold hover:bg-primary/20 transition-colors"
                 >
                   Remarcar Agora
                 </button>
@@ -145,7 +145,7 @@ function NotificationCard({
               {!notification.lida && (
                 <button
                   onClick={() => onMarkAsRead(notification.id)}
-                  className="text-xs text-zinc-400 hover:text-white transition-colors"
+                  className="text-[11px] text-muted-foreground/60 hover:text-foreground transition-colors"
                 >
                   Marcar como lida
                 </button>
@@ -264,7 +264,7 @@ export function NotificationsSheet({ open, onOpenChange, userId }: Notifications
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full p-0 bg-zinc-950 border-zinc-800">
+      <SheetContent side="right" className="w-full p-0 bg-background border-border">
         
         {/* HEADER FIXO */}
         <div className="flex items-center gap-3 px-4 pt-4 pb-3">
@@ -291,7 +291,7 @@ export function NotificationsSheet({ open, onOpenChange, userId }: Notifications
           
           {loading ? (
             <div className="flex items-center justify-center py-12">
-              <div className="w-8 h-8 border-2 border-red-500 border-t-transparent rounded-full animate-spin" />
+              <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
             </div>
           ) : notifications.length === 0 ? (
             <motion.div 
@@ -299,13 +299,13 @@ export function NotificationsSheet({ open, onOpenChange, userId }: Notifications
               animate={{ opacity: 1, y: 0 }}
               className="flex flex-col items-center justify-center py-16 text-center"
             >
-              <div className="w-20 h-20 bg-zinc-800/50 rounded-full flex items-center justify-center mb-4">
-                <Bell className="w-10 h-10 text-zinc-600" />
+              <div className="w-20 h-20 bg-muted/30 rounded-full flex items-center justify-center mb-4">
+                <Bell className="w-10 h-10 text-muted-foreground/30" />
               </div>
-              <h3 className="text-lg font-semibold text-zinc-400 mb-2">
+              <h3 className="text-base font-semibold text-muted-foreground mb-2">
                 Nenhuma notificação
               </h3>
-              <p className="text-sm text-zinc-500 max-w-xs">
+              <p className="text-sm text-muted-foreground/60 max-w-xs">
                 Você receberá atualizações sobre seus agendamentos aqui
               </p>
             </motion.div>

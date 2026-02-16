@@ -41,3 +41,6 @@ verify_jwt = false
 
 [functions.wallet-pin]
 verify_jwt = false
+
+[functions.appointment-reminders]
+verify_jwt = false
