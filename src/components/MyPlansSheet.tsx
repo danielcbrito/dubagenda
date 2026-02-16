@@ -2,13 +2,13 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Gift, Calendar, CheckCircle2, AlertCircle, Loader2, XCircle, ArrowLeft, Crown, CreditCard, ChevronRight } from "lucide-react";
+import { Calendar, CheckCircle2, AlertCircle, Loader2, ArrowLeft, Crown, CreditCard, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { motion, AnimatePresence } from "framer-motion";
+import { cn } from "@/lib/utils";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -105,14 +105,26 @@ export function MyPlansSheet({ open, onOpenChange, userId, onSubscriptionChanged
     }
   };
 
-  const getStatusBadge = (status: string) => {
-    const statusMap: Record<string, { label: string; variant: "default" | "secondary" | "destructive" }> = {
-      active: { label: "Ativo", variant: "default" },
-      suspended: { label: "Pagamento Pendente", variant: "destructive" },
-      past_due: { label: "Vencido", variant: "destructive" },
-      cancelled: { label: "Cancelado", variant: "secondary" },
+  const getStatusConfig = (status: string) => {
+    const map: Record<string, { label: string; className: string }> = {
+      active: { 
+        label: "ATIVO", 
+        className: "bg-emerald-500/10 text-emerald-400 ring-1 ring-emerald-500/20" 
+      },
+      suspended: { 
+        label: "PENDENTE", 
+        className: "bg-primary/10 text-primary ring-1 ring-primary/20" 
+      },
+      past_due: { 
+        label: "VENCIDO", 
+        className: "bg-destructive/10 text-destructive ring-1 ring-destructive/20" 
+      },
+      cancelled: { 
+        label: "CANCELADO", 
+        className: "bg-muted text-muted-foreground ring-1 ring-border" 
+      },
     };
-    return statusMap[status] || { label: status, variant: "secondary" };
+    return map[status] || { label: status, className: "bg-muted text-muted-foreground" };
   };
 
   const isSuspended = subscription?.status === "suspended";
@@ -131,7 +143,6 @@ export function MyPlansSheet({ open, onOpenChange, userId, onSubscriptionChanged
       setCancelDialogOpen(false);
       setSubscription(null);
       onOpenChange(false);
-      // Notificar o dashboard para recarregar dados imediatamente
       onSubscriptionChanged?.();
     } catch (error: any) {
       console.error('Cancel subscription error:', error);
@@ -147,6 +158,8 @@ export function MyPlansSheet({ open, onOpenChange, userId, onSubscriptionChanged
     ? subscription.plano.beneficios_json 
     : [];
 
+  const statusConfig = subscription ? getStatusConfig(subscription.status) : null;
+
   return (
     <>
       <AnimatePresence>
@@ -158,177 +171,188 @@ export function MyPlansSheet({ open, onOpenChange, userId, onSubscriptionChanged
             transition={{ type: "spring", damping: 30, stiffness: 300 }}
             className="fixed inset-0 z-50 bg-background flex flex-col"
           >
-            {/* Header */}
-            <div className="flex items-center gap-3 px-5 py-4 border-b border-border/40">
+            {/* Header — compacto, só seta + título */}
+            <div className="flex items-center gap-3 px-4 pt-[max(env(safe-area-inset-top),0.75rem)] pb-3">
               <button
                 onClick={() => onOpenChange(false)}
-                className="w-10 h-10 flex items-center justify-center rounded-full bg-card hover:bg-muted transition-colors"
+                className="w-8 h-8 flex items-center justify-center rounded-lg bg-card border border-border/40 hover:bg-muted transition-colors"
               >
-                <ArrowLeft className="w-5 h-5 text-foreground" />
+                <ArrowLeft className="w-4 h-4 text-foreground" />
               </button>
-              <h1 className="text-lg font-bold text-foreground">Meus Planos</h1>
+              <h1 className="text-sm font-semibold text-foreground tracking-tight">Meus Planos</h1>
             </div>
 
             {/* Content */}
-            <div className="flex-1 overflow-y-auto px-5 py-6">
+            <div className="flex-1 overflow-y-auto overscroll-contain px-4 pb-24">
               {/* Loading */}
               {loadingState === "loading" && (
-                <div className="space-y-4">
-                  <Skeleton className="h-6 w-3/4 bg-muted" />
+                <div className="space-y-3 pt-2">
+                  <Skeleton className="h-5 w-2/3 bg-muted" />
                   <Skeleton className="h-4 w-full bg-muted" />
-                  <Skeleton className="h-4 w-2/3 bg-muted" />
-                  <Skeleton className="h-40 w-full rounded-2xl bg-muted" />
+                  <Skeleton className="h-32 w-full rounded-xl bg-muted" />
                 </div>
               )}
 
               {/* Error */}
               {loadingState === "error" && (
-                <div className="flex flex-col items-center justify-center pt-20 space-y-6">
-                  <div className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center">
-                    <AlertCircle className="w-8 h-8 text-destructive" />
+                <div className="flex flex-col items-center justify-center pt-16 space-y-5">
+                  <div className="w-14 h-14 rounded-full bg-destructive/10 flex items-center justify-center">
+                    <AlertCircle className="w-6 h-6 text-destructive" />
                   </div>
                   <div className="text-center space-y-1">
                     <p className="text-sm font-medium text-foreground">Erro ao carregar</p>
-                    <p className="text-xs text-muted-foreground max-w-xs">
-                      {errorMessage}
-                    </p>
+                    <p className="text-xs text-muted-foreground max-w-[260px]">{errorMessage}</p>
                   </div>
-                  <Button onClick={loadSubscription} variant="default" className="h-11 px-6">
-                    <Loader2 className="w-4 h-4 mr-2" />
+                  <Button onClick={loadSubscription} size="sm" className="h-9 px-5">
+                    <Loader2 className="w-3.5 h-3.5 mr-1.5" />
                     Tentar Novamente
                   </Button>
                 </div>
               )}
 
-              {/* Empty */}
+              {/* Empty — Sem plano ativo */}
               {loadingState === "success" && !subscription && (
-                <div className="flex flex-col items-center justify-center pt-20 space-y-6">
-                  <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center">
-                    <Crown className="w-8 h-8 text-muted-foreground" />
+                <div className="flex flex-col items-center justify-center pt-16 space-y-5">
+                  <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center">
+                    <Crown className="w-6 h-6 text-primary" />
                   </div>
                   <div className="text-center space-y-1">
-                    <p className="text-sm font-medium text-foreground">Nenhum plano ativo</p>
-                    <p className="text-xs text-muted-foreground">
-                      Assine um plano e aproveite benefícios exclusivos
+                    <p className="text-sm font-semibold text-foreground">Nenhum plano ativo</p>
+                    <p className="text-xs text-muted-foreground max-w-[240px]">
+                      Assine e tenha acesso a benefícios exclusivos com preços especiais.
                     </p>
                   </div>
                   <Button
                     onClick={handleSubscribeClick}
-                    className="h-12 px-8 bg-primary hover:bg-primary/90 transition-all"
+                    className="h-10 px-6 text-sm font-semibold"
                   >
+                    <Crown className="w-4 h-4 mr-1.5" />
                     Assinar um Plano
                   </Button>
                 </div>
               )}
 
-              {/* Subscription Card */}
+              {/* Subscription Active */}
               {loadingState === "success" && subscription && (
                 <motion.div
-                  initial={{ opacity: 0, y: 12 }}
+                  initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="space-y-6"
+                  className="space-y-3 pt-1"
                 >
-                  {/* Plan Header */}
-                  <div className="rounded-2xl border border-border/40 bg-card p-6 space-y-5">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1 space-y-1">
-                        <h2 className="text-xl font-bold text-foreground">
-                          {subscription.plano.nome}
-                        </h2>
-                        <p className="text-sm text-muted-foreground">
-                          {subscription.plano.descricao}
-                        </p>
+                  {/* Plan Card Principal */}
+                  <div className="rounded-xl border border-border/40 bg-card overflow-hidden">
+                    {/* Accent line */}
+                    <div className="h-0.5 bg-gradient-to-r from-primary via-primary/60 to-transparent" />
+
+                    <div className="p-4 space-y-3.5">
+                      {/* Nome + Status badge */}
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1 min-w-0">
+                          <h2 className="text-base font-bold text-foreground truncate">
+                            {subscription.plano.nome}
+                          </h2>
+                          <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
+                            {subscription.plano.descricao}
+                          </p>
+                        </div>
+                        {statusConfig && (
+                          <span className={cn(
+                            "text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-md shrink-0",
+                            statusConfig.className
+                          )}>
+                            {statusConfig.label}
+                          </span>
+                        )}
                       </div>
-                      <Badge variant={getStatusBadge(subscription.status).variant}>
-                        {getStatusBadge(subscription.status).label}
-                      </Badge>
-                    </div>
 
-                    {/* Price */}
-                    <div className="flex items-baseline gap-1">
-                      <span className="text-3xl font-bold text-primary">
-                        R$ {Number(subscription.plano.preco_mensal || 0).toFixed(2).replace(".", ",")}
-                      </span>
-                      <span className="text-sm text-muted-foreground">/mês</span>
-                    </div>
-
-                    {/* Next billing - only for active */}
-                    {!isSuspended && subscription.next_billing_date && (
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Calendar className="w-4 h-4" />
-                        <span>
-                          Próxima cobrança:{" "}
-                          {format(new Date(subscription.next_billing_date), "dd 'de' MMMM", { locale: ptBR })}
+                      {/* Preço */}
+                      <div className="flex items-baseline gap-0.5">
+                        <span className="text-2xl font-bold text-primary tabular-nums">
+                          R$ {Number(subscription.plano.preco_mensal || 0).toFixed(2).replace(".", ",")}
                         </span>
+                        <span className="text-xs text-muted-foreground">/mês</span>
                       </div>
-                    )}
 
-                    {/* Suspended: Finalize payment CTA */}
-                    {isSuspended && (
-                      <div className="pt-1">
-                        <p className="text-xs text-muted-foreground mb-3">
-                          Finalize o pagamento para ativar seus benefícios.
-                        </p>
-                        <Button
-                          onClick={() => {
-                            onOpenChange(false);
-                            setTimeout(() => navigate("/cliente/assinar", { 
-                              state: { resumePlanId: subscription.plano?.id || null }
-                            }), 300);
-                          }}
-                          className="w-full h-12 bg-primary hover:bg-primary/90 font-semibold"
-                        >
-                          Finalizar pagamento
-                        </Button>
-                      </div>
-                    )}
+                      {/* Próxima cobrança */}
+                      {!isSuspended && subscription.next_billing_date && (
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <Calendar className="w-3.5 h-3.5" />
+                          <span>
+                            Renova em{" "}
+                            <span className="text-foreground font-medium">
+                              {format(new Date(subscription.next_billing_date), "dd 'de' MMM", { locale: ptBR })}
+                            </span>
+                          </span>
+                        </div>
+                      )}
+
+                      {/* Suspended CTA */}
+                      {isSuspended && (
+                        <div className="pt-1">
+                          <p className="text-[11px] text-muted-foreground mb-2">
+                            Finalize o pagamento para ativar seus benefícios.
+                          </p>
+                          <Button
+                            onClick={() => {
+                              onOpenChange(false);
+                              setTimeout(() => navigate("/cliente/assinar", { 
+                                state: { resumePlanId: subscription.plano?.id || null }
+                              }), 300);
+                            }}
+                            className="w-full h-10 text-sm font-semibold"
+                          >
+                            Finalizar pagamento
+                          </Button>
+                        </div>
+                      )}
+                    </div>
                   </div>
 
-                  {/* Benefits */}
+                  {/* Benefícios */}
                   {benefits.length > 0 && (
-                    <div className="rounded-2xl border border-border/40 bg-card p-6 space-y-4">
-                      <h3 className="text-sm font-semibold text-foreground">
-                        Benefícios inclusos
-                      </h3>
-                      <div className="space-y-3">
+                    <div className="rounded-xl border border-border/40 bg-card p-4 space-y-3">
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
+                        BENEFÍCIOS INCLUSOS
+                      </p>
+                      <div className="space-y-2">
                         {benefits.map((benefit: string, i: number) => (
-                          <div key={i} className="flex items-start gap-3">
-                            <CheckCircle2 className="w-4 h-4 mt-0.5 text-primary flex-shrink-0" />
-                            <span className="text-sm text-muted-foreground">{benefit}</span>
+                          <div key={i} className="flex items-start gap-2.5">
+                            <CheckCircle2 className="w-3.5 h-3.5 mt-0.5 text-primary flex-shrink-0" />
+                            <span className="text-xs text-muted-foreground">{benefit}</span>
                           </div>
                         ))}
                       </div>
                     </div>
                   )}
 
-                  {/* Gerenciar pagamento - only for active */}
+                  {/* Gerenciar pagamento */}
                   {!isSuspended && (
                     <button
                       onClick={() => {
                         onOpenChange(false);
                         setTimeout(() => navigate("/cliente/pagamento"), 300);
                       }}
-                      className="w-full rounded-2xl border border-border/40 bg-card p-5 flex items-center justify-between hover:bg-muted/50 transition-colors"
+                      className="w-full rounded-xl border border-border/40 bg-card p-3.5 flex items-center justify-between hover:bg-muted/50 transition-colors active:scale-[0.99]"
                     >
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                          <CreditCard className="w-5 h-5 text-primary" />
+                        <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                          <CreditCard className="w-4 h-4 text-primary" />
                         </div>
                         <div className="text-left">
-                          <p className="text-sm font-semibold text-foreground">Formas de Pagamento</p>
-                          <p className="text-xs text-muted-foreground">
-                            {subscription.payment_method === 'card' ? 'Cartão de crédito • Débito automático' : 'PIX mensal'}
+                          <p className="text-xs font-semibold text-foreground">Formas de Pagamento</p>
+                          <p className="text-[11px] text-muted-foreground">
+                            {subscription.payment_method === 'card' ? 'Cartão • Débito automático' : 'PIX mensal'}
                           </p>
                         </div>
                       </div>
-                      <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                      <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />
                     </button>
                   )}
 
                   {/* Cancel */}
                   <button
                     onClick={() => setCancelDialogOpen(true)}
-                    className="w-full py-3 text-sm text-destructive hover:text-destructive/80 transition-colors"
+                    className="w-full py-2.5 text-xs text-destructive/70 hover:text-destructive transition-colors"
                   >
                     {isSuspended ? "Cancelar assinatura pendente" : "Cancelar assinatura"}
                   </button>

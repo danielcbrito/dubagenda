@@ -7,7 +7,8 @@ import {
   AlertCircle, 
   Loader2,
   ArrowLeft,
-  Crown
+  Crown,
+  Sparkles
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -31,7 +32,7 @@ interface SubscribePlanSheetProps {
 
 type LoadingState = "idle" | "loading" | "error" | "success";
 
-/** Card individual de plano */
+/** Card individual de plano — compacto e persuasivo */
 function PlanCard({ 
   plan, 
   isHighlighted,
@@ -47,44 +48,58 @@ function PlanCard({
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 16 }}
+      initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       className={cn(
-        "relative rounded-2xl border transition-all overflow-hidden",
+        "relative rounded-xl border transition-all overflow-hidden",
         isHighlighted 
-          ? "border-primary/40 bg-card shadow-lg shadow-primary/5" 
+          ? "border-primary/40 bg-card" 
           : "border-border/40 bg-card"
       )}
     >
-      {/* Accent top line for highlighted */}
       {isHighlighted && (
-        <div className="h-0.5 bg-gradient-to-r from-primary via-primary/80 to-primary/40" />
+        <div className="h-0.5 bg-gradient-to-r from-primary via-primary/60 to-transparent" />
       )}
 
-      <div className="p-6 space-y-5">
+      <div className="p-4 space-y-3.5">
+        {/* Popular badge */}
+        {isHighlighted && (
+          <div className="flex items-center gap-1.5">
+            <Sparkles className="w-3 h-3 text-primary" />
+            <span className="text-[10px] font-bold uppercase tracking-widest text-primary">
+              Recomendado
+            </span>
+          </div>
+        )}
+
         {/* Name & Description */}
-        <div className="space-y-1">
-          <h3 className="text-lg font-bold text-foreground">{plan.nome}</h3>
-          <p className="text-sm text-muted-foreground">{plan.descricao}</p>
+        <div>
+          <h3 className="text-base font-bold text-foreground">{plan.nome}</h3>
+          <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{plan.descricao}</p>
         </div>
 
         {/* Price */}
-        <div className="flex items-baseline gap-1">
-          <span className="text-3xl font-bold text-primary">
+        <div className="flex items-baseline gap-0.5">
+          <span className="text-2xl font-bold text-primary tabular-nums">
             R$ {Number(plan.preco_mensal).toFixed(2).replace('.', ',')}
           </span>
-          <span className="text-sm text-muted-foreground">/mês</span>
+          <span className="text-xs text-muted-foreground">/mês</span>
         </div>
 
         {/* Benefits */}
         {benefits.length > 0 && (
-          <div className="space-y-2.5 pt-2 border-t border-border/30">
-            {benefits.map((benefit: string, index: number) => (
-              <div key={index} className="flex items-start gap-3">
-                <CheckCircle2 className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
-                <span className="text-sm text-muted-foreground">{benefit}</span>
+          <div className="space-y-1.5 pt-3 border-t border-border/30">
+            {benefits.slice(0, 4).map((benefit: string, index: number) => (
+              <div key={index} className="flex items-center gap-2">
+                <CheckCircle2 className="w-3.5 h-3.5 text-primary flex-shrink-0" />
+                <span className="text-xs text-muted-foreground line-clamp-1">{benefit}</span>
               </div>
             ))}
+            {benefits.length > 4 && (
+              <p className="text-[10px] text-primary/70 pl-5.5 font-medium">
+                +{benefits.length - 4} benefícios
+              </p>
+            )}
           </div>
         )}
 
@@ -93,15 +108,15 @@ function PlanCard({
           onClick={onSubscribe}
           disabled={isSubscribing}
           className={cn(
-            "w-full h-12 font-semibold transition-all",
+            "w-full h-10 text-xs font-semibold transition-all",
             isHighlighted
               ? "bg-primary hover:bg-primary/90 text-primary-foreground"
               : "bg-secondary hover:bg-secondary/80 text-secondary-foreground"
           )}
         >
           {isSubscribing ? (
-            <div className="flex items-center gap-2">
-              <Loader2 className="w-4 h-4 animate-spin" />
+            <div className="flex items-center gap-1.5">
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
               Processando...
             </div>
           ) : (
@@ -267,29 +282,29 @@ export function SubscribePlanSheet({ open, onOpenChange, userId }: SubscribePlan
           transition={{ type: "spring", damping: 30, stiffness: 300 }}
           className="fixed inset-0 z-50 bg-background flex flex-col"
         >
-          {/* Header */}
-          <div className="flex items-center gap-3 px-5 py-4 border-b border-border/40">
+          {/* Header — compacto */}
+          <div className="flex items-center gap-3 px-4 pt-[max(env(safe-area-inset-top),0.75rem)] pb-3">
             <button
               onClick={() => onOpenChange(false)}
-              className="w-10 h-10 flex items-center justify-center rounded-full bg-card hover:bg-muted transition-colors"
+              className="w-8 h-8 flex items-center justify-center rounded-lg bg-card border border-border/40 hover:bg-muted transition-colors"
             >
-              <ArrowLeft className="w-5 h-5 text-foreground" />
+              <ArrowLeft className="w-4 h-4 text-foreground" />
             </button>
-            <h1 className="text-lg font-bold text-foreground">Escolha seu Plano</h1>
+            <h1 className="text-sm font-semibold text-foreground tracking-tight">Escolha seu Plano</h1>
           </div>
 
           {/* Content */}
-          <div className="flex-1 overflow-y-auto px-5 py-6">
+          <div className="flex-1 overflow-y-auto overscroll-contain px-4 pb-24">
             {/* Loading */}
             {loadingState === "loading" && (
-              <div className="space-y-4">
+              <div className="space-y-3 pt-2">
                 {[1, 2].map((i) => (
-                  <div key={i} className="rounded-2xl p-6 border border-border/40 bg-card">
-                    <Skeleton className="h-5 w-3/4 mb-3 bg-muted" />
-                    <Skeleton className="h-4 w-full mb-2 bg-muted" />
-                    <Skeleton className="h-8 w-32 mb-4 bg-muted" />
-                    <Skeleton className="h-16 w-full mb-3 bg-muted" />
-                    <Skeleton className="h-12 w-full bg-muted" />
+                  <div key={i} className="rounded-xl p-4 border border-border/40 bg-card">
+                    <Skeleton className="h-4 w-2/3 mb-2 bg-muted" />
+                    <Skeleton className="h-3 w-full mb-2 bg-muted" />
+                    <Skeleton className="h-6 w-28 mb-3 bg-muted" />
+                    <Skeleton className="h-12 w-full mb-2 bg-muted" />
+                    <Skeleton className="h-10 w-full bg-muted" />
                   </div>
                 ))}
               </div>
@@ -297,16 +312,16 @@ export function SubscribePlanSheet({ open, onOpenChange, userId }: SubscribePlan
 
             {/* Error */}
             {loadingState === "error" && (
-              <div className="flex flex-col items-center justify-center pt-20 space-y-6">
-                <div className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center">
-                  <AlertCircle className="w-8 h-8 text-destructive" />
+              <div className="flex flex-col items-center justify-center pt-16 space-y-5">
+                <div className="w-14 h-14 rounded-full bg-destructive/10 flex items-center justify-center">
+                  <AlertCircle className="w-6 h-6 text-destructive" />
                 </div>
                 <div className="text-center space-y-1">
                   <p className="text-sm font-medium text-foreground">Erro ao carregar planos</p>
-                  <p className="text-xs text-muted-foreground max-w-xs">{errorMessage}</p>
+                  <p className="text-xs text-muted-foreground max-w-[260px]">{errorMessage}</p>
                 </div>
-                <Button onClick={loadPlans} className="h-11 px-6 bg-primary hover:bg-primary/90">
-                  <Loader2 className="w-4 h-4 mr-2" />
+                <Button onClick={loadPlans} size="sm" className="h-9 px-5">
+                  <Loader2 className="w-3.5 h-3.5 mr-1.5" />
                   Tentar Novamente
                 </Button>
               </div>
@@ -314,28 +329,26 @@ export function SubscribePlanSheet({ open, onOpenChange, userId }: SubscribePlan
 
             {/* Empty */}
             {loadingState === "success" && plans.length === 0 && (
-              <div className="flex flex-col items-center justify-center pt-20 space-y-6">
-                <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center">
-                  <Crown className="w-8 h-8 text-muted-foreground" />
+              <div className="flex flex-col items-center justify-center pt-16 space-y-5">
+                <div className="w-14 h-14 rounded-full bg-muted/50 flex items-center justify-center">
+                  <Crown className="w-6 h-6 text-muted-foreground" />
                 </div>
                 <div className="text-center space-y-1">
                   <p className="text-sm font-medium text-muted-foreground">Nenhum plano disponível</p>
-                  <p className="text-xs text-muted-foreground">
-                    Tente novamente mais tarde.
-                  </p>
+                  <p className="text-xs text-muted-foreground">Tente novamente mais tarde.</p>
                 </div>
               </div>
             )}
 
             {/* Plans List */}
             {loadingState === "success" && plans.length > 0 && (
-              <div className="space-y-4 pb-6">
+              <div className="space-y-3 pt-1">
                 {plans.map((plan, index) => (
                   <motion.div
                     key={plan.id}
-                    initial={{ opacity: 0, y: 16 }}
+                    initial={{ opacity: 0, y: 12 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.08 }}
+                    transition={{ delay: index * 0.06 }}
                   >
                     <PlanCard
                       plan={plan}

@@ -10,6 +10,7 @@ import {
   Crown,
   CreditCard,
   Loader2,
+  Sparkles,
 } from "lucide-react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
@@ -25,7 +26,7 @@ interface Plan {
   limite_agendamentos_mes: number;
 }
 
-/** Card de plano premium */
+/** Card de plano compacto e persuasivo */
 function PlanCard({ 
   plan, 
   isSelected,
@@ -44,14 +45,14 @@ function PlanCard({
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 16 }}
+      initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       whileTap={{ scale: disabled ? 1 : 0.98 }}
       onClick={() => !disabled && onSelect()}
       className={cn(
-        "relative rounded-2xl border transition-all cursor-pointer overflow-hidden",
+        "relative rounded-xl border transition-all cursor-pointer overflow-hidden active:scale-[0.99]",
         isSelected
-          ? "border-primary/50 bg-card shadow-lg shadow-primary/5 ring-2 ring-primary/30"
+          ? "border-primary/50 bg-card ring-2 ring-primary/20"
           : isMostPopular
             ? "border-primary/20 bg-card hover:border-primary/40"
             : "border-border/40 bg-card hover:border-border",
@@ -59,54 +60,65 @@ function PlanCard({
       )}
     >
       {(isSelected || isMostPopular) && (
-        <div className="h-0.5 bg-gradient-to-r from-primary via-primary/80 to-primary/40" />
+        <div className="h-0.5 bg-gradient-to-r from-primary via-primary/60 to-transparent" />
       )}
 
-      <div className="p-6">
+      <div className="p-4">
+        {/* Popular badge */}
         {isMostPopular && !isSelected && (
-          <div className="flex items-center gap-1.5 mb-3">
-            <Crown className="w-3.5 h-3.5 text-primary" />
-            <span className="text-[11px] font-bold uppercase tracking-widest text-primary">
+          <div className="flex items-center gap-1.5 mb-2">
+            <Sparkles className="w-3 h-3 text-primary" />
+            <span className="text-[10px] font-bold uppercase tracking-widest text-primary">
               Mais Popular
             </span>
           </div>
         )}
+
+        {/* Check indicator */}
         {isSelected && (
-          <div className="absolute top-5 right-5">
-            <div className="w-7 h-7 bg-primary rounded-full flex items-center justify-center">
-              <Check className="w-4 h-4 text-primary-foreground" />
+          <div className="absolute top-4 right-4">
+            <div className="w-6 h-6 bg-primary rounded-full flex items-center justify-center">
+              <Check className="w-3.5 h-3.5 text-primary-foreground" />
             </div>
           </div>
         )}
 
-        <div className="mb-4 pr-10">
-          <h3 className="text-xl font-bold text-foreground mb-1">{plan.nome}</h3>
-          <p className="text-sm text-muted-foreground">{plan.descricao}</p>
+        {/* Name + description */}
+        <div className="mb-3 pr-8">
+          <h3 className="text-base font-bold text-foreground">{plan.nome}</h3>
+          <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{plan.descricao}</p>
         </div>
 
-        <div className="mb-5">
-          <div className="flex items-baseline gap-1">
-            <span className="text-3xl font-bold text-primary">
+        {/* Price */}
+        <div className="mb-3">
+          <div className="flex items-baseline gap-0.5">
+            <span className="text-2xl font-bold text-primary tabular-nums">
               R$ {plan.preco_mensal.toFixed(2).replace('.', ',')}
             </span>
-            <span className="text-sm text-muted-foreground">/mês</span>
+            <span className="text-xs text-muted-foreground">/mês</span>
           </div>
         </div>
 
-        <div className="space-y-2.5 pt-4 border-t border-border/30">
-          <div className="flex items-start gap-3">
-            <CheckCircle2 className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
-            <span className="text-sm text-muted-foreground">
-              {plan.limite_agendamentos_mes} agendamentos por mês
+        {/* Benefits — compacto */}
+        <div className="space-y-1.5 pt-3 border-t border-border/30">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-3.5 h-3.5 text-primary flex-shrink-0" />
+            <span className="text-xs text-muted-foreground">
+              {plan.limite_agendamentos_mes} agendamentos/mês
             </span>
           </div>
           
-          {benefits.map((beneficio: string, index: number) => (
-            <div key={index} className="flex items-start gap-3">
-              <CheckCircle2 className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
-              <span className="text-sm text-muted-foreground">{beneficio}</span>
+          {benefits.slice(0, 3).map((beneficio: string, index: number) => (
+            <div key={index} className="flex items-center gap-2">
+              <CheckCircle2 className="w-3.5 h-3.5 text-primary flex-shrink-0" />
+              <span className="text-xs text-muted-foreground line-clamp-1">{beneficio}</span>
             </div>
           ))}
+          {benefits.length > 3 && (
+            <p className="text-[10px] text-primary/70 pl-5.5 font-medium">
+              +{benefits.length - 3} benefícios
+            </p>
+          )}
         </div>
       </div>
     </motion.div>
@@ -129,13 +141,12 @@ const ClienteAssinar = () => {
     checkActiveSubscription();
   }, []);
 
-  // Se veio com resumePlanId, auto-seleciona o plano e vai direto para pagamento
   useEffect(() => {
     if (resumePlanId && plans.length > 0 && (step === 0 || step === 1)) {
       const plan = plans.find(p => p.id === resumePlanId);
       if (plan) {
         setSelectedPlan(plan);
-        setStep(2); // Ir direto para escolha de pagamento
+        setStep(2);
       } else {
         setStep(1);
       }
@@ -147,14 +158,12 @@ const ClienteAssinar = () => {
   const checkActiveSubscription = async () => {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return;
-
     const { data } = await supabase
       .from('assinaturas')
       .select('*')
       .eq('user_id', session.user.id)
       .eq('status', 'active')
       .maybeSingle();
-
     setHasActiveSubscription(!!data);
   };
 
@@ -164,17 +173,14 @@ const ClienteAssinar = () => {
       .select('*')
       .eq('ativo', true)
       .order('preco_mensal');
-
     setPlans(data || []);
   };
 
-  /** Avançar para pagamento */
   const handleProceedToPayment = () => {
     if (!selectedPlan) return;
     setStep(2);
   };
 
-  /** Finalizar pagamento com o método escolhido */
   const handlePayment = async () => {
     if (!selectedPlan || !selectedPaymentMethod) return;
     setLoading(true);
@@ -188,28 +194,21 @@ const ClienteAssinar = () => {
       }
 
       if (selectedPaymentMethod === "card") {
-        // Asaas Checkout (Cartão)
         const { data, error } = await supabase.functions.invoke('create-subscription-card', {
           body: { planoId: selectedPlan.id }
         });
-
         if (error) throw error;
         if (data?.error) throw new Error(data.error);
-        
         if (data?.url) {
           window.location.href = data.url;
           toast.info("Complete o pagamento para ativar sua assinatura");
         }
       } else {
-        // PIX via Asaas
         const { data, error } = await supabase.functions.invoke('create-subscription-pix', {
           body: { planoId: selectedPlan.id }
         });
-
         if (error) throw error;
-
         if (data?.success) {
-          // Salvar dados do PIX e redirecionar para checkout PIX
           const pixCheckoutData = {
             pixQrCode: data.pixQrCode,
             pixPayload: data.pixPayload,
@@ -231,14 +230,13 @@ const ClienteAssinar = () => {
     }
   };
 
-  /** Título do header conforme o step */
-  const headerTitle = step === 1 ? "Escolha o melhor para você" : "Forma de pagamento";
+  const headerTitle = step === 1 ? "Escolha seu plano" : "Forma de pagamento";
 
   return (
     <div className="min-h-screen pb-20">
       
-      {/* Header */}
-      <div className="sticky top-0 z-10 px-4 pt-[max(env(safe-area-inset-top),1rem)] pb-3 bg-background/80 backdrop-blur-xl">
+      {/* Header — compacto, seta + título */}
+      <div className="sticky top-0 z-10 px-4 pt-[max(env(safe-area-inset-top),0.75rem)] pb-3 bg-background/80 backdrop-blur-xl">
         <div className="max-w-2xl mx-auto flex items-center gap-3">
           <button 
             onClick={() => {
@@ -249,13 +247,13 @@ const ClienteAssinar = () => {
                 navigate("/cliente");
               }
             }}
-            className="w-9 h-9 flex items-center justify-center rounded-full bg-card border border-border/40 hover:bg-muted transition-colors"
+            className="w-8 h-8 flex items-center justify-center rounded-lg bg-card border border-border/40 hover:bg-muted transition-colors"
           >
             <ArrowLeft className="w-4 h-4 text-foreground" />
           </button>
           <motion.p 
             key={headerTitle}
-            initial={{ opacity: 0, x: -8 }}
+            initial={{ opacity: 0, x: -6 }}
             animate={{ opacity: 1, x: 0 }}
             className="text-sm font-semibold text-foreground tracking-tight"
           >
@@ -264,32 +262,32 @@ const ClienteAssinar = () => {
         </div>
       </div>
 
-      <div className="max-w-2xl mx-auto p-4 space-y-6">
+      <div className="max-w-2xl mx-auto px-4 space-y-4">
         
-        {/* Aviso de assinatura ativa */}
+        {/* Aviso assinatura ativa */}
         {hasActiveSubscription && (
           <motion.div 
-            initial={{ opacity: 0, y: -10 }}
+            initial={{ opacity: 0, y: -8 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-destructive/10 border border-destructive/30 rounded-xl p-4"
+            className="bg-destructive/10 border border-destructive/30 rounded-lg p-3"
           >
-            <p className="text-sm text-destructive">
+            <p className="text-xs text-destructive">
               Você já possui uma assinatura ativa. Cancele-a antes de assinar outro plano.
             </p>
           </motion.div>
         )}
 
         <AnimatePresence mode="wait">
-          {/* Loading state */}
+          {/* Loading */}
           {step === 0 && (
             <motion.div
               key="step0"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="flex items-center justify-center py-20"
+              className="flex items-center justify-center py-16"
             >
-              <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+              <div className="w-7 h-7 border-2 border-primary border-t-transparent rounded-full animate-spin" />
             </motion.div>
           )}
 
@@ -297,56 +295,54 @@ const ClienteAssinar = () => {
           {step === 1 && (
             <motion.div
               key="step1"
-              initial={{ opacity: 0, x: -20 }}
+              initial={{ opacity: 0, x: -16 }}
               animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 20 }}
-              className="space-y-4 pb-28"
+              exit={{ opacity: 0, x: 16 }}
+              className="space-y-3 pb-28"
             >
-              <div className="space-y-4">
-                {plans.map((plan, index) => (
-                  <PlanCard 
-                    key={plan.id}
-                    plan={plan}
-                    isSelected={selectedPlan?.id === plan.id}
-                    isPopular={index === Math.floor(plans.length / 2)}
-                    onSelect={() => setSelectedPlan(plan)}
-                    disabled={hasActiveSubscription}
-                  />
-                ))}
-              </div>
+              {plans.map((plan, index) => (
+                <PlanCard 
+                  key={plan.id}
+                  plan={plan}
+                  isSelected={selectedPlan?.id === plan.id}
+                  isPopular={index === Math.floor(plans.length / 2)}
+                  onSelect={() => setSelectedPlan(plan)}
+                  disabled={hasActiveSubscription}
+                />
+              ))}
             </motion.div>
           )}
 
-          {/* Step 2: Escolha de Forma de Pagamento */}
+          {/* Step 2: Pagamento */}
           {step === 2 && selectedPlan && (
             <motion.div
               key="step2"
-              initial={{ opacity: 0, x: 20 }}
+              initial={{ opacity: 0, x: 16 }}
               animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              className="space-y-5 pb-28"
+              exit={{ opacity: 0, x: -16 }}
+              className="space-y-3 pb-28"
             >
-              {/* Resumo do plano selecionado */}
-              <div className="rounded-2xl border border-border/40 bg-card p-5">
+              {/* Resumo compacto */}
+              <div className="rounded-xl border border-border/40 bg-card p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium mb-1">
+                    <p className="text-[10px] text-muted-foreground/60 uppercase tracking-widest font-bold mb-0.5">
                       Plano selecionado
                     </p>
-                    <p className="text-lg font-bold text-foreground">{selectedPlan.nome}</p>
+                    <p className="text-sm font-bold text-foreground">{selectedPlan.nome}</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-2xl font-bold text-primary">
+                    <p className="text-xl font-bold text-primary tabular-nums">
                       R$ {selectedPlan.preco_mensal.toFixed(2).replace('.', ',')}
                     </p>
-                    <p className="text-xs text-muted-foreground">/mês</p>
+                    <p className="text-[10px] text-muted-foreground">/mês</p>
                   </div>
                 </div>
               </div>
 
               {/* Opções de pagamento */}
-              <div className="space-y-3">
-                <p className="text-sm font-semibold text-foreground">
+              <div className="space-y-2">
+                <p className="text-xs font-semibold text-foreground">
                   Como deseja pagar?
                 </p>
 
@@ -355,28 +351,28 @@ const ClienteAssinar = () => {
                   whileTap={{ scale: 0.98 }}
                   onClick={() => setSelectedPaymentMethod("pix")}
                   className={cn(
-                    "w-full rounded-2xl border p-5 text-left transition-all",
+                    "w-full rounded-xl border p-3.5 text-left transition-all active:scale-[0.99]",
                     selectedPaymentMethod === "pix"
-                      ? "border-primary/50 bg-card ring-2 ring-primary/30"
+                      ? "border-primary/50 bg-card ring-2 ring-primary/20"
                       : "border-border/40 bg-card hover:border-border"
                   )}
                 >
-                  <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-3">
                     <div className={cn(
-                      "w-12 h-12 rounded-xl flex items-center justify-center transition-colors",
+                      "w-10 h-10 rounded-lg flex items-center justify-center transition-colors",
                       selectedPaymentMethod === "pix" ? "bg-primary/15" : "bg-muted/60"
                     )}>
-                      <img src={pixIcon} alt="PIX" className="w-6 h-6" />
+                      <img src={pixIcon} alt="PIX" className="w-5 h-5" />
                     </div>
                     <div className="flex-1">
-                      <p className="font-semibold text-sm text-foreground">Pix</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">
+                      <p className="font-semibold text-xs text-foreground">Pix</p>
+                      <p className="text-[11px] text-muted-foreground mt-0.5">
                         Pagamento instantâneo via QR Code
                       </p>
                     </div>
                     {selectedPaymentMethod === "pix" && (
-                      <div className="w-6 h-6 bg-primary rounded-full flex items-center justify-center">
-                        <Check className="w-3.5 h-3.5 text-primary-foreground" />
+                      <div className="w-5 h-5 bg-primary rounded-full flex items-center justify-center">
+                        <Check className="w-3 h-3 text-primary-foreground" />
                       </div>
                     )}
                   </div>
@@ -387,31 +383,31 @@ const ClienteAssinar = () => {
                   whileTap={{ scale: 0.98 }}
                   onClick={() => setSelectedPaymentMethod("card")}
                   className={cn(
-                    "w-full rounded-2xl border p-5 text-left transition-all",
+                    "w-full rounded-xl border p-3.5 text-left transition-all active:scale-[0.99]",
                     selectedPaymentMethod === "card"
-                      ? "border-primary/50 bg-card ring-2 ring-primary/30"
+                      ? "border-primary/50 bg-card ring-2 ring-primary/20"
                       : "border-border/40 bg-card hover:border-border"
                   )}
                 >
-                  <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-3">
                     <div className={cn(
-                      "w-12 h-12 rounded-xl flex items-center justify-center transition-colors",
+                      "w-10 h-10 rounded-lg flex items-center justify-center transition-colors",
                       selectedPaymentMethod === "card" ? "bg-primary/15" : "bg-muted/60"
                     )}>
                       <CreditCard className={cn(
-                        "w-6 h-6 transition-colors",
+                        "w-5 h-5 transition-colors",
                         selectedPaymentMethod === "card" ? "text-primary" : "text-muted-foreground"
                       )} />
                     </div>
                     <div className="flex-1">
-                      <p className="font-semibold text-sm text-foreground">Cartão de Crédito/Débito</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">
+                      <p className="font-semibold text-xs text-foreground">Cartão de Crédito/Débito</p>
+                      <p className="text-[11px] text-muted-foreground mt-0.5">
                         Pagamento seguro via checkout
                       </p>
                     </div>
                     {selectedPaymentMethod === "card" && (
-                      <div className="w-6 h-6 bg-primary rounded-full flex items-center justify-center">
-                        <Check className="w-3.5 h-3.5 text-primary-foreground" />
+                      <div className="w-5 h-5 bg-primary rounded-full flex items-center justify-center">
+                        <Check className="w-3 h-3 text-primary-foreground" />
                       </div>
                     )}
                   </div>
@@ -422,9 +418,8 @@ const ClienteAssinar = () => {
         </AnimatePresence>
       </div>
 
-      {/* Floating Bottom Bar */}
+      {/* Floating Bottom Bar — Step 1 */}
       <AnimatePresence>
-        {/* Step 1 — Avançar para pagamento */}
         {step === 1 && selectedPlan && !hasActiveSubscription && (
           <motion.div
             key="bar-step1"
@@ -435,33 +430,33 @@ const ClienteAssinar = () => {
             className="fixed bottom-0 left-0 right-0 z-40"
           >
             <div className="relative px-4 pb-safe">
-              <div className="absolute -top-12 left-0 right-0 h-12 bg-gradient-to-t from-background to-transparent pointer-events-none" />
+              <div className="absolute -top-10 left-0 right-0 h-10 bg-gradient-to-t from-background to-transparent pointer-events-none" />
               <div 
                 className="relative mx-auto max-w-md"
                 style={{
-                  borderRadius: "16px",
-                  background: "rgba(18, 18, 20, 0.95)",
-                  boxShadow: "0 0 0 1px rgba(255, 255, 255, 0.08), 0 8px 32px -8px rgba(0, 0, 0, 0.6), 0 4px 16px -4px rgba(239, 68, 68, 0.1)",
+                  borderRadius: "14px",
+                  background: "hsl(var(--card) / 0.95)",
+                  boxShadow: "0 0 0 1px hsl(var(--border) / 0.3), 0 8px 24px -6px rgba(0, 0, 0, 0.4)",
                   backdropFilter: "blur(20px)"
                 }}
               >
                 <div 
-                  className="absolute top-0 left-1/2 -translate-x-1/2 w-24 h-[1px]"
-                  style={{ background: "linear-gradient(90deg, transparent, hsl(var(--primary) / 0.5), transparent)" }}
+                  className="absolute top-0 left-1/2 -translate-x-1/2 w-20 h-[1px]"
+                  style={{ background: "linear-gradient(90deg, transparent, hsl(var(--primary) / 0.4), transparent)" }}
                 />
-                <div className="flex items-center justify-between px-4 py-3">
-                  <div className="flex items-center gap-3">
+                <div className="flex items-center justify-between px-3.5 py-2.5">
+                  <div className="flex items-center gap-2.5">
                     <div 
-                      className="flex items-center justify-center w-9 h-9 rounded-xl"
+                      className="flex items-center justify-center w-8 h-8 rounded-lg"
                       style={{ background: "linear-gradient(135deg, hsl(var(--primary) / 0.15), hsl(var(--primary) / 0.05))" }}
                     >
-                      <Crown className="w-4 h-4 text-primary" />
+                      <Crown className="w-3.5 h-3.5 text-primary" />
                     </div>
                     <div>
-                      <div className="text-xs text-muted-foreground/60">{selectedPlan.nome}</div>
-                      <div className="flex items-baseline gap-1 mt-0.5">
+                      <div className="text-[10px] text-muted-foreground/60">{selectedPlan.nome}</div>
+                      <div className="flex items-baseline gap-0.5 mt-0.5">
                         <span className="text-[10px] text-muted-foreground/50">R$</span>
-                        <span className="text-base font-semibold text-foreground">
+                        <span className="text-sm font-semibold text-foreground tabular-nums">
                           {selectedPlan.preco_mensal.toFixed(2).replace('.', ',')}
                         </span>
                         <span className="text-[10px] text-muted-foreground/50">/mês</span>
@@ -470,16 +465,11 @@ const ClienteAssinar = () => {
                   </div>
                   <motion.button
                     onClick={handleProceedToPayment}
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    className="group flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium text-sm text-white"
-                    style={{
-                      background: "linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(0 65% 42%) 100%)",
-                      boxShadow: "0 2px 12px hsl(var(--primary) / 0.35), inset 0 1px 0 rgba(255,255,255,0.15)"
-                    }}
+                    whileTap={{ scale: 0.96 }}
+                    className="group flex items-center gap-1.5 px-4 py-2 rounded-lg font-medium text-xs text-primary-foreground bg-primary hover:bg-primary/90 transition-colors"
                   >
                     <span>Continuar</span>
-                    <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
+                    <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" />
                   </motion.button>
                 </div>
               </div>
@@ -488,7 +478,7 @@ const ClienteAssinar = () => {
           </motion.div>
         )}
 
-        {/* Step 2 — Confirmar pagamento */}
+        {/* Floating Bottom Bar — Step 2 */}
         {step === 2 && selectedPaymentMethod && !hasActiveSubscription && (
           <motion.div
             key="bar-step2"
@@ -499,39 +489,39 @@ const ClienteAssinar = () => {
             className="fixed bottom-0 left-0 right-0 z-40"
           >
             <div className="relative px-4 pb-safe">
-              <div className="absolute -top-12 left-0 right-0 h-12 bg-gradient-to-t from-background to-transparent pointer-events-none" />
+              <div className="absolute -top-10 left-0 right-0 h-10 bg-gradient-to-t from-background to-transparent pointer-events-none" />
               <div 
                 className="relative mx-auto max-w-md"
                 style={{
-                  borderRadius: "16px",
-                  background: "rgba(18, 18, 20, 0.95)",
-                  boxShadow: "0 0 0 1px rgba(255, 255, 255, 0.08), 0 8px 32px -8px rgba(0, 0, 0, 0.6), 0 4px 16px -4px rgba(239, 68, 68, 0.1)",
+                  borderRadius: "14px",
+                  background: "hsl(var(--card) / 0.95)",
+                  boxShadow: "0 0 0 1px hsl(var(--border) / 0.3), 0 8px 24px -6px rgba(0, 0, 0, 0.4)",
                   backdropFilter: "blur(20px)"
                 }}
               >
                 <div 
-                  className="absolute top-0 left-1/2 -translate-x-1/2 w-24 h-[1px]"
-                  style={{ background: "linear-gradient(90deg, transparent, hsl(var(--primary) / 0.5), transparent)" }}
+                  className="absolute top-0 left-1/2 -translate-x-1/2 w-20 h-[1px]"
+                  style={{ background: "linear-gradient(90deg, transparent, hsl(var(--primary) / 0.4), transparent)" }}
                 />
-                <div className="flex items-center justify-between px-4 py-3">
-                  <div className="flex items-center gap-3">
+                <div className="flex items-center justify-between px-3.5 py-2.5">
+                  <div className="flex items-center gap-2.5">
                     <div 
-                      className="flex items-center justify-center w-9 h-9 rounded-xl"
+                      className="flex items-center justify-center w-8 h-8 rounded-lg"
                       style={{ background: "linear-gradient(135deg, hsl(var(--primary) / 0.15), hsl(var(--primary) / 0.05))" }}
                     >
                       {selectedPaymentMethod === "pix" ? (
-                        <img src={pixIcon} alt="PIX" className="w-4 h-4" />
+                        <img src={pixIcon} alt="PIX" className="w-3.5 h-3.5" />
                       ) : (
-                        <CreditCard className="w-4 h-4 text-primary" />
+                        <CreditCard className="w-3.5 h-3.5 text-primary" />
                       )}
                     </div>
                     <div>
-                      <div className="text-xs text-muted-foreground/60">
+                      <div className="text-[10px] text-muted-foreground/60">
                         {selectedPaymentMethod === "pix" ? "Pagar via Pix" : "Pagar via Cartão"}
                       </div>
-                      <div className="flex items-baseline gap-1 mt-0.5">
+                      <div className="flex items-baseline gap-0.5 mt-0.5">
                         <span className="text-[10px] text-muted-foreground/50">R$</span>
-                        <span className="text-base font-semibold text-foreground">
+                        <span className="text-sm font-semibold text-foreground tabular-nums">
                           {selectedPlan?.preco_mensal.toFixed(2).replace('.', ',')}
                         </span>
                       </div>
@@ -540,20 +530,15 @@ const ClienteAssinar = () => {
                   <motion.button
                     onClick={handlePayment}
                     disabled={loading}
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    className="group flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium text-sm text-white disabled:opacity-50"
-                    style={{
-                      background: "linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(0 65% 42%) 100%)",
-                      boxShadow: "0 2px 12px hsl(var(--primary) / 0.35), inset 0 1px 0 rgba(255,255,255,0.15)"
-                    }}
+                    whileTap={{ scale: 0.96 }}
+                    className="group flex items-center gap-1.5 px-4 py-2 rounded-lg font-medium text-xs text-primary-foreground bg-primary hover:bg-primary/90 transition-colors disabled:opacity-50"
                   >
                     {loading ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
                     ) : (
                       <>
                         <span>Assinar</span>
-                        <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
+                        <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" />
                       </>
                     )}
                   </motion.button>
