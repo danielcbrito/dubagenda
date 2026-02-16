@@ -35,8 +35,8 @@ export function BookingBottomBar({
         >
           <div className="relative px-4 pb-safe">
             <div 
-              className="absolute -top-24 left-0 right-0 h-24 pointer-events-none"
-              style={{ background: "linear-gradient(to top, #000000 0%, rgba(0,0,0,0.85) 40%, rgba(0,0,0,0) 100%)" }}
+              className="absolute -bottom-6 left-0 right-0 h-24 pointer-events-none"
+              style={{ background: "linear-gradient(to bottom, #000000 0%, rgba(0,0,0,0.85) 40%, rgba(0,0,0,0) 100%)" }}
             />
             <div 
               className="absolute -bottom-4 left-4 right-4 h-10 rounded-2xl pointer-events-none"
