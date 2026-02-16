@@ -31,16 +31,23 @@ export function BookingBottomBar({
             stiffness: 500, 
             damping: 40
           }}
-          className={cn("fixed bottom-0 left-0 right-0 z-40", className)}
+          className={cn("fixed bottom-6 left-0 right-0 z-40", className)}
         >
           <div className="relative px-4 pb-safe">
-            {/* Compact floating bar */}
+            <div 
+              className="absolute -bottom-4 left-6 right-6 h-12 rounded-2xl pointer-events-none"
+              style={{ 
+                background: "radial-gradient(ellipse at center, rgba(0,0,0,0.7) 0%, transparent 70%)",
+                filter: "blur(12px)"
+              }}
+            />
+            
             <div 
               className="relative mx-auto max-w-md overflow-hidden"
               style={{
                 borderRadius: "14px",
                 background: "rgba(10, 10, 12, 0.97)",
-                boxShadow: "0 -8px 30px -4px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.04)",
+                boxShadow: "0 8px 40px -4px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.04)",
                 backdropFilter: "blur(24px)"
               }}
             >
