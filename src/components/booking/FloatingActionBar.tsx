@@ -38,26 +38,16 @@ export function FloatingActionBar({
           className={cn("fixed bottom-4 left-0 right-0 z-40", className)}
         >
           <div className="relative px-4 pb-safe">
-            {/* Dark fade for depth */}
-            <div className="absolute -top-10 left-0 right-0 h-10 pointer-events-none" style={{ background: "linear-gradient(to top, rgba(0,0,0,0.6), transparent)" }} />
-            
             {/* Compact floating bar */}
             <div 
-              className="relative mx-auto max-w-md"
+              className="relative mx-auto max-w-md overflow-hidden"
               style={{
                 borderRadius: "14px",
-                background: "rgba(12, 12, 14, 0.95)",
-                boxShadow: "0 -4px 24px -4px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05)",
-                backdropFilter: "blur(20px)"
+                background: "rgba(10, 10, 12, 0.97)",
+                boxShadow: "0 -8px 30px -4px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.04)",
+                backdropFilter: "blur(24px)"
               }}
             >
-              {/* Subtle top accent */}
-              <div 
-                className="absolute top-0 left-1/2 -translate-x-1/2 w-24 h-[1px]"
-                style={{
-                  background: "linear-gradient(90deg, transparent, hsl(var(--primary) / 0.5), transparent)"
-                }}
-              />
               
               <div className="flex items-center justify-between px-3.5 py-2.5">
                 {/* Left: Icon + info inline */}
