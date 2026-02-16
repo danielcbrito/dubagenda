@@ -38,20 +38,16 @@ export function FloatingActionBar({
           className={cn("fixed bottom-4 left-0 right-0 z-40", className)}
         >
           <div className="relative px-4 pb-safe">
-            {/* Fade gradient */}
-            <div className="absolute -top-12 left-0 right-0 h-12 bg-gradient-to-t from-background to-transparent pointer-events-none" />
+            {/* Subtle fade below content */}
+            <div className="absolute -top-8 left-0 right-0 h-8 bg-gradient-to-t from-background/80 to-transparent pointer-events-none" />
             
             {/* Compact floating bar */}
             <div 
               className="relative mx-auto max-w-md"
               style={{
-                borderRadius: "16px",
-                background: "rgba(18, 18, 20, 0.95)",
-                boxShadow: `
-                  0 0 0 1px rgba(255, 255, 255, 0.08),
-                  0 8px 32px -8px rgba(0, 0, 0, 0.6),
-                  0 4px 16px -4px rgba(239, 68, 68, 0.1)
-                `,
+                borderRadius: "14px",
+                background: "rgba(18, 18, 20, 0.92)",
+                boxShadow: "0 -2px 20px -6px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.06)",
                 backdropFilter: "blur(20px)"
               }}
             >
