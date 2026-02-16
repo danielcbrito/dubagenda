@@ -7,7 +7,7 @@ interface StepDotsProps {
 
 export function StepDots({ currentStep, totalSteps }: StepDotsProps) {
   return (
-    <div className="flex items-center justify-center gap-2">
+    <div className="flex items-center justify-center gap-1.5">
       {Array.from({ length: totalSteps }, (_, index) => {
         const stepNumber = index + 1;
         const isCompleted = stepNumber < currentStep;
@@ -17,10 +17,10 @@ export function StepDots({ currentStep, totalSteps }: StepDotsProps) {
           <div
             key={stepNumber}
             className={cn(
-              "w-2.5 h-2.5 rounded-full transition-all duration-300",
-              isCompleted && "bg-primary",
-              isCurrent && "bg-primary w-6",
-              !isCompleted && !isCurrent && "bg-muted-foreground/30"
+              "rounded-full transition-all duration-300",
+              isCompleted && "w-1.5 h-1.5 bg-primary/60",
+              isCurrent && "w-5 h-1.5 bg-primary",
+              !isCompleted && !isCurrent && "w-1.5 h-1.5 bg-muted-foreground/15"
             )}
           />
         );
