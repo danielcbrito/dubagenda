@@ -25,14 +25,10 @@ export function TimeSelectionBar({
     <AnimatePresence>
       {isVisible && (
         <motion.div
-          initial={{ y: 80, opacity: 0 }}
+          initial={{ y: 60, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
-          exit={{ y: 80, opacity: 0 }}
-          transition={{ 
-            type: "spring", 
-            stiffness: 500, 
-            damping: 40
-          }}
+          exit={{ y: 60, opacity: 0 }}
+          transition={{ duration: 0.35, ease: [0.25, 0.1, 0.25, 1] }}
           className={cn("fixed bottom-0 left-0 right-0 z-40", className)}
         >
           <div className="pb-safe" style={{ background: "linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.4) 15%, rgba(0,0,0,0.85) 35%, #000000 55%)" }}>
