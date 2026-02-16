@@ -73,12 +73,14 @@ export function BottomNavigation({
           <NavItem
             icon={Headphones}
             label="Suporte"
+            isActive={isActive("/suporte")}
             onClick={onSupportClick}
           />
           <NavItem
             icon={User}
             label="Perfil"
-            onClick={onProfileClick}
+            isActive={isActive("/cliente/perfil")}
+            onClick={() => navigate("/cliente/perfil")}
           />
         </div>
       </nav>
