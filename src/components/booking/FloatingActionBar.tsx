@@ -65,7 +65,7 @@ export function FloatingActionBar({
                   whileHover={{ scale: isLoading ? 1 : 1.02 }}
                   whileTap={{ scale: isLoading ? 1 : 0.95 }}
                   className={cn(
-                    "group flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-[14px] text-white",
+                    "group flex items-center gap-1.5 px-4 py-2 rounded-xl font-semibold text-[13px] text-white",
                     isLoading && "cursor-wait opacity-70"
                   )}
                   style={{
