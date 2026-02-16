@@ -109,71 +109,75 @@ All colors MUST be HSL. */
 
   /* ☀️ LIGHT THEME — Premium Branco Elegante */
   .light {
-    --background: 0 0% 97%;       /* #F7F7F7 - Branco suave, não cansa */
+    --background: 0 0% 96%;       /* #F5F5F5 - Off-white confortável */
     --background-elevated: 0 0% 100%;
-    --foreground: 0 0% 8%;        /* #141414 - Preto suave para texto */
+    --foreground: 0 0% 7%;        /* #121212 - Texto principal forte */
 
     --card: 0 0% 100%;            /* Branco puro */
-    --card-elevated: 0 0% 98%;
-    --card-foreground: 0 0% 8%;
+    --card-elevated: 0 0% 99%;
+    --card-foreground: 0 0% 7%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 8%;
+    --popover-foreground: 0 0% 7%;
 
-    --primary: 0 78% 50%;         /* Vermelho ligeiramente mais saturado */
-    --primary-glow: 0 78% 60%;
+    /* Vermelho Premium — mais saturado no claro */
+    --primary: 0 80% 48%;
+    --primary-glow: 0 80% 58%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 0 0% 93%;        /* Cinza claro */
-    --secondary-foreground: 0 0% 25%;
+    /* Secondary — contraste forte */
+    --secondary: 0 0% 92%;
+    --secondary-foreground: 0 0% 15%;
 
-    --muted: 0 0% 94%;
-    --muted-foreground: 0 0% 40%;
+    --muted: 0 0% 93%;
+    --muted-foreground: 0 0% 32%;  /* Muito mais escuro — legível */
 
-    --accent: 0 78% 50%;
+    --accent: 0 80% 48%;
     --accent-foreground: 0 0% 100%;
 
-    --gold: 40 65% 50%;
-    --gold-glow: 40 65% 60%;
+    /* Dourado */
+    --gold: 40 70% 45%;
+    --gold-glow: 40 70% 55%;
     --gold-foreground: 0 0% 100%;
 
-    --destructive: 0 84% 55%;
+    --destructive: 0 84% 50%;
     --destructive-foreground: 0 0% 100%;
 
-    --success: 142 76% 40%;
+    --success: 142 76% 36%;
     --success-foreground: 0 0% 100%;
 
-    --border: 0 0% 88%;           /* Borda suave */
-    --border-glow: 0 78% 50% / 0.25;
-    --input: 0 0% 92%;
-    --ring: 0 78% 50%;
+    /* Bordas — mais visíveis */
+    --border: 0 0% 84%;
+    --border-glow: 0 80% 48% / 0.2;
+    --input: 0 0% 90%;
+    --ring: 0 80% 48%;
 
     /* GRADIENTES LIGHT */
-    --gradient-titanium: linear-gradient(180deg, hsl(0 0% 98%), hsl(0 0% 95%));
-    --gradient-metallic: linear-gradient(135deg, hsl(0 0% 97%), hsl(0 0% 93%));
-    --gradient-glass: linear-gradient(135deg, rgba(255,255,255,0.8), rgba(255,255,255,0.5));
+    --gradient-titanium: linear-gradient(180deg, hsl(0 0% 98%), hsl(0 0% 94%));
+    --gradient-metallic: linear-gradient(135deg, hsl(0 0% 96%), hsl(0 0% 91%));
+    --gradient-glass: linear-gradient(135deg, rgba(255,255,255,0.85), rgba(255,255,255,0.6));
     --gradient-glass-dark: linear-gradient(135deg, rgba(255,255,255,0.95), rgba(245,245,245,0.98));
-    --gradient-red-neon: linear-gradient(90deg, transparent, hsl(0 78% 50% / 0.15), transparent);
-    --gradient-shine: linear-gradient(135deg, transparent 30%, rgba(255,255,255,0.6) 50%, transparent 70%);
+    --gradient-red-neon: linear-gradient(90deg, transparent, hsl(0 80% 48% / 0.12), transparent);
+    --gradient-shine: linear-gradient(135deg, transparent 30%, rgba(255,255,255,0.7) 50%, transparent 70%);
 
     /* GLASSMORPHISM LIGHT */
-    --glass-bg: rgba(255, 255, 255, 0.7);
-    --glass-bg-hover: rgba(255, 255, 255, 0.85);
-    --glass-border: rgba(0, 0, 0, 0.06);
-    --glass-border-bright: rgba(0, 0, 0, 0.10);
+    --glass-bg: rgba(255, 255, 255, 0.75);
+    --glass-bg-hover: rgba(255, 255, 255, 0.9);
+    --glass-border: rgba(0, 0, 0, 0.08);
+    --glass-border-bright: rgba(0, 0, 0, 0.13);
 
-    /* SHADOWS LIGHT — Sombras suaves e elegantes */
-    --shadow-premium: 0 10px 40px -10px rgba(0, 0, 0, 0.08), 0 4px 20px rgba(0, 0, 0, 0.04);
-    --shadow-premium-hover: 0 20px 60px -10px rgba(0, 0, 0, 0.12), 0 8px 30px rgba(0, 0, 0, 0.06);
-    --shadow-glow-red: 0 0 30px rgba(219, 59, 59, 0.08), 0 0 60px rgba(219, 59, 59, 0.04);
-    --shadow-glow-red-intense: 0 0 40px rgba(219, 59, 59, 0.12), 0 0 80px rgba(219, 59, 59, 0.06);
-    --shadow-glow-gold: 0 0 20px rgba(209, 168, 84, 0.1), 0 0 40px rgba(209, 168, 84, 0.05);
-    --shadow-inset-glass: inset 0 1px 0 rgba(255, 255, 255, 0.9), inset 0 -1px 0 rgba(0, 0, 0, 0.03);
-    --shadow-soft: 0 4px 24px rgba(0, 0, 0, 0.06);
-    --shadow-card: 0 2px 12px rgba(0, 0, 0, 0.06), 0 1px 4px rgba(0, 0, 0, 0.04);
-    --shadow-elegant: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
-    --shadow-glow: 0 0 40px rgba(219, 59, 59, 0.08);
-    --shadow-inset-titanium: inset 0 1px 0 rgba(255,255,255,0.8);
+    /* SHADOWS LIGHT — Sombras mais presentes */
+    --shadow-premium: 0 10px 40px -10px rgba(0, 0, 0, 0.10), 0 4px 20px rgba(0, 0, 0, 0.05);
+    --shadow-premium-hover: 0 20px 60px -10px rgba(0, 0, 0, 0.14), 0 8px 30px rgba(0, 0, 0, 0.07);
+    --shadow-glow-red: 0 0 30px rgba(200, 40, 40, 0.10), 0 0 60px rgba(200, 40, 40, 0.05);
+    --shadow-glow-red-intense: 0 0 40px rgba(200, 40, 40, 0.15), 0 0 80px rgba(200, 40, 40, 0.08);
+    --shadow-glow-gold: 0 0 20px rgba(180, 140, 50, 0.12), 0 0 40px rgba(180, 140, 50, 0.06);
+    --shadow-inset-glass: inset 0 1px 0 rgba(255, 255, 255, 1), inset 0 -1px 0 rgba(0, 0, 0, 0.04);
+    --shadow-soft: 0 4px 24px rgba(0, 0, 0, 0.08);
+    --shadow-card: 0 2px 16px rgba(0, 0, 0, 0.07), 0 1px 4px rgba(0, 0, 0, 0.05);
+    --shadow-elegant: 0 25px 50px -12px rgba(0, 0, 0, 0.12);
+    --shadow-glow: 0 0 40px rgba(200, 40, 40, 0.10);
+    --shadow-inset-titanium: inset 0 1px 0 rgba(255,255,255,0.9);
   }
 }
 
