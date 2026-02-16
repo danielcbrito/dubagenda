@@ -64,7 +64,7 @@ export function TimeSelectionBar({
                   whileHover={{ scale: isLoading ? 1 : 1.02 }}
                   whileTap={{ scale: isLoading ? 1 : 0.95 }}
                   className={cn(
-                    "group flex items-center gap-1.5 px-3.5 py-2 rounded-lg font-medium text-[12px] text-white",
+                    "group flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-[14px] text-white",
                     isLoading && "cursor-wait opacity-70"
                   )}
                   style={{
@@ -75,7 +75,7 @@ export function TimeSelectionBar({
                   {isLoading ? (
                     <>
                       <motion.div 
-                        className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full"
+                        className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full"
                         animate={{ rotate: 360 }}
                         transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
                       />
@@ -84,7 +84,7 @@ export function TimeSelectionBar({
                   ) : (
                     <>
                       <span>Continuar</span>
-                      <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" />
+                      <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
                     </>
                   )}
                 </motion.button>

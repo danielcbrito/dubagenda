@@ -36,28 +36,28 @@ export function BookingBottomBar({
           <div className="pb-safe backdrop-blur-2xl" style={{ background: "linear-gradient(to bottom, transparent 0%, rgba(10,10,12,0.7) 20%, rgba(10,10,12,0.95) 40%, #0a0a0c 60%)" }}>
             <div className="w-full px-5 pt-8 pb-5">
               
-              <div className="flex items-center justify-between px-3.5 py-2.5">
+              <div className="flex items-center justify-between">
                 
                 {/* Left: Summary inline */}
-                <div className="flex items-center gap-2.5">
+                <div className="flex items-center gap-3">
                   <div 
-                    className="flex items-center justify-center w-7 h-7 rounded-lg"
+                    className="flex items-center justify-center w-10 h-10 rounded-xl"
                     style={{
                       background: "linear-gradient(135deg, hsl(var(--primary) / 0.15), hsl(var(--primary) / 0.05))"
                     }}
                   >
-                    <span className="text-[11px] font-bold text-primary">{serviceCount}</span>
+                    <span className="text-[13px] font-bold text-primary">{serviceCount}</span>
                   </div>
                   
-                  <div className="flex items-center gap-1.5">
-                    <div className="flex items-center gap-1 text-[11px] text-muted-foreground/60">
-                      <Clock className="w-3 h-3" />
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1 text-[13px] text-muted-foreground/70">
+                      <Clock className="w-3.5 h-3.5" />
                       <span>{totalDuration}min</span>
                     </div>
-                    <span className="text-[10px] text-muted-foreground/50">•</span>
+                    <span className="text-[11px] text-muted-foreground/50">•</span>
                     <div className="flex items-baseline gap-0.5">
-                      <span className="text-[10px] text-muted-foreground/50">R$</span>
-                      <span className="text-[13px] font-semibold text-foreground tabular-nums">
+                      <span className="text-[11px] text-muted-foreground/60">R$</span>
+                      <span className="text-[15px] font-bold text-foreground tabular-nums">
                         {totalPrice.toFixed(2).replace('.', ',')}
                       </span>
                     </div>
@@ -69,14 +69,14 @@ export function BookingBottomBar({
                   onClick={onContinue}
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.95 }}
-                  className="group flex items-center gap-1.5 px-3.5 py-2 rounded-lg font-medium text-[12px] text-white"
+                  className="group flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-[14px] text-white"
                   style={{
                     background: "linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(0 65% 42%) 100%)",
                     boxShadow: "0 2px 8px hsl(var(--primary) / 0.3), inset 0 1px 0 rgba(255,255,255,0.12)"
                   }}
                 >
                   <span>Continuar</span>
-                  <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" />
+                  <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
                 </motion.button>
               </div>
             </div>
