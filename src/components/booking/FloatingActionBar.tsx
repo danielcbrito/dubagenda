@@ -42,16 +42,7 @@ export function FloatingActionBar({
               
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  {icon && (
-                    <div 
-                      className="flex items-center justify-center w-9 h-9 rounded-xl"
-                      style={{
-                        background: "linear-gradient(135deg, hsl(var(--primary) / 0.15), hsl(var(--primary) / 0.05))"
-                      }}
-                    >
-                      {icon}
-                    </div>
-                  )}
+                  {icon && icon}
                   
                   {subtitle && (
                     <span className="text-[13px] text-muted-foreground/70">{subtitle}</span>

@@ -1505,9 +1505,9 @@ const ClienteAgendar = () => {
               subtitle={selectedBarber ? selectedBarber.apelido : ""}
               icon={
                 selectedBarber?.foto_url ? (
-                  <img src={selectedBarber.foto_url} alt="" className="w-6 h-6 rounded-full object-cover" />
+                  <img src={selectedBarber.foto_url} alt="" className="w-7 h-7 rounded-full object-cover" />
                 ) : (
-                  <div className="w-6 h-6 rounded-full bg-primary/30 flex items-center justify-center text-[10px] font-bold text-primary">
+                  <div className="w-7 h-7 rounded-full bg-primary/30 flex items-center justify-center text-[11px] font-bold text-primary">
                     {selectedBarber?.apelido?.charAt(0)}
                   </div>
                 )
@@ -2212,23 +2212,19 @@ const ClienteAgendar = () => {
               <div className="w-full px-5 pt-12 pb-5">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div 
-                      className="flex items-center justify-center w-9 h-9 rounded-xl"
-                      style={{ background: "linear-gradient(135deg, hsl(var(--primary) / 0.15), hsl(var(--primary) / 0.05))" }}
-                    >
-                      {paymentMethod === "pix" ? (
-                        <img src={pixIcon} alt="PIX" className="w-4 h-4" />
-                      ) : paymentMethod === "card" ? (
-                        <CreditCard className="w-4 h-4 text-primary" />
-                      ) : (
-                        <Landmark className="w-4 h-4 text-primary" />
-                      )}
-                    </div>
-                    <div>
-                      <div className="text-[11px] text-muted-foreground/60">
+                    {paymentMethod === "pix" ? (
+                      <img src={pixIcon} alt="PIX" className="w-6 h-6 object-contain" />
+                    ) : paymentMethod === "card" ? (
+                      <CreditCard className="w-6 h-6 text-primary" />
+                    ) : (
+                      <Landmark className="w-6 h-6 text-primary" />
+                    )}
+                    <div className="flex items-center gap-2">
+                      <span className="text-[13px] text-muted-foreground/70">
                         {paymentMethod === "pix" ? "Pagar via Pix" : paymentMethod === "card" ? "Pagar via Cartão" : "Pagar na Barbearia"}
-                      </div>
-                      <div className="flex items-baseline gap-0.5 mt-0.5">
+                      </span>
+                      <span className="text-[11px] text-muted-foreground/40">•</span>
+                      <div className="flex items-baseline gap-0.5">
                         <span className="text-[10px] text-muted-foreground/50">R$</span>
                         <span className="text-[15px] font-bold text-foreground tabular-nums">
                           {Math.max(0, getTotalPrice() - availableCredits).toFixed(2).replace('.', ',')}
