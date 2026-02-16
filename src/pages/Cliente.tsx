@@ -571,10 +571,10 @@ const Cliente = () => {
 
       {/* Scrollable Content */}
       <div className="flex-1 overflow-y-auto overscroll-contain pb-24">
-        <div className="max-w-lg mx-auto px-4 pt-4 pb-6">
+        <div className="max-w-lg mx-auto px-5 pt-5 pb-6">
           
           {/* Header */}
-          <div className="mb-5">
+          <div className="mb-6">
             <ClientHeader
               profileName={profile?.nome}
               email={user?.email}
@@ -582,7 +582,7 @@ const Cliente = () => {
           </div>
           
           {/* Plan Tracker ou Loyalty Card */}
-          <div className="mb-5">
+          <div className="mb-6">
             {!dataLoaded ? (
               <div className="rounded-xl h-[140px] bg-muted/10 animate-pulse" />
             ) : activeSubscription ? (
@@ -652,7 +652,7 @@ const Cliente = () => {
           </div>
 
           {/* Schedule Button */}
-          <div className="mb-6">
+          <div className="mb-7">
             <ScheduleButton onClick={() => navigate("/cliente/agendar")} />
           </div>
 
@@ -665,7 +665,7 @@ const Cliente = () => {
                 exit={{ opacity: 0, height: 0 }}
                 className="mb-5"
               >
-                <p className="text-[8px] font-semibold text-muted-foreground/30 uppercase tracking-[0.2em] mb-2.5">
+                <p className="text-[9px] font-semibold text-muted-foreground/35 uppercase tracking-[0.2em] mb-3">
                   Pagamentos Pendentes
                 </p>
                 <div className="space-y-3">
@@ -684,7 +684,7 @@ const Cliente = () => {
 
           {/* Appointments Section */}
           <div>
-            <p className="text-[8px] font-semibold text-muted-foreground/30 uppercase tracking-[0.2em] mb-2.5">
+            <p className="text-[9px] font-semibold text-muted-foreground/35 uppercase tracking-[0.2em] mb-3">
               Meus Agendamentos
             </p>
             
