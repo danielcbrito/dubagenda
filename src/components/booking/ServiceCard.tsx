@@ -30,28 +30,28 @@ export function ServiceCard({
   return (
     <div
       className={cn(
-        "w-full text-left rounded-xl p-4 transition-all duration-200 border",
+        "w-full text-left rounded-lg p-3 transition-all duration-200 border",
         isSelected 
           ? "bg-primary/10 border-primary/50" 
           : "bg-card border-border hover:bg-secondary"
       )}
     >
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex items-start justify-between gap-2">
         {/* Info — clicável para toggle */}
         <button
           onClick={onToggle}
           className="flex-1 text-left"
         >
-          <h3 className="text-base font-semibold text-foreground mb-0.5">
+          <h3 className="text-sm font-semibold text-foreground mb-0.5">
             {service.nome}
           </h3>
           {service.descricao && (
-            <p className="text-xs text-muted-foreground mb-2 line-clamp-2">
+            <p className="text-[11px] text-muted-foreground mb-1.5 line-clamp-1">
               {service.descricao}
             </p>
           )}
           
-          <div className="flex items-center gap-3 text-xs">
+          <div className="flex items-center gap-2.5 text-[11px]">
             <span className="text-muted-foreground">
               {service.duracao_minutos * (quantity || 1)} min
             </span>
