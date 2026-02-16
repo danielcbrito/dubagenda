@@ -1,13 +1,15 @@
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { motion } from "framer-motion";
+import { NotificationBellPremium } from "./NotificationBellPremium";
 
 interface ClientHeaderProps {
   profileName?: string;
   email?: string;
+  userId?: string;
 }
 
-export function ClientHeader({ profileName, email }: ClientHeaderProps) {
+export function ClientHeader({ profileName, email, userId }: ClientHeaderProps) {
   const firstName = profileName ? String(profileName).split(" ")[0] : null;
   const initials = firstName ? firstName.charAt(0).toUpperCase() : "?";
   const today = new Date();
@@ -30,19 +32,27 @@ export function ClientHeader({ profileName, email }: ClientHeaderProps) {
         </h1>
       </div>
 
-      <motion.div
-        initial={{ opacity: 0, scale: 0.9 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ delay: 0.08, duration: 0.2 }}
-        className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 border border-border"
-        style={{
-          background: "hsl(var(--card))",
-        }}
-      >
-        <span className="text-foreground/80 font-semibold text-[11px]">
-          {initials}
-        </span>
-      </motion.div>
+      <div className="flex items-center gap-2 flex-shrink-0">
+        {/* Notification Bell */}
+        {userId && (
+          <NotificationBellPremium userId={userId} />
+        )}
+
+        {/* Avatar */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.08, duration: 0.2 }}
+          className="w-8 h-8 rounded-full flex items-center justify-center border border-border"
+          style={{
+            background: "hsl(var(--card))",
+          }}
+        >
+          <span className="text-foreground/80 font-semibold text-[11px]">
+            {initials}
+          </span>
+        </motion.div>
+      </div>
     </motion.div>
   );
 }

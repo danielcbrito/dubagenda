@@ -29,6 +29,7 @@ import { ScheduleButton } from "@/components/client/ScheduleButton";
 import { AppointmentCardPremium } from "@/components/client/AppointmentCardPremium";
 import { BarberReviewModal } from "@/components/client/BarberReviewModal";
 import { usePendingReviews } from "@/hooks/usePendingReviews";
+import { useNotificationManager } from "@/hooks/useNotificationManager";
 
 interface Appointment {
   id: string;
@@ -94,6 +95,9 @@ const Cliente = () => {
   const reviewClosedRef = useRef(false);
 
   const { pendingReviews, refresh: refreshReviews } = usePendingReviews(user?.id || null);
+
+  // Gerenciador de notificações push + som
+  useNotificationManager(user?.id || null);
 
   /**
    * Lógica de exibição do modal de avaliação:
@@ -578,6 +582,7 @@ const Cliente = () => {
             <ClientHeader
               profileName={profile?.nome}
               email={user?.email}
+              userId={user?.id}
             />
           </div>
           
