@@ -113,30 +113,30 @@ All colors MUST be HSL. */
 
   /* ☀️ LIGHT THEME — Premium Branco Elegante */
   .light {
-    --background: 0 0% 95%;       /* #F2F2F2 - Levemente mais escuro para contraste */
+    --background: 0 0% 96%;       /* #F5F5F5 - Fundo claro para bom contraste ao sol */
     --background-elevated: 0 0% 100%;
-    --foreground: 0 0% 5%;        /* #0D0D0D - Texto quase preto */
+    --foreground: 0 0% 3%;        /* #080808 - Texto preto forte — legível no sol */
 
     --card: 0 0% 100%;
     --card-elevated: 0 0% 99%;
-    --card-foreground: 0 0% 5%;
+    --card-foreground: 0 0% 3%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 5%;
+    --popover-foreground: 0 0% 3%;
 
-    /* Vermelho Premium — mais saturado no claro */
-    --primary: 0 80% 48%;
-    --primary-glow: 0 80% 58%;
+    /* Vermelho Premium — saturado e escuro para sol */
+    --primary: 0 82% 45%;
+    --primary-glow: 0 82% 55%;
     --primary-foreground: 0 0% 100%;
 
     /* Secondary — contraste forte */
-    --secondary: 0 0% 90%;
-    --secondary-foreground: 0 0% 12%;
+    --secondary: 0 0% 89%;
+    --secondary-foreground: 0 0% 8%;
 
-    --muted: 0 0% 91%;
-    --muted-foreground: 0 0% 25%;  /* Bem escuro — sempre legível */
+    --muted: 0 0% 90%;
+    --muted-foreground: 0 0% 22%;  /* Escuro — legível sob sol forte */
 
-    --accent: 0 80% 48%;
+    --accent: 0 82% 45%;
     --accent-foreground: 0 0% 100%;
 
     /* Dourado */
@@ -150,11 +150,11 @@ All colors MUST be HSL. */
     --success: 142 76% 36%;
     --success-foreground: 0 0% 100%;
 
-    /* Bordas — mais visíveis */
-    --border: 0 0% 80%;
-    --border-glow: 0 80% 48% / 0.2;
-    --input: 0 0% 88%;
-    --ring: 0 80% 48%;
+    /* Bordas — fortes para definição em qualquer tela */
+    --border: 0 0% 76%;
+    --border-glow: 0 82% 45% / 0.2;
+    --input: 0 0% 86%;
+    --ring: 0 82% 45%;
 
     /* GRADIENTES LIGHT */
     --gradient-titanium: linear-gradient(180deg, hsl(0 0% 98%), hsl(0 0% 94%));
@@ -185,6 +185,29 @@ All colors MUST be HSL. */
   }
 }
 
+/* 🌞 HIGH CONTRAST — Para uso no sol, telas fracas, acessibilidade */
+@media (prefers-contrast: more) {
+  .light {
+    --background: 0 0% 100%;
+    --foreground: 0 0% 0%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 0%;
+    --muted-foreground: 0 0% 18%;
+    --border: 0 0% 65%;
+    --primary: 0 85% 42%;
+    --secondary: 0 0% 85%;
+    --secondary-foreground: 0 0% 5%;
+  }
+  :root {
+    --foreground: 0 0% 98%;
+    --card: 0 0% 18%;
+    --card-foreground: 0 0% 98%;
+    --muted-foreground: 0 0% 72%;
+    --border: 0 0% 30%;
+    --primary: 0 80% 60%;
+  }
+}
+
 @layer base {
   * {
     @apply border-border;
@@ -207,6 +230,11 @@ body {
     font-weight: 400;
     letter-spacing: 0.01em;
     min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
     background: 
       radial-gradient(ellipse 100% 50% at 50% -10%, hsl(0 78% 50% / 0.12) 0%, transparent 55%),
       radial-gradient(ellipse 60% 40% at 10% 30%, hsl(0 78% 50% / 0.06) 0%, transparent 50%),
