@@ -590,6 +590,7 @@ export type Database = {
           ativo: boolean | null
           comissao_pct: number | null
           created_at: string | null
+          deleted_at: string | null
           foto_url: string | null
           google_calendar_connected: boolean | null
           id: string
@@ -602,6 +603,7 @@ export type Database = {
           ativo?: boolean | null
           comissao_pct?: number | null
           created_at?: string | null
+          deleted_at?: string | null
           foto_url?: string | null
           google_calendar_connected?: boolean | null
           id?: string
@@ -614,6 +616,7 @@ export type Database = {
           ativo?: boolean | null
           comissao_pct?: number | null
           created_at?: string | null
+          deleted_at?: string | null
           foto_url?: string | null
           google_calendar_connected?: boolean | null
           id?: string
@@ -626,22 +629,49 @@ export type Database = {
       barbeiros_private: {
         Row: {
           barbeiro_id: string
+          cpf: string | null
           created_at: string
+          data_nascimento: string | null
           email: string | null
+          endereco_bairro: string | null
+          endereco_cep: string | null
+          endereco_cidade: string | null
+          endereco_estado: string | null
+          endereco_numero: string | null
+          endereco_rua: string | null
+          nome_completo: string | null
           telefone: string | null
           updated_at: string
         }
         Insert: {
           barbeiro_id: string
+          cpf?: string | null
           created_at?: string
+          data_nascimento?: string | null
           email?: string | null
+          endereco_bairro?: string | null
+          endereco_cep?: string | null
+          endereco_cidade?: string | null
+          endereco_estado?: string | null
+          endereco_numero?: string | null
+          endereco_rua?: string | null
+          nome_completo?: string | null
           telefone?: string | null
           updated_at?: string
         }
         Update: {
           barbeiro_id?: string
+          cpf?: string | null
           created_at?: string
+          data_nascimento?: string | null
           email?: string | null
+          endereco_bairro?: string | null
+          endereco_cep?: string | null
+          endereco_cidade?: string | null
+          endereco_estado?: string | null
+          endereco_numero?: string | null
+          endereco_rua?: string | null
+          nome_completo?: string | null
           telefone?: string | null
           updated_at?: string
         }

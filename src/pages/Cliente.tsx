@@ -20,6 +20,7 @@ import { BottomNavigation } from "@/components/BottomNavigation";
 import { AppointmentHistorySheet } from "@/components/AppointmentHistorySheet";
 
 // Premium components
+import { ClientHeader } from "@/components/client/ClientHeader";
 import { LoyaltyCard } from "@/components/client/LoyaltyCard";
 import { PlanTrackerCard } from "@/components/client/PlanTrackerCard";
 import { PlanExpiredBanner } from "@/components/client/PlanExpiredBanner";
@@ -569,81 +570,94 @@ const Cliente = () => {
       <AnnouncementModal />
 
       {/* Scrollable Content */}
-      <div className="flex-1 overflow-y-auto pb-28">
-        <div className="max-w-lg mx-auto px-4 py-6 space-y-6">
+      <div className="flex-1 overflow-y-auto overscroll-contain pb-28">
+        <div className="max-w-lg mx-auto px-4 pt-5 pb-6">
+          
+          {/* Header - Greeting */}
+          <div className="mb-6">
+            <ClientHeader
+              profileName={profile?.nome}
+              email={user?.email}
+            />
+          </div>
+
+          {/* Separator line */}
+          <div className="h-px bg-border/40 mb-6" />
           
           {/* Plan Tracker ou Loyalty Card */}
-          {!dataLoaded ? (
-            <div className="rounded-2xl h-[180px] bg-muted/30 animate-pulse" />
-          ) : activeSubscription ? (
-            <PlanTrackerCard
-              planName={(activeSubscription as any).plano?.nome || "Meu Plano"}
-              usedAppointments={planUsageCount}
-              totalAppointments={4}
-              nextBillingDate={activeSubscription.next_billing_date || ""}
-              onViewDetails={() => setPlansSheetOpen(true)}
-            />
-          ) : pendingSubscription ? (
-            <>
-              <PendingSubscriptionBanner
-                planName={(pendingSubscription as any).plano?.nome || "Plano"}
-                onFinalize={() => {
-                  const ps = pendingSubscription as any;
-                  // Se tem PIX válido (não expirado), redireciona direto para checkout PIX
-                  if (ps.payment_method === "pix" && ps.pix_qr_code && ps.pix_expires_at) {
-                    const pixExpiresAt = new Date(ps.pix_expires_at).getTime();
-                    if (pixExpiresAt > Date.now()) {
-                      const pixCheckoutData = {
-                        pixQrCode: ps.pix_qr_code,
-                        pixPayload: ps.pix_payload,
-                        subscriptionId: ps.id,
-                        asaasPaymentId: ps.asaas_payment_id,
-                        expiresAt: ps.pix_expires_at,
-                        value: ps.plano?.preco_mensal || 0,
-                        planName: ps.plano?.nome || "Plano",
-                      };
-                      sessionStorage.setItem("subscription_pix_checkout_data", JSON.stringify(pixCheckoutData));
-                      navigate("/cliente/assinatura-pix");
-                      return;
+          <div className="mb-6">
+            {!dataLoaded ? (
+              <div className="rounded-2xl h-[180px] bg-muted/20 animate-pulse" />
+            ) : activeSubscription ? (
+              <PlanTrackerCard
+                planName={(activeSubscription as any).plano?.nome || "Meu Plano"}
+                usedAppointments={planUsageCount}
+                totalAppointments={4}
+                nextBillingDate={activeSubscription.next_billing_date || ""}
+                onViewDetails={() => setPlansSheetOpen(true)}
+              />
+            ) : pendingSubscription ? (
+              <div className="space-y-4">
+                <PendingSubscriptionBanner
+                  planName={(pendingSubscription as any).plano?.nome || "Plano"}
+                  onFinalize={() => {
+                    const ps = pendingSubscription as any;
+                    if (ps.payment_method === "pix" && ps.pix_qr_code && ps.pix_expires_at) {
+                      const pixExpiresAt = new Date(ps.pix_expires_at).getTime();
+                      if (pixExpiresAt > Date.now()) {
+                        const pixCheckoutData = {
+                          pixQrCode: ps.pix_qr_code,
+                          pixPayload: ps.pix_payload,
+                          subscriptionId: ps.id,
+                          asaasPaymentId: ps.asaas_payment_id,
+                          expiresAt: ps.pix_expires_at,
+                          value: ps.plano?.preco_mensal || 0,
+                          planName: ps.plano?.nome || "Plano",
+                        };
+                        sessionStorage.setItem("subscription_pix_checkout_data", JSON.stringify(pixCheckoutData));
+                        navigate("/cliente/assinatura-pix");
+                        return;
+                      }
                     }
-                  }
-                  // PIX expirado ou cartão — vai para tela de assinar com plano pré-selecionado
-                  navigate("/cliente/assinar", { 
-                    state: { resumePlanId: ps.plano_id }
-                  });
-                }}
-              />
+                    navigate("/cliente/assinar", { 
+                      state: { resumePlanId: ps.plano_id }
+                    });
+                  }}
+                />
+                <LoyaltyCard
+                  points={points}
+                  redemptions={redemptions}
+                  pontosNecessarios={pontosNecessarios}
+                  onViewDetails={() => setPointsModalOpen(true)}
+                />
+              </div>
+            ) : expiredSubscription ? (
+              <div className="space-y-4">
+                <PlanExpiredBanner
+                  planName={(expiredSubscription as any).plano?.nome || "Plano"}
+                  onRenew={() => setSubscribeSheetOpen(true)}
+                />
+                <LoyaltyCard
+                  points={points}
+                  redemptions={redemptions}
+                  pontosNecessarios={pontosNecessarios}
+                  onViewDetails={() => setPointsModalOpen(true)}
+                />
+              </div>
+            ) : (
               <LoyaltyCard
                 points={points}
                 redemptions={redemptions}
                 pontosNecessarios={pontosNecessarios}
                 onViewDetails={() => setPointsModalOpen(true)}
               />
-            </>
-          ) : expiredSubscription ? (
-            <>
-              <PlanExpiredBanner
-                planName={(expiredSubscription as any).plano?.nome || "Plano"}
-                onRenew={() => setSubscribeSheetOpen(true)}
-              />
-              <LoyaltyCard
-                points={points}
-                redemptions={redemptions}
-                pontosNecessarios={pontosNecessarios}
-                onViewDetails={() => setPointsModalOpen(true)}
-              />
-            </>
-          ) : (
-            <LoyaltyCard
-              points={points}
-              redemptions={redemptions}
-              pontosNecessarios={pontosNecessarios}
-              onViewDetails={() => setPointsModalOpen(true)}
-            />
-          )}
+            )}
+          </div>
 
           {/* Schedule Button */}
-          <ScheduleButton onClick={() => navigate("/cliente/agendar")} />
+          <div className="mb-8">
+            <ScheduleButton onClick={() => navigate("/cliente/agendar")} />
+          </div>
 
           {/* Pending Bookings */}
           <AnimatePresence>
@@ -652,11 +666,11 @@ const Cliente = () => {
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: "auto" }}
                 exit={{ opacity: 0, height: 0 }}
+                className="mb-6"
               >
-                <h3 className="text-sm font-bold text-foreground mb-3 flex items-center gap-2">
-                  <span className="w-1 h-4 bg-yellow-500 rounded-full" />
-                  Pagamentos Pendentes
-                </h3>
+                <p className="text-[10px] font-semibold text-muted-foreground/50 uppercase tracking-widest mb-3">
+                  PAGAMENTOS PENDENTES
+                </p>
                 <div className="space-y-3">
                   {pendingBookings.map((booking) => (
                     <PendingPaymentCard
@@ -673,10 +687,9 @@ const Cliente = () => {
 
           {/* Appointments Section */}
           <div>
-            <h3 className="text-sm font-bold text-foreground mb-3 flex items-center gap-2">
-              <span className="w-1 h-4 bg-primary rounded-full" />
-              Meus Agendamentos
-            </h3>
+            <p className="text-[10px] font-semibold text-muted-foreground/50 uppercase tracking-widest mb-3">
+              MEUS AGENDAMENTOS
+            </p>
             
             {/* Recent Cancellation Banners */}
             <AnimatePresence>
@@ -704,25 +717,22 @@ const Cliente = () => {
             
             {appointments.length === 0 && pendingBookings.length === 0 ? (
               <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+                className="rounded-2xl border border-dashed border-border/40 p-8 text-center bg-card/30"
               >
-                <Card className="p-8 text-center border-dashed border-2 bg-card/50">
-                  <div 
-                    className="w-16 h-16 mx-auto mb-4 rounded-2xl flex items-center justify-center"
-                    style={{
-                      background: "rgba(239, 68, 68, 0.1)",
-                    }}
-                  >
-                    <Calendar className="w-8 h-8 text-primary/50" />
-                  </div>
-                  <p className="text-sm text-muted-foreground font-medium">
-                    Você ainda não tem agendamentos
-                  </p>
-                  <p className="text-xs text-muted-foreground/70 mt-1">
-                    Toque em "Agendar Horário" para começar
-                  </p>
-                </Card>
+                <div 
+                  className="w-14 h-14 mx-auto mb-4 rounded-2xl flex items-center justify-center bg-primary/10"
+                >
+                  <Calendar className="w-7 h-7 text-primary/40" />
+                </div>
+                <p className="text-sm text-muted-foreground font-medium">
+                  Nenhum agendamento
+                </p>
+                <p className="text-xs text-muted-foreground/50 mt-1">
+                  Toque em "Agendar Horário" acima
+                </p>
               </motion.div>
             ) : (
               <div className="space-y-3">
