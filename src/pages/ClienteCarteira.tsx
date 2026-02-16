@@ -352,7 +352,7 @@ export default function ClienteCarteira() {
   }, [activeModal, pixQr, loadData]);
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="min-h-screen flex flex-col">
       {/* ── HEADER ── */}
       <div className="shrink-0 px-5 pt-[calc(env(safe-area-inset-top)+1rem)] pb-4">
         <div className="flex items-center justify-between mb-6">
