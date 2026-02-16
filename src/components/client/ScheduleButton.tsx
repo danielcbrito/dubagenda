@@ -8,27 +8,19 @@ interface ScheduleButtonProps {
 export function ScheduleButton({ onClick }: ScheduleButtonProps) {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 6 }}
+      initial={{ opacity: 0, y: 4 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.15, duration: 0.3 }}
+      transition={{ delay: 0.12, duration: 0.25 }}
     >
       <button
         onClick={onClick}
-        className="relative w-full h-12 rounded-xl text-sm font-semibold tracking-wide overflow-hidden bg-primary text-primary-foreground active:scale-[0.98] transition-transform"
+        className="relative w-full h-10 rounded-lg text-[12px] font-semibold tracking-wide overflow-hidden bg-primary/90 text-primary-foreground active:scale-[0.98] transition-transform"
         style={{
-          boxShadow: "0 6px 20px -4px hsl(var(--primary) / 0.4)",
+          boxShadow: "0 4px 14px -3px hsl(var(--primary) / 0.3)",
         }}
       >
-        {/* Inner highlight */}
-        <div
-          className="absolute inset-0 opacity-20 pointer-events-none"
-          style={{
-            background: "linear-gradient(180deg, rgba(255,255,255,0.25) 0%, transparent 50%)",
-          }}
-        />
-
-        <div className="relative z-10 flex items-center justify-center gap-2.5">
-          <Calendar className="w-4 h-4" />
+        <div className="relative z-10 flex items-center justify-center gap-2">
+          <Calendar className="w-3.5 h-3.5" />
           <span>Agendar Horário</span>
         </div>
       </button>

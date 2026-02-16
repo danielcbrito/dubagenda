@@ -16,42 +16,30 @@ export function ClientHeader({ profileName, email }: ClientHeaderProps) {
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: -6 }}
+      initial={{ opacity: 0, y: -4 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.35, ease: "easeOut" }}
+      transition={{ duration: 0.3, ease: "easeOut" }}
       className="flex items-center justify-between"
     >
-      {/* Greeting */}
       <div className="flex-1 min-w-0">
-        <motion.p
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.12 }}
-          className="text-[9px] font-medium text-muted-foreground/60 uppercase tracking-widest mb-0.5"
-        >
-          {dayOfWeek}, {formattedDate}
-        </motion.p>
-        <motion.h1
-          initial={{ opacity: 0, x: -4 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.08 }}
-          className="text-base font-bold text-foreground font-display tracking-tight leading-tight"
-        >
+        <p className="text-[9px] font-medium text-muted-foreground/40 uppercase tracking-[0.18em] mb-0.5">
+          {dayOfWeek} · {formattedDate}
+        </p>
+        <h1 className="text-[15px] font-semibold text-foreground/90 font-display tracking-tight leading-snug">
           {firstName ? `Olá, ${firstName}` : "Olá"}
-        </motion.h1>
+        </h1>
       </div>
 
-      {/* Avatar */}
       <motion.div
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
-        transition={{ delay: 0.1, duration: 0.25 }}
-        className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 bg-primary"
+        transition={{ delay: 0.08, duration: 0.2 }}
+        className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 border border-border/60"
         style={{
-          boxShadow: "0 3px 12px hsl(var(--primary) / 0.25)",
+          background: "hsl(var(--card))",
         }}
       >
-        <span className="text-primary-foreground font-bold text-xs tabular-nums">
+        <span className="text-foreground/70 font-semibold text-[11px]">
           {initials}
         </span>
       </motion.div>
