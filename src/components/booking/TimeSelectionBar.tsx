@@ -40,7 +40,7 @@ export function TimeSelectionBar({
               className="relative mx-auto max-w-md overflow-hidden"
               style={{
                 borderRadius: "14px",
-                background: "#000000",
+                background: "#1a1a1e",
                 boxShadow: "0 20px 80px 30px rgba(0,0,0,1), 0 10px 50px 20px rgba(0,0,0,1), 0 4px 20px 10px rgba(0,0,0,1), 0 0 0 1px rgba(255,255,255,0.04)",
               }}
             >
