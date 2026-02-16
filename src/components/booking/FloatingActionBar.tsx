@@ -35,7 +35,7 @@ export function FloatingActionBar({
             stiffness: 500, 
             damping: 40
           }}
-          className={cn("fixed bottom-0 left-0 right-0 z-40", className)}
+          className={cn("fixed bottom-4 left-0 right-0 z-40", className)}
         >
           <div className="relative px-4 pb-safe">
             {/* Fade gradient */}

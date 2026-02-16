@@ -1701,7 +1701,7 @@ const ClienteAgendar = () => {
             animate="animate"
             exit="exit"
             transition={{ duration: 0.3 }}
-            className="min-h-screen pt-20 pb-32 px-4"
+            className="min-h-screen pt-20 pb-24 px-4"
           >
             <div className="max-w-2xl mx-auto">
               {/* Header */}
@@ -1942,56 +1942,6 @@ const ClienteAgendar = () => {
                 )}
               </div>
 
-              {/* Resumo financeiro */}
-              <div className="mt-6 border-t border-border/20 pt-5">
-                <div className="space-y-2.5">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[12px] text-muted-foreground">Serviço</span>
-                    <span className={cn(
-                      "text-[12px] font-medium text-foreground tabular-nums",
-                      (useRedemption && getCorteService()) && "line-through text-muted-foreground/40"
-                    )}>
-                      R$ {selectedServices.reduce((sum, s) => sum + s.preco * (serviceQuantities[s.id] || 1), 0).toFixed(2).replace('.', ',')}
-                    </span>
-                  </div>
-                  
-                  {useRedemption && getRedemptionDiscount() > 0 && (
-                    <div className="flex items-center justify-between">
-                      <span className="text-[12px] text-emerald-400">Resgate fidelidade</span>
-                      <span className="text-[12px] font-medium text-emerald-400 tabular-nums">-R$ {getRedemptionDiscount().toFixed(2).replace('.', ',')}</span>
-                    </div>
-                  )}
-
-                  {appliedCoupon && getCouponDiscount() > 0 && (
-                    <div className="flex items-center justify-between">
-                      <span className="text-[12px] text-emerald-400">Cupom {appliedCoupon.code}</span>
-                      <span className="text-[12px] font-medium text-emerald-400 tabular-nums">-R$ {getCouponDiscount().toFixed(2).replace('.', ',')}</span>
-                    </div>
-                  )}
-
-                  {availableCredits > 0 && getTotalPrice() > 0 && (
-                    <div className="flex items-center justify-between">
-                      <span className="text-[12px] text-emerald-400">Créditos</span>
-                      <span className="text-[12px] font-medium text-emerald-400 tabular-nums">-R$ {Math.min(availableCredits, getTotalPrice()).toFixed(2).replace('.', ',')}</span>
-                    </div>
-                  )}
-                </div>
-                
-                <div className="flex items-center justify-between mt-4 pt-4 border-t border-border/20">
-                  <span className="text-[13px] font-semibold text-foreground">Total a pagar</span>
-                  <span className="text-xl font-bold text-primary tabular-nums">
-                    R$ {Math.max(0, getTotalPrice() - availableCredits).toFixed(2).replace('.', ',')}
-                  </span>
-                </div>
-
-                {/* Trust indicator */}
-                <div className="flex items-center justify-center gap-1.5 mt-4">
-                  <Shield className="w-3 h-3 text-muted-foreground/25" />
-                  <p className="text-[10px] text-muted-foreground/25">
-                    Pagamento seguro e criptografado
-                  </p>
-                </div>
-              </div>
             </div>
           </motion.div>
         )}
@@ -2249,7 +2199,7 @@ const ClienteAgendar = () => {
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 80, opacity: 0 }}
             transition={{ type: "spring", stiffness: 500, damping: 40 }}
-            className="fixed bottom-0 left-0 right-0 z-40"
+            className="fixed bottom-4 left-0 right-0 z-40"
           >
             <div className="relative px-4 pb-safe">
               <div className="absolute -top-12 left-0 right-0 h-12 bg-gradient-to-t from-background to-transparent pointer-events-none" />
