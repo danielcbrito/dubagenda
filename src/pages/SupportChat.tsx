@@ -42,16 +42,16 @@ export default function SupportChat() {
         width: '100vw',
       }}
     >
-      {/* Botão voltar — limpo, sem caixa */}
+      {/* Botão voltar — integrado no header do chat */}
       <motion.button
         initial={{ opacity: 0, x: -8 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ duration: 0.25, delay: 0.1 }}
         onClick={handleBack}
-        className="absolute top-3.5 left-3.5 z-20 h-8 w-8 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors"
+        className="absolute top-3 left-3 z-20 h-9 w-9 rounded-full flex items-center justify-center text-muted-foreground/70 hover:text-foreground hover:bg-muted/40 active:scale-95 transition-all"
         aria-label="Voltar"
       >
-        <ArrowLeft className="h-[18px] w-[18px]" strokeWidth={2} />
+        <ArrowLeft className="h-5 w-5" strokeWidth={1.8} />
       </motion.button>
 
       {/* Chat Interface */}
