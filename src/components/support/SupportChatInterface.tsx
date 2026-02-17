@@ -1,11 +1,10 @@
-import { Send, Paperclip, Mic, X, Image as ImageIcon, FileText, StopCircle, AlertTriangle, CreditCard, Lock, Bug, Sparkles, RefreshCw, Loader2 } from "lucide-react";
+import { Send, Mic, X, Image as ImageIcon, FileText, StopCircle, ArrowUp, Sparkles, RefreshCw, Loader2, Calendar, CreditCard, Shield, HelpCircle } from "lucide-react";
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
-import logoImage from "@/assets/logo-dub.png";
+import { BotAvatar } from "./BotAvatar";
 
 interface Message {
   role: "user" | "assistant";
@@ -22,30 +21,34 @@ interface Message {
 
 const quickSuggestions = [
   {
-    icon: AlertTriangle,
-    title: "Problema com agendamento",
+    icon: Calendar,
+    title: "Agendamento",
+    description: "Problemas para agendar",
     message: "Estou tendo problemas para agendar um horário"
   },
   {
     icon: CreditCard,
-    title: "Erro no pagamento",
+    title: "Pagamento",
+    description: "Erro no pagamento",
     message: "Meu pagamento não foi processado corretamente"
   },
   {
-    icon: Lock,
-    title: "Não consigo acessar",
+    icon: Shield,
+    title: "Minha conta",
+    description: "Acesso ou segurança",
     message: "Não estou conseguindo acessar minha conta"
   },
   {
-    icon: Bug,
-    title: "Reportar bug",
-    message: "Encontrei um erro no aplicativo"
+    icon: HelpCircle,
+    title: "Outro problema",
+    description: "Preciso de ajuda",
+    message: "Preciso de ajuda com outro assunto"
   }
 ];
 
 /**
- * Interface de Chat Premium 2025 — Agente IA Inteligente
- * Com histórico persistente e indicadores de ações
+ * Chat IA Premium — Design inspirado no ChatGPT
+ * Layout limpo, sem bolhas no assistente, input centralizado
  */
 export function SupportChatInterface() {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -54,26 +57,21 @@ export function SupportChatInterface() {
   const [isLoadingHistory, setIsLoadingHistory] = useState(true);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [isRecording, setIsRecording] = useState(false);
-  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [isFocused, setIsFocused] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
   
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
 
-  // Carregar usuário e histórico de conversas
+  // Carregar usuário e histórico
   useEffect(() => {
     const loadUserAndHistory = async () => {
       try {
         const { data: { user } } = await supabase.auth.getUser();
-        
         if (user) {
           setUserId(user.id);
-          
-          // Buscar conversa ativa mais recente do usuário
           const { data: conversations } = await supabase
             .from('support_conversations')
             .select('id, created_at')
@@ -85,8 +83,6 @@ export function SupportChatInterface() {
           if (conversations && conversations.length > 0) {
             const convId = conversations[0].id;
             setConversationId(convId);
-            
-            // Carregar mensagens dessa conversa
             const { data: messagesData } = await supabase
               .from('support_messages')
               .select('role, content, created_at, metadata')
@@ -104,7 +100,6 @@ export function SupportChatInterface() {
                   actionType: metadata?.actionType
                 };
               });
-              
               setMessages(loadedMessages);
             }
           }
@@ -115,7 +110,6 @@ export function SupportChatInterface() {
         setIsLoadingHistory(false);
       }
     };
-
     loadUserAndHistory();
   }, []);
 
@@ -144,19 +138,14 @@ export function SupportChatInterface() {
       const mediaRecorder = new MediaRecorder(stream);
       mediaRecorderRef.current = mediaRecorder;
       audioChunksRef.current = [];
-
       mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          audioChunksRef.current.push(event.data);
-        }
+        if (event.data.size > 0) audioChunksRef.current.push(event.data);
       };
-
       mediaRecorder.onstop = async () => {
         const audioBlob = new Blob(audioChunksRef.current, { type: "audio/webm" });
         stream.getTracks().forEach(track => track.stop());
         await convertAudioToText(audioBlob);
       };
-
       mediaRecorder.start();
       setIsRecording(true);
       toast.success("Ouvindo...");
@@ -176,19 +165,14 @@ export function SupportChatInterface() {
   const convertAudioToText = async (audioBlob: Blob) => {
     try {
       toast.info("Convertendo áudio em texto...");
-      
       const reader = new FileReader();
       reader.readAsDataURL(audioBlob);
-      
       reader.onloadend = async () => {
         const base64Audio = (reader.result as string).split(',')[1];
-        
         const { data, error } = await supabase.functions.invoke("speech-to-text", {
           body: { audio: base64Audio }
         });
-
         if (error) throw error;
-
         if (data?.text) {
           setInput(data.text);
           toast.success("Mensagem transcrita");
@@ -201,33 +185,18 @@ export function SupportChatInterface() {
     }
   };
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    setSelectedFiles(files);
-  };
-
-  const removeFile = (index: number) => {
-    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
-  };
-
   const sendMessage = async (messageText?: string) => {
     const textToSend = messageText || input.trim();
-    if (!textToSend && selectedFiles.length === 0) return;
+    if (!textToSend) return;
 
     const userMessage: Message = {
       role: "user",
       content: textToSend,
       timestamp: new Date(),
-      attachments: selectedFiles.map(file => ({
-        type: file.type.startsWith("image/") ? "image" : file.type.startsWith("audio/") ? "audio" : "file",
-        url: URL.createObjectURL(file),
-        name: file.name
-      }))
     };
 
     setMessages(prev => [...prev, userMessage]);
     setInput("");
-    setSelectedFiles([]);
     setIsLoading(true);
 
     if (textareaRef.current) {
@@ -253,7 +222,6 @@ export function SupportChatInterface() {
       };
 
       setMessages(prev => [...prev, assistantMessage]);
-      
       if (data.conversationId && !conversationId) {
         setConversationId(data.conversationId);
       }
@@ -279,79 +247,72 @@ export function SupportChatInterface() {
     toast.success("Nova conversa iniciada");
   }, []);
 
-  // Loading de histórico
+  // Loading
   if (isLoadingHistory) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center px-6 py-12">
-        <motion.div 
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="text-center"
-        >
-          <Loader2 className="w-8 h-8 text-primary animate-spin mx-auto mb-4" />
-          <p className="text-white/40 text-sm">Carregando histórico...</p>
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center">
+          <Loader2 className="w-6 h-6 text-primary animate-spin mx-auto mb-3" />
+          <p className="text-muted-foreground text-[13px]">Carregando histórico...</p>
         </motion.div>
       </div>
     );
   }
 
-  // Tela de boas-vindas
+  // Welcome Screen — ChatGPT style
   const renderWelcomeScreen = () => (
-    <div className="flex-1 flex flex-col items-center justify-center px-6 py-12">
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, ease: "easeOut" }}
-        className="text-center max-w-md"
+    <div className="flex-1 flex flex-col items-center justify-center px-5 pb-4">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+        className="text-center max-w-sm"
       >
-        {/* Logo/Avatar */}
-        <div className="relative mb-8">
-          <div className="w-20 h-20 mx-auto rounded-3xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center border border-white/10 shadow-2xl">
-            <img src={logoImage} alt="DUB" className="w-12 h-12 object-contain" />
-          </div>
-          <div className="absolute -bottom-1 -right-1 left-1/2 transform translate-x-4">
-            <div className="w-6 h-6 rounded-full bg-emerald-500/20 flex items-center justify-center border border-emerald-500/30">
-              <Sparkles className="w-3 h-3 text-emerald-400" />
-            </div>
+        {/* Avatar central */}
+        <div className="mb-6 flex flex-col items-center">
+          <BotAvatar size="lg" />
+          <div className="flex items-center justify-center gap-1.5 mt-3">
+            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+            <span className="text-[11px] font-medium text-emerald-500/80 uppercase tracking-wider">Online agora</span>
           </div>
         </div>
 
-        {/* Título */}
-        <h2 className="text-2xl font-semibold text-white mb-3">
-          Como posso ajudar?
+        <h2 className="text-xl font-display font-semibold text-foreground mb-2">
+          Como posso te ajudar?
         </h2>
-        <p className="text-white/50 text-sm leading-relaxed mb-10">
-          Sou um agente inteligente com acesso aos seus dados. Posso diagnosticar e resolver problemas automaticamente.
+        <p className="text-[13px] text-muted-foreground leading-relaxed mb-8">
+          Tenho acesso aos seus dados e posso resolver a maioria dos problemas automaticamente.
         </p>
       </motion.div>
 
-      {/* Sugestões */}
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
+      {/* Sugestões rápidas — grid 2x2 */}
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, delay: 0.15, ease: "easeOut" }}
-        className="w-full max-w-lg px-4"
+        transition={{ duration: 0.5, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
+        className="w-full max-w-sm"
       >
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-2.5">
           {quickSuggestions.map((suggestion, index) => {
             const Icon = suggestion.icon;
             return (
               <motion.button
                 key={index}
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3, delay: 0.2 + index * 0.05 }}
                 onClick={() => sendMessage(suggestion.message)}
-                className="group p-4 rounded-2xl bg-white/[0.03] border border-white/[0.06] hover:bg-white/[0.06] hover:border-white/10 transition-all duration-300 text-left active:scale-[0.98]"
+                className="group p-3.5 rounded-xl border border-border/60 hover:border-border bg-card/40 hover:bg-card/80 transition-all duration-200 text-left active:scale-[0.98]"
               >
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-xl bg-white/[0.05] group-hover:bg-primary/10 transition-colors duration-300">
-                    <Icon className="h-4 w-4 text-white/40 group-hover:text-primary transition-colors duration-300" />
-                  </div>
-                  <span className="text-[13px] text-white/60 group-hover:text-white/80 font-medium transition-colors duration-300">
-                    {suggestion.title}
-                  </span>
+                <div className="p-1.5 rounded-lg bg-muted/50 w-fit mb-2.5 group-hover:bg-primary/10 transition-colors">
+                  <Icon className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
                 </div>
+                <p className="text-[13px] font-medium text-foreground/80 group-hover:text-foreground leading-tight">
+                  {suggestion.title}
+                </p>
+                <p className="text-[11px] text-muted-foreground mt-0.5">
+                  {suggestion.description}
+                </p>
               </motion.button>
             );
           })}
@@ -360,17 +321,17 @@ export function SupportChatInterface() {
     </div>
   );
 
-  // Área de mensagens
+  // Mensagens — estilo ChatGPT (sem bolha para assistente)
   const renderMessages = () => (
-    <div ref={scrollAreaRef} className="flex-1 overflow-y-auto px-4 md:px-6">
-      {/* Botão nova conversa */}
+    <div ref={scrollAreaRef} className="flex-1 overflow-y-auto overscroll-contain">
+      {/* Nova conversa */}
       {messages.length > 0 && (
-        <div className="sticky top-0 z-10 py-3 flex justify-center">
+        <div className="sticky top-0 z-10 py-2.5 flex justify-center bg-gradient-to-b from-background via-background/95 to-transparent">
           <motion.button
-            initial={{ opacity: 0, y: -10 }}
+            initial={{ opacity: 0, y: -8 }}
             animate={{ opacity: 1, y: 0 }}
             onClick={startNewConversation}
-            className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/[0.04] border border-white/[0.08] hover:bg-white/[0.08] text-white/50 hover:text-white/70 text-xs font-medium transition-all"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border/60 hover:border-border bg-card/60 hover:bg-card text-muted-foreground hover:text-foreground text-[11px] font-medium transition-all"
           >
             <RefreshCw className="w-3 h-3" />
             Nova conversa
@@ -378,189 +339,101 @@ export function SupportChatInterface() {
         </div>
       )}
 
-      <div className="max-w-2xl mx-auto py-6 space-y-5">
+      <div className="max-w-2xl mx-auto px-4 py-4 space-y-1">
         <AnimatePresence mode="popLayout">
           {messages.map((message, index) => (
             <motion.div
               key={index}
-              initial={{ opacity: 0, y: 10 }}
+              initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3, ease: "easeOut" }}
+              transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
               className={cn(
-                "flex gap-3",
-                message.role === "user" ? "justify-end" : "justify-start"
+                "py-3",
+                message.role === "assistant" && "py-4"
               )}
             >
-              {/* Avatar do assistente */}
-              {message.role === "assistant" && (
-                <div className="shrink-0 w-8 h-8 rounded-xl bg-gradient-to-br from-white/10 to-white/5 flex items-center justify-center border border-white/10">
-                  <img src={logoImage} alt="DUB" className="w-5 h-5 object-contain" />
-                </div>
-              )}
-              
-              {/* Balão da mensagem */}
-              <div className={cn("max-w-[85%] md:max-w-[75%]", message.role === "user" ? "order-1" : "")}>
-                {/* Attachments */}
-                {message.attachments && message.attachments.length > 0 && (
-                  <div className="mb-3 space-y-2">
-                    {message.attachments.map((attachment, idx) => (
-                      <div key={idx} className="flex items-center gap-2 p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.06]">
-                        {attachment.type === "image" ? (
-                          <>
-                            <ImageIcon className="h-4 w-4 text-white/40" />
-                            <img src={attachment.url} alt={attachment.name} className="max-w-xs rounded-lg" />
-                          </>
-                        ) : attachment.type === "audio" ? (
-                          <>
-                            <Mic className="h-4 w-4 text-white/40" />
-                            <audio src={attachment.url} controls className="max-w-xs" />
-                          </>
-                        ) : (
-                          <>
-                            <FileText className="h-4 w-4 text-white/40" />
-                            <span className="text-xs text-white/60">{attachment.name}</span>
-                          </>
-                        )}
-                      </div>
-                    ))}
+              {message.role === "user" ? (
+                /* Mensagem do usuário — bolha alinhada à direita */
+                <div className="flex justify-end">
+                  <div className="max-w-[80%]">
+                    <div className="rounded-2xl rounded-br-md px-4 py-2.5 bg-primary text-primary-foreground">
+                      <p className="text-[14px] leading-relaxed whitespace-pre-wrap break-words">
+                        {message.content}
+                      </p>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground/50 text-right mt-1 pr-1 tabular-nums">
+                      {message.timestamp.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                    </p>
                   </div>
-                )}
-                
-                {/* Conteúdo */}
-                <div
-                  className={cn(
-                    "rounded-2xl px-4 py-3",
-                    message.role === "user"
-                      ? "bg-primary/90 text-white"
-                      : "bg-white/[0.04] border border-white/[0.06] text-white/90"
-                  )}
-                >
-                  <p className="text-[15px] leading-relaxed whitespace-pre-wrap break-words">
-                    {message.content}
-                  </p>
                 </div>
-                
-                {/* Timestamp */}
-                <p className={cn(
-                  "text-[11px] mt-1.5 px-1",
-                  message.role === "user" ? "text-right text-white/40" : "text-white/30"
-                )}>
-                  {message.timestamp.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
-                </p>
-              </div>
-
-              {/* Avatar do usuário */}
-              {message.role === "user" && (
-                <div className="shrink-0 w-8 h-8 rounded-xl bg-gradient-to-br from-primary/30 to-primary/10 flex items-center justify-center border border-primary/20 order-2">
-                  <span className="text-xs font-semibold text-white/80">EU</span>
+              ) : (
+                /* Mensagem do assistente — estilo ChatGPT, sem bolha */
+                <div className="flex gap-3">
+                  <div className="shrink-0 mt-0.5">
+                    <BotAvatar size="sm" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[14px] leading-[1.7] text-foreground/90 whitespace-pre-wrap break-words">
+                      {message.content}
+                    </p>
+                    <p className="text-[10px] text-muted-foreground/40 mt-1.5 tabular-nums">
+                      {message.timestamp.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                    </p>
+                  </div>
                 </div>
               )}
             </motion.div>
           ))}
         </AnimatePresence>
 
-        {/* Loading indicator */}
+        {/* Typing indicator */}
         {isLoading && (
-          <motion.div 
-            initial={{ opacity: 0, y: 10 }}
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
-            className="flex gap-3"
+            className="flex gap-3 py-4"
           >
-            <div className="shrink-0 w-8 h-8 rounded-xl bg-gradient-to-br from-white/10 to-white/5 flex items-center justify-center border border-white/10">
-              <img src={logoImage} alt="DUB" className="w-5 h-5 object-contain" />
+            <div className="shrink-0 mt-0.5">
+              <BotAvatar size="sm" />
             </div>
-            <div className="bg-white/[0.04] border border-white/[0.06] rounded-2xl px-4 py-3">
-              <div className="flex items-center gap-3">
-                <div className="flex gap-1">
-                  <span className="w-2 h-2 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: "0ms" }} />
-                  <span className="w-2 h-2 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: "150ms" }} />
-                  <span className="w-2 h-2 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: "300ms" }} />
-                </div>
-                <span className="text-xs text-white/40">Analisando e resolvendo...</span>
+            <div className="flex items-center gap-2 py-1">
+              <div className="flex gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/40 animate-bounce" style={{ animationDelay: "0ms" }} />
+                <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/40 animate-bounce" style={{ animationDelay: "150ms" }} />
+                <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/40 animate-bounce" style={{ animationDelay: "300ms" }} />
               </div>
+              <span className="text-[12px] text-muted-foreground/50">Analisando...</span>
             </div>
           </motion.div>
         )}
+
+        {/* Spacer para scroll */}
+        <div className="h-4" />
       </div>
     </div>
   );
 
   return (
-    <div className="flex flex-col h-full relative">
-      {/* Área de conteúdo */}
+    <div className="flex flex-col h-full relative bg-background">
+      {/* Conteúdo */}
       {messages.length === 0 && !isLoading ? renderWelcomeScreen() : renderMessages()}
 
-      {/* Input flutuante */}
-      <div className="shrink-0 px-4 pb-6 pt-2">
+      {/* Input — estilo ChatGPT, centralizado embaixo */}
+      <div className="shrink-0 px-4 pb-5 pt-1">
         <div className="max-w-2xl mx-auto">
-          {/* Preview de arquivos */}
-          <AnimatePresence>
-            {selectedFiles.length > 0 && (
-              <motion.div 
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 10 }}
-                className="mb-3 flex flex-wrap gap-2"
-              >
-                {selectedFiles.map((file, index) => (
-                  <div 
-                    key={index} 
-                    className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm"
-                  >
-                    {file.type.startsWith("image/") ? (
-                      <ImageIcon className="h-4 w-4 text-white/40" />
-                    ) : file.type.startsWith("audio/") ? (
-                      <Mic className="h-4 w-4 text-white/40" />
-                    ) : (
-                      <FileText className="h-4 w-4 text-white/40" />
-                    )}
-                    <span className="text-xs text-white/60">{file.name}</span>
-                    <button 
-                      onClick={() => removeFile(index)} 
-                      className="hover:text-red-400 transition-colors"
-                    >
-                      <X className="h-3.5 w-3.5 text-white/40" />
-                    </button>
-                  </div>
-                ))}
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* Container do input */}
-          <motion.div 
-            animate={{ 
-              boxShadow: isFocused 
-                ? "0 0 0 1px rgba(239, 68, 68, 0.3), 0 8px 40px -8px rgba(0, 0, 0, 0.5)" 
-                : "0 4px 24px -4px rgba(0, 0, 0, 0.4)"
+          <motion.div
+            animate={{
+              borderColor: isFocused
+                ? "hsl(var(--ring) / 0.4)"
+                : "hsl(var(--border) / 0.6)"
             }}
             transition={{ duration: 0.2 }}
             className={cn(
-              "relative flex items-end gap-2 p-2 rounded-2xl transition-all duration-200",
-              "bg-white/[0.04] border",
-              isFocused ? "border-primary/30" : "border-white/[0.08]"
+              "relative flex items-end gap-1.5 p-1.5 rounded-2xl transition-all duration-200",
+              "bg-card/60 border backdrop-blur-sm",
+              "shadow-soft"
             )}
           >
-            {/* Botão de anexo */}
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="h-9 w-9 rounded-xl shrink-0 hover:bg-white/[0.06] text-white/40 hover:text-white/60 transition-colors"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={isLoading}
-            >
-              <Paperclip className="h-[18px] w-[18px]" />
-            </Button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              multiple
-              accept="image/*,.pdf,.doc,.docx,.txt"
-              className="hidden"
-              onChange={handleFileSelect}
-            />
-
             {/* Textarea */}
             <textarea
               ref={textareaRef}
@@ -569,52 +442,49 @@ export function SupportChatInterface() {
               onKeyDown={handleKeyPress}
               onFocus={() => setIsFocused(true)}
               onBlur={() => setIsFocused(false)}
-              placeholder="Descreva seu problema..."
+              placeholder="Escreva sua mensagem..."
               disabled={isLoading}
-              className="flex-1 min-h-[36px] max-h-[120px] resize-none border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 px-1 py-2 text-[15px] text-white placeholder:text-white/30 focus:outline-none leading-tight"
+              className="flex-1 min-h-[40px] max-h-[120px] resize-none border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 px-3 py-2.5 text-[14px] text-foreground placeholder:text-muted-foreground/50 focus:outline-none leading-tight"
               rows={1}
             />
 
-            {/* Botões de ação */}
-            <div className="flex items-center gap-1">
-              {/* Botão de áudio */}
-              <Button
+            {/* Actions */}
+            <div className="flex items-center gap-1 pb-0.5 pr-0.5">
+              {/* Mic */}
+              <button
                 type="button"
-                variant="ghost"
-                size="icon"
                 className={cn(
-                  "h-9 w-9 rounded-xl shrink-0 transition-all duration-200",
-                  isRecording 
-                    ? "bg-red-500/20 hover:bg-red-500/30 text-red-400" 
-                    : "hover:bg-white/[0.06] text-white/40 hover:text-white/60"
+                  "h-8 w-8 rounded-xl flex items-center justify-center shrink-0 transition-all duration-200",
+                  isRecording
+                    ? "bg-destructive/20 text-destructive"
+                    : "text-muted-foreground/50 hover:text-muted-foreground hover:bg-muted/50"
                 )}
                 onClick={isRecording ? stopRecording : startRecording}
                 disabled={isLoading}
               >
-                {isRecording ? <StopCircle className="h-[18px] w-[18px]" /> : <Mic className="h-[18px] w-[18px]" />}
-              </Button>
+                {isRecording ? <StopCircle className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+              </button>
 
-              {/* Botão de enviar */}
-              <Button
+              {/* Send */}
+              <button
                 type="button"
-                size="icon"
                 className={cn(
-                  "h-9 w-9 rounded-xl shrink-0 transition-all duration-200",
-                  input.trim() || selectedFiles.length > 0
-                    ? "bg-primary hover:bg-primary/90 text-white"
-                    : "bg-white/[0.06] text-white/20 cursor-not-allowed"
+                  "h-8 w-8 rounded-xl flex items-center justify-center shrink-0 transition-all duration-200",
+                  input.trim()
+                    ? "bg-foreground text-background hover:opacity-90"
+                    : "bg-muted/50 text-muted-foreground/30 cursor-not-allowed"
                 )}
                 onClick={() => sendMessage()}
-                disabled={isLoading || (!input.trim() && selectedFiles.length === 0)}
+                disabled={isLoading || !input.trim()}
               >
-                <Send className="h-[18px] w-[18px]" />
-              </Button>
+                <ArrowUp className="h-4 w-4" strokeWidth={2.5} />
+              </button>
             </div>
           </motion.div>
 
-          {/* Disclaimer */}
-          <p className="text-[11px] text-white/20 text-center mt-3">
-            IA com acesso aos seus dados para resolver problemas automaticamente
+          {/* Disclaimer sutil */}
+          <p className="text-[10px] text-muted-foreground/30 text-center mt-2.5">
+            IA com acesso aos seus dados para resolver problemas
           </p>
         </div>
       </div>

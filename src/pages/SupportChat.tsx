@@ -5,8 +5,8 @@ import { SupportChatInterface } from "@/components/support/SupportChatInterface"
 import { motion } from "framer-motion";
 
 /**
- * Chat de Suporte — Interface Fluida Premium 2025
- * Sem barras fixas, visual flutuante e moderno
+ * Chat de Suporte — Interface Premium
+ * Tela cheia, limpa, sem distrações
  */
 export default function SupportChat() {
   const navigate = useNavigate();
@@ -15,7 +15,6 @@ export default function SupportChat() {
     navigate("/cliente");
   };
 
-  // Lock body scroll e altura dinâmica para mobile
   useEffect(() => {
     document.documentElement.classList.add('lock-scroll');
     document.body.classList.add('lock-scroll');
@@ -37,26 +36,25 @@ export default function SupportChat() {
 
   return (
     <div
-      className="w-full flex flex-col overflow-hidden relative"
+      className="w-full flex flex-col overflow-hidden relative bg-background"
       style={{ 
         height: 'calc(var(--vh, 1vh) * 100)',
         width: '100vw',
-        background: 'linear-gradient(180deg, #0A0A0A 0%, #0F0F0F 50%, #0A0A0A 100%)'
       }}
     >
-      {/* Botão voltar flutuante — discreto e elegante */}
+      {/* Botão voltar — discreto */}
       <motion.button
-        initial={{ opacity: 0, x: -20 }}
+        initial={{ opacity: 0, x: -12 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ duration: 0.3, delay: 0.1 }}
         onClick={handleBack}
-        className="absolute top-4 left-4 z-20 h-10 w-10 rounded-xl bg-white/[0.04] border border-white/[0.08] hover:bg-white/[0.08] flex items-center justify-center transition-all duration-200"
+        className="absolute top-4 left-4 z-20 h-9 w-9 rounded-xl bg-card/60 border border-border/50 hover:bg-card flex items-center justify-center transition-all duration-200"
         aria-label="Voltar"
       >
-        <ArrowLeft className="h-5 w-5 text-white/60" />
+        <ArrowLeft className="h-4 w-4 text-muted-foreground" />
       </motion.button>
 
-      {/* Chat Interface — ocupa toda a tela */}
+      {/* Chat Interface */}
       <div className="flex-1 overflow-hidden flex flex-col">
         <SupportChatInterface />
       </div>
