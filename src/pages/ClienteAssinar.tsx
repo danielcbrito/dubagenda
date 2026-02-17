@@ -12,11 +12,14 @@ import {
   Loader2,
   Shield,
   Sparkles,
+  User,
 } from "lucide-react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import pixIcon from "@/assets/pix-icon.png";
+import { BarberCard } from "@/components/booking/BarberCard";
+import { useBarberRatings } from "@/hooks/useBarberRatings";
 
 interface Plan {
   id: string;
@@ -25,6 +28,12 @@ interface Plan {
   preco_mensal: number;
   beneficios_json: any;
   limite_agendamentos_mes: number;
+}
+
+interface Barber {
+  id: string;
+  apelido: string;
+  foto_url: string | null;
 }
 
 /** Card de plano — premium, moderno e persuasivo */
@@ -66,7 +75,6 @@ function PlanCard({
       )}
 
       <div className="p-5">
-        {/* Popular badge — mais visível */}
         {isMostPopular && (
           <div className="flex items-center gap-1.5 mb-3">
             <div className="flex items-center gap-1.5 bg-primary/10 px-2.5 py-1 rounded-full">
@@ -78,7 +86,6 @@ function PlanCard({
           </div>
         )}
 
-        {/* Check indicator — mais destacado */}
         {isSelected && (
           <div className="absolute top-5 right-5">
             <motion.div 
@@ -91,13 +98,11 @@ function PlanCard({
           </div>
         )}
 
-        {/* Name + description */}
         <div className="mb-4 pr-10">
           <h3 className="text-lg font-bold text-foreground tracking-tight">{plan.nome}</h3>
           <p className="text-[13px] text-muted-foreground mt-1 leading-relaxed line-clamp-2">{plan.descricao}</p>
         </div>
 
-        {/* Price — destaque visual forte */}
         <div className="mb-4">
           <div className="flex items-baseline gap-1">
             <span className="text-[11px] text-muted-foreground font-medium">R$</span>
@@ -108,7 +113,6 @@ function PlanCard({
           </div>
         </div>
 
-        {/* Benefits — espaçados e legíveis */}
         <div className="space-y-2.5 pt-4 border-t border-border/40">
           <div className="flex items-center gap-2.5">
             <div className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
@@ -134,7 +138,6 @@ function PlanCard({
           )}
         </div>
 
-        {/* CTA sutil — texto ao invés de botão para não conflitar com a floating bar */}
         {!isSelected && (
           <div className="mt-4 pt-3 border-t border-border/20">
             <p className="text-[11px] text-center text-muted-foreground/60 font-medium">
@@ -153,6 +156,7 @@ function PlanCard({
     </motion.div>
   );
 }
+
 const ClienteAssinar = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -164,8 +168,14 @@ const ClienteAssinar = () => {
   const [hasActiveSubscription, setHasActiveSubscription] = useState(false);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<"pix" | "card" | null>(null);
 
+  // Barber selection
+  const [barbers, setBarbers] = useState<Barber[]>([]);
+  const [selectedBarber, setSelectedBarber] = useState<Barber | null>(null);
+  const { ratings } = useBarberRatings(barbers.map(b => b.id));
+
   useEffect(() => {
     loadPlans();
+    loadBarbers();
     checkActiveSubscription();
   }, []);
 
@@ -174,7 +184,7 @@ const ClienteAssinar = () => {
       const plan = plans.find(p => p.id === resumePlanId);
       if (plan) {
         setSelectedPlan(plan);
-        setStep(2);
+        setStep(2); // go to barber selection
       } else {
         setStep(1);
       }
@@ -204,13 +214,30 @@ const ClienteAssinar = () => {
     setPlans(data || []);
   };
 
-  const handleProceedToPayment = () => {
+  const loadBarbers = async () => {
+    const { data } = await supabase
+      .from('barbeiros')
+      .select('id, apelido, foto_url')
+      .eq('ativo', true)
+      .order('apelido');
+    setBarbers(data || []);
+  };
+
+  const handleProceedToBarber = () => {
     if (!selectedPlan) return;
     setStep(2);
   };
 
+  const handleProceedToPayment = () => {
+    if (!selectedBarber) {
+      toast.error("Selecione um barbeiro");
+      return;
+    }
+    setStep(3);
+  };
+
   const handlePayment = async () => {
-    if (!selectedPlan || !selectedPaymentMethod) return;
+    if (!selectedPlan || !selectedPaymentMethod || !selectedBarber) return;
     setLoading(true);
 
     try {
@@ -223,20 +250,23 @@ const ClienteAssinar = () => {
 
       if (selectedPaymentMethod === "card") {
         const { data, error } = await supabase.functions.invoke('create-subscription-card', {
-          body: { planoId: selectedPlan.id }
+          body: { planoId: selectedPlan.id, barbeiroId: selectedBarber.id }
         });
         if (error) throw error;
         if (data?.error) throw new Error(data.error);
         if (data?.url) {
+          // Store barber info for post-payment redirect
+          sessionStorage.setItem("subscription_barber_id", selectedBarber.id);
           window.location.href = data.url;
           toast.info("Complete o pagamento para ativar sua assinatura");
         }
       } else {
         const { data, error } = await supabase.functions.invoke('create-subscription-pix', {
-          body: { planoId: selectedPlan.id }
+          body: { planoId: selectedPlan.id, barbeiroId: selectedBarber.id }
         });
         if (error) throw error;
         if (data?.success) {
+          sessionStorage.setItem("subscription_barber_id", selectedBarber.id);
           const pixCheckoutData = {
             pixQrCode: data.pixQrCode,
             pixPayload: data.pixPayload,
@@ -258,23 +288,32 @@ const ClienteAssinar = () => {
     }
   };
 
-  const headerTitle = step === 1 ? "Escolha seu plano" : "Forma de pagamento";
+  const headerTitle = step === 1 
+    ? "Escolha seu plano" 
+    : step === 2 
+      ? "Escolha seu barbeiro" 
+      : "Forma de pagamento";
+
+  const handleBack = () => {
+    if (step === 3) {
+      setStep(2);
+      setSelectedPaymentMethod(null);
+    } else if (step === 2) {
+      setStep(1);
+      setSelectedBarber(null);
+    } else {
+      navigate("/cliente");
+    }
+  };
 
   return (
     <div className="min-h-screen pb-20">
       
-      {/* Header — compacto, seta + título */}
+      {/* Header */}
       <div className="sticky top-0 z-10 px-4 pt-[max(env(safe-area-inset-top),0.75rem)] pb-3 mb-4 bg-background/80 backdrop-blur-xl">
         <div className="max-w-2xl mx-auto flex items-center gap-3">
           <button 
-            onClick={() => {
-              if (step === 2) {
-                setStep(1);
-                setSelectedPaymentMethod(null);
-              } else {
-                navigate("/cliente");
-              }
-            }}
+            onClick={handleBack}
             className="w-8 h-8 flex items-center justify-center rounded-lg bg-card border border-border/40 hover:bg-muted transition-colors"
           >
             <ArrowLeft className="w-4 h-4 text-foreground" />
@@ -287,6 +326,19 @@ const ClienteAssinar = () => {
           >
             {headerTitle}
           </motion.p>
+
+          {/* Step dots */}
+          <div className="ml-auto flex items-center gap-1.5">
+            {[1, 2, 3].map((s) => (
+              <div
+                key={s}
+                className={cn(
+                  "w-1.5 h-1.5 rounded-full transition-all",
+                  step >= s ? "bg-primary" : "bg-muted-foreground/20"
+                )}
+              />
+            ))}
+          </div>
         </div>
       </div>
 
@@ -341,8 +393,8 @@ const ClienteAssinar = () => {
             </motion.div>
           )}
 
-          {/* Step 2: Pagamento — idêntico ao fluxo de agendamento */}
-          {step === 2 && selectedPlan && (
+          {/* Step 2: Seleção de Barbeiro */}
+          {step === 2 && (
             <motion.div
               key="step2"
               initial={{ opacity: 0, x: 16 }}
@@ -350,7 +402,44 @@ const ClienteAssinar = () => {
               exit={{ opacity: 0, x: -16 }}
               className="pb-28"
             >
-              {/* Header */}
+              <div className="mb-5 pt-1">
+                <h2 className="text-xl font-semibold text-foreground">
+                  Seu Barbeiro
+                </h2>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Escolha o profissional exclusivo do seu plano
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                {barbers.map((barber, index) => (
+                  <motion.div
+                    key={barber.id}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.04 }}
+                  >
+                    <BarberCard
+                      barber={barber}
+                      isSelected={selectedBarber?.id === barber.id}
+                      onSelect={() => setSelectedBarber(barber)}
+                      rating={ratings[barber.id]}
+                    />
+                  </motion.div>
+                ))}
+              </div>
+            </motion.div>
+          )}
+
+          {/* Step 3: Pagamento */}
+          {step === 3 && selectedPlan && (
+            <motion.div
+              key="step3"
+              initial={{ opacity: 0, x: 16 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -16 }}
+              className="pb-28"
+            >
               <div className="mb-6 pt-1">
                 <h2 className="text-xl font-semibold text-foreground">
                   Pagamento
@@ -360,7 +449,7 @@ const ClienteAssinar = () => {
                 </p>
               </div>
 
-              {/* Resumo do plano — mesmo estilo do resumo de serviço */}
+              {/* Resumo do plano + barbeiro */}
               <div className="bg-card border border-border/40 rounded-xl p-4 mb-6">
                 <div className="flex items-center justify-between">
                   <div>
@@ -375,9 +464,23 @@ const ClienteAssinar = () => {
                     R$ {selectedPlan.preco_mensal.toFixed(2).replace('.', ',')}
                   </p>
                 </div>
+                {selectedBarber && (
+                  <div className="flex items-center gap-2 mt-3 pt-3 border-t border-border/30">
+                    <div className="w-6 h-6 rounded-full overflow-hidden bg-muted/20 flex items-center justify-center flex-shrink-0">
+                      {selectedBarber.foto_url ? (
+                        <img src={selectedBarber.foto_url} alt={selectedBarber.apelido} className="w-full h-full object-cover" />
+                      ) : (
+                        <User className="w-3.5 h-3.5 text-muted-foreground/40" />
+                      )}
+                    </div>
+                    <p className="text-[12px] text-muted-foreground">
+                      Barbeiro: <span className="font-medium text-foreground">{selectedBarber.apelido}</span>
+                    </p>
+                  </div>
+                )}
               </div>
 
-              {/* Métodos de pagamento digital */}
+              {/* Métodos de pagamento */}
               <div className="space-y-3 mb-4">
                 {/* PIX */}
                 <motion.button
@@ -467,8 +570,9 @@ const ClienteAssinar = () => {
         </AnimatePresence>
       </div>
 
-      {/* Floating Bottom Bar — Step 1 */}
+      {/* Floating Bottom Bars */}
       <AnimatePresence>
+        {/* Step 1 — Plan selected */}
         {step === 1 && selectedPlan && !hasActiveSubscription && (
           <motion.div
             key="bar-step1"
@@ -513,6 +617,62 @@ const ClienteAssinar = () => {
                     </div>
                   </div>
                   <motion.button
+                    onClick={handleProceedToBarber}
+                    whileTap={{ scale: 0.96 }}
+                    className="group flex items-center gap-1.5 px-4 py-2 rounded-lg font-medium text-xs text-primary-foreground bg-primary hover:bg-primary/90 transition-colors"
+                  >
+                    <span>Continuar</span>
+                    <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" />
+                  </motion.button>
+                </div>
+              </div>
+              <div className="h-3" />
+            </div>
+          </motion.div>
+        )}
+
+        {/* Step 2 — Barber selected */}
+        {step === 2 && selectedBarber && !hasActiveSubscription && (
+          <motion.div
+            key="bar-step2"
+            initial={{ y: 80, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 80, opacity: 0 }}
+            transition={{ type: "spring", stiffness: 500, damping: 40 }}
+            className="fixed bottom-0 left-0 right-0 z-40"
+          >
+            <div className="relative px-4 pb-safe">
+              <div className="absolute -top-10 left-0 right-0 h-10 bg-gradient-to-t from-background to-transparent pointer-events-none" />
+              <div 
+                className="relative mx-auto max-w-md"
+                style={{
+                  borderRadius: "14px",
+                  background: "hsl(var(--card) / 0.95)",
+                  boxShadow: "0 0 0 1px hsl(var(--border) / 0.3), 0 8px 24px -6px rgba(0, 0, 0, 0.4)",
+                  backdropFilter: "blur(20px)"
+                }}
+              >
+                <div 
+                  className="absolute top-0 left-1/2 -translate-x-1/2 w-20 h-[1px]"
+                  style={{ background: "linear-gradient(90deg, transparent, hsl(var(--primary) / 0.4), transparent)" }}
+                />
+                <div className="flex items-center justify-between px-3.5 py-2.5">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-full overflow-hidden bg-muted/20 flex items-center justify-center flex-shrink-0">
+                      {selectedBarber.foto_url ? (
+                        <img src={selectedBarber.foto_url} alt={selectedBarber.apelido} className="w-full h-full object-cover" />
+                      ) : (
+                        <User className="w-4 h-4 text-muted-foreground/40" />
+                      )}
+                    </div>
+                    <div>
+                      <div className="text-[10px] text-muted-foreground/60">Barbeiro</div>
+                      <div className="text-sm font-semibold text-foreground">
+                        {selectedBarber.apelido}
+                      </div>
+                    </div>
+                  </div>
+                  <motion.button
                     onClick={handleProceedToPayment}
                     whileTap={{ scale: 0.96 }}
                     className="group flex items-center gap-1.5 px-4 py-2 rounded-lg font-medium text-xs text-primary-foreground bg-primary hover:bg-primary/90 transition-colors"
@@ -527,10 +687,10 @@ const ClienteAssinar = () => {
           </motion.div>
         )}
 
-        {/* Floating Bottom Bar — Step 2 */}
-        {step === 2 && selectedPaymentMethod && !hasActiveSubscription && (
+        {/* Step 3 — Payment method selected */}
+        {step === 3 && selectedPaymentMethod && !hasActiveSubscription && (
           <motion.div
-            key="bar-step2"
+            key="bar-step3"
             initial={{ y: 80, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 80, opacity: 0 }}
