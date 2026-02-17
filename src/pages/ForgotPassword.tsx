@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { z } from "zod";
 import logoDub from "@/assets/logo-dub.png";
 import { Loader2, Mail, CheckCircle2, ArrowLeft } from "lucide-react";
+import { motion } from "framer-motion";
 
 const emailSchema = z.object({
   email: z.string().trim().email("Email inválido"),
@@ -57,7 +58,6 @@ const ForgotPassword = () => {
 
       if (error) {
         console.error("Reset password error:", error);
-        // Supabase SMTP issues (500/504/timeout) - still show success since email may have been queued
         const isInfraError = error.status === 500 || error.status === 504 || error.message?.includes('timeout');
         if (!isInfraError) {
           toast.error("Erro ao solicitar recuperação. Tente novamente.");
@@ -81,139 +81,126 @@ const ForgotPassword = () => {
     }
   };
 
+  const inputClasses = "h-12 pl-11 bg-muted/50 border-border text-foreground placeholder:text-muted-foreground/50 rounded-xl focus:border-primary/50 focus:ring-1 focus:ring-primary/20 transition-all text-sm";
+
   return (
-    <div className="min-h-screen min-h-[100dvh] flex flex-col bg-black">
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div 
-          className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[600px] rounded-full opacity-20"
-          style={{
-            background: 'radial-gradient(ellipse at center, hsl(var(--primary) / 0.3) 0%, transparent 70%)',
-            filter: 'blur(80px)',
-          }}
-        />
-      </div>
+    <div className="min-h-screen min-h-[100dvh] flex flex-col bg-background">
+      <div className="flex-1 flex flex-col px-6 pt-[env(safe-area-inset-top)] overflow-y-auto">
+        {/* Back */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.4 }}
+          className="pt-4"
+        >
+          <button
+            onClick={() => navigate("/auth")}
+            className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span className="text-[13px]">Voltar</span>
+          </button>
+        </motion.div>
 
-      <div className="flex-1 flex items-center justify-center px-5 py-8 sm:py-12 overflow-y-auto">
-        <div className="w-full max-w-[400px] relative z-10">
-          
-          <div className="flex justify-center mb-8">
-            <div className="relative">
-              <div 
-                className="absolute inset-0 rounded-full opacity-60"
+        {/* Logo + Title */}
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+          className="flex flex-col items-center mt-12 mb-8"
+        >
+          <img
+            src={logoDub}
+            alt="DUB"
+            className="w-14 h-14 object-contain mb-4"
+          />
+
+          {!emailSent ? (
+            <>
+              <h1 className="text-2xl font-bold text-foreground tracking-tight font-display">
+                Recuperar senha
+              </h1>
+              <p className="text-[13px] text-muted-foreground mt-1.5 text-center max-w-[260px]">
+                Digite seu email para receber o link de recuperação
+              </p>
+            </>
+          ) : (
+            <>
+              <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+                <CheckCircle2 className="w-8 h-8 text-primary" />
+              </div>
+              <h1 className="text-2xl font-bold text-foreground tracking-tight font-display">
+                Email enviado!
+              </h1>
+              <p className="text-[13px] text-muted-foreground mt-1.5 text-center">
+                Verifique sua caixa de entrada em
+                <br />
+                <span className="text-primary font-medium">{email}</span>
+              </p>
+            </>
+          )}
+        </motion.div>
+
+        {/* Form or CTA */}
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
+          className="w-full max-w-sm mx-auto"
+        >
+          {!emailSent ? (
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-[12px] font-medium text-muted-foreground uppercase tracking-wider block">
+                  Email
+                </label>
+                <div className="relative">
+                  <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-[18px] h-[18px] text-muted-foreground/40" />
+                  <Input
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className={inputClasses}
+                    placeholder="seu@email.com"
+                  />
+                </div>
+              </div>
+
+              <Button
+                type="submit"
+                className="w-full h-[50px] rounded-xl text-[14px] font-semibold transition-all duration-200"
                 style={{
-                  background: 'radial-gradient(circle, hsl(var(--primary) / 0.4) 0%, transparent 70%)',
-                  filter: 'blur(20px)',
-                  transform: 'scale(1.5)',
+                  background: "var(--gradient-primary)",
+                  boxShadow: "var(--shadow-glow-red)",
                 }}
-              />
-              <img src={logoDub} alt="DUB" className="relative w-16 h-16 sm:w-20 sm:h-20 object-contain" />
-            </div>
-          </div>
-
-          <div className="relative">
-            <div 
-              className="absolute -inset-px rounded-2xl opacity-50"
-              style={{ background: 'linear-gradient(180deg, hsl(var(--primary) / 0.3) 0%, transparent 50%)' }}
-            />
-            
-            <div 
-              className="relative rounded-2xl p-6 sm:p-8 border border-white/[0.08]"
+                disabled={isLoading || cooldown > 0}
+              >
+                {isLoading ? (
+                  <span className="flex items-center gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Enviando...
+                  </span>
+                ) : cooldown > 0 ? (
+                  `Aguarde ${cooldown}s`
+                ) : (
+                  "Enviar link de recuperação"
+                )}
+              </Button>
+            </form>
+          ) : (
+            <Button
+              onClick={() => navigate("/auth")}
+              className="w-full h-[50px] rounded-xl text-[14px] font-semibold transition-all duration-200"
               style={{
-                background: 'linear-gradient(180deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.02) 100%)',
-                backdropFilter: 'blur(20px)',
+                background: "var(--gradient-primary)",
+                boxShadow: "var(--shadow-glow-red)",
               }}
             >
-              <div className="absolute top-0 left-8 right-8 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
-
-              {!emailSent ? (
-                <>
-                  <div className="flex justify-center mb-6">
-                    <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center border border-primary/20">
-                      <Mail className="w-8 h-8 text-primary" />
-                    </div>
-                  </div>
-
-                  <div className="text-center mb-8">
-                    <h1 className="text-2xl sm:text-[26px] font-semibold text-white tracking-tight">
-                      Recuperar senha
-                    </h1>
-                    <p className="mt-2 text-sm text-white/50 leading-relaxed">
-                      Digite seu email para receber o link de recuperação
-                    </p>
-                  </div>
-
-                  <form onSubmit={handleSubmit} className="space-y-4">
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-white/80 block">Email</label>
-                      <div className="relative">
-                        <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-[18px] h-[18px] text-white/30" />
-                        <Input
-                          type="email"
-                          required
-                          value={email}
-                          onChange={(e) => setEmail(e.target.value)}
-                          className="h-12 pl-11 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/30 rounded-xl focus:border-primary/50 focus:ring-1 focus:ring-primary/20 transition-all"
-                          placeholder="seu@email.com"
-                        />
-                      </div>
-                    </div>
-
-                    <Button 
-                      type="submit" 
-                      className="w-full h-12 mt-2 bg-primary hover:bg-primary/90 text-white font-semibold rounded-xl transition-all duration-200 shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 disabled:opacity-50"
-                      disabled={isLoading || cooldown > 0}
-                    >
-                      {isLoading ? (
-                        <span className="flex items-center gap-2">
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                          Enviando...
-                        </span>
-                      ) : cooldown > 0 ? (
-                        `Aguarde ${cooldown}s`
-                      ) : (
-                        "Enviar link de recuperação"
-                      )}
-                    </Button>
-                  </form>
-                </>
-              ) : (
-                <>
-                  <div className="flex justify-center mb-6">
-                    <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center border border-primary/20 animate-scale-in">
-                      <CheckCircle2 className="w-10 h-10 text-primary" />
-                    </div>
-                  </div>
-
-                  <div className="text-center">
-                    <h1 className="text-2xl font-semibold text-white mb-3">Email enviado!</h1>
-                    <p className="text-sm text-white/50 mb-6 leading-relaxed">
-                      Verifique sua caixa de entrada em<br />
-                      <span className="text-primary font-medium">{email}</span>
-                    </p>
-                    <Button 
-                      onClick={() => navigate("/auth")}
-                      className="w-full h-12 bg-primary hover:bg-primary/90 text-white font-semibold rounded-xl transition-all duration-200"
-                    >
-                      Voltar para login
-                    </Button>
-                  </div>
-                </>
-              )}
-
-              {!emailSent && (
-                <div className="mt-6 pt-6 border-t border-white/[0.06] text-center">
-                  <button
-                    onClick={() => navigate("/auth")}
-                    className="inline-flex items-center gap-2 text-sm text-white/40 hover:text-white/70 transition-colors"
-                  >
-                    <ArrowLeft className="w-4 h-4" />
-                    Voltar para login
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
+              Voltar para login
+            </Button>
+          )}
+        </motion.div>
       </div>
     </div>
   );

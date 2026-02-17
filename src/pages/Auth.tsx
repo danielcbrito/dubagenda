@@ -5,9 +5,11 @@ import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { z } from "zod";
-import { Loader2, Eye, EyeOff, User, Mail, Phone, Lock, CreditCard } from "lucide-react";
+import { Loader2, Eye, EyeOff, User, Mail, Phone, Lock, CreditCard, ArrowLeft } from "lucide-react";
 import { formatPhone, validatePhone, formatCPF, validateCPF } from "@/lib/validators";
 import { SupportChatBubble } from "@/components/support/SupportChatBubble";
+import logoDub from "@/assets/logo-dub.png";
+import { motion } from "framer-motion";
 
 const signupSchema = z.object({
   nome: z.string().trim().min(2, "Nome deve ter pelo menos 2 caracteres").max(100),
@@ -79,8 +81,6 @@ const Auth = () => {
 
     if (roles && roles.length > 0) {
       const isAdmin = roles.some(r => r.role === "admin");
-      
-      // Bloquear acesso de admins - este app é exclusivo para clientes
       if (isAdmin) {
         await supabase.auth.signOut();
         toast.error("Este aplicativo é exclusivo para clientes. Acesse o app administrativo para gerenciar.", {
@@ -89,8 +89,6 @@ const Auth = () => {
         return;
       }
     }
-    
-    // Redirecionar clientes para área do cliente
     navigate("/cliente");
   };
 
@@ -142,7 +140,6 @@ const Auth = () => {
     try {
       const validated = signupSchema.parse(formData);
 
-      // Verificar duplicidade de CPF, telefone e email
       try {
         const { data: dupData, error: dupError } = await supabase.functions.invoke('check-duplicate-signup', {
           body: {
@@ -167,7 +164,6 @@ const Auth = () => {
         }
       } catch (dupErr) {
         console.error("Erro ao verificar duplicidade:", dupErr);
-        // Continua com o cadastro se a verificação falhar
       }
 
       const { data, error } = await supabase.auth.signUp({
@@ -199,7 +195,6 @@ const Auth = () => {
       }
 
       if (data.user) {
-        // Redirecionar diretamente para verificação via WhatsApp
         try {
           const { data: whatsappData, error: whatsappError } = await supabase.functions.invoke('whatsapp-verification', {
             body: {
@@ -285,223 +280,228 @@ const Auth = () => {
 
   const isSignup = mode === "signup";
 
+  const inputClasses = "h-12 pl-11 bg-muted/50 border-border text-foreground placeholder:text-muted-foreground/50 rounded-xl focus:border-primary/50 focus:ring-1 focus:ring-primary/20 transition-all text-sm";
+
   return (
-    <div className="min-h-screen min-h-[100dvh] flex flex-col bg-black">
-      {/* Background Effects */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div 
-          className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[400px] rounded-full opacity-15"
-          style={{
-            background: 'radial-gradient(ellipse at center, hsl(var(--primary) / 0.3) 0%, transparent 70%)',
-            filter: 'blur(80px)',
-          }}
-        />
-      </div>
-
-      {/* Main Content */}
-      <div className="flex-1 flex items-center justify-center px-4 py-6 overflow-y-auto">
-        <div className="w-full max-w-[380px] relative z-10">
-          
-          {/* Card */}
-          <div 
-            className="rounded-2xl p-5 sm:p-6 border border-white/[0.08]"
-            style={{
-              background: 'linear-gradient(180deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)',
-              backdropFilter: 'blur(20px)',
-            }}
+    <div className="min-h-screen min-h-[100dvh] flex flex-col bg-background">
+      {/* Content */}
+      <div className="flex-1 flex flex-col px-6 pt-[env(safe-area-inset-top)] overflow-y-auto">
+        {/* Back button */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.4 }}
+          className="pt-4"
+        >
+          <button
+            type="button"
+            onClick={() => navigate("/")}
+            className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors"
           >
-            {/* Title */}
-            <div className="text-center mb-6">
-              <h1 className="text-xl sm:text-2xl font-semibold text-white tracking-tight">
-                {isSignup ? "Criar conta" : "Entrar"}
-              </h1>
-              <p className="mt-1.5 text-sm text-white/50">
-                {isSignup 
-                  ? "Preencha seus dados" 
-                  : "Entre com suas credenciais"}
-              </p>
-            </div>
+            <ArrowLeft className="w-4 h-4" />
+            <span className="text-[13px]">Voltar</span>
+          </button>
+        </motion.div>
 
-            {/* Form */}
-            <form onSubmit={isSignup ? handleSignup : handleLogin} className="space-y-3">
-              
-              {isSignup && (
-                <>
-                  {/* Nome */}
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-white/70 block">
-                      Nome completo
-                    </label>
-                    <div className="relative">
-                      <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
-                      <Input
-                        name="nome"
-                        type="text"
-                        required
-                        value={formData.nome}
-                        onChange={handleInputChange}
-                        className="h-11 pl-10 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/30 rounded-lg focus:border-primary/50 focus:ring-1 focus:ring-primary/20 transition-all text-sm"
-                        placeholder="Seu nome"
-                      />
-                    </div>
-                  </div>
+        {/* Logo + Title */}
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+          className="flex flex-col items-center mt-8 mb-8"
+        >
+          <img
+            src={logoDub}
+            alt="DUB"
+            className="w-14 h-14 object-contain mb-4"
+          />
+          <h1 className="text-2xl font-bold text-foreground tracking-tight font-display">
+            {isSignup ? "Criar conta" : "Bem-vindo de volta"}
+          </h1>
+          <p className="text-[13px] text-muted-foreground mt-1.5">
+            {isSignup
+              ? "Preencha seus dados para começar"
+              : "Entre com suas credenciais"}
+          </p>
+        </motion.div>
 
-                  {/* Telefone */}
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-white/70 block">
-                      WhatsApp
-                    </label>
-                    <div className="relative">
-                      <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
-                      <Input
-                        name="telefone"
-                        type="text"
-                        required
-                        maxLength={15}
-                        value={formData.telefone}
-                        onChange={handleInputChange}
-                        className={`h-11 pl-10 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/30 rounded-lg focus:border-primary/50 focus:ring-1 focus:ring-primary/20 transition-all text-sm ${telefoneError ? 'border-destructive/50 focus:border-destructive/50' : ''}`}
-                        placeholder="(00) 00000-0000"
-                      />
-                    </div>
-                    {telefoneError && (
-                      <p className="text-xs text-destructive pl-1">{telefoneError}</p>
-                    )}
-                  </div>
-
-                  {/* CPF */}
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-white/70 block">
-                      CPF
-                    </label>
-                    <div className="relative">
-                      <CreditCard className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
-                      <Input
-                        name="cpf"
-                        type="text"
-                        required
-                        maxLength={14}
-                        value={formData.cpf}
-                        onChange={handleInputChange}
-                        className={`h-11 pl-10 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/30 rounded-lg focus:border-primary/50 focus:ring-1 focus:ring-primary/20 transition-all text-sm ${cpfError ? 'border-destructive/50 focus:border-destructive/50' : ''}`}
-                        placeholder="000.000.000-00"
-                      />
-                    </div>
-                    {cpfError && (
-                      <p className="text-xs text-destructive pl-1">{cpfError}</p>
-                    )}
-                  </div>
-                </>
-              )}
-
-              {/* Email */}
+        {/* Form */}
+        <motion.form
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
+          onSubmit={isSignup ? handleSignup : handleLogin}
+          className="w-full max-w-sm mx-auto space-y-4"
+        >
+          {isSignup && (
+            <>
+              {/* Nome */}
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-white/70 block">
-                  Email
+                <label className="text-[12px] font-medium text-muted-foreground uppercase tracking-wider block">
+                  Nome completo
                 </label>
                 <div className="relative">
-                  <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
+                  <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-[18px] h-[18px] text-muted-foreground/40" />
                   <Input
-                    name="email"
-                    type="email"
+                    name="nome"
+                    type="text"
                     required
-                    value={formData.email}
+                    value={formData.nome}
                     onChange={handleInputChange}
-                    className="h-11 pl-10 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/30 rounded-lg focus:border-primary/50 focus:ring-1 focus:ring-primary/20 transition-all text-sm"
-                    placeholder="seu@email.com"
+                    className={inputClasses}
+                    placeholder="Seu nome"
                   />
                 </div>
               </div>
 
-              {/* Senha */}
+              {/* Telefone */}
               <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-medium text-white/70">
-                    Senha
-                  </label>
-                  {!isSignup && (
-                    <button
-                      type="button"
-                      onClick={() => navigate("/esqueci-senha")}
-                      className="text-xs text-primary/80 hover:text-primary transition-colors"
-                    >
-                      Esqueci a senha
-                    </button>
-                  )}
-                </div>
+                <label className="text-[12px] font-medium text-muted-foreground uppercase tracking-wider block">
+                  WhatsApp
+                </label>
                 <div className="relative">
-                  <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
+                  <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-[18px] h-[18px] text-muted-foreground/40" />
                   <Input
-                    name="senha"
-                    type={showPassword ? "text" : "password"}
+                    name="telefone"
+                    type="text"
                     required
-                    value={formData.senha}
+                    maxLength={15}
+                    value={formData.telefone}
                     onChange={handleInputChange}
-                    className="h-11 pl-10 pr-10 bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/30 rounded-lg focus:border-primary/50 focus:ring-1 focus:ring-primary/20 transition-all text-sm"
-                    placeholder={isSignup ? "Mínimo 6 caracteres" : "Sua senha"}
+                    className={`${inputClasses} ${telefoneError ? 'border-destructive/50 focus:border-destructive/50' : ''}`}
+                    placeholder="(00) 00000-0000"
                   />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 transition-colors"
-                  >
-                    {showPassword ? (
-                      <EyeOff className="w-4 h-4" />
-                    ) : (
-                      <Eye className="w-4 h-4" />
-                    )}
-                  </button>
                 </div>
+                {telefoneError && (
+                  <p className="text-[11px] text-destructive pl-1">{telefoneError}</p>
+                )}
               </div>
 
-              {/* Submit Button */}
-              <Button 
-                type="submit" 
-                className="w-full h-11 mt-4 bg-primary hover:bg-primary/90 text-white font-semibold rounded-lg transition-all duration-200 disabled:opacity-50"
-                disabled={isLoading || cooldownTimer > 0 || (isSignup && (!!telefoneError || !!cpfError))}
-              >
-                {isLoading ? (
-                  <span className="flex items-center gap-2">
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    {isSignup ? "Criando..." : "Entrando..."}
-                  </span>
-                ) : cooldownTimer > 0 ? (
-                  `Aguarde ${cooldownTimer}s`
-                ) : (
-                  isSignup ? "Criar conta" : "Entrar"
+              {/* CPF */}
+              <div className="space-y-1.5">
+                <label className="text-[12px] font-medium text-muted-foreground uppercase tracking-wider block">
+                  CPF
+                </label>
+                <div className="relative">
+                  <CreditCard className="absolute left-3.5 top-1/2 -translate-y-1/2 w-[18px] h-[18px] text-muted-foreground/40" />
+                  <Input
+                    name="cpf"
+                    type="text"
+                    required
+                    maxLength={14}
+                    value={formData.cpf}
+                    onChange={handleInputChange}
+                    className={`${inputClasses} ${cpfError ? 'border-destructive/50 focus:border-destructive/50' : ''}`}
+                    placeholder="000.000.000-00"
+                  />
+                </div>
+                {cpfError && (
+                  <p className="text-[11px] text-destructive pl-1">{cpfError}</p>
                 )}
-              </Button>
-            </form>
+              </div>
+            </>
+          )}
 
-            {/* Toggle Mode */}
-            <div className="mt-5 pt-5 border-t border-white/[0.06] text-center">
-              <p className="text-sm text-white/40">
-                {isSignup ? "Já tem conta?" : "Não tem conta?"}
-                <button
-                  type="button"
-                  onClick={() => navigate(`/auth?mode=${isSignup ? "login" : "signup"}`)}
-                  className="ml-1.5 text-primary hover:text-primary/80 font-medium transition-colors"
-                >
-                  {isSignup ? "Entrar" : "Criar agora"}
-                </button>
-              </p>
+          {/* Email */}
+          <div className="space-y-1.5">
+            <label className="text-[12px] font-medium text-muted-foreground uppercase tracking-wider block">
+              Email
+            </label>
+            <div className="relative">
+              <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-[18px] h-[18px] text-muted-foreground/40" />
+              <Input
+                name="email"
+                type="email"
+                required
+                value={formData.email}
+                onChange={handleInputChange}
+                className={inputClasses}
+                placeholder="seu@email.com"
+              />
             </div>
           </div>
 
-          {/* Back Link */}
-          <div className="mt-6 text-center">
+          {/* Senha */}
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <label className="text-[12px] font-medium text-muted-foreground uppercase tracking-wider">
+                Senha
+              </label>
+              {!isSignup && (
+                <button
+                  type="button"
+                  onClick={() => navigate("/esqueci-senha")}
+                  className="text-[11px] text-primary/80 hover:text-primary transition-colors font-medium"
+                >
+                  Esqueci a senha
+                </button>
+              )}
+            </div>
+            <div className="relative">
+              <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-[18px] h-[18px] text-muted-foreground/40" />
+              <Input
+                name="senha"
+                type={showPassword ? "text" : "password"}
+                required
+                value={formData.senha}
+                onChange={handleInputChange}
+                className={`${inputClasses} pr-11`}
+                placeholder={isSignup ? "Mínimo 6 caracteres" : "Sua senha"}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground/40 hover:text-muted-foreground transition-colors"
+              >
+                {showPassword ? <EyeOff className="w-[18px] h-[18px]" /> : <Eye className="w-[18px] h-[18px]" />}
+              </button>
+            </div>
+          </div>
+
+          {/* Submit */}
+          <Button
+            type="submit"
+            className="w-full h-[50px] mt-2 rounded-xl text-[14px] font-semibold transition-all duration-200"
+            style={{
+              background: "var(--gradient-primary)",
+              boxShadow: "var(--shadow-glow-red)",
+            }}
+            disabled={isLoading || cooldownTimer > 0 || (isSignup && (!!telefoneError || !!cpfError))}
+          >
+            {isLoading ? (
+              <span className="flex items-center gap-2">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                {isSignup ? "Criando..." : "Entrando..."}
+              </span>
+            ) : cooldownTimer > 0 ? (
+              `Aguarde ${cooldownTimer}s`
+            ) : (
+              isSignup ? "Criar conta" : "Entrar"
+            )}
+          </Button>
+        </motion.form>
+
+        {/* Toggle Mode */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.4, delay: 0.3 }}
+          className="text-center mt-6 pb-8"
+          style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 2rem)" }}
+        >
+          <p className="text-[13px] text-muted-foreground">
+            {isSignup ? "Já tem conta?" : "Não tem conta?"}
             <button
               type="button"
-              onClick={() => navigate("/")}
-              className="text-sm text-white/40 hover:text-white/70 transition-colors"
+              onClick={() => navigate(`/auth?mode=${isSignup ? "login" : "signup"}`)}
+              className="ml-1.5 text-primary hover:text-primary/80 font-semibold transition-colors"
             >
-              ← Voltar ao início
+              {isSignup ? "Entrar" : "Criar agora"}
             </button>
-          </div>
-        </div>
+          </p>
+        </motion.div>
       </div>
 
-      {/* Support Chat */}
       <SupportChatBubble />
     </div>
   );
