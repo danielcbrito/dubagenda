@@ -286,7 +286,7 @@ const Auth = () => {
   return (
     <div className="min-h-screen min-h-[100dvh] flex flex-col bg-background">
       {/* Content */}
-      <div className={cn("flex-1 flex flex-col px-6 pt-[env(safe-area-inset-top)] overflow-y-auto", !isSignup && "justify-center")}>
+      <div className="flex-1 flex flex-col px-6 pt-[env(safe-area-inset-top)] overflow-y-auto justify-center">
         {/* Back button */}
         <motion.div
           initial={{ opacity: 0 }}
