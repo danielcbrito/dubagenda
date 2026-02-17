@@ -637,7 +637,7 @@ const Cliente = () => {
               <div className="space-y-4">
                 <PlanExpiredBanner
                   planName={(expiredSubscription as any).plano?.nome || "Plano"}
-                  onRenew={() => setSubscribeSheetOpen(true)}
+                  onRenew={() => navigate("/cliente/assinar")}
                 />
                 <LoyaltyCard
                   points={points}

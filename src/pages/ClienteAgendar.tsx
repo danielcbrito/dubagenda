@@ -91,6 +91,7 @@ const ClienteAgendar = () => {
   
   // Indica se o usuário está usando fluxo de plano (serviço pré-selecionado)
   const [isPlanFlow, setIsPlanFlow] = useState(false);
+  const [isInitializing, setIsInitializing] = useState(true);
 
   // Verificação se usuário pode usar o plano
   const isPlanEligible =
@@ -157,6 +158,7 @@ const ClienteAgendar = () => {
   // Initialize booking
   useEffect(() => {
     const initializeBooking = async () => {
+      setIsInitializing(true);
       await loadBarbers();
       await loadUserCredits();
       await loadAvailableRedemptions();
@@ -204,6 +206,7 @@ const ClienteAgendar = () => {
 
           // Ir direto para o step 5 (pagamento)
           setStep(5);
+          setIsInitializing(false);
           return;
         } catch (e) {
           console.error("Erro ao restaurar dados de pagamento:", e);
@@ -217,6 +220,7 @@ const ClienteAgendar = () => {
         setIsRescheduling(true);
         setRescheduleAppointmentId(appointmentId);
         loadAppointmentForReschedule(appointmentId);
+        setIsInitializing(false);
         return;
       }
 
@@ -238,15 +242,18 @@ const ClienteAgendar = () => {
           } else {
             setStep(1); // Fallback: escolher barbeiro
           }
+          setIsInitializing(false);
           return;
         }
 
         // Limite atingido - bloquear fluxo
         setSubscriptionLimitReached(true);
+        setIsInitializing(false);
         return;
       }
 
       await loadServices();
+      setIsInitializing(false);
     };
 
     initializeBooking();
@@ -1466,6 +1473,15 @@ const ClienteAgendar = () => {
     animate: { opacity: 1, x: 0 },
     exit: { opacity: 0, x: -20 }
   };
+
+  // Loading gate — previne flash do step 1 enquanto inicializa
+  if (isInitializing) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   // Tela de Limite Atingido - para quando o usuário já usou todos os agendamentos do plano
   if (subscriptionLimitReached) {
