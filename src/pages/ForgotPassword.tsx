@@ -85,29 +85,30 @@ const ForgotPassword = () => {
 
   return (
     <div className="min-h-screen min-h-[100dvh] flex flex-col bg-background">
-      <div className="flex-1 flex flex-col px-6 pt-[env(safe-area-inset-top)] overflow-y-auto">
-        {/* Back */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.4 }}
-          className="pt-4"
+      {/* Back - absolute */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.4 }}
+        className="absolute top-0 left-0 pt-[calc(env(safe-area-inset-top)+1rem)] pl-6 z-10"
+      >
+        <button
+          onClick={() => navigate("/auth")}
+          className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors"
         >
-          <button
-            onClick={() => navigate("/auth")}
-            className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            <span className="text-[13px]">Voltar</span>
-          </button>
-        </motion.div>
+          <ArrowLeft className="w-4 h-4" />
+          <span className="text-[13px]">Voltar</span>
+        </button>
+      </motion.div>
+
+      <div className="flex-1 flex flex-col justify-center px-6 overflow-y-auto">
 
         {/* Logo + Title */}
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-          className="flex flex-col items-center mt-12 mb-8"
+          className="flex flex-col items-center mb-6"
         >
           <img
             src={logoDub}
