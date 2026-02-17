@@ -48,6 +48,8 @@ interface ActiveSubscription {
   status: string;
   servico_id: string | null;
   servico: Service | null;
+  barbeiro_id: string | null;
+  barbeiro: Barber | null;
 }
 
 const ClienteAgendar = () => {
@@ -227,7 +229,15 @@ const ClienteAgendar = () => {
           // Usuário de plano com agendamentos disponíveis
           setSelectedServices([subscription.servico]);
           setIsPlanFlow(true);
-          setStep(1); // Step 1 = Escolher barbeiro (para todos)
+
+          // Auto-selecionar barbeiro do plano e pular para data
+          if (subscription.barbeiro) {
+            setSelectedBarber(subscription.barbeiro);
+            await loadBarberCustomDurations(subscription.barbeiro.id);
+            setStep(2); // Pula direto para seleção de data
+          } else {
+            setStep(1); // Fallback: escolher barbeiro
+          }
           return;
         }
 
@@ -380,6 +390,7 @@ const ClienteAgendar = () => {
           plano_id,
           next_billing_date,
           status,
+          barbeiro_id,
           plano:planos(nome, limite_agendamentos_mes, servico_id)
         `)
         .eq("user_id", session.user.id)
@@ -430,6 +441,20 @@ const ClienteAgendar = () => {
           }
         }
 
+        // Buscar barbeiro vinculado ao plano
+        let barbeiroVinculado: Barber | null = null;
+        if (subscription.barbeiro_id) {
+          const { data: barbeiroData } = await supabase
+            .from("barbeiros")
+            .select("id, apelido, foto_url")
+            .eq("id", subscription.barbeiro_id)
+            .single();
+          
+          if (barbeiroData) {
+            barbeiroVinculado = barbeiroData;
+          }
+        }
+
         const activeSubscriptionData: ActiveSubscription = {
           id: subscription.id,
           plano_id: subscription.plano_id,
@@ -439,7 +464,9 @@ const ClienteAgendar = () => {
           next_billing_date: subscription.next_billing_date,
           status: subscription.status,
           servico_id: planoData.servico_id || null,
-          servico: servicoVinculado
+          servico: servicoVinculado,
+          barbeiro_id: subscription.barbeiro_id || null,
+          barbeiro: barbeiroVinculado,
         };
 
         setActiveSubscription(activeSubscriptionData);
@@ -1398,15 +1425,21 @@ const ClienteAgendar = () => {
   const canUseRedemption = availableRedemptions.length > 0 && !!getCorteService();
 
   const handleBack = () => {
-    // NOVO FLUXO: Step 1 = Barbeiro para TODOS
+    // Step 1 (Barbeiro) - volta para home
     if (step === 1) {
-      // Step 1 (Barbeiro) - volta para home
       navigate("/cliente");
       return;
     }
     
-    if (isPlanFlow) {
-      // Plano: 1=Barbeiro, 2=Data, 3=Horário, 4=Confirmação
+    if (isPlanFlow && activeSubscription?.barbeiro) {
+      // Plano com barbeiro vinculado: step 2 = primeira etapa visível
+      if (step === 2) {
+        navigate("/cliente");
+        return;
+      }
+      setStep(step - 1);
+    } else if (isPlanFlow) {
+      // Plano sem barbeiro vinculado: 1=Barbeiro, 2=Data, 3=Horário, 4=Confirmação
       setStep(step - 1);
     } else if (isRescheduling) {
       // Remarcação: 1=Barbeiro, 2=Data, 3=Horário, 4=Confirmação
@@ -1417,14 +1450,16 @@ const ClienteAgendar = () => {
     }
   };
 
-  // NOVO CÁLCULO: Step 1 = Barbeiro para TODOS
-  // Plano: 4 etapas (Barbeiro, Data, Horário, Confirmação)
+  // Plano com barbeiro auto-selecionado: 3 etapas visíveis (Data, Horário, Confirmação)
+  // Plano sem barbeiro: 4 etapas (Barbeiro, Data, Horário, Confirmação)
   // Remarcação: 4 etapas (Barbeiro, Data, Horário, Confirmação)
   // Normal: 6 etapas (Barbeiro, Serviços, Data, Horário, Pagamento, Confirmação)
-  const totalSteps = isPlanFlow ? 4 : isRescheduling ? 4 : 6;
+  const totalSteps = isPlanFlow && activeSubscription?.barbeiro ? 3 : isPlanFlow ? 4 : isRescheduling ? 4 : 6;
   
-  // O step visual agora é direto (step 1-N = bolinha 1-N)
-  const currentDisplayStep = Math.min(step, totalSteps);
+  // Ajustar step visual para plano com barbeiro auto-selecionado
+  const currentDisplayStep = isPlanFlow && activeSubscription?.barbeiro 
+    ? Math.min(step - 1, totalSteps) 
+    : Math.min(step, totalSteps);
 
   const pageVariants = {
     initial: { opacity: 0, x: 20 },

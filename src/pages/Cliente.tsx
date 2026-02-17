@@ -374,7 +374,7 @@ const Cliente = () => {
     // Buscar assinatura ativa do usuário
     const { data: activeSub } = await supabase
       .from("assinaturas")
-      .select("id, status, next_billing_date, plano_id, plano:planos(nome, limite_agendamentos_mes)")
+      .select("id, status, next_billing_date, plano_id, barbeiro_id, plano:planos(nome, limite_agendamentos_mes)")
       .eq("user_id", userId)
       .eq("status", "active")
       .order("created_at", { ascending: false })
@@ -658,7 +658,14 @@ const Cliente = () => {
 
           {/* Schedule Button */}
           <div className="mb-6">
-            <ScheduleButton onClick={() => navigate("/cliente/agendar")} />
+            <ScheduleButton onClick={() => {
+              // Se tem assinatura ativa com barbeiro vinculado, passa direto
+              if (activeSubscription?.barbeiro_id) {
+                navigate(`/cliente/agendar?barber=${activeSubscription.barbeiro_id}`);
+              } else {
+                navigate("/cliente/agendar");
+              }
+            }} />
           </div>
 
           {/* Pending Bookings */}
