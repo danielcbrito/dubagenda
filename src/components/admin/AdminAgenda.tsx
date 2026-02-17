@@ -350,6 +350,7 @@ export function AdminAgenda() {
             onSelectDate={setDate}
             onSelectAppointment={setSelectedAppointment}
             onEmptySlotClick={handleEmptySlotClick}
+            barbeiroId={barbeiroId}
           />
         ) : (
           <PremiumTimeline
@@ -357,6 +358,7 @@ export function AdminAgenda() {
             selectedDate={date}
             onSelectAppointment={setSelectedAppointment}
             onEmptySlotClick={(time) => handleEmptySlotClick(format(date, 'yyyy-MM-dd'), time)}
+            barbeiroId={barbeiroId}
           />
         )}
       </div>

@@ -1,7 +1,6 @@
 import { useMemo, useState, useEffect, useCallback, useRef } from "react";
 import { format, isSameDay } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
-import { supabase } from "@/integrations/supabase/client";
 import { TimelineAppointment } from "../AdminAgenda";
 import { PremiumTimelineCard } from "./PremiumTimelineCard";
 import { PremiumEmptySlot } from "./PremiumEmptySlot";
@@ -10,21 +9,14 @@ import { PremiumFreeIntervalCard } from "./PremiumFreeIntervalCard";
 import { CurrentTimeIndicator } from "./CurrentTimeIndicator";
 import { Eye, EyeOff } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useBarberBusinessHours, type BusinessHoursConfig } from "@/hooks/useBarberBusinessHours";
 
 interface PremiumTimelineProps {
   appointments: TimelineAppointment[];
   selectedDate: Date;
   onSelectAppointment: (appointment: TimelineAppointment) => void;
   onEmptySlotClick: (time: string) => void;
-}
-
-interface BusinessHoursConfig {
-  aberto: boolean;
-  hora_abertura: string;
-  hora_fechamento: string;
-  hora_almoco_inicio: string | null;
-  hora_almoco_fim: string | null;
-  delay_entre_servicos: number;
+  barbeiroId?: string | null;
 }
 
 function timeToMinutes(time: string): number {
@@ -36,13 +28,16 @@ export function PremiumTimeline({
   appointments, 
   selectedDate, 
   onSelectAppointment, 
-  onEmptySlotClick 
+  onEmptySlotClick,
+  barbeiroId
 }: PremiumTimelineProps) {
   const [currentTime, setCurrentTime] = useState(new Date());
-  const [businessHours, setBusinessHours] = useState<BusinessHoursConfig | null>(null);
   const [hideFreeSlots, setHideFreeSlots] = useState(false);
   const [expandedIntervals, setExpandedIntervals] = useState<Set<string>>(new Set());
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Usar hook centralizado com hierarquia de prioridade por barbeiro
+  const { config: businessHours } = useBarberBusinessHours(selectedDate, barbeiroId || null);
 
   // Update current time every minute (silently, no re-render flash)
   useEffect(() => {
@@ -51,43 +46,6 @@ export function PremiumTimeline({
     }, 60000);
     return () => clearInterval(interval);
   }, []);
-
-  // Fetch business hours from database
-  useEffect(() => {
-    const fetchBusinessHours = async () => {
-      const dayOfWeek = selectedDate.getDay();
-      
-      const { data: configData, error } = await supabase
-        .from('configuracoes_horario')
-        .select('*')
-        .eq('dia_semana', dayOfWeek)
-        .maybeSingle();
-
-      if (error) {
-        console.error('[PremiumTimeline] Error fetching config:', error);
-      }
-
-      const config: BusinessHoursConfig = configData ? {
-        aberto: configData.aberto,
-        hora_abertura: configData.hora_abertura,
-        hora_fechamento: configData.hora_fechamento,
-        hora_almoco_inicio: configData.hora_almoco_inicio,
-        hora_almoco_fim: configData.hora_almoco_fim,
-        delay_entre_servicos: configData.delay_entre_servicos || 10
-      } : {
-        aberto: dayOfWeek !== 0,
-        hora_abertura: '09:00',
-        hora_fechamento: '21:00',
-        hora_almoco_inicio: '13:00',
-        hora_almoco_fim: '14:00',
-        delay_entre_servicos: 10
-      };
-
-      setBusinessHours(config);
-    };
-
-    fetchBusinessHours();
-  }, [selectedDate]);
 
   // Generate time slots (every 10 minutes)
   const timeSlots = useMemo(() => {

@@ -17,6 +17,7 @@ import {
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
+import { useBarberBusinessHours } from "@/hooks/useBarberBusinessHours";
 
 interface TimelineAppointment {
   id: string;
@@ -36,22 +37,15 @@ interface TimelineAppointment {
   servico: { nome: string; duracao_minutos: number } | null;
 }
 
-interface HorarioConfig {
-  hora_abertura: string;
-  hora_fechamento: string;
-  hora_almoco_inicio: string | null;
-  hora_almoco_fim: string | null;
-  aberto: boolean;
-}
-
 interface MobileDayTimelineProps {
   selectedDate: Date;
   onSlotClick: (time: string) => void;
   onAppointmentClick: (appointment: TimelineAppointment) => void;
+  barbeiroId?: string | null;
 }
 
-const SLOT_HEIGHT = 60; // altura de cada slot de 30 minutos em px
-const SLOT_INTERVAL = 30; // intervalo em minutos
+const SLOT_HEIGHT = 60;
+const SLOT_INTERVAL = 30;
 
 const getStatusConfig = (status: string, barbeiroConfirmou: boolean | null) => {
   if (status === "completed") {
@@ -78,69 +72,39 @@ const getStatusConfig = (status: string, barbeiroConfirmou: boolean | null) => {
   };
 };
 
-export function MobileDayTimeline({ selectedDate, onSlotClick, onAppointmentClick }: MobileDayTimelineProps) {
+export function MobileDayTimeline({ selectedDate, onSlotClick, onAppointmentClick, barbeiroId }: MobileDayTimelineProps) {
   const [appointments, setAppointments] = useState<TimelineAppointment[]>([]);
-  const [horarioConfig, setHorarioConfig] = useState<HorarioConfig | null>(null);
   const [loading, setLoading] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
   const currentTimeRef = useRef<HTMLDivElement>(null);
+
+  // Usar hook centralizado com hierarquia de prioridade por barbeiro
+  const { config: horarioConfig, loading: loadingConfig } = useBarberBusinessHours(selectedDate, barbeiroId || null);
 
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
       const dateStr = format(selectedDate, 'yyyy-MM-dd');
-      const dayOfWeek = selectedDate.getDay();
 
-      // Carregar configuração de horário para o dia
-      const [horarioRes, exceptionalRes, appointmentsRes] = await Promise.all([
-        supabase
-          .from("configuracoes_horario")
-          .select("*")
-          .eq("dia_semana", dayOfWeek)
-          .maybeSingle(),
-        supabase
-          .from("horarios_excepcionais")
-          .select("*")
-          .eq("data", dateStr)
-          .maybeSingle(),
-        supabase
-          .from("agendamentos")
-          .select("*")
-          .eq("data", dateStr)
-          .in("status", ["pending", "confirmed", "completed"])
-          .order("hora", { ascending: true })
-      ]);
+      // Carregar agendamentos filtrados por barbeiro
+      let query = supabase
+        .from("agendamentos")
+        .select("*")
+        .eq("data", dateStr)
+        .in("status", ["pending", "confirmed", "completed"])
+        .order("hora", { ascending: true });
 
-      // Usar horário excepcional se existir
-      if (exceptionalRes.data) {
-        setHorarioConfig({
-          hora_abertura: exceptionalRes.data.hora_abertura || "08:00",
-          hora_fechamento: exceptionalRes.data.hora_fechamento || "20:00",
-          hora_almoco_inicio: exceptionalRes.data.hora_almoco_inicio,
-          hora_almoco_fim: exceptionalRes.data.hora_almoco_fim,
-          aberto: exceptionalRes.data.aberto
-        });
-      } else if (horarioRes.data) {
-        setHorarioConfig({
-          hora_abertura: horarioRes.data.hora_abertura,
-          hora_fechamento: horarioRes.data.hora_fechamento,
-          hora_almoco_inicio: horarioRes.data.hora_almoco_inicio,
-          hora_almoco_fim: horarioRes.data.hora_almoco_fim,
-          aberto: horarioRes.data.aberto
-        });
-      } else {
-        setHorarioConfig({
-          hora_abertura: "08:00",
-          hora_fechamento: "20:00",
-          hora_almoco_inicio: null,
-          hora_almoco_fim: null,
-          aberto: true
-        });
+      // FILTRO CRÍTICO: Se barbeiro, mostrar APENAS seus agendamentos
+      if (barbeiroId) {
+        query = query.eq("barbeiro_id", barbeiroId);
       }
+
+      const { data, error } = await query;
+      if (error) throw error;
 
       // Carregar detalhes dos agendamentos
       const appointmentsWithDetails = await Promise.all(
-        (appointmentsRes.data || []).map(async (apt) => {
+        (data || []).map(async (apt) => {
           const [profileRes, servicoRes] = await Promise.all([
             supabase.from("profiles").select("nome, telefone").eq("id", apt.user_id).maybeSingle(),
             supabase.from("servicos").select("nome, duracao_minutos").eq("id", apt.servico_id).maybeSingle(),
@@ -160,7 +124,7 @@ export function MobileDayTimeline({ selectedDate, onSlotClick, onAppointmentClic
     } finally {
       setLoading(false);
     }
-  }, [selectedDate]);
+  }, [selectedDate, barbeiroId]);
 
   useEffect(() => {
     loadData();
@@ -272,7 +236,7 @@ export function MobileDayTimeline({ selectedDate, onSlotClick, onAppointmentClic
     return slotIndex * SLOT_HEIGHT;
   };
 
-  if (loading) {
+  if (loading || loadingConfig) {
     return (
       <div className="flex items-center justify-center h-60">
         <div className="w-10 h-10 border-2 border-primary border-t-transparent rounded-full animate-spin" />

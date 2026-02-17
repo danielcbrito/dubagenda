@@ -4,8 +4,8 @@ import { ptBR } from "date-fns/locale";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { TimelineAppointment } from "../AdminAgenda";
-import { supabase } from "@/integrations/supabase/client";
 import { Scissors, User, Clock, CreditCard } from "lucide-react";
+import { useBarberBusinessHours } from "@/hooks/useBarberBusinessHours";
 
 interface EnhancedWeekViewProps {
   selectedDate: Date;
@@ -14,14 +14,7 @@ interface EnhancedWeekViewProps {
   onSelectDate: (date: Date) => void;
   onSelectAppointment: (appointment: TimelineAppointment) => void;
   onEmptySlotClick?: (date: string, time: string) => void;
-}
-
-interface BusinessHoursConfig {
-  aberto: boolean;
-  hora_abertura: string;
-  hora_fechamento: string;
-  hora_almoco_inicio: string | null;
-  hora_almoco_fim: string | null;
+  barbeiroId?: string | null;
 }
 
 function timeToMinutes(time: string): number {
@@ -58,42 +51,16 @@ export function EnhancedWeekView({
   allAppointments, 
   onSelectDate,
   onSelectAppointment,
-  onEmptySlotClick
+  onEmptySlotClick,
+  barbeiroId
 }: EnhancedWeekViewProps) {
-  const [businessHours, setBusinessHours] = useState<BusinessHoursConfig | null>(null);
+  // Usar hook centralizado com hierarquia de prioridade por barbeiro
+  const { config: businessHours } = useBarberBusinessHours(selectedDate, barbeiroId || null);
 
   const weekStart = startOfWeek(selectedDate, { weekStartsOn: 1 });
   const weekDays = useMemo(() => {
     return Array.from({ length: 6 }, (_, i) => addDays(weekStart, i));
   }, [weekStart]);
-
-  useEffect(() => {
-    const fetchBusinessHours = async () => {
-      const { data: configData } = await supabase
-        .from('configuracoes_horario')
-        .select('*')
-        .eq('dia_semana', 1)
-        .maybeSingle();
-
-      const config: BusinessHoursConfig = configData ? {
-        aberto: configData.aberto,
-        hora_abertura: configData.hora_abertura,
-        hora_fechamento: configData.hora_fechamento,
-        hora_almoco_inicio: configData.hora_almoco_inicio,
-        hora_almoco_fim: configData.hora_almoco_fim
-      } : {
-        aberto: true,
-        hora_abertura: '09:00',
-        hora_fechamento: '21:00',
-        hora_almoco_inicio: '13:00',
-        hora_almoco_fim: '14:00'
-      };
-
-      setBusinessHours(config);
-    };
-
-    fetchBusinessHours();
-  }, []);
 
   // Generate time slots (every 30 minutes for better granularity)
   const timeSlots = useMemo(() => {
