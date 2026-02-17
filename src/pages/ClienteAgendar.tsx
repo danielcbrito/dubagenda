@@ -76,6 +76,9 @@ const ClienteAgendar = () => {
   const [useRedemption, setUseRedemption] = useState(false);
   const [serviceQuantities, setServiceQuantities] = useState<Record<string, number>>({});
   
+  // Durações personalizadas do barbeiro selecionado (servico_id → duracao)
+  const [barberCustomDurations, setBarberCustomDurations] = useState<Record<string, number>>({});
+  
   // Dias fechados no calendário (barbearia/barbeiro não trabalha)
   const [closedDates, setClosedDates] = useState<Date[]>([]);
   
@@ -99,7 +102,12 @@ const ClienteAgendar = () => {
   // Avaliações dos barbeiros
   const { ratings: barberRatings } = useBarberRatings(barbers.map(b => b.id));
 
-  const totalDuration = (selectedServices || []).reduce((sum, s) => sum + s.duracao_minutos * (serviceQuantities[s.id] || 1), 0);
+  /** Retorna a duração efetiva de um serviço (personalizada do barbeiro ou padrão) */
+  const getEffectiveDuration = useCallback((service: Service) => {
+    return barberCustomDurations[service.id] ?? service.duracao_minutos;
+  }, [barberCustomDurations]);
+
+  const totalDuration = (selectedServices || []).reduce((sum, s) => sum + getEffectiveDuration(s) * (serviceQuantities[s.id] || 1), 0);
 
   const { 
     slots: availableSlots, 
@@ -112,6 +120,27 @@ const ClienteAgendar = () => {
     isRescheduling ? rescheduleAppointmentId : null,
     selectedBarber?.id || null
   );
+
+  // Carregar durações personalizadas do barbeiro
+  const loadBarberCustomDurations = useCallback(async (barberId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from("barbeiro_servico_duracao")
+        .select("servico_id, duracao_personalizada")
+        .eq("barbeiro_id", barberId);
+      
+      if (error) throw error;
+      
+      const durations: Record<string, number> = {};
+      (data || []).forEach(d => {
+        durations[d.servico_id] = d.duracao_personalizada;
+      });
+      setBarberCustomDurations(durations);
+    } catch (err) {
+      console.error("Error loading barber custom durations:", err);
+      setBarberCustomDurations({});
+    }
+  }, []);
 
   // Carregar barbeiros
   const loadBarbers = async () => {
@@ -141,7 +170,10 @@ const ClienteAgendar = () => {
           // Pré-selecionar barbeiro
           const barbersList = (await supabase.from("barbeiros").select("id, apelido, foto_url").eq("ativo", true).order("apelido")).data || [];
           const resumeBarber = barbersList.find((b: Barber) => b.id === resumeData.barberId);
-          if (resumeBarber) setSelectedBarber(resumeBarber);
+          if (resumeBarber) {
+            setSelectedBarber(resumeBarber);
+            await loadBarberCustomDurations(resumeBarber.id);
+          }
 
           // Pré-selecionar serviço
           const servicesList = (await supabase.from("servicos").select("*").eq("ativo", true).order("preco")).data || [];
@@ -425,6 +457,7 @@ const ClienteAgendar = () => {
       // Pré-selecionar o barbeiro do agendamento original
       if (appointment.barbeiro) {
         setSelectedBarber(appointment.barbeiro);
+        await loadBarberCustomDurations(appointment.barbeiro.id);
       }
       setStep(2);
       toast.info("Escolha a nova data e horário");
@@ -672,7 +705,7 @@ const ClienteAgendar = () => {
         return;
       }
 
-      const totalDuration = selectedServices.reduce((sum, s) => sum + s.duracao_minutos * (serviceQuantities[s.id] || 1), 0);
+      const totalDuration = selectedServices.reduce((sum, s) => sum + getEffectiveDuration(s) * (serviceQuantities[s.id] || 1), 0);
       const serviceNames = selectedServices.map(s => {
         const qty = serviceQuantities[s.id] || 1;
         return qty > 1 ? `${s.nome} x${qty}` : s.nome;
@@ -808,7 +841,7 @@ const ClienteAgendar = () => {
         return;
       }
 
-      const totalDuration = selectedServices.reduce((sum, s) => sum + s.duracao_minutos * (serviceQuantities[s.id] || 1), 0);
+      const totalDuration = selectedServices.reduce((sum, s) => sum + getEffectiveDuration(s) * (serviceQuantities[s.id] || 1), 0);
       const serviceNames = selectedServices.map(s => {
         const qty = serviceQuantities[s.id] || 1;
         return qty > 1 ? `${s.nome} x${qty}` : s.nome;
@@ -883,7 +916,7 @@ const ClienteAgendar = () => {
         return;
       }
 
-      const totalDuration = selectedServices.reduce((sum, s) => sum + s.duracao_minutos * (serviceQuantities[s.id] || 1), 0);
+      const totalDuration = selectedServices.reduce((sum, s) => sum + getEffectiveDuration(s) * (serviceQuantities[s.id] || 1), 0);
       const serviceNames = selectedServices.map(s => {
         const qty = serviceQuantities[s.id] || 1;
         return qty > 1 ? `${s.nome} x${qty}` : s.nome;
@@ -1013,7 +1046,7 @@ const ClienteAgendar = () => {
         return;
       }
 
-      const totalDuration = selectedServices.reduce((sum, s) => sum + s.duracao_minutos * (serviceQuantities[s.id] || 1), 0);
+      const totalDuration = selectedServices.reduce((sum, s) => sum + getEffectiveDuration(s) * (serviceQuantities[s.id] || 1), 0);
       const serviceNames = selectedServices.map(s => {
         const qty = serviceQuantities[s.id] || 1;
         return qty > 1 ? `${s.nome} x${qty}` : s.nome;
@@ -1229,7 +1262,7 @@ const ClienteAgendar = () => {
         return;
       }
 
-      const totalDuration = selectedServices.reduce((sum, s) => sum + s.duracao_minutos * (serviceQuantities[s.id] || 1), 0);
+      const totalDuration = selectedServices.reduce((sum, s) => sum + getEffectiveDuration(s) * (serviceQuantities[s.id] || 1), 0);
       const dateStr = format(selectedDate, 'yyyy-MM-dd');
       
       const { data: validation, error: validationError } = await supabase.functions.invoke('validate-appointment', {
@@ -1296,7 +1329,7 @@ const ClienteAgendar = () => {
   };
 
   const getTotalDuration = () => {
-    return selectedServices.reduce((sum, s) => sum + s.duracao_minutos * (serviceQuantities[s.id] || 1), 0);
+    return selectedServices.reduce((sum, s) => sum + getEffectiveDuration(s) * (serviceQuantities[s.id] || 1), 0);
   };
 
   const getCorteService = () => {
@@ -1489,7 +1522,10 @@ const ClienteAgendar = () => {
                       key={barber.id}
                       barber={barber}
                       isSelected={selectedBarber?.id === barber.id}
-                      onSelect={() => setSelectedBarber(barber)}
+                      onSelect={() => {
+                        setSelectedBarber(barber);
+                        loadBarberCustomDurations(barber.id);
+                      }}
                       rating={barberRatings[barber.id] || null}
                     />
                   ))}
@@ -1545,6 +1581,7 @@ const ClienteAgendar = () => {
                     service={service}
                     isSelected={selectedServices.some(s => s.id === service.id)}
                     quantity={serviceQuantities[service.id] || 0}
+                    effectiveDuration={barberCustomDurations[service.id]}
                     onToggle={() => toggleService(service)}
                     onIncrement={() => incrementServiceQty(service.id)}
                     onDecrement={() => decrementServiceQty(service)}

@@ -14,6 +14,7 @@ interface ServiceCardProps {
   service: Service;
   isSelected: boolean;
   quantity: number;
+  effectiveDuration?: number;
   onToggle: () => void;
   onIncrement: () => void;
   onDecrement: () => void;
@@ -23,10 +24,13 @@ export function ServiceCard({
   service, 
   isSelected, 
   quantity, 
+  effectiveDuration,
   onToggle, 
   onIncrement, 
   onDecrement 
 }: ServiceCardProps) {
+  const duration = effectiveDuration ?? service.duracao_minutos;
+  const isCustom = effectiveDuration !== undefined && effectiveDuration !== service.duracao_minutos;
   return (
     <div
       className={cn(
@@ -55,7 +59,9 @@ export function ServiceCard({
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-1 text-[11px] text-muted-foreground/50">
               <Clock className="w-3 h-3" />
-              <span>{service.duracao_minutos * (quantity || 1)} min</span>
+              <span className={isCustom ? "text-primary/70 font-medium" : ""}>
+                {duration * (quantity || 1)} min
+              </span>
             </div>
             <div className="flex items-baseline gap-0.5">
               <span className="text-[10px] text-muted-foreground/40">R$</span>
