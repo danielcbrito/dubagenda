@@ -1,0 +1,1 @@
+UPDATE barbeiros SET foto_url = 'https://djtpzvujzmrrslirzwun.supabase.co/storage/v1/object/public/avatars/barbeiros/barbeiros-5f8930bc-5d4f-4136-b97c-27a38730f994-1771344852537.webp' WHERE id = 'ee238642-bc38-4de6-ba86-9eed40262fc7';
