@@ -32,8 +32,8 @@ serve(async (req) => {
       const { pendingBookingId } = body;
       if (!pendingBookingId) throw new Error("pendingBookingId é obrigatório");
 
-      const asaasApiKey = Deno.env.get("ASAAS_API_KEY");
-      if (!asaasApiKey) throw new Error("ASAAS_API_KEY não configurada");
+      const globalAsaasKey = Deno.env.get("ASAAS_API_KEY");
+      if (!globalAsaasKey) throw new Error("ASAAS_API_KEY não configurada");
 
       // Buscar pending_booking
       const { data: pb } = await supabase
@@ -57,8 +57,22 @@ serve(async (req) => {
         );
       }
 
+      // Resolver API key: se o pending_booking tem barbeiro, verificar sub-conta
+      let asaasApiKey = globalAsaasKey;
+      if (pb.barbeiro_id) {
+        const { data: barberPrivate } = await supabase
+          .from("barbeiros_private")
+          .select("asaas_api_key")
+          .eq("barbeiro_id", pb.barbeiro_id)
+          .maybeSingle();
+        if (barberPrivate?.asaas_api_key) {
+          asaasApiKey = barberPrivate.asaas_api_key;
+          console.log("[asaas-webhook] Usando sub-conta do barbeiro:", pb.barbeiro_id);
+        }
+      }
+
       // Consultar status no Asaas
-      const paymentRes = await fetch(`https://api.asaas.com/v3/payments/${pb.asaas_payment_id}`, {
+      const paymentRes = await fetch(`https://sandbox.asaas.com/api/v3/payments/${pb.asaas_payment_id}`, {
         headers: { access_token: asaasApiKey },
       });
       const paymentData = await paymentRes.json();

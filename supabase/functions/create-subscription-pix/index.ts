@@ -10,6 +10,31 @@ const corsHeaders = {
 const ASAAS_BASE_URL = "https://sandbox.asaas.com/api/v3";
 
 /**
+ * Resolve a API key do Asaas para o barbeiro selecionado.
+ * Se o barbeiro tiver sub-conta (asaas_api_key em barbeiros_private), usa ela.
+ * Senão, usa a chave principal (ASAAS_API_KEY do env).
+ */
+async function resolveAsaasApiKey(
+  supabaseAdmin: any,
+  barbeiroId: string,
+  fallbackKey: string
+): Promise<{ apiKey: string; isSubAccount: boolean }> {
+  const { data: barberPrivate } = await supabaseAdmin
+    .from("barbeiros_private")
+    .select("asaas_api_key")
+    .eq("barbeiro_id", barbeiroId)
+    .maybeSingle();
+
+  if (barberPrivate?.asaas_api_key) {
+    console.log("[create-subscription-pix] Usando sub-conta do barbeiro:", barbeiroId);
+    return { apiKey: barberPrivate.asaas_api_key, isSubAccount: true };
+  }
+
+  console.log("[create-subscription-pix] Usando conta principal (sem sub-conta para barbeiro:", barbeiroId, ")");
+  return { apiKey: fallbackKey, isSubAccount: false };
+}
+
+/**
  * Busca ou cria customer no Asaas, sincronizando dados do profile
  */
 async function getOrCreateAsaasCustomer(
@@ -22,7 +47,6 @@ async function getOrCreateAsaasCustomer(
     access_token: apiKey,
   };
 
-  // Buscar dados atualizados do profile (fonte real de CPF/nome)
   const { data: profile } = await supabaseAdmin
     .from("profiles")
     .select("nome, cpf, telefone")
@@ -74,7 +98,7 @@ async function getOrCreateAsaasCustomer(
 
 /**
  * Gera cobrança PIX no Asaas para assinatura de plano.
- * Cria a assinatura com status "suspended" e armazena dados do PIX nela.
+ * Usa a sub-conta do barbeiro quando disponível.
  */
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -82,8 +106,8 @@ serve(async (req) => {
   }
 
   try {
-    const asaasApiKey = Deno.env.get("ASAAS_API_KEY");
-    if (!asaasApiKey) throw new Error("ASAAS_API_KEY não configurada");
+    const globalAsaasKey = Deno.env.get("ASAAS_API_KEY");
+    if (!globalAsaasKey) throw new Error("ASAAS_API_KEY não configurada");
 
     const supabaseClient = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
@@ -107,7 +131,10 @@ serve(async (req) => {
     if (!planoId) throw new Error("planoId é obrigatório");
     if (!barbeiroId) throw new Error("barbeiroId é obrigatório");
 
-    console.log("[create-subscription-pix] Iniciando PIX para plano:", planoId);
+    console.log("[create-subscription-pix] Iniciando PIX para plano:", planoId, "barbeiro:", barbeiroId);
+
+    // Resolver API key (sub-conta do barbeiro ou principal)
+    const { apiKey: asaasApiKey, isSubAccount } = await resolveAsaasApiKey(supabaseAdmin, barbeiroId, globalAsaasKey);
 
     // Buscar dados do plano
     const { data: plano, error: planoError } = await supabaseAdmin
@@ -129,16 +156,16 @@ serve(async (req) => {
 
     if (existingSub) throw new Error("Você já possui uma assinatura ativa");
 
-    // Deletar assinaturas "suspended" anteriores (tentativas não finalizadas)
+    // Deletar assinaturas "suspended" anteriores
     await supabaseAdmin
       .from("assinaturas")
       .delete()
       .eq("user_id", user.id)
       .eq("status", "suspended");
 
-    // Buscar/criar customer no Asaas
+    // Buscar/criar customer no Asaas (usando a key resolvida)
     const customerId = await getOrCreateAsaasCustomer(asaasApiKey, user, supabaseAdmin);
-    console.log("[create-subscription-pix] Asaas customer:", customerId);
+    console.log("[create-subscription-pix] Asaas customer:", customerId, "isSubAccount:", isSubAccount);
 
     // Criar cobrança PIX no Asaas
     const expiresAt = new Date();

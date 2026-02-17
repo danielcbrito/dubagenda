@@ -10,6 +10,31 @@ const corsHeaders = {
 const ASAAS_BASE_URL = "https://sandbox.asaas.com/api/v3";
 
 /**
+ * Resolve a API key do Asaas para o barbeiro selecionado.
+ * Se o barbeiro tiver sub-conta (asaas_api_key em barbeiros_private), usa ela.
+ * Senão, usa a chave principal (ASAAS_API_KEY do env).
+ */
+async function resolveAsaasApiKey(
+  supabaseAdmin: any,
+  barbeiroId: string,
+  fallbackKey: string
+): Promise<{ apiKey: string; isSubAccount: boolean }> {
+  const { data: barberPrivate } = await supabaseAdmin
+    .from("barbeiros_private")
+    .select("asaas_api_key")
+    .eq("barbeiro_id", barbeiroId)
+    .maybeSingle();
+
+  if (barberPrivate?.asaas_api_key) {
+    console.log("[create-subscription-card] Usando sub-conta do barbeiro:", barbeiroId);
+    return { apiKey: barberPrivate.asaas_api_key, isSubAccount: true };
+  }
+
+  console.log("[create-subscription-card] Usando conta principal (sem sub-conta para barbeiro:", barbeiroId, ")");
+  return { apiKey: fallbackKey, isSubAccount: false };
+}
+
+/**
  * Busca ou cria customer no Asaas, sincronizando dados do profile
  */
 async function getOrCreateAsaasCustomer(
@@ -22,7 +47,6 @@ async function getOrCreateAsaasCustomer(
     access_token: apiKey,
   };
 
-  // Buscar dados atualizados do profile (fonte real de CPF/nome)
   const { data: profile } = await supabaseAdmin
     .from("profiles")
     .select("nome, cpf, telefone")
@@ -74,8 +98,7 @@ async function getOrCreateAsaasCustomer(
 
 /**
  * Edge Function: Cria ASSINATURA RECORRENTE via Cartão de Crédito no Asaas.
- * Usa o endpoint /v3/subscriptions para cobranças mensais automáticas.
- * Redireciona o cliente para a invoiceUrl da primeira cobrança.
+ * Usa a sub-conta do barbeiro quando disponível.
  */
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -83,8 +106,8 @@ serve(async (req) => {
   }
 
   try {
-    const asaasApiKey = Deno.env.get("ASAAS_API_KEY");
-    if (!asaasApiKey) throw new Error("ASAAS_API_KEY não configurada");
+    const globalAsaasKey = Deno.env.get("ASAAS_API_KEY");
+    if (!globalAsaasKey) throw new Error("ASAAS_API_KEY não configurada");
 
     const supabaseClient = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
@@ -110,7 +133,10 @@ serve(async (req) => {
 
     const origin = req.headers.get("origin") || "https://dubagenda.lovable.app";
 
-    console.log("[create-subscription-card] Iniciando assinatura recorrente para plano:", planoId);
+    console.log("[create-subscription-card] Iniciando assinatura recorrente para plano:", planoId, "barbeiro:", barbeiroId);
+
+    // Resolver API key (sub-conta do barbeiro ou principal)
+    const { apiKey: asaasApiKey, isSubAccount } = await resolveAsaasApiKey(supabaseAdmin, barbeiroId, globalAsaasKey);
 
     // Buscar dados do plano
     const { data: plano, error: planoError } = await supabaseAdmin
@@ -132,16 +158,16 @@ serve(async (req) => {
 
     if (existingSub) throw new Error("Você já possui uma assinatura ativa");
 
-    // Deletar assinaturas "suspended" anteriores (tentativas não finalizadas)
+    // Deletar assinaturas "suspended" anteriores
     await supabaseAdmin
       .from("assinaturas")
       .delete()
       .eq("user_id", user.id)
       .eq("status", "suspended");
 
-    // Buscar/criar customer no Asaas
+    // Buscar/criar customer no Asaas (usando a key resolvida)
     const customerId = await getOrCreateAsaasCustomer(asaasApiKey, user, supabaseAdmin);
-    console.log("[create-subscription-card] Asaas customer:", customerId);
+    console.log("[create-subscription-card] Asaas customer:", customerId, "isSubAccount:", isSubAccount);
 
     // Data de início: hoje
     const nextDueDate = new Date().toISOString().split("T")[0];
@@ -170,10 +196,10 @@ serve(async (req) => {
       throw new Error("Erro ao criar assinatura recorrente: " + JSON.stringify(subscriptionData.errors));
     }
 
-    const asaasSubscriptionId = subscriptionData.id; // sub_XXXXX
+    const asaasSubscriptionId = subscriptionData.id;
     console.log("[create-subscription-card] Asaas subscription created:", asaasSubscriptionId);
 
-    // Buscar a primeira cobrança gerada pela assinatura para obter invoiceUrl
+    // Buscar a primeira cobrança gerada pela assinatura
     const paymentsRes = await fetch(
       `${ASAAS_BASE_URL}/subscriptions/${asaasSubscriptionId}/payments`,
       {
@@ -198,7 +224,7 @@ serve(async (req) => {
     const nextBilling = new Date();
     nextBilling.setMonth(nextBilling.getMonth() + 1);
 
-    // Criar assinatura no banco com status "suspended" (será ativada pelo webhook)
+    // Criar assinatura no banco com status "suspended"
     const { data: subscription, error: subError } = await supabaseAdmin
       .from("assinaturas")
       .insert({

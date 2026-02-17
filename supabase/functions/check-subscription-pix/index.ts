@@ -1,6 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.57.2";
-import { format } from "https://deno.land/x/date_fns@v2.22.1/format/index.js";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -8,11 +7,37 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const ASAAS_BASE_URL = "https://api.asaas.com/v3";
+const ASAAS_BASE_URL = "https://sandbox.asaas.com/api/v3";
+
+/**
+ * Resolve a API key do Asaas para o barbeiro vinculado à assinatura.
+ * Se o barbeiro tiver sub-conta, usa ela. Senão, usa a chave principal.
+ */
+async function resolveAsaasApiKey(
+  supabaseAdmin: any,
+  barbeiroId: string | null,
+  fallbackKey: string
+): Promise<string> {
+  if (!barbeiroId) return fallbackKey;
+
+  const { data: barberPrivate } = await supabaseAdmin
+    .from("barbeiros_private")
+    .select("asaas_api_key")
+    .eq("barbeiro_id", barbeiroId)
+    .maybeSingle();
+
+  if (barberPrivate?.asaas_api_key) {
+    console.log("[check-subscription-pix] Usando sub-conta do barbeiro:", barbeiroId);
+    return barberPrivate.asaas_api_key;
+  }
+
+  console.log("[check-subscription-pix] Usando conta principal para barbeiro:", barbeiroId);
+  return fallbackKey;
+}
 
 /**
  * Verifica status do pagamento PIX de uma assinatura pendente.
- * Se pago, ativa a assinatura. Se expirado, limpa.
+ * Usa a sub-conta do barbeiro quando disponível.
  */
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -20,8 +45,8 @@ serve(async (req) => {
   }
 
   try {
-    const asaasApiKey = Deno.env.get("ASAAS_API_KEY");
-    if (!asaasApiKey) throw new Error("ASAAS_API_KEY não configurada");
+    const globalAsaasKey = Deno.env.get("ASAAS_API_KEY");
+    if (!globalAsaasKey) throw new Error("ASAAS_API_KEY não configurada");
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
@@ -32,7 +57,7 @@ serve(async (req) => {
     const { subscriptionId } = body;
     if (!subscriptionId) throw new Error("subscriptionId é obrigatório");
 
-    // Buscar assinatura
+    // Buscar assinatura (inclui barbeiro_id para resolver API key)
     const { data: sub } = await supabase
       .from("assinaturas")
       .select("*")
@@ -54,6 +79,9 @@ serve(async (req) => {
       );
     }
 
+    // Resolver API key do barbeiro vinculado
+    const asaasApiKey = await resolveAsaasApiKey(supabase, sub.barbeiro_id, globalAsaasKey);
+
     // Consultar status no Asaas
     const paymentRes = await fetch(
       `${ASAAS_BASE_URL}/payments/${sub.asaas_payment_id}`,
@@ -64,7 +92,6 @@ serve(async (req) => {
     console.log("[check-subscription-pix] Status:", paymentData.status);
 
     if (paymentData.status === "RECEIVED" || paymentData.status === "CONFIRMED") {
-      // Ativar assinatura
       const nextBilling = new Date();
       nextBilling.setMonth(nextBilling.getMonth() + 1);
 
@@ -79,7 +106,6 @@ serve(async (req) => {
         })
         .eq("id", subscriptionId);
 
-      // Registrar pagamento
       await supabase.from("pagamentos").insert({
         user_id: sub.user_id,
         assinatura_id: sub.id,
@@ -101,7 +127,6 @@ serve(async (req) => {
       paymentData.status === "REFUNDED" ||
       paymentData.status === "DELETED"
     ) {
-      // Expirado — deletar assinatura pendente
       await supabase.from("assinaturas").delete().eq("id", subscriptionId);
       return new Response(
         JSON.stringify({ status: "expired" }),
