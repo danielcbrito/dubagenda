@@ -59,9 +59,7 @@ export function ServiceCard({
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-1 text-[11px] text-muted-foreground/50">
               <Clock className="w-3 h-3" />
-              <span className={isCustom ? "text-primary/70 font-medium" : ""}>
-                {duration * (quantity || 1)} min
-              </span>
+              <span>{duration * (quantity || 1)} min</span>
             </div>
             <div className="flex items-baseline gap-0.5">
               <span className="text-[10px] text-muted-foreground/40">R$</span>
