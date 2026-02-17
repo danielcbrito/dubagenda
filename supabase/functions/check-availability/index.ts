@@ -310,14 +310,9 @@ Deno.serve(async (req) => {
       const startMinutes = timeToMinutes(apt.hora);
       const endMinutes = startMinutes + apt.duracao;
       const endWithDelayMinutes = endMinutes + DELAY_MINUTES;
-
       const info: OccupiedSlotInfo = {
-        hora: apt.hora,
-        duracao: apt.duracao,
-        status: apt.status,
-        source: 'agendamento',
-        fim: minutesToTime(endMinutes),
-        fimComDelay: minutesToTime(endWithDelayMinutes)
+        hora: apt.hora, duracao: apt.duracao, status: apt.status, source: 'agendamento',
+        fim: minutesToTime(endMinutes), fimComDelay: minutesToTime(endWithDelayMinutes)
       };
       occupiedSlots.push(info);
       console.log(`[check-availability] → Agendamento: ${apt.hora} (${apt.duracao}min) | Fim: ${info.fim} | Livre após: ${info.fimComDelay}`);
@@ -327,27 +322,23 @@ Deno.serve(async (req) => {
       const startMinutes = timeToMinutes(pb.hora);
       const endMinutes = startMinutes + pb.duracao;
       const endWithDelayMinutes = endMinutes + DELAY_MINUTES;
-
       const info: OccupiedSlotInfo = {
-        hora: pb.hora,
-        duracao: pb.duracao,
-        status: 'pending_booking',
-        source: 'pending_booking',
-        fim: minutesToTime(endMinutes),
-        fimComDelay: minutesToTime(endWithDelayMinutes)
+        hora: pb.hora, duracao: pb.duracao, status: 'pending_booking', source: 'pending_booking',
+        fim: minutesToTime(endMinutes), fimComDelay: minutesToTime(endWithDelayMinutes)
       };
       occupiedSlots.push(info);
       console.log(`[check-availability] → Pending: ${pb.hora} (${pb.duracao}min) | Fim: ${info.fim} | Livre após: ${info.fimComDelay}`);
     }
 
-    // Calcular horário mínimo (1h de antecedência para hoje)
-    const todayStr = now.toISOString().split('T')[0];
-    const isToday = date === todayStr;
-    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+    // CRITICAL: Converter para horário de Brasília (UTC-3) para comparação correta
+    const brasilNow = new Date(now.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
+    const brasilTodayStr = `${brasilNow.getFullYear()}-${String(brasilNow.getMonth() + 1).padStart(2, '0')}-${String(brasilNow.getDate()).padStart(2, '0')}`;
+    const isToday = date === brasilTodayStr;
+    const currentMinutes = brasilNow.getHours() * 60 + brasilNow.getMinutes();
     const minimumAdvanceMinutes = isToday ? currentMinutes + 60 : 0;
 
     if (isToday) {
-      console.log(`[check-availability] É HOJE - Hora atual: ${minutesToTime(currentMinutes)} | Mínimo: ${minutesToTime(minimumAdvanceMinutes)}`);
+      console.log(`[check-availability] É HOJE (BRT) - Hora atual: ${minutesToTime(currentMinutes)} | Mínimo: ${minutesToTime(minimumAdvanceMinutes)}`);
     }
 
     // Gerar slots a cada 10 minutos
