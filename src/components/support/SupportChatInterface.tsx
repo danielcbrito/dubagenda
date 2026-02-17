@@ -332,7 +332,7 @@ export function SupportChatInterface() {
       </AnimatePresence>
 
       {/* Top bar — always visible */}
-      <div className="shrink-0 flex items-center justify-between px-4 pt-3 pb-1">
+      <div className="shrink-0 flex items-center justify-between pl-14 pr-4 pt-3 pb-1">
         <button
           onClick={() => { setShowHistory(true); loadConversationHistory(); }}
           className="h-8 w-8 rounded-full flex items-center justify-center text-muted-foreground/60 hover:text-foreground hover:bg-muted/40 transition-colors"
