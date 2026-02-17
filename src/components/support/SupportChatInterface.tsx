@@ -331,23 +331,23 @@ export function SupportChatInterface() {
         )}
       </AnimatePresence>
 
-      {/* Top bar — only when in conversation */}
-      {hasMessages && (
-        <div className="shrink-0 flex items-center justify-between px-4 pt-3 pb-1">
-          <button
-            onClick={() => { setShowHistory(true); loadConversationHistory(); }}
-            className="h-7 w-7 rounded-full flex items-center justify-center text-muted-foreground/50 hover:text-muted-foreground hover:bg-muted/30 transition-colors"
-          >
-            <Clock className="h-3.5 w-3.5" />
-          </button>
-          <button
-            onClick={startNewConversation}
-            className="h-7 w-7 rounded-full flex items-center justify-center text-muted-foreground/50 hover:text-muted-foreground hover:bg-muted/30 transition-colors"
-          >
-            <Plus className="h-3.5 w-3.5" />
-          </button>
-        </div>
-      )}
+      {/* Top bar — always visible */}
+      <div className="shrink-0 flex items-center justify-between px-4 pt-3 pb-1">
+        <button
+          onClick={() => { setShowHistory(true); loadConversationHistory(); }}
+          className="h-8 w-8 rounded-full flex items-center justify-center text-muted-foreground/60 hover:text-foreground hover:bg-muted/40 transition-colors"
+          title="Histórico"
+        >
+          <Clock className="h-4 w-4" />
+        </button>
+        <button
+          onClick={startNewConversation}
+          className="h-8 w-8 rounded-full flex items-center justify-center text-muted-foreground/60 hover:text-foreground hover:bg-muted/40 transition-colors"
+          title="Nova conversa"
+        >
+          <Plus className="h-4 w-4" strokeWidth={2} />
+        </button>
+      </div>
 
       {/* Welcome or Messages */}
       {!hasMessages ? (
@@ -369,23 +369,6 @@ export function SupportChatInterface() {
             </p>
           </motion.div>
 
-          {/* History + New conversation — bottom actions on welcome */}
-          {userId && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.3 }}
-              className="mt-10 flex items-center gap-3"
-            >
-              <button
-                onClick={() => { setShowHistory(true); loadConversationHistory(); }}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border/50 text-muted-foreground/50 hover:text-muted-foreground hover:border-border transition-colors"
-              >
-                <Clock className="h-3 w-3" />
-                <span className="text-[11px]">Histórico</span>
-              </button>
-            </motion.div>
-          )}
         </div>
       ) : (
         <div ref={scrollAreaRef} className="flex-1 overflow-y-auto overscroll-contain">
@@ -401,7 +384,7 @@ export function SupportChatInterface() {
                 >
                   {message.role === "user" ? (
                     <div className="max-w-[80%]">
-                      <div className="rounded-2xl rounded-br-sm px-3.5 py-2.5 bg-primary text-primary-foreground">
+                      <div className="rounded-2xl rounded-br-sm px-3.5 py-2.5 bg-muted/70 dark:bg-muted/40 text-foreground">
                         <p className="text-[13px] leading-relaxed whitespace-pre-wrap break-words">{message.content}</p>
                       </div>
                     </div>
