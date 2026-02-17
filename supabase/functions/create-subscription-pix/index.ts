@@ -103,8 +103,9 @@ serve(async (req) => {
     if (!user?.email) throw new Error("Usuário não autenticado");
 
     const body = await req.json();
-    const { planoId } = body;
+    const { planoId, barbeiroId } = body;
     if (!planoId) throw new Error("planoId é obrigatório");
+    if (!barbeiroId) throw new Error("barbeiroId é obrigatório");
 
     console.log("[create-subscription-pix] Iniciando PIX para plano:", planoId);
 
@@ -191,6 +192,7 @@ serve(async (req) => {
       .insert({
         user_id: user.id,
         plano_id: planoId,
+        barbeiro_id: barbeiroId,
         status: "suspended",
         payment_method: "pix",
         asaas_payment_id: paymentData.id,

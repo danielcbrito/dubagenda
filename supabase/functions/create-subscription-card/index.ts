@@ -104,8 +104,9 @@ serve(async (req) => {
     if (!user?.email) throw new Error("Usuário não autenticado");
 
     const body = await req.json();
-    const { planoId } = body;
+    const { planoId, barbeiroId } = body;
     if (!planoId) throw new Error("planoId é obrigatório");
+    if (!barbeiroId) throw new Error("barbeiroId é obrigatório");
 
     const origin = req.headers.get("origin") || "https://dubagenda.lovable.app";
 
@@ -203,6 +204,7 @@ serve(async (req) => {
       .insert({
         user_id: user.id,
         plano_id: planoId,
+        barbeiro_id: barbeiroId,
         status: "suspended",
         payment_method: "card",
         asaas_payment_id: firstPayment.id,

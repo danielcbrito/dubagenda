@@ -96,7 +96,13 @@ const SubscriptionPixCheckout = () => {
       setProgressPct(Math.min((elapsed / duration) * 100, 100));
       if (elapsed >= duration) {
         clearInterval(interval);
-        navigate("/cliente");
+        const barberId = sessionStorage.getItem("subscription_barber_id");
+        sessionStorage.removeItem("subscription_barber_id");
+        if (barberId) {
+          navigate(`/cliente/agendar?barber=${barberId}`);
+        } else {
+          navigate("/cliente");
+        }
       }
     }, step);
     return () => clearInterval(interval);

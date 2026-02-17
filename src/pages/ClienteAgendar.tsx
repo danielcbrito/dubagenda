@@ -159,6 +159,22 @@ const ClienteAgendar = () => {
       await loadUserCredits();
       await loadAvailableRedemptions();
 
+      // Auto-select barber from query param (e.g., after subscription)
+      const barberFromParam = searchParams.get("barber");
+      if (barberFromParam) {
+        const barbersList = (await supabase.from("barbeiros").select("id, apelido, foto_url").eq("ativo", true).order("apelido")).data || [];
+        const matchedBarber = barbersList.find((b: Barber) => b.id === barberFromParam);
+        if (matchedBarber) {
+          setSelectedBarber(matchedBarber);
+          await loadBarberCustomDurations(matchedBarber.id);
+          // Remove param from URL
+          setSearchParams(prev => {
+            prev.delete("barber");
+            return prev;
+          }, { replace: true });
+        }
+      }
+
       // Verificar se deve retomar direto para a etapa de pagamento (PIX expirado)
       const resumePaymentRaw = sessionStorage.getItem("resumeToPaymentStep");
       if (resumePaymentRaw) {
