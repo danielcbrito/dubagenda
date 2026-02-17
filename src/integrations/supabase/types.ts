@@ -408,6 +408,7 @@ export type Database = {
       assinaturas: {
         Row: {
           asaas_payment_id: string | null
+          barbeiro_id: string | null
           created_at: string | null
           gateway_subscription_id: string | null
           id: string
@@ -423,6 +424,7 @@ export type Database = {
         }
         Insert: {
           asaas_payment_id?: string | null
+          barbeiro_id?: string | null
           created_at?: string | null
           gateway_subscription_id?: string | null
           id?: string
@@ -438,6 +440,7 @@ export type Database = {
         }
         Update: {
           asaas_payment_id?: string | null
+          barbeiro_id?: string | null
           created_at?: string | null
           gateway_subscription_id?: string | null
           id?: string
@@ -452,6 +455,20 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "assinaturas_barbeiro_id_fkey"
+            columns: ["barbeiro_id"]
+            isOneToOne: false
+            referencedRelation: "barbeiros"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assinaturas_barbeiro_id_fkey"
+            columns: ["barbeiro_id"]
+            isOneToOne: false
+            referencedRelation: "barbeiros_public"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "assinaturas_plano_id_fkey"
             columns: ["plano_id"]
@@ -584,9 +601,60 @@ export type Database = {
           },
         ]
       }
+      barbeiro_servico_duracao: {
+        Row: {
+          barbeiro_id: string
+          created_at: string
+          duracao_personalizada: number
+          id: string
+          servico_id: string
+          updated_at: string
+        }
+        Insert: {
+          barbeiro_id: string
+          created_at?: string
+          duracao_personalizada: number
+          id?: string
+          servico_id: string
+          updated_at?: string
+        }
+        Update: {
+          barbeiro_id?: string
+          created_at?: string
+          duracao_personalizada?: number
+          id?: string
+          servico_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "barbeiro_servico_duracao_barbeiro_id_fkey"
+            columns: ["barbeiro_id"]
+            isOneToOne: false
+            referencedRelation: "barbeiros"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "barbeiro_servico_duracao_barbeiro_id_fkey"
+            columns: ["barbeiro_id"]
+            isOneToOne: false
+            referencedRelation: "barbeiros_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "barbeiro_servico_duracao_servico_id_fkey"
+            columns: ["servico_id"]
+            isOneToOne: false
+            referencedRelation: "servicos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       barbeiros: {
         Row: {
           apelido: string
+          asaas_account_id: string | null
+          asaas_wallet_id: string | null
           ativo: boolean | null
           comissao_pct: number | null
           created_at: string | null
@@ -600,6 +668,8 @@ export type Database = {
         }
         Insert: {
           apelido: string
+          asaas_account_id?: string | null
+          asaas_wallet_id?: string | null
           ativo?: boolean | null
           comissao_pct?: number | null
           created_at?: string | null
@@ -613,6 +683,8 @@ export type Database = {
         }
         Update: {
           apelido?: string
+          asaas_account_id?: string | null
+          asaas_wallet_id?: string | null
           ativo?: boolean | null
           comissao_pct?: number | null
           created_at?: string | null
@@ -628,6 +700,7 @@ export type Database = {
       }
       barbeiros_private: {
         Row: {
+          asaas_api_key: string | null
           barbeiro_id: string
           cpf: string | null
           created_at: string
@@ -644,6 +717,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          asaas_api_key?: string | null
           barbeiro_id: string
           cpf?: string | null
           created_at?: string
@@ -660,6 +734,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          asaas_api_key?: string | null
           barbeiro_id?: string
           cpf?: string | null
           created_at?: string
@@ -899,6 +974,72 @@ export type Database = {
           },
           {
             foreignKeyName: "configuracoes_horario_barbeiro_barbeiro_id_fkey"
+            columns: ["barbeiro_id"]
+            isOneToOne: false
+            referencedRelation: "barbeiros_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contas_bancarias: {
+        Row: {
+          agencia: string
+          banco_codigo: string
+          banco_nome: string | null
+          barbeiro_id: string | null
+          conta: string
+          conta_digito: string
+          created_at: string
+          id: string
+          is_default: boolean | null
+          tipo_conta: string
+          titular_cpf_cnpj: string
+          titular_nome: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          agencia: string
+          banco_codigo: string
+          banco_nome?: string | null
+          barbeiro_id?: string | null
+          conta: string
+          conta_digito: string
+          created_at?: string
+          id?: string
+          is_default?: boolean | null
+          tipo_conta?: string
+          titular_cpf_cnpj: string
+          titular_nome: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          agencia?: string
+          banco_codigo?: string
+          banco_nome?: string | null
+          barbeiro_id?: string | null
+          conta?: string
+          conta_digito?: string
+          created_at?: string
+          id?: string
+          is_default?: boolean | null
+          tipo_conta?: string
+          titular_cpf_cnpj?: string
+          titular_nome?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contas_bancarias_barbeiro_id_fkey"
+            columns: ["barbeiro_id"]
+            isOneToOne: false
+            referencedRelation: "barbeiros"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contas_bancarias_barbeiro_id_fkey"
             columns: ["barbeiro_id"]
             isOneToOne: false
             referencedRelation: "barbeiros_public"
@@ -2764,6 +2905,45 @@ export type Database = {
           level?: string
           message?: string
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      taxas_gateway: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          descricao: string | null
+          id: string
+          metodo_pagamento: string
+          taxa_fixa: number | null
+          taxa_percentual: number | null
+          tipo_taxa: string
+          updated_at: string
+          valor_taxa: number
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          metodo_pagamento: string
+          taxa_fixa?: number | null
+          taxa_percentual?: number | null
+          tipo_taxa?: string
+          updated_at?: string
+          valor_taxa?: number
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          metodo_pagamento?: string
+          taxa_fixa?: number | null
+          taxa_percentual?: number | null
+          tipo_taxa?: string
+          updated_at?: string
+          valor_taxa?: number
         }
         Relationships: []
       }

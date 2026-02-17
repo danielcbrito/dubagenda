@@ -10,7 +10,7 @@ import {
   User, 
   Scissors, 
   CheckCircle, 
-  AlertCircle, 
+  AlertCircle,
   Phone,
   Plus,
   RefreshCw,
@@ -26,6 +26,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { MobileDayTimeline } from "./MobileDayTimeline";
 import { MobileManualBookingModal } from "./MobileManualBookingModal";
+import { useBarbeiroLogado } from "@/hooks/useBarbeiroLogado";
 
 type ViewMode = "list" | "timeline";
 
@@ -102,6 +103,9 @@ export function AdminMobileAgenda({ onAppointmentClick, onAddClick }: AdminMobil
   const [manualBookingOpen, setManualBookingOpen] = useState(false);
   const [selectedSlotTime, setSelectedSlotTime] = useState("09:00");
 
+  // Hook para obter o barbeiro logado - FILTRO CRÍTICO
+  const { barbeiroId, loading: loadingBarbeiro } = useBarbeiroLogado();
+
   // Gerar dias da semana para o seletor horizontal
   const weekDays = Array.from({ length: 7 }, (_, i) => {
     const date = addDays(new Date(), i - 3);
@@ -109,17 +113,26 @@ export function AdminMobileAgenda({ onAppointmentClick, onAddClick }: AdminMobil
   });
 
   const loadAppointments = useCallback(async (date: Date, silent = false) => {
+    if (loadingBarbeiro) return;
+    
     try {
       if (!silent) setLoading(true);
       
       const dateStr = format(date, 'yyyy-MM-dd');
       
-      const { data, error } = await supabase
+      let query = supabase
         .from("agendamentos")
         .select("*")
         .eq("data", dateStr)
         .in("status", ["pending", "confirmed", "completed"])
         .order("hora", { ascending: true });
+
+      // FILTRO CRÍTICO: Se o usuário é um barbeiro, mostrar APENAS seus agendamentos
+      if (barbeiroId) {
+        query = query.eq("barbeiro_id", barbeiroId);
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
 
@@ -146,7 +159,7 @@ export function AdminMobileAgenda({ onAppointmentClick, onAddClick }: AdminMobil
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [barbeiroId, loadingBarbeiro]);
 
   useEffect(() => {
     loadAppointments(selectedDate);
@@ -334,6 +347,7 @@ export function AdminMobileAgenda({ onAppointmentClick, onAddClick }: AdminMobil
               setManualBookingOpen(true);
             }}
             onAppointmentClick={(apt) => onAppointmentClick?.(apt as any)}
+            barbeiroId={barbeiroId}
           />
         </div>
       ) : (

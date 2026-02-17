@@ -6,23 +6,17 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { useState, useEffect, useMemo } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { useState, useMemo } from "react";
+import { useBarberBusinessHours } from "@/hooks/useBarberBusinessHours";
 
 interface AgendaDiariaViewProps {
   date: Date;
   appointments: any[];
   onCancelAppointment: (id: string) => void;
+  barbeiroId?: string | null;
 }
 
-interface BusinessHoursConfig {
-  aberto: boolean;
-  hora_abertura: string;
-  hora_fechamento: string;
-  hora_almoco_inicio: string | null;
-  hora_almoco_fim: string | null;
-  delay_entre_servicos: number;
-}
+// Helper function: convert HH:MM to minutes
 
 // Helper function: convert HH:MM to minutes
 function timeToMinutes(time: string): number {
@@ -30,48 +24,11 @@ function timeToMinutes(time: string): number {
   return hours * 60 + minutes;
 }
 
-export function AgendaDiariaView({ date, appointments, onCancelAppointment }: AgendaDiariaViewProps) {
+export function AgendaDiariaView({ date, appointments, onCancelAppointment, barbeiroId }: AgendaDiariaViewProps) {
   const [clickedUnavailableSlot, setClickedUnavailableSlot] = useState<string | null>(null);
-  const [businessHours, setBusinessHours] = useState<BusinessHoursConfig | null>(null);
 
-  // Fetch business hours from database
-  useEffect(() => {
-    const fetchBusinessHours = async () => {
-      const dayOfWeek = date.getDay();
-      
-      const { data: configData, error } = await supabase
-        .from('configuracoes_horario')
-        .select('*')
-        .eq('dia_semana', dayOfWeek)
-        .maybeSingle();
-
-      if (error) {
-        console.error('[AgendaDiariaView] Erro ao buscar config:', error);
-      }
-
-      // Use database config or fallback
-      const config: BusinessHoursConfig = configData ? {
-        aberto: configData.aberto,
-        hora_abertura: configData.hora_abertura,
-        hora_fechamento: configData.hora_fechamento,
-        hora_almoco_inicio: configData.hora_almoco_inicio,
-        hora_almoco_fim: configData.hora_almoco_fim,
-        delay_entre_servicos: configData.delay_entre_servicos || 10
-      } : {
-        aberto: dayOfWeek !== 0,
-        hora_abertura: '09:00',
-        hora_fechamento: '21:00',
-        hora_almoco_inicio: '13:00',
-        hora_almoco_fim: '14:00',
-        delay_entre_servicos: 10
-      };
-
-      console.log(`[AgendaDiariaView] Config do dia ${dayOfWeek}: ${config.hora_abertura} - ${config.hora_fechamento}`);
-      setBusinessHours(config);
-    };
-
-    fetchBusinessHours();
-  }, [date]);
+  // Usar hook centralizado com hierarquia de prioridade por barbeiro
+  const { config: businessHours, loading: loadingHours } = useBarberBusinessHours(date, barbeiroId || null);
 
   // Generate all time slots based on business hours (every 30 minutes)
   const timeSlots = useMemo(() => {
