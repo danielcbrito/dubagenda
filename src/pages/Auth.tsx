@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { z } from "zod";
 import { Loader2, Eye, EyeOff, User, Mail, Phone, Lock, CreditCard, ArrowLeft } from "lucide-react";
 import { formatPhone, validatePhone, formatCPF, validateCPF } from "@/lib/validators";
+import { cn } from "@/lib/utils";
 import { SupportChatBubble } from "@/components/support/SupportChatBubble";
 import logoDub from "@/assets/logo-dub.png";
 import { motion } from "framer-motion";
@@ -285,7 +286,7 @@ const Auth = () => {
   return (
     <div className="min-h-screen min-h-[100dvh] flex flex-col bg-background">
       {/* Content */}
-      <div className="flex-1 flex flex-col px-6 pt-[env(safe-area-inset-top)] overflow-y-auto">
+      <div className={cn("flex-1 flex flex-col px-6 pt-[env(safe-area-inset-top)] overflow-y-auto", !isSignup && "justify-center")}>
         {/* Back button */}
         <motion.div
           initial={{ opacity: 0 }}
@@ -308,7 +309,7 @@ const Auth = () => {
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-          className="flex flex-col items-center mt-8 mb-8"
+          className={cn("flex flex-col items-center mb-8", isSignup ? "mt-8" : "mt-auto pt-8")}
         >
           <img
             src={logoDub}
@@ -321,7 +322,7 @@ const Auth = () => {
           <p className="text-[13px] text-muted-foreground mt-1.5">
             {isSignup
               ? "Preencha seus dados para começar"
-              : "Entre com suas credenciais"}
+              : "Entre com seu email e senha"}
           </p>
         </motion.div>
 
