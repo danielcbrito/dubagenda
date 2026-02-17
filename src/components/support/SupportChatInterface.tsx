@@ -432,7 +432,7 @@ export function SupportChatInterface() {
       )}
 
       {/* Input area */}
-      <div className="shrink-0 px-4 pb-5 pt-2">
+      <div className="shrink-0 px-3 pt-2" style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 1rem)" }}>
         <div className="max-w-xl mx-auto">
           {/* File previews */}
           <AnimatePresence>
@@ -457,27 +457,19 @@ export function SupportChatInterface() {
 
           {/* Input pill */}
           <div className={cn(
-            "flex items-end gap-1 px-1 py-1 rounded-full transition-all duration-200",
+            "flex items-end gap-1.5 px-1.5 py-1.5 rounded-[22px] transition-all duration-200",
             "bg-card border border-border/60",
             "shadow-soft"
           )}>
             {/* Attach file — left side */}
             <button
               type="button"
-              className="h-8 w-8 rounded-full flex items-center justify-center shrink-0 text-muted-foreground/40 hover:text-muted-foreground hover:bg-muted/30 transition-colors"
+              className="h-10 w-10 rounded-full flex items-center justify-center shrink-0 text-muted-foreground/50 hover:text-muted-foreground hover:bg-muted/30 active:scale-95 transition-all"
               onClick={() => fileInputRef.current?.click()}
               disabled={isLoading}
             >
-              <Paperclip className="h-4 w-4" />
+              <Paperclip className="h-[18px] w-[18px]" />
             </button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              multiple
-              accept="image/*,.pdf,.doc,.docx,.txt"
-              className="hidden"
-              onChange={handleFileSelect}
-            />
 
             {/* Textarea */}
             <textarea
@@ -487,30 +479,30 @@ export function SupportChatInterface() {
               onKeyDown={handleKeyPress}
               placeholder="Mensagem..."
               disabled={isLoading}
-              className="flex-1 min-h-[32px] max-h-[100px] resize-none border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 px-1 py-1.5 text-[13px] text-foreground placeholder:text-muted-foreground/40 focus:outline-none leading-tight"
+              className="flex-1 min-h-[40px] max-h-[120px] resize-none border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 px-0.5 py-2.5 text-[15px] text-foreground placeholder:text-muted-foreground/40 focus:outline-none leading-snug"
               rows={1}
             />
 
             {/* Mic + Send — right side */}
-            <div className="flex items-center gap-0.5">
+            <div className="flex items-center gap-1">
               <button
                 type="button"
                 className={cn(
-                  "h-8 w-8 rounded-full flex items-center justify-center shrink-0 transition-all duration-200",
+                  "h-10 w-10 rounded-full flex items-center justify-center shrink-0 active:scale-95 transition-all duration-200",
                   isRecording
                     ? "text-destructive bg-destructive/10"
-                    : "text-muted-foreground/40 hover:text-muted-foreground hover:bg-muted/30"
+                    : "text-muted-foreground/50 hover:text-muted-foreground hover:bg-muted/30"
                 )}
                 onClick={isRecording ? stopRecording : startRecording}
                 disabled={isLoading}
               >
-                {isRecording ? <StopCircle className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+                {isRecording ? <StopCircle className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
               </button>
 
               <button
                 type="button"
                 className={cn(
-                  "h-8 w-8 rounded-full flex items-center justify-center shrink-0 transition-all duration-200",
+                  "h-10 w-10 rounded-full flex items-center justify-center shrink-0 active:scale-95 transition-all duration-200",
                   canSend
                     ? "bg-foreground text-background"
                     : "bg-muted/60 text-muted-foreground/20 cursor-not-allowed"
@@ -518,7 +510,7 @@ export function SupportChatInterface() {
                 onClick={() => sendMessage()}
                 disabled={isLoading || !canSend}
               >
-                <ArrowUp className="h-4 w-4" strokeWidth={2.5} />
+                <ArrowUp className="h-[18px] w-[18px]" strokeWidth={2.5} />
               </button>
             </div>
           </div>
