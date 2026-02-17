@@ -285,31 +285,32 @@ const Auth = () => {
 
   return (
     <div className="min-h-screen min-h-[100dvh] flex flex-col bg-background">
-      {/* Content */}
-      <div className="flex-1 flex flex-col px-6 pt-[env(safe-area-inset-top)] overflow-y-auto justify-center">
-        {/* Back button */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.4 }}
-          className="pt-4"
+      {/* Back button - absolute so it doesn't affect centering */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.4 }}
+        className="absolute top-0 left-0 pt-[calc(env(safe-area-inset-top)+1rem)] pl-6 z-10"
+      >
+        <button
+          type="button"
+          onClick={() => navigate("/")}
+          className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors"
         >
-          <button
-            type="button"
-            onClick={() => navigate("/")}
-            className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            <span className="text-[13px]">Voltar</span>
-          </button>
-        </motion.div>
+          <ArrowLeft className="w-4 h-4" />
+          <span className="text-[13px]">Voltar</span>
+        </button>
+      </motion.div>
+
+      {/* Content */}
+      <div className="flex-1 flex flex-col justify-center px-6 overflow-y-auto">
 
         {/* Logo + Title */}
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-          className={cn("flex flex-col items-center mb-8", isSignup ? "mt-8" : "mt-auto pt-8")}
+          className="flex flex-col items-center mb-6"
         >
           <img
             src={logoDub}
