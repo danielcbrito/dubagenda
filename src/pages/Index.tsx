@@ -49,10 +49,10 @@ const Index = () => {
             className="text-center mb-10"
           >
             <h1 className="text-[2.25rem] font-bold text-foreground tracking-tight leading-none font-display">
-              Barbearia <span className="text-primary">DUB</span>
+              DUB <span className="text-primary">Agenda</span>
             </h1>
             <p className="text-[13px] text-muted-foreground mt-2.5">
-              Estilo e precisão em um só lugar.
+              Seu estilo, na palma da mão.
             </p>
           </motion.div>
 
@@ -78,10 +78,10 @@ const Index = () => {
                 </div>
                 <div className="flex-1 text-left">
                   <span className="block text-[14px] font-bold text-primary-foreground">
-                    Seja Cliente da DUB
+                    Seja Cliente Exclusivo DUB
                   </span>
                   <span className="block text-[11px] text-primary-foreground/60 mt-0.5">
-                    Agende com seu barbeiro favorito
+                    Acesse as unidades DUB e agende
                   </span>
                 </div>
                 <ChevronRight className="w-5 h-5 text-primary-foreground/50 group-hover:translate-x-0.5 transition-transform flex-shrink-0" />
@@ -120,7 +120,7 @@ const Index = () => {
             className="text-center text-[9px] text-muted-foreground/30 tracking-wider uppercase mt-8 pb-8"
             style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 2rem)" }}
           >
-            © {new Date().getFullYear()} Barbearia DUB
+            © {new Date().getFullYear()} DUB Agenda
           </motion.p>
         </div>
       </div>
