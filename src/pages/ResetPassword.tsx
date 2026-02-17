@@ -2,13 +2,12 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Card } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { z } from "zod";
 import logoDub from "@/assets/logo-dub.png";
-import { Loader2, CheckCircle2, AlertCircle } from "lucide-react";
+import { Loader2, CheckCircle2, AlertCircle, Lock, Eye, EyeOff } from "lucide-react";
+import { motion } from "framer-motion";
 
 const passwordSchema = z.object({
   password: z.string().min(6, "Senha deve ter pelo menos 6 caracteres"),
@@ -23,21 +22,16 @@ const ResetPassword = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [hasValidToken, setHasValidToken] = useState<boolean | null>(null);
   const [passwordReset, setPasswordReset] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const [formData, setFormData] = useState({
     password: "",
     confirmPassword: "",
   });
 
   useEffect(() => {
-    /**
-     * Fluxo de recuperação de senha:
-     * 1. Supabase envia email com link que redireciona para /resetar-senha#access_token=...&type=recovery
-     * 2. O cliente Supabase detecta os tokens no hash e dispara PASSWORD_RECOVERY
-     * 3. Ou os tokens já foram processados via /auth/callback e a sessão já existe
-     */
     let resolved = false;
 
-    // Listener para o evento PASSWORD_RECOVERY (tokens no hash)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (resolved) return;
       if (event === 'PASSWORD_RECOVERY' || event === 'SIGNED_IN') {
@@ -46,9 +40,7 @@ const ResetPassword = () => {
       }
     });
 
-    // Fallback: verificar se já tem sessão válida (veio do /auth/callback)
     const checkExistingSession = async () => {
-      // Dar tempo para o Supabase processar os tokens do hash
       await new Promise(r => setTimeout(r, 1500));
       if (resolved) return;
 
@@ -64,7 +56,6 @@ const ResetPassword = () => {
     };
 
     checkExistingSession();
-
     return () => subscription.unsubscribe();
   }, []);
 
@@ -96,10 +87,7 @@ const ResetPassword = () => {
 
       setPasswordReset(true);
       toast.success("Senha redefinida com sucesso!");
-      
-      setTimeout(() => {
-        navigate("/auth");
-      }, 2000);
+      setTimeout(() => navigate("/auth"), 2000);
     } catch (error) {
       if (error instanceof z.ZodError) {
         toast.error(error.errors[0].message);
@@ -111,111 +99,161 @@ const ResetPassword = () => {
     }
   };
 
-  // Loading state
+  const inputClasses = "h-12 pl-11 pr-11 bg-muted/50 border-border text-foreground placeholder:text-muted-foreground/50 rounded-xl focus:border-primary/50 focus:ring-1 focus:ring-primary/20 transition-all text-sm";
+
+  // Loading
   if (hasValidToken === null) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-6">
-        <Card className="w-full max-w-md p-8 card-premium text-center">
-          <Loader2 className="mx-auto h-12 w-12 animate-spin text-primary mb-4" />
-          <p className="text-muted-foreground">Verificando link de recuperação...</p>
-        </Card>
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center px-6">
+        <img src={logoDub} alt="DUB" className="w-14 h-14 object-contain mb-6" />
+        <Loader2 className="w-8 h-8 animate-spin text-primary mb-4" />
+        <p className="text-[13px] text-muted-foreground">Verificando link...</p>
       </div>
     );
   }
 
-  // Invalid token
+  // Invalid
   if (hasValidToken === false) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-6">
-        <Card className="w-full max-w-md p-8 card-premium text-center">
-          <div className="mx-auto w-16 h-16 bg-destructive/20 rounded-full flex items-center justify-center mb-4">
-            <AlertCircle className="w-8 h-8 text-destructive" />
-          </div>
-          <h2 className="text-2xl font-bold mb-2">Link inválido ou expirado</h2>
-          <p className="text-sm text-muted-foreground mb-6">
-            O link de recuperação de senha não é válido ou já expirou. Solicite um novo link.
-          </p>
-          <Button 
-            onClick={() => navigate("/esqueci-senha")}
-            className="w-full h-11 bg-primary hover:bg-primary/90"
-          >
-            Solicitar novo link
-          </Button>
-        </Card>
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center px-6">
+        <img src={logoDub} alt="DUB" className="w-14 h-14 object-contain mb-6" />
+        <div className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center mb-4">
+          <AlertCircle className="w-8 h-8 text-destructive" />
+        </div>
+        <h2 className="text-xl font-bold text-foreground mb-2">Link expirado</h2>
+        <p className="text-[13px] text-muted-foreground text-center mb-6 max-w-[280px]">
+          O link de recuperação não é válido ou já expirou. Solicite um novo.
+        </p>
+        <Button
+          onClick={() => navigate("/esqueci-senha")}
+          className="w-full max-w-sm h-[50px] rounded-xl text-[14px] font-semibold"
+          style={{
+            background: "var(--gradient-primary)",
+            boxShadow: "var(--shadow-glow-red)",
+          }}
+        >
+          Solicitar novo link
+        </Button>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-6">
-      <Card className="w-full max-w-md p-8 card-premium">
-        <div className="flex justify-center mb-6">
-          <img src={logoDub} alt="Barbearia DUB" className="w-20 h-20 object-contain" />
-        </div>
+    <div className="min-h-screen min-h-[100dvh] flex flex-col bg-background">
+      <div className="flex-1 flex flex-col items-center justify-center px-6">
+        {/* Logo */}
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+          className="flex flex-col items-center mb-8"
+        >
+          <img src={logoDub} alt="DUB" className="w-14 h-14 object-contain mb-4" />
 
-        {!passwordReset ? (
-          <>
-            <h2 className="text-2xl font-bold text-center mb-2">Redefinir senha</h2>
-            <p className="text-sm text-muted-foreground text-center mb-6">Digite sua nova senha</p>
+          {!passwordReset ? (
+            <>
+              <h1 className="text-2xl font-bold text-foreground tracking-tight font-display">
+                Redefinir senha
+              </h1>
+              <p className="text-[13px] text-muted-foreground mt-1.5">
+                Digite sua nova senha
+              </p>
+            </>
+          ) : (
+            <>
+              <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+                <CheckCircle2 className="w-8 h-8 text-primary" />
+              </div>
+              <h1 className="text-2xl font-bold text-foreground tracking-tight font-display">
+                Senha redefinida!
+              </h1>
+              <p className="text-[13px] text-muted-foreground mt-1.5">
+                Redirecionando para o login...
+              </p>
+              <Loader2 className="w-5 h-5 animate-spin text-primary mt-4" />
+            </>
+          )}
+        </motion.div>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <Label htmlFor="password" className="text-sm">Nova senha</Label>
+        {!passwordReset && (
+          <motion.form
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
+            onSubmit={handleSubmit}
+            className="w-full max-w-sm space-y-4"
+          >
+            <div className="space-y-1.5">
+              <label className="text-[12px] font-medium text-muted-foreground uppercase tracking-wider block">
+                Nova senha
+              </label>
+              <div className="relative">
+                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-[18px] h-[18px] text-muted-foreground/40" />
                 <Input
-                  id="password"
                   name="password"
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   required
                   value={formData.password}
                   onChange={handleInputChange}
-                  className="input-premium mt-1"
+                  className={inputClasses}
                   placeholder="Mínimo 6 caracteres"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground/40 hover:text-muted-foreground transition-colors"
+                >
+                  {showPassword ? <EyeOff className="w-[18px] h-[18px]" /> : <Eye className="w-[18px] h-[18px]" />}
+                </button>
               </div>
+            </div>
 
-              <div>
-                <Label htmlFor="confirmPassword" className="text-sm">Confirmar nova senha</Label>
+            <div className="space-y-1.5">
+              <label className="text-[12px] font-medium text-muted-foreground uppercase tracking-wider block">
+                Confirmar senha
+              </label>
+              <div className="relative">
+                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-[18px] h-[18px] text-muted-foreground/40" />
                 <Input
-                  id="confirmPassword"
                   name="confirmPassword"
-                  type="password"
+                  type={showConfirm ? "text" : "password"}
                   required
                   value={formData.confirmPassword}
                   onChange={handleInputChange}
-                  className="input-premium mt-1"
+                  className={inputClasses}
                   placeholder="Digite a senha novamente"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirm(!showConfirm)}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground/40 hover:text-muted-foreground transition-colors"
+                >
+                  {showConfirm ? <EyeOff className="w-[18px] h-[18px]" /> : <Eye className="w-[18px] h-[18px]" />}
+                </button>
               </div>
-
-              <Button 
-                type="submit" 
-                className="w-full h-11 bg-primary hover:bg-primary/90"
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Redefinindo...
-                  </>
-                ) : (
-                  "Redefinir senha"
-                )}
-              </Button>
-            </form>
-          </>
-        ) : (
-          <div className="text-center">
-            <div className="mx-auto w-16 h-16 bg-primary/20 rounded-full flex items-center justify-center mb-4">
-              <CheckCircle2 className="w-8 h-8 text-primary" />
             </div>
-            <h2 className="text-2xl font-bold mb-2">Senha redefinida!</h2>
-            <p className="text-sm text-muted-foreground mb-6">
-              Sua senha foi atualizada com sucesso. Redirecionando para o login...
-            </p>
-            <Loader2 className="mx-auto h-6 w-6 animate-spin text-primary" />
-          </div>
+
+            <Button
+              type="submit"
+              className="w-full h-[50px] rounded-xl text-[14px] font-semibold transition-all duration-200"
+              style={{
+                background: "var(--gradient-primary)",
+                boxShadow: "var(--shadow-glow-red)",
+              }}
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <span className="flex items-center gap-2">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Redefinindo...
+                </span>
+              ) : (
+                "Redefinir senha"
+              )}
+            </Button>
+          </motion.form>
         )}
-      </Card>
+      </div>
     </div>
   );
 };
