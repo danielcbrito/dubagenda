@@ -7,7 +7,7 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const ASAAS_BASE_URL = "https://sandbox.asaas.com/api/v3";
+const ASAAS_BASE_URL = "https://api.asaas.com/v3";
 
 /**
  * Resolve a API key do Asaas para o barbeiro vinculado à assinatura.
