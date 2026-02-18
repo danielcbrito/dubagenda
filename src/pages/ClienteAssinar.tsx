@@ -484,13 +484,10 @@ const ClienteAssinar = () => {
               <div className="space-y-3 mb-4">
                 {/* PIX */}
                 <motion.button
-                  whileTap={{ scale: 0.98 }}
-                  onClick={() => setSelectedPaymentMethod("pix")}
+                  disabled
                   className={cn(
-                    "w-full rounded-xl border p-4 text-left transition-all",
-                    selectedPaymentMethod === "pix"
-                      ? "border-primary/50 bg-primary/5 ring-1 ring-primary/20"
-                      : "border-border/30 bg-card hover:border-border/50"
+                    "w-full rounded-xl border p-4 text-left transition-all opacity-40 cursor-not-allowed",
+                    "border-border/30 bg-card"
                   )}
                 >
                   <div className="flex items-center gap-3.5">
@@ -521,24 +518,15 @@ const ClienteAssinar = () => {
 
                 {/* Cartão */}
                 <motion.button
-                  whileTap={{ scale: 0.98 }}
-                  onClick={() => setSelectedPaymentMethod("card")}
+                  disabled
                   className={cn(
-                    "w-full rounded-xl border p-4 text-left transition-all",
-                    selectedPaymentMethod === "card"
-                      ? "border-primary/50 bg-primary/5 ring-1 ring-primary/20"
-                      : "border-border/30 bg-card hover:border-border/50"
+                    "w-full rounded-xl border p-4 text-left transition-all opacity-40 cursor-not-allowed",
+                    "border-border/30 bg-card"
                   )}
                 >
                   <div className="flex items-center gap-3.5">
-                    <div className={cn(
-                      "w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0",
-                      selectedPaymentMethod === "card" ? "bg-primary/10" : "bg-muted/30"
-                    )}>
-                      <CreditCard className={cn(
-                        "w-5 h-5 transition-colors",
-                        selectedPaymentMethod === "card" ? "text-primary" : "text-muted-foreground/50"
-                      )} />
+                    <div className="w-10 h-10 rounded-xl bg-muted/30 flex items-center justify-center flex-shrink-0">
+                      <CreditCard className="w-5 h-5 text-muted-foreground/50" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-[13px] font-semibold text-foreground">Cartão</p>
@@ -546,14 +534,7 @@ const ClienteAssinar = () => {
                         Crédito ou débito • Checkout seguro
                       </p>
                     </div>
-                    <div className={cn(
-                      "w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all",
-                      selectedPaymentMethod === "card"
-                        ? "bg-primary border-primary"
-                        : "border-muted-foreground/30"
-                    )}>
-                      {selectedPaymentMethod === "card" && <Check className="w-3 h-3 text-primary-foreground" strokeWidth={3} />}
-                    </div>
+                    <div className="w-5 h-5 rounded-full border-2 border-muted-foreground/30 flex-shrink-0" />
                   </div>
                 </motion.button>
               </div>
