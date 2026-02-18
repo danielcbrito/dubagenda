@@ -63,7 +63,7 @@ const ClienteAgendar = () => {
   const [selectedTime, setSelectedTime] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState(1);
-  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'pix'>('pix');
+  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'pix'>('cash');
   const [processingPayment, setProcessingPayment] = useState(false);
   const [availableCredits, setAvailableCredits] = useState(0);
   const [userId, setUserId] = useState<string | null>(null);
@@ -1850,12 +1850,11 @@ const ClienteAgendar = () => {
                 {/* PIX */}
                 <motion.button
                   whileTap={{ scale: 0.98 }}
-                  onClick={() => { setPaymentMethod('pix'); setUseRedemption(false); }}
+                  disabled
+                  onClick={undefined}
                   className={cn(
-                    "w-full rounded-xl border p-4 text-left transition-all",
-                    paymentMethod === 'pix'
-                      ? "border-primary/50 bg-primary/5 ring-1 ring-primary/20"
-                      : "border-border/30 bg-card hover:border-border/50"
+                    "w-full rounded-xl border p-4 text-left transition-all opacity-40 cursor-not-allowed",
+                    "border-border/30 bg-card"
                   )}
                 >
                   <div className="flex items-center gap-3.5">
@@ -1887,12 +1886,11 @@ const ClienteAgendar = () => {
                 {/* Cartão */}
                 <motion.button
                   whileTap={{ scale: 0.98 }}
-                  onClick={() => { setPaymentMethod('card'); setUseRedemption(false); }}
+                  disabled
+                  onClick={undefined}
                   className={cn(
-                    "w-full rounded-xl border p-4 text-left transition-all",
-                    paymentMethod === 'card'
-                      ? "border-primary/50 bg-primary/5 ring-1 ring-primary/20"
-                      : "border-border/30 bg-card hover:border-border/50"
+                    "w-full rounded-xl border p-4 text-left transition-all opacity-40 cursor-not-allowed",
+                    "border-border/30 bg-card"
                   )}
                 >
                   <div className="flex items-center gap-3.5">
