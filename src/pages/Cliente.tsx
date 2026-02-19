@@ -570,7 +570,7 @@ const Cliente = () => {
   };
 
   return (
-    <div className="h-dvh flex flex-col overflow-hidden">
+    <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
       <AnnouncementModal />
 
 
