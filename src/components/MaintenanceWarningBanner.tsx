@@ -21,32 +21,35 @@ export function MaintenanceWarningBanner({ message }: MaintenanceWarningBannerPr
           className="w-full flex-shrink-0 overflow-hidden"
         >
           <div
-            className="w-full flex items-center gap-2.5 px-4 py-2.5"
+            className="w-full relative flex items-center justify-center px-10 py-2.5"
             style={{
               background: "linear-gradient(90deg, hsl(42 100% 50%), hsl(35 100% 52%))",
             }}
           >
-            <AlertTriangle
-              className="w-4 h-4 flex-shrink-0"
-              style={{ color: "rgba(0,0,0,0.65)" }}
-              strokeWidth={2.5}
-            />
+            {/* Ícone + mensagem centralizados */}
+            <div className="flex items-center gap-2">
+              <AlertTriangle
+                className="w-4 h-4 flex-shrink-0"
+                style={{ color: "rgba(0,0,0,0.6)" }}
+                strokeWidth={2.5}
+              />
+              <p
+                className="text-[12px] font-semibold leading-snug"
+                style={{ color: "rgba(0,0,0,0.75)" }}
+              >
+                {message}
+              </p>
+            </div>
 
-            <p
-              className="flex-1 text-[12px] font-semibold leading-snug"
-              style={{ color: "rgba(0,0,0,0.75)" }}
-            >
-              {message}
-            </p>
-
+            {/* Botão X fixo na direita — não afeta a centralização */}
             <button
               onClick={() => setDismissed(true)}
               aria-label="Fechar aviso"
-              className="flex-shrink-0 p-0.5 rounded transition-all active:scale-90"
+              className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded transition-all active:scale-90"
             >
               <X
                 className="w-3.5 h-3.5"
-                style={{ color: "rgba(0,0,0,0.55)" }}
+                style={{ color: "rgba(0,0,0,0.5)" }}
                 strokeWidth={2.5}
               />
             </button>
