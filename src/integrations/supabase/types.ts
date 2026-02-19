@@ -2947,6 +2947,113 @@ export type Database = {
         }
         Relationships: []
       }
+      tenant_members: {
+        Row: {
+          created_at: string
+          id: string
+          role: string
+          tenant_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role?: string
+          tenant_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: string
+          tenant_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_members_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tenants: {
+        Row: {
+          ativo: boolean
+          bairro: string | null
+          cidade: string | null
+          cnpj: string | null
+          cpf: string | null
+          created_at: string
+          email: string | null
+          endereco_completo: string | null
+          estado: string | null
+          id: string
+          logo_url: string | null
+          nome: string
+          numero: string | null
+          onboarding_completed: boolean
+          onboarding_step: number
+          owner_user_id: string
+          rua: string | null
+          site: string | null
+          slogan: string | null
+          telefone: string | null
+          updated_at: string
+          whatsapp: string | null
+        }
+        Insert: {
+          ativo?: boolean
+          bairro?: string | null
+          cidade?: string | null
+          cnpj?: string | null
+          cpf?: string | null
+          created_at?: string
+          email?: string | null
+          endereco_completo?: string | null
+          estado?: string | null
+          id?: string
+          logo_url?: string | null
+          nome: string
+          numero?: string | null
+          onboarding_completed?: boolean
+          onboarding_step?: number
+          owner_user_id: string
+          rua?: string | null
+          site?: string | null
+          slogan?: string | null
+          telefone?: string | null
+          updated_at?: string
+          whatsapp?: string | null
+        }
+        Update: {
+          ativo?: boolean
+          bairro?: string | null
+          cidade?: string | null
+          cnpj?: string | null
+          cpf?: string | null
+          created_at?: string
+          email?: string | null
+          endereco_completo?: string | null
+          estado?: string | null
+          id?: string
+          logo_url?: string | null
+          nome?: string
+          numero?: string | null
+          onboarding_completed?: boolean
+          onboarding_step?: number
+          owner_user_id?: string
+          rua?: string | null
+          site?: string | null
+          slogan?: string | null
+          telefone?: string | null
+          updated_at?: string
+          whatsapp?: string | null
+        }
+        Relationships: []
+      }
       ti_auth_attempts: {
         Row: {
           created_at: string
@@ -3449,6 +3556,7 @@ export type Database = {
         Args: { p_user_id: string }
         Returns: number
       }
+      get_user_tenant_id: { Args: never; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -3509,7 +3617,7 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "admin" | "barber" | "cliente" | "ti"
+      app_role: "admin" | "barber" | "cliente" | "ti" | "tenant_admin"
       appointment_status:
         | "pending"
         | "confirmed"
@@ -3649,7 +3757,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "barber", "cliente", "ti"],
+      app_role: ["admin", "barber", "cliente", "ti", "tenant_admin"],
       appointment_status: [
         "pending",
         "confirmed",
