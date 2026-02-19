@@ -354,18 +354,11 @@ Deno.serve(async (req) => {
         continue; // Slot ignorado - não cabe
       }
 
-      // 2. Verificar almoço - slot não pode começar durante o almoço nem o serviço terminar durante
+      // 2. Verificar almoço - qualquer sobreposição entre [slotStart, slotEnd] e [LUNCH_START, LUNCH_END] bloqueia
+      // Regra: sobreposição existe quando slotStart < LUNCH_END E slotEnd > LUNCH_START
       if (LUNCH_START !== null && LUNCH_END !== null) {
-        // Slot começa durante almoço?
-        if (slotStartMinutes >= LUNCH_START && slotStartMinutes < LUNCH_END) {
-          continue;
-        }
-        // Serviço terminaria durante o almoço?
-        if (slotEndMinutes > LUNCH_START && slotEndMinutes <= LUNCH_END) {
-          continue;
-        }
-        // Serviço atravessa todo o almoço?
-        if (slotStartMinutes < LUNCH_START && slotEndMinutes > LUNCH_END) {
+        if (slotStartMinutes < LUNCH_END && slotEndMinutes > LUNCH_START) {
+          slots.push({ time: timeStr, available: false, blockedReason: 'lunch' });
           continue;
         }
       }
