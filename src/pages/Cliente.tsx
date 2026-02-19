@@ -573,12 +573,6 @@ const Cliente = () => {
     <div className="h-dvh flex flex-col overflow-hidden">
       <AnnouncementModal />
 
-      {/* Banner Sandbox/Teste */}
-      <div className="flex-shrink-0 bg-amber-500/15 border-b border-amber-500/30 px-4 py-2 flex items-center justify-center gap-2">
-        <span className="text-[11px] font-semibold uppercase tracking-wider text-amber-600 dark:text-amber-400">
-          ⚠ Ambiente de Teste — Sandbox Asaas
-        </span>
-      </div>
 
       {/* Scrollable Content */}
       <div className="flex-1 overflow-y-auto overscroll-contain pb-24">

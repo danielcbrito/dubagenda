@@ -1850,11 +1850,12 @@ const ClienteAgendar = () => {
                 {/* PIX */}
                 <motion.button
                   whileTap={{ scale: 0.98 }}
-                  disabled
-                  onClick={undefined}
+                  onClick={() => setPaymentMethod('pix')}
                   className={cn(
-                    "w-full rounded-xl border p-4 text-left transition-all opacity-40 cursor-not-allowed",
-                    "border-border/30 bg-card"
+                    "w-full rounded-xl border p-4 text-left transition-all active:scale-[0.99]",
+                    paymentMethod === 'pix'
+                      ? "border-primary/60 bg-primary/5 shadow-sm"
+                      : "border-border/50 bg-card hover:border-border hover:shadow-sm"
                   )}
                 >
                   <div className="flex items-center gap-3.5">
@@ -1887,10 +1888,12 @@ const ClienteAgendar = () => {
                 <motion.button
                   whileTap={{ scale: 0.98 }}
                   disabled
-                  onClick={undefined}
+                  onClick={() => setPaymentMethod('card')}
                   className={cn(
-                    "w-full rounded-xl border p-4 text-left transition-all opacity-40 cursor-not-allowed",
-                    "border-border/30 bg-card"
+                    "w-full rounded-xl border p-4 text-left transition-all active:scale-[0.99]",
+                    paymentMethod === 'card'
+                      ? "border-primary/60 bg-primary/5 shadow-sm"
+                      : "border-border/50 bg-card hover:border-border hover:shadow-sm"
                   )}
                 >
                   <div className="flex items-center gap-3.5">
