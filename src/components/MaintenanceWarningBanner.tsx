@@ -20,39 +20,49 @@ export function MaintenanceWarningBanner({ message }: MaintenanceWarningBannerPr
           transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
           className="w-full flex-shrink-0 overflow-hidden"
         >
+          {/* Left accent border + content */}
           <div
-            className="w-full flex items-center justify-between gap-3 px-4 py-2.5"
+            className="w-full flex items-center gap-3 px-4 py-3"
             style={{
-              background: "hsl(40 100% 50%)",
-              borderBottom: "1px solid hsl(38 100% 42%)",
+              background: "hsl(36 90% 13%)",
+              borderBottom: "1px solid hsl(38 80% 22%)",
+              borderLeft: "3px solid hsl(40 95% 52%)",
             }}
           >
-            {/* Icon + Text */}
-            <div className="flex items-center gap-2.5 min-w-0 flex-1">
-              <AlertTriangle
-                className="w-4 h-4 flex-shrink-0"
-                style={{ color: "hsl(30 60% 15%)" }}
-                strokeWidth={2.5}
-              />
+            {/* Icon */}
+            <AlertTriangle
+              className="flex-shrink-0 w-4 h-4"
+              style={{ color: "hsl(40 95% 55%)" }}
+              strokeWidth={2.2}
+            />
+
+            {/* Text block */}
+            <div className="flex-1 min-w-0">
               <p
-                className="text-[12px] font-semibold leading-snug"
-                style={{ color: "hsl(30 60% 12%)" }}
+                className="text-[9px] font-bold uppercase tracking-[0.16em] leading-none mb-1"
+                style={{ color: "hsl(40 80% 50%)" }}
+              >
+                Aviso
+              </p>
+              <p
+                className="text-[12px] font-medium leading-snug"
+                style={{ color: "hsl(40 30% 85%)" }}
               >
                 {message}
               </p>
             </div>
 
-            {/* Dismiss button */}
+            {/* Dismiss */}
             <button
               onClick={() => setDismissed(true)}
               aria-label="Fechar aviso"
-              className="flex-shrink-0 w-5 h-5 flex items-center justify-center rounded-full transition-all active:scale-90"
-              style={{ background: "rgba(0,0,0,0.12)" }}
+              className="flex-shrink-0 w-6 h-6 flex items-center justify-center rounded-md transition-all active:scale-90"
+              style={{ background: "rgba(255,255,255,0.06)" }}
             >
               <X
-                className="w-3 h-3"
-                style={{ color: "hsl(30 60% 15%)" }}
-                strokeWidth={2.5}
+                className="w-3.5 h-3.5"
+                style={{ color: "hsl(40 30% 70%)" }}
+                strokeWidth={2}
               />
             </button>
           </div>
