@@ -71,8 +71,10 @@ serve(async (req) => {
         }
       }
 
-      // Consultar status no Asaas
-      const paymentRes = await fetch(`https://sandbox.asaas.com/api/v3/payments/${pb.asaas_payment_id}`, {
+      // Consultar status no Asaas (detecta sandbox vs produção automaticamente)
+      const isSandbox = asaasApiKey.includes("hmlg");
+      const baseUrl = isSandbox ? "https://api-sandbox.asaas.com/v3" : "https://api.asaas.com/v3";
+      const paymentRes = await fetch(`${baseUrl}/payments/${pb.asaas_payment_id}`, {
         headers: { access_token: asaasApiKey },
       });
       const paymentData = await paymentRes.json();
