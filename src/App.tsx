@@ -76,12 +76,14 @@ function MaintenanceWrapper({ children }: { children: React.ReactNode }) {
   // Allowed users can access everything
   if (isAllowedUser) {
     return (
-      <>
+      <div className="flex flex-col min-h-dvh">
         {warningActive && warningMessage && (
           <MaintenanceWarningBanner message={warningMessage} />
         )}
-        {children}
-      </>
+        <div className="flex-1 flex flex-col min-h-0">
+          {children}
+        </div>
+      </div>
     );
   }
 
@@ -99,12 +101,14 @@ function MaintenanceWrapper({ children }: { children: React.ReactNode }) {
 
   // Normal flow - show warning banner if active
   return (
-    <>
+    <div className="flex flex-col min-h-dvh">
       {warningActive && warningMessage && (
         <MaintenanceWarningBanner message={warningMessage} />
       )}
-      {children}
-    </>
+      <div className="flex-1 flex flex-col min-h-0">
+        {children}
+      </div>
+    </div>
   );
 }
 
