@@ -484,10 +484,12 @@ const ClienteAssinar = () => {
               <div className="space-y-3 mb-4">
                 {/* PIX */}
                 <motion.button
-                  disabled
+                  onClick={() => setSelectedPaymentMethod("pix")}
                   className={cn(
-                    "w-full rounded-xl border p-4 text-left transition-all opacity-40 cursor-not-allowed",
-                    "border-border/30 bg-card"
+                    "w-full rounded-xl border p-4 text-left transition-all active:scale-[0.99]",
+                    selectedPaymentMethod === "pix"
+                      ? "border-primary/60 bg-primary/5 shadow-sm"
+                      : "border-border/50 bg-card hover:border-border hover:shadow-sm"
                   )}
                 >
                   <div className="flex items-center gap-3.5">
@@ -518,10 +520,12 @@ const ClienteAssinar = () => {
 
                 {/* Cartão */}
                 <motion.button
-                  disabled
+                  onClick={() => setSelectedPaymentMethod("card")}
                   className={cn(
-                    "w-full rounded-xl border p-4 text-left transition-all opacity-40 cursor-not-allowed",
-                    "border-border/30 bg-card"
+                    "w-full rounded-xl border p-4 text-left transition-all active:scale-[0.99]",
+                    selectedPaymentMethod === "card"
+                      ? "border-primary/60 bg-primary/5 shadow-sm"
+                      : "border-border/50 bg-card hover:border-border hover:shadow-sm"
                   )}
                 >
                   <div className="flex items-center gap-3.5">
