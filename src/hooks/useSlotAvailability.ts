@@ -296,7 +296,8 @@ export function useSlotAvailability(
           .eq('barbeiro_id', barbeiroId)
           .eq('dia_semana', dayOfWeek)
           .maybeSingle();
-        if (data && data.aberto !== null) { sourceData = data; configSource = 'CONFIG BARBEIRO'; }
+        // Corrigido: usar data diretamente sem checar aberto !== null (aberto pode ser false válido)
+        if (data) { sourceData = data; configSource = 'CONFIG BARBEIRO'; }
       }
 
       // 4) Config global
