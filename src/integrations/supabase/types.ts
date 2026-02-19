@@ -663,6 +663,7 @@ export type Database = {
           google_calendar_connected: boolean | null
           id: string
           setup_completed: boolean | null
+          tenant_id: string | null
           updated_at: string | null
           user_id: string | null
         }
@@ -678,6 +679,7 @@ export type Database = {
           google_calendar_connected?: boolean | null
           id?: string
           setup_completed?: boolean | null
+          tenant_id?: string | null
           updated_at?: string | null
           user_id?: string | null
         }
@@ -693,10 +695,19 @@ export type Database = {
           google_calendar_connected?: boolean | null
           id?: string
           setup_completed?: boolean | null
+          tenant_id?: string | null
           updated_at?: string | null
           user_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "barbeiros_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       barbeiros_private: {
         Row: {
@@ -1186,6 +1197,7 @@ export type Database = {
           nome: string | null
           percent: number
           starts_at: string | null
+          tenant_id: string | null
           updated_at: string
         }
         Insert: {
@@ -1198,6 +1210,7 @@ export type Database = {
           nome?: string | null
           percent: number
           starts_at?: string | null
+          tenant_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -1210,9 +1223,18 @@ export type Database = {
           nome?: string | null
           percent?: number
           starts_at?: string | null
+          tenant_id?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "discount_coupons_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       disparos_programados: {
         Row: {
@@ -1225,6 +1247,7 @@ export type Database = {
           id: string
           mensagem: string
           resultado: Json | null
+          tenant_id: string | null
         }
         Insert: {
           contatos_ids?: string[]
@@ -1236,6 +1259,7 @@ export type Database = {
           id?: string
           mensagem: string
           resultado?: Json | null
+          tenant_id?: string | null
         }
         Update: {
           contatos_ids?: string[]
@@ -1247,8 +1271,17 @@ export type Database = {
           id?: string
           mensagem?: string
           resultado?: Json | null
+          tenant_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "disparos_programados_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       dispositivos_autorizados: {
         Row: {
@@ -2178,6 +2211,7 @@ export type Database = {
           preco_mensal: number
           prioridade_agendamento: number | null
           servico_id: string | null
+          tenant_id: string | null
           updated_at: string | null
         }
         Insert: {
@@ -2191,6 +2225,7 @@ export type Database = {
           preco_mensal: number
           prioridade_agendamento?: number | null
           servico_id?: string | null
+          tenant_id?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -2204,6 +2239,7 @@ export type Database = {
           preco_mensal?: number
           prioridade_agendamento?: number | null
           servico_id?: string | null
+          tenant_id?: string | null
           updated_at?: string | null
         }
         Relationships: [
@@ -2212,6 +2248,13 @@ export type Database = {
             columns: ["servico_id"]
             isOneToOne: false
             referencedRelation: "servicos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "planos_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
         ]
@@ -2406,6 +2449,7 @@ export type Database = {
           pontos_necessarios: number | null
           prompt_ia: string | null
           regras_json: Json | null
+          tenant_id: string | null
           weekly_required: boolean | null
         }
         Insert: {
@@ -2423,6 +2467,7 @@ export type Database = {
           pontos_necessarios?: number | null
           prompt_ia?: string | null
           regras_json?: Json | null
+          tenant_id?: string | null
           weekly_required?: boolean | null
         }
         Update: {
@@ -2440,9 +2485,18 @@ export type Database = {
           pontos_necessarios?: number | null
           prompt_ia?: string | null
           regras_json?: Json | null
+          tenant_id?: string | null
           weekly_required?: boolean | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "promocoes_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       relatorios_mensais: {
         Row: {
@@ -2690,6 +2744,7 @@ export type Database = {
           id: string
           nome: string
           preco: number
+          tenant_id: string | null
           updated_at: string | null
         }
         Insert: {
@@ -2702,6 +2757,7 @@ export type Database = {
           id?: string
           nome: string
           preco: number
+          tenant_id?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -2714,9 +2770,18 @@ export type Database = {
           id?: string
           nome?: string
           preco?: number
+          tenant_id?: string | null
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "servicos_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       support_conversations: {
         Row: {
@@ -2974,6 +3039,79 @@ export type Database = {
             foreignKeyName: "tenant_members_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tenant_mensagem_templates: {
+        Row: {
+          ativo: boolean | null
+          conteudo: string
+          created_at: string | null
+          id: string
+          slug: string
+          tenant_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          ativo?: boolean | null
+          conteudo: string
+          created_at?: string | null
+          id?: string
+          slug: string
+          tenant_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          ativo?: boolean | null
+          conteudo?: string
+          created_at?: string | null
+          id?: string
+          slug?: string
+          tenant_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_mensagem_templates_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tenant_webhook_config: {
+        Row: {
+          ativo: boolean | null
+          created_at: string | null
+          id: string
+          tenant_id: string
+          updated_at: string | null
+          webhook_url: string | null
+        }
+        Insert: {
+          ativo?: boolean | null
+          created_at?: string | null
+          id?: string
+          tenant_id: string
+          updated_at?: string | null
+          webhook_url?: string | null
+        }
+        Update: {
+          ativo?: boolean | null
+          created_at?: string | null
+          id?: string
+          tenant_id?: string
+          updated_at?: string | null
+          webhook_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_webhook_config_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
             referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
@@ -3486,6 +3624,10 @@ export type Database = {
       }
     }
     Functions: {
+      assign_tenant_admin_role: {
+        Args: { p_user_id: string }
+        Returns: undefined
+      }
       auto_hide_old_cancelled_appointments: { Args: never; Returns: undefined }
       calcular_saldo_barbeiro: {
         Args: { p_barbeiro_id?: string; p_user_id: string }
@@ -3509,6 +3651,20 @@ export type Database = {
           p_telefone: string
         }
         Returns: Json
+      }
+      create_tenant_barber: {
+        Args: {
+          p_apelido: string
+          p_comissao_pct?: number
+          p_email: string
+          p_nome: string
+          p_telefone: string
+        }
+        Returns: Json
+      }
+      ensure_tenant_barber: {
+        Args: { p_apelido: string; p_user_id: string }
+        Returns: string
       }
       format_phone_for_whatsapp: { Args: { phone: string }; Returns: string }
       get_maintenance_status: {
