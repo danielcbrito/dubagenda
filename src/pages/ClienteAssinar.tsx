@@ -166,7 +166,7 @@ const ClienteAssinar = () => {
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState(resumePlanId ? 0 : 1);
   const [hasActiveSubscription, setHasActiveSubscription] = useState(false);
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<"pix" | "card" | null>(null);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<"pix" | "card" | null>("pix");
 
   // Barber selection
   const [barbers, setBarbers] = useState<Barber[]>([]);
