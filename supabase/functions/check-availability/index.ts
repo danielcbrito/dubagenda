@@ -213,17 +213,24 @@ Deno.serve(async (req) => {
             .eq('dia_semana', dayOfWeek)
             .maybeSingle();
 
-          if (configBarbeiroData && configBarbeiroData.aberto !== null) {
-            console.log(`[check-availability] Config do barbeiro ${barbeiroId} para dia ${dayOfWeek}`);
-            config = {
-              aberto: configBarbeiroData.aberto ?? true,
-              hora_abertura: configBarbeiroData.hora_abertura || '09:00',
-              hora_fechamento: configBarbeiroData.hora_fechamento || '20:00',
+          if (configBarbeiroData) {
+            console.log(`[check-availability] Config do barbeiro ${barbeiroId} para dia ${dayOfWeek}:`, JSON.stringify({
+              aberto: configBarbeiroData.aberto,
               hora_almoco_inicio: configBarbeiroData.hora_almoco_inicio,
               hora_almoco_fim: configBarbeiroData.hora_almoco_fim,
+              hora_abertura: configBarbeiroData.hora_abertura,
+              hora_fechamento: configBarbeiroData.hora_fechamento,
+            }));
+            config = {
+              aberto: configBarbeiroData.aberto !== null ? configBarbeiroData.aberto : true,
+              hora_abertura: configBarbeiroData.hora_abertura || '09:00',
+              hora_fechamento: configBarbeiroData.hora_fechamento || '20:00',
+              hora_almoco_inicio: configBarbeiroData.hora_almoco_inicio || null,
+              hora_almoco_fim: configBarbeiroData.hora_almoco_fim || null,
               delay_entre_servicos: configBarbeiroData.delay_entre_servicos || 10
             };
           } else {
+            console.log(`[check-availability] Sem config para barbeiro ${barbeiroId} dia ${dayOfWeek}, usando global`);
             // Fallback para config geral (já verifica horarios_excepcionais)
             config = await getDefaultConfig(supabase, date, dayOfWeek);
           }
