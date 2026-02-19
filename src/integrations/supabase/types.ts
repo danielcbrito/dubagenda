@@ -3201,6 +3201,7 @@ export type Database = {
           manutencao_ativa: boolean | null
           manutencao_aviso_ativo: boolean
           manutencao_aviso_mensagem: string | null
+          manutencao_aviso_publico: string
           manutencao_fim_programada: string | null
           manutencao_inicio_programada: string | null
           manutencao_ips_permitidos: string[] | null
@@ -3231,6 +3232,7 @@ export type Database = {
           manutencao_ativa?: boolean | null
           manutencao_aviso_ativo?: boolean
           manutencao_aviso_mensagem?: string | null
+          manutencao_aviso_publico?: string
           manutencao_fim_programada?: string | null
           manutencao_inicio_programada?: string | null
           manutencao_ips_permitidos?: string[] | null
@@ -3261,6 +3263,7 @@ export type Database = {
           manutencao_ativa?: boolean | null
           manutencao_aviso_ativo?: boolean
           manutencao_aviso_mensagem?: string | null
+          manutencao_aviso_publico?: string
           manutencao_fim_programada?: string | null
           manutencao_inicio_programada?: string | null
           manutencao_ips_permitidos?: string[] | null
@@ -3407,6 +3410,7 @@ export type Database = {
           manutencao_ativa: boolean
           manutencao_aviso_ativo: boolean
           manutencao_aviso_mensagem: string
+          manutencao_aviso_publico: string
           manutencao_fim_programada: string
           manutencao_inicio_programada: string
           manutencao_mensagem: string
