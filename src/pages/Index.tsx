@@ -90,24 +90,22 @@ const Index = () => {
 
             {/* Secondary — Encontrar Barbearias */}
             <button
-              disabled
-              className="w-full rounded-2xl border border-border/50 bg-card/60 backdrop-blur-sm cursor-not-allowed"
+              onClick={() => navigate("/auth")}
+              className="group w-full rounded-2xl border border-border/50 bg-card/80 backdrop-blur-sm active:scale-[0.98] transition-transform duration-150"
             >
               <div className="flex items-center gap-4 px-5 py-4">
-                <div className="w-10 h-10 rounded-xl bg-muted/50 flex items-center justify-center flex-shrink-0">
-                  <MapPin className="w-[18px] h-[18px] text-muted-foreground/60" />
+                <div className="w-10 h-10 rounded-xl bg-muted/80 flex items-center justify-center flex-shrink-0">
+                  <MapPin className="w-[18px] h-[18px] text-foreground" />
                 </div>
                 <div className="flex-1 text-left">
-                  <span className="block text-[14px] font-medium text-foreground/50">
+                  <span className="block text-[14px] font-medium text-foreground">
                     Encontrar Barbearias
                   </span>
-                  <span className="block text-[11px] text-muted-foreground/50 mt-0.5">
+                  <span className="block text-[11px] text-muted-foreground mt-0.5">
                     As melhores perto de você
                   </span>
                 </div>
-                <span className="text-[9px] font-semibold text-muted-foreground/50 uppercase tracking-widest flex-shrink-0">
-                  Breve
-                </span>
+                <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:translate-x-0.5 transition-transform flex-shrink-0" />
               </div>
             </button>
           </motion.div>
