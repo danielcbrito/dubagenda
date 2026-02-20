@@ -90,7 +90,7 @@ const Index = () => {
 
             {/* Secondary — Encontrar Barbearias */}
             <button
-              onClick={() => navigate("/auth")}
+              onClick={() => navigate("/auth?mode=signup&origin=discover")}
               className="group w-full rounded-2xl border border-border/50 bg-card/80 backdrop-blur-sm active:scale-[0.98] transition-transform duration-150"
             >
               <div className="flex items-center gap-4 px-5 py-4">

@@ -12,6 +12,7 @@ const VerificarWhatsApp = () => {
   const [searchParams] = useSearchParams();
   const userId = searchParams.get("user_id");
   const phone = searchParams.get("phone");
+  const origin = searchParams.get("origin");
 
   const [code, setCode] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -77,7 +78,11 @@ const VerificarWhatsApp = () => {
         toast.success("Cadastro confirmado com sucesso!");
         
         setTimeout(() => {
-          navigate("/auth?mode=login&verified=whatsapp");
+          if (origin === "discover") {
+            navigate("/auth?mode=login&verified=whatsapp&origin=discover");
+          } else {
+            navigate("/auth?mode=login&verified=whatsapp");
+          }
         }, 2000);
       } else {
         setVerificationStatus('error');

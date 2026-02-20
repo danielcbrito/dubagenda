@@ -36,6 +36,7 @@ const Auth = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const mode = searchParams.get("mode") || "login";
+  const signupOrigin = searchParams.get("origin") || "dub_exclusive";
   
   const [isLoading, setIsLoading] = useState(false);
   const [cooldownTimer, setCooldownTimer] = useState<number>(0);
@@ -90,6 +91,23 @@ const Auth = () => {
         return;
       }
     }
+
+    // Check if user came from "Encontrar Barbearias" flow and needs onboarding
+    const currentOrigin = searchParams.get("origin") || signupOrigin;
+    if (currentOrigin === "discover") {
+      // Check if user already has a preferred barbershop
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("barbearia_preferida_id")
+        .eq("id", userId)
+        .single();
+
+      if (!profile?.barbearia_preferida_id) {
+        navigate("/escolher-barbearia");
+        return;
+      }
+    }
+
     navigate("/cliente");
   };
 
@@ -175,6 +193,7 @@ const Auth = () => {
             nome: validated.nome,
             telefone: validated.telefone,
             cpf: validated.cpf,
+            signup_origin: signupOrigin,
           },
         },
       });
@@ -211,15 +230,15 @@ const Auth = () => {
 
           if (whatsappData?.success) {
             toast.success("Código enviado para seu WhatsApp!");
-            navigate(`/verificar-whatsapp?user_id=${data.user.id}&phone=${encodeURIComponent(validated.telefone)}`);
+            navigate(`/verificar-whatsapp?user_id=${data.user.id}&phone=${encodeURIComponent(validated.telefone)}&origin=${signupOrigin}`);
           } else {
             toast.error("Erro ao enviar código. Tente novamente.");
-            navigate(`/verificar-whatsapp?user_id=${data.user.id}&phone=${encodeURIComponent(validated.telefone)}`);
+            navigate(`/verificar-whatsapp?user_id=${data.user.id}&phone=${encodeURIComponent(validated.telefone)}&origin=${signupOrigin}`);
           }
         } catch (whatsappErr) {
           console.error("Erro ao gerar código WhatsApp:", whatsappErr);
           toast.info("Cadastro realizado! Confirme via WhatsApp.");
-          navigate(`/verificar-whatsapp?user_id=${data.user.id}&phone=${encodeURIComponent(validated.telefone)}`);
+          navigate(`/verificar-whatsapp?user_id=${data.user.id}&phone=${encodeURIComponent(validated.telefone)}&origin=${signupOrigin}`);
         }
       }
     } catch (error) {
