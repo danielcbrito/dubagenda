@@ -1,11 +1,22 @@
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Scissors, MapPin, ChevronRight } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 import logoDub from "@/assets/logo-dub.png";
 import landingHero from "@/assets/landing-hero-tools.jpg";
 
 const Index = () => {
   const navigate = useNavigate();
+
+  const handleDiscover = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.user?.email_confirmed_at) {
+      // User already logged in — go directly to barbershop selection
+      navigate("/escolher-barbearia?mode=change");
+    } else {
+      navigate("/auth?mode=signup&origin=discover");
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background relative overflow-hidden">
@@ -90,7 +101,7 @@ const Index = () => {
 
             {/* Secondary — Encontrar Barbearias */}
             <button
-              onClick={() => navigate("/auth?mode=signup&origin=discover")}
+              onClick={handleDiscover}
               className="group w-full rounded-2xl border border-border/50 bg-card/80 backdrop-blur-sm active:scale-[0.98] transition-transform duration-150"
             >
               <div className="flex items-center gap-4 px-5 py-4">

@@ -45,10 +45,6 @@ const EscolherBarbearia = () => {
         .single();
 
       if (profile?.barbearia_preferida_id) {
-        if (!isChangeMode) {
-          navigate("/cliente");
-          return;
-        }
         setCurrentPreferred(profile.barbearia_preferida_id);
       }
 
@@ -94,6 +90,28 @@ const EscolherBarbearia = () => {
     } catch (err) {
       console.error("Erro ao salvar barbearia:", err);
       toast.error("Erro ao salvar. Tente novamente.");
+    } finally {
+      setSaving(null);
+    }
+  };
+
+  const handleBackToDub = async () => {
+    if (!userId) return;
+    setSaving("dub");
+    try {
+      const { error } = await supabase
+        .from("profiles")
+        .update({
+          barbearia_preferida_id: null,
+          signup_origin: "dub_exclusive",
+        })
+        .eq("id", userId);
+      if (error) throw error;
+      toast.success("Você voltou para o modo DUB Exclusivo!");
+      navigate("/cliente");
+    } catch (err) {
+      console.error("Erro ao voltar para DUB:", err);
+      toast.error("Erro ao processar. Tente novamente.");
     } finally {
       setSaving(null);
     }
@@ -279,7 +297,16 @@ const EscolherBarbearia = () => {
           style={{ background: "linear-gradient(to bottom, transparent, hsl(var(--background)))" }}
         />
         <div className="bg-background border-t border-border/30 px-5 pb-safe">
-          <div className="pt-3 pb-4">
+          <div className="pt-3 pb-4 space-y-2">
+            {/* Voltar para DUB Exclusivo — only if user already has a preference or is in change mode */}
+            {(currentPreferred || isChangeMode) && (
+              <button
+                onClick={handleBackToDub}
+                className="w-full text-center text-[13px] text-primary font-medium hover:text-primary/80 transition-colors py-2.5 rounded-xl"
+              >
+                Voltar para DUB Exclusivo
+              </button>
+            )}
             <button
               onClick={handleSkip}
               className="w-full text-center text-[13px] text-muted-foreground/60 hover:text-muted-foreground transition-colors py-2.5 rounded-xl"
