@@ -37,6 +37,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { BarbershopDetailsSheet } from "@/components/client/BarbershopDetailsSheet";
 
 /* ─── Reusable sub-components ─── */
 
@@ -140,6 +141,9 @@ export default function ClientePerfil() {
   const [pointsModalOpen, setPointsModalOpen] = useState(false);
   const [preferredShopName, setPreferredShopName] = useState<string | null>(null);
   const [showDiscoverConfirm, setShowDiscoverConfirm] = useState(false);
+  const [shopDetailsOpen, setShopDetailsOpen] = useState(false);
+  const [shopDetails, setShopDetails] = useState<any>(null);
+  const [isDubExclusive, setIsDubExclusive] = useState(false);
 
   useEffect(() => {
     loadProfile();
@@ -155,14 +159,21 @@ export default function ClientePerfil() {
     const { data: prof } = await supabase.from("profiles").select("*").eq("id", user.id).single();
     if (prof) {
       setProfile(prof);
-      // Load preferred barbershop name
       if (prof.barbearia_preferida_id) {
         const { data: tenant } = await supabase
           .from("tenants")
-          .select("nome")
+          .select("id, nome, slogan, logo_url, telefone, whatsapp, email, site, rua, numero, bairro, cidade, estado, endereco_completo")
           .eq("id", prof.barbearia_preferida_id)
           .single();
-        if (tenant) setPreferredShopName(tenant.nome);
+        if (tenant) {
+          setPreferredShopName(tenant.nome);
+          setShopDetails(tenant);
+        }
+        setIsDubExclusive(false);
+      } else {
+        setIsDubExclusive(true);
+        setPreferredShopName(null);
+        setShopDetails(null);
       }
     }
 
@@ -268,9 +279,9 @@ export default function ClientePerfil() {
           <ProfileSection title="Preferências">
             <ProfileItem
               icon={Store}
-              label="Minha Barbearia"
-              badge={preferredShopName || undefined}
-              onClick={() => navigate("/escolher-barbearia?mode=change")}
+              label={isDubExclusive ? "Barbearia DUB" : "Minha Barbearia"}
+              badge={isDubExclusive ? "Exclusivo" : preferredShopName || undefined}
+              onClick={() => setShopDetailsOpen(true)}
             />
             <ProfileItem
               icon={MapPin}
@@ -378,6 +389,14 @@ export default function ClientePerfil() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Barbershop Details Sheet */}
+      <BarbershopDetailsSheet
+        open={shopDetailsOpen}
+        onOpenChange={setShopDetailsOpen}
+        barbershop={shopDetails}
+        isDub={isDubExclusive}
+      />
     </div>
   );
 }

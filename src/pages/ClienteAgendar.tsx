@@ -1,7 +1,8 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowLeft, ArrowRight, Clock, Check, Tag, CreditCard, Landmark, Loader2, Calendar as CalendarIcon, Shield, Zap, Star, Store, ChevronRight } from "lucide-react";
+import { ArrowLeft, ArrowRight, Clock, Check, Tag, CreditCard, Landmark, Loader2, Calendar as CalendarIcon, Shield, Zap, Star, Store, ChevronRight, Crown } from "lucide-react";
+import logoDub from "@/assets/logo-dub.png";
 import pixIcon from "@/assets/pix-icon.png";
 import { toast } from "sonner";
 import { ptBR } from "date-fns/locale";
@@ -1613,7 +1614,7 @@ const ClienteAgendar = () => {
           >
             <div className="max-w-2xl mx-auto">
               {/* Barbershop context header */}
-              {preferredShop && (
+              {preferredShop ? (
                 <motion.div
                   initial={{ opacity: 0, y: 4 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -1633,10 +1634,8 @@ const ClienteAgendar = () => {
                       onClick={() => {
                         setShowingOtherShops(!showingOtherShops);
                         if (!showingOtherShops) {
-                          // Show all barbers
                           setBarbers(allBarbers);
                         } else {
-                          // Show only preferred shop barbers
                           setBarbers(allBarbers.filter(b => (b as any).tenant_id === preferredShop.id));
                         }
                       }}
@@ -1645,6 +1644,26 @@ const ClienteAgendar = () => {
                       {showingOtherShops ? "Minha barbearia" : "Ver todas"}
                       <ChevronRight className="w-3.5 h-3.5" />
                     </button>
+                  </div>
+                </motion.div>
+              ) : (
+                /* DUB Exclusive header */
+                <motion.div
+                  initial={{ opacity: 0, y: 4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="mb-4 pt-1"
+                >
+                  <div className="flex items-center gap-3 rounded-xl border border-primary/20 bg-gradient-to-r from-primary/5 to-transparent px-4 py-3">
+                    <div className="w-8 h-8 rounded-lg bg-card flex items-center justify-center border border-primary/15 overflow-hidden">
+                      <img src={logoDub} alt="DUB" className="w-6 h-6 object-contain" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-1.5">
+                        <p className="text-[12px] font-bold text-foreground">Barbearia DUB</p>
+                        <Crown className="w-3 h-3 text-primary" />
+                      </div>
+                      <p className="text-[10px] text-primary/60 font-medium">Cliente Exclusivo</p>
+                    </div>
                   </div>
                 </motion.div>
               )}
