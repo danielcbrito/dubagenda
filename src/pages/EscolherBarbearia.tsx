@@ -1,11 +1,10 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
-import { MapPin, Search, Scissors, ChevronRight, Store, Star } from "lucide-react";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
+import { MapPin, Search, Scissors, ChevronRight, Store, ArrowLeft, Check, Star } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import logoDub from "@/assets/logo-dub.png";
 
 interface Tenant {
   id: string;
@@ -19,11 +18,16 @@ interface Tenant {
 
 const EscolherBarbearia = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [search, setSearch] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
+  const [currentPreferred, setCurrentPreferred] = useState<string | null>(null);
+
+  // mode=change means user is changing their barbershop (from profile)
+  const isChangeMode = searchParams.get("mode") === "change";
 
   useEffect(() => {
     const init = async () => {
@@ -34,7 +38,6 @@ const EscolherBarbearia = () => {
       }
       setUserId(session.user.id);
 
-      // Check if user already has a preferred barbershop
       const { data: profile } = await supabase
         .from("profiles")
         .select("barbearia_preferida_id")
@@ -42,8 +45,11 @@ const EscolherBarbearia = () => {
         .single();
 
       if (profile?.barbearia_preferida_id) {
-        navigate("/cliente");
-        return;
+        if (!isChangeMode) {
+          navigate("/cliente");
+          return;
+        }
+        setCurrentPreferred(profile.barbearia_preferida_id);
       }
 
       await loadTenants();
@@ -83,8 +89,8 @@ const EscolherBarbearia = () => {
 
       if (error) throw error;
 
-      toast.success("Barbearia selecionada!");
-      navigate("/cliente");
+      toast.success(isChangeMode ? "Barbearia atualizada!" : "Barbearia selecionada!");
+      navigate(isChangeMode ? "/cliente/perfil" : "/cliente");
     } catch (err) {
       console.error("Erro ao salvar barbearia:", err);
       toast.error("Erro ao salvar. Tente novamente.");
@@ -94,7 +100,7 @@ const EscolherBarbearia = () => {
   };
 
   const handleSkip = () => {
-    navigate("/cliente");
+    navigate(isChangeMode ? "/cliente/perfil" : "/cliente");
   };
 
   const filtered = tenants.filter(t =>
@@ -106,21 +112,35 @@ const EscolherBarbearia = () => {
   return (
     <div className="flex flex-col bg-background" style={{ height: "100dvh" }}>
       {/* Header */}
-      <div className="flex-shrink-0 px-5 pt-[calc(env(safe-area-inset-top)+1.5rem)] pb-4">
+      <div className="flex-shrink-0 px-5 pt-[calc(env(safe-area-inset-top)+1rem)] pb-4">
+        {/* Back button for change mode */}
+        {isChangeMode && (
+          <motion.button
+            initial={{ opacity: 0, x: -8 }}
+            animate={{ opacity: 1, x: 0 }}
+            onClick={() => navigate("/cliente/perfil")}
+            className="mb-4 w-8 h-8 flex items-center justify-center rounded-lg bg-card/60 border border-border/30 active:scale-90 transition-all"
+          >
+            <ArrowLeft className="w-4 h-4 text-foreground/70" />
+          </motion.button>
+        )}
+
         <motion.div
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
           className="flex flex-col items-center mb-5"
         >
-          <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center mb-3">
-            <MapPin className="w-6 h-6 text-primary" />
+          <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mb-3.5">
+            <MapPin className="w-7 h-7 text-primary" />
           </div>
           <h1 className="text-xl font-bold text-foreground tracking-tight text-center">
-            Escolha sua barbearia
+            {isChangeMode ? "Trocar barbearia" : "Escolha sua barbearia"}
           </h1>
-          <p className="text-[13px] text-muted-foreground mt-1 text-center max-w-[260px]">
-            Selecione a barbearia mais perto de você para começar
+          <p className="text-[13px] text-muted-foreground mt-1.5 text-center max-w-[280px] leading-relaxed">
+            {isChangeMode
+              ? "Selecione outra barbearia como sua preferida"
+              : "Selecione a barbearia mais perto de você para começar"}
           </p>
         </motion.div>
 
@@ -170,81 +190,103 @@ const EscolherBarbearia = () => {
             </motion.div>
           ) : (
             <div className="space-y-2.5 pt-1">
-              {filtered.map((tenant, index) => (
-                <motion.button
-                  key={tenant.id}
-                  initial={{ opacity: 0, y: 6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.04 }}
-                  onClick={() => handleSelect(tenant.id)}
-                  disabled={!!saving}
-                  className={cn(
-                    "w-full rounded-xl border border-border/50 p-4",
-                    "active:scale-[0.98] transition-all duration-150",
-                    "bg-card/80 backdrop-blur-sm",
-                    "dark:shadow-none shadow-[0_2px_8px_rgba(0,0,0,0.04)]",
-                    "text-left",
-                    saving === tenant.id && "ring-2 ring-primary/40 border-primary/30",
-                    saving && saving !== tenant.id && "opacity-50"
-                  )}
-                >
-                  <div className="flex items-center gap-3.5">
-                    {/* Logo/Avatar */}
-                    <div className="w-12 h-12 rounded-xl bg-muted/60 flex items-center justify-center flex-shrink-0 overflow-hidden">
-                      {tenant.logo_url ? (
-                        <img
-                          src={tenant.logo_url}
-                          alt={tenant.nome}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <Scissors className="w-5 h-5 text-muted-foreground/60" />
-                      )}
-                    </div>
-
-                    {/* Info */}
-                    <div className="flex-1 min-w-0">
-                      <span className="block text-[14px] font-semibold text-foreground truncate">
-                        {tenant.nome}
-                      </span>
-                      {tenant.slogan && (
-                        <span className="block text-[11px] text-muted-foreground/70 truncate mt-0.5">
-                          {tenant.slogan}
-                        </span>
-                      )}
-                      {(tenant.bairro || tenant.cidade) && (
-                        <div className="flex items-center gap-1 mt-1">
-                          <MapPin className="w-3 h-3 text-muted-foreground/40 flex-shrink-0" />
-                          <span className="text-[11px] text-muted-foreground/50 truncate">
-                            {[tenant.bairro, tenant.cidade, tenant.estado].filter(Boolean).join(", ")}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Action */}
-                    {saving === tenant.id ? (
-                      <div className="w-5 h-5 border-2 border-primary/30 border-t-primary rounded-full animate-spin flex-shrink-0" />
-                    ) : (
-                      <ChevronRight className="w-5 h-5 text-muted-foreground/40 flex-shrink-0" />
+              {filtered.map((tenant, index) => {
+                const isCurrent = currentPreferred === tenant.id;
+                return (
+                  <motion.button
+                    key={tenant.id}
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.03 }}
+                    onClick={() => handleSelect(tenant.id)}
+                    disabled={!!saving || isCurrent}
+                    className={cn(
+                      "w-full rounded-xl border p-4",
+                      "active:scale-[0.98] transition-all duration-150",
+                      "bg-card/80 backdrop-blur-sm",
+                      "dark:shadow-none shadow-[0_2px_8px_rgba(0,0,0,0.04)]",
+                      "text-left",
+                      isCurrent && "border-primary/40 bg-primary/5",
+                      !isCurrent && "border-border/50",
+                      saving === tenant.id && "ring-2 ring-primary/40 border-primary/30",
+                      saving && saving !== tenant.id && !isCurrent && "opacity-50"
                     )}
-                  </div>
-                </motion.button>
-              ))}
+                  >
+                    <div className="flex items-center gap-3.5">
+                      {/* Logo/Avatar */}
+                      <div className="w-12 h-12 rounded-xl bg-muted/60 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                        {tenant.logo_url ? (
+                          <img
+                            src={tenant.logo_url}
+                            alt={tenant.nome}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <Scissors className="w-5 h-5 text-muted-foreground/60" />
+                        )}
+                      </div>
+
+                      {/* Info */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[14px] font-semibold text-foreground truncate">
+                            {tenant.nome}
+                          </span>
+                          {isCurrent && (
+                            <span className="text-[9px] font-bold uppercase tracking-wider bg-primary/10 text-primary px-1.5 py-px rounded flex-shrink-0">
+                              Atual
+                            </span>
+                          )}
+                        </div>
+                        {tenant.slogan && (
+                          <span className="block text-[11px] text-muted-foreground/70 truncate mt-0.5">
+                            {tenant.slogan}
+                          </span>
+                        )}
+                        {(tenant.bairro || tenant.cidade) && (
+                          <div className="flex items-center gap-1 mt-1">
+                            <MapPin className="w-3 h-3 text-muted-foreground/40 flex-shrink-0" />
+                            <span className="text-[11px] text-muted-foreground/50 truncate">
+                              {[tenant.bairro, tenant.cidade, tenant.estado].filter(Boolean).join(", ")}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Action */}
+                      {saving === tenant.id ? (
+                        <div className="w-5 h-5 border-2 border-primary/30 border-t-primary rounded-full animate-spin flex-shrink-0" />
+                      ) : isCurrent ? (
+                        <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
+                          <Check className="w-3.5 h-3.5 text-primary-foreground" strokeWidth={3} />
+                        </div>
+                      ) : (
+                        <ChevronRight className="w-5 h-5 text-muted-foreground/40 flex-shrink-0" />
+                      )}
+                    </div>
+                  </motion.button>
+                );
+              })}
             </div>
           )}
         </div>
       </div>
 
-      {/* Skip button */}
-      <div className="fixed bottom-0 left-0 right-0 z-40 bg-background/95 backdrop-blur-xl border-t border-border/30">
-        <div className="px-5 py-4" style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 1rem)" }}>
-          <button
-            onClick={handleSkip}
-            className="w-full text-center text-[13px] text-muted-foreground/60 hover:text-muted-foreground transition-colors py-2"
-          >
-            Pular por agora
-          </button>
+      {/* Bottom bar */}
+      <div className="fixed bottom-0 left-0 right-0 z-40">
+        <div 
+          className="h-8 pointer-events-none"
+          style={{ background: "linear-gradient(to bottom, transparent, hsl(var(--background)))" }}
+        />
+        <div className="bg-background border-t border-border/30 px-5 pb-safe">
+          <div className="pt-3 pb-4">
+            <button
+              onClick={handleSkip}
+              className="w-full text-center text-[13px] text-muted-foreground/60 hover:text-muted-foreground transition-colors py-2.5 rounded-xl"
+            >
+              {isChangeMode ? "Cancelar" : "Pular por agora"}
+            </button>
+          </div>
         </div>
       </div>
     </div>

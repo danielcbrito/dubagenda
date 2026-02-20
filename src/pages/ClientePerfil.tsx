@@ -15,6 +15,7 @@ import {
   History,
   Gift,
   HelpCircle,
+  Store,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -126,6 +127,7 @@ export default function ClientePerfil() {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [pointsModalOpen, setPointsModalOpen] = useState(false);
+  const [preferredShopName, setPreferredShopName] = useState<string | null>(null);
 
   useEffect(() => {
     loadProfile();
@@ -139,7 +141,18 @@ export default function ClientePerfil() {
     setUserEmail(user.email || "");
 
     const { data: prof } = await supabase.from("profiles").select("*").eq("id", user.id).single();
-    if (prof) setProfile(prof);
+    if (prof) {
+      setProfile(prof);
+      // Load preferred barbershop name
+      if (prof.barbearia_preferida_id) {
+        const { data: tenant } = await supabase
+          .from("tenants")
+          .select("nome")
+          .eq("id", prof.barbearia_preferida_id)
+          .single();
+        if (tenant) setPreferredShopName(tenant.nome);
+      }
+    }
 
     const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", user.id);
     if (roles?.[0]) setUserRole(roles[0].role);
@@ -241,6 +254,12 @@ export default function ClientePerfil() {
         {/* Preferências */}
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
           <ProfileSection title="Preferências">
+            <ProfileItem
+              icon={Store}
+              label="Minha Barbearia"
+              badge={preferredShopName || undefined}
+              onClick={() => navigate("/escolher-barbearia?mode=change")}
+            />
             <ProfileItem
               icon={Bell}
               label="Notificações"
