@@ -11,6 +11,16 @@ import { cn } from "@/lib/utils";
 import { SupportChatBubble } from "@/components/support/SupportChatBubble";
 import logoDub from "@/assets/logo-dub.png";
 import { motion } from "framer-motion";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const signupSchema = z.object({
   nome: z.string().trim().min(2, "Nome deve ter pelo menos 2 caracteres").max(100),
@@ -50,6 +60,7 @@ const Auth = () => {
   const [telefoneError, setTelefoneError] = useState("");
   const [cpfError, setCpfError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [showDubExclusiveDialog, setShowDubExclusiveDialog] = useState(false);
 
   useEffect(() => {
     const verified = searchParams.get("verified");
@@ -169,6 +180,12 @@ const Auth = () => {
         });
 
         if (!dupError && dupData?.duplicates?.length > 0) {
+          // If user is coming from discover flow and already has an account, show special dialog
+          if (signupOrigin === "discover") {
+            setShowDubExclusiveDialog(true);
+            setIsLoading(false);
+            return;
+          }
           const msgs: Record<string, string> = {
             cpf: "Este CPF já está cadastrado.",
             telefone: "Este telefone já está cadastrado.",
@@ -522,6 +539,29 @@ const Auth = () => {
           </p>
         </motion.div>
       </div>
+
+      {/* Dialog — Already a DUB Exclusive Client */}
+      <AlertDialog open={showDubExclusiveDialog} onOpenChange={setShowDubExclusiveDialog}>
+        <AlertDialogContent className="max-w-[340px] rounded-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-[15px]">Você já é cliente DUB!</AlertDialogTitle>
+            <AlertDialogDescription className="text-[13px] leading-relaxed">
+              Identificamos que você já possui uma conta como <strong className="text-foreground">Cliente Exclusivo DUB</strong>.
+              {"\n\n"}Para explorar outras barbearias, faça login e acesse a opção no seu perfil. Você pode voltar ao modo exclusivo quando quiser.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="gap-2 sm:gap-2">
+            <AlertDialogCancel className="rounded-xl text-[13px]">Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="rounded-xl text-[13px]"
+              style={{ background: "var(--gradient-primary)" }}
+              onClick={() => navigate("/auth?mode=login&origin=discover")}
+            >
+              Fazer login
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <SupportChatBubble />
     </div>

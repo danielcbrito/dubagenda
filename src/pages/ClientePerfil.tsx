@@ -16,6 +16,7 @@ import {
   Gift,
   HelpCircle,
   Store,
+  MapPin,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -26,6 +27,16 @@ import { MyPlansSheet } from "@/components/MyPlansSheet";
 import { NotificationsSheet } from "@/components/NotificationsSheet";
 import { AppointmentHistorySheet } from "@/components/AppointmentHistorySheet";
 import { PointsDetailModal } from "@/components/PointsDetailModal";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 /* ─── Reusable sub-components ─── */
 
@@ -128,6 +139,7 @@ export default function ClientePerfil() {
   const [historyOpen, setHistoryOpen] = useState(false);
   const [pointsModalOpen, setPointsModalOpen] = useState(false);
   const [preferredShopName, setPreferredShopName] = useState<string | null>(null);
+  const [showDiscoverConfirm, setShowDiscoverConfirm] = useState(false);
 
   useEffect(() => {
     loadProfile();
@@ -261,6 +273,18 @@ export default function ClientePerfil() {
               onClick={() => navigate("/escolher-barbearia?mode=change")}
             />
             <ProfileItem
+              icon={MapPin}
+              label="Encontrar barbearias perto de mim"
+              onClick={() => {
+                // If user is DUB exclusive (no preferred shop), ask for confirmation
+                if (!profile?.barbearia_preferida_id) {
+                  setShowDiscoverConfirm(true);
+                } else {
+                  navigate("/escolher-barbearia?mode=change");
+                }
+              }}
+            />
+            <ProfileItem
               icon={Bell}
               label="Notificações"
               onClick={() => setNotificationsOpen(true)}
@@ -331,6 +355,29 @@ export default function ClientePerfil() {
         redemptions={redemptions}
         pontosNecessarios={pontosNecessarios}
       />
+
+      {/* Confirmation Dialog — Leave DUB Exclusive */}
+      <AlertDialog open={showDiscoverConfirm} onOpenChange={setShowDiscoverConfirm}>
+        <AlertDialogContent className="max-w-[340px] rounded-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-[15px]">Encontrar barbearias</AlertDialogTitle>
+            <AlertDialogDescription className="text-[13px] leading-relaxed">
+              Ao continuar, você deixará de ser um <strong className="text-foreground">Cliente Exclusivo DUB</strong> e poderá explorar outras barbearias perto de você.
+              {"\n\n"}Você pode voltar ao modo exclusivo a qualquer momento.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="gap-2 sm:gap-2">
+            <AlertDialogCancel className="rounded-xl text-[13px]">Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="rounded-xl text-[13px]"
+              style={{ background: "var(--gradient-primary)" }}
+              onClick={() => navigate("/escolher-barbearia?mode=change")}
+            >
+              Quero explorar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
