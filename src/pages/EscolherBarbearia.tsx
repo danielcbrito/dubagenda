@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { MapPin, Search, Scissors, ChevronRight, Store, ArrowLeft, Check, Star } from "lucide-react";
+import { MapPin, Search, Scissors, ChevronRight, Store, ArrowLeft, Check, Star, Crown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import logoDub from "@/assets/logo-dub.png";
 
 interface Tenant {
   id: string;
@@ -14,6 +15,7 @@ interface Tenant {
   cidade: string | null;
   bairro: string | null;
   estado: string | null;
+  is_dub?: boolean;
 }
 
 const EscolherBarbearia = () => {
@@ -208,6 +210,57 @@ const EscolherBarbearia = () => {
             </motion.div>
           ) : (
             <div className="space-y-2.5 pt-1">
+              {/* DUB Premium Card — Always shown at top */}
+              {!currentPreferred && (
+                <motion.div
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="rounded-xl border-2 border-primary/30 p-4 bg-gradient-to-br from-primary/5 to-transparent backdrop-blur-sm"
+                >
+                  <div className="flex items-center gap-3.5">
+                    <div className="w-12 h-12 rounded-xl bg-card flex items-center justify-center flex-shrink-0 overflow-hidden border border-primary/20">
+                      <img src={logoDub} alt="DUB" className="w-9 h-9 object-contain" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[14px] font-bold text-foreground">Barbearia DUB</span>
+                        <span className="text-[8px] font-bold uppercase tracking-wider bg-primary/15 text-primary px-1.5 py-px rounded flex-shrink-0 flex items-center gap-0.5">
+                          <Crown className="w-2.5 h-2.5" />
+                          Premium
+                        </span>
+                      </div>
+                      <span className="block text-[11px] text-primary/70 font-medium mt-0.5">
+                        Referência em corte masculino
+                      </span>
+                      <div className="flex items-center gap-1 mt-1">
+                        <Star className="w-3 h-3 text-primary fill-primary flex-shrink-0" />
+                        <span className="text-[10px] text-muted-foreground/60">
+                          Recomendado para você
+                        </span>
+                      </div>
+                    </div>
+                    <button
+                      onClick={handleBackToDub}
+                      disabled={!!saving}
+                      className="text-[11px] font-semibold text-primary bg-primary/10 px-3 py-1.5 rounded-lg hover:bg-primary/20 transition-colors flex-shrink-0"
+                    >
+                      {saving === "dub" ? (
+                        <div className="w-4 h-4 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+                      ) : (
+                        "Ser exclusivo"
+                      )}
+                    </button>
+                  </div>
+                </motion.div>
+              )}
+
+              {/* Other barbershops */}
+              {currentPreferred === null && filtered.length > 0 && (
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground/40 font-semibold px-1 pt-2">
+                  Barbearias disponíveis
+                </p>
+              )}
+
               {filtered.map((tenant, index) => {
                 const isCurrent = currentPreferred === tenant.id;
                 return (
@@ -231,25 +284,16 @@ const EscolherBarbearia = () => {
                     )}
                   >
                     <div className="flex items-center gap-3.5">
-                      {/* Logo/Avatar */}
                       <div className="w-12 h-12 rounded-xl bg-muted/60 flex items-center justify-center flex-shrink-0 overflow-hidden">
                         {tenant.logo_url ? (
-                          <img
-                            src={tenant.logo_url}
-                            alt={tenant.nome}
-                            className="w-full h-full object-cover"
-                          />
+                          <img src={tenant.logo_url} alt={tenant.nome} className="w-full h-full object-cover" />
                         ) : (
                           <Scissors className="w-5 h-5 text-muted-foreground/60" />
                         )}
                       </div>
-
-                      {/* Info */}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
-                          <span className="text-[14px] font-semibold text-foreground truncate">
-                            {tenant.nome}
-                          </span>
+                          <span className="text-[14px] font-semibold text-foreground truncate">{tenant.nome}</span>
                           {isCurrent && (
                             <span className="text-[9px] font-bold uppercase tracking-wider bg-primary/10 text-primary px-1.5 py-px rounded flex-shrink-0">
                               Atual
@@ -257,9 +301,7 @@ const EscolherBarbearia = () => {
                           )}
                         </div>
                         {tenant.slogan && (
-                          <span className="block text-[11px] text-muted-foreground/70 truncate mt-0.5">
-                            {tenant.slogan}
-                          </span>
+                          <span className="block text-[11px] text-muted-foreground/70 truncate mt-0.5">{tenant.slogan}</span>
                         )}
                         {(tenant.bairro || tenant.cidade) && (
                           <div className="flex items-center gap-1 mt-1">
@@ -270,8 +312,6 @@ const EscolherBarbearia = () => {
                           </div>
                         )}
                       </div>
-
-                      {/* Action */}
                       {saving === tenant.id ? (
                         <div className="w-5 h-5 border-2 border-primary/30 border-t-primary rounded-full animate-spin flex-shrink-0" />
                       ) : isCurrent ? (
