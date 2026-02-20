@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
-import { MapPin, Search, Scissors, ChevronRight, Store, ArrowLeft, Check, Star, Crown } from "lucide-react";
+import { motion } from "framer-motion";
+import { MapPin, Search, Scissors, ChevronRight, Store, ArrowLeft, Check, Star, Crown, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -15,7 +15,6 @@ interface Tenant {
   cidade: string | null;
   bairro: string | null;
   estado: string | null;
-  is_dub?: boolean;
 }
 
 const EscolherBarbearia = () => {
@@ -28,7 +27,6 @@ const EscolherBarbearia = () => {
   const [userId, setUserId] = useState<string | null>(null);
   const [currentPreferred, setCurrentPreferred] = useState<string | null>(null);
 
-  // mode=change means user is changing their barbershop (from profile)
   const isChangeMode = searchParams.get("mode") === "change";
 
   useEffect(() => {
@@ -133,7 +131,6 @@ const EscolherBarbearia = () => {
     <div className="flex flex-col bg-background" style={{ height: "100dvh" }}>
       {/* Header */}
       <div className="flex-shrink-0 px-5 pt-[calc(env(safe-area-inset-top)+1rem)] pb-4">
-        {/* Back button for change mode */}
         {isChangeMode && (
           <motion.button
             initial={{ opacity: 0, x: -8 }}
@@ -194,71 +191,104 @@ const EscolherBarbearia = () => {
               <div className="w-8 h-8 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
               <p className="text-[12px] text-muted-foreground mt-3">Carregando barbearias...</p>
             </div>
-          ) : filtered.length === 0 ? (
-            <motion.div
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="flex flex-col items-center justify-center py-16"
-            >
-              <Store className="w-10 h-10 text-muted-foreground/30 mb-3" />
-              <p className="text-[13px] text-muted-foreground font-medium">
-                {search ? "Nenhuma barbearia encontrada" : "Nenhuma barbearia disponível"}
-              </p>
-              <p className="text-[11px] text-muted-foreground/60 mt-1">
-                {search ? "Tente outro nome ou bairro" : "Volte mais tarde"}
-              </p>
-            </motion.div>
           ) : (
-            <div className="space-y-2.5 pt-1">
-              {/* DUB Premium Card — Always shown at top */}
-              {!currentPreferred && (
-                <motion.div
-                  initial={{ opacity: 0, y: 6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="rounded-xl border-2 border-primary/30 p-4 bg-gradient-to-br from-primary/5 to-transparent backdrop-blur-sm"
-                >
-                  <div className="flex items-center gap-3.5">
-                    <div className="w-12 h-12 rounded-xl bg-card flex items-center justify-center flex-shrink-0 overflow-hidden border border-primary/20">
-                      <img src={logoDub} alt="DUB" className="w-9 h-9 object-contain" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="text-[14px] font-bold text-foreground">Barbearia DUB</span>
-                        <span className="text-[8px] font-bold uppercase tracking-wider bg-primary/15 text-primary px-1.5 py-px rounded flex-shrink-0 flex items-center gap-0.5">
-                          <Crown className="w-2.5 h-2.5" />
-                          Premium
-                        </span>
-                      </div>
-                      <span className="block text-[11px] text-primary/70 font-medium mt-0.5">
-                        Referência em corte masculino
-                      </span>
-                      <div className="flex items-center gap-1 mt-1">
-                        <Star className="w-3 h-3 text-primary fill-primary flex-shrink-0" />
-                        <span className="text-[10px] text-muted-foreground/60">
-                          Recomendado para você
-                        </span>
-                      </div>
-                    </div>
-                    <button
-                      onClick={handleBackToDub}
-                      disabled={!!saving}
-                      className="text-[11px] font-semibold text-primary bg-primary/10 px-3 py-1.5 rounded-lg hover:bg-primary/20 transition-colors flex-shrink-0"
-                    >
-                      {saving === "dub" ? (
-                        <div className="w-4 h-4 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
-                      ) : (
-                        "Ser exclusivo"
-                      )}
-                    </button>
+            <div className="space-y-3 pt-1">
+              {/* ══════════════════════════════════════════════ */}
+              {/* DUB PREMIUM — Sempre no topo, sempre destaque */}
+              {/* ══════════════════════════════════════════════ */}
+              <motion.div
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5 }}
+                className={cn(
+                  "rounded-2xl border-2 p-4 relative overflow-hidden",
+                  "border-primary/40 dark:border-primary/30",
+                  "bg-gradient-to-br from-primary/8 via-primary/3 to-transparent",
+                  "dark:from-primary/10 dark:via-primary/5 dark:to-transparent",
+                  "shadow-[0_4px_20px_rgba(0,0,0,0.08)] dark:shadow-none"
+                )}
+              >
+                {/* Sparkle accent */}
+                <div className="absolute top-3 right-3">
+                  <Sparkles className="w-4 h-4 text-primary/30" />
+                </div>
+
+                <div className="flex items-center gap-3.5">
+                  <div className="w-14 h-14 rounded-2xl bg-card flex items-center justify-center flex-shrink-0 overflow-hidden border-2 border-primary/20 shadow-sm">
+                    <img src={logoDub} alt="DUB" className="w-10 h-10 object-contain" />
                   </div>
-                </motion.div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <span className="text-[15px] font-bold text-foreground">Barbearia DUB</span>
+                      <span className="text-[8px] font-bold uppercase tracking-wider bg-primary/15 text-primary px-1.5 py-0.5 rounded flex items-center gap-0.5 flex-shrink-0">
+                        <Crown className="w-2.5 h-2.5" />
+                        Premium
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground leading-relaxed">
+                      Referência em corte masculino premium
+                    </p>
+                    <div className="flex items-center gap-1.5 mt-1.5">
+                      <div className="flex items-center gap-0.5">
+                        {[1, 2, 3, 4, 5].map(i => (
+                          <Star key={i} className="w-2.5 h-2.5 text-primary fill-primary" />
+                        ))}
+                      </div>
+                      <span className="text-[10px] text-muted-foreground/50">•</span>
+                      <span className="text-[10px] text-primary/70 font-medium">Recomendada</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* CTA — Voltar / Ser exclusivo */}
+                <button
+                  onClick={handleBackToDub}
+                  disabled={!!saving}
+                  className={cn(
+                    "w-full mt-3.5 h-10 rounded-xl text-[12px] font-semibold",
+                    "bg-primary text-primary-foreground",
+                    "active:scale-[0.98] transition-all duration-150",
+                    "flex items-center justify-center gap-2",
+                    saving === "dub" && "opacity-70"
+                  )}
+                >
+                  {saving === "dub" ? (
+                    <div className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
+                  ) : (
+                    <>
+                      <Crown className="w-3.5 h-3.5" />
+                      {currentPreferred ? "Voltar para DUB Exclusivo" : "Ser cliente exclusivo"}
+                    </>
+                  )}
+                </button>
+              </motion.div>
+
+              {/* Separator */}
+              {filtered.length > 0 && (
+                <div className="flex items-center gap-3 pt-2 pb-1 px-1">
+                  <div className="flex-1 h-px bg-border/40" />
+                  <span className="text-[10px] uppercase tracking-wider text-muted-foreground/40 font-semibold flex-shrink-0">
+                    Outras barbearias
+                  </span>
+                  <div className="flex-1 h-px bg-border/40" />
+                </div>
               )}
 
               {/* Other barbershops */}
-              {currentPreferred === null && filtered.length > 0 && (
-                <p className="text-[10px] uppercase tracking-wider text-muted-foreground/40 font-semibold px-1 pt-2">
-                  Barbearias disponíveis
-                </p>
+              {filtered.length === 0 && !isLoading && (
+                <motion.div
+                  initial={{ opacity: 0, y: 16 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="flex flex-col items-center justify-center py-12"
+                >
+                  <Store className="w-10 h-10 text-muted-foreground/30 mb-3" />
+                  <p className="text-[13px] text-muted-foreground font-medium">
+                    {search ? "Nenhuma barbearia encontrada" : "Nenhuma outra barbearia disponível"}
+                  </p>
+                  <p className="text-[11px] text-muted-foreground/60 mt-1">
+                    {search ? "Tente outro nome ou bairro" : "A Barbearia DUB é a referência para você"}
+                  </p>
+                </motion.div>
               )}
 
               {filtered.map((tenant, index) => {
@@ -268,11 +298,11 @@ const EscolherBarbearia = () => {
                     key={tenant.id}
                     initial={{ opacity: 0, y: 6 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.03 }}
+                    transition={{ delay: 0.05 + index * 0.03 }}
                     onClick={() => handleSelect(tenant.id)}
                     disabled={!!saving || isCurrent}
                     className={cn(
-                      "w-full rounded-xl border p-4",
+                      "w-full rounded-xl border p-3.5",
                       "active:scale-[0.98] transition-all duration-150",
                       "bg-card/80 backdrop-blur-sm",
                       "dark:shadow-none shadow-[0_2px_8px_rgba(0,0,0,0.04)]",
@@ -284,7 +314,7 @@ const EscolherBarbearia = () => {
                     )}
                   >
                     <div className="flex items-center gap-3.5">
-                      <div className="w-12 h-12 rounded-xl bg-muted/60 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                      <div className="w-11 h-11 rounded-xl bg-muted/60 flex items-center justify-center flex-shrink-0 overflow-hidden">
                         {tenant.logo_url ? (
                           <img src={tenant.logo_url} alt={tenant.nome} className="w-full h-full object-cover" />
                         ) : (
@@ -293,7 +323,7 @@ const EscolherBarbearia = () => {
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
-                          <span className="text-[14px] font-semibold text-foreground truncate">{tenant.nome}</span>
+                          <span className="text-[13px] font-semibold text-foreground truncate">{tenant.nome}</span>
                           {isCurrent && (
                             <span className="text-[9px] font-bold uppercase tracking-wider bg-primary/10 text-primary px-1.5 py-px rounded flex-shrink-0">
                               Atual
@@ -332,21 +362,12 @@ const EscolherBarbearia = () => {
 
       {/* Bottom bar */}
       <div className="fixed bottom-0 left-0 right-0 z-40">
-        <div 
+        <div
           className="h-8 pointer-events-none"
           style={{ background: "linear-gradient(to bottom, transparent, hsl(var(--background)))" }}
         />
         <div className="bg-background border-t border-border/30 px-5 pb-safe">
-          <div className="pt-3 pb-4 space-y-2">
-            {/* Voltar para DUB Exclusivo — only if user already has a preference or is in change mode */}
-            {(currentPreferred || isChangeMode) && (
-              <button
-                onClick={handleBackToDub}
-                className="w-full text-center text-[13px] text-primary font-medium hover:text-primary/80 transition-colors py-2.5 rounded-xl"
-              >
-                Voltar para DUB Exclusivo
-              </button>
-            )}
+          <div className="pt-3 pb-4">
             <button
               onClick={handleSkip}
               className="w-full text-center text-[13px] text-muted-foreground/60 hover:text-muted-foreground transition-colors py-2.5 rounded-xl"
