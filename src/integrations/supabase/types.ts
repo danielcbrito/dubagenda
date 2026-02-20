@@ -2380,6 +2380,7 @@ export type Database = {
         Row: {
           avatar_url: string | null
           banner_url: string | null
+          barbearia_preferida_id: string | null
           blocked: boolean | null
           cep: string | null
           cpf: string | null
@@ -2392,6 +2393,7 @@ export type Database = {
           endereco_uf: string | null
           id: string
           nome: string
+          signup_origin: string | null
           telefone: string | null
           updated_at: string | null
           wallet_pin_hash: string | null
@@ -2399,6 +2401,7 @@ export type Database = {
         Insert: {
           avatar_url?: string | null
           banner_url?: string | null
+          barbearia_preferida_id?: string | null
           blocked?: boolean | null
           cep?: string | null
           cpf?: string | null
@@ -2411,6 +2414,7 @@ export type Database = {
           endereco_uf?: string | null
           id: string
           nome: string
+          signup_origin?: string | null
           telefone?: string | null
           updated_at?: string | null
           wallet_pin_hash?: string | null
@@ -2418,6 +2422,7 @@ export type Database = {
         Update: {
           avatar_url?: string | null
           banner_url?: string | null
+          barbearia_preferida_id?: string | null
           blocked?: boolean | null
           cep?: string | null
           cpf?: string | null
@@ -2430,11 +2435,20 @@ export type Database = {
           endereco_uf?: string | null
           id?: string
           nome?: string
+          signup_origin?: string | null
           telefone?: string | null
           updated_at?: string | null
           wallet_pin_hash?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_barbearia_preferida_id_fkey"
+            columns: ["barbearia_preferida_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       promocoes: {
         Row: {
