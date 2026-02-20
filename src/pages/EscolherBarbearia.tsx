@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
-import { MapPin, Search, Scissors, ChevronRight, Store, ArrowLeft, Check, Star, Crown, Sparkles } from "lucide-react";
+import { MapPin, Search, Scissors, ChevronRight, ArrowLeft, Check, Crown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -73,18 +73,12 @@ const EscolherBarbearia = () => {
   const handleSelect = async (tenantId: string) => {
     if (!userId || saving) return;
     setSaving(tenantId);
-
     try {
       const { error } = await supabase
         .from("profiles")
-        .update({
-          barbearia_preferida_id: tenantId,
-          signup_origin: "discover",
-        })
+        .update({ barbearia_preferida_id: tenantId, signup_origin: "discover" })
         .eq("id", userId);
-
       if (error) throw error;
-
       toast.success(isChangeMode ? "Barbearia atualizada!" : "Barbearia selecionada!");
       navigate(isChangeMode ? "/cliente/perfil" : "/cliente");
     } catch (err) {
@@ -101,10 +95,7 @@ const EscolherBarbearia = () => {
     try {
       const { error } = await supabase
         .from("profiles")
-        .update({
-          barbearia_preferida_id: null,
-          signup_origin: "dub_exclusive",
-        })
+        .update({ barbearia_preferida_id: null, signup_origin: "dub_exclusive" })
         .eq("id", userId);
       if (error) throw error;
       toast.success("Você voltou para o modo DUB Exclusivo!");
@@ -127,16 +118,20 @@ const EscolherBarbearia = () => {
     (t.cidade && t.cidade.toLowerCase().includes(search.toLowerCase()))
   );
 
+  // Quem saiu da DUB (tem preferida em outro tenant)
+  const leftDub = !!currentPreferred;
+
   return (
     <div className="flex flex-col bg-background" style={{ height: "100dvh" }}>
-      {/* Header */}
-      <div className="flex-shrink-0 px-5 pt-[calc(env(safe-area-inset-top)+1rem)] pb-4">
+      {/* ── Header ── */}
+      <div className="flex-shrink-0 px-5 pt-[calc(env(safe-area-inset-top)+0.75rem)] pb-3">
+        {/* Back */}
         {isChangeMode && (
           <motion.button
             initial={{ opacity: 0, x: -8 }}
             animate={{ opacity: 1, x: 0 }}
             onClick={() => navigate("/cliente/perfil")}
-            className="mb-4 w-8 h-8 flex items-center justify-center rounded-lg bg-card/60 border border-border/30 active:scale-90 transition-all"
+            className="mb-3 w-8 h-8 flex items-center justify-center rounded-lg bg-card border border-border/40 active:scale-90 transition-all"
           >
             <ArrowLeft className="w-4 h-4 text-foreground/70" />
           </motion.button>
@@ -145,19 +140,16 @@ const EscolherBarbearia = () => {
         <motion.div
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-          className="flex flex-col items-center mb-5"
+          transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+          className="mb-4"
         >
-          <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mb-3.5">
-            <MapPin className="w-7 h-7 text-primary" />
-          </div>
-          <h1 className="text-xl font-bold text-foreground tracking-tight text-center">
+          <h1 className="text-[18px] font-bold text-foreground tracking-tight">
             {isChangeMode ? "Trocar barbearia" : "Escolha sua barbearia"}
           </h1>
-          <p className="text-[13px] text-muted-foreground mt-1.5 text-center max-w-[280px] leading-relaxed">
+          <p className="text-[12px] text-muted-foreground mt-1 leading-relaxed">
             {isChangeMode
-              ? "Selecione outra barbearia como sua preferida"
-              : "Selecione a barbearia mais perto de você para começar"}
+              ? "Selecione outra unidade como sua preferida"
+              : "Selecione a barbearia mais perto de você"}
           </p>
         </motion.div>
 
@@ -165,132 +157,132 @@ const EscolherBarbearia = () => {
         <motion.div
           initial={{ opacity: 0, y: 6 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, delay: 0.1 }}
+          transition={{ delay: 0.08 }}
           className="relative"
         >
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/50" />
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/40" />
           <input
             type="text"
             placeholder="Buscar por nome ou bairro..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full h-11 pl-10 pr-4 rounded-xl bg-muted/50 border border-border/50 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20 transition-all"
+            className={cn(
+              "w-full h-10 pl-10 pr-4 rounded-xl text-[13px]",
+              "bg-card border border-border/50 text-foreground",
+              "placeholder:text-muted-foreground/40",
+              "focus:outline-none focus:border-primary/40 focus:ring-1 focus:ring-primary/15",
+              "transition-all"
+            )}
           />
         </motion.div>
       </div>
 
-      {/* Scrollable list */}
+      {/* ── Scrollable ── */}
       <div className="flex-1 min-h-0 relative">
         <div
           className="absolute top-0 left-0 right-0 h-3 z-10 pointer-events-none"
           style={{ background: "linear-gradient(to bottom, hsl(var(--background)), transparent)" }}
         />
-        <div className="h-full overflow-y-auto overscroll-contain px-5 pb-32">
+        <div className="h-full overflow-y-auto overscroll-contain px-5 pb-36">
           {isLoading ? (
-            <div className="flex flex-col items-center justify-center py-16">
-              <div className="w-8 h-8 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
-              <p className="text-[12px] text-muted-foreground mt-3">Carregando barbearias...</p>
+            <div className="flex flex-col items-center justify-center py-20">
+              <div className="w-7 h-7 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+              <p className="text-[11px] text-muted-foreground/60 mt-3 tracking-wide">Carregando...</p>
             </div>
           ) : (
-            <div className="space-y-3 pt-1">
-              {/* ══════════════════════════════════════════════ */}
-              {/* DUB PREMIUM — Sempre no topo, sempre destaque */}
-              {/* ══════════════════════════════════════════════ */}
+            <div className="space-y-2 pt-1">
+
+              {/* ═══════════════════════════════════════════ */}
+              {/*  DUB — Sempre primeiro, sempre referência  */}
+              {/* ═══════════════════════════════════════════ */}
               <motion.div
-                initial={{ opacity: 0, y: 8 }}
+                initial={{ opacity: 0, y: 6 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5 }}
-                className={cn(
-                  "rounded-2xl border-2 p-4 relative overflow-hidden",
-                  "border-primary/40 dark:border-primary/30",
-                  "bg-gradient-to-br from-primary/8 via-primary/3 to-transparent",
-                  "dark:from-primary/10 dark:via-primary/5 dark:to-transparent",
-                  "shadow-[0_4px_20px_rgba(0,0,0,0.08)] dark:shadow-none"
-                )}
+                transition={{ delay: 0.05 }}
               >
-                {/* Sparkle accent */}
-                <div className="absolute top-3 right-3">
-                  <Sparkles className="w-4 h-4 text-primary/30" />
-                </div>
-
-                <div className="flex items-center gap-3.5">
-                  <div className="w-14 h-14 rounded-2xl bg-card flex items-center justify-center flex-shrink-0 overflow-hidden border-2 border-primary/20 shadow-sm">
-                    <img src={logoDub} alt="DUB" className="w-10 h-10 object-contain" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-0.5">
-                      <span className="text-[15px] font-bold text-foreground">Barbearia DUB</span>
-                      <span className="text-[8px] font-bold uppercase tracking-wider bg-primary/15 text-primary px-1.5 py-0.5 rounded flex items-center gap-0.5 flex-shrink-0">
-                        <Crown className="w-2.5 h-2.5" />
-                        Premium
-                      </span>
-                    </div>
-                    <p className="text-[11px] text-muted-foreground leading-relaxed">
-                      Referência em corte masculino premium
-                    </p>
-                    <div className="flex items-center gap-1.5 mt-1.5">
-                      <div className="flex items-center gap-0.5">
-                        {[1, 2, 3, 4, 5].map(i => (
-                          <Star key={i} className="w-2.5 h-2.5 text-primary fill-primary" />
-                        ))}
-                      </div>
-                      <span className="text-[10px] text-muted-foreground/50">•</span>
-                      <span className="text-[10px] text-primary/70 font-medium">Recomendada</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* CTA — Voltar / Ser exclusivo */}
                 <button
                   onClick={handleBackToDub}
                   disabled={!!saving}
                   className={cn(
-                    "w-full mt-3.5 h-10 rounded-xl text-[12px] font-semibold",
-                    "bg-primary text-primary-foreground",
+                    "w-full rounded-xl border p-4 text-left",
                     "active:scale-[0.98] transition-all duration-150",
-                    "flex items-center justify-center gap-2",
-                    saving === "dub" && "opacity-70"
+                    "bg-card backdrop-blur-sm",
+                    "dark:shadow-none shadow-[0_2px_12px_rgba(0,0,0,0.06)]",
+                    // Destaque sutil — borda primária, sem exageros
+                    "border-primary/25 dark:border-primary/20",
+                    saving === "dub" && "ring-2 ring-primary/30",
+                    saving && saving !== "dub" && "opacity-50"
                   )}
                 >
-                  {saving === "dub" ? (
-                    <div className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
-                  ) : (
-                    <>
-                      <Crown className="w-3.5 h-3.5" />
-                      {currentPreferred ? "Voltar para DUB Exclusivo" : "Ser cliente exclusivo"}
-                    </>
+                  <div className="flex items-center gap-3.5">
+                    <div className="w-12 h-12 rounded-xl bg-muted/40 flex items-center justify-center flex-shrink-0 overflow-hidden border border-primary/15">
+                      <img src={logoDub} alt="DUB" className="w-8 h-8 object-contain" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[14px] font-bold text-foreground">Barbearia DUB</span>
+                        <span className="text-[8px] font-bold uppercase tracking-widest bg-primary/10 text-primary px-1.5 py-0.5 rounded flex-shrink-0">
+                          <Crown className="w-2.5 h-2.5 inline -mt-px mr-0.5" />
+                          Referência
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-muted-foreground/70 mt-0.5">
+                        Corte masculino premium • Atendimento exclusivo
+                      </p>
+                    </div>
+                    {saving === "dub" ? (
+                      <div className="w-5 h-5 border-2 border-primary/30 border-t-primary rounded-full animate-spin flex-shrink-0" />
+                    ) : !currentPreferred ? (
+                      <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
+                        <Check className="w-3.5 h-3.5 text-primary-foreground" strokeWidth={3} />
+                      </div>
+                    ) : (
+                      <ChevronRight className="w-5 h-5 text-primary/50 flex-shrink-0" />
+                    )}
+                  </div>
+
+                  {/* Mensagem estratégica para quem saiu */}
+                  {leftDub && (
+                    <div className="mt-3 pt-3 border-t border-border/30">
+                      <p className="text-[11px] text-primary/80 font-medium text-center">
+                        Voltar para atendimento exclusivo DUB
+                      </p>
+                    </div>
                   )}
                 </button>
               </motion.div>
 
-              {/* Separator */}
+              {/* ── Divider ── */}
               {filtered.length > 0 && (
-                <div className="flex items-center gap-3 pt-2 pb-1 px-1">
-                  <div className="flex-1 h-px bg-border/40" />
-                  <span className="text-[10px] uppercase tracking-wider text-muted-foreground/40 font-semibold flex-shrink-0">
-                    Outras barbearias
+                <div className="flex items-center gap-3 py-2 px-1">
+                  <div className="flex-1 h-px bg-border/30" />
+                  <span className="text-[9px] uppercase tracking-[0.1em] text-muted-foreground/35 font-semibold">
+                    Barbearias disponíveis
                   </span>
-                  <div className="flex-1 h-px bg-border/40" />
+                  <div className="flex-1 h-px bg-border/30" />
                 </div>
               )}
 
-              {/* Other barbershops */}
+              {/* ── Empty state ── */}
               {filtered.length === 0 && !isLoading && (
                 <motion.div
-                  initial={{ opacity: 0, y: 16 }}
+                  initial={{ opacity: 0, y: 12 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="flex flex-col items-center justify-center py-12"
+                  className="flex flex-col items-center justify-center py-14"
                 >
-                  <Store className="w-10 h-10 text-muted-foreground/30 mb-3" />
+                  <div className="w-12 h-12 rounded-2xl bg-muted/50 flex items-center justify-center mb-3">
+                    <Scissors className="w-5 h-5 text-muted-foreground/30" />
+                  </div>
                   <p className="text-[13px] text-muted-foreground font-medium">
                     {search ? "Nenhuma barbearia encontrada" : "Nenhuma outra barbearia disponível"}
                   </p>
-                  <p className="text-[11px] text-muted-foreground/60 mt-1">
-                    {search ? "Tente outro nome ou bairro" : "A Barbearia DUB é a referência para você"}
+                  <p className="text-[11px] text-muted-foreground/50 mt-1">
+                    {search ? "Tente outro nome ou bairro" : "Novas unidades em breve"}
                   </p>
                 </motion.div>
               )}
 
+              {/* ── Tenant cards ── */}
               {filtered.map((tenant, index) => {
                 const isCurrent = currentPreferred === tenant.id;
                 return (
@@ -298,45 +290,43 @@ const EscolherBarbearia = () => {
                     key={tenant.id}
                     initial={{ opacity: 0, y: 6 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.05 + index * 0.03 }}
+                    transition={{ delay: 0.08 + index * 0.03 }}
                     onClick={() => handleSelect(tenant.id)}
                     disabled={!!saving || isCurrent}
                     className={cn(
-                      "w-full rounded-xl border p-3.5",
+                      "w-full rounded-xl border p-3.5 text-left",
                       "active:scale-[0.98] transition-all duration-150",
                       "bg-card/80 backdrop-blur-sm",
-                      "dark:shadow-none shadow-[0_2px_8px_rgba(0,0,0,0.04)]",
-                      "text-left",
-                      isCurrent && "border-primary/40 bg-primary/5",
-                      !isCurrent && "border-border/50",
-                      saving === tenant.id && "ring-2 ring-primary/40 border-primary/30",
-                      saving && saving !== tenant.id && !isCurrent && "opacity-50"
+                      "dark:shadow-none shadow-[0_1px_6px_rgba(0,0,0,0.04)]",
+                      isCurrent ? "border-primary/30 bg-primary/5" : "border-border/40",
+                      saving === tenant.id && "ring-2 ring-primary/30 border-primary/25",
+                      saving && saving !== tenant.id && !isCurrent && "opacity-40"
                     )}
                   >
-                    <div className="flex items-center gap-3.5">
-                      <div className="w-11 h-11 rounded-xl bg-muted/60 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                    <div className="flex items-center gap-3">
+                      <div className="w-11 h-11 rounded-xl bg-muted/50 flex items-center justify-center flex-shrink-0 overflow-hidden">
                         {tenant.logo_url ? (
                           <img src={tenant.logo_url} alt={tenant.nome} className="w-full h-full object-cover" />
                         ) : (
-                          <Scissors className="w-5 h-5 text-muted-foreground/60" />
+                          <Scissors className="w-4.5 h-4.5 text-muted-foreground/50" />
                         )}
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
                           <span className="text-[13px] font-semibold text-foreground truncate">{tenant.nome}</span>
                           {isCurrent && (
-                            <span className="text-[9px] font-bold uppercase tracking-wider bg-primary/10 text-primary px-1.5 py-px rounded flex-shrink-0">
+                            <span className="text-[8px] font-bold uppercase tracking-wider bg-primary/10 text-primary px-1.5 py-px rounded flex-shrink-0">
                               Atual
                             </span>
                           )}
                         </div>
                         {tenant.slogan && (
-                          <span className="block text-[11px] text-muted-foreground/70 truncate mt-0.5">{tenant.slogan}</span>
+                          <span className="block text-[11px] text-muted-foreground/60 truncate mt-0.5">{tenant.slogan}</span>
                         )}
                         {(tenant.bairro || tenant.cidade) && (
                           <div className="flex items-center gap-1 mt-1">
-                            <MapPin className="w-3 h-3 text-muted-foreground/40 flex-shrink-0" />
-                            <span className="text-[11px] text-muted-foreground/50 truncate">
+                            <MapPin className="w-3 h-3 text-muted-foreground/30 flex-shrink-0" />
+                            <span className="text-[10px] text-muted-foreground/45 truncate">
                               {[tenant.bairro, tenant.cidade, tenant.estado].filter(Boolean).join(", ")}
                             </span>
                           </div>
@@ -349,7 +339,7 @@ const EscolherBarbearia = () => {
                           <Check className="w-3.5 h-3.5 text-primary-foreground" strokeWidth={3} />
                         </div>
                       ) : (
-                        <ChevronRight className="w-5 h-5 text-muted-foreground/40 flex-shrink-0" />
+                        <ChevronRight className="w-4.5 h-4.5 text-muted-foreground/30 flex-shrink-0" />
                       )}
                     </div>
                   </motion.button>
@@ -360,17 +350,17 @@ const EscolherBarbearia = () => {
         </div>
       </div>
 
-      {/* Bottom bar */}
+      {/* ── Bottom ── */}
       <div className="fixed bottom-0 left-0 right-0 z-40">
         <div
-          className="h-8 pointer-events-none"
+          className="h-6 pointer-events-none"
           style={{ background: "linear-gradient(to bottom, transparent, hsl(var(--background)))" }}
         />
-        <div className="bg-background border-t border-border/30 px-5 pb-safe">
-          <div className="pt-3 pb-4">
+        <div className="bg-background border-t border-border/20 px-5 pb-safe">
+          <div className="pt-2.5 pb-3">
             <button
               onClick={handleSkip}
-              className="w-full text-center text-[13px] text-muted-foreground/60 hover:text-muted-foreground transition-colors py-2.5 rounded-xl"
+              className="w-full text-center text-[12px] text-muted-foreground/50 hover:text-muted-foreground transition-colors py-2 rounded-xl"
             >
               {isChangeMode ? "Cancelar" : "Pular por agora"}
             </button>
