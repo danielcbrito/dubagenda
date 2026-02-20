@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowLeft, ArrowRight, Clock, Check, Tag, CreditCard, Landmark, Loader2, Calendar as CalendarIcon, Shield, Zap, Star } from "lucide-react";
+import { ArrowLeft, ArrowRight, Clock, Check, Tag, CreditCard, Landmark, Loader2, Calendar as CalendarIcon, Shield, Zap, Star, Store, ChevronRight } from "lucide-react";
 import pixIcon from "@/assets/pix-icon.png";
 import { toast } from "sonner";
 import { ptBR } from "date-fns/locale";
@@ -93,6 +93,11 @@ const ClienteAgendar = () => {
   const [isPlanFlow, setIsPlanFlow] = useState(false);
   const [isInitializing, setIsInitializing] = useState(true);
 
+  // Barbearia preferida do usuário (multi-tenant)
+  const [preferredShop, setPreferredShop] = useState<{ id: string; nome: string } | null>(null);
+  const [showingOtherShops, setShowingOtherShops] = useState(false);
+  const [allBarbers, setAllBarbers] = useState<Barber[]>([]);
+
   // Verificação se usuário pode usar o plano
   const isPlanEligible =
     !isRescheduling &&
@@ -145,21 +150,62 @@ const ClienteAgendar = () => {
     }
   }, []);
 
-  // Carregar barbeiros
-  const loadBarbers = async () => {
-    const { data } = await supabase
+  // Carregar barbeiros (filtrado pelo tenant da barbearia preferida)
+  const loadBarbers = async (tenantId?: string | null) => {
+    let query = supabase
       .from("barbeiros")
-      .select("id, apelido, foto_url")
+      .select("id, apelido, foto_url, tenant_id")
       .eq("ativo", true)
       .order("apelido");
+
+    if (tenantId) {
+      // Filtra barbeiros da barbearia preferida
+      query = query.eq("tenant_id", tenantId);
+    } else {
+      // Fluxo DUB exclusivo: barbeiros sem tenant (globais)
+      query = query.is("tenant_id", null);
+    }
+
+    const { data } = await query;
     setBarbers(data || []);
+
+    // Também carrega todos para "ver outras barbearias"
+    const { data: all } = await supabase
+      .from("barbeiros")
+      .select("id, apelido, foto_url, tenant_id")
+      .eq("ativo", true)
+      .order("apelido");
+    setAllBarbers(all || []);
   };
 
   // Initialize booking
   useEffect(() => {
     const initializeBooking = async () => {
       setIsInitializing(true);
-      await loadBarbers();
+
+      // Carregar barbearia preferida do perfil
+      const { data: { session } } = await supabase.auth.getSession();
+      let tenantId: string | null = null;
+      if (session) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("barbearia_preferida_id")
+          .eq("id", session.user.id)
+          .single();
+
+        if (profile?.barbearia_preferida_id) {
+          tenantId = profile.barbearia_preferida_id;
+          // Buscar nome da barbearia
+          const { data: tenant } = await supabase
+            .from("tenants")
+            .select("id, nome")
+            .eq("id", tenantId)
+            .single();
+          if (tenant) setPreferredShop(tenant);
+        }
+      }
+
+      await loadBarbers(tenantId);
       await loadUserCredits();
       await loadAvailableRedemptions();
 
@@ -1566,12 +1612,49 @@ const ClienteAgendar = () => {
             className="min-h-screen pt-16 pb-32 px-4"
           >
             <div className="max-w-2xl mx-auto">
+              {/* Barbershop context header */}
+              {preferredShop && (
+                <motion.div
+                  initial={{ opacity: 0, y: 4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="mb-4 pt-1"
+                >
+                  <div className="flex items-center justify-between rounded-xl border border-border/30 bg-card/60 px-4 py-3">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                        <Store className="w-4 h-4 text-primary" />
+                      </div>
+                      <div>
+                        <p className="text-[12px] font-semibold text-foreground">{preferredShop.nome}</p>
+                        <p className="text-[10px] text-muted-foreground/50">Sua barbearia preferida</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setShowingOtherShops(!showingOtherShops);
+                        if (!showingOtherShops) {
+                          // Show all barbers
+                          setBarbers(allBarbers);
+                        } else {
+                          // Show only preferred shop barbers
+                          setBarbers(allBarbers.filter(b => (b as any).tenant_id === preferredShop.id));
+                        }
+                      }}
+                      className="text-[11px] text-primary font-medium flex items-center gap-1 hover:text-primary/80 transition-colors"
+                    >
+                      {showingOtherShops ? "Minha barbearia" : "Ver todas"}
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </motion.div>
+              )}
+
               <div className="mb-6 pt-1">
                 <h2 className="text-xl font-semibold text-foreground">
                   Seu Profissional
                 </h2>
                 <p className="text-[12px] text-muted-foreground/60 mt-1">
-                  Quem vai cuidar de você hoje?
+                  {showingOtherShops ? "Profissionais de todas as barbearias" : "Quem vai cuidar de você hoje?"}
                 </p>
               </div>
 
