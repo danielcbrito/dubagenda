@@ -164,6 +164,7 @@ async function checkTimeSlotAvailability(
  */
 async function getOrCreateAsaasCustomer(
   apiKey: string,
+  baseUrl: string,
   user: { id: string; email: string; user_metadata?: any },
   supabaseAdmin: any
 ): Promise<string> {
@@ -183,7 +184,7 @@ async function getOrCreateAsaasCustomer(
   const cpf = profile?.cpf?.replace(/\D/g, "") || user.user_metadata?.cpf || undefined;
 
   // Buscar por email no Asaas
-  const searchRes = await fetch(`${ASAAS_BASE_URL}/customers?email=${encodeURIComponent(user.email)}`, {
+  const searchRes = await fetch(`${baseUrl}/customers?email=${encodeURIComponent(user.email)}`, {
     headers,
   });
   const searchData = await searchRes.json();
@@ -194,7 +195,7 @@ async function getOrCreateAsaasCustomer(
     // Sincronizar dados se CPF ou nome mudou
     if (cpf && (!existingCustomer.cpfCnpj || existingCustomer.cpfCnpj !== cpf || existingCustomer.name !== name)) {
       console.log("[create-asaas-pix] Atualizando customer no Asaas:", existingCustomer.id);
-      await fetch(`${ASAAS_BASE_URL}/customers/${existingCustomer.id}`, {
+      await fetch(`${baseUrl}/customers/${existingCustomer.id}`, {
         method: "PUT",
         headers,
         body: JSON.stringify({
@@ -208,7 +209,7 @@ async function getOrCreateAsaasCustomer(
   }
 
   // Criar novo customer
-  const createRes = await fetch(`${ASAAS_BASE_URL}/customers`, {
+  const createRes = await fetch(`${baseUrl}/customers`, {
     method: "POST",
     headers,
     body: JSON.stringify({
@@ -337,7 +338,7 @@ serve(async (req) => {
     }
 
     // 3. Buscar/criar customer no Asaas (usando key resolvida do barbeiro)
-    const customerId = await getOrCreateAsaasCustomer(asaasResolvedKey, user, supabaseAdmin);
+    const customerId = await getOrCreateAsaasCustomer(asaasResolvedKey, ASAAS_BASE_URL, user, supabaseAdmin);
     console.log("[create-asaas-pix] Asaas customer:", customerId);
 
     // 4. Criar cobrança PIX no Asaas
