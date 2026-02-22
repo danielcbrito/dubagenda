@@ -234,17 +234,18 @@ const ClienteAgendar = () => {
           const resumeData = JSON.parse(resumePaymentRaw);
           await loadServices(tenantId);
 
-          // Pré-selecionar barbeiro
-          const barbersList = (await supabase.from("barbeiros").select("id, apelido, foto_url").eq("ativo", true).order("apelido")).data || [];
-          const resumeBarber = barbersList.find((b: Barber) => b.id === resumeData.barberId);
+          // Pré-selecionar barbeiro (filtrado pelo tenant)
+          await loadBarbers(tenantId);
+          const resumeBarber = barbers.find((b: Barber) => b.id === resumeData.barberId) 
+            || (await supabase.from("barbeiros").select("id, apelido, foto_url").eq("id", resumeData.barberId).maybeSingle()).data;
           if (resumeBarber) {
             setSelectedBarber(resumeBarber);
             await loadBarberCustomDurations(resumeBarber.id);
           }
 
-          // Pré-selecionar serviço
-          const servicesList = (await supabase.from("servicos").select("*").eq("ativo", true).order("preco")).data || [];
-          const resumeService = servicesList.find((s: Service) => s.id === resumeData.servicoId);
+          // Pré-selecionar serviço (já carregado com tenant filter acima)
+          const resumeService = services.find((s: Service) => s.id === resumeData.servicoId)
+            || (await supabase.from("servicos").select("*").eq("id", resumeData.servicoId).maybeSingle()).data;
           if (resumeService) setSelectedServices([resumeService]);
 
           // Pré-selecionar data e hora
