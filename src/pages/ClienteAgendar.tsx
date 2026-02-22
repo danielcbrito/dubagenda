@@ -278,6 +278,9 @@ const ClienteAgendar = () => {
         const restantes = subscription.limite_agendamentos_mes - subscription.agendamentos_usados;
 
         if (restantes > 0) {
+          // SEMPRE ativar isPlanFlow para assinantes
+          setIsPlanFlow(true);
+
           // Auto-selecionar barbeiro do plano
           if (subscription.barbeiro) {
             setSelectedBarber(subscription.barbeiro);
@@ -285,12 +288,11 @@ const ClienteAgendar = () => {
           }
 
           if (subscription.servico) {
-            // Plano COM serviço vinculado: fluxo de plano completo
+            // Plano COM serviço vinculado: pula direto para data
             setSelectedServices([subscription.servico]);
-            setIsPlanFlow(true);
             setStep(subscription.barbeiro ? 2 : 1); // 2=data, 1=barbeiro
           } else {
-            // Plano SEM serviço vinculado: fluxo normal mas pula barbeiro
+            // Plano SEM serviço vinculado: precisa escolher serviço primeiro
             // Carregar serviços do tenant do barbeiro do plano
             if (subscription.barbeiro_id) {
               const { data: barberData } = await supabase
@@ -302,7 +304,8 @@ const ClienteAgendar = () => {
             } else {
               await loadServices(tenantId);
             }
-            setStep(subscription.barbeiro ? 2 : 1); // 2=serviço, 1=barbeiro
+            // Step 2 = seleção de serviço no planFlow sem serviço vinculado
+            setStep(subscription.barbeiro ? 2 : 1);
           }
           setIsInitializing(false);
           return;
@@ -721,21 +724,25 @@ const ClienteAgendar = () => {
       return;
     }
     
-    // Step 2: Serviços (apenas para não-plano e não-remarcação)
-    if (!isPlanFlow && !isRescheduling && step === 2 && selectedServices.length === 0) {
+    // Plano SEM serviço: step 2 = serviço
+    const _planNeedsService = isPlanFlow && !activeSubscription?.servico;
+    
+    // Step 2: Serviços (não-plano normal OU plano sem serviço vinculado)
+    const serviceStep = _planNeedsService ? 2 : (!isPlanFlow && !isRescheduling ? 2 : -1);
+    if (step === serviceStep && selectedServices.length === 0) {
       toast.error("Selecione pelo menos um serviço");
       return;
     }
     
     // Validação de data
-    const dateStep = isPlanFlow ? 2 : isRescheduling ? 2 : 3;
+    const dateStep = _planNeedsService ? 3 : isPlanFlow ? 2 : isRescheduling ? 2 : 3;
     if (step === dateStep && !selectedDate) {
       toast.error("Selecione uma data");
       return;
     }
     
     // Validação de horário
-    const timeStep = isPlanFlow ? 3 : isRescheduling ? 3 : 4;
+    const timeStep = _planNeedsService ? 4 : isPlanFlow ? 3 : isRescheduling ? 3 : 4;
     if (step === timeStep && !selectedTime) {
       toast.error("Selecione um horário");
       return;
@@ -770,9 +777,15 @@ const ClienteAgendar = () => {
       return;
     }
     
-    // Fluxo de plano: após horário (step 3), vai para confirmação (step 4)
-    if (isPlanFlow && step === 3) {
+    // Fluxo de plano COM serviço: após horário (step 3), vai para confirmação (step 4)
+    if (isPlanFlow && !_planNeedsService && step === 3) {
       setStep(4);
+      return;
+    }
+    
+    // Fluxo de plano SEM serviço: após horário (step 4), vai para confirmação (step 5)
+    if (isPlanFlow && _planNeedsService && step === 4) {
+      setStep(5);
       return;
     }
 
@@ -1525,11 +1538,19 @@ const ClienteAgendar = () => {
     }
   };
 
-  // Plano com barbeiro auto-selecionado: 3 etapas visíveis (Data, Horário, Confirmação)
-  // Plano sem barbeiro: 4 etapas (Barbeiro, Data, Horário, Confirmação)
+  // Plano SEM serviço vinculado: precisa de seleção de serviço adicional
+  const planNeedsService = isPlanFlow && !activeSubscription?.servico;
+  
+  // Cálculo de steps por fluxo:
+  // Plano COM serviço + barbeiro: 3 etapas (Data, Horário, Confirmação)
+  // Plano SEM serviço + barbeiro: 4 etapas (Serviço, Data, Horário, Confirmação)
+  // Plano sem barbeiro: +1 (Barbeiro primeiro)
   // Remarcação: 4 etapas (Barbeiro, Data, Horário, Confirmação)
   // Normal: 6 etapas (Barbeiro, Serviços, Data, Horário, Pagamento, Confirmação)
-  const totalSteps = isPlanFlow && activeSubscription?.barbeiro ? 3 : isPlanFlow ? 4 : isRescheduling ? 4 : 6;
+  const totalSteps = isPlanFlow && activeSubscription?.barbeiro 
+    ? (planNeedsService ? 4 : 3) 
+    : isPlanFlow ? (planNeedsService ? 5 : 4) 
+    : isRescheduling ? 4 : 6;
   
   // Ajustar step visual para plano com barbeiro auto-selecionado
   const currentDisplayStep = isPlanFlow && activeSubscription?.barbeiro 
@@ -1742,8 +1763,8 @@ const ClienteAgendar = () => {
           </motion.div>
         )}
 
-        {/* Step 2: Serviços (APENAS para usuários SEM plano) */}
-        {step === 2 && !isPlanFlow && !isRescheduling && (
+        {/* Step 2: Serviços (usuários SEM plano OU plano SEM serviço vinculado) */}
+        {step === 2 && ((!isPlanFlow && !isRescheduling) || planNeedsService) && (
           <motion.div
             key="step-2-services"
             variants={pageVariants}
@@ -1791,8 +1812,8 @@ const ClienteAgendar = () => {
           </motion.div>
         )}
 
-        {/* Step 2 (Plano/Remarcação) ou Step 3 (Normal): Data */}
-        {((isPlanFlow && step === 2) || (isRescheduling && step === 2) || (!isPlanFlow && !isRescheduling && step === 3)) && (
+        {/* Data: Step 2 (Plano com serviço/Remarcação), Step 3 (Plano sem serviço/Normal) */}
+        {(((isPlanFlow && !planNeedsService) && step === 2) || (planNeedsService && step === 3) || (isRescheduling && step === 2) || (!isPlanFlow && !isRescheduling && step === 3)) && (
           <motion.div
             key="step-date"
             variants={pageVariants}
@@ -1810,7 +1831,7 @@ const ClienteAgendar = () => {
                 </h2>
                 <p className="text-[12px] text-muted-foreground/60 mt-1">
                   {isPlanFlow && activeSubscription ? (
-                    <>{activeSubscription.servico?.nome} • {selectedBarber?.apelido}</>
+                    <>{activeSubscription.servico?.nome || getFormattedServiceNames()} • {selectedBarber?.apelido}</>
                   ) : selectedBarber ? (
                     <>com {selectedBarber.apelido}</>
                   ) : (
@@ -1839,8 +1860,8 @@ const ClienteAgendar = () => {
           </motion.div>
         )}
 
-        {/* Step 3 (Plano/Remarcação) ou Step 4 (Normal): Horário */}
-        {((isPlanFlow && step === 3) || (isRescheduling && step === 3) || (!isPlanFlow && !isRescheduling && step === 4)) && (
+        {/* Horário: Step 3 (Plano com serviço/Remarcação), Step 4 (Plano sem serviço/Normal) */}
+        {(((isPlanFlow && !planNeedsService) && step === 3) || (planNeedsService && step === 4) || (isRescheduling && step === 3) || (!isPlanFlow && !isRescheduling && step === 4)) && (
           <motion.div
             key="step-time"
             variants={pageVariants}
@@ -1874,7 +1895,7 @@ const ClienteAgendar = () => {
                     {selectedBarber?.apelido} está com agenda cheia neste dia.
                   </p>
                   <button
-                    onClick={() => setStep(isPlanFlow ? 2 : isRescheduling ? 2 : 3)}
+                    onClick={() => setStep(planNeedsService ? 3 : isPlanFlow ? 2 : isRescheduling ? 2 : 3)}
                     className="px-6 py-3 border border-border rounded-xl text-foreground hover:bg-secondary transition-all"
                   >
                     Escolher outra data
@@ -2183,8 +2204,8 @@ const ClienteAgendar = () => {
           </motion.div>
         )}
 
-        {/* Step 4 (Plano) Confirmação - Tela limpa e profissional para usuários de plano */}
-        {isPlanFlow && step === 4 && (
+        {/* Confirmação Plano: Step 4 (com serviço) ou Step 5 (sem serviço) */}
+        {isPlanFlow && ((planNeedsService && step === 5) || (!planNeedsService && step === 4)) && (
           <motion.div
             key="step-plan-confirmation"
             variants={pageVariants}
