@@ -7,7 +7,35 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const ASAAS_BASE_URL = "https://api.asaas.com/v3";
+/**
+ * Resolve a API key e URL base do Asaas para o barbeiro da assinatura.
+ */
+async function resolveAsaasConfig(
+  supabase: any,
+  barbeiroId: string | null,
+  fallbackKey: string
+): Promise<{ apiKey: string; baseUrl: string }> {
+  let apiKey = fallbackKey;
+
+  if (barbeiroId) {
+    const { data: barberPrivate } = await supabase
+      .from("barbeiros_private")
+      .select("asaas_api_key")
+      .eq("barbeiro_id", barbeiroId)
+      .maybeSingle();
+
+    if (barberPrivate?.asaas_api_key) {
+      console.log("[cancel-subscription] Usando sub-conta do barbeiro:", barbeiroId);
+      apiKey = barberPrivate.asaas_api_key;
+    }
+  }
+
+  const isSandbox = apiKey.includes("hmlg");
+  const baseUrl = isSandbox ? "https://api-sandbox.asaas.com/v3" : "https://api.asaas.com/v3";
+  if (isSandbox) console.log("[cancel-subscription] 🧪 Modo SANDBOX detectado");
+
+  return { apiKey, baseUrl };
+}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -15,8 +43,8 @@ serve(async (req) => {
   }
 
   try {
-    const asaasApiKey = Deno.env.get("ASAAS_API_KEY");
-    if (!asaasApiKey) throw new Error("ASAAS_API_KEY não configurada");
+    const globalAsaasKey = Deno.env.get("ASAAS_API_KEY");
+    if (!globalAsaasKey) throw new Error("ASAAS_API_KEY não configurada");
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
@@ -42,6 +70,13 @@ serve(async (req) => {
     if (subError) throw new Error("Erro ao buscar assinatura");
     if (!subscription) throw new Error("Nenhuma assinatura encontrada para cancelar");
 
+    // Resolver API key do barbeiro vinculado à assinatura
+    const { apiKey: asaasApiKey, baseUrl: ASAAS_BASE_URL } = await resolveAsaasConfig(
+      supabase,
+      subscription.barbeiro_id,
+      globalAsaasKey
+    );
+
     // Cancelar assinatura recorrente no Asaas
     if (subscription.gateway_subscription_id) {
       try {
@@ -66,7 +101,6 @@ serve(async (req) => {
         }
       } catch (asaasError) {
         console.error("[cancel-subscription] Asaas cancellation error:", asaasError);
-        // Continuar mesmo se falhar no Asaas para não bloquear o usuário
       }
     }
 

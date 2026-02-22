@@ -7,31 +7,40 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const ASAAS_BASE_URL = "https://api.asaas.com/v3";
+// URL base é resolvida dinamicamente por resolveAsaasConfig
 
 /**
  * Resolve a API key do Asaas para o barbeiro selecionado.
  * Se o barbeiro tiver sub-conta (asaas_api_key em barbeiros_private), usa ela.
  * Senão, usa a chave principal (ASAAS_API_KEY do env).
  */
-async function resolveAsaasApiKey(
+async function resolveAsaasConfig(
   supabaseAdmin: any,
   barbeiroId: string,
   fallbackKey: string
-): Promise<{ apiKey: string; isSubAccount: boolean }> {
+): Promise<{ apiKey: string; baseUrl: string; isSubAccount: boolean }> {
   const { data: barberPrivate } = await supabaseAdmin
     .from("barbeiros_private")
     .select("asaas_api_key")
     .eq("barbeiro_id", barbeiroId)
     .maybeSingle();
 
+  let apiKey = fallbackKey;
+  let isSubAccount = false;
+
   if (barberPrivate?.asaas_api_key) {
     console.log("[create-subscription-card] Usando sub-conta do barbeiro:", barbeiroId);
-    return { apiKey: barberPrivate.asaas_api_key, isSubAccount: true };
+    apiKey = barberPrivate.asaas_api_key;
+    isSubAccount = true;
+  } else {
+    console.log("[create-subscription-card] Usando conta principal (sem sub-conta para barbeiro:", barbeiroId, ")");
   }
 
-  console.log("[create-subscription-card] Usando conta principal (sem sub-conta para barbeiro:", barbeiroId, ")");
-  return { apiKey: fallbackKey, isSubAccount: false };
+  const isSandbox = apiKey.includes("hmlg");
+  const baseUrl = isSandbox ? "https://api-sandbox.asaas.com/v3" : "https://api.asaas.com/v3";
+  if (isSandbox) console.log("[create-subscription-card] 🧪 Modo SANDBOX detectado");
+
+  return { apiKey, baseUrl, isSubAccount };
 }
 
 /**
@@ -135,8 +144,8 @@ serve(async (req) => {
 
     console.log("[create-subscription-card] Iniciando assinatura recorrente para plano:", planoId, "barbeiro:", barbeiroId);
 
-    // Resolver API key (sub-conta do barbeiro ou principal)
-    const { apiKey: asaasApiKey, isSubAccount } = await resolveAsaasApiKey(supabaseAdmin, barbeiroId, globalAsaasKey);
+    // Resolver API key + URL base (sub-conta do barbeiro ou principal)
+    const { apiKey: asaasApiKey, baseUrl: ASAAS_BASE_URL, isSubAccount } = await resolveAsaasConfig(supabaseAdmin, barbeiroId, globalAsaasKey);
 
     // Buscar dados do plano
     const { data: plano, error: planoError } = await supabaseAdmin

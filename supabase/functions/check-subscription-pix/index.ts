@@ -7,32 +7,37 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const ASAAS_BASE_URL = "https://api.asaas.com/v3";
+// URL base é resolvida dinamicamente
 
 /**
  * Resolve a API key do Asaas para o barbeiro vinculado à assinatura.
  * Se o barbeiro tiver sub-conta, usa ela. Senão, usa a chave principal.
  */
-async function resolveAsaasApiKey(
+async function resolveAsaasConfig(
   supabaseAdmin: any,
   barbeiroId: string | null,
   fallbackKey: string
-): Promise<string> {
-  if (!barbeiroId) return fallbackKey;
+): Promise<{ apiKey: string; baseUrl: string }> {
+  let apiKey = fallbackKey;
 
-  const { data: barberPrivate } = await supabaseAdmin
-    .from("barbeiros_private")
-    .select("asaas_api_key")
-    .eq("barbeiro_id", barbeiroId)
-    .maybeSingle();
+  if (barbeiroId) {
+    const { data: barberPrivate } = await supabaseAdmin
+      .from("barbeiros_private")
+      .select("asaas_api_key")
+      .eq("barbeiro_id", barbeiroId)
+      .maybeSingle();
 
-  if (barberPrivate?.asaas_api_key) {
-    console.log("[check-subscription-pix] Usando sub-conta do barbeiro:", barbeiroId);
-    return barberPrivate.asaas_api_key;
+    if (barberPrivate?.asaas_api_key) {
+      console.log("[check-subscription-pix] Usando sub-conta do barbeiro:", barbeiroId);
+      apiKey = barberPrivate.asaas_api_key;
+    }
   }
 
-  console.log("[check-subscription-pix] Usando conta principal para barbeiro:", barbeiroId);
-  return fallbackKey;
+  const isSandbox = apiKey.includes("hmlg");
+  const baseUrl = isSandbox ? "https://api-sandbox.asaas.com/v3" : "https://api.asaas.com/v3";
+  if (isSandbox) console.log("[check-subscription-pix] 🧪 Modo SANDBOX detectado");
+
+  return { apiKey, baseUrl };
 }
 
 /**
@@ -79,8 +84,8 @@ serve(async (req) => {
       );
     }
 
-    // Resolver API key do barbeiro vinculado
-    const asaasApiKey = await resolveAsaasApiKey(supabase, sub.barbeiro_id, globalAsaasKey);
+    // Resolver API key + URL do barbeiro vinculado
+    const { apiKey: asaasApiKey, baseUrl: ASAAS_BASE_URL } = await resolveAsaasConfig(supabase, sub.barbeiro_id, globalAsaasKey);
 
     // Consultar status no Asaas
     const paymentRes = await fetch(

@@ -7,7 +7,41 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const ASAAS_BASE_URL = "https://api.asaas.com/v3";
+/**
+ * Resolve a API key e URL base do Asaas para o barbeiro selecionado.
+ * Se o barbeiro tiver sub-conta (asaas_api_key em barbeiros_private), usa ela.
+ * Detecta sandbox automaticamente pelo prefixo 'hmlg' da key.
+ */
+async function resolveAsaasConfig(
+  supabaseAdmin: any,
+  barbeiroId: string | null,
+  fallbackKey: string
+): Promise<{ apiKey: string; baseUrl: string; isSubAccount: boolean }> {
+  let apiKey = fallbackKey;
+  let isSubAccount = false;
+
+  if (barbeiroId) {
+    const { data: barberPrivate } = await supabaseAdmin
+      .from("barbeiros_private")
+      .select("asaas_api_key")
+      .eq("barbeiro_id", barbeiroId)
+      .maybeSingle();
+
+    if (barberPrivate?.asaas_api_key) {
+      console.log("[create-asaas-pix] Usando sub-conta do barbeiro:", barbeiroId);
+      apiKey = barberPrivate.asaas_api_key;
+      isSubAccount = true;
+    } else {
+      console.log("[create-asaas-pix] Sem sub-conta para barbeiro:", barbeiroId, "— usando conta principal");
+    }
+  }
+
+  const isSandbox = apiKey.includes("hmlg");
+  const baseUrl = isSandbox ? "https://api-sandbox.asaas.com/v3" : "https://api.asaas.com/v3";
+  if (isSandbox) console.log("[create-asaas-pix] 🧪 Modo SANDBOX detectado");
+
+  return { apiKey, baseUrl, isSubAccount };
+}
 
 /**
  * Converte HH:MM para minutos totais
@@ -230,7 +264,16 @@ serve(async (req) => {
       data: bookingData.data,
       hora: bookingData.hora,
       preco: bookingData.preco,
+      barbeiro_id: bookingData.barbeiro_id,
     });
+
+    // Resolver API key (sub-conta do barbeiro ou principal) + URL base
+    const { apiKey: asaasResolvedKey, baseUrl: ASAAS_BASE_URL, isSubAccount } = await resolveAsaasConfig(
+      supabaseAdmin,
+      bookingData.barbeiro_id,
+      asaasApiKey
+    );
+    console.log("[create-asaas-pix] isSubAccount:", isSubAccount, "baseUrl:", ASAAS_BASE_URL);
 
     // 1. Verificar disponibilidade
     const avail = await checkTimeSlotAvailability(
@@ -293,8 +336,8 @@ serve(async (req) => {
       throw new Error("Erro ao reservar horário");
     }
 
-    // 3. Buscar/criar customer no Asaas
-    const customerId = await getOrCreateAsaasCustomer(asaasApiKey, user, supabaseAdmin);
+    // 3. Buscar/criar customer no Asaas (usando key resolvida do barbeiro)
+    const customerId = await getOrCreateAsaasCustomer(asaasResolvedKey, user, supabaseAdmin);
     console.log("[create-asaas-pix] Asaas customer:", customerId);
 
     // 4. Criar cobrança PIX no Asaas
@@ -306,7 +349,7 @@ serve(async (req) => {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        access_token: asaasApiKey,
+        access_token: asaasResolvedKey,
       },
       body: JSON.stringify({
         customer: customerId,
@@ -320,7 +363,6 @@ serve(async (req) => {
 
     const paymentData = await paymentRes.json();
     if (paymentData.errors) {
-      // Limpar pending booking
       await supabaseAdmin.from("pending_bookings").delete().eq("id", pendingBooking.id);
       console.error("[create-asaas-pix] Payment error:", paymentData.errors);
       throw new Error("Erro ao gerar cobrança PIX: " + JSON.stringify(paymentData.errors));
@@ -332,7 +374,7 @@ serve(async (req) => {
     const qrRes = await fetch(`${ASAAS_BASE_URL}/payments/${paymentData.id}/pixQrCode`, {
       headers: {
         "Content-Type": "application/json",
-        access_token: asaasApiKey,
+        access_token: asaasResolvedKey,
       },
     });
 
