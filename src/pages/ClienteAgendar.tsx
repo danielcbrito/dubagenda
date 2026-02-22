@@ -274,21 +274,35 @@ const ClienteAgendar = () => {
 
       const subscription = await loadActiveSubscription();
 
-      if (subscription?.servico) {
+      if (subscription) {
         const restantes = subscription.limite_agendamentos_mes - subscription.agendamentos_usados;
 
         if (restantes > 0) {
-          // Usuário de plano com agendamentos disponíveis
-          setSelectedServices([subscription.servico]);
-          setIsPlanFlow(true);
-
-          // Auto-selecionar barbeiro do plano e pular para data
+          // Auto-selecionar barbeiro do plano
           if (subscription.barbeiro) {
             setSelectedBarber(subscription.barbeiro);
             await loadBarberCustomDurations(subscription.barbeiro.id);
-            setStep(2); // Pula direto para seleção de data
+          }
+
+          if (subscription.servico) {
+            // Plano COM serviço vinculado: fluxo de plano completo
+            setSelectedServices([subscription.servico]);
+            setIsPlanFlow(true);
+            setStep(subscription.barbeiro ? 2 : 1); // 2=data, 1=barbeiro
           } else {
-            setStep(1); // Fallback: escolher barbeiro
+            // Plano SEM serviço vinculado: fluxo normal mas pula barbeiro
+            // Carregar serviços do tenant do barbeiro do plano
+            if (subscription.barbeiro_id) {
+              const { data: barberData } = await supabase
+                .from("barbeiros")
+                .select("tenant_id")
+                .eq("id", subscription.barbeiro_id)
+                .maybeSingle();
+              await loadServices(barberData?.tenant_id);
+            } else {
+              await loadServices(tenantId);
+            }
+            setStep(subscription.barbeiro ? 2 : 1); // 2=serviço, 1=barbeiro
           }
           setIsInitializing(false);
           return;
@@ -1494,21 +1508,19 @@ const ClienteAgendar = () => {
       return;
     }
     
+    // Assinante com barbeiro pré-selecionado (com ou sem isPlanFlow): step 2 = primeira etapa visível
+    if (activeSubscription?.barbeiro && step === 2) {
+      navigate("/cliente");
+      return;
+    }
+
     if (isPlanFlow && activeSubscription?.barbeiro) {
-      // Plano com barbeiro vinculado: step 2 = primeira etapa visível
-      if (step === 2) {
-        navigate("/cliente");
-        return;
-      }
       setStep(step - 1);
     } else if (isPlanFlow) {
-      // Plano sem barbeiro vinculado: 1=Barbeiro, 2=Data, 3=Horário, 4=Confirmação
       setStep(step - 1);
     } else if (isRescheduling) {
-      // Remarcação: 1=Barbeiro, 2=Data, 3=Horário, 4=Confirmação
       setStep(step - 1);
     } else {
-      // Normal: 1=Barbeiro, 2=Serviços, 3=Data, 4=Horário, 5=Pagamento, 6=Confirmação
       setStep(step - 1);
     }
   };
