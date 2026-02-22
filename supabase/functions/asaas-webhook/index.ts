@@ -81,7 +81,7 @@ serve(async (req) => {
 
       console.log("[asaas-webhook] Check payment status:", paymentData.status);
 
-      if (paymentData.status === "RECEIVED" || paymentData.status === "CONFIRMED") {
+      if (paymentData.status === "RECEIVED" || paymentData.status === "CONFIRMED" || paymentData.status === "RECEIVED_IN_CASH") {
         // Pagamento confirmado — converter em agendamento
         const appointmentId = await convertPendingToAppointment(supabase, pb, paymentData.id);
         return new Response(
