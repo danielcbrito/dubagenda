@@ -232,7 +232,7 @@ const ClienteAgendar = () => {
         sessionStorage.removeItem("resumeToPaymentStep");
         try {
           const resumeData = JSON.parse(resumePaymentRaw);
-          await loadServices();
+          await loadServices(tenantId);
 
           // Pré-selecionar barbeiro
           const barbersList = (await supabase.from("barbeiros").select("id, apelido, foto_url").eq("ativo", true).order("apelido")).data || [];
@@ -299,7 +299,7 @@ const ClienteAgendar = () => {
         return;
       }
 
-      await loadServices();
+      await loadServices(tenantId);
       setIsInitializing(false);
     };
 
@@ -372,12 +372,20 @@ const ClienteAgendar = () => {
     }
   }, []);
 
-  const loadServices = async () => {
-    const { data } = await supabase
+  const loadServices = async (tenantId?: string | null) => {
+    let query = supabase
       .from("servicos")
       .select("*")
       .eq("ativo", true)
       .order("preco");
+
+    if (tenantId) {
+      query = query.eq("tenant_id", tenantId);
+    } else {
+      query = query.is("tenant_id", null);
+    }
+
+    const { data } = await query;
     setServices(data || []);
   };
 
