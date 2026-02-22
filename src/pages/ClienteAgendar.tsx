@@ -292,20 +292,36 @@ const ClienteAgendar = () => {
             setSelectedServices([subscription.servico]);
             setStep(subscription.barbeiro ? 2 : 1); // 2=data, 1=barbeiro
           } else {
-            // Plano SEM serviço vinculado: precisa escolher serviço primeiro
-            // Carregar serviços do tenant do barbeiro do plano
+            // Plano SEM serviço vinculado: tentar auto-selecionar
+            let barberTenantId = tenantId;
             if (subscription.barbeiro_id) {
               const { data: barberData } = await supabase
                 .from("barbeiros")
                 .select("tenant_id")
                 .eq("id", subscription.barbeiro_id)
                 .maybeSingle();
-              await loadServices(barberData?.tenant_id);
-            } else {
-              await loadServices(tenantId);
+              barberTenantId = barberData?.tenant_id || tenantId;
             }
-            // Step 2 = seleção de serviço no planFlow sem serviço vinculado
-            setStep(subscription.barbeiro ? 2 : 1);
+            
+            // Buscar serviços do tenant
+            let svcQuery = supabase.from("servicos").select("*").eq("ativo", true).order("preco");
+            if (barberTenantId) {
+              svcQuery = svcQuery.eq("tenant_id", barberTenantId);
+            } else {
+              svcQuery = svcQuery.is("tenant_id", null);
+            }
+            const { data: tenantServices } = await svcQuery;
+            
+            if (tenantServices && tenantServices.length === 1) {
+              // Apenas 1 serviço: auto-selecionar e pular para data
+              setSelectedServices([tenantServices[0]]);
+              setServices(tenantServices);
+              setStep(subscription.barbeiro ? 2 : 1);
+            } else {
+              // Múltiplos serviços: mostrar seleção
+              setServices(tenantServices || []);
+              setStep(subscription.barbeiro ? 2 : 1);
+            }
           }
           setIsInitializing(false);
           return;
