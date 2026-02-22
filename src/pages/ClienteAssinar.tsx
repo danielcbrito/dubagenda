@@ -274,7 +274,7 @@ const ClienteAssinar = () => {
 
   // UI
   const [loading, setLoading] = useState(false);
-  const [step, setStep] = useState(resumePlanId ? 0 : 1); // 1=shop, 2=plan, 3=barber, 4=payment
+  const [step, setStep] = useState(resumePlanId ? 0 : 0); // starts loading, auto-selects preferred shop
   const [hasActiveSubscription, setHasActiveSubscription] = useState(false);
 
   const { ratings } = useBarberRatings(barbers.map(b => b.id));
@@ -283,7 +283,37 @@ const ClienteAssinar = () => {
   useEffect(() => {
     loadTenants();
     checkActiveSubscription();
+    if (!resumePlanId) {
+      autoSelectPreferredShop();
+    }
   }, []);
+
+  /** Carrega barbearia preferida do perfil e já seleciona automaticamente */
+  const autoSelectPreferredShop = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("barbearia_preferida_id")
+        .eq("id", session.user.id)
+        .single();
+
+      const preferredId = profile?.barbearia_preferida_id;
+      // Se tem barbearia preferida, auto-seleciona; senão DUB
+      const tenantId = preferredId || null;
+      const key = tenantId || "dub";
+      setSelectedTenantId(key);
+      await loadPlansForTenant(tenantId);
+      await loadBarbersForTenant(tenantId);
+      setStep(2); // pula direto para planos
+    } catch (err) {
+      console.error("Erro ao carregar barbearia preferida:", err);
+      // Fallback: vai para seleção manual
+      setStep(1);
+    }
+  };
 
   // Resume flow
   useEffect(() => {
@@ -464,7 +494,10 @@ const ClienteAssinar = () => {
       setStep(2);
       setSelectedBarber(null);
     } else if (step === 2) {
-      handleChangeShop();
+      navigate("/cliente");
+    } else if (step === 1) {
+      // Voltando da seleção manual de barbearia → volta para planos da preferida
+      navigate("/cliente");
     } else {
       navigate("/cliente");
     }
