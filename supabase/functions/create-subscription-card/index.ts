@@ -48,6 +48,7 @@ async function resolveAsaasConfig(
  */
 async function getOrCreateAsaasCustomer(
   apiKey: string,
+  baseUrl: string,
   user: { id: string; email: string; user_metadata?: any },
   supabaseAdmin: any
 ): Promise<string> {
@@ -66,7 +67,7 @@ async function getOrCreateAsaasCustomer(
   const cpf = profile?.cpf?.replace(/\D/g, "") || user.user_metadata?.cpf || undefined;
 
   const searchRes = await fetch(
-    `${ASAAS_BASE_URL}/customers?email=${encodeURIComponent(user.email)}`,
+    `${baseUrl}/customers?email=${encodeURIComponent(user.email)}`,
     { headers }
   );
   const searchData = await searchRes.json();
@@ -76,7 +77,7 @@ async function getOrCreateAsaasCustomer(
 
     if (cpf && (!existingCustomer.cpfCnpj || existingCustomer.cpfCnpj !== cpf || existingCustomer.name !== name)) {
       console.log("[create-subscription-card] Atualizando customer no Asaas:", existingCustomer.id);
-      await fetch(`${ASAAS_BASE_URL}/customers/${existingCustomer.id}`, {
+      await fetch(`${baseUrl}/customers/${existingCustomer.id}`, {
         method: "PUT",
         headers,
         body: JSON.stringify({ name, cpfCnpj: cpf }),
@@ -86,7 +87,7 @@ async function getOrCreateAsaasCustomer(
     return existingCustomer.id;
   }
 
-  const createRes = await fetch(`${ASAAS_BASE_URL}/customers`, {
+  const createRes = await fetch(`${baseUrl}/customers`, {
     method: "POST",
     headers,
     body: JSON.stringify({
@@ -175,7 +176,7 @@ serve(async (req) => {
       .eq("status", "suspended");
 
     // Buscar/criar customer no Asaas (usando a key resolvida)
-    const customerId = await getOrCreateAsaasCustomer(asaasApiKey, user, supabaseAdmin);
+    const customerId = await getOrCreateAsaasCustomer(asaasApiKey, ASAAS_BASE_URL, user, supabaseAdmin);
     console.log("[create-subscription-card] Asaas customer:", customerId, "isSubAccount:", isSubAccount);
 
     // Data de início: hoje
