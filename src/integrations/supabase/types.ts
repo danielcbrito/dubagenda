@@ -800,7 +800,9 @@ export type Database = {
           chave: string
           created_at: string
           id: string
+          instituicao: string | null
           is_default: boolean | null
+          nome_titular: string | null
           tipo: string
           updated_at: string
           user_id: string
@@ -811,7 +813,9 @@ export type Database = {
           chave: string
           created_at?: string
           id?: string
+          instituicao?: string | null
           is_default?: boolean | null
+          nome_titular?: string | null
           tipo: string
           updated_at?: string
           user_id: string
@@ -822,7 +826,9 @@ export type Database = {
           chave?: string
           created_at?: string
           id?: string
+          instituicao?: string | null
           is_default?: boolean | null
+          nome_titular?: string | null
           tipo?: string
           updated_at?: string
           user_id?: string
@@ -3684,6 +3690,10 @@ export type Database = {
         Returns: string
       }
       format_phone_for_whatsapp: { Args: { phone: string }; Returns: string }
+      get_admin_banner_for_barber: {
+        Args: { p_barbeiro_id: string }
+        Returns: string
+      }
       get_maintenance_status: {
         Args: never
         Returns: {
