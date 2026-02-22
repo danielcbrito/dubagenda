@@ -292,7 +292,10 @@ const ClienteAssinar = () => {
   const autoSelectPreferredShop = async () => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
+      if (!session) {
+        setStep(1);
+        return;
+      }
 
       const { data: profile } = await supabase
         .from("profiles")
@@ -507,13 +510,15 @@ const ClienteAssinar = () => {
     ? "Barbearia DUB"
     : tenants.find(t => t.id === selectedTenantId)?.nome || "";
 
-  const headerTitle = step === 1
-    ? "Escolha a barbearia"
-    : step === 2
-      ? "Escolha seu plano"
-      : step === 3
-        ? "Escolha seu barbeiro"
-        : "Forma de pagamento";
+  const headerTitle = step === 0
+    ? "Carregando..."
+    : step === 1
+      ? "Escolha a barbearia"
+      : step === 2
+        ? "Escolha seu plano"
+        : step === 3
+          ? "Escolha seu barbeiro"
+          : "Forma de pagamento";
 
   const totalSteps = 4;
 
