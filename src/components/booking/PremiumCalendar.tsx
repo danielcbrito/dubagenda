@@ -167,9 +167,10 @@ export function PremiumCalendar({ selectedDate, onSelectDate, disabledDates = []
                 className={cn(
                   "relative aspect-square rounded-xl transition-all duration-200",
                   "flex items-center justify-center",
-                  !isCurrentMonth && "opacity-20",
-                  isClosed && "opacity-15 cursor-not-allowed",
-                  isDisabled && !isClosed && !isCurrentMonth && "opacity-25 cursor-not-allowed",
+                  !isCurrentMonth && "opacity-15",
+                  isClosed && "opacity-10 cursor-not-allowed",
+                  isDisabled && !isClosed && !isCurrentMonth && "opacity-15 cursor-not-allowed",
+                  isDisabled && isCurrentMonth && !isClosed && "opacity-25 cursor-not-allowed",
                   !isDisabled && !isSelected && "hover:bg-secondary/50",
                   isSelected && "bg-primary text-primary-foreground shadow-lg shadow-primary/25 scale-105",
                   isCurrentDay && !isSelected && !isClosed && "ring-1 ring-primary/50"
@@ -178,10 +179,9 @@ export function PremiumCalendar({ selectedDate, onSelectDate, disabledDates = []
                 <span className={cn(
                   "text-[13px] font-medium",
                   isSelected && "font-semibold",
-                  isClosed && "line-through",
                   !isCurrentMonth && "text-muted-foreground",
                   isCurrentMonth && !isSelected && !isDisabled && "text-foreground",
-                  isCurrentMonth && isDisabled && !isClosed && "text-muted-foreground"
+                  isCurrentMonth && isDisabled && "text-muted-foreground"
                 )}>
                   {format(day, "d")}
                 </span>

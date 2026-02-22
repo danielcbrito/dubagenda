@@ -17,6 +17,7 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
+import { useBarbeiroLogado } from '@/hooks/useBarbeiroLogado';
 
 interface HorarioExcepcional {
   id: string;
@@ -54,19 +55,32 @@ export default function HorariosExcepcionais() {
     motivo: ''
   });
 
+  const { barbeiroId } = useBarbeiroLogado();
+
+  // Determina qual tabela usar: barbeiro logado = tabela específica, admin global = tabela global
+  const tableName = barbeiroId ? 'horarios_excepcionais_barbeiro' : 'horarios_excepcionais';
+
   useEffect(() => {
-    loadExcecoes();
-  }, []);
+    if (barbeiroId !== undefined) {
+      loadExcecoes();
+    }
+  }, [barbeiroId]);
 
   const loadExcecoes = async () => {
     try {
-      const { data, error } = await supabase
-        .from('horarios_excepcionais')
+      let query = supabase
+        .from(tableName as any)
         .select('*')
         .order('data', { ascending: true });
 
+      if (barbeiroId) {
+        query = query.eq('barbeiro_id', barbeiroId);
+      }
+
+      const { data, error } = await query;
+
       if (error) throw error;
-      setExcecoes(data || []);
+      setExcecoes((data as any[]) || []);
     } catch (error) {
       console.error('Erro ao carregar exceções:', error);
       toast.error('Erro ao carregar exceções de horário');
@@ -81,7 +95,6 @@ export default function HorariosExcepcionais() {
       return;
     }
 
-    // Verificar se a data é no futuro
     const dataExcecao = parseISO(novaExcecao.data);
     if (isBefore(dataExcecao, startOfDay(new Date()))) {
       toast.error('A data deve ser hoje ou no futuro');
@@ -90,17 +103,24 @@ export default function HorariosExcepcionais() {
 
     setSaving(true);
     try {
+      const insertData: any = {
+        data: novaExcecao.data,
+        aberto: novaExcecao.aberto,
+        hora_abertura: novaExcecao.aberto ? novaExcecao.hora_abertura : null,
+        hora_fechamento: novaExcecao.aberto ? novaExcecao.hora_fechamento : null,
+        hora_almoco_inicio: novaExcecao.aberto && novaExcecao.hora_almoco_inicio ? novaExcecao.hora_almoco_inicio : null,
+        hora_almoco_fim: novaExcecao.aberto && novaExcecao.hora_almoco_fim ? novaExcecao.hora_almoco_fim : null,
+        motivo: novaExcecao.motivo || null
+      };
+
+      // Adicionar barbeiro_id se for barbeiro logado
+      if (barbeiroId) {
+        insertData.barbeiro_id = barbeiroId;
+      }
+
       const { error } = await supabase
-        .from('horarios_excepcionais')
-        .insert({
-          data: novaExcecao.data,
-          aberto: novaExcecao.aberto,
-          hora_abertura: novaExcecao.aberto ? novaExcecao.hora_abertura : null,
-          hora_fechamento: novaExcecao.aberto ? novaExcecao.hora_fechamento : null,
-          hora_almoco_inicio: novaExcecao.aberto && novaExcecao.hora_almoco_inicio ? novaExcecao.hora_almoco_inicio : null,
-          hora_almoco_fim: novaExcecao.aberto && novaExcecao.hora_almoco_fim ? novaExcecao.hora_almoco_fim : null,
-          motivo: novaExcecao.motivo || null
-        });
+        .from(tableName as any)
+        .insert(insertData);
 
       if (error) {
         if (error.code === '23505') {
@@ -126,7 +146,7 @@ export default function HorariosExcepcionais() {
   const handleDeleteExcecao = async (id: string) => {
     try {
       const { error } = await supabase
-        .from('horarios_excepcionais')
+        .from(tableName as any)
         .delete()
         .eq('id', id);
 
@@ -168,7 +188,6 @@ export default function HorariosExcepcionais() {
     }
   };
 
-  // Separar exceções futuras e passadas
   const excecoesFuturas = excecoes.filter(e => !isDatePast(e.data));
   const excecoesPassadas = excecoes.filter(e => isDatePast(e.data));
 
@@ -193,7 +212,9 @@ export default function HorariosExcepcionais() {
               <div>
                 <CardTitle className="text-lg">Exceções de Horário</CardTitle>
                 <CardDescription>
-                  Configure horários especiais para datas específicas (ex: médico, feriado, compromisso)
+                  {barbeiroId
+                    ? 'Configure horários especiais para a SUA agenda (não afeta outros barbeiros)'
+                    : 'Configure horários especiais para datas específicas (afeta toda a barbearia)'}
                 </CardDescription>
               </div>
             </div>
@@ -284,7 +305,7 @@ export default function HorariosExcepcionais() {
         </Card>
       )}
 
-      {/* Exceções Passadas (colapsável) */}
+      {/* Exceções Passadas */}
       {excecoesPassadas.length > 0 && (
         <div className="space-y-3 opacity-60">
           <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
@@ -331,12 +352,13 @@ export default function HorariosExcepcionais() {
               Nova Exceção de Horário
             </DialogTitle>
             <DialogDescription>
-              Configure um horário diferente para uma data específica
+              {barbeiroId
+                ? 'Configure um horário diferente para a SUA agenda em uma data específica'
+                : 'Configure um horário diferente para uma data específica (toda a barbearia)'}
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
-            {/* Data */}
             <div className="space-y-2">
               <Label>Data</Label>
               <Input
@@ -348,10 +370,9 @@ export default function HorariosExcepcionais() {
               />
             </div>
 
-            {/* Aberto/Fechado */}
             <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
               <div>
-                <Label>Barbearia aberta?</Label>
+                <Label>{barbeiroId ? 'Disponível neste dia?' : 'Barbearia aberta?'}</Label>
                 <p className="text-sm text-muted-foreground">
                   {novaExcecao.aberto ? 'Sim, com horário especial' : 'Não, fechado o dia todo'}
                 </p>
@@ -362,7 +383,6 @@ export default function HorariosExcepcionais() {
               />
             </div>
 
-            {/* Horários (só se aberto) */}
             {novaExcecao.aberto && (
               <>
                 <div className="grid grid-cols-2 gap-4">
@@ -417,11 +437,10 @@ export default function HorariosExcepcionais() {
               </>
             )}
 
-            {/* Motivo */}
             <div className="space-y-2">
               <Label>Motivo (opcional)</Label>
               <Textarea
-                placeholder="Ex: Consulta médica, feriado, evento..."
+                placeholder="Ex: Consulta médica, feriado, compromisso..."
                 value={novaExcecao.motivo}
                 onChange={(e) => setNovaExcecao(prev => ({ ...prev, motivo: e.target.value }))}
                 rows={2}
@@ -435,7 +454,7 @@ export default function HorariosExcepcionais() {
             </Button>
             <Button onClick={handleAddExcecao} disabled={saving} className="gap-2">
               {saving ? (
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-foreground"></div>
               ) : (
                 <Plus className="h-4 w-4" />
               )}
