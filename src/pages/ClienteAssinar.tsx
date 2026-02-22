@@ -10,6 +10,9 @@ import {
   Crown,
   CreditCard,
   Loader2,
+  MapPin,
+  RefreshCw,
+  Scissors,
   Shield,
   Sparkles,
   User,
@@ -18,6 +21,7 @@ import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import pixIcon from "@/assets/pix-icon.png";
+import logoDub from "@/assets/logo-dub.png";
 import { BarberCard } from "@/components/booking/BarberCard";
 import { useBarberRatings } from "@/hooks/useBarberRatings";
 
@@ -28,15 +32,26 @@ interface Plan {
   preco_mensal: number;
   beneficios_json: any;
   limite_agendamentos_mes: number;
+  tenant_id: string | null;
 }
 
 interface Barber {
   id: string;
   apelido: string;
   foto_url: string | null;
+  tenant_id: string | null;
 }
 
-/** Card de plano — premium, moderno e persuasivo */
+interface Tenant {
+  id: string;
+  nome: string;
+  slogan: string | null;
+  logo_url: string | null;
+  cidade: string | null;
+  bairro: string | null;
+}
+
+// ─── Plan Card ────────────────────────────────────────────
 function PlanCard({ 
   plan, 
   isSelected,
@@ -51,7 +66,7 @@ function PlanCard({
   disabled?: boolean;
 }) {
   const benefits = Array.isArray(plan.beneficios_json) ? plan.beneficios_json : [];
-  const isMostPopular = plan.nome.toLowerCase().includes('barba');
+  const isMostPopular = isPopular || plan.nome.toLowerCase().includes('barba');
 
   return (
     <motion.div
@@ -69,7 +84,6 @@ function PlanCard({
         disabled && "opacity-50 cursor-not-allowed"
       )}
     >
-      {/* Top accent */}
       {(isSelected || isMostPopular) && (
         <div className="h-1 bg-gradient-to-r from-primary via-primary/70 to-primary/20" />
       )}
@@ -157,41 +171,148 @@ function PlanCard({
   );
 }
 
+// ─── Barbershop Card ──────────────────────────────────────
+function BarbershopCard({
+  tenant,
+  isDub,
+  isSelected,
+  onSelect,
+  disabled,
+}: {
+  tenant?: Tenant;
+  isDub?: boolean;
+  isSelected: boolean;
+  onSelect: () => void;
+  disabled?: boolean;
+}) {
+  const name = isDub ? "Barbearia DUB" : tenant?.nome || "";
+  const subtitle = isDub
+    ? "Corte masculino premium • Atendimento exclusivo"
+    : tenant?.slogan || [tenant?.bairro, tenant?.cidade].filter(Boolean).join(", ") || "Barbearia parceira";
+
+  return (
+    <motion.button
+      initial={{ opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      whileTap={{ scale: disabled ? 1 : 0.98 }}
+      onClick={onSelect}
+      disabled={disabled}
+      className={cn(
+        "w-full rounded-xl border p-4 text-left transition-all",
+        "active:scale-[0.98]",
+        "bg-card backdrop-blur-sm",
+        "dark:shadow-none shadow-[0_2px_8px_rgba(0,0,0,0.06)]",
+        isSelected
+          ? "border-primary/50 ring-2 ring-primary/20"
+          : isDub
+            ? "border-primary/25"
+            : "border-border/40 hover:border-border",
+        disabled && "opacity-50 cursor-not-allowed"
+      )}
+    >
+      <div className="flex items-center gap-3.5">
+        <div className={cn(
+          "w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden",
+          isDub ? "bg-muted/40 border border-primary/15" : "bg-muted/50"
+        )}>
+          {isDub ? (
+            <img src={logoDub} alt="DUB" className="w-8 h-8 object-contain" />
+          ) : tenant?.logo_url ? (
+            <img src={tenant.logo_url} alt={name} className="w-full h-full object-cover" />
+          ) : (
+            <Scissors className="w-5 h-5 text-muted-foreground/50" />
+          )}
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="text-[14px] font-bold text-foreground truncate">{name}</span>
+            {isDub && (
+              <span className="text-[8px] font-bold uppercase tracking-widest bg-primary/10 text-primary px-1.5 py-0.5 rounded flex-shrink-0">
+                <Crown className="w-2.5 h-2.5 inline -mt-px mr-0.5" />
+                Referência
+              </span>
+            )}
+          </div>
+          <p className="text-[11px] text-muted-foreground/70 mt-0.5 truncate">{subtitle}</p>
+          {!isDub && tenant?.bairro && (
+            <div className="flex items-center gap-1 mt-1">
+              <MapPin className="w-3 h-3 text-muted-foreground/30 flex-shrink-0" />
+              <span className="text-[10px] text-muted-foreground/45 truncate">
+                {[tenant.bairro, tenant.cidade].filter(Boolean).join(", ")}
+              </span>
+            </div>
+          )}
+        </div>
+        {isSelected ? (
+          <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
+            <Check className="w-3.5 h-3.5 text-primary-foreground" strokeWidth={3} />
+          </div>
+        ) : (
+          <ArrowRight className="w-4 h-4 text-muted-foreground/30 flex-shrink-0" />
+        )}
+      </div>
+    </motion.button>
+  );
+}
+
+// ─── Main Page ────────────────────────────────────────────
 const ClienteAssinar = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const resumePlanId = (location.state as any)?.resumePlanId as string | undefined;
+
+  // Data
+  const [tenants, setTenants] = useState<Tenant[]>([]);
   const [plans, setPlans] = useState<Plan[]>([]);
+  const [barbers, setBarbers] = useState<Barber[]>([]);
+
+  // Selections
+  const [selectedTenantId, setSelectedTenantId] = useState<string | null | "dub">(null); // "dub" = DUB global, string = tenant UUID
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [step, setStep] = useState(resumePlanId ? 0 : 1);
-  const [hasActiveSubscription, setHasActiveSubscription] = useState(false);
+  const [selectedBarber, setSelectedBarber] = useState<Barber | null>(null);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<"pix" | "card" | null>("pix");
 
-  // Barber selection
-  const [barbers, setBarbers] = useState<Barber[]>([]);
-  const [selectedBarber, setSelectedBarber] = useState<Barber | null>(null);
+  // UI
+  const [loading, setLoading] = useState(false);
+  const [step, setStep] = useState(resumePlanId ? 0 : 1); // 1=shop, 2=plan, 3=barber, 4=payment
+  const [hasActiveSubscription, setHasActiveSubscription] = useState(false);
+
   const { ratings } = useBarberRatings(barbers.map(b => b.id));
 
+  // ─── Init ─────────────────────────────────
   useEffect(() => {
-    loadPlans();
-    loadBarbers();
+    loadTenants();
     checkActiveSubscription();
   }, []);
 
+  // Resume flow
   useEffect(() => {
-    if (resumePlanId && plans.length > 0 && (step === 0 || step === 1)) {
-      const plan = plans.find(p => p.id === resumePlanId);
-      if (plan) {
-        setSelectedPlan(plan);
-        setStep(2); // go to barber selection
-      } else {
-        setStep(1);
-      }
-    } else if (step === 0 && plans.length > 0 && !resumePlanId) {
+    if (resumePlanId && step === 0) {
+      // Load all plans to find the one to resume
+      loadAllPlansForResume(resumePlanId);
+    }
+  }, [resumePlanId]);
+
+  const loadAllPlansForResume = async (planId: string) => {
+    const { data } = await supabase
+      .from('planos')
+      .select('*')
+      .eq('ativo', true)
+      .eq('id', planId)
+      .single();
+    
+    if (data) {
+      const tenantId = data.tenant_id;
+      setSelectedTenantId(tenantId || "dub");
+      setSelectedPlan(data as Plan);
+      // Load filtered plans & barbers for this tenant
+      await loadPlansForTenant(tenantId);
+      await loadBarbersForTenant(tenantId);
+      setStep(3); // go to barber selection
+    } else {
       setStep(1);
     }
-  }, [resumePlanId, plans]);
+  };
 
   const checkActiveSubscription = async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -205,27 +326,75 @@ const ClienteAssinar = () => {
     setHasActiveSubscription(!!data);
   };
 
-  const loadPlans = async () => {
+  const loadTenants = async () => {
     const { data } = await supabase
+      .from("tenants")
+      .select("id, nome, slogan, logo_url, cidade, bairro")
+      .eq("ativo", true)
+      .eq("onboarding_completed", true)
+      .order("nome");
+    setTenants(data || []);
+  };
+
+  const loadPlansForTenant = async (tenantId: string | null) => {
+    let query = supabase
       .from('planos')
       .select('*')
       .eq('ativo', true)
       .order('preco_mensal');
+
+    if (tenantId) {
+      query = query.eq('tenant_id', tenantId);
+    } else {
+      query = query.is('tenant_id', null);
+    }
+
+    const { data } = await query;
     setPlans(data || []);
   };
 
-  const loadBarbers = async () => {
-    const { data } = await supabase
+  const loadBarbersForTenant = async (tenantId: string | null) => {
+    let query = supabase
       .from('barbeiros')
-      .select('id, apelido, foto_url')
+      .select('id, apelido, foto_url, tenant_id')
       .eq('ativo', true)
       .order('apelido');
+
+    if (tenantId) {
+      query = query.eq('tenant_id', tenantId);
+    } else {
+      query = query.is('tenant_id', null);
+    }
+
+    const { data } = await query;
     setBarbers(data || []);
+  };
+
+  // ─── Handlers ─────────────────────────────
+  const handleSelectShop = async (tenantId: string | null) => {
+    // tenantId = null means DUB
+    const key = tenantId || "dub";
+    setSelectedTenantId(key);
+    setSelectedPlan(null);
+    setSelectedBarber(null);
+
+    await loadPlansForTenant(tenantId);
+    await loadBarbersForTenant(tenantId);
+    setStep(2);
+  };
+
+  const handleChangeShop = () => {
+    setSelectedTenantId(null);
+    setSelectedPlan(null);
+    setSelectedBarber(null);
+    setPlans([]);
+    setBarbers([]);
+    setStep(1);
   };
 
   const handleProceedToBarber = () => {
     if (!selectedPlan) return;
-    setStep(2);
+    setStep(3);
   };
 
   const handleProceedToPayment = () => {
@@ -233,7 +402,7 @@ const ClienteAssinar = () => {
       toast.error("Selecione um barbeiro");
       return;
     }
-    setStep(3);
+    setStep(4);
   };
 
   const handlePayment = async () => {
@@ -255,7 +424,6 @@ const ClienteAssinar = () => {
         if (error) throw error;
         if (data?.error) throw new Error(data.error);
         if (data?.url) {
-          // Store barber info for post-payment redirect
           sessionStorage.setItem("subscription_barber_id", selectedBarber.id);
           window.location.href = data.url;
           toast.info("Complete o pagamento para ativar sua assinatura");
@@ -288,23 +456,33 @@ const ClienteAssinar = () => {
     }
   };
 
-  const headerTitle = step === 1 
-    ? "Escolha seu plano" 
-    : step === 2 
-      ? "Escolha seu barbeiro" 
-      : "Forma de pagamento";
-
   const handleBack = () => {
-    if (step === 3) {
+    if (step === 4) {
+      setStep(3);
+      setSelectedPaymentMethod("pix");
+    } else if (step === 3) {
       setStep(2);
-      setSelectedPaymentMethod(null);
-    } else if (step === 2) {
-      setStep(1);
       setSelectedBarber(null);
+    } else if (step === 2) {
+      handleChangeShop();
     } else {
       navigate("/cliente");
     }
   };
+
+  const selectedShopName = selectedTenantId === "dub"
+    ? "Barbearia DUB"
+    : tenants.find(t => t.id === selectedTenantId)?.nome || "";
+
+  const headerTitle = step === 1
+    ? "Escolha a barbearia"
+    : step === 2
+      ? "Escolha seu plano"
+      : step === 3
+        ? "Escolha seu barbeiro"
+        : "Forma de pagamento";
+
+  const totalSteps = 4;
 
   return (
     <div className="min-h-screen pb-20">
@@ -329,7 +507,7 @@ const ClienteAssinar = () => {
 
           {/* Step dots */}
           <div className="ml-auto flex items-center gap-1.5">
-            {[1, 2, 3].map((s) => (
+            {[1, 2, 3, 4].map((s) => (
               <div
                 key={s}
                 className={cn(
@@ -358,7 +536,7 @@ const ClienteAssinar = () => {
         )}
 
         <AnimatePresence mode="wait">
-          {/* Loading */}
+          {/* Loading (resume) */}
           {step === 0 && (
             <motion.div
               key="step0"
@@ -371,32 +549,146 @@ const ClienteAssinar = () => {
             </motion.div>
           )}
 
-          {/* Step 1: Seleção de Plano */}
+          {/* ═══ Step 1: Seleção de Barbearia ═══ */}
           {step === 1 && (
             <motion.div
               key="step1"
               initial={{ opacity: 0, x: -16 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: 16 }}
-              className="space-y-3 pb-28"
+              className="space-y-2.5 pb-28"
             >
-              {plans.map((plan, index) => (
-                <PlanCard 
-                  key={plan.id}
-                  plan={plan}
-                  isSelected={selectedPlan?.id === plan.id}
-                  isPopular={index === Math.floor(plans.length / 2)}
-                  onSelect={() => setSelectedPlan(plan)}
-                  disabled={hasActiveSubscription}
-                />
+              <div className="mb-4">
+                <h2 className="text-xl font-semibold text-foreground">
+                  Sua Barbearia
+                </h2>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Selecione onde deseja assinar o plano
+                </p>
+              </div>
+
+              {/* DUB — always first */}
+              <BarbershopCard
+                isDub
+                isSelected={false}
+                onSelect={() => handleSelectShop(null)}
+                disabled={hasActiveSubscription}
+              />
+
+              {/* Divider */}
+              {tenants.length > 0 && (
+                <div className="flex items-center gap-3 py-1.5 px-1">
+                  <div className="flex-1 h-px bg-border/30" />
+                  <span className="text-[9px] uppercase tracking-[0.1em] text-muted-foreground/35 font-semibold">
+                    Barbearias parceiras
+                  </span>
+                  <div className="flex-1 h-px bg-border/30" />
+                </div>
+              )}
+
+              {/* Tenant cards */}
+              {tenants.map((tenant, index) => (
+                <motion.div
+                  key={tenant.id}
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.06 + index * 0.03 }}
+                >
+                  <BarbershopCard
+                    tenant={tenant}
+                    isSelected={false}
+                    onSelect={() => handleSelectShop(tenant.id)}
+                    disabled={hasActiveSubscription}
+                  />
+                </motion.div>
               ))}
+
+              {tenants.length === 0 && (
+                <motion.div
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="flex flex-col items-center justify-center py-10"
+                >
+                  <div className="w-12 h-12 rounded-2xl bg-muted/50 flex items-center justify-center mb-3">
+                    <Scissors className="w-5 h-5 text-muted-foreground/30" />
+                  </div>
+                  <p className="text-[11px] text-muted-foreground/50">
+                    Nenhuma outra barbearia parceira disponível
+                  </p>
+                </motion.div>
+              )}
             </motion.div>
           )}
 
-          {/* Step 2: Seleção de Barbeiro */}
+          {/* ═══ Step 2: Seleção de Plano ═══ */}
           {step === 2 && (
             <motion.div
               key="step2"
+              initial={{ opacity: 0, x: 16 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -16 }}
+              className="space-y-3 pb-28"
+            >
+              {/* Selected shop badge + change button */}
+              <div className="flex items-center justify-between bg-card border border-border/40 rounded-xl p-3 mb-2">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-muted/40 flex items-center justify-center overflow-hidden flex-shrink-0">
+                    {selectedTenantId === "dub" ? (
+                      <img src={logoDub} alt="DUB" className="w-5 h-5 object-contain" />
+                    ) : (
+                      (() => {
+                        const t = tenants.find(t => t.id === selectedTenantId);
+                        return t?.logo_url
+                          ? <img src={t.logo_url} alt={t.nome} className="w-full h-full object-cover" />
+                          : <Scissors className="w-4 h-4 text-muted-foreground/50" />;
+                      })()
+                    )}
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-muted-foreground/60 uppercase tracking-wider font-medium">Barbearia</p>
+                    <p className="text-[13px] font-semibold text-foreground">{selectedShopName}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={handleChangeShop}
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-medium text-primary hover:bg-primary/5 transition-colors"
+                >
+                  <RefreshCw className="w-3 h-3" />
+                  Trocar
+                </button>
+              </div>
+
+              {plans.length === 0 ? (
+                <motion.div
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="flex flex-col items-center justify-center py-14"
+                >
+                  <div className="w-14 h-14 rounded-full bg-muted/50 flex items-center justify-center mb-3">
+                    <Crown className="w-6 h-6 text-muted-foreground/40" />
+                  </div>
+                  <p className="text-sm font-medium text-muted-foreground">Nenhum plano disponível</p>
+                  <p className="text-xs text-muted-foreground/60 mt-1">Esta barbearia ainda não possui planos</p>
+                </motion.div>
+              ) : (
+                plans.map((plan, index) => (
+                  <PlanCard 
+                    key={plan.id}
+                    plan={plan}
+                    isSelected={selectedPlan?.id === plan.id}
+                    isPopular={index === Math.floor(plans.length / 2)}
+                    onSelect={() => setSelectedPlan(plan)}
+                    disabled={hasActiveSubscription}
+                  />
+                ))
+              )}
+            </motion.div>
+          )}
+
+          {/* ═══ Step 3: Seleção de Barbeiro ═══ */}
+          {step === 3 && (
+            <motion.div
+              key="step3"
               initial={{ opacity: 0, x: 16 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -16 }}
@@ -411,30 +703,44 @@ const ClienteAssinar = () => {
                 </p>
               </div>
 
-              <div className="space-y-2">
-                {barbers.map((barber, index) => (
-                  <motion.div
-                    key={barber.id}
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.04 }}
-                  >
-                    <BarberCard
-                      barber={barber}
-                      isSelected={selectedBarber?.id === barber.id}
-                      onSelect={() => setSelectedBarber(barber)}
-                      rating={ratings[barber.id]}
-                    />
-                  </motion.div>
-                ))}
-              </div>
+              {barbers.length === 0 ? (
+                <motion.div
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="flex flex-col items-center justify-center py-14"
+                >
+                  <div className="w-14 h-14 rounded-full bg-muted/50 flex items-center justify-center mb-3">
+                    <User className="w-6 h-6 text-muted-foreground/40" />
+                  </div>
+                  <p className="text-sm font-medium text-muted-foreground">Nenhum barbeiro disponível</p>
+                  <p className="text-xs text-muted-foreground/60 mt-1">Nenhum profissional ativo nesta barbearia</p>
+                </motion.div>
+              ) : (
+                <div className="space-y-2">
+                  {barbers.map((barber, index) => (
+                    <motion.div
+                      key={barber.id}
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.04 }}
+                    >
+                      <BarberCard
+                        barber={barber}
+                        isSelected={selectedBarber?.id === barber.id}
+                        onSelect={() => setSelectedBarber(barber)}
+                        rating={ratings[barber.id]}
+                      />
+                    </motion.div>
+                  ))}
+                </div>
+              )}
             </motion.div>
           )}
 
-          {/* Step 3: Pagamento */}
-          {step === 3 && selectedPlan && (
+          {/* ═══ Step 4: Pagamento ═══ */}
+          {step === 4 && selectedPlan && (
             <motion.div
-              key="step3"
+              key="step4"
               initial={{ opacity: 0, x: 16 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -16 }}
@@ -449,7 +755,7 @@ const ClienteAssinar = () => {
                 </p>
               </div>
 
-              {/* Resumo do plano + barbeiro */}
+              {/* Summary */}
               <div className="bg-card border border-border/40 rounded-xl p-4 mb-6">
                 <div className="flex items-center justify-between">
                   <div>
@@ -457,7 +763,7 @@ const ClienteAssinar = () => {
                       {selectedPlan.nome}
                     </p>
                     <p className="text-[11px] text-muted-foreground mt-0.5">
-                      Assinatura mensal • Renovação automática
+                      {selectedShopName} • Renovação automática
                     </p>
                   </div>
                   <p className="text-base font-bold text-foreground tabular-nums">
@@ -480,7 +786,7 @@ const ClienteAssinar = () => {
                 )}
               </div>
 
-              {/* Métodos de pagamento */}
+              {/* Payment methods */}
               <div className="space-y-3 mb-4">
                 {/* PIX */}
                 <motion.button
@@ -518,7 +824,7 @@ const ClienteAssinar = () => {
                   </div>
                 </motion.button>
 
-                {/* Cartão */}
+                {/* Card */}
                 <motion.button
                   onClick={() => setSelectedPaymentMethod("card")}
                   className={cn(
@@ -538,12 +844,19 @@ const ClienteAssinar = () => {
                         Crédito ou débito • Checkout seguro
                       </p>
                     </div>
-                    <div className="w-5 h-5 rounded-full border-2 border-muted-foreground/30 flex-shrink-0" />
+                    <div className={cn(
+                      "w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all",
+                      selectedPaymentMethod === "card"
+                        ? "bg-primary border-primary"
+                        : "border-muted-foreground/30"
+                    )}>
+                      {selectedPaymentMethod === "card" && <Check className="w-3 h-3 text-primary-foreground" strokeWidth={3} />}
+                    </div>
                   </div>
                 </motion.button>
               </div>
 
-              {/* Selo de segurança */}
+              {/* Security seal */}
               <div className="flex items-center justify-center gap-1.5 mt-6">
                 <Shield className="w-3 h-3 text-muted-foreground/40" />
                 <span className="text-[10px] text-muted-foreground/40 uppercase tracking-wider font-medium">
@@ -555,12 +868,12 @@ const ClienteAssinar = () => {
         </AnimatePresence>
       </div>
 
-      {/* Floating Bottom Bars */}
+      {/* ═══ Floating Bottom Bars ═══ */}
       <AnimatePresence>
-        {/* Step 1 — Plan selected */}
-        {step === 1 && selectedPlan && !hasActiveSubscription && (
+        {/* Step 2 — Plan selected */}
+        {step === 2 && selectedPlan && !hasActiveSubscription && (
           <motion.div
-            key="bar-step1"
+            key="bar-step2"
             initial={{ y: 80, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 80, opacity: 0 }}
@@ -616,10 +929,10 @@ const ClienteAssinar = () => {
           </motion.div>
         )}
 
-        {/* Step 2 — Barber selected */}
-        {step === 2 && selectedBarber && !hasActiveSubscription && (
+        {/* Step 3 — Barber selected */}
+        {step === 3 && selectedBarber && !hasActiveSubscription && (
           <motion.div
-            key="bar-step2"
+            key="bar-step3"
             initial={{ y: 80, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 80, opacity: 0 }}
@@ -672,10 +985,10 @@ const ClienteAssinar = () => {
           </motion.div>
         )}
 
-        {/* Step 3 — Payment method selected */}
-        {step === 3 && selectedPaymentMethod && !hasActiveSubscription && (
+        {/* Step 4 — Payment method selected */}
+        {step === 4 && selectedPaymentMethod && !hasActiveSubscription && (
           <motion.div
-            key="bar-step3"
+            key="bar-step4"
             initial={{ y: 80, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 80, opacity: 0 }}
