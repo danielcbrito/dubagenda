@@ -32,36 +32,38 @@ interface WalletSheetProps {
   userId?: string;
 }
 
-interface Credit {
+interface WalletTransaction {
   id: string;
-  valor: number;
-  origem: string;
-  usado: boolean;
+  type: string;
+  amount: number;
+  status: string;
+  description: string | null;
   created_at: string;
-  expires_at: string | null;
-  agendamento_origem_id: string | null;
 }
 
 type TabType = "extrato" | "acoes";
 
-/** Mapa de ícone e label por origem do crédito */
-const originMeta: Record<string, { icon: typeof Coins; label: string; color: string }> = {
-  cancelamento: { icon: RefreshCw, label: "Cancelamento", color: "text-blue-400" },
-  reembolso: { icon: ArrowDownLeft, label: "Reembolso", color: "text-orange-400" },
-  promocao: { icon: Gift, label: "Promoção", color: "text-purple-400" },
+/** Mapa de ícone e label por tipo de transação */
+const typeMeta: Record<string, { icon: typeof Coins; label: string; color: string }> = {
+  refund: { icon: RefreshCw, label: "Estorno", color: "text-green-400" },
+  recharge: { icon: Plus, label: "Recarga", color: "text-blue-400" },
+  payment: { icon: ArrowUpRight, label: "Pagamento", color: "text-orange-400" },
+  withdraw: { icon: ArrowDownToLine, label: "Retirada", color: "text-red-400" },
+  transfer: { icon: Send, label: "Transferência", color: "text-purple-400" },
+  convert_credits: { icon: ArrowLeftRight, label: "Conversão", color: "text-amber-400" },
+  bonus: { icon: Gift, label: "Bônus", color: "text-emerald-400" },
 };
 
-function getOriginMeta(origem: string) {
-  return originMeta[origem] || { icon: Coins, label: origem, color: "text-muted-foreground" };
+function getTypeMeta(type: string) {
+  return typeMeta[type] || { icon: Coins, label: type, color: "text-muted-foreground" };
 }
 
 /* ─────────────────────── ITEM DO EXTRATO ─────────────────────── */
-function TransactionItem({ credito, index }: { credito: Credit; index: number }) {
-  const isUsed = credito.usado;
-  const isExpired = credito.expires_at && new Date(credito.expires_at) < new Date();
-  const inactive = isUsed || !!isExpired;
-  const meta = getOriginMeta(credito.origem);
+function TransactionItem({ tx, index }: { tx: WalletTransaction; index: number }) {
+  const isPending = tx.status === "pending";
+  const meta = getTypeMeta(tx.type);
   const Icon = meta.icon;
+  const isDebit = ["withdraw", "transfer", "payment"].includes(tx.type);
 
   return (
     <motion.div
@@ -70,46 +72,40 @@ function TransactionItem({ credito, index }: { credito: Credit; index: number })
       transition={{ delay: index * 0.03 }}
       className={cn(
         "flex items-center gap-3 py-3.5 border-b border-border/40 last:border-b-0",
-        inactive && "opacity-50"
+        isPending && "opacity-60"
       )}
     >
-      {/* Ícone circular */}
       <div className={cn(
         "w-10 h-10 rounded-full flex items-center justify-center shrink-0",
-        inactive ? "bg-muted/50" : "bg-muted"
+        isPending ? "bg-muted/50" : "bg-muted"
       )}>
-        <Icon className={cn("w-4 h-4", inactive ? "text-muted-foreground" : meta.color)} />
+        <Icon className={cn("w-4 h-4", isPending ? "text-muted-foreground" : meta.color)} />
       </div>
 
-      {/* Info */}
       <div className="flex-1 min-w-0">
         <p className={cn(
           "text-sm font-medium truncate",
-          inactive ? "text-muted-foreground" : "text-foreground"
+          isPending ? "text-muted-foreground" : "text-foreground"
         )}>
-          {meta.label}
+          {tx.description || meta.label}
         </p>
         <p className="text-xs text-muted-foreground">
-          {format(new Date(credito.created_at), "dd MMM yyyy", { locale: ptBR })}
+          {format(new Date(tx.created_at), "dd MMM yyyy, HH:mm", { locale: ptBR })}
         </p>
       </div>
 
-      {/* Valor + status */}
       <div className="text-right shrink-0">
         <p className={cn(
           "text-sm font-semibold",
-          inactive ? "text-muted-foreground line-through" : "text-green-400"
+          isPending ? "text-muted-foreground" :
+          isDebit ? "text-red-400" : "text-green-400"
         )}>
-          +R$ {credito.valor.toFixed(2).replace(".", ",")}
+          {isDebit ? "-" : "+"}R$ {tx.amount.toFixed(2).replace(".", ",")}
         </p>
-        {isUsed ? (
-          <span className="text-[10px] text-muted-foreground">Utilizado</span>
-        ) : isExpired ? (
-          <span className="text-[10px] text-destructive flex items-center justify-end gap-0.5">
-            <AlertCircle className="w-2.5 h-2.5" /> Expirado
-          </span>
+        {isPending ? (
+          <span className="text-[10px] text-amber-400">Pendente</span>
         ) : (
-          <span className="text-[10px] text-green-400">Disponível</span>
+          <span className="text-[10px] text-green-400">Concluído</span>
         )}
       </div>
     </motion.div>
@@ -141,39 +137,44 @@ function QuickAction({
 
 /* ─────────────────────── COMPONENTE PRINCIPAL ─────────────────────── */
 export function WalletSheet({ open, onOpenChange, userId }: WalletSheetProps) {
-  const [credits, setCredits] = useState<Credit[]>([]);
-  const [availableBalance, setAvailableBalance] = useState(0);
+  const [transactions, setTransactions] = useState<WalletTransaction[]>([]);
+  const [walletBalance, setWalletBalance] = useState(0);
   const [loading, setLoading] = useState(false);
   const [balanceVisible, setBalanceVisible] = useState(true);
   const [activeTab, setActiveTab] = useState<TabType>("extrato");
 
-  const totalRecebido = credits.reduce((acc, c) => acc + c.valor, 0);
-  const totalUtilizado = credits.filter((c) => c.usado).reduce((acc, c) => acc + c.valor, 0);
+  const totalEntradas = transactions
+    .filter(t => !["withdraw", "transfer", "payment"].includes(t.type) && t.status === "completed")
+    .reduce((acc, t) => acc + t.amount, 0);
+  const totalSaidas = transactions
+    .filter(t => ["withdraw", "transfer", "payment"].includes(t.type) && t.status === "completed")
+    .reduce((acc, t) => acc + t.amount, 0);
 
   useEffect(() => {
-    if (open && userId) loadCredits();
+    if (open && userId) loadWallet();
   }, [open, userId]);
 
-  const loadCredits = async () => {
+  const loadWallet = async () => {
     if (!userId) return;
     setLoading(true);
     try {
-      const [creditsRes, balanceRes] = await Promise.all([
+      const [balanceRes, txRes] = await Promise.all([
+        supabase.rpc("get_or_create_wallet_balance", { p_user_id: userId }),
         supabase
-          .from("creditos")
-          .select("*")
+          .from("wallet_transactions")
+          .select("id, type, amount, status, description, created_at")
           .eq("user_id", userId)
-          .order("created_at", { ascending: false }),
-        supabase.rpc("get_user_available_credits", { p_user_id: userId }),
+          .order("created_at", { ascending: false })
+          .limit(50),
       ]);
 
-      if (creditsRes.error) throw creditsRes.error;
       if (balanceRes.error) throw balanceRes.error;
+      if (txRes.error) throw txRes.error;
 
-      setCredits(creditsRes.data || []);
-      setAvailableBalance(balanceRes.data || 0);
+      setWalletBalance(balanceRes.data || 0);
+      setTransactions((txRes.data as WalletTransaction[]) || []);
     } catch (error) {
-      console.error("Error loading credits:", error);
+      console.error("Error loading wallet:", error);
     } finally {
       setLoading(false);
     }
@@ -191,7 +192,6 @@ export function WalletSheet({ open, onOpenChange, userId }: WalletSheetProps) {
       >
         {/* ── HEADER ── */}
         <div className="shrink-0 px-5 pt-5 pb-4">
-          {/* Top bar */}
           <div className="flex items-center justify-between mb-6">
             <button
               onClick={() => onOpenChange(false)}
@@ -200,7 +200,7 @@ export function WalletSheet({ open, onOpenChange, userId }: WalletSheetProps) {
               <ChevronLeft className="w-4 h-4 text-foreground" />
             </button>
             <h2 className="text-base font-semibold text-foreground">Carteira</h2>
-            <div className="w-8" /> {/* spacer */}
+            <div className="w-8" />
           </div>
 
           {/* Saldo principal */}
@@ -224,7 +224,7 @@ export function WalletSheet({ open, onOpenChange, userId }: WalletSheetProps) {
             </div>
             <div className="text-3xl font-bold text-foreground tracking-tight">
               {balanceVisible ? (
-                <>R$ {availableBalance.toFixed(2).replace(".", ",")}</>
+                <>R$ {walletBalance.toFixed(2).replace(".", ",")}</>
               ) : (
                 "R$ •••••"
               )}
@@ -248,11 +248,6 @@ export function WalletSheet({ open, onOpenChange, userId }: WalletSheetProps) {
               label="Transferir"
               onClick={() => handleComingSoon("Transferência")}
             />
-            <QuickAction
-              icon={ArrowLeftRight}
-              label="Converter"
-              onClick={() => handleComingSoon("Conversão")}
-            />
           </div>
         </div>
 
@@ -264,19 +259,19 @@ export function WalletSheet({ open, onOpenChange, userId }: WalletSheetProps) {
           <div className="flex-1 bg-card rounded-xl p-3 border border-border">
             <div className="flex items-center gap-1.5 mb-1">
               <ArrowDownLeft className="w-3.5 h-3.5 text-green-400" />
-              <span className="text-[11px] text-muted-foreground">Recebido</span>
+              <span className="text-[11px] text-muted-foreground">Entradas</span>
             </div>
             <p className="text-sm font-semibold text-foreground">
-              R$ {totalRecebido.toFixed(2).replace(".", ",")}
+              R$ {totalEntradas.toFixed(2).replace(".", ",")}
             </p>
           </div>
           <div className="flex-1 bg-card rounded-xl p-3 border border-border">
             <div className="flex items-center gap-1.5 mb-1">
               <ArrowUpRight className="w-3.5 h-3.5 text-muted-foreground" />
-              <span className="text-[11px] text-muted-foreground">Utilizado</span>
+              <span className="text-[11px] text-muted-foreground">Saídas</span>
             </div>
             <p className="text-sm font-semibold text-foreground">
-              R$ {totalUtilizado.toFixed(2).replace(".", ",")}
+              R$ {totalSaidas.toFixed(2).replace(".", ",")}
             </p>
           </div>
         </div>
@@ -319,7 +314,7 @@ export function WalletSheet({ open, onOpenChange, userId }: WalletSheetProps) {
                   <div className="flex items-center justify-center py-16">
                     <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
                   </div>
-                ) : credits.length === 0 ? (
+                ) : transactions.length === 0 ? (
                   <div className="text-center py-16">
                     <div className="w-16 h-16 bg-muted/50 rounded-full flex items-center justify-center mx-auto mb-4">
                       <Wallet className="w-7 h-7 text-muted-foreground" />
@@ -328,15 +323,15 @@ export function WalletSheet({ open, onOpenChange, userId }: WalletSheetProps) {
                       Nenhuma movimentação
                     </p>
                     <p className="text-xs text-muted-foreground/70 max-w-[220px] mx-auto">
-                      Seus créditos de cancelamentos, reembolsos e promoções aparecerão aqui
+                      Estornos de cancelamentos e recargas aparecerão aqui
                     </p>
                   </div>
                 ) : (
                   <div className="pb-6">
-                    {credits.map((credito, index) => (
+                    {transactions.map((tx, index) => (
                       <TransactionItem
-                        key={credito.id}
-                        credito={credito}
+                        key={tx.id}
+                        tx={tx}
                         index={index}
                       />
                     ))}
@@ -351,25 +346,25 @@ export function WalletSheet({ open, onOpenChange, userId }: WalletSheetProps) {
                 exit={{ opacity: 0, x: -10 }}
                 className="space-y-4"
               >
-                {/* Cards informativos */}
                 <div className="bg-card rounded-xl p-4 border border-border">
                   <h4 className="text-sm font-semibold text-foreground mb-2">
-                    Como funcionam os créditos
+                    Como funciona a carteira
                   </h4>
                   <p className="text-xs text-muted-foreground leading-relaxed">
-                    Créditos são gerados automaticamente quando um agendamento pago é cancelado
-                    ou quando você participa de promoções. Eles podem ser usados como forma
-                    de pagamento em novos agendamentos.
+                    Quando um agendamento pago é cancelado, o valor é automaticamente
+                    adicionado ao saldo da sua carteira. Você pode usar esse saldo
+                    como forma de pagamento em novos agendamentos.
                   </p>
                 </div>
 
                 <div className="bg-card rounded-xl p-4 border border-border">
                   <h4 className="text-sm font-semibold text-foreground mb-2">
-                    Validade dos créditos
+                    Estornos automáticos
                   </h4>
                   <p className="text-xs text-muted-foreground leading-relaxed">
-                    Os créditos possuem validade definida no momento da emissão. Créditos
-                    expirados não podem ser utilizados. Fique atento às datas no seu extrato.
+                    Pagamentos via PIX, Cartão ou Crédito que forem cancelados
+                    são convertidos automaticamente em saldo da carteira, disponível
+                    para uso imediato.
                   </p>
                 </div>
 
@@ -378,8 +373,8 @@ export function WalletSheet({ open, onOpenChange, userId }: WalletSheetProps) {
                     Novas funcionalidades
                   </h4>
                   <p className="text-xs text-muted-foreground leading-relaxed">
-                    Em breve você poderá recarregar sua carteira, transferir saldo e
-                    converter créditos. Fique ligado nas atualizações.
+                    Em breve você poderá recarregar sua carteira e transferir saldo.
+                    Fique ligado nas atualizações.
                   </p>
                 </div>
               </motion.div>
