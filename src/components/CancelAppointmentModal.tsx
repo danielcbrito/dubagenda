@@ -62,6 +62,38 @@ export function CancelAppointmentModal({
   const shouldRefundCredit = isPaidWithCredit && creditAmount > 0;
   const shouldRefundPayment = isPaid && !isPaidWithCredit && amount > 0;
 
+  /** Credita o valor diretamente no saldo da carteira (wallet_balances) */
+  async function creditToWallet(uid: string, valor: number, agendamentoId: string, description: string) {
+    try {
+      // 1. Garantir que o wallet_balance existe e pegar saldo atual
+      const { data: currentBalance } = await supabase
+        .rpc("get_or_create_wallet_balance", { p_user_id: uid });
+
+      // 2. Atualizar saldo
+      const newBalance = (currentBalance || 0) + valor;
+      const { error: updateError } = await supabase
+        .from("wallet_balances")
+        .update({ balance: newBalance })
+        .eq("user_id", uid);
+
+      if (updateError) throw updateError;
+
+      // 3. Registrar transação no histórico
+      await supabase.from("wallet_transactions").insert({
+        user_id: uid,
+        type: "refund",
+        amount: valor,
+        status: "completed",
+        description,
+      });
+
+      return true;
+    } catch (err) {
+      console.error("Erro ao creditar carteira:", err);
+      return false;
+    }
+  }
+
   const handleCancelDefinitely = async () => {
     setCancelling(true);
     try {
@@ -76,58 +108,35 @@ export function CancelAppointmentModal({
 
       if (updateError) throw updateError;
 
-      // 2. Estorno de crédito do app
+      // 2. Estorno de crédito do app → vai direto para saldo da carteira
       if (shouldRefundCredit) {
-        const { error: creditError } = await supabase
-          .from("creditos")
-          .insert({
-            user_id: userId,
-            valor: creditAmount,
-            origem: "estorno_cancelamento",
-            agendamento_origem_id: appointmentId,
-            usado: false,
-          });
-
-        if (creditError) {
-          console.error("Erro ao estornar crédito:", creditError);
-          throw creditError;
-        }
+        const ok = await creditToWallet(
+          userId, creditAmount, appointmentId,
+          `Estorno de cancelamento - R$ ${creditAmount.toFixed(2)}`
+        );
         
-        toast.success(`Agendamento cancelado. R$ ${creditAmount.toFixed(2)} estornado para sua carteira.`);
+        if (!ok) throw new Error("Erro ao creditar carteira");
+        toast.success(`Agendamento cancelado. R$ ${creditAmount.toFixed(2)} adicionado ao saldo da sua carteira.`);
       } 
-      // 3. Estorno automático via Asaas (PIX/Cartão)
+      // 3. Estorno de pagamento gateway (PIX/Cartão) → direto para saldo da carteira
       else if (shouldRefundPayment && isPaidViaGateway) {
-        try {
-          const { data: refundResult, error: refundError } = await supabase.functions.invoke(
-            'refund-payment',
-            { body: { agendamento_id: appointmentId } }
-          );
-
-          if (refundError) {
-            console.error("Erro ao chamar refund-payment:", refundError);
-            // Fallback: criar crédito interno
-            await createInternalCredit(userId, amount, appointmentId);
-            toast.success(`Agendamento cancelado. R$ ${amount.toFixed(2)} disponível como crédito.`);
-          } else if (refundResult?.refunded) {
-            if (refundResult.refund_type === 'gateway') {
-              toast.success(`Agendamento cancelado. Estorno de R$ ${amount.toFixed(2)} realizado para sua conta.`);
-            } else {
-              toast.success(`Agendamento cancelado. R$ ${amount.toFixed(2)} disponível como crédito.`);
-            }
-          } else {
-            toast.success("Agendamento cancelado com sucesso.");
-          }
-        } catch (refundErr) {
-          console.error("Erro no estorno:", refundErr);
-          // Fallback: criar crédito interno
-          await createInternalCredit(userId, amount, appointmentId);
-          toast.success(`Agendamento cancelado. R$ ${amount.toFixed(2)} disponível como crédito.`);
-        }
+        const ok = await creditToWallet(
+          userId, amount, appointmentId,
+          `Estorno de cancelamento (${paymentMethod === 'pix' ? 'PIX' : 'Cartão'}) - R$ ${amount.toFixed(2)}`
+        );
+        
+        if (!ok) throw new Error("Erro ao creditar carteira");
+        toast.success(`Agendamento cancelado. R$ ${amount.toFixed(2)} adicionado ao saldo da sua carteira.`);
       }
-      // 4. Pagamento normal sem gateway (fallback crédito)
+      // 4. Pagamento normal sem gateway → direto para saldo da carteira
       else if (shouldRefundPayment) {
-        await createInternalCredit(userId, amount, appointmentId);
-        toast.success(`Agendamento cancelado. Crédito de R$ ${amount.toFixed(2)} disponível para o próximo corte.`);
+        const ok = await creditToWallet(
+          userId, amount, appointmentId,
+          `Estorno de cancelamento - R$ ${amount.toFixed(2)}`
+        );
+        
+        if (!ok) throw new Error("Erro ao creditar carteira");
+        toast.success(`Agendamento cancelado. R$ ${amount.toFixed(2)} adicionado ao saldo da sua carteira.`);
       } else {
         toast.success("Agendamento cancelado com sucesso.");
       }
@@ -141,18 +150,6 @@ export function CancelAppointmentModal({
       setCancelling(false);
     }
   };
-
-  /** Cria crédito interno como fallback */
-  async function createInternalCredit(userId: string, valor: number, agendamentoId: string) {
-    const { error } = await supabase.from("creditos").insert({
-      user_id: userId,
-      valor,
-      origem: "cancelamento",
-      agendamento_origem_id: agendamentoId,
-      usado: false,
-    });
-    if (error) console.error("Erro ao criar crédito interno:", error);
-  }
 
   const refundAmount = shouldRefundCredit ? creditAmount : (shouldRefundPayment ? amount : 0);
 
@@ -169,19 +166,7 @@ export function CancelAppointmentModal({
         <div className="space-y-3">
           {refundAmount > 0 && (
             <div className="p-3 bg-primary/10 rounded-md text-sm">
-              {shouldRefundCredit ? (
-                <>
-                  💰 O valor de <strong>R$ {creditAmount.toFixed(2)}</strong> usado do crédito será <strong>estornado</strong> para sua carteira.
-                </>
-              ) : isPaidViaGateway ? (
-                <>
-                  💰 O valor de <strong>R$ {amount.toFixed(2)}</strong> será <strong>estornado automaticamente</strong> para sua conta.
-                </>
-              ) : (
-                <>
-                  💡 O valor já pago de <strong>R$ {amount.toFixed(2)}</strong> ficará disponível como crédito para o próximo corte.
-                </>
-              )}
+              💰 O valor de <strong>R$ {refundAmount.toFixed(2)}</strong> será <strong>adicionado ao saldo da sua carteira</strong> automaticamente.
             </div>
           )}
           
