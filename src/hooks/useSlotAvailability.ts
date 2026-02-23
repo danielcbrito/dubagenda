@@ -43,7 +43,7 @@ const SUPABASE_URL = 'https://djtpzvujzmrrslirzwun.supabase.co';
 // Constantes de configuração padrão
 const DEFAULT_DELAY_MINUTES = 10;
 const SLOT_INTERVAL = 10;
-const MINIMUM_ADVANCE_MINUTES = 60; // 1 hora de antecedência
+const MINIMUM_ADVANCE_MINUTES = 30; // 30 min de antecedência
 
 function timeToMinutes(timeStr: string): number {
   const parts = timeStr.split(':').map(Number);

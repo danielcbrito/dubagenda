@@ -342,7 +342,7 @@ Deno.serve(async (req) => {
     const brasilTodayStr = `${brasilNow.getFullYear()}-${String(brasilNow.getMonth() + 1).padStart(2, '0')}-${String(brasilNow.getDate()).padStart(2, '0')}`;
     const isToday = date === brasilTodayStr;
     const currentMinutes = brasilNow.getHours() * 60 + brasilNow.getMinutes();
-    const minimumAdvanceMinutes = isToday ? currentMinutes + 60 : 0;
+    const minimumAdvanceMinutes = isToday ? currentMinutes + 30 : 0;
 
     if (isToday) {
       console.log(`[check-availability] É HOJE (BRT) - Hora atual: ${minutesToTime(currentMinutes)} | Mínimo: ${minutesToTime(minimumAdvanceMinutes)}`);

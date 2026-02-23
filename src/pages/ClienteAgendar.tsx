@@ -1932,7 +1932,7 @@ const ClienteAgendar = () => {
                             setUnavailableMessage(null);
                           } else {
                             if (slot.blockedReason === 'minimum_advance') {
-                              setUnavailableMessage("É necessário 1 hora de antecedência.");
+                              setUnavailableMessage("É necessário 30 minutos de antecedência.");
                             } else {
                               setUnavailableMessage("Este horário já foi agendado.");
                             }
