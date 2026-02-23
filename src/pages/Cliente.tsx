@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Calendar } from "lucide-react";
@@ -28,6 +28,7 @@ import { PendingSubscriptionBanner } from "@/components/client/PendingSubscripti
 import { ScheduleButton } from "@/components/client/ScheduleButton";
 import { AppointmentCardPremium } from "@/components/client/AppointmentCardPremium";
 import { BarberReviewModal } from "@/components/client/BarberReviewModal";
+import { PendingReviewBanner } from "@/components/client/PendingReviewBanner";
 import { usePendingReviews } from "@/hooks/usePendingReviews";
 import { useNotificationManager } from "@/hooks/useNotificationManager";
 
@@ -105,25 +106,7 @@ const Cliente = () => {
    * - Se dispensado ("Não quero avaliar"), NUNCA mais aparece para esse appointment
    * - Usa localStorage para persistência permanente
    */
-  const REVIEW_INTERVAL = 3; // A cada 3 cortes concluídos sem avaliar
-
-  const shouldShowReview = (): boolean => {
-    // Buscar contador de cortes concluídos desde última avaliação/dispensa
-    try {
-      const lastReviewCount = parseInt(localStorage.getItem("review_completed_count") || "0", 10);
-      const dismissed = getDismissedIds();
-      const eligible = pendingReviews.filter((r) => !dismissed.has(r.appointmentId));
-      
-      // Total de cortes concluídos sem avaliar
-      const totalUnreviewed = eligible.length;
-      
-      // Só mostra se atingiu o intervalo
-      return totalUnreviewed > 0 && totalUnreviewed >= REVIEW_INTERVAL && 
-             (totalUnreviewed % REVIEW_INTERVAL === 0 || totalUnreviewed === REVIEW_INTERVAL);
-    } catch {
-      return false;
-    }
-  };
+  const REVIEW_INTERVAL = 1; // Mostrar sempre que houver avaliação pendente
 
   const getDismissedIds = (): Set<string> => {
     try {
@@ -142,17 +125,19 @@ const Cliente = () => {
     } catch { /* ignore */ }
   };
 
-  // Auto-abrir modal — UMA ÚNICA VEZ, com intervalo de 3 cortes
+  // Eligible reviews (filtered by dismissed)
+  const eligibleReviews = useMemo(() => {
+    const dismissed = getDismissedIds();
+    return pendingReviews.filter((r) => !dismissed.has(r.appointmentId));
+  }, [pendingReviews]);
+
+  // Auto-abrir modal — UMA ÚNICA VEZ por sessão
   useEffect(() => {
     if (!dataLoaded || reviewTriggeredRef.current || reviewClosedRef.current) return;
     
-    const dismissed = getDismissedIds();
-    const eligible = pendingReviews.filter((r) => !dismissed.has(r.appointmentId));
-    
-    // Só mostra a cada REVIEW_INTERVAL cortes não avaliados
-    if (eligible.length > 0 && eligible.length % REVIEW_INTERVAL === 0) {
+    if (eligibleReviews.length >= REVIEW_INTERVAL) {
       reviewTriggeredRef.current = true;
-      const pick = eligible[0];
+      const pick = eligibleReviews[0];
       setReviewModalData({
         appointmentId: pick.appointmentId,
         barberId: pick.barberId,
@@ -160,7 +145,7 @@ const Cliente = () => {
         barberPhoto: pick.barberPhoto,
       });
     }
-  }, [pendingReviews, dataLoaded]);
+  }, [eligibleReviews, dataLoaded]);
 
   useEffect(() => {
     checkAuth();
@@ -694,6 +679,29 @@ const Cliente = () => {
               </motion.div>
             )}
           </AnimatePresence>
+
+          {/* Pending Review Banners */}
+          {eligibleReviews.length > 0 && (
+            <div className="space-y-2.5 mb-4">
+              {eligibleReviews.slice(0, 2).map((review) => (
+                <PendingReviewBanner
+                  key={review.appointmentId}
+                  barberName={review.barberName}
+                  barberPhoto={review.barberPhoto}
+                  serviceName={review.serviceName}
+                  date={review.data}
+                  onReview={() => {
+                    setReviewModalData({
+                      appointmentId: review.appointmentId,
+                      barberId: review.barberId,
+                      barberName: review.barberName,
+                      barberPhoto: review.barberPhoto,
+                    });
+                  }}
+                />
+              ))}
+            </div>
+          )}
 
           {/* Appointments Section */}
           <div>
