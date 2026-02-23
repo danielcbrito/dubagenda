@@ -1,5 +1,4 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import Stripe from "https://esm.sh/stripe@18.5.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -8,8 +7,7 @@ const corsHeaders = {
 
 /**
  * Edge Function: refund-payment
- * Realiza estorno automático de pagamentos via Stripe.
- * Fallback: crédito interno se o Stripe recusar.
+ * Quando um agendamento pago é cancelado, o valor vai direto para o saldo da carteira (wallet_balances).
  */
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -48,7 +46,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log(`[refund-payment] Iniciando estorno: ${agendamento_id}`);
+    console.log(`[refund-payment] Iniciando estorno para carteira: ${agendamento_id}`);
 
     // Buscar pagamento pago associado
     const { data: pagamento, error: pagError } = await supabase
@@ -62,66 +60,59 @@ Deno.serve(async (req) => {
 
     if (pagError) throw new Error("Erro ao buscar pagamento");
 
-    if (!pagamento || !pagamento.gateway_payment_id) {
+    if (!pagamento) {
       return new Response(
         JSON.stringify({ success: true, refunded: false, message: "Nenhum pagamento encontrado para estorno" }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    console.log(`[refund-payment] Pagamento: ${pagamento.gateway_payment_id} | Valor: R$ ${pagamento.valor}`);
+    const valor = pagamento.valor;
+    console.log(`[refund-payment] Pagamento encontrado: R$ ${valor} | Método: ${pagamento.metodo}`);
 
-    // Tentar estorno via Stripe
-    try {
-      const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
-        apiVersion: "2025-08-27.basil",
-      });
+    // Creditar direto no saldo da carteira
+    const { data: currentBalance } = await supabase
+      .rpc("get_or_create_wallet_balance", { p_user_id: user.id });
 
-      await stripe.refunds.create({
-        payment_intent: pagamento.gateway_payment_id,
-      });
+    const newBalance = (currentBalance || 0) + valor;
 
-      // Atualizar status
-      await supabase
-        .from("pagamentos")
-        .update({ status: "refunded" })
-        .eq("id", pagamento.id);
+    const { error: updateError } = await supabase
+      .from("wallet_balances")
+      .update({ balance: newBalance })
+      .eq("user_id", user.id);
 
-      console.log("[refund-payment] Estorno Stripe realizado com sucesso");
-
-      return new Response(
-        JSON.stringify({
-          success: true,
-          refunded: true,
-          refund_type: "gateway",
-          message: `Estorno de R$ ${pagamento.valor.toFixed(2)} realizado com sucesso.`,
-          valor: pagamento.valor,
-        }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    } catch (stripeError) {
-      console.error("[refund-payment] Stripe refund failed:", stripeError);
-
-      // Fallback: crédito interno
-      await supabase.from("creditos").insert({
-        user_id: user.id,
-        valor: pagamento.valor,
-        origem: "estorno_cancelamento",
-        agendamento_origem_id: agendamento_id,
-        usado: false,
-      });
-
-      return new Response(
-        JSON.stringify({
-          success: true,
-          refunded: true,
-          refund_type: "credit",
-          message: `Estorno via gateway falhou. R$ ${pagamento.valor.toFixed(2)} adicionado como crédito.`,
-          valor: pagamento.valor,
-        }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    if (updateError) {
+      console.error("[refund-payment] Erro ao atualizar saldo:", updateError);
+      throw new Error("Erro ao creditar carteira");
     }
+
+    // Registrar transação
+    await supabase.from("wallet_transactions").insert({
+      user_id: user.id,
+      type: "refund",
+      amount: valor,
+      status: "completed",
+      description: `Estorno de cancelamento (${pagamento.metodo === 'pix' ? 'PIX' : pagamento.metodo === 'card' ? 'Cartão' : pagamento.metodo}) - R$ ${valor.toFixed(2)}`,
+    });
+
+    // Marcar pagamento como estornado
+    await supabase
+      .from("pagamentos")
+      .update({ status: "refunded" })
+      .eq("id", pagamento.id);
+
+    console.log(`[refund-payment] R$ ${valor.toFixed(2)} creditado na carteira do usuário ${user.id}`);
+
+    return new Response(
+      JSON.stringify({
+        success: true,
+        refunded: true,
+        refund_type: "wallet",
+        message: `R$ ${valor.toFixed(2)} adicionado ao saldo da sua carteira.`,
+        valor,
+      }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
   } catch (error) {
     console.error("[refund-payment] Erro:", error);
     return new Response(
