@@ -39,6 +39,7 @@ interface AvailabilityRequest {
   duration: number;
   excludeAppointmentId?: string;
   barbeiroId?: string;
+  tenantId?: string | null;
 }
 
 interface TimeSlot {
@@ -134,6 +135,31 @@ async function getDefaultConfig(supabase: any, date: string, dayOfWeek: number):
   };
 }
 
+async function resolveScopedBarberIds(
+  supabase: any,
+  tenantId: string | null
+): Promise<string[]> {
+  let query = supabase
+    .from('barbeiros')
+    .select('id')
+    .eq('ativo', true);
+
+  if (tenantId === null) {
+    query = query.is('tenant_id', null);
+  } else {
+    query = query.eq('tenant_id', tenantId);
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    console.error('[check-availability] Erro ao resolver barbeiros do escopo:', error.message);
+    return [];
+  }
+
+  return (data || []).map((barber: { id: string }) => barber.id);
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -145,16 +171,22 @@ Deno.serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     const body: AvailabilityRequest = await req.json();
-    const { date, duration, excludeAppointmentId, barbeiroId } = body;
+    const { date, duration, excludeAppointmentId, barbeiroId, tenantId } = body;
 
     console.log('='.repeat(70));
     console.log('[check-availability] INICIANDO VERIFICAÇÃO');
-    console.log(`[check-availability] Data: ${date} | Duração solicitada: ${duration}min | Barbeiro: ${barbeiroId || 'TODOS'}`);
-
+    console.log(`[check-availability] Data: ${date} | Duração solicitada: ${duration}min | Barbeiro: ${barbeiroId || 'N/A'} | Tenant: ${tenantId === null ? 'DUB' : (tenantId || 'N/A')}`);
 
     if (!date || !duration || duration <= 0) {
       return new Response(
         JSON.stringify({ success: false, message: 'Data e duração são obrigatórios' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      );
+    }
+
+    if (!barbeiroId && tenantId === undefined) {
+      return new Response(
+        JSON.stringify({ success: false, message: 'Contexto inválido: informe barbeiroId ou tenantId.' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
       );
     }
@@ -262,53 +294,74 @@ Deno.serve(async (req) => {
 
     console.log(`[check-availability] Horário: ${minutesToTime(OPEN_MINUTES)}-${minutesToTime(CLOSE_MINUTES)} | Almoço: ${LUNCH_START ? minutesToTime(LUNCH_START) : 'N/A'}-${LUNCH_END ? minutesToTime(LUNCH_END) : 'N/A'} | Delay: ${DELAY_MINUTES}min`);
 
-    // Buscar agendamentos com status bloqueante
-    // Se barbeiro especificado, filtrar apenas agendamentos desse barbeiro
-    let appointmentsQuery = supabase
-      .from('agendamentos')
-      .select('id, hora, duracao, status, barbeiro_id')
-      .eq('data', date)
-      .in('status', BLOCKING_STATUSES);
+    // Resolver escopo de conflito (barbeiro específico ou tenant inteiro)
+    let scopedBarberIds: string[] | null = null;
 
-    if (barbeiroId) {
-      appointmentsQuery = appointmentsQuery.eq('barbeiro_id', barbeiroId);
+    if (!barbeiroId) {
+      scopedBarberIds = await resolveScopedBarberIds(supabase, tenantId ?? null);
+      console.log(`[check-availability] Escopo por tenant: ${tenantId === null ? 'DUB' : tenantId} | Barbeiros ativos: ${scopedBarberIds.length}`);
     }
 
-    if (excludeAppointmentId) {
-      appointmentsQuery = appointmentsQuery.neq('id', excludeAppointmentId);
-    }
-
-    const { data: appointments, error: aptError } = await appointmentsQuery;
-
-    if (aptError) {
-      console.error('[check-availability] ERRO ao buscar agendamentos:', aptError);
-      return new Response(
-        JSON.stringify({ success: false, message: 'Erro ao verificar disponibilidade' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
-      );
-    }
-
-    // Buscar pending bookings não expirados
-    // Se barbeiro especificado, filtrar apenas pending do barbeiro
     const now = new Date();
-    let pendingQuery = supabase
-      .from('pending_bookings')
-      .select('id, hora, duracao, expires_at, barbeiro_id')
-      .eq('data', date)
-      .gt('expires_at', now.toISOString());
+    let appointments: Array<{ id: string; hora: string; duracao: number; status: string; barbeiro_id: string | null }> = [];
+    let pendingBookings: Array<{ id: string; hora: string; duracao: number; expires_at: string; barbeiro_id: string | null }> = [];
 
-    if (barbeiroId) {
-      pendingQuery = pendingQuery.eq('barbeiro_id', barbeiroId);
+    const shouldQueryByScope = Boolean(barbeiroId) || Boolean(scopedBarberIds && scopedBarberIds.length > 0);
+
+    if (shouldQueryByScope) {
+      // Buscar agendamentos com status bloqueante
+      let appointmentsQuery = supabase
+        .from('agendamentos')
+        .select('id, hora, duracao, status, barbeiro_id')
+        .eq('data', date)
+        .in('status', BLOCKING_STATUSES);
+
+      if (barbeiroId) {
+        appointmentsQuery = appointmentsQuery.eq('barbeiro_id', barbeiroId);
+      } else if (scopedBarberIds) {
+        appointmentsQuery = appointmentsQuery.in('barbeiro_id', scopedBarberIds);
+      }
+
+      if (excludeAppointmentId) {
+        appointmentsQuery = appointmentsQuery.neq('id', excludeAppointmentId);
+      }
+
+      const { data: appointmentsData, error: aptError } = await appointmentsQuery;
+
+      if (aptError) {
+        console.error('[check-availability] ERRO ao buscar agendamentos:', aptError);
+        return new Response(
+          JSON.stringify({ success: false, message: 'Erro ao verificar disponibilidade' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+        );
+      }
+
+      appointments = appointmentsData || [];
+
+      // Buscar pending bookings não expirados
+      let pendingQuery = supabase
+        .from('pending_bookings')
+        .select('id, hora, duracao, expires_at, barbeiro_id')
+        .eq('data', date)
+        .gt('expires_at', now.toISOString());
+
+      if (barbeiroId) {
+        pendingQuery = pendingQuery.eq('barbeiro_id', barbeiroId);
+      } else if (scopedBarberIds) {
+        pendingQuery = pendingQuery.in('barbeiro_id', scopedBarberIds);
+      }
+
+      const { data: pendingData, error: pbError } = await pendingQuery;
+
+      if (pbError) {
+        console.log('[check-availability] Aviso ao buscar pending:', pbError.message);
+      }
+
+      pendingBookings = pendingData || [];
     }
 
-    const { data: pendingBookings, error: pbError } = await pendingQuery;
-
-    if (pbError) {
-      console.log('[check-availability] Aviso ao buscar pending:', pbError.message);
-    }
-
-    console.log(`[check-availability] Agendamentos encontrados: ${appointments?.length || 0}`);
-    console.log(`[check-availability] Pending bookings encontrados: ${pendingBookings?.length || 0}`);
+    console.log(`[check-availability] Agendamentos encontrados: ${appointments.length}`);
+    console.log(`[check-availability] Pending bookings encontrados: ${pendingBookings.length}`);
 
     // Processar todos os slots ocupados com cálculo correto de fim + delay
     const occupiedSlots: OccupiedSlotInfo[] = [];

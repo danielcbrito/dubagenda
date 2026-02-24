@@ -29,6 +29,7 @@ interface Barber {
   id: string;
   apelido: string;
   foto_url: string | null;
+  tenant_id?: string | null;
 }
 
 interface Service {
@@ -118,6 +119,8 @@ const ClienteAgendar = () => {
 
   const totalDuration = (selectedServices || []).reduce((sum, s) => sum + getEffectiveDuration(s) * (serviceQuantities[s.id] || 1), 0);
 
+  const availabilityTenantId = selectedBarber?.tenant_id ?? (preferredShop?.id ?? null);
+
   const { 
     slots: availableSlots, 
     loading: loadingSlots, 
@@ -127,7 +130,8 @@ const ClienteAgendar = () => {
     selectedDate, 
     totalDuration,
     isRescheduling ? rescheduleAppointmentId : null,
-    selectedBarber?.id || null
+    selectedBarber?.id || null,
+    availabilityTenantId
   );
 
   // Carregar durações personalizadas do barbeiro
@@ -213,7 +217,7 @@ const ClienteAgendar = () => {
       // Auto-select barber from query param (e.g., after subscription)
       const barberFromParam = searchParams.get("barber");
       if (barberFromParam) {
-        const barbersList = (await supabase.from("barbeiros").select("id, apelido, foto_url").eq("ativo", true).order("apelido")).data || [];
+        const barbersList = (await supabase.from("barbeiros").select("id, apelido, foto_url, tenant_id").eq("ativo", true).order("apelido")).data || [];
         const matchedBarber = barbersList.find((b: Barber) => b.id === barberFromParam);
         if (matchedBarber) {
           setSelectedBarber(matchedBarber);
