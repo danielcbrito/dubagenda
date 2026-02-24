@@ -126,7 +126,8 @@ export function useSlotAvailability(
   selectedDate: Date | undefined,
   serviceDuration: number,
   excludeAppointmentId?: string | null,
-  barbeiroId?: string | null
+  barbeiroId?: string | null,
+  tenantId?: string | null
 ) {
   const [slots, setSlots] = useState<TimeSlot[]>([]);
   const [loading, setLoading] = useState(false);
@@ -166,7 +167,7 @@ export function useSlotAvailability(
 
     const dateStr = format(selectedDate, 'yyyy-MM-dd');
 
-    console.log('[useSlotAvailability] Buscando slots...', isInitialLoadRef.current ? '(inicial)' : '(update parcial)', barbeiroId ? `barbeiro: ${barbeiroId}` : '');
+    console.log('[useSlotAvailability] Buscando slots...', isInitialLoadRef.current ? '(inicial)' : '(update parcial)', barbeiroId ? `barbeiro: ${barbeiroId}` : `tenant: ${tenantId === null ? 'DUB' : (tenantId || 'N/A')}`);
 
     try {
       const response = await fetch(
@@ -180,7 +181,8 @@ export function useSlotAvailability(
             date: dateStr,
             duration: serviceDuration,
             excludeAppointmentId: excludeAppointmentId || undefined,
-            barbeiroId: barbeiroId || undefined
+            barbeiroId: barbeiroId || undefined,
+            tenantId: tenantId !== undefined ? tenantId : undefined
           }),
           signal: abortControllerRef.current.signal
         }
@@ -242,7 +244,7 @@ export function useSlotAvailability(
     } finally {
       setLoading(false);
     }
-  }, [selectedDate, serviceDuration, excludeAppointmentId, barbeiroId]);
+  }, [selectedDate, serviceDuration, excludeAppointmentId, barbeiroId, tenantId]);
 
   /**
    * Fallback CORRIGIDO: carregar slots diretamente do banco
@@ -342,25 +344,60 @@ export function useSlotAvailability(
       const LUNCH_END = config.hora_almoco_fim ? timeToMinutes(config.hora_almoco_fim) : null;
       const DELAY_MINUTES = config.delay_entre_servicos || DEFAULT_DELAY_MINUTES;
 
-      // Buscar agendamentos com status bloqueante (filtrado por barbeiro se especificado)
+      // Buscar agendamentos com status bloqueante (filtrado por barbeiro/tenant)
+      let scopedBarberIds: string[] = [];
+      if (!barbeiroId && tenantId !== undefined) {
+        let barbersQuery = supabase
+          .from('barbeiros')
+          .select('id')
+          .eq('ativo', true);
+
+        if (tenantId === null) {
+          barbersQuery = barbersQuery.is('tenant_id', null);
+        } else {
+          barbersQuery = barbersQuery.eq('tenant_id', tenantId);
+        }
+
+        const { data: scopedBarbers } = await barbersQuery;
+        scopedBarberIds = (scopedBarbers || []).map((b: { id: string }) => b.id);
+      }
+
       let aptQuery = supabase
         .from('agendamentos')
         .select('id, hora, duracao, status')
         .eq('data', dateStr)
         .in('status', ['pending', 'confirmed', 'completed']);
-      if (barbeiroId) aptQuery = aptQuery.eq('barbeiro_id', barbeiroId);
+
+      if (barbeiroId) {
+        aptQuery = aptQuery.eq('barbeiro_id', barbeiroId);
+      } else if (tenantId !== undefined) {
+        if (scopedBarberIds.length > 0) {
+          aptQuery = aptQuery.in('barbeiro_id', scopedBarberIds);
+        } else {
+          aptQuery = aptQuery.eq('id', '__no_rows__');
+        }
+      }
 
       const { data: appointments, error: aptError } = await aptQuery;
 
       if (aptError) throw aptError;
 
-      // Buscar pending_bookings não expirados (filtrado por barbeiro se especificado)
+      // Buscar pending_bookings não expirados (filtrado por barbeiro/tenant)
       let pbQuery = supabase
         .from('pending_bookings')
         .select('id, hora, duracao, expires_at')
         .eq('data', dateStr)
         .gt('expires_at', now.toISOString());
-      if (barbeiroId) pbQuery = pbQuery.eq('barbeiro_id', barbeiroId);
+
+      if (barbeiroId) {
+        pbQuery = pbQuery.eq('barbeiro_id', barbeiroId);
+      } else if (tenantId !== undefined) {
+        if (scopedBarberIds.length > 0) {
+          pbQuery = pbQuery.in('barbeiro_id', scopedBarberIds);
+        } else {
+          pbQuery = pbQuery.eq('id', '__no_rows__');
+        }
+      }
 
       const { data: pendingBookings } = await pbQuery;
 
@@ -459,7 +496,7 @@ export function useSlotAvailability(
       console.error('[useSlotAvailability FALLBACK] Erro:', err);
       setError('Erro ao carregar horários');
     }
-  }, [serviceDuration, barbeiroId]);
+  }, [serviceDuration, barbeiroId, tenantId]);
 
   /**
    * Configurar listeners em tempo real e polling
