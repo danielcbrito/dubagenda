@@ -128,12 +128,15 @@ async function checkTimeSlotAvailability(
     }
   }
 
-  // Verificar pending bookings
-  const { data: pendingBookings } = await supabase
+  // Verificar pending bookings (filtrado por barbeiro para isolamento multi-tenant)
+  let pendingQuery = supabase
     .from('pending_bookings')
     .select('id, hora, duracao')
     .eq('data', data)
     .gt('expires_at', new Date().toISOString());
+  if (barbeiro_id) pendingQuery = pendingQuery.eq('barbeiro_id', barbeiro_id);
+
+  const { data: pendingBookings } = await pendingQuery;
 
   for (const pending of pendingBookings || []) {
     const [pendingHour, pendingMinute] = pending.hora.split(':').map(Number);

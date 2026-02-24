@@ -3572,6 +3572,57 @@ export type Database = {
         }
         Relationships: []
       }
+      whatsapp_instances: {
+        Row: {
+          api_key: string | null
+          barbeiro_id: string
+          connected_at: string | null
+          created_at: string
+          id: string
+          instance_name: string
+          qrcode_base64: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          api_key?: string | null
+          barbeiro_id: string
+          connected_at?: string | null
+          created_at?: string
+          id?: string
+          instance_name: string
+          qrcode_base64?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          api_key?: string | null
+          barbeiro_id?: string
+          connected_at?: string | null
+          created_at?: string
+          id?: string
+          instance_name?: string
+          qrcode_base64?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_instances_barbeiro_id_fkey"
+            columns: ["barbeiro_id"]
+            isOneToOne: true
+            referencedRelation: "barbeiros"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_instances_barbeiro_id_fkey"
+            columns: ["barbeiro_id"]
+            isOneToOne: true
+            referencedRelation: "barbeiros_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       whatsapp_verification_codes: {
         Row: {
           attempts: number | null
