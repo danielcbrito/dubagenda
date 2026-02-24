@@ -210,19 +210,8 @@ export function PremiumTimeline({
         const { blocked, nextFreeTime } = isSlotBlockedByDuration(slot);
         const lunch = isLunchBreak(slot);
 
-        // Lunch break
+        // Lunch break — completely hidden
         if (lunch) {
-          // Only render once at the start of lunch
-          if (slot === businessHours.hora_almoco_inicio) {
-            return (
-              <PremiumLunchBreak
-                key={slot}
-                startTime={businessHours.hora_almoco_inicio!}
-                endTime={businessHours.hora_almoco_fim!}
-                index={index}
-              />
-            );
-          }
           return null;
         }
 
@@ -284,14 +273,7 @@ export function PremiumTimeline({
         }
 
         if (group.type === 'lunch') {
-          return (
-            <PremiumLunchBreak
-              key={`lunch-${group.slots[0]}`}
-              startTime={businessHours.hora_almoco_inicio!}
-              endTime={businessHours.hora_almoco_fim!}
-              index={groupIndex}
-            />
-          );
+          return null;
         }
 
         if (group.type === 'blocked') {

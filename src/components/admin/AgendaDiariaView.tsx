@@ -164,19 +164,9 @@ export function AgendaDiariaView({ date, appointments, onCancelAppointment, barb
           const lunchBreak = isLunchBreak(slot);
           const isBlockedByDuration = !appointment && isSlotBlockedByDuration(slot);
 
-          // Render lunch break
+          // Lunch break — completely hidden
           if (lunchBreak) {
-            return (
-              <Card key={slot} className="p-4 border-border/30 opacity-40 bg-amber-500/5">
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center gap-2">
-                    <Clock className="w-4 h-4 text-muted-foreground" />
-                    <span className="font-semibold text-sm text-muted-foreground">{slot}</span>
-                  </div>
-                  <span className="text-sm text-muted-foreground italic">Horário de almoço</span>
-                </div>
-              </Card>
-            );
+            return null;
           }
 
           return (

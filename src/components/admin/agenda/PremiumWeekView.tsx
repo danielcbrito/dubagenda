@@ -212,16 +212,7 @@ export function PremiumWeekView({
                 />
               ))}
 
-              {/* Lunch break overlay */}
-              {businessHours.hora_almoco_inicio && businessHours.hora_almoco_fim && (
-                <div
-                  className="absolute left-0 right-0 bg-amber-500/5 border-y border-amber-500/10"
-                  style={{
-                    top: `${((timeToMinutes(businessHours.hora_almoco_inicio) - timeToMinutes(businessHours.hora_abertura)) / (timeToMinutes(businessHours.hora_fechamento) - timeToMinutes(businessHours.hora_abertura))) * 100}%`,
-                    height: `${((timeToMinutes(businessHours.hora_almoco_fim) - timeToMinutes(businessHours.hora_almoco_inicio)) / (timeToMinutes(businessHours.hora_fechamento) - timeToMinutes(businessHours.hora_abertura))) * 100}%`
-                  }}
-                />
-              )}
+              {/* Lunch break overlay removed — hidden completely */}
 
               {/* Appointments */}
               {dayAppointments.map((apt, aptIdx) => (
