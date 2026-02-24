@@ -290,33 +290,24 @@ export function MobileDayTimeline({ selectedDate, onSlotClick, onAppointmentClic
           const duration = appointmentStart?.duracao || appointmentStart?.servico?.duracao_minutos || 30;
           const cardHeight = (duration / SLOT_INTERVAL) * SLOT_HEIGHT;
 
+          // Hide lunch slots completely
+          if (isLunch && !isOccupied) {
+            return null;
+          }
+
           return (
             <div key={time} className="relative" style={{ height: SLOT_HEIGHT }}>
               {/* Marcador de tempo */}
               <div className="absolute left-0 -translate-x-full pr-3 flex items-center h-full">
-                <span className={cn(
-                  "text-xs font-medium tabular-nums",
-                  isLunch ? "text-amber-500" : "text-muted-foreground"
-                )}>
+                <span className="text-xs font-medium tabular-nums text-muted-foreground">
                   {time}
                 </span>
               </div>
 
               {/* Linha de grade */}
-              <div className={cn(
-                "absolute left-0 right-0 top-0 border-t",
-                isLunch ? "border-amber-500/20" : "border-border/30"
-              )} />
+              <div className="absolute left-0 right-0 top-0 border-t border-border/30" />
 
-              {/* Slot de almoço */}
-              {isLunch && !isOccupied && (
-                <div className="absolute inset-x-0 top-0 h-full flex items-center justify-center bg-amber-500/5 border-l-2 border-amber-500/30">
-                  <div className="flex items-center gap-2 text-amber-500/60">
-                    <Coffee className="w-4 h-4" />
-                    <span className="text-xs font-medium">Almoço</span>
-                  </div>
-                </div>
-              )}
+              {/* Lunch slots completely hidden */}
 
               {/* Card do agendamento (apenas no primeiro slot) */}
               {isFirstSlot && appointmentStart && (
