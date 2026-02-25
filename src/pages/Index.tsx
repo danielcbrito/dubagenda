@@ -1,21 +1,15 @@
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Scissors, MapPin, ChevronRight } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+
 import logoDub from "@/assets/logo-dub.png";
 import landingHero from "@/assets/landing-hero-tools.jpg";
 
 const Index = () => {
   const navigate = useNavigate();
 
-  const handleDiscover = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session?.user?.email_confirmed_at) {
-      // User already logged in — go directly to barbershop selection
-      navigate("/escolher-barbearia?mode=change");
-    } else {
-      navigate("/auth?mode=signup&origin=discover");
-    }
+  const handleDiscover = () => {
+    navigate("/escolher-barbearia");
   };
 
   return (

@@ -103,10 +103,20 @@ const Auth = () => {
       }
     }
 
+    // If tenant was pre-selected (from discover flow), save it now
+    const preSelectedTenant = searchParams.get("tenant");
+    if (preSelectedTenant) {
+      await supabase
+        .from("profiles")
+        .update({ barbearia_preferida_id: preSelectedTenant, signup_origin: "discover" })
+        .eq("id", userId);
+      navigate("/cliente");
+      return;
+    }
+
     // Check if user came from "Encontrar Barbearias" flow and needs onboarding
     const currentOrigin = searchParams.get("origin") || signupOrigin;
     if (currentOrigin === "discover") {
-      // Check if user already has a preferred barbershop
       const { data: profile } = await supabase
         .from("profiles")
         .select("barbearia_preferida_id")
@@ -246,16 +256,19 @@ const Auth = () => {
           if (whatsappError) throw whatsappError;
 
           if (whatsappData?.success) {
+            const tenantParam = searchParams.get("tenant") ? `&tenant=${searchParams.get("tenant")}` : "";
             toast.success("Código enviado para seu WhatsApp!");
-            navigate(`/verificar-whatsapp?user_id=${data.user.id}&phone=${encodeURIComponent(validated.telefone)}&origin=${signupOrigin}`);
+            navigate(`/verificar-whatsapp?user_id=${data.user.id}&phone=${encodeURIComponent(validated.telefone)}&origin=${signupOrigin}${tenantParam}`);
           } else {
+            const tenantParam = searchParams.get("tenant") ? `&tenant=${searchParams.get("tenant")}` : "";
             toast.error("Erro ao enviar código. Tente novamente.");
-            navigate(`/verificar-whatsapp?user_id=${data.user.id}&phone=${encodeURIComponent(validated.telefone)}&origin=${signupOrigin}`);
+            navigate(`/verificar-whatsapp?user_id=${data.user.id}&phone=${encodeURIComponent(validated.telefone)}&origin=${signupOrigin}${tenantParam}`);
           }
         } catch (whatsappErr) {
           console.error("Erro ao gerar código WhatsApp:", whatsappErr);
           toast.info("Cadastro realizado! Confirme via WhatsApp.");
-          navigate(`/verificar-whatsapp?user_id=${data.user.id}&phone=${encodeURIComponent(validated.telefone)}&origin=${signupOrigin}`);
+          const tenantParam = searchParams.get("tenant") ? `&tenant=${searchParams.get("tenant")}` : "";
+          navigate(`/verificar-whatsapp?user_id=${data.user.id}&phone=${encodeURIComponent(validated.telefone)}&origin=${signupOrigin}${tenantParam}`);
         }
       }
     } catch (error) {

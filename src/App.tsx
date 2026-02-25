@@ -43,7 +43,8 @@ const PUBLIC_ROUTES = [
   '/verificar-whatsapp',
   '/escolher-verificacao',
   '/esqueci-senha',
-  '/resetar-senha'
+  '/resetar-senha',
+  '/escolher-barbearia'
 ];
 
 function MaintenanceWrapper({ children }: { children: React.ReactNode }) {
