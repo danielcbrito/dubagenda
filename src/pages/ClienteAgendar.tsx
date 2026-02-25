@@ -65,7 +65,7 @@ const ClienteAgendar = () => {
   const [selectedTime, setSelectedTime] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState(1);
-  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'pix'>('pix');
+  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'pix'>('cash');
   const [processingPayment, setProcessingPayment] = useState(false);
   const [availableCredits, setAvailableCredits] = useState(0);
   const [userId, setUserId] = useState<string | null>(null);
@@ -2009,90 +2009,8 @@ const ClienteAgendar = () => {
                 </div>
               </div>
 
-              {/* Métodos de pagamento digital */}
-              <div className="space-y-3 mb-4">
-                {/* PIX */}
-                <motion.button
-                  whileTap={{ scale: 0.98 }}
-                  onClick={() => setPaymentMethod('pix')}
-                  className={cn(
-                    "w-full rounded-xl border p-4 text-left transition-all active:scale-[0.99]",
-                    paymentMethod === 'pix'
-                      ? "border-primary/60 bg-primary/5 shadow-sm"
-                      : "border-border/50 bg-card hover:border-border hover:shadow-sm"
-                  )}
-                >
-                  <div className="flex items-center gap-3.5">
-                    <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-                      <img src={pixIcon} alt="PIX" className="w-5 h-5 object-contain" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <p className="text-[13px] font-semibold text-foreground">Pix</p>
-                        <span className="text-[9px] font-bold uppercase tracking-wider bg-primary/10 text-primary px-1.5 py-px rounded">
-                          Recomendado
-                        </span>
-                      </div>
-                      <p className="text-[11px] text-muted-foreground mt-0.5">
-                        Confirmação instantânea • Sem taxa
-                      </p>
-                    </div>
-                    <div className={cn(
-                      "w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all",
-                      paymentMethod === 'pix'
-                        ? "bg-primary border-primary"
-                        : "border-muted-foreground/30"
-                    )}>
-                      {paymentMethod === 'pix' && <Check className="w-3 h-3 text-primary-foreground" strokeWidth={3} />}
-                    </div>
-                  </div>
-                </motion.button>
-
-                {/* Cartão */}
-                <motion.button
-                  whileTap={{ scale: 0.98 }}
-                  onClick={() => setPaymentMethod('card')}
-                  className={cn(
-                    "w-full rounded-xl border p-4 text-left transition-all active:scale-[0.99]",
-                    paymentMethod === 'card'
-                      ? "border-primary/60 bg-primary/5 shadow-sm"
-                      : "border-border/50 bg-card hover:border-border hover:shadow-sm"
-                  )}
-                >
-                  <div className="flex items-center gap-3.5">
-                    <div className={cn(
-                      "w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0",
-                      paymentMethod === 'card' ? "bg-primary/10" : "bg-muted/30"
-                    )}>
-                      <CreditCard className={cn(
-                        "w-5 h-5 transition-colors",
-                        paymentMethod === 'card' ? "text-primary" : "text-muted-foreground/50"
-                      )} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[13px] font-semibold text-foreground">Cartão</p>
-                      <p className="text-[11px] text-muted-foreground mt-0.5">
-                        Crédito ou débito • Checkout seguro
-                      </p>
-                    </div>
-                    <div className={cn(
-                      "w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all",
-                      paymentMethod === 'card'
-                        ? "bg-primary border-primary"
-                        : "border-muted-foreground/30"
-                    )}>
-                      {paymentMethod === 'card' && <Check className="w-3 h-3 text-primary-foreground" strokeWidth={3} />}
-                    </div>
-                  </div>
-                </motion.button>
-              </div>
-
-              {/* Divisor */}
-              <div className="flex items-center gap-3 my-5">
-                <div className="flex-1 h-px bg-border/30" />
-                <span className="text-[10px] text-muted-foreground/40 uppercase tracking-widest">ou</span>
-                <div className="flex-1 h-px bg-border/30" />
-              </div>
+              {/* Métodos de pagamento digital - temporariamente ocultos */}
+              {/* PIX e Cartão removidos temporariamente */}
 
               {/* Pagar na Barbearia */}
               <motion.button
