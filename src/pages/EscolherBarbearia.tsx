@@ -42,310 +42,22 @@ function formatDistance(km: number): string {
 
 // ── Sub-components ──
 
-/** Renders 1-5 star rating inline */
 function RatingStars({ rating, count }: { rating: number; count: number }) {
-  const full = Math.floor(rating);
-  const hasHalf = rating - full >= 0.3;
   return (
     <span className="inline-flex items-center gap-1">
-      <span className="flex items-center gap-px">
-        {[1, 2, 3, 4, 5].map((i) => (
-          <Star
-            key={i}
-            className={cn(
-              "w-3 h-3",
-              i <= full
-                ? "fill-amber-400 text-amber-400"
-                : i === full + 1 && hasHalf
-                  ? "fill-amber-400/50 text-amber-400"
-                  : "fill-muted/40 text-muted-foreground/20"
-            )}
-          />
-        ))}
-      </span>
-      <span className="text-[10px] font-semibold tabular-nums text-foreground/80">{rating.toFixed(1)}</span>
+      <Star className="w-[10px] h-[10px] fill-amber-400 text-amber-400" />
+      <span className="text-[10px] font-semibold tabular-nums text-foreground/70">{rating.toFixed(1)}</span>
       <span className="text-[9px] text-muted-foreground/40">({count})</span>
     </span>
   );
 }
 
-/** Distance badge */
 function DistanceBadge({ km }: { km: number }) {
   return (
-    <span className={cn(
-      "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold tabular-nums",
-      "bg-primary/8 text-primary border border-primary/15"
-    )}>
-      <Route className="w-3 h-3" />
+    <span className="inline-flex items-center gap-0.5 text-[9px] font-medium tabular-nums text-muted-foreground/50">
+      <Route className="w-[10px] h-[10px]" />
       {formatDistance(km)}
     </span>
-  );
-}
-
-/** Premium back button with rounded arrow */
-function BackButton({ onClick }: { onClick: () => void }) {
-  return (
-    <motion.button
-      initial={{ opacity: 0, x: -10 }}
-      animate={{ opacity: 1, x: 0 }}
-      transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-      onClick={onClick}
-      className={cn(
-        "w-10 h-10 flex items-center justify-center",
-        "rounded-2xl bg-card border border-border/50",
-        "active:scale-90 transition-all duration-200",
-        "shadow-[var(--shadow-soft)]"
-      )}
-      aria-label="Voltar"
-    >
-      <ArrowLeft className="w-[18px] h-[18px] text-foreground/70" strokeWidth={2.2} strokeLinecap="round" />
-    </motion.button>
-  );
-}
-
-/** Location status indicator */
-function LocationIndicator({ status }: { status: "idle" | "requesting" | "granted" | "denied" }) {
-  if (status === "idle" || status === "denied") return null;
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, height: 0 }}
-      animate={{ opacity: 1, height: "auto" }}
-      exit={{ opacity: 0, height: 0 }}
-      transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-      className="overflow-hidden"
-    >
-      <div className={cn(
-        "flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl mb-3",
-        status === "requesting"
-          ? "bg-primary/5 border border-primary/10"
-          : "bg-emerald-500/5 border border-emerald-500/10"
-      )}>
-        {status === "requesting" ? (
-          <>
-            <Loader2 className="w-4 h-4 text-primary animate-spin" />
-            <span className="text-[12px] text-primary/80 font-medium">Localizando você...</span>
-          </>
-        ) : (
-          <>
-            <Navigation className="w-4 h-4 text-emerald-500" />
-            <span className="text-[12px] text-emerald-600 dark:text-emerald-400 font-medium">
-              Ordenado por proximidade
-            </span>
-          </>
-        )}
-      </div>
-    </motion.div>
-  );
-}
-
-/** DUB reference card */
-function DubReferenceCard({
-  dubRating,
-  currentPreferred,
-  saving,
-  leftDub,
-  onSelect,
-}: {
-  dubRating: { avg: number; count: number } | null;
-  currentPreferred: string | null;
-  saving: string | null;
-  leftDub: boolean;
-  onSelect: () => void;
-}) {
-  const isSelected = !currentPreferred;
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1], delay: 0.05 }}
-    >
-      <button
-        onClick={onSelect}
-        disabled={!!saving}
-        className={cn(
-          "w-full rounded-2xl border p-4 text-left relative overflow-hidden",
-          "active:scale-[0.98] transition-all duration-200",
-          "bg-card",
-          "shadow-[var(--shadow-card)]",
-          "border-primary/20",
-          saving === "dub" && "ring-2 ring-primary/30",
-          saving && saving !== "dub" && "opacity-50"
-        )}
-      >
-        {/* Subtle shine overlay */}
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/[0.03] via-transparent to-transparent pointer-events-none" />
-
-        <div className="relative flex items-center gap-4">
-          {/* Logo */}
-          <div className={cn(
-            "w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0 overflow-hidden",
-            "bg-muted/30 border border-primary/10"
-          )}>
-            <img src={logoDub} alt="Barbearia DUB" className="w-9 h-9 object-contain" />
-          </div>
-
-          {/* Info */}
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-[15px] font-bold text-foreground tracking-tight">Barbearia DUB</span>
-              <span className={cn(
-                "inline-flex items-center gap-1 text-[8px] font-bold uppercase tracking-widest",
-                "bg-primary/10 text-primary px-2 py-0.5 rounded-full flex-shrink-0"
-              )}>
-                <Crown className="w-2.5 h-2.5" />
-                Referência
-              </span>
-            </div>
-            <p className="text-[12px] text-muted-foreground/70 mb-1.5">
-              Corte masculino premium
-            </p>
-            {dubRating && (
-              <RatingStars rating={dubRating.avg} count={dubRating.count} />
-            )}
-          </div>
-
-          {/* Action indicator */}
-          <div className="flex-shrink-0">
-            {saving === "dub" ? (
-              <div className="w-6 h-6 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
-            ) : isSelected ? (
-              <div className="w-7 h-7 rounded-full bg-primary flex items-center justify-center shadow-[var(--shadow-glow-red)]">
-                <Check className="w-4 h-4 text-primary-foreground" strokeWidth={3} />
-              </div>
-            ) : (
-              <ChevronRight className="w-5 h-5 text-primary/40" />
-            )}
-          </div>
-        </div>
-
-        {/* Return to DUB CTA */}
-        <AnimatePresence>
-          {leftDub && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              exit={{ opacity: 0, height: 0 }}
-              className="relative mt-3 pt-3 border-t border-border/20"
-            >
-              <p className="text-[11px] text-primary/80 font-semibold text-center tracking-wide">
-                ← Voltar para atendimento exclusivo DUB
-              </p>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </button>
-    </motion.div>
-  );
-}
-
-/** Tenant card for partner barbershops */
-function TenantCard({
-  tenant,
-  index,
-  isCurrent,
-  saving,
-  onSelect,
-}: {
-  tenant: Tenant & { distance?: number | null };
-  index: number;
-  isCurrent: boolean;
-  saving: string | null;
-  onSelect: () => void;
-}) {
-  return (
-    <motion.button
-      key={tenant.id}
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.1 + index * 0.04, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-      onClick={onSelect}
-      disabled={!!saving || isCurrent}
-      className={cn(
-        "w-full rounded-2xl border p-4 text-left",
-        "active:scale-[0.98] transition-all duration-200",
-        "bg-card",
-        "shadow-[var(--shadow-card)]",
-        isCurrent ? "border-primary/25 bg-primary/[0.03]" : "border-border/30",
-        saving === tenant.id && "ring-2 ring-primary/30 border-primary/20",
-        saving && saving !== tenant.id && !isCurrent && "opacity-40"
-      )}
-    >
-      <div className="flex items-center gap-3.5">
-        {/* Avatar */}
-        <div className={cn(
-          "w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 overflow-hidden",
-          "bg-muted/40 border border-border/30"
-        )}>
-          {tenant.logo_url ? (
-            <img src={tenant.logo_url} alt={tenant.nome} className="w-full h-full object-cover" />
-          ) : (
-            <Scissors className="w-5 h-5 text-muted-foreground/40" />
-          )}
-        </div>
-
-        {/* Content */}
-        <div className="flex-1 min-w-0">
-          {/* Name + current badge */}
-          <div className="flex items-center gap-2 mb-0.5">
-            <span className="text-[14px] font-bold text-foreground truncate tracking-tight">
-              {tenant.nome}
-            </span>
-            {isCurrent && (
-              <span className={cn(
-                "text-[8px] font-bold uppercase tracking-widest",
-                "bg-primary/10 text-primary px-2 py-0.5 rounded-full flex-shrink-0"
-              )}>
-                Atual
-              </span>
-            )}
-          </div>
-
-          {/* Slogan */}
-          {tenant.slogan && (
-            <p className="text-[11px] text-muted-foreground/60 truncate mb-1">
-              {tenant.slogan}
-            </p>
-          )}
-
-          {/* Meta row: location + rating + distance */}
-          <div className="flex items-center gap-2 flex-wrap">
-            {(tenant.bairro || tenant.cidade) && (
-              <span className="inline-flex items-center gap-1 min-w-0">
-                <MapPin className="w-3 h-3 text-muted-foreground/30 flex-shrink-0" />
-                <span className="text-[11px] text-muted-foreground/50 truncate">
-                  {[tenant.bairro, tenant.cidade].filter(Boolean).join(", ")}
-                </span>
-              </span>
-            )}
-
-            {tenant.avgRating != null && tenant.totalReviews != null && tenant.totalReviews > 0 && (
-              <RatingStars rating={tenant.avgRating} count={tenant.totalReviews} />
-            )}
-
-            {tenant.distance != null && (
-              <span className="ml-auto flex-shrink-0">
-                <DistanceBadge km={tenant.distance} />
-              </span>
-            )}
-          </div>
-        </div>
-
-        {/* Right action */}
-        <div className="flex-shrink-0">
-          {saving === tenant.id ? (
-            <div className="w-5 h-5 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
-          ) : isCurrent ? (
-            <div className="w-7 h-7 rounded-full bg-primary flex items-center justify-center">
-              <Check className="w-4 h-4 text-primary-foreground" strokeWidth={3} />
-            </div>
-          ) : (
-            <ChevronRight className="w-5 h-5 text-muted-foreground/25" />
-          )}
-        </div>
-      </div>
-    </motion.button>
   );
 }
 
@@ -568,160 +280,239 @@ const EscolherBarbearia = () => {
     (t.cidade && t.cidade.toLowerCase().includes(search.toLowerCase()))
   );
   const leftDub = !!currentPreferred;
+  const isDubSelected = !currentPreferred;
 
   return (
     <div className="flex flex-col bg-background" style={{ height: "100dvh" }}>
       {/* ══════ Header ══════ */}
-      <div className="flex-shrink-0 px-5 pt-[calc(env(safe-area-inset-top)+0.75rem)] pb-3">
-        <BackButton onClick={handleBack} />
-
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1], delay: 0.05 }}
-          className="mt-4 mb-4"
-        >
-          <h1 className="text-[20px] font-bold text-foreground tracking-tight leading-tight">
-            {isChangeMode ? "Trocar barbearia" : "Encontrar barbearias"}
-          </h1>
-          <p className="text-[13px] text-muted-foreground mt-1.5 leading-relaxed">
-            {isChangeMode
-              ? "Selecione outra unidade como sua preferida"
-              : "Escolha a barbearia ideal para você"}
-          </p>
-        </motion.div>
-
-        {/* Location */}
-        <AnimatePresence>
-          <LocationIndicator status={locationStatus} />
-        </AnimatePresence>
+      <div className="flex-shrink-0 px-4 pt-[calc(env(safe-area-inset-top)+0.5rem)] pb-2">
+        {/* Top bar */}
+        <div className="flex items-center gap-3 mb-3">
+          <button
+            onClick={handleBack}
+            className="w-8 h-8 flex items-center justify-center rounded-xl bg-card/80 border border-border/30 active:scale-90 transition-transform"
+          >
+            <ArrowLeft className="w-4 h-4 text-muted-foreground" strokeWidth={2} />
+          </button>
+          <div className="flex-1">
+            <h1 className="text-[15px] font-bold text-foreground tracking-tight">
+              {isChangeMode ? "Trocar barbearia" : "Barbearias"}
+            </h1>
+          </div>
+          {locationStatus === "granted" && (
+            <span className="inline-flex items-center gap-1 text-[9px] text-emerald-500 font-medium">
+              <Navigation className="w-[10px] h-[10px]" />
+              Próximas
+            </span>
+          )}
+          {locationStatus === "requesting" && (
+            <Loader2 className="w-3 h-3 text-muted-foreground/40 animate-spin" />
+          )}
+        </div>
 
         {/* Search */}
-        <motion.div
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-          className="relative"
-        >
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-[18px] h-[18px] text-muted-foreground/35" />
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/30" />
           <input
             type="text"
-            placeholder="Buscar por nome ou bairro..."
+            placeholder="Buscar barbearia..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className={cn(
-              "w-full h-12 pl-11 pr-4 rounded-2xl text-[14px]",
-              "bg-card border border-border/40 text-foreground",
-              "placeholder:text-muted-foreground/35",
-              "focus:outline-none focus:border-primary/30 focus:ring-2 focus:ring-primary/10",
-              "transition-all duration-200"
+              "w-full h-10 pl-9 pr-3 rounded-xl text-[13px]",
+              "bg-card/60 border border-border/30 text-foreground",
+              "placeholder:text-muted-foreground/30",
+              "focus:outline-none focus:border-primary/25",
+              "transition-colors duration-150"
             )}
           />
-        </motion.div>
+        </div>
       </div>
 
       {/* ══════ Scrollable ══════ */}
       <div className="flex-1 min-h-0 relative">
-        {/* Fade mask */}
         <div
-          className="absolute top-0 left-0 right-0 h-4 z-10 pointer-events-none"
+          className="absolute top-0 left-0 right-0 h-3 z-10 pointer-events-none"
           style={{ background: "linear-gradient(to bottom, hsl(var(--background)), transparent)" }}
         />
 
-        <div className="h-full overflow-y-auto overscroll-contain px-5 pb-32">
+        <div className="h-full overflow-y-auto overscroll-contain px-4 pb-24">
           {isLoading ? (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="flex flex-col items-center justify-center py-24"
-            >
-              <div className="w-8 h-8 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
-              <p className="text-[12px] text-muted-foreground/50 mt-4 tracking-wide font-medium">
-                Carregando barbearias...
-              </p>
-            </motion.div>
+            <div className="flex flex-col items-center justify-center py-20">
+              <div className="w-6 h-6 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
+              <p className="text-[11px] text-muted-foreground/40 mt-3">Carregando...</p>
+            </div>
           ) : (
-            <div className="space-y-3 pt-2">
-              {/* ═══ DUB Reference Card ═══ */}
-              <DubReferenceCard
-                dubRating={dubRating}
-                currentPreferred={currentPreferred}
-                saving={saving}
-                leftDub={leftDub}
-                onSelect={handleBackToDub}
-              />
-
-              {/* ── Section divider ── */}
-              {filtered.length > 0 && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.15 }}
-                  className="flex items-center gap-3 py-2 px-1"
+            <div className="space-y-2 pt-1">
+              {/* ═══ DUB Card ═══ */}
+              <motion.div
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.35, ease: [0.25, 0.46, 0.45, 0.94] }}
+              >
+                <button
+                  onClick={handleBackToDub}
+                  disabled={!!saving}
+                  className={cn(
+                    "w-full rounded-xl border p-3 text-left",
+                    "active:scale-[0.99] transition-all duration-150",
+                    "bg-card/80 border-primary/15",
+                    saving === "dub" && "opacity-70",
+                    saving && saving !== "dub" && "opacity-40"
+                  )}
                 >
-                  <div className="flex-1 h-px bg-border/25" />
-                  <span className="text-[9px] uppercase tracking-[0.15em] text-muted-foreground/30 font-bold">
-                    Barbearias parceiras
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0 bg-muted/20 border border-border/20">
+                      <img src={logoDub} alt="DUB" className="w-6 h-6 object-contain" />
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5 mb-0.5">
+                        <span className="text-[13px] font-semibold text-foreground">Barbearia DUB</span>
+                        <Crown className="w-[10px] h-[10px] text-primary/60" />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] text-muted-foreground/50">Corte premium</span>
+                        {dubRating && (
+                          <RatingStars rating={dubRating.avg} count={dubRating.count} />
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="shrink-0">
+                      {saving === "dub" ? (
+                        <div className="w-4 h-4 border-[1.5px] border-primary/25 border-t-primary rounded-full animate-spin" />
+                      ) : isDubSelected ? (
+                        <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center">
+                          <Check className="w-3 h-3 text-primary-foreground" strokeWidth={3} />
+                        </div>
+                      ) : (
+                        <ChevronRight className="w-4 h-4 text-muted-foreground/20" />
+                      )}
+                    </div>
+                  </div>
+
+                  <AnimatePresence>
+                    {leftDub && (
+                      <motion.p
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: "auto" }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="text-[10px] text-primary/60 font-medium mt-2 pt-2 border-t border-border/10 text-center"
+                      >
+                        Voltar para DUB
+                      </motion.p>
+                    )}
+                  </AnimatePresence>
+                </button>
+              </motion.div>
+
+              {/* ── Divider ── */}
+              {filtered.length > 0 && (
+                <div className="flex items-center gap-2 py-1.5 px-0.5">
+                  <div className="flex-1 h-px bg-border/15" />
+                  <span className="text-[8px] uppercase tracking-[0.12em] text-muted-foreground/25 font-semibold">
+                    Parceiras
                   </span>
-                  <div className="flex-1 h-px bg-border/25" />
-                </motion.div>
+                  <div className="flex-1 h-px bg-border/15" />
+                </div>
               )}
 
               {/* ── Empty state ── */}
               {filtered.length === 0 && !isLoading && (
                 <motion.div
-                  initial={{ opacity: 0, y: 16 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-                  className="flex flex-col items-center justify-center py-16"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="flex flex-col items-center py-14"
                 >
-                  <div className="w-14 h-14 rounded-2xl bg-muted/40 flex items-center justify-center mb-4">
-                    <Scissors className="w-6 h-6 text-muted-foreground/25" />
-                  </div>
-                  <p className="text-[14px] text-muted-foreground font-semibold">
-                    {search ? "Nenhuma barbearia encontrada" : "Nenhuma barbearia disponível"}
-                  </p>
-                  <p className="text-[12px] text-muted-foreground/40 mt-1.5">
-                    {search ? "Tente outro nome ou bairro" : "Novas unidades em breve"}
+                  <Scissors className="w-5 h-5 text-muted-foreground/15 mb-2" />
+                  <p className="text-[12px] text-muted-foreground/40">
+                    {search ? "Nenhum resultado" : "Sem barbearias parceiras"}
                   </p>
                 </motion.div>
               )}
 
               {/* ── Tenant cards ── */}
-              {filtered.map((tenant, index) => (
-                <TenantCard
-                  key={tenant.id}
-                  tenant={tenant}
-                  index={index}
-                  isCurrent={currentPreferred === tenant.id}
-                  saving={saving}
-                  onSelect={() => handleSelect(tenant.id)}
-                />
-              ))}
+              {filtered.map((tenant, index) => {
+                const isCurrent = currentPreferred === tenant.id;
+                return (
+                  <motion.button
+                    key={tenant.id}
+                    initial={{ opacity: 0, y: 5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.04 + index * 0.03, duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] }}
+                    onClick={() => handleSelect(tenant.id)}
+                    disabled={!!saving || isCurrent}
+                    className={cn(
+                      "w-full rounded-xl border p-3 text-left",
+                      "active:scale-[0.99] transition-all duration-150",
+                      "bg-card/60",
+                      isCurrent ? "border-primary/20" : "border-border/20",
+                      saving === tenant.id && "opacity-70",
+                      saving && saving !== tenant.id && !isCurrent && "opacity-40"
+                    )}
+                  >
+                    <div className="flex items-center gap-3">
+                      {/* Avatar */}
+                      <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0 overflow-hidden bg-muted/20 border border-border/15">
+                        {tenant.logo_url ? (
+                          <img src={tenant.logo_url} alt={tenant.nome} className="w-full h-full object-cover" />
+                        ) : (
+                          <Scissors className="w-4 h-4 text-muted-foreground/25" />
+                        )}
+                      </div>
+
+                      {/* Info */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5 mb-0.5">
+                          <span className="text-[13px] font-semibold text-foreground truncate">
+                            {tenant.nome}
+                          </span>
+                          {isCurrent && (
+                            <span className="text-[7px] font-bold uppercase tracking-wider bg-primary/10 text-primary px-1.5 py-px rounded-full shrink-0">
+                              Atual
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {(tenant.bairro || tenant.cidade) && (
+                            <span className="inline-flex items-center gap-0.5 min-w-0">
+                              <MapPin className="w-[10px] h-[10px] text-muted-foreground/25 shrink-0" />
+                              <span className="text-[10px] text-muted-foreground/40 truncate">
+                                {[tenant.bairro, tenant.cidade].filter(Boolean).join(", ")}
+                              </span>
+                            </span>
+                          )}
+
+                          {tenant.avgRating != null && tenant.totalReviews != null && tenant.totalReviews > 0 && (
+                            <RatingStars rating={tenant.avgRating} count={tenant.totalReviews} />
+                          )}
+
+                          {tenant.distance != null && (
+                            <DistanceBadge km={tenant.distance} />
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Right */}
+                      <div className="shrink-0">
+                        {saving === tenant.id ? (
+                          <div className="w-4 h-4 border-[1.5px] border-primary/25 border-t-primary rounded-full animate-spin" />
+                        ) : isCurrent ? (
+                          <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center">
+                            <Check className="w-3 h-3 text-primary-foreground" strokeWidth={3} />
+                          </div>
+                        ) : (
+                          <ChevronRight className="w-4 h-4 text-muted-foreground/15" />
+                        )}
+                      </div>
+                    </div>
+                  </motion.button>
+                );
+              })}
             </div>
           )}
-        </div>
-      </div>
-
-      {/* ══════ Bottom ══════ */}
-      <div className="fixed bottom-0 left-0 right-0 z-40">
-        <div
-          className="h-8 pointer-events-none"
-          style={{ background: "linear-gradient(to bottom, transparent, hsl(var(--background)))" }}
-        />
-        <div className="bg-background border-t border-border/15 px-5 pb-[env(safe-area-inset-bottom)]">
-          <div className="pt-3 pb-3">
-            <button
-              onClick={handleBack}
-              className={cn(
-                "w-full text-center text-[13px] text-muted-foreground/45",
-                "hover:text-muted-foreground transition-colors duration-200",
-                "py-2.5 rounded-xl font-medium"
-              )}
-            >
-              {isChangeMode ? "Cancelar" : "Voltar"}
-            </button>
-          </div>
         </div>
       </div>
     </div>
