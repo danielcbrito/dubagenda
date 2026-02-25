@@ -109,17 +109,29 @@ const EscolherBarbearia = () => {
 
     const tenantList = (data as Tenant[]) || [];
 
-    // Fetch ratings per tenant (via barbeiros → barbeiro_avaliacoes)
+    let curatedTenants = tenantList;
+
+    // Fetch active barbers per tenant and ratings
     if (tenantList.length > 0) {
-      const tenantIds = tenantList.map(t => t.id);
+      const tenantIds = tenantList.map((t) => t.id);
       const { data: barbers } = await supabase
         .from("barbeiros")
         .select("id, tenant_id")
         .in("tenant_id", tenantIds)
-        .eq("ativo", true);
+        .eq("ativo", true)
+        .is("deleted_at", null);
+
+      // Only keep tenants that still have at least one active barber
+      const activeTenantIds = new Set(
+        (barbers ?? [])
+          .map((b) => b.tenant_id)
+          .filter((tenantId): tenantId is string => !!tenantId)
+      );
+
+      curatedTenants = tenantList.filter((t) => activeTenantIds.has(t.id));
 
       if (barbers && barbers.length > 0) {
-        const barberIds = barbers.map(b => b.id);
+        const barberIds = barbers.map((b) => b.id);
         const { data: reviews } = await supabase
           .from("barbeiro_avaliacoes")
           .select("barber_id, rating")
@@ -127,7 +139,7 @@ const EscolherBarbearia = () => {
 
         if (reviews && reviews.length > 0) {
           // Map barber_id → tenant_id
-          const barberToTenant = new Map(barbers.map(b => [b.id, b.tenant_id]));
+          const barberToTenant = new Map(barbers.map((b) => [b.id, b.tenant_id]));
           const tenantRatings = new Map<string, { sum: number; count: number }>();
 
           for (const r of reviews) {
@@ -139,7 +151,7 @@ const EscolherBarbearia = () => {
             tenantRatings.set(tid, cur);
           }
 
-          for (const t of tenantList) {
+          for (const t of curatedTenants) {
             const stats = tenantRatings.get(t.id);
             if (stats) {
               t.avgRating = stats.sum / stats.count;
@@ -148,29 +160,30 @@ const EscolherBarbearia = () => {
           }
         }
       }
+    }
 
-      // Also fetch DUB (global) barber ratings (tenant_id IS NULL)
-      const { data: dubBarbers } = await supabase
-        .from("barbeiros")
-        .select("id")
-        .is("tenant_id", null)
-        .eq("ativo", true);
+    // Also fetch DUB (global) barber ratings (tenant_id IS NULL)
+    const { data: dubBarbers } = await supabase
+      .from("barbeiros")
+      .select("id")
+      .is("tenant_id", null)
+      .eq("ativo", true)
+      .is("deleted_at", null);
 
-      if (dubBarbers && dubBarbers.length > 0) {
-        const dubBarberIds = dubBarbers.map(b => b.id);
-        const { data: dubReviews } = await supabase
-          .from("barbeiro_avaliacoes")
-          .select("rating")
-          .in("barber_id", dubBarberIds);
+    if (dubBarbers && dubBarbers.length > 0) {
+      const dubBarberIds = dubBarbers.map((b) => b.id);
+      const { data: dubReviews } = await supabase
+        .from("barbeiro_avaliacoes")
+        .select("rating")
+        .in("barber_id", dubBarberIds);
 
-        if (dubReviews && dubReviews.length > 0) {
-          const sum = dubReviews.reduce((s, r) => s + r.rating, 0);
-          setDubRating({ avg: sum / dubReviews.length, count: dubReviews.length });
-        }
+      if (dubReviews && dubReviews.length > 0) {
+        const sum = dubReviews.reduce((s, r) => s + r.rating, 0);
+        setDubRating({ avg: sum / dubReviews.length, count: dubReviews.length });
       }
     }
 
-    setTenants(tenantList);
+    setTenants(curatedTenants);
     setIsLoading(false);
   };
 
