@@ -36,21 +36,45 @@ async function checkTimeSlotAvailability(
   const appointmentDate = new Date(data + 'T12:00:00');
   const dayOfWeek = appointmentDate.getDay();
 
-  // Buscar configurações de horário (barbeiro ou global)
+  // Buscar configurações de horário com hierarquia completa:
+  // 1) Exceção do barbeiro, 2) Exceção global, 3) Config barbeiro, 4) Config global
   let config: any = null;
+  let configSource = 'padrão global';
 
   if (barbeiro_id) {
+    // 1) Exceção do barbeiro para a data específica
+    const { data: excBarbeiro } = await supabase
+      .from('horarios_excepcionais_barbeiro')
+      .select('*')
+      .eq('barbeiro_id', barbeiro_id)
+      .eq('data', data)
+      .maybeSingle();
+    if (excBarbeiro) { config = excBarbeiro; configSource = 'exceção barbeiro'; }
+  }
+
+  if (!config) {
+    // 2) Exceção global para a data específica
+    const { data: excGlobal } = await supabase
+      .from('horarios_excepcionais')
+      .select('*')
+      .eq('data', data)
+      .maybeSingle();
+    if (excGlobal) { config = excGlobal; configSource = 'exceção global'; }
+  }
+
+  if (!config && barbeiro_id) {
+    // 3) Config padrão do barbeiro
     const { data: barbeiroConfig } = await supabase
       .from('configuracoes_horario_barbeiro')
       .select('*')
       .eq('barbeiro_id', barbeiro_id)
       .eq('dia_semana', dayOfWeek)
       .maybeSingle();
-
-    if (barbeiroConfig) config = barbeiroConfig;
+    if (barbeiroConfig) { config = barbeiroConfig; configSource = 'config barbeiro'; }
   }
 
   if (!config) {
+    // 4) Config global
     const { data: globalConfig } = await supabase
       .from('configuracoes_horario')
       .select('*')
@@ -65,7 +89,10 @@ async function checkTimeSlotAvailability(
       hora_almoco_fim: '14:00',
       delay_entre_servicos: 10
     };
+    if (globalConfig) configSource = 'config global';
   }
+
+  console.log(`[checkTimeSlotAvailability] Config dia ${dayOfWeek} (${configSource}${barbeiro_id ? `, barbeiro: ${barbeiro_id}` : ''}): ${config.hora_abertura}-${config.hora_fechamento}`);
 
   if (!config.aberto) {
     return { available: false, message: 'A barbearia não funciona neste dia.' };
