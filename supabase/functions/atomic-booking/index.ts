@@ -50,38 +50,83 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Buscar configurações do dia (prioridade: barbeiro > global)
+    // Buscar configurações com hierarquia completa:
+    // 1) Exceção barbeiro, 2) Exceção global, 3) Config barbeiro, 4) Config global
     const dateObj = new Date(date + 'T12:00:00');
     const dayOfWeek = dateObj.getDay();
 
-    let delayMinutes = 10;
+    let resolvedConfig: any = null;
 
     if (barbeiroId) {
+      const { data: excBarb } = await supabase
+        .from('horarios_excepcionais_barbeiro')
+        .select('*')
+        .eq('barbeiro_id', barbeiroId)
+        .eq('data', date)
+        .maybeSingle();
+      if (excBarb) resolvedConfig = excBarb;
+    }
+
+    if (!resolvedConfig) {
+      const { data: excGlobal } = await supabase
+        .from('horarios_excepcionais')
+        .select('*')
+        .eq('data', date)
+        .maybeSingle();
+      if (excGlobal) resolvedConfig = excGlobal;
+    }
+
+    if (!resolvedConfig && barbeiroId) {
       const { data: barberConfig } = await supabase
         .from('configuracoes_horario_barbeiro')
-        .select('delay_entre_servicos')
+        .select('*')
         .eq('barbeiro_id', barbeiroId)
         .eq('dia_semana', dayOfWeek)
         .maybeSingle();
-      if (barberConfig?.delay_entre_servicos) {
-        delayMinutes = barberConfig.delay_entre_servicos;
-      }
+      if (barberConfig) resolvedConfig = barberConfig;
     }
 
-    if (delayMinutes === 10) {
-      const { data: configData } = await supabase
+    if (!resolvedConfig) {
+      const { data: globalConfig } = await supabase
         .from('configuracoes_horario')
-        .select('delay_entre_servicos')
+        .select('*')
         .eq('dia_semana', dayOfWeek)
-        .single();
-      delayMinutes = configData?.delay_entre_servicos || 10;
+        .maybeSingle();
+      resolvedConfig = globalConfig || {
+        aberto: dayOfWeek !== 0,
+        hora_abertura: '09:00',
+        hora_fechamento: '20:00',
+        delay_entre_servicos: 10
+      };
     }
 
-    const DELAY_MINUTES = delayMinutes;
+    if (resolvedConfig.aberto === false) {
+      return new Response(
+        JSON.stringify({ success: false, message: 'Barbearia fechada neste dia.' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 409 }
+      );
+    }
+
+    const DELAY_MINUTES = resolvedConfig.delay_entre_servicos || 10;
+
+    // Validar horário de expediente
+    const openMinutes = (() => { const [h, m] = (resolvedConfig.hora_abertura || '09:00').split(':').map(Number); return h * 60 + m; })();
+    const closeMinutes = (() => { const [h, m] = (resolvedConfig.hora_fechamento || '20:00').split(':').map(Number); return h * 60 + m; })();
 
     const [hour, minute] = time.split(':').map(Number);
     const slotStartMinutes = hour * 60 + minute;
     const slotEndMinutes = slotStartMinutes + duration;
+
+    // Validar dentro do expediente
+    if (slotStartMinutes < openMinutes || slotEndMinutes > closeMinutes) {
+      const openTime = `${Math.floor(openMinutes / 60).toString().padStart(2, '0')}:${(openMinutes % 60).toString().padStart(2, '0')}`;
+      const closeTime = `${Math.floor(closeMinutes / 60).toString().padStart(2, '0')}:${(closeMinutes % 60).toString().padStart(2, '0')}`;
+      console.log(`[atomic-booking] ❌ Fora do expediente: ${time} vs ${openTime}-${closeTime}`);
+      return new Response(
+        JSON.stringify({ success: false, message: `Horário fora do expediente (${openTime}-${closeTime}).` }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 409 }
+      );
+    }
 
     // Verificar agendamentos existentes (FILTRADO POR BARBEIRO)
     let aptQuery = supabase
