@@ -78,8 +78,10 @@ const VerificarWhatsApp = () => {
         toast.success("Cadastro confirmado com sucesso!");
         
         setTimeout(() => {
+          const tenantParam = searchParams.get("tenant");
+          const tenantQuery = tenantParam ? `&tenant=${tenantParam}` : "";
           if (origin === "discover") {
-            navigate("/auth?mode=login&verified=whatsapp&origin=discover");
+            navigate(`/auth?mode=login&verified=whatsapp&origin=discover${tenantQuery}`);
           } else {
             navigate("/auth?mode=login&verified=whatsapp");
           }

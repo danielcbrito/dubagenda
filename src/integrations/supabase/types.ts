@@ -3152,7 +3152,9 @@ export type Database = {
           endereco_completo: string | null
           estado: string | null
           id: string
+          latitude: number | null
           logo_url: string | null
+          longitude: number | null
           nome: string
           numero: string | null
           onboarding_completed: boolean
@@ -3176,7 +3178,9 @@ export type Database = {
           endereco_completo?: string | null
           estado?: string | null
           id?: string
+          latitude?: number | null
           logo_url?: string | null
+          longitude?: number | null
           nome: string
           numero?: string | null
           onboarding_completed?: boolean
@@ -3200,7 +3204,9 @@ export type Database = {
           endereco_completo?: string | null
           estado?: string | null
           id?: string
+          latitude?: number | null
           logo_url?: string | null
+          longitude?: number | null
           nome?: string
           numero?: string | null
           onboarding_completed?: boolean
