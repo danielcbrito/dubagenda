@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
-import { MapPin, Search, Scissors, ChevronRight, ArrowLeft, Check, Crown, Navigation, Loader2 } from "lucide-react";
+import { MapPin, Search, Scissors, ChevronRight, ArrowLeft, Check, Crown, Navigation, Loader2, Star } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -18,6 +18,8 @@ interface Tenant {
   latitude: number | null;
   longitude: number | null;
   distance?: number | null;
+  avgRating?: number | null;
+  totalReviews?: number;
 }
 
 function haversineDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
@@ -41,6 +43,7 @@ const EscolherBarbearia = () => {
   const [currentPreferred, setCurrentPreferred] = useState<string | null>(null);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [locationStatus, setLocationStatus] = useState<"idle" | "requesting" | "granted" | "denied">("idle");
+  const [dubRating, setDubRating] = useState<{ avg: number; count: number } | null>(null);
 
   const isChangeMode = searchParams.get("mode") === "change";
   const isAuthenticated = !!userId;
@@ -99,24 +102,103 @@ const EscolherBarbearia = () => {
     if (error) {
       console.error("Erro ao carregar barbearias:", error);
       toast.error("Erro ao carregar barbearias");
+      setTenants([]);
+      setIsLoading(false);
+      return;
     }
-    setTenants((data as Tenant[]) || []);
+
+    const tenantList = (data as Tenant[]) || [];
+
+    // Fetch ratings per tenant (via barbeiros → barbeiro_avaliacoes)
+    if (tenantList.length > 0) {
+      const tenantIds = tenantList.map(t => t.id);
+      const { data: barbers } = await supabase
+        .from("barbeiros")
+        .select("id, tenant_id")
+        .in("tenant_id", tenantIds)
+        .eq("ativo", true);
+
+      if (barbers && barbers.length > 0) {
+        const barberIds = barbers.map(b => b.id);
+        const { data: reviews } = await supabase
+          .from("barbeiro_avaliacoes")
+          .select("barber_id, rating")
+          .in("barber_id", barberIds);
+
+        if (reviews && reviews.length > 0) {
+          // Map barber_id → tenant_id
+          const barberToTenant = new Map(barbers.map(b => [b.id, b.tenant_id]));
+          const tenantRatings = new Map<string, { sum: number; count: number }>();
+
+          for (const r of reviews) {
+            const tid = barberToTenant.get(r.barber_id);
+            if (!tid) continue;
+            const cur = tenantRatings.get(tid) || { sum: 0, count: 0 };
+            cur.sum += r.rating;
+            cur.count += 1;
+            tenantRatings.set(tid, cur);
+          }
+
+          for (const t of tenantList) {
+            const stats = tenantRatings.get(t.id);
+            if (stats) {
+              t.avgRating = stats.sum / stats.count;
+              t.totalReviews = stats.count;
+            }
+          }
+        }
+      }
+
+      // Also fetch DUB (global) barber ratings (tenant_id IS NULL)
+      const { data: dubBarbers } = await supabase
+        .from("barbeiros")
+        .select("id")
+        .is("tenant_id", null)
+        .eq("ativo", true);
+
+      if (dubBarbers && dubBarbers.length > 0) {
+        const dubBarberIds = dubBarbers.map(b => b.id);
+        const { data: dubReviews } = await supabase
+          .from("barbeiro_avaliacoes")
+          .select("rating")
+          .in("barber_id", dubBarberIds);
+
+        if (dubReviews && dubReviews.length > 0) {
+          const sum = dubReviews.reduce((s, r) => s + r.rating, 0);
+          setDubRating({ avg: sum / dubReviews.length, count: dubReviews.length });
+        }
+      }
+    }
+
+    setTenants(tenantList);
     setIsLoading(false);
   };
 
-  // Sort tenants by distance when location available
+  // Sort tenants: proximity first, then by rating
   const sortedTenants = useCallback(() => {
-    if (!userLocation) return tenants;
-    return [...tenants].map(t => ({
+    const mapped = [...tenants].map(t => ({
       ...t,
-      distance: t.latitude && t.longitude
+      distance: userLocation && t.latitude && t.longitude
         ? haversineDistance(userLocation.lat, userLocation.lng, t.latitude, t.longitude)
         : null,
-    })).sort((a, b) => {
-      if (a.distance != null && b.distance != null) return a.distance - b.distance;
-      if (a.distance != null) return -1;
-      if (b.distance != null) return 1;
-      return 0;
+    }));
+
+    return mapped.sort((a, b) => {
+      // Primary: distance (closest first)
+      if (a.distance != null && b.distance != null) {
+        const diff = a.distance - b.distance;
+        if (Math.abs(diff) > 0.5) return diff; // >500m apart → sort by distance
+      }
+      if (a.distance != null && b.distance == null) return -1;
+      if (a.distance == null && b.distance != null) return 1;
+
+      // Secondary: rating (highest first)
+      const rA = a.avgRating ?? 0;
+      const rB = b.avgRating ?? 0;
+      if (rA !== rB) return rB - rA;
+
+      // Tertiary: review count
+      return (b.totalReviews ?? 0) - (a.totalReviews ?? 0);
     });
   }, [tenants, userLocation]);
 
@@ -309,9 +391,18 @@ const EscolherBarbearia = () => {
                             Referência
                           </span>
                         </div>
-                        <p className="text-[11px] text-muted-foreground/70 mt-0.5">
-                          Corte masculino premium • Atendimento exclusivo
-                        </p>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <p className="text-[11px] text-muted-foreground/70">
+                            Corte masculino premium
+                          </p>
+                          {dubRating && (
+                            <span className="flex items-center gap-0.5 text-[10px] text-amber-500 font-medium">
+                              <Star className="w-3 h-3 fill-amber-500 text-amber-500" />
+                              {dubRating.avg.toFixed(1)}
+                              <span className="text-muted-foreground/40 ml-0.5">({dubRating.count})</span>
+                            </span>
+                          )}
+                        </div>
                       </div>
                       {saving === "dub" ? (
                         <div className="w-5 h-5 border-2 border-primary/30 border-t-primary rounded-full animate-spin flex-shrink-0" />
@@ -405,14 +496,21 @@ const EscolherBarbearia = () => {
                         {tenant.slogan && (
                           <span className="block text-[11px] text-muted-foreground/60 truncate mt-0.5">{tenant.slogan}</span>
                         )}
-                        <div className="flex items-center gap-1 mt-1">
+                        <div className="flex items-center gap-1.5 mt-1 flex-wrap">
                           {(tenant.bairro || tenant.cidade) && (
-                            <>
+                            <div className="flex items-center gap-1 min-w-0">
                               <MapPin className="w-3 h-3 text-muted-foreground/30 flex-shrink-0" />
                               <span className="text-[10px] text-muted-foreground/45 truncate">
-                                {[tenant.bairro, tenant.cidade, tenant.estado].filter(Boolean).join(", ")}
+                                {[tenant.bairro, tenant.cidade].filter(Boolean).join(", ")}
                               </span>
-                            </>
+                            </div>
+                          )}
+                          {tenant.avgRating != null && (
+                            <span className="flex items-center gap-0.5 text-[10px] text-amber-500 font-medium flex-shrink-0">
+                              <Star className="w-3 h-3 fill-amber-500 text-amber-500" />
+                              {tenant.avgRating.toFixed(1)}
+                              <span className="text-muted-foreground/40">({tenant.totalReviews})</span>
+                            </span>
                           )}
                           {tenant.distance != null && (
                             <span className="text-[10px] text-primary/70 font-medium tabular-nums ml-auto flex-shrink-0">
