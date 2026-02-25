@@ -278,7 +278,7 @@ const EscolherBarbearia = () => {
             <div className="space-y-2 pt-1">
 
               {/* ═══ DUB — Always first ═══ */}
-              {isChangeMode && (
+              {(
                 <motion.div
                   initial={{ opacity: 0, y: 6 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -335,7 +335,7 @@ const EscolherBarbearia = () => {
               )}
 
               {/* ── Divider ── */}
-              {filtered.length > 0 && isChangeMode && (
+              {filtered.length > 0 && (
                 <div className="flex items-center gap-3 py-2 px-1">
                   <div className="flex-1 h-px bg-border/30" />
                   <span className="text-[9px] uppercase tracking-[0.1em] text-muted-foreground/35 font-semibold">
