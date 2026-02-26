@@ -135,104 +135,86 @@ export function AppointmentCardPremium({
         {/* Top accent bar with status color */}
         <div className="h-[3px]" style={{ background: statusConfig.color }} />
 
-        <div className="flex items-start gap-3.5 px-4 py-3.5">
-          {/* Left: Main info */}
-          <div className="flex-1 min-w-0">
-            {/* Service (highlighted and free) */}
-            <div className="mb-2.5">
-              <p className="text-[8px] font-semibold uppercase tracking-widest text-muted-foreground">
-                Serviço
-              </p>
-              <h3 className="mt-0.5 font-bold text-foreground text-[14px] leading-tight break-words">
-                {appointment.servico?.nome || "Serviço"}
-              </h3>
+        <div className="px-4 py-3.5">
+          {/* Line 1: Service name — free and bold */}
+          <h3 className="font-bold text-foreground text-[14px] leading-tight break-words mb-2">
+            {appointment.servico?.nome || "Serviço"}
+          </h3>
+
+          {/* Line 2: Status + Shop + Barber — all inline */}
+          <div className="flex items-center gap-1.5 flex-wrap mb-2.5">
+            <div
+              className="flex items-center gap-1 px-2 py-[3px] rounded-md text-[9px] font-bold uppercase tracking-wider"
+              style={{
+                background: statusConfig.bgColor,
+                color: statusConfig.color,
+                border: `1px solid ${statusConfig.borderColor}`,
+              }}
+            >
+              <StatusIcon className="w-2.5 h-2.5" />
+              {statusConfig.label}
             </div>
-
-            {/* Context badges */}
-            <div className="flex items-center gap-1.5 flex-wrap mb-2.5">
-              <div
-                className="flex items-center gap-1 px-2 py-[3px] rounded-md text-[9px] font-bold uppercase tracking-wider"
-                style={{
-                  background: statusConfig.bgColor,
-                  color: statusConfig.color,
-                  border: `1px solid ${statusConfig.borderColor}`,
-                }}
-              >
-                <StatusIcon className="w-2.5 h-2.5" />
-                {statusConfig.label}
-              </div>
-
-              <div className="flex items-center gap-1 px-2 py-[3px] rounded-md bg-muted/70 border border-border/30 max-w-full">
-                <Store className="w-3 h-3 text-foreground/50 flex-shrink-0" />
-                <span className="text-[10px] font-semibold text-foreground/70 truncate">{shopName}</span>
-              </div>
-
-              {appointment.barbeiro?.apelido && (
-                <div className="flex items-center gap-1 px-2 py-[3px] rounded-md bg-muted/70 border border-border/30 max-w-full">
-                  <Scissors className="w-3 h-3 text-foreground/50 flex-shrink-0" />
-                  <span className="text-[10px] font-semibold text-foreground/70 truncate">
-                    {appointment.barbeiro.apelido}
-                  </span>
-                </div>
-              )}
+            <div className="flex items-center gap-1 px-2 py-[3px] rounded-md bg-muted/70 border border-border/30">
+              <Store className="w-3 h-3 text-foreground/50" />
+              <span className="text-[10px] font-semibold text-foreground/70 truncate">{shopName}</span>
             </div>
-
-            {/* Quick-read details */}
-            <div className="grid grid-cols-3 gap-2">
-              <div className="rounded-md border border-border/30 bg-muted/40 px-2 py-1.5">
-                <p className="text-[8px] font-semibold uppercase tracking-wider text-muted-foreground">Data</p>
-                <p className="text-[11px] font-bold text-foreground tabular-nums">
-                  {format(new Date(`${appointment.data}T12:00:00`), "dd/MM", { locale: ptBR })}
-                </p>
+            {appointment.barbeiro?.apelido && (
+              <div className="flex items-center gap-1 px-2 py-[3px] rounded-md bg-muted/70 border border-border/30">
+                <Scissors className="w-3 h-3 text-foreground/50" />
+                <span className="text-[10px] font-semibold text-foreground/70 truncate">{appointment.barbeiro.apelido}</span>
               </div>
-
-              <div className="rounded-md border border-border/30 bg-muted/40 px-2 py-1.5">
-                <p className="text-[8px] font-semibold uppercase tracking-wider text-muted-foreground">Horário</p>
-                <p className="text-[11px] font-bold text-foreground tabular-nums">{appointment.hora}</p>
-              </div>
-
-              <div className="rounded-md border border-border/30 bg-muted/40 px-2 py-1.5">
-                <p className="text-[8px] font-semibold uppercase tracking-wider text-muted-foreground">Valor</p>
-                {isPlanAppointment ? (
-                  <div className="flex items-center gap-1">
-                    <Crown className="w-3 h-3 text-primary" />
-                    <span className="text-[10px] font-bold text-primary">Plano</span>
-                  </div>
-                ) : isFreeAppointment ? (
-                  <div className="flex items-center gap-1">
-                    <Gift className="w-3 h-3 text-secondary" />
-                    <span className="text-[10px] font-bold text-secondary">Grátis</span>
-                  </div>
-                ) : appointment.preco ? (
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className="text-[11px] font-bold text-foreground tabular-nums">
-                      R$ {appointment.preco.toFixed(2)}
-                    </span>
-                    {isPaid && (
-                      <span className="text-[8px] text-primary font-bold uppercase tracking-wider bg-primary/10 px-1 py-0.5 rounded">
-                        Pago
-                      </span>
-                    )}
-                  </div>
-                ) : (
-                  <span className="text-[11px] font-bold text-muted-foreground">—</span>
-                )}
-              </div>
-            </div>
+            )}
           </div>
 
-          {/* Right: Date circle */}
-          <div className="flex flex-col items-center flex-shrink-0 pt-0.5">
-            <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">
-              {format(new Date(`${appointment.data}T12:00:00`), "EEE", { locale: ptBR })}
-            </span>
-            <div
-              className="w-11 h-11 rounded-full flex items-center justify-center mt-0.5"
-              style={{ background: statusConfig.bgColor, border: `1.5px solid ${statusConfig.borderColor}` }}
-            >
-              <span className="text-[17px] font-bold tabular-nums" style={{ color: statusConfig.color }}>
-                {format(new Date(`${appointment.data}T12:00:00`), "dd")}
-              </span>
+          {/* Line 3: Time + Price + Date circle — all inline */}
+          <div className="flex items-center gap-2.5 text-[11px]">
+            <div className="flex items-center gap-1">
+              <Clock className="w-3.5 h-3.5 text-foreground/40" />
+              <span className="font-semibold text-foreground/70 tabular-nums">{appointment.hora}</span>
+            </div>
+
+            <span className="text-border">·</span>
+
+            {isPlanAppointment ? (
+              <div className="flex items-center gap-1">
+                <Crown className="w-3 h-3 text-primary" />
+                <span className="text-[10px] font-bold text-primary">Plano</span>
+              </div>
+            ) : isFreeAppointment ? (
+              <div className="flex items-center gap-1">
+                <Gift className="w-3 h-3 text-secondary" />
+                <span className="text-[10px] font-bold text-secondary">Grátis</span>
+              </div>
+            ) : appointment.preco ? (
+              <div className="flex items-center gap-1.5">
+                <span className="font-bold text-foreground tabular-nums">
+                  R$ {appointment.preco.toFixed(2)}
+                </span>
+                {isPaid && (
+                  <span className="text-[8px] text-primary font-bold uppercase tracking-wider bg-primary/10 px-1 py-0.5 rounded">
+                    Pago
+                  </span>
+                )}
+              </div>
+            ) : null}
+
+            <span className="flex-1" />
+
+            {/* Date circle — bottom right */}
+            <div className="flex items-center gap-1.5 flex-shrink-0">
+              <div className="flex flex-col items-center">
+                <span className="text-[8px] font-bold uppercase tracking-widest text-muted-foreground leading-none">
+                  {format(new Date(`${appointment.data}T12:00:00`), "EEE", { locale: ptBR })}
+                </span>
+                <div
+                  className="w-9 h-9 rounded-full flex items-center justify-center mt-0.5"
+                  style={{ background: statusConfig.bgColor, border: `1.5px solid ${statusConfig.borderColor}` }}
+                >
+                  <span className="text-[15px] font-bold tabular-nums" style={{ color: statusConfig.color }}>
+                    {format(new Date(`${appointment.data}T12:00:00`), "dd")}
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
