@@ -2,8 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Scissors, MapPin, ChevronRight } from "lucide-react";
 
-import logoDub from "@/assets/logo-dub.png";
-import landingHero from "@/assets/landing-hero-tools.jpg";
+import landingHero from "@/assets/landing-hero-new.jpg";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -20,28 +19,15 @@ const Index = () => {
           <img
             src={landingHero}
             alt=""
-            className="w-full h-full object-cover object-center"
+            className="w-full h-full object-cover object-top"
             loading="eager"
           />
-          <div className="absolute inset-0 bg-gradient-to-b from-background/50 via-background/70 to-background" />
-          <div className="absolute inset-0 bg-gradient-to-t from-background via-background/90 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-background" />
+          <div className="absolute inset-0 bg-gradient-to-t from-background via-background/70 to-transparent" style={{ top: '40%' }} />
         </div>
 
         {/* Content */}
         <div className="relative z-10 flex flex-col flex-1 px-6 pt-[env(safe-area-inset-top)]">
-          {/* Logo */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-            className="flex items-center justify-center pt-14"
-          >
-            <img
-              src={logoDub}
-              alt="DUB"
-              className="w-[72px] h-[72px] object-contain drop-shadow-2xl"
-            />
-          </motion.div>
 
           {/* Spacer */}
           <div className="flex-1" />
