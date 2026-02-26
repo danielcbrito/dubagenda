@@ -26,7 +26,7 @@ interface Appointment {
   payment_method?: string | null;
   tipo_agendamento?: string | null;
   is_free?: boolean | null;
-  barbeiro?: { apelido: string } | null;
+  barbeiro?: { apelido: string; tenant?: { nome: string } | null } | null;
   pagamentos?: Array<{
     metodo: string;
     status: string;
@@ -157,6 +157,14 @@ export function AppointmentCardPremium({
                   <span className="text-[10px] text-foreground/70 font-medium">
                     {appointment.barbeiro.apelido}
                   </span>
+                  {appointment.barbeiro.tenant?.nome && (
+                    <>
+                      <span className="text-[8px] text-muted-foreground/30">·</span>
+                      <span className="text-[9px] text-muted-foreground/50 font-medium truncate max-w-[80px]">
+                        {appointment.barbeiro.tenant.nome}
+                      </span>
+                    </>
+                  )}
                 </div>
               )}
               <div className="text-center px-2.5 py-1.5 rounded-lg bg-muted/60">
