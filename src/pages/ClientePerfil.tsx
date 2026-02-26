@@ -314,7 +314,7 @@ export default function ClientePerfil() {
                 icon={Store}
                 label={isDubExclusive ? "Barbearia DUB" : "Minha Barbearia"}
                 badge={isDubExclusive ? "Exclusivo" : preferredShopName || undefined}
-                onClick={() => navigate("/escolher-barbearia?mode=change")}
+                onClick={() => setShopDetailsOpen(true)}
               />
               <ProfileItem
                 icon={MapPin}
