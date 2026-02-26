@@ -61,6 +61,9 @@ function DistanceBadge({ km }: { km: number | null; }) {
   );
 }
 
+// ── DUB Coordinates (Rua Ferrador, 108 – Cidade Ipava, São Paulo) ──
+const DUB_COORDS = { lat: -23.635, lng: -46.685 };
+
 // ── Main Page ──
 const EscolherBarbearia = () => {
   const navigate = useNavigate();
@@ -371,10 +374,13 @@ const EscolherBarbearia = () => {
                         <span className="text-[13px] font-semibold text-foreground">Barbearia DUB</span>
                         <Crown className="w-[10px] h-[10px] text-primary/60" />
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-[10px] text-muted-foreground/50">Corte premium</span>
                         {dubRating && (
                           <RatingStars rating={dubRating.avg} count={dubRating.count} />
+                        )}
+                        {locationStatus === "granted" && userLocation && (
+                          <DistanceBadge km={haversineDistance(userLocation.lat, userLocation.lng, DUB_COORDS.lat, DUB_COORDS.lng)} />
                         )}
                       </div>
                     </div>
