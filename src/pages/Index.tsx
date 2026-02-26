@@ -1,4 +1,3 @@
-import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Scissors, MapPin, ChevronRight } from "lucide-react";
@@ -8,60 +7,23 @@ import landingHero from "@/assets/landing-hero-new.jpg";
 const Index = () => {
   const navigate = useNavigate();
 
-  useEffect(() => {
-    const html = document.documentElement;
-    const body = document.body;
-
-    html.classList.remove("lock-scroll");
-    body.classList.remove("lock-scroll");
-
-    html.style.overflow = "";
-    html.style.overflowY = "";
-    html.style.overflowX = "";
-    html.style.height = "";
-    html.style.position = "";
-    html.style.width = "";
-    html.style.top = "";
-    html.style.left = "";
-    html.style.right = "";
-    html.style.bottom = "";
-    html.style.paddingRight = "";
-    html.style.removeProperty("touch-action");
-    html.style.removeProperty("overscroll-behavior");
-    html.style.removeProperty("overscroll-behavior-y");
-
-    body.style.overflow = "";
-    body.style.overflowY = "";
-    body.style.overflowX = "";
-    body.style.height = "";
-    body.style.minHeight = "";
-    body.style.position = "";
-    body.style.width = "";
-    body.style.top = "";
-    body.style.left = "";
-    body.style.right = "";
-    body.style.bottom = "";
-    body.style.paddingRight = "";
-    body.style.removeProperty("-webkit-overflow-scrolling");
-    body.style.removeProperty("touch-action");
-    body.style.removeProperty("overscroll-behavior");
-    body.style.removeProperty("overscroll-behavior-y");
-  }, []);
-
   const handleDiscover = () => {
     navigate("/escolher-barbearia");
   };
 
   return (
-    <div className="flex flex-col bg-background relative" style={{ height: "100dvh" }}>
+    <div className="flex flex-col bg-background" style={{ height: "100dvh" }}>
       <div className="flex-1 min-h-0 relative">
         <div
           className="absolute top-0 left-0 right-0 h-4 z-10 pointer-events-none"
           style={{ background: "linear-gradient(to bottom, hsl(var(--background)), transparent)" }}
         />
 
-        <div className="h-full overflow-y-auto overscroll-contain touch-pan-y">
-          <div className="relative min-h-[108dvh] flex flex-col">
+        <div
+          className="h-full overflow-y-auto overscroll-contain touch-pan-y pb-8"
+          style={{ WebkitOverflowScrolling: "touch" }}
+        >
+          <div className="relative min-h-[112dvh] flex flex-col">
             <div className="absolute inset-0 pointer-events-none">
               <img
                 src={landingHero}
@@ -158,3 +120,4 @@ const Index = () => {
 };
 
 export default Index;
+

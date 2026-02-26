@@ -16,21 +16,28 @@ export default function SupportChat() {
   };
 
   useEffect(() => {
-    document.documentElement.classList.add('lock-scroll');
-    document.body.classList.add('lock-scroll');
-    
+    const html = document.documentElement;
+    const body = document.body;
+
+    html.classList.add("lock-scroll");
+    body.classList.add("lock-scroll");
+
     const setFullHeight = () => {
       const vh = window.innerHeight * 0.01;
-      document.documentElement.style.setProperty('--vh', `${vh}px`);
+      html.style.setProperty("--vh", `${vh}px`);
     };
-    
+
     setFullHeight();
-    window.addEventListener('resize', setFullHeight);
-    
+    window.addEventListener("resize", setFullHeight);
+
     return () => {
-      document.documentElement.classList.remove('lock-scroll');
-      document.body.classList.remove('lock-scroll');
-      window.removeEventListener('resize', setFullHeight);
+      html.classList.remove("lock-scroll");
+      body.classList.remove("lock-scroll");
+      html.style.removeProperty("overflow");
+      body.style.removeProperty("overflow");
+      html.style.removeProperty("overscroll-behavior");
+      body.style.removeProperty("overscroll-behavior");
+      window.removeEventListener("resize", setFullHeight);
     };
   }, []);
 
