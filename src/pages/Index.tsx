@@ -12,9 +12,11 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background relative overflow-x-hidden">
-      <div className="relative min-h-screen flex flex-col">
-        {/* Background */}
+    <div
+      className="h-[100dvh] bg-background relative overflow-x-hidden overflow-y-auto overscroll-contain"
+      style={{ WebkitOverflowScrolling: "touch", touchAction: "pan-y" }}
+    >
+      <div className="relative min-h-[100dvh] flex flex-col">
         <div className="absolute inset-0 pointer-events-none">
           <img
             src={landingHero}
