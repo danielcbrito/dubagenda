@@ -1,15 +1,11 @@
 import { useState, useEffect } from "react";
-import {
-  Sheet,
-  SheetContent,
-} from "@/components/ui/sheet";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { 
-  Calendar, 
-  CheckCircle, 
-  AlertCircle, 
-  Bell, 
+import {
+  Calendar,
+  CheckCircle,
+  AlertCircle,
+  Bell,
   CheckCircle2,
   XCircle,
   Clock,
@@ -37,117 +33,99 @@ interface NotificationsSheetProps {
   userId: string;
 }
 
-// Componente do Card de Notificação Premium
-function NotificationCard({ 
-  notification, 
+function getNotifIcon(tipo: string, titulo: string) {
+  const t = titulo.toLowerCase();
+  if (tipo === "cancelamento" || tipo === "cancelamento_massa" || t.includes("cancelad"))
+    return <XCircle className="w-4 h-4 text-destructive" />;
+  if (tipo === "remarcacao" || t.includes("remarc"))
+    return <Calendar className="w-4 h-4 text-primary" />;
+  if (tipo === "lembrete" || t.includes("lembrete"))
+    return <Clock className="w-4 h-4 text-primary" />;
+  if (t.includes("concluíd") || t.includes("concluido"))
+    return <CheckCircle2 className="w-4 h-4 text-primary" />;
+  if (t.includes("confirmad") || t.includes("agendamento"))
+    return <CheckCircle className="w-4 h-4 text-primary" />;
+  return <Bell className="w-4 h-4 text-muted-foreground" />;
+}
+
+function NotificationCard({
+  notification,
   onMarkAsRead,
-  onReschedule 
-}: { 
+  onReschedule,
+  index,
+}: {
   notification: Notification;
   onMarkAsRead: (id: string) => void;
   onReschedule: (id: string) => void;
+  index: number;
 }) {
-  // Determina o ícone baseado no tipo e título da notificação
-  const getIcon = () => {
-    const tipo = notification.tipo;
-    const titulo = notification.titulo.toLowerCase();
-
-    if (tipo === 'cancelamento' || tipo === 'cancelamento_massa' || titulo.includes('cancelad')) {
-      return <XCircle className="w-5 h-5 text-red-500" />;
-    }
-    if (tipo === 'remarcacao' || titulo.includes('remarc')) {
-      return <Calendar className="w-5 h-5 text-orange-500" />;
-    }
-    if (tipo === 'lembrete' || titulo.includes('lembrete')) {
-      return <Clock className="w-5 h-5 text-primary" />;
-    }
-    if (titulo.includes('concluíd') || titulo.includes('concluido')) {
-      return <CheckCircle2 className="w-5 h-5 text-blue-500" />;
-    }
-    if (titulo.includes('confirmad') || titulo.includes('agendamento')) {
-      return <CheckCircle className="w-5 h-5 text-green-500" />;
-    }
-    return <Bell className="w-5 h-5 text-zinc-400" />;
-  };
-
-  const needsAction = notification.tipo === 'remarcacao' || notification.tipo === 'cancelamento_massa';
+  const needsAction = notification.tipo === "remarcacao" || notification.tipo === "cancelamento_massa";
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 10 }}
+      initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -10 }}
+      transition={{ delay: index * 0.03 }}
       className={cn(
-        "relative rounded-xl p-4 border transition-all",
-        notification.lida 
-          ? "bg-card/50 border-border" 
-          : "bg-card border-primary/20 shadow-sm"
+        "rounded-xl border p-3.5 active:scale-[0.99] transition-all",
+        notification.lida
+          ? "border-border/20 bg-card/40"
+          : "border-border/40 bg-card shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-none"
       )}
     >
-      {/* Indicador de nova notificação */}
-      {!notification.lida && (
-        <div className="absolute top-4 right-4">
-          <div className="w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse" />
-        </div>
-      )}
-
-      <div className="flex gap-3">
-        {/* Ícone */}
-        <div className="flex-shrink-0 mt-0.5">
-          <div className={cn(
-            "w-10 h-10 rounded-full flex items-center justify-center",
-            notification.lida ? "bg-muted" : "bg-muted/80"
-          )}>
-            {getIcon()}
-          </div>
+      <div className="flex items-start gap-3">
+        {/* Icon */}
+        <div className={cn(
+          "w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5",
+          notification.lida ? "bg-muted/50" : "bg-primary/10 dark:bg-primary/15"
+        )}>
+          {getNotifIcon(notification.tipo, notification.titulo)}
         </div>
 
-        {/* Conteúdo */}
+        {/* Content */}
         <div className="flex-1 min-w-0">
-          <div className="flex items-start justify-between gap-2 mb-1">
+          <div className="flex items-start justify-between gap-2 mb-0.5">
             <h4 className={cn(
-              "font-semibold text-sm",
+              "text-[13px] font-semibold leading-tight",
               notification.lida ? "text-muted-foreground" : "text-foreground"
             )}>
               {notification.titulo}
             </h4>
             {!notification.lida && (
-              <span className="text-[10px] bg-primary text-primary-foreground px-2 py-0.5 rounded-full font-semibold flex-shrink-0">
-                Nova
-              </span>
+              <div className="w-2 h-2 rounded-full bg-primary flex-shrink-0 mt-1.5" />
             )}
           </div>
 
           <p className={cn(
-            "text-[13px] mb-2 line-clamp-2 leading-relaxed",
-            notification.lida ? "text-muted-foreground/60" : "text-muted-foreground"
+            "text-[11px] leading-relaxed line-clamp-2 mb-2",
+            notification.lida ? "text-muted-foreground/50" : "text-muted-foreground"
           )}>
             {notification.mensagem}
           </p>
 
-          <div className="flex items-center justify-between flex-wrap gap-2">
-            <span className="text-[11px] text-muted-foreground/50">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] text-muted-foreground/40 tabular-nums">
               {formatDistanceToNow(new Date(notification.created_at), {
                 addSuffix: true,
-                locale: ptBR
+                locale: ptBR,
               })}
             </span>
 
             <div className="flex items-center gap-2">
               {needsAction && (
                 <button
-                  onClick={() => onReschedule(notification.id)}
-                  className="text-[11px] bg-primary/10 text-primary px-3 py-1.5 rounded-lg font-semibold hover:bg-primary/20 transition-colors"
+                  onClick={(e) => { e.stopPropagation(); onReschedule(notification.id); }}
+                  className="text-[10px] bg-primary/10 text-primary px-2.5 py-1 rounded-lg font-semibold active:opacity-70 transition-opacity"
                 >
-                  Remarcar Agora
+                  Remarcar
                 </button>
               )}
               {!notification.lida && (
                 <button
-                  onClick={() => onMarkAsRead(notification.id)}
-                  className="text-[11px] text-muted-foreground/60 hover:text-foreground transition-colors"
+                  onClick={(e) => { e.stopPropagation(); onMarkAsRead(notification.id); }}
+                  className="text-[10px] text-muted-foreground/50 active:text-foreground transition-colors"
                 >
-                  Marcar como lida
+                  Marcar lida
                 </button>
               )}
             </div>
@@ -164,23 +142,19 @@ export function NotificationsSheet({ open, onOpenChange, userId }: Notifications
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (open && userId) {
-      loadNotifications();
-    }
+    if (open && userId) loadNotifications();
   }, [open, userId]);
 
   useEffect(() => {
     if (!userId) return;
-    
-    // Real-time subscription for new notifications
     const channel = supabase
-      .channel('user-notifications')
+      .channel("user-notifications")
       .on(
-        'postgres_changes',
+        "postgres_changes",
         {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'notificacoes',
+          event: "INSERT",
+          schema: "public",
+          table: "notificacoes",
           filter: `user_id=eq.${userId}`,
         },
         () => {
@@ -189,15 +163,11 @@ export function NotificationsSheet({ open, onOpenChange, userId }: Notifications
         }
       )
       .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    return () => { supabase.removeChannel(channel); };
   }, [userId]);
 
   const loadNotifications = async () => {
     if (!userId) return;
-    
     setLoading(true);
     try {
       const { data, error } = await supabase
@@ -206,7 +176,6 @@ export function NotificationsSheet({ open, onOpenChange, userId }: Notifications
         .eq("user_id", userId)
         .order("created_at", { ascending: false })
         .limit(50);
-
       if (error) throw error;
       setNotifications(data || []);
     } catch (error) {
@@ -223,13 +192,9 @@ export function NotificationsSheet({ open, onOpenChange, userId }: Notifications
         .from("notificacoes")
         .update({ lida: true })
         .eq("id", notificationId);
-
       if (error) throw error;
-      
-      setNotifications(prev =>
-        prev.map(notif =>
-          notif.id === notificationId ? { ...notif, lida: true } : notif
-        )
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === notificationId ? { ...n, lida: true } : n))
       );
     } catch (error) {
       console.error("Erro ao marcar como lida:", error);
@@ -243,14 +208,12 @@ export function NotificationsSheet({ open, onOpenChange, userId }: Notifications
         .update({ lida: true })
         .eq("user_id", userId)
         .eq("lida", false);
-
       if (error) throw error;
-      
-      setNotifications(prev => prev.map(n => ({ ...n, lida: true })));
+      setNotifications((prev) => prev.map((n) => ({ ...n, lida: true })));
       toast.success("Todas marcadas como lidas");
     } catch (error) {
       console.error("Erro ao marcar todas como lidas:", error);
-      toast.error("Erro ao marcar notificações como lidas");
+      toast.error("Erro ao marcar notificações");
     }
   };
 
@@ -260,77 +223,96 @@ export function NotificationsSheet({ open, onOpenChange, userId }: Notifications
     navigate("/cliente/agendar");
   };
 
-  const unreadCount = notifications.filter(n => !n.lida).length;
+  const unreadCount = notifications.filter((n) => !n.lida).length;
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full p-0 bg-background border-border">
-        
-        {/* HEADER FIXO */}
-        <div className="flex items-center gap-3 px-4 pt-4 pb-3">
-          <button 
-            onClick={() => onOpenChange(false)}
-            className="w-8 h-8 flex items-center justify-center"
-          >
-            <BackArrow size={20} className="text-foreground" />
-          </button>
-          <h2 className="text-lg font-bold text-foreground">Notificações</h2>
-          <div className="flex-1" />
-          {unreadCount > 0 && (
-            <button 
-              onClick={markAllAsRead}
-              className="text-sm text-primary hover:text-primary/80 font-medium transition-colors"
-            >
-              Marcar todas
-            </button>
-          )}
-        </div>
-
-        {/* LISTA DE NOTIFICAÇÕES */}
-        <div className="p-4 space-y-3 max-h-[calc(100vh-180px)] overflow-y-auto pb-20">
-          
-          {loading ? (
-            <div className="flex items-center justify-center py-12">
-              <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-            </div>
-          ) : notifications.length === 0 ? (
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="flex flex-col items-center justify-center py-16 text-center"
-            >
-              <div className="w-20 h-20 bg-muted/30 rounded-full flex items-center justify-center mb-4">
-                <Bell className="w-10 h-10 text-muted-foreground/30" />
-              </div>
-              <h3 className="text-base font-semibold text-muted-foreground mb-2">
-                Nenhuma notificação
-              </h3>
-              <p className="text-sm text-muted-foreground/60 max-w-xs">
-                Você receberá atualizações sobre seus agendamentos aqui
-              </p>
-            </motion.div>
-          ) : (
-            <AnimatePresence>
-              {notifications.map((notif, index) => (
-                <motion.div
-                  key={notif.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.05 }}
+    <AnimatePresence>
+      {open && (
+        <motion.div
+          initial={{ opacity: 0, x: "100%" }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: "100%" }}
+          transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+          className="fixed inset-0 z-50 flex flex-col bg-background"
+        >
+          {/* Header */}
+          <div className="flex-shrink-0 px-4 pt-[max(env(safe-area-inset-top),0.75rem)] pb-3">
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => onOpenChange(false)}
+                className="w-8 h-8 flex items-center justify-center rounded-lg bg-card border border-border/40 active:scale-90 transition-transform"
+              >
+                <BackArrow size={18} className="text-foreground" />
+              </button>
+              <h1 className="text-[14px] font-semibold text-foreground tracking-tight flex-1">
+                Notificações
+              </h1>
+              {unreadCount > 0 && (
+                <button
+                  onClick={markAllAsRead}
+                  className="text-[11px] text-primary font-semibold active:opacity-70 transition-opacity"
                 >
-                  <NotificationCard 
+                  Marcar todas
+                </button>
+              )}
+            </div>
+
+            {/* Unread counter */}
+            {unreadCount > 0 && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="mt-2"
+              >
+                <p className="text-[10px] text-muted-foreground/50">
+                  <span className="text-foreground font-bold tabular-nums">{unreadCount}</span> não lida{unreadCount > 1 ? "s" : ""}
+                </p>
+              </motion.div>
+            )}
+          </div>
+
+          {/* Scroll area */}
+          <div className="flex-1 min-h-0 relative">
+            <div
+              className="absolute top-0 left-0 right-0 h-4 z-10 pointer-events-none"
+              style={{ background: "linear-gradient(to bottom, hsl(var(--background)), transparent)" }}
+            />
+            <div className="h-full overflow-y-auto overscroll-contain pb-24 px-4 space-y-2.5">
+              {loading ? (
+                <div className="flex items-center justify-center py-16">
+                  <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                </div>
+              ) : notifications.length === 0 ? (
+                <motion.div
+                  initial={{ opacity: 0, y: 16 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="flex flex-col items-center justify-center py-20 text-center"
+                >
+                  <div className="w-14 h-14 bg-muted/30 rounded-2xl flex items-center justify-center mb-4">
+                    <Bell className="w-6 h-6 text-muted-foreground/30" />
+                  </div>
+                  <p className="text-[13px] font-semibold text-muted-foreground mb-1">
+                    Nenhuma notificação
+                  </p>
+                  <p className="text-[11px] text-muted-foreground/50 max-w-[200px]">
+                    Atualizações sobre seus agendamentos aparecerão aqui
+                  </p>
+                </motion.div>
+              ) : (
+                notifications.map((notif, index) => (
+                  <NotificationCard
+                    key={notif.id}
                     notification={notif}
                     onMarkAsRead={markAsRead}
                     onReschedule={handleReschedule}
+                    index={index}
                   />
-                </motion.div>
-              ))}
-            </AnimatePresence>
-          )}
-          
-        </div>
-
-      </SheetContent>
-    </Sheet>
+                ))
+              )}
+            </div>
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }
