@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Calendar, Clock, Check, AlertCircle, X, Crown, Gift, Scissors } from "lucide-react";
+import { Calendar, Clock, Check, AlertCircle, X, Crown, Gift, Scissors, Store } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { motion } from "framer-motion";
@@ -150,23 +150,7 @@ export function AppointmentCardPremium({
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
-              {appointment.barbeiro?.apelido && (
-                <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-muted/60">
-                  <Scissors className="w-2.5 h-2.5 text-muted-foreground/60" />
-                  <span className="text-[10px] text-foreground/70 font-medium">
-                    {appointment.barbeiro.apelido}
-                  </span>
-                  {appointment.barbeiro.tenant?.nome && (
-                    <>
-                      <span className="text-[8px] text-muted-foreground/30">·</span>
-                      <span className="text-[9px] text-muted-foreground/50 font-medium truncate max-w-[80px]">
-                        {appointment.barbeiro.tenant.nome}
-                      </span>
-                    </>
-                  )}
-                </div>
-              )}
+            <div className="flex flex-col items-end gap-1.5">
               <div className="text-center px-2.5 py-1.5 rounded-lg bg-muted/60">
                 <p className="text-[8px] text-muted-foreground uppercase font-semibold tracking-wider">
                   {format(new Date(`${appointment.data}T12:00:00`), "MMM", { locale: ptBR })}
@@ -175,7 +159,23 @@ export function AppointmentCardPremium({
                   {format(new Date(`${appointment.data}T12:00:00`), "dd", { locale: ptBR })}
                 </p>
               </div>
+              {appointment.barbeiro?.apelido && (
+                <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-muted/40">
+                  <Scissors className="w-2.5 h-2.5 text-muted-foreground/50" />
+                  <span className="text-[9px] text-foreground/60 font-medium">
+                    {appointment.barbeiro.apelido}
+                  </span>
+                </div>
+              )}
             </div>
+          </div>
+
+          {/* Barbershop tag */}
+          <div className="flex items-center gap-1 mb-2.5">
+            <Store className="w-2.5 h-2.5 text-muted-foreground/40" />
+            <span className="text-[9px] text-muted-foreground/50 font-medium tracking-wide">
+              {appointment.barbeiro?.tenant?.nome || "Barbearia DUB"}
+            </span>
           </div>
 
           {/* Details */}
