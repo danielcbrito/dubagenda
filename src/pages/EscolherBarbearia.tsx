@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { MapPin, Search, Scissors, ChevronRight, Check, Crown, Navigation, Loader2, Star, ArrowLeft, Route } from "lucide-react";
+import { MapPin, Search, Scissors, ChevronRight, Check, Crown, Navigation, Loader2, Star, ArrowLeft, Route, ExternalLink } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -52,17 +52,34 @@ function RatingStars({ rating, count }: { rating: number; count: number }) {
   );
 }
 
-function DistanceBadge({ km }: { km: number | null; }) {
+function DistanceBadge({ km, lat, lng }: { km: number | null; lat?: number | null; lng?: number | null }) {
+  const handleRoute = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (lat != null && lng != null) {
+      window.open(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`, "_blank");
+    }
+  };
+
   return (
-    <span className="inline-flex items-center gap-0.5 text-[9px] font-medium tabular-nums text-muted-foreground/50">
+    <button
+      onClick={handleRoute}
+      disabled={lat == null || lng == null}
+      className={cn(
+        "inline-flex items-center gap-0.5 text-[9px] font-medium tabular-nums",
+        lat != null && lng != null
+          ? "text-primary/60 active:scale-90 transition-transform"
+          : "text-muted-foreground/50"
+      )}
+    >
       <Route className="w-[10px] h-[10px]" />
       {km != null ? formatDistance(km) : "—"}
-    </span>
+      {lat != null && lng != null && <ExternalLink className="w-[8px] h-[8px] ml-0.5" />}
+    </button>
   );
 }
 
 // ── DUB Coordinates (Rua Ferrador, 108 – Cidade Ipava, São Paulo) ──
-const DUB_COORDS = { lat: -23.635, lng: -46.685 };
+const DUB_COORDS = { lat: -23.7219695, lng: -46.7615913 };
 
 // ── Main Page ──
 const EscolherBarbearia = () => {
@@ -380,7 +397,11 @@ const EscolherBarbearia = () => {
                           <RatingStars rating={dubRating.avg} count={dubRating.count} />
                         )}
                         {locationStatus === "granted" && userLocation && (
-                          <DistanceBadge km={haversineDistance(userLocation.lat, userLocation.lng, DUB_COORDS.lat, DUB_COORDS.lng)} />
+                          <DistanceBadge
+                            km={haversineDistance(userLocation.lat, userLocation.lng, DUB_COORDS.lat, DUB_COORDS.lng)}
+                            lat={DUB_COORDS.lat}
+                            lng={DUB_COORDS.lng}
+                          />
                         )}
                       </div>
                     </div>
@@ -496,7 +517,7 @@ const EscolherBarbearia = () => {
                           )}
 
                           {locationStatus === "granted" && (
-                            <DistanceBadge km={tenant.distance ?? null} />
+                            <DistanceBadge km={tenant.distance ?? null} lat={tenant.latitude} lng={tenant.longitude} />
                           )}
                         </div>
                       </div>
