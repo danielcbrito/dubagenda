@@ -68,15 +68,15 @@ export function AppointmentHistorySheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="max-h-[85vh] rounded-t-3xl">
-        <SheetHeader>
+      <SheetContent side="bottom" className="max-h-[85dvh] rounded-t-3xl flex flex-col min-h-0">
+        <SheetHeader className="flex-shrink-0 pr-8">
           <SheetTitle className="text-lg">Histórico de Agendamentos</SheetTitle>
           <SheetDescription className="text-xs">
             {completedCount} {completedCount === 1 ? 'corte realizado' : 'cortes realizados'} no total
           </SheetDescription>
         </SheetHeader>
 
-        <div className="mt-6 space-y-3 max-h-[60vh] overflow-y-auto pr-2">
+        <div className="mt-4 flex-1 min-h-0 space-y-3 overflow-y-auto overscroll-contain touch-pan-y [webkit-overflow-scrolling:touch] pr-1 pb-[calc(env(safe-area-inset-bottom)+0.5rem)]">
           {loading ? (
             <div className="text-center py-8">
               <p className="text-xs text-muted-foreground">Carregando...</p>
