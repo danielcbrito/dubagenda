@@ -555,216 +555,221 @@ const Cliente = () => {
   };
 
   return (
-    <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+    <div className="flex flex-col" style={{ height: "calc(100dvh - 56px)" }}>
       <AnnouncementModal />
 
-
       {/* Scrollable Content */}
-      <div className="flex-1 overflow-y-auto overscroll-contain touch-pan-y [webkit-overflow-scrolling:touch] pb-24">
-        <div className="max-w-lg mx-auto px-4 pt-4 pb-6">
-          
-          {/* Header */}
-          <div className="mb-5">
-            <ClientHeader
-              profileName={profile?.nome}
-              email={user?.email}
-              userId={user?.id}
-            />
-          </div>
-          
-          {/* Plan Tracker ou Loyalty Card */}
-          <div className="mb-5">
-            {!dataLoaded ? (
-              <div className="rounded-xl h-[140px] bg-muted/10 animate-pulse" />
-            ) : activeSubscription ? (
-              <PlanTrackerCard
-                planName={(activeSubscription as any).plano?.nome || "Meu Plano"}
-                usedAppointments={planUsageCount}
-                totalAppointments={4}
-                nextBillingDate={activeSubscription.next_billing_date || ""}
-                onViewDetails={() => setPlansSheetOpen(true)}
+      <div className="flex-1 min-h-0 relative">
+        <div
+          className="absolute top-0 left-0 right-0 h-4 z-10 pointer-events-none"
+          style={{ background: "linear-gradient(to bottom, hsl(var(--background)), transparent)" }}
+        />
+
+        <div className="h-full overflow-y-auto overscroll-contain touch-pan-y [webkit-overflow-scrolling:touch] pb-24">
+          <div className="max-w-lg mx-auto px-4 pt-4 pb-6">
+            {/* Header */}
+            <div className="mb-5">
+              <ClientHeader
+                profileName={profile?.nome}
+                email={user?.email}
+                userId={user?.id}
               />
-            ) : pendingSubscription ? (
-              <div className="space-y-4">
-                <PendingSubscriptionBanner
-                  planName={(pendingSubscription as any).plano?.nome || "Plano"}
-                  onFinalize={() => {
-                    const ps = pendingSubscription as any;
-                    if (ps.payment_method === "pix" && ps.pix_qr_code && ps.pix_expires_at) {
-                      const pixExpiresAt = new Date(ps.pix_expires_at).getTime();
-                      if (pixExpiresAt > Date.now()) {
-                        const pixCheckoutData = {
-                          pixQrCode: ps.pix_qr_code,
-                          pixPayload: ps.pix_payload,
-                          subscriptionId: ps.id,
-                          asaasPaymentId: ps.asaas_payment_id,
-                          expiresAt: ps.pix_expires_at,
-                          value: ps.plano?.preco_mensal || 0,
-                          planName: ps.plano?.nome || "Plano",
-                        };
-                        sessionStorage.setItem("subscription_pix_checkout_data", JSON.stringify(pixCheckoutData));
-                        navigate("/cliente/assinatura-pix");
-                        return;
-                      }
-                    }
-                    navigate("/cliente/assinar", { 
-                      state: { resumePlanId: ps.plano_id }
-                    });
-                  }}
-                />
-                <LoyaltyCard
-                  points={points}
-                  redemptions={redemptions}
-                  pontosNecessarios={pontosNecessarios}
-                  onViewDetails={() => setPointsModalOpen(true)}
-                />
-              </div>
-            ) : expiredSubscription ? (
-              <div className="space-y-4">
-                <PlanExpiredBanner
-                  planName={(expiredSubscription as any).plano?.nome || "Plano"}
-                  onRenew={() => navigate("/cliente/assinar")}
-                />
-                <LoyaltyCard
-                  points={points}
-                  redemptions={redemptions}
-                  pontosNecessarios={pontosNecessarios}
-                  onViewDetails={() => setPointsModalOpen(true)}
-                />
-              </div>
-            ) : (
-              <LoyaltyCard
-                points={points}
-                redemptions={redemptions}
-                pontosNecessarios={pontosNecessarios}
-                onViewDetails={() => setPointsModalOpen(true)}
-              />
-            )}
-          </div>
-
-          {/* Schedule Button */}
-          <div className="mb-6">
-            <ScheduleButton onClick={() => {
-              // Se tem assinatura ativa com barbeiro vinculado, passa direto
-              if (activeSubscription?.barbeiro_id) {
-                navigate(`/cliente/agendar?barber=${activeSubscription.barbeiro_id}`);
-              } else {
-                navigate("/cliente/agendar");
-              }
-            }} />
-          </div>
-
-          {/* Pending Bookings */}
-          <AnimatePresence>
-            {pendingBookings.length > 0 && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                exit={{ opacity: 0, height: 0 }}
-                className="mb-5"
-              >
-                <p className="text-[8px] font-semibold text-muted-foreground/30 uppercase tracking-[0.2em] mb-2.5">
-                  Pagamentos Pendentes
-                </p>
-                <div className="space-y-3">
-                  {pendingBookings.map((booking) => (
-                    <PendingPaymentCard
-                      key={booking.id}
-                      booking={booking}
-                      onResumePayment={handleResumePayment}
-                      onCancel={handleCancelPendingBooking}
-                    />
-                  ))}
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* Pending Review Banners */}
-          {eligibleReviews.length > 0 && (
-            <div className="space-y-2.5 mb-4">
-              {eligibleReviews.slice(0, 2).map((review) => (
-                <PendingReviewBanner
-                  key={review.appointmentId}
-                  barberName={review.barberName}
-                  barberPhoto={review.barberPhoto}
-                  serviceName={review.serviceName}
-                  date={review.data}
-                  onReview={() => {
-                    setReviewModalData({
-                      appointmentId: review.appointmentId,
-                      barberId: review.barberId,
-                      barberName: review.barberName,
-                      barberPhoto: review.barberPhoto,
-                    });
-                  }}
-                />
-              ))}
             </div>
-          )}
-
-          {/* Appointments Section */}
-          <div>
-            <p className="text-[8px] font-semibold text-muted-foreground/30 uppercase tracking-[0.2em] mb-2.5">
-              Meus Agendamentos
-            </p>
             
-            {/* Recent Cancellation Banners */}
+            {/* Plan Tracker ou Loyalty Card */}
+            <div className="mb-5">
+              {!dataLoaded ? (
+                <div className="rounded-xl h-[140px] bg-muted/10 animate-pulse" />
+              ) : activeSubscription ? (
+                <PlanTrackerCard
+                  planName={(activeSubscription as any).plano?.nome || "Meu Plano"}
+                  usedAppointments={planUsageCount}
+                  totalAppointments={4}
+                  nextBillingDate={activeSubscription.next_billing_date || ""}
+                  onViewDetails={() => setPlansSheetOpen(true)}
+                />
+              ) : pendingSubscription ? (
+                <div className="space-y-4">
+                  <PendingSubscriptionBanner
+                    planName={(pendingSubscription as any).plano?.nome || "Plano"}
+                    onFinalize={() => {
+                      const ps = pendingSubscription as any;
+                      if (ps.payment_method === "pix" && ps.pix_qr_code && ps.pix_expires_at) {
+                        const pixExpiresAt = new Date(ps.pix_expires_at).getTime();
+                        if (pixExpiresAt > Date.now()) {
+                          const pixCheckoutData = {
+                            pixQrCode: ps.pix_qr_code,
+                            pixPayload: ps.pix_payload,
+                            subscriptionId: ps.id,
+                            asaasPaymentId: ps.asaas_payment_id,
+                            expiresAt: ps.pix_expires_at,
+                            value: ps.plano?.preco_mensal || 0,
+                            planName: ps.plano?.nome || "Plano",
+                          };
+                          sessionStorage.setItem("subscription_pix_checkout_data", JSON.stringify(pixCheckoutData));
+                          navigate("/cliente/assinatura-pix");
+                          return;
+                        }
+                      }
+                      navigate("/cliente/assinar", { 
+                        state: { resumePlanId: ps.plano_id }
+                      });
+                    }}
+                  />
+                  <LoyaltyCard
+                    points={points}
+                    redemptions={redemptions}
+                    pontosNecessarios={pontosNecessarios}
+                    onViewDetails={() => setPointsModalOpen(true)}
+                  />
+                </div>
+              ) : expiredSubscription ? (
+                <div className="space-y-4">
+                  <PlanExpiredBanner
+                    planName={(expiredSubscription as any).plano?.nome || "Plano"}
+                    onRenew={() => navigate("/cliente/assinar")}
+                  />
+                  <LoyaltyCard
+                    points={points}
+                    redemptions={redemptions}
+                    pontosNecessarios={pontosNecessarios}
+                    onViewDetails={() => setPointsModalOpen(true)}
+                  />
+                </div>
+              ) : (
+                <LoyaltyCard
+                  points={points}
+                  redemptions={redemptions}
+                  pontosNecessarios={pontosNecessarios}
+                  onViewDetails={() => setPointsModalOpen(true)}
+                />
+              )}
+            </div>
+
+            {/* Schedule Button */}
+            <div className="mb-6">
+              <ScheduleButton onClick={() => {
+                // Se tem assinatura ativa com barbeiro vinculado, passa direto
+                if (activeSubscription?.barbeiro_id) {
+                  navigate(`/cliente/agendar?barber=${activeSubscription.barbeiro_id}`);
+                } else {
+                  navigate("/cliente/agendar");
+                }
+              }} />
+            </div>
+
+            {/* Pending Bookings */}
             <AnimatePresence>
-              {recentCancellations.length > 0 && (
+              {pendingBookings.length > 0 && (
                 <motion.div
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="space-y-3 mb-4"
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="mb-5"
                 >
-                  {recentCancellations.map(apt => {
-                    const reason = apt.observacoes?.replace("Cancelado em massa: ", "") || "Não informado";
-                    return (
-                      <CancelledAppointmentBanner
-                        key={apt.id}
-                        reason={reason}
-                        serviceName={apt.servico?.nome || "Serviço"}
-                        date={apt.data}
-                        time={apt.hora}
+                  <p className="text-[8px] font-semibold text-muted-foreground/30 uppercase tracking-[0.2em] mb-2.5">
+                    Pagamentos Pendentes
+                  </p>
+                  <div className="space-y-3">
+                    {pendingBookings.map((booking) => (
+                      <PendingPaymentCard
+                        key={booking.id}
+                        booking={booking}
+                        onResumePayment={handleResumePayment}
+                        onCancel={handleCancelPendingBooking}
                       />
-                    );
-                  })}
+                    ))}
+                  </div>
                 </motion.div>
               )}
             </AnimatePresence>
-            
-            {appointments.length === 0 && pendingBookings.length === 0 ? (
-              <motion.div
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.15 }}
-                className="rounded-xl border border-dashed border-border/20 p-6 text-center bg-card/20"
-              >
-                <div className="w-10 h-10 mx-auto mb-3 rounded-xl flex items-center justify-center bg-muted/10">
-                  <Calendar className="w-5 h-5 text-muted-foreground/20" />
-                </div>
-                <p className="text-[12px] text-muted-foreground/50 font-medium">
-                  Nenhum agendamento
-                </p>
-                <p className="text-[10px] text-muted-foreground/30 mt-0.5">
-                  Toque em "Agendar Horário" acima
-                </p>
-              </motion.div>
-            ) : (
-              <div className="space-y-3">
-                {appointments.map((apt, index) => (
-                  <AppointmentCardPremium
-                    key={apt.id}
-                    appointment={apt}
-                    onCancel={() => loadUserData(user.id)}
-                    onConfirm={handleConfirmAppointment}
-                    userId={user?.id}
-                    payments={payments}
-                    index={index}
+
+            {/* Pending Review Banners */}
+            {eligibleReviews.length > 0 && (
+              <div className="space-y-2.5 mb-4">
+                {eligibleReviews.slice(0, 2).map((review) => (
+                  <PendingReviewBanner
+                    key={review.appointmentId}
+                    barberName={review.barberName}
+                    barberPhoto={review.barberPhoto}
+                    serviceName={review.serviceName}
+                    date={review.data}
+                    onReview={() => {
+                      setReviewModalData({
+                        appointmentId: review.appointmentId,
+                        barberId: review.barberId,
+                        barberName: review.barberName,
+                        barberPhoto: review.barberPhoto,
+                      });
+                    }}
                   />
                 ))}
               </div>
             )}
+
+            {/* Appointments Section */}
+            <div>
+              <p className="text-[8px] font-semibold text-muted-foreground/30 uppercase tracking-[0.2em] mb-2.5">
+                Meus Agendamentos
+              </p>
+              
+              {/* Recent Cancellation Banners */}
+              <AnimatePresence>
+                {recentCancellations.length > 0 && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="space-y-3 mb-4"
+                  >
+                    {recentCancellations.map(apt => {
+                      const reason = apt.observacoes?.replace("Cancelado em massa: ", "") || "Não informado";
+                      return (
+                        <CancelledAppointmentBanner
+                          key={apt.id}
+                          reason={reason}
+                          serviceName={apt.servico?.nome || "Serviço"}
+                          date={apt.data}
+                          time={apt.hora}
+                        />
+                      );
+                    })}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+              
+              {appointments.length === 0 && pendingBookings.length === 0 ? (
+                <motion.div
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.15 }}
+                  className="rounded-xl border border-dashed border-border/20 p-6 text-center bg-card/20"
+                >
+                  <div className="w-10 h-10 mx-auto mb-3 rounded-xl flex items-center justify-center bg-muted/10">
+                    <Calendar className="w-5 h-5 text-muted-foreground/20" />
+                  </div>
+                  <p className="text-[12px] text-muted-foreground/50 font-medium">
+                    Nenhum agendamento
+                  </p>
+                  <p className="text-[10px] text-muted-foreground/30 mt-0.5">
+                    Toque em "Agendar Horário" acima
+                  </p>
+                </motion.div>
+              ) : (
+                <div className="space-y-3">
+                  {appointments.map((apt, index) => (
+                    <AppointmentCardPremium
+                      key={apt.id}
+                      appointment={apt}
+                      onCancel={() => loadUserData(user.id)}
+                      onConfirm={handleConfirmAppointment}
+                      userId={user?.id}
+                      payments={payments}
+                      index={index}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
