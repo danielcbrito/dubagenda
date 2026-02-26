@@ -163,13 +163,18 @@ function ScrollLockGuard() {
     document.body.classList.remove("lock-scroll");
 
     document.documentElement.style.overflow = "";
+    document.documentElement.style.overflowX = "";
+    document.documentElement.style.overflowY = "";
     document.body.style.overflow = "";
+    document.body.style.overflowX = "";
+    document.body.style.overflowY = "";
     document.documentElement.style.position = "";
     document.body.style.position = "";
     document.documentElement.style.width = "";
     document.body.style.width = "";
     document.documentElement.style.height = "";
     document.body.style.height = "";
+    document.body.style.minHeight = "";
     document.documentElement.style.top = "";
     document.body.style.top = "";
     document.documentElement.style.left = "";
@@ -184,6 +189,9 @@ function ScrollLockGuard() {
     document.body.style.removeProperty("touch-action");
     document.documentElement.style.removeProperty("overscroll-behavior");
     document.body.style.removeProperty("overscroll-behavior");
+    document.documentElement.style.removeProperty("overscroll-behavior-y");
+    document.body.style.removeProperty("overscroll-behavior-y");
+    document.body.style.removeProperty("-webkit-overflow-scrolling");
   }, [location.pathname]);
 
   return null;
