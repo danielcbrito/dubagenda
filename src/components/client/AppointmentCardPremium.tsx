@@ -135,15 +135,15 @@ export function AppointmentCardPremium({
         {/* Top accent bar with status color */}
         <div className="h-[3px]" style={{ background: statusConfig.color }} />
 
-        <div className="p-3.5">
+        <div className="px-4 py-4">
           {/* Row 1: Service name + Date badge */}
-          <div className="flex items-start justify-between gap-3 mb-2">
+          <div className="flex items-start justify-between gap-3 mb-3">
             <div className="flex-1 min-w-0">
               <h3 className="font-bold text-foreground text-[14px] leading-tight truncate">
                 {appointment.servico?.nome || "Serviço"}
               </h3>
             </div>
-            <div className="flex-shrink-0 text-center px-2 py-1 rounded-lg bg-muted/80 min-w-[42px]">
+            <div className="flex-shrink-0 text-center px-2.5 py-1.5 rounded-lg bg-muted/80 min-w-[44px]">
               <p className="text-[7px] text-muted-foreground uppercase font-bold tracking-widest leading-none mb-0.5">
                 {format(new Date(`${appointment.data}T12:00:00`), "MMM", { locale: ptBR })}
               </p>
@@ -153,8 +153,8 @@ export function AppointmentCardPremium({
             </div>
           </div>
 
-          {/* Row 2: Shop + Barber + Status — single row, compact */}
-          <div className="flex items-center gap-1.5 flex-wrap mb-2.5">
+          {/* Row 2: Shop + Barber + Status */}
+          <div className="flex items-center gap-2 flex-wrap mb-3.5">
             {/* Barbershop */}
             <div className="flex items-center gap-1 px-2 py-[3px] rounded-md bg-muted/70 border border-border/30">
               <Store className="w-3 h-3 text-foreground/50" />
