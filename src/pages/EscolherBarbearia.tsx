@@ -60,6 +60,7 @@ const EscolherBarbearia = () => {
   const [selectedShop, setSelectedShop] = useState<string | null>(null); // "dub" or tenant id
 
   const isChangeMode = searchParams.get("mode") === "change";
+  const shouldOpenCurrent = searchParams.get("open") === "current";
   const isAuthenticated = !!userId;
 
   // ── Auth check ──
@@ -84,6 +85,16 @@ const EscolherBarbearia = () => {
     };
     init();
   }, []);
+
+  // ── Auto-open current barbershop when coming from profile ──
+  useEffect(() => {
+    if (!shouldOpenCurrent || isLoading || selectedShop) return;
+    if (currentPreferred) {
+      setSelectedShop(currentPreferred);
+    } else {
+      setSelectedShop("dub");
+    }
+  }, [shouldOpenCurrent, isLoading, currentPreferred]);
 
   // ── Geolocation ──
   useEffect(() => {
