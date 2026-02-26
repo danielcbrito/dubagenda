@@ -57,7 +57,7 @@ const AgendaFullScreen = () => {
   // Mobile Layout
   if (isMobile) {
     return (
-      <div className="min-h-screen w-full bg-background relative overflow-hidden">
+      <div className="flex flex-col w-full bg-background relative" style={{ height: "100dvh" }}>
         {/* Premium Background Light Effects - Mobile */}
         <div className="fixed inset-0 pointer-events-none overflow-hidden">
           <div className="absolute top-[10%] left-[15%] w-[300px] h-[300px] rounded-full bg-primary/8 blur-[100px] animate-pulse" />
@@ -65,7 +65,7 @@ const AgendaFullScreen = () => {
         </div>
         
         {/* Mobile Agenda */}
-        <div className="relative z-10">
+        <div className="relative z-10 flex-1 min-h-0 overflow-y-auto overscroll-contain touch-pan-y [webkit-overflow-scrolling:touch]">
           <AdminMobileAgenda 
             onAppointmentClick={handleAppointmentClick}
             onAddClick={handleAddClick}
@@ -93,7 +93,7 @@ const AgendaFullScreen = () => {
 
   // Desktop Layout
   return (
-    <div className="min-h-screen w-full bg-background relative overflow-hidden">
+    <div className="flex flex-col w-full bg-background relative" style={{ height: "100dvh" }}>
       {/* Premium Background Light Effects */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         {/* Main red light orbs */}
@@ -113,8 +113,10 @@ const AgendaFullScreen = () => {
       </div>
       
       {/* Content */}
-      <div className="relative z-10 p-8">
-        <AdminAgenda />
+      <div className="relative z-10 flex-1 min-h-0 overflow-y-auto overscroll-contain touch-pan-y [webkit-overflow-scrolling:touch]">
+        <div className="p-8">
+          <AdminAgenda />
+        </div>
       </div>
     </div>
   );
