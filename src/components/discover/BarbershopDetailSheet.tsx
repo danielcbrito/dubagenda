@@ -162,7 +162,7 @@ export function BarbershopDetailSheet({
           <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain pb-32">
 
             {/* ── Hero Banner ── */}
-            <div className="relative w-full" style={{ minHeight: bannerUrl ? 260 : 160 }}>
+            <div className="relative w-full" style={{ minHeight: bannerUrl ? 280 : 160 }}>
               {bannerUrl ? (
                 <>
                   <img
@@ -170,11 +170,11 @@ export function BarbershopDetailSheet({
                     alt={`Banner ${tenantName}`}
                     className="absolute inset-0 w-full h-full object-cover"
                   />
-                  {/* Lighter overlay so banner is clearly visible */}
+                  {/* Only fade at the very bottom so the image stays vivid */}
                   <div
                     className="absolute inset-0"
                     style={{
-                      background: "linear-gradient(to bottom, transparent 0%, hsl(var(--background) / 0.25) 50%, hsl(var(--background)) 100%)"
+                      background: "linear-gradient(to bottom, transparent 0%, transparent 55%, hsl(var(--background) / 0.6) 80%, hsl(var(--background)) 100%)"
                     }}
                   />
                 </>
