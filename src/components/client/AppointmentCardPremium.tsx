@@ -135,91 +135,101 @@ export function AppointmentCardPremium({
         {/* Top accent bar with status color */}
         <div className="h-[3px]" style={{ background: statusConfig.color }} />
 
-        <div className="px-4 py-4">
-          {/* Row 1: Service name + Status */}
-          <div className="flex items-center justify-between gap-3 mb-2.5">
-            <h3 className="font-bold text-foreground text-[14px] leading-tight truncate flex-1 min-w-0">
-              {appointment.servico?.nome || "Serviço"}
-            </h3>
+        <div className="flex gap-3.5 px-4 py-4">
+          {/* Left: Date circle */}
+          <div className="flex flex-col items-center justify-center flex-shrink-0 w-12">
+            <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">
+              {format(new Date(`${appointment.data}T12:00:00`), "EEE", { locale: ptBR })}
+            </span>
             <div
-              className="flex items-center gap-1 px-2 py-[3px] rounded-md text-[9px] font-bold uppercase tracking-wider flex-shrink-0"
-              style={{
-                background: statusConfig.bgColor,
-                color: statusConfig.color,
-                border: `1px solid ${statusConfig.borderColor}`,
-              }}
+              className="w-11 h-11 rounded-full flex items-center justify-center mt-0.5"
+              style={{ background: statusConfig.bgColor, border: `1.5px solid ${statusConfig.borderColor}` }}
             >
-              <StatusIcon className="w-2.5 h-2.5" />
-              {statusConfig.label}
+              <span className="text-[17px] font-bold tabular-nums" style={{ color: statusConfig.color }}>
+                {format(new Date(`${appointment.data}T12:00:00`), "dd")}
+              </span>
             </div>
           </div>
 
-          {/* Row 2: Shop + Barber */}
-          <div className="flex items-center gap-2 flex-wrap mb-3">
-            <div className="flex items-center gap-1 px-2 py-[3px] rounded-md bg-muted/70 border border-border/30">
-              <Store className="w-3 h-3 text-foreground/50" />
-              <span className="text-[10px] font-semibold text-foreground/70">
-                {shopName}
-              </span>
+          {/* Right: Info */}
+          <div className="flex-1 min-w-0">
+            {/* Row 1: Service name + Status */}
+            <div className="flex items-center justify-between gap-3 mb-2">
+              <h3 className="font-bold text-foreground text-[14px] leading-tight truncate flex-1 min-w-0">
+                {appointment.servico?.nome || "Serviço"}
+              </h3>
+              <div
+                className="flex items-center gap-1 px-2 py-[3px] rounded-md text-[9px] font-bold uppercase tracking-wider flex-shrink-0"
+                style={{
+                  background: statusConfig.bgColor,
+                  color: statusConfig.color,
+                  border: `1px solid ${statusConfig.borderColor}`,
+                }}
+              >
+                <StatusIcon className="w-2.5 h-2.5" />
+                {statusConfig.label}
+              </div>
             </div>
-            {appointment.barbeiro?.apelido && (
+
+            {/* Row 2: Shop + Barber */}
+            <div className="flex items-center gap-2 flex-wrap mb-2.5">
               <div className="flex items-center gap-1 px-2 py-[3px] rounded-md bg-muted/70 border border-border/30">
-                <Scissors className="w-3 h-3 text-foreground/50" />
+                <Store className="w-3 h-3 text-foreground/50" />
                 <span className="text-[10px] font-semibold text-foreground/70">
-                  {appointment.barbeiro.apelido}
+                  {shopName}
                 </span>
               </div>
-            )}
-          </div>
-
-          {/* Row 3: Date + Time + Price — footer row */}
-          <div className="flex items-center gap-2.5 text-[11px] text-muted-foreground pt-2.5 border-t border-border/20">
-            {/* Date */}
-            <div className="flex items-center gap-1">
-              <Calendar className="w-3.5 h-3.5 text-foreground/40" />
-              <span className="font-semibold text-foreground/70 tabular-nums">
-                {format(new Date(`${appointment.data}T12:00:00`), "dd MMM", { locale: ptBR })}
-              </span>
-            </div>
-
-            <span className="text-border/50">·</span>
-
-            {/* Time */}
-            <div className="flex items-center gap-1">
-              <Clock className="w-3.5 h-3.5 text-foreground/40" />
-              <span className="font-semibold text-foreground/70 tabular-nums">{appointment.hora}</span>
-            </div>
-
-            <span className="flex-1" />
-
-            {/* Price/Plan */}
-            {isPlanAppointment ? (
-              <div className="flex items-center gap-1">
-                <Crown className="w-3 h-3 text-primary" />
-                <span className="text-[10px] font-bold text-primary">Plano</span>
-              </div>
-            ) : isFreeAppointment ? (
-              <div className="flex items-center gap-1">
-                <Gift className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
-                <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">Grátis</span>
-              </div>
-            ) : appointment.preco ? (
-              <div className="flex items-center gap-1.5">
-                <span className="font-bold text-foreground tabular-nums">
-                  R$ {appointment.preco.toFixed(2)}
-                </span>
-                {isPaid && (
-                  <span className="text-[8px] text-emerald-600 dark:text-emerald-400 font-bold uppercase tracking-wider bg-emerald-500/10 px-1.5 py-0.5 rounded">
-                    Pago
+              {appointment.barbeiro?.apelido && (
+                <div className="flex items-center gap-1 px-2 py-[3px] rounded-md bg-muted/70 border border-border/30">
+                  <Scissors className="w-3 h-3 text-foreground/50" />
+                  <span className="text-[10px] font-semibold text-foreground/70">
+                    {appointment.barbeiro.apelido}
                   </span>
-                )}
-              </div>
-            ) : null}
-          </div>
+                </div>
+              )}
+            </div>
 
+            {/* Row 3: Time + Price — footer */}
+            <div className="flex items-center gap-2.5 text-[11px] text-muted-foreground pt-2 border-t border-border/20">
+              <div className="flex items-center gap-1">
+                <Clock className="w-3.5 h-3.5 text-foreground/40" />
+                <span className="font-semibold text-foreground/70 tabular-nums">{appointment.hora}</span>
+              </div>
+
+              <span className="flex-1" />
+
+              {/* Price/Plan */}
+              {isPlanAppointment ? (
+                <div className="flex items-center gap-1">
+                  <Crown className="w-3 h-3 text-primary" />
+                  <span className="text-[10px] font-bold text-primary">Plano</span>
+                </div>
+              ) : isFreeAppointment ? (
+                <div className="flex items-center gap-1">
+                  <Gift className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
+                  <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">Grátis</span>
+                </div>
+              ) : appointment.preco ? (
+                <div className="flex items-center gap-1.5">
+                  <span className="font-bold text-foreground tabular-nums">
+                    R$ {appointment.preco.toFixed(2)}
+                  </span>
+                  {isPaid && (
+                    <span className="text-[8px] text-emerald-600 dark:text-emerald-400 font-bold uppercase tracking-wider bg-emerald-500/10 px-1.5 py-0.5 rounded">
+                      Pago
+                    </span>
+                  )}
+                </div>
+              ) : null}
+            </div>
+          </div>
+        </div>
+
+        {/* Action sections */}
+        <div className="px-4 pb-4">
           {/* Reschedule banner */}
           {rescheduleRequested && !isCancelled && (
-            <div className="mt-3 p-2.5 rounded-lg bg-destructive/5 border border-destructive/10">
+            <div className="mt-1 p-2.5 rounded-lg bg-destructive/5 border border-destructive/10">
               <div className="flex items-start gap-1.5">
                 <AlertCircle className="w-3.5 h-3.5 text-destructive/60 mt-0.5 flex-shrink-0" />
                 <div className="flex-1">
@@ -249,7 +259,7 @@ export function AppointmentCardPremium({
             <Button
               onClick={() => onConfirm?.(appointment.id)}
               size="sm"
-              className="w-full mt-3 h-8 text-[11px]"
+              className="w-full mt-1 h-8 text-[11px]"
             >
               <Check className="w-3 h-3 mr-1.5" />
               Confirmar Presença
@@ -258,7 +268,7 @@ export function AppointmentCardPremium({
 
           {/* Actions */}
           {canCancel && !rescheduleRequested && (
-            <div className="flex gap-2 mt-3">
+            <div className="flex gap-2 mt-1">
               <Button
                 onClick={() => setRescheduleModalOpen(true)}
                 size="sm"
