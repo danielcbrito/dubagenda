@@ -555,12 +555,11 @@ const Cliente = () => {
   };
 
   return (
-    <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+    <main className="flex-1 flex flex-col min-h-[100dvh] bg-background">
       <AnnouncementModal />
 
-
       {/* Scrollable Content */}
-      <div className="flex-1 overflow-y-auto overscroll-contain pb-24">
+      <div className="flex-1 pb-24 touch-pan-y">
         <div className="max-w-lg mx-auto px-4 pt-4 pb-6">
           
           {/* Header */}
@@ -861,7 +860,7 @@ const Cliente = () => {
         onProfileClick={() => setProfileSheetOpen(true)}
         onSupportClick={() => navigate('/suporte')}
       />
-    </div>
+    </main>
   );
 };
 
