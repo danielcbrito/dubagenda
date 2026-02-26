@@ -13,8 +13,8 @@ import {
   CheckCircle2,
   XCircle,
   Clock,
-  ChevronLeft
 } from "lucide-react";
+import { BackArrow } from "@/components/ui/back-arrow";
 import { useNavigate } from "react-router-dom";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -272,7 +272,7 @@ export function NotificationsSheet({ open, onOpenChange, userId }: Notifications
             onClick={() => onOpenChange(false)}
             className="w-8 h-8 flex items-center justify-center"
           >
-            <ChevronLeft className="w-5 h-5 text-foreground" />
+            <BackArrow size={20} className="text-foreground" />
           </button>
           <h2 className="text-lg font-bold text-foreground">Notificações</h2>
           <div className="flex-1" />

@@ -2,8 +2,8 @@ import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { BackArrow } from "@/components/ui/back-arrow";
 import { 
-  ArrowLeft, 
   ArrowRight,
   Check, 
   CheckCircle2, 
@@ -532,7 +532,7 @@ const ClienteAssinar = () => {
             onClick={handleBack}
             className="w-8 h-8 flex items-center justify-center rounded-lg bg-card border border-border/40 hover:bg-muted transition-colors"
           >
-            <ArrowLeft className="w-4 h-4 text-foreground" />
+            <BackArrow size={18} className="text-foreground" />
           </button>
           <motion.p 
             key={headerTitle}

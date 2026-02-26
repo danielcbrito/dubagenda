@@ -3,7 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Calendar, CheckCircle2, AlertCircle, Loader2, ArrowLeft, Crown, CreditCard, ChevronRight } from "lucide-react";
+import { Calendar, CheckCircle2, AlertCircle, Loader2, Crown, CreditCard, ChevronRight } from "lucide-react";
+import { BackArrow } from "@/components/ui/back-arrow";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -177,7 +178,7 @@ export function MyPlansSheet({ open, onOpenChange, userId, onSubscriptionChanged
                 onClick={() => onOpenChange(false)}
                 className="w-8 h-8 flex items-center justify-center rounded-lg bg-card border border-border/40 hover:bg-muted transition-colors"
               >
-                <ArrowLeft className="w-4 h-4 text-foreground" />
+                <BackArrow size={18} className="text-foreground" />
               </button>
               <h1 className="text-sm font-semibold text-foreground tracking-tight">Meus Planos</h1>
             </div>

@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { BackArrow } from "@/components/ui/back-arrow";
 import { supabase } from "@/integrations/supabase/client";
 import { ArrowLeft, ArrowRight, Clock, Check, Tag, CreditCard, Landmark, Loader2, Calendar as CalendarIcon, Shield, Zap, Star, Store, ChevronRight, Crown } from "lucide-react";
 import logoDub from "@/assets/logo-dub.png";
@@ -1645,7 +1646,7 @@ const ClienteAgendar = () => {
                 onClick={handleBack}
                 className="w-8 h-8 flex items-center justify-center rounded-lg bg-card/60 hover:bg-card transition-all active:scale-90"
               >
-                <ArrowLeft className="w-4 h-4 text-foreground/70" />
+                <BackArrow size={18} className="text-foreground/70" />
               </button>
 
               <StepDots currentStep={currentDisplayStep} totalSteps={totalSteps} />

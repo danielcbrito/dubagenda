@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import {
-  ArrowLeft,
   CreditCard,
   ExternalLink,
   Loader2,
@@ -11,6 +10,7 @@ import {
   RefreshCw,
   Settings,
 } from "lucide-react";
+import { BackArrow } from "@/components/ui/back-arrow";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 
@@ -91,7 +91,7 @@ const ClientePagamento = () => {
             onClick={() => navigate("/cliente")}
             className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-muted/50 transition-colors"
           >
-            <ArrowLeft className="w-4 h-4 text-foreground" />
+            <BackArrow size={18} className="text-foreground" />
           </button>
           <p className="text-sm font-semibold text-foreground tracking-tight">
             Formas de Pagamento
