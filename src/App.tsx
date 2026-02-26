@@ -170,6 +170,20 @@ function ScrollLockGuard() {
     document.body.style.width = "";
     document.documentElement.style.height = "";
     document.body.style.height = "";
+    document.documentElement.style.top = "";
+    document.body.style.top = "";
+    document.documentElement.style.left = "";
+    document.body.style.left = "";
+    document.documentElement.style.right = "";
+    document.body.style.right = "";
+    document.documentElement.style.bottom = "";
+    document.body.style.bottom = "";
+    document.documentElement.style.paddingRight = "";
+    document.body.style.paddingRight = "";
+    document.documentElement.style.removeProperty("touch-action");
+    document.body.style.removeProperty("touch-action");
+    document.documentElement.style.removeProperty("overscroll-behavior");
+    document.body.style.removeProperty("overscroll-behavior");
   }, [location.pathname]);
 
   return null;

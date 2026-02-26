@@ -12,6 +12,7 @@ const Index = () => {
     const unlockScroll = () => {
       document.documentElement.classList.remove("lock-scroll");
       document.body.classList.remove("lock-scroll");
+
       document.documentElement.style.overflow = "";
       document.body.style.overflow = "";
       document.documentElement.style.position = "";
@@ -20,6 +21,20 @@ const Index = () => {
       document.body.style.height = "";
       document.documentElement.style.width = "";
       document.body.style.width = "";
+      document.documentElement.style.top = "";
+      document.body.style.top = "";
+      document.documentElement.style.left = "";
+      document.body.style.left = "";
+      document.documentElement.style.right = "";
+      document.body.style.right = "";
+      document.documentElement.style.bottom = "";
+      document.body.style.bottom = "";
+      document.documentElement.style.paddingRight = "";
+      document.body.style.paddingRight = "";
+      document.documentElement.style.removeProperty("touch-action");
+      document.body.style.removeProperty("touch-action");
+      document.documentElement.style.removeProperty("overscroll-behavior");
+      document.body.style.removeProperty("overscroll-behavior");
     };
 
     unlockScroll();
@@ -41,11 +56,8 @@ const Index = () => {
   };
 
   return (
-    <div
-      className="h-[100svh] bg-background relative overflow-x-hidden overflow-y-scroll overscroll-contain"
-      style={{ WebkitOverflowScrolling: "touch" }}
-    >
-      <div className="relative min-h-[108svh] flex flex-col">
+    <div className="min-h-[100dvh] bg-background relative overflow-x-hidden touch-pan-y">
+      <div className="relative min-h-[108dvh] flex flex-col">
         <div className="absolute inset-0 pointer-events-none">
           <img
             src={landingHero}
