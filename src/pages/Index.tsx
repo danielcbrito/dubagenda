@@ -15,7 +15,7 @@ const Index = () => {
     <div className="min-h-screen bg-background relative overflow-x-hidden">
       <div className="relative min-h-screen flex flex-col">
         {/* Background */}
-        <div className="absolute inset-0">
+        <div className="absolute inset-0 pointer-events-none">
           <img
             src={landingHero}
             alt=""
