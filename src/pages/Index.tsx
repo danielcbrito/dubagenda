@@ -12,47 +12,13 @@ const Index = () => {
     const html = document.documentElement;
     const body = document.body;
 
-    const previous = {
-      htmlOverflow: html.style.overflow,
-      htmlHeight: html.style.height,
-      htmlPosition: html.style.position,
-      htmlWidth: html.style.width,
-      htmlTop: html.style.top,
-      htmlLeft: html.style.left,
-      htmlRight: html.style.right,
-      htmlBottom: html.style.bottom,
-      htmlPaddingRight: html.style.paddingRight,
-      htmlTouchAction: html.style.getPropertyValue("touch-action"),
-      htmlOverscrollBehavior: html.style.getPropertyValue("overscroll-behavior"),
-      bodyOverflowY: body.style.overflowY,
-      bodyOverflowX: body.style.overflowX,
-      bodyHeight: body.style.height,
-      bodyMinHeight: body.style.minHeight,
-      bodyPosition: body.style.position,
-      bodyWidth: body.style.width,
-      bodyTop: body.style.top,
-      bodyLeft: body.style.left,
-      bodyRight: body.style.right,
-      bodyBottom: body.style.bottom,
-      bodyPaddingRight: body.style.paddingRight,
-      bodyWebkitOverflowScrolling: body.style.getPropertyValue("-webkit-overflow-scrolling"),
-      bodyTouchAction: body.style.getPropertyValue("touch-action"),
-      bodyOverscrollBehaviorY: body.style.getPropertyValue("overscroll-behavior-y"),
-    };
-
     html.classList.remove("lock-scroll");
     body.classList.remove("lock-scroll");
 
-    html.style.overflow = "hidden";
-    html.style.height = "100%";
-    body.style.height = "100%";
-    body.style.minHeight = "100%";
-    body.style.overflowY = "auto";
-    body.style.overflowX = "hidden";
-    body.style.setProperty("-webkit-overflow-scrolling", "touch");
-    body.style.setProperty("touch-action", "pan-y");
-    body.style.setProperty("overscroll-behavior-y", "auto");
-
+    html.style.overflow = "";
+    html.style.overflowY = "";
+    html.style.overflowX = "";
+    html.style.height = "";
     html.style.position = "";
     html.style.width = "";
     html.style.top = "";
@@ -62,7 +28,13 @@ const Index = () => {
     html.style.paddingRight = "";
     html.style.removeProperty("touch-action");
     html.style.removeProperty("overscroll-behavior");
+    html.style.removeProperty("overscroll-behavior-y");
 
+    body.style.overflow = "";
+    body.style.overflowY = "";
+    body.style.overflowX = "";
+    body.style.height = "";
+    body.style.minHeight = "";
     body.style.position = "";
     body.style.width = "";
     body.style.top = "";
@@ -70,59 +42,10 @@ const Index = () => {
     body.style.right = "";
     body.style.bottom = "";
     body.style.paddingRight = "";
-
-    return () => {
-      html.style.overflow = previous.htmlOverflow;
-      html.style.height = previous.htmlHeight;
-      html.style.position = previous.htmlPosition;
-      html.style.width = previous.htmlWidth;
-      html.style.top = previous.htmlTop;
-      html.style.left = previous.htmlLeft;
-      html.style.right = previous.htmlRight;
-      html.style.bottom = previous.htmlBottom;
-      html.style.paddingRight = previous.htmlPaddingRight;
-      body.style.overflowY = previous.bodyOverflowY;
-      body.style.overflowX = previous.bodyOverflowX;
-      body.style.height = previous.bodyHeight;
-      body.style.minHeight = previous.bodyMinHeight;
-      body.style.position = previous.bodyPosition;
-      body.style.width = previous.bodyWidth;
-      body.style.top = previous.bodyTop;
-      body.style.left = previous.bodyLeft;
-      body.style.right = previous.bodyRight;
-      body.style.bottom = previous.bodyBottom;
-      body.style.paddingRight = previous.bodyPaddingRight;
-
-      if (previous.bodyWebkitOverflowScrolling) {
-        body.style.setProperty("-webkit-overflow-scrolling", previous.bodyWebkitOverflowScrolling);
-      } else {
-        body.style.removeProperty("-webkit-overflow-scrolling");
-      }
-
-      if (previous.bodyTouchAction) {
-        body.style.setProperty("touch-action", previous.bodyTouchAction);
-      } else {
-        body.style.removeProperty("touch-action");
-      }
-
-      if (previous.bodyOverscrollBehaviorY) {
-        body.style.setProperty("overscroll-behavior-y", previous.bodyOverscrollBehaviorY);
-      } else {
-        body.style.removeProperty("overscroll-behavior-y");
-      }
-
-      if (previous.htmlTouchAction) {
-        html.style.setProperty("touch-action", previous.htmlTouchAction);
-      } else {
-        html.style.removeProperty("touch-action");
-      }
-
-      if (previous.htmlOverscrollBehavior) {
-        html.style.setProperty("overscroll-behavior", previous.htmlOverscrollBehavior);
-      } else {
-        html.style.removeProperty("overscroll-behavior");
-      }
-    };
+    body.style.removeProperty("-webkit-overflow-scrolling");
+    body.style.removeProperty("touch-action");
+    body.style.removeProperty("overscroll-behavior");
+    body.style.removeProperty("overscroll-behavior-y");
   }, []);
 
   const handleDiscover = () => {
@@ -130,7 +53,7 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-[100dvh] bg-background relative overflow-x-hidden">
+    <div className="min-h-[100dvh] bg-background relative overflow-x-hidden touch-pan-y">
       <div className="relative min-h-[108dvh] flex flex-col">
         <div className="absolute inset-0 pointer-events-none">
           <img
