@@ -12,7 +12,7 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background relative overflow-hidden">
+    <div className="min-h-screen bg-background relative overflow-x-hidden">
       <div className="relative min-h-screen flex flex-col">
         {/* Background */}
         <div className="absolute inset-0">
