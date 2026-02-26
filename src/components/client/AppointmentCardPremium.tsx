@@ -136,46 +136,13 @@ export function AppointmentCardPremium({
         <div className="h-[3px]" style={{ background: statusConfig.color }} />
 
         <div className="px-4 py-4">
-          {/* Row 1: Service name + Date badge */}
-          <div className="flex items-start justify-between gap-3 mb-3">
-            <div className="flex-1 min-w-0">
-              <h3 className="font-bold text-foreground text-[14px] leading-tight truncate">
-                {appointment.servico?.nome || "Serviço"}
-              </h3>
-            </div>
-            <div className="flex-shrink-0 text-center px-2.5 py-1.5 rounded-lg bg-muted/80 min-w-[44px]">
-              <p className="text-[7px] text-muted-foreground uppercase font-bold tracking-widest leading-none mb-0.5">
-                {format(new Date(`${appointment.data}T12:00:00`), "MMM", { locale: ptBR })}
-              </p>
-              <p className="text-[15px] font-bold text-foreground leading-none tabular-nums">
-                {format(new Date(`${appointment.data}T12:00:00`), "dd", { locale: ptBR })}
-              </p>
-            </div>
-          </div>
-
-          {/* Row 2: Shop + Barber + Status */}
-          <div className="flex items-center gap-2 flex-wrap mb-3.5">
-            {/* Barbershop */}
-            <div className="flex items-center gap-1 px-2 py-[3px] rounded-md bg-muted/70 border border-border/30">
-              <Store className="w-3 h-3 text-foreground/50" />
-              <span className="text-[10px] font-semibold text-foreground/70">
-                {shopName}
-              </span>
-            </div>
-
-            {/* Barber */}
-            {appointment.barbeiro?.apelido && (
-              <div className="flex items-center gap-1 px-2 py-[3px] rounded-md bg-muted/70 border border-border/30">
-                <Scissors className="w-3 h-3 text-foreground/50" />
-                <span className="text-[10px] font-semibold text-foreground/70">
-                  {appointment.barbeiro.apelido}
-                </span>
-              </div>
-            )}
-
-            {/* Status badge */}
+          {/* Row 1: Service name + Status */}
+          <div className="flex items-center justify-between gap-3 mb-2.5">
+            <h3 className="font-bold text-foreground text-[14px] leading-tight truncate flex-1 min-w-0">
+              {appointment.servico?.nome || "Serviço"}
+            </h3>
             <div
-              className="flex items-center gap-1 px-2 py-[3px] rounded-md text-[9px] font-bold uppercase tracking-wider"
+              className="flex items-center gap-1 px-2 py-[3px] rounded-md text-[9px] font-bold uppercase tracking-wider flex-shrink-0"
               style={{
                 background: statusConfig.bgColor,
                 color: statusConfig.color,
@@ -187,15 +154,45 @@ export function AppointmentCardPremium({
             </div>
           </div>
 
-          {/* Row 3: Time + Price/Plan info */}
-          <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
+          {/* Row 2: Shop + Barber */}
+          <div className="flex items-center gap-2 flex-wrap mb-3">
+            <div className="flex items-center gap-1 px-2 py-[3px] rounded-md bg-muted/70 border border-border/30">
+              <Store className="w-3 h-3 text-foreground/50" />
+              <span className="text-[10px] font-semibold text-foreground/70">
+                {shopName}
+              </span>
+            </div>
+            {appointment.barbeiro?.apelido && (
+              <div className="flex items-center gap-1 px-2 py-[3px] rounded-md bg-muted/70 border border-border/30">
+                <Scissors className="w-3 h-3 text-foreground/50" />
+                <span className="text-[10px] font-semibold text-foreground/70">
+                  {appointment.barbeiro.apelido}
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* Row 3: Date + Time + Price — footer row */}
+          <div className="flex items-center gap-2.5 text-[11px] text-muted-foreground pt-2.5 border-t border-border/20">
+            {/* Date */}
+            <div className="flex items-center gap-1">
+              <Calendar className="w-3.5 h-3.5 text-foreground/40" />
+              <span className="font-semibold text-foreground/70 tabular-nums">
+                {format(new Date(`${appointment.data}T12:00:00`), "dd MMM", { locale: ptBR })}
+              </span>
+            </div>
+
+            <span className="text-border/50">·</span>
+
+            {/* Time */}
             <div className="flex items-center gap-1">
               <Clock className="w-3.5 h-3.5 text-foreground/40" />
               <span className="font-semibold text-foreground/70 tabular-nums">{appointment.hora}</span>
             </div>
 
-            <span className="text-border">|</span>
+            <span className="flex-1" />
 
+            {/* Price/Plan */}
             {isPlanAppointment ? (
               <div className="flex items-center gap-1">
                 <Crown className="w-3 h-3 text-primary" />
