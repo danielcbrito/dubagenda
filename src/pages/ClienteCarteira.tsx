@@ -367,13 +367,26 @@ export default function ClienteCarteira() {
         </div>
 
         {/* Saldo principal */}
-        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-2">
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-sm text-muted-foreground">Saldo disponível</span>
-            <button onClick={() => setBalanceVisible(!balanceVisible)} className="text-muted-foreground hover:text-foreground transition-colors">
-              {balanceVisible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
-            </button>
+        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-1">
+          <div className="flex items-center justify-between gap-3 mb-1">
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">Saldo disponível</span>
+              <button onClick={() => setBalanceVisible(!balanceVisible)} className="text-muted-foreground hover:text-foreground transition-colors">
+                {balanceVisible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+              </button>
+            </div>
+
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 px-3 rounded-lg border-border/60"
+              onClick={() => setActiveModal("recharge")}
+            >
+              <Plus className="w-3.5 h-3.5 mr-1" />
+              Recarregar
+            </Button>
           </div>
+
           <div className="text-3xl font-bold text-foreground tracking-tight">
             {balanceVisible ? <>R$ {balance.toFixed(2).replace(".", ",")}</> : "R$ •••••"}
           </div>
@@ -381,15 +394,10 @@ export default function ClienteCarteira() {
 
         {/* Créditos disponíveis */}
         {creditsBalance > 0 && (
-          <div className="text-xs text-muted-foreground mb-6">
+          <div className="text-xs text-muted-foreground mb-3">
             <span className="text-green-400 font-medium">R$ {creditsBalance.toFixed(2).replace(".", ",")}</span> em créditos disponíveis para conversão
           </div>
         )}
-
-        {/* Ações rápidas */}
-        <div className="flex items-center justify-center mt-4">
-          <QuickAction icon={Send} label="Transferir" onClick={() => setActiveModal("transfer")} />
-        </div>
       </div>
 
       {/* Separator */}
