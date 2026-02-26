@@ -137,7 +137,7 @@ export function AppointmentCardPremium({
 
         <div className="px-4 py-3.5">
           {/* Top row: Service + Date circle (top-right) */}
-          <div className="flex items-start justify-between gap-3 mb-3">
+          <div className="flex items-start justify-between gap-3 mb-2">
             <h3 className="font-bold text-foreground text-[15px] leading-snug break-words flex-1 min-w-0">
               {appointment.servico?.nome || "Serviço"}
             </h3>
@@ -156,19 +156,8 @@ export function AppointmentCardPremium({
             </div>
           </div>
 
-          {/* Badges row: Status + Shop + Barber */}
+          {/* Shop + Barber only */}
           <div className="flex items-center gap-1.5 flex-wrap mb-3">
-            <div
-              className="flex items-center gap-1 px-2 py-[3px] rounded-md text-[9px] font-bold uppercase tracking-wider"
-              style={{
-                background: statusConfig.bgColor,
-                color: statusConfig.color,
-                border: `1px solid ${statusConfig.borderColor}`,
-              }}
-            >
-              <StatusIcon className="w-2.5 h-2.5" />
-              {statusConfig.label}
-            </div>
             <div className="flex items-center gap-1 px-2 py-[3px] rounded-md bg-muted/70 border border-border/30">
               <Store className="w-3 h-3 text-foreground/50" />
               <span className="text-[10px] font-semibold text-foreground/70 truncate">{shopName}</span>
@@ -181,7 +170,7 @@ export function AppointmentCardPremium({
             )}
           </div>
 
-          {/* Bottom row: Time · Value */}
+          {/* Bottom row: Time · Value ——— Status (right) */}
           <div className="flex items-center gap-2.5 text-[11px] pt-2.5 border-t border-border/20">
             <div className="flex items-center gap-1">
               <Clock className="w-3.5 h-3.5 text-foreground/40" />
@@ -212,6 +201,21 @@ export function AppointmentCardPremium({
                 )}
               </div>
             ) : null}
+
+            <span className="flex-1" />
+
+            {/* Status badge — bottom right */}
+            <div
+              className="flex items-center gap-1 px-2 py-[3px] rounded-md text-[9px] font-bold uppercase tracking-wider flex-shrink-0"
+              style={{
+                background: statusConfig.bgColor,
+                color: statusConfig.color,
+                border: `1px solid ${statusConfig.borderColor}`,
+              }}
+            >
+              <StatusIcon className="w-2.5 h-2.5" />
+              {statusConfig.label}
+            </div>
           </div>
         </div>
 
