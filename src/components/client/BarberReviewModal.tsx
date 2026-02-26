@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Star, User, Send } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -34,6 +34,34 @@ export function BarberReviewModal({
   const [hoveredRating, setHoveredRating] = useState(0);
   const [comment, setComment] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [existingReviewId, setExistingReviewId] = useState<string | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+
+  // Check if user already has a review for this barber
+  useEffect(() => {
+    if (!open || !userId || !barberId) return;
+    const checkExisting = async () => {
+      const { data } = await supabase
+        .from("barbeiro_avaliacoes")
+        .select("id, rating, comment")
+        .eq("user_id", userId)
+        .eq("barber_id", barberId)
+        .maybeSingle();
+
+      if (data) {
+        setExistingReviewId(data.id);
+        setRating(data.rating);
+        setComment(data.comment || "");
+        setIsEditing(true);
+      } else {
+        setExistingReviewId(null);
+        setRating(0);
+        setComment("");
+        setIsEditing(false);
+      }
+    };
+    checkExisting();
+  }, [open, userId, barberId]);
 
   const handleSubmit = async () => {
     if (rating === 0) {
@@ -45,28 +73,45 @@ export function BarberReviewModal({
     try {
       const firstName = userName.split(" ")[0] || "Cliente";
 
-      const { error } = await supabase.from("barbeiro_avaliacoes").insert({
-        appointment_id: appointmentId,
-        barber_id: barberId,
-        user_id: userId,
-        rating,
-        comment: comment.trim() || null,
-        reviewer_first_name: firstName,
-      });
+      if (existingReviewId) {
+        // Update existing review
+        const { error } = await supabase
+          .from("barbeiro_avaliacoes")
+          .update({
+            rating,
+            comment: comment.trim() || null,
+            appointment_id: appointmentId,
+          })
+          .eq("id", existingReviewId);
 
-      if (error) {
-        if (error.code === "23505") {
-          toast.error("Você já avaliou este atendimento");
-        } else {
-          throw error;
-        }
+        if (error) throw error;
+        toast.success("Avaliação atualizada!");
       } else {
-        toast.success("Avaliação enviada com sucesso!");
+        // Insert new review
+        const { error } = await supabase.from("barbeiro_avaliacoes").insert({
+          appointment_id: appointmentId,
+          barber_id: barberId,
+          user_id: userId,
+          rating,
+          comment: comment.trim() || null,
+          reviewer_first_name: firstName,
+        });
+
+        if (error) {
+          if (error.code === "23505") {
+            toast.info("Você já avaliou este barbeiro. Sua avaliação foi mantida.");
+          } else {
+            throw error;
+          }
+        } else {
+          toast.success("Avaliação enviada com sucesso!");
+        }
       }
 
-      // Sempre fecha e chama onSuccess após (mesmo em duplicata)
       setRating(0);
       setComment("");
+      setExistingReviewId(null);
+      setIsEditing(false);
       onSuccess?.();
       onOpenChange(false);
     } catch (err) {
@@ -101,10 +146,12 @@ export function BarberReviewModal({
           </div>
 
           <h3 className="text-lg font-bold text-foreground mb-1">
-            Como foi com {barberName}?
+            {isEditing ? `Editar avaliação de ${barberName}` : `Como foi com ${barberName}?`}
           </h3>
           <p className="text-sm text-muted-foreground text-center">
-            Sua avaliação ajuda outros clientes
+            {isEditing
+              ? "Você já avaliou este barbeiro. Atualize se quiser."
+              : "Sua avaliação ajuda outros clientes"}
           </p>
         </div>
 
@@ -165,7 +212,7 @@ export function BarberReviewModal({
             ) : (
               <>
                 <Send className="w-4 h-4 mr-2" />
-                Enviar Avaliação
+                {isEditing ? "Atualizar Avaliação" : "Enviar Avaliação"}
               </>
             )}
           </Button>
@@ -174,7 +221,7 @@ export function BarberReviewModal({
             onClick={() => onOpenChange(false)}
             className="w-full text-sm text-muted-foreground hover:text-foreground transition-colors py-1"
           >
-            Não quero avaliar
+            {isEditing ? "Manter avaliação atual" : "Não quero avaliar"}
           </button>
         </div>
       </DialogContent>
