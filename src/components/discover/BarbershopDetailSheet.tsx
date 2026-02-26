@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Star, MapPin, Navigation, Scissors, Users, Loader2, ExternalLink } from "lucide-react";
+import { Star, MapPin, Navigation, Scissors, Users, Loader2, ExternalLink, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+import { BarberProfileSheet } from "./BarberProfileSheet";
 
 interface Barber {
   id: string;
@@ -57,7 +58,7 @@ export function BarbershopDetailSheet({
   const [barbers, setBarbers] = useState<Barber[]>([]);
   const [loadingBarbers, setLoadingBarbers] = useState(false);
   const [bannerUrl, setBannerUrl] = useState<string | null>(null);
-
+  const [selectedBarber, setSelectedBarber] = useState<Barber | null>(null);
   useEffect(() => {
     if (!open) return;
     loadBarbers();
@@ -297,12 +298,13 @@ export function BarbershopDetailSheet({
               ) : (
                 <div className="space-y-2">
                   {barbers.map((barber, i) => (
-                    <motion.div
+                    <motion.button
                       key={barber.id}
                       initial={{ opacity: 0, y: 8 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: i * 0.04, duration: 0.2 }}
-                      className="flex items-center gap-3 p-3 rounded-xl bg-card border border-border/30 active:scale-[0.985] transition-transform"
+                      onClick={() => setSelectedBarber(barber)}
+                      className="w-full flex items-center gap-3 p-3 rounded-xl bg-card border border-border/30 active:scale-[0.985] transition-transform text-left"
                     >
                       <div className="w-11 h-11 rounded-full overflow-hidden bg-muted/30 border border-border/20 shrink-0">
                         {barber.foto_url ? (
@@ -325,8 +327,8 @@ export function BarbershopDetailSheet({
                           </div>
                         )}
                       </div>
-                      <Scissors className="w-3.5 h-3.5 text-muted-foreground/30 shrink-0" />
-                    </motion.div>
+                      <ChevronRight className="w-4 h-4 text-muted-foreground/30 shrink-0" />
+                    </motion.button>
                   ))}
                 </div>
               )}
@@ -361,6 +363,17 @@ export function BarbershopDetailSheet({
               )}
             </button>
           </div>
+
+          {/* Barber Profile Sheet */}
+          <BarberProfileSheet
+            open={!!selectedBarber}
+            onClose={() => setSelectedBarber(null)}
+            barberId={selectedBarber?.id || null}
+            barberName={selectedBarber?.apelido || ""}
+            barberPhoto={selectedBarber?.foto_url || null}
+            barberAvgRating={selectedBarber?.avgRating ?? null}
+            barberTotalReviews={selectedBarber?.totalReviews || 0}
+          />
         </motion.div>
       )}
     </AnimatePresence>
