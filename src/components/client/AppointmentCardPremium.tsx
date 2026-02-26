@@ -157,7 +157,7 @@ export function AppointmentCardPremium({
           </div>
 
           {/* Shop + Barber only */}
-          <div className="flex items-center gap-1.5 flex-wrap mb-2.5 -mt-2">
+          <div className="flex items-center gap-1.5 flex-wrap mb-2 -mt-2.5">
             <div className="flex items-center gap-1 px-2 py-[3px] rounded-md bg-muted/70 border border-border/30">
               <Store className="w-3 h-3 text-foreground/50" />
               <span className="text-[10px] font-semibold text-foreground/70 truncate">{shopName}</span>
@@ -171,7 +171,7 @@ export function AppointmentCardPremium({
           </div>
 
           {/* Bottom row: Time · Value ——— Status (right) */}
-          <div className="flex items-center gap-2.5 text-[11px] pt-4 mt-2 border-t border-border/20">
+          <div className="flex items-center gap-2.5 text-[11px] pt-2 border-t border-border/20">
             <div className="flex items-center gap-1">
               <Clock className="w-3.5 h-3.5 text-foreground/40" />
               <span className="font-semibold text-foreground/70 tabular-nums">{appointment.hora}</span>
