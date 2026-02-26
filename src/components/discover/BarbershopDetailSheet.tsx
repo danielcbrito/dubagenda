@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Star, MapPin, Navigation, X, Scissors, Users, ChevronRight, Loader2 } from "lucide-react";
+import { Star, MapPin, Navigation, ArrowLeft, Scissors, Users, Loader2, ExternalLink } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 
@@ -115,210 +115,191 @@ export function BarbershopDetailSheet({
   return (
     <AnimatePresence>
       {open && (
-        <>
-          {/* Backdrop */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm"
-            onClick={onClose}
-          />
-
-          {/* Sheet */}
-          <motion.div
-            initial={{ y: "100%" }}
-            animate={{ y: 0 }}
-            exit={{ y: "100%" }}
-            transition={{ type: "spring", damping: 28, stiffness: 300 }}
-            className="fixed inset-x-0 bottom-0 z-50 flex flex-col bg-background rounded-t-2xl overflow-hidden"
-            style={{ maxHeight: "92dvh" }}
-          >
-            {/* Drag handle */}
-            <div className="flex justify-center pt-3 pb-1">
-              <div className="w-8 h-1 rounded-full bg-muted-foreground/20" />
-            </div>
-
-            {/* Close */}
+        <motion.div
+          initial={{ opacity: 0, x: "100%" }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: "100%" }}
+          transition={{ type: "spring", damping: 30, stiffness: 300 }}
+          className="fixed inset-0 z-50 flex flex-col bg-background"
+        >
+          {/* ── Top Bar ── */}
+          <div className="flex-shrink-0 flex items-center gap-3 px-4 pt-[calc(env(safe-area-inset-top)+0.75rem)] pb-3">
             <button
               onClick={onClose}
-              className="absolute top-3 right-3 z-10 w-8 h-8 rounded-full bg-card/80 border border-border/20 flex items-center justify-center active:scale-90 transition-transform"
+              className="w-8 h-8 flex items-center justify-center rounded-xl bg-card/80 border border-border/30 active:scale-90 transition-transform"
             >
-              <X className="w-4 h-4 text-muted-foreground" />
+              <ArrowLeft className="w-4 h-4 text-muted-foreground" strokeWidth={2} />
             </button>
+            <span className="text-[13px] font-semibold text-foreground/70 tracking-tight truncate">
+              Detalhes
+            </span>
+          </div>
 
-            {/* Scrollable content */}
-            <div className="flex-1 overflow-y-auto overscroll-contain pb-32">
-              {/* ── Hero Section ── */}
-              <div className="px-5 pt-4 pb-5">
-                <div className="flex items-start gap-4">
-                  {/* Logo grande */}
-                  <div className={cn(
-                    "w-16 h-16 rounded-2xl flex items-center justify-center shrink-0 overflow-hidden",
-                    "bg-card border-2 border-border/20",
-                    "shadow-lg shadow-background/50"
-                  )}>
-                    {tenantLogo ? (
-                      <img src={tenantLogo} alt={tenantName} className="w-full h-full object-cover" />
-                    ) : (
-                      <Scissors className="w-7 h-7 text-muted-foreground/30" />
-                    )}
-                  </div>
-
-                  <div className="flex-1 min-w-0 pt-1">
-                    <h2 className="text-[18px] font-bold text-foreground tracking-tight leading-tight">
-                      {tenantName}
-                    </h2>
-                    {tenantSlogan && (
-                      <p className="text-[11px] text-muted-foreground/50 mt-0.5 italic">
-                        {tenantSlogan}
-                      </p>
-                    )}
-
-                    {/* Stats row */}
-                    <div className="flex items-center gap-3 mt-2.5 flex-wrap">
-                      {avgRating != null && totalReviews > 0 && (
-                        <span className="inline-flex items-center gap-1 bg-card/80 border border-border/15 rounded-lg px-2 py-1">
-                          <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
-                          <span className="text-[11px] font-bold tabular-nums text-foreground">{avgRating.toFixed(1)}</span>
-                          <span className="text-[9px] text-muted-foreground/40">({totalReviews})</span>
-                        </span>
-                      )}
-
-                      {distance != null && (
-                        <span className="inline-flex items-center gap-1 bg-card/80 border border-border/15 rounded-lg px-2 py-1">
-                          <Navigation className="w-3 h-3 text-primary/60" />
-                          <span className="text-[11px] font-semibold tabular-nums text-foreground">{formatDistance(distance)}</span>
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
+          {/* ── Scrollable Content ── */}
+          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain pb-32">
+            {/* Hero — Logo + Name */}
+            <div className="flex flex-col items-center px-6 pt-4 pb-6">
+              <div className={cn(
+                "w-20 h-20 rounded-2xl flex items-center justify-center overflow-hidden mb-4",
+                "bg-card border-2 border-border/15 shadow-lg shadow-background/30"
+              )}>
+                {tenantLogo ? (
+                  <img src={tenantLogo} alt={tenantName} className="w-full h-full object-cover" />
+                ) : (
+                  <Scissors className="w-8 h-8 text-muted-foreground/20" />
+                )}
               </div>
 
-              {/* ── Location ── */}
-              {location && (
-                <div className="px-5 mb-4">
-                  <button
-                    onClick={handleOpenMaps}
-                    disabled={latitude == null || longitude == null}
-                    className={cn(
-                      "w-full flex items-center gap-3 p-3 rounded-xl",
-                      "bg-card/60 border border-border/15",
-                      "active:scale-[0.99] transition-all"
-                    )}
-                  >
-                    <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-                      <MapPin className="w-4 h-4 text-primary/70" />
-                    </div>
-                    <div className="flex-1 text-left min-w-0">
-                      <p className="text-[8px] uppercase tracking-[0.15em] text-muted-foreground/40 font-semibold mb-0.5">
-                        Localização
-                      </p>
-                      <p className="text-[12px] text-foreground/80 truncate">{location}</p>
-                    </div>
-                    {latitude != null && longitude != null && (
-                      <div className="shrink-0 flex items-center gap-1 text-[9px] text-primary/60 font-medium">
-                        <span>Rota</span>
-                        <ChevronRight className="w-3 h-3" />
-                      </div>
-                    )}
-                  </button>
-                </div>
+              <h1 className="text-[20px] font-bold text-foreground tracking-tight text-center">
+                {tenantName}
+              </h1>
+
+              {tenantSlogan && (
+                <p className="text-[11px] text-muted-foreground/40 mt-1 text-center italic">
+                  {tenantSlogan}
+                </p>
               )}
 
-              {/* ── Barbers Section ── */}
-              <div className="px-5 mb-4">
-                <div className="flex items-center gap-2 mb-3">
-                  <Users className="w-3.5 h-3.5 text-muted-foreground/30" />
-                  <h3 className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground/40 font-bold">
-                    Profissionais
-                  </h3>
-                  {!loadingBarbers && (
-                    <span className="text-[9px] tabular-nums text-muted-foreground/25 font-medium">
-                      {barbers.length}
-                    </span>
-                  )}
-                </div>
-
-                {loadingBarbers ? (
-                  <div className="flex items-center justify-center py-6">
-                    <Loader2 className="w-4 h-4 text-muted-foreground/30 animate-spin" />
+              {/* Rating + Distance chips */}
+              <div className="flex items-center gap-2.5 mt-4">
+                {avgRating != null && totalReviews > 0 && (
+                  <div className="flex items-center gap-1.5 bg-card border border-border/15 rounded-lg px-2.5 py-1.5">
+                    <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                    <span className="text-[12px] font-bold tabular-nums text-foreground">{avgRating.toFixed(1)}</span>
+                    <span className="text-[10px] text-muted-foreground/40">({totalReviews})</span>
                   </div>
-                ) : barbers.length === 0 ? (
-                  <p className="text-[11px] text-muted-foreground/30 text-center py-4">
-                    Nenhum profissional disponível
-                  </p>
-                ) : (
-                  <div className="space-y-2">
-                    {barbers.map((barber, i) => (
-                      <motion.div
-                        key={barber.id}
-                        initial={{ opacity: 0, x: -8 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: i * 0.05, duration: 0.25 }}
-                        className="flex items-center gap-3 p-2.5 rounded-xl bg-card/40 border border-border/10"
-                      >
-                        <div className="w-10 h-10 rounded-full overflow-hidden bg-muted/20 border border-border/15 shrink-0">
-                          {barber.foto_url ? (
-                            <img src={barber.foto_url} alt={barber.apelido} className="w-full h-full object-cover" />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center">
-                              <span className="text-[13px] font-bold text-muted-foreground/30">
-                                {barber.apelido.charAt(0).toUpperCase()}
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-[13px] font-semibold text-foreground truncate">{barber.apelido}</p>
-                          {barber.avgRating != null && barber.totalReviews > 0 && (
-                            <div className="flex items-center gap-1 mt-0.5">
-                              <Star className="w-[9px] h-[9px] fill-amber-400 text-amber-400" />
-                              <span className="text-[9px] font-semibold tabular-nums text-foreground/60">{barber.avgRating.toFixed(1)}</span>
-                              <span className="text-[8px] text-muted-foreground/30">({barber.totalReviews})</span>
-                            </div>
-                          )}
-                        </div>
-                        <Scissors className="w-3.5 h-3.5 text-muted-foreground/15 shrink-0" />
-                      </motion.div>
-                    ))}
+                )}
+
+                {distance != null && (
+                  <div className="flex items-center gap-1.5 bg-card border border-border/15 rounded-lg px-2.5 py-1.5">
+                    <Navigation className="w-3 h-3 text-primary/50" />
+                    <span className="text-[12px] font-semibold tabular-nums text-foreground">{formatDistance(distance)}</span>
                   </div>
                 )}
               </div>
             </div>
 
-            {/* ── Fixed CTA ── */}
-            <div
-              className="absolute bottom-0 left-0 right-0 p-4 pb-[calc(1rem+env(safe-area-inset-bottom))]"
-              style={{ background: "linear-gradient(to top, hsl(var(--background)) 70%, transparent)" }}
-            >
-              <button
-                onClick={onSelect}
-                disabled={saving || isCurrent}
-                className={cn(
-                  "w-full h-[50px] rounded-xl font-bold text-[14px] tracking-wide",
-                  "flex items-center justify-center gap-2",
-                  "transition-all duration-200 active:scale-[0.97]",
-                  isCurrent
-                    ? "bg-card border border-primary/20 text-primary/60"
-                    : "bg-foreground text-background shadow-lg shadow-foreground/10"
+            {/* ── Location Card ── */}
+            {location && (
+              <div className="px-5 mb-5">
+                <button
+                  onClick={handleOpenMaps}
+                  disabled={latitude == null || longitude == null}
+                  className={cn(
+                    "w-full flex items-center gap-3 p-3.5 rounded-xl",
+                    "bg-card/60 border border-border/15",
+                    "active:scale-[0.99] transition-all"
+                  )}
+                >
+                  <div className="w-10 h-10 rounded-xl bg-primary/8 flex items-center justify-center shrink-0">
+                    <MapPin className="w-[18px] h-[18px] text-primary/60" />
+                  </div>
+                  <div className="flex-1 text-left min-w-0">
+                    <p className="text-[8px] uppercase tracking-[0.15em] text-muted-foreground/35 font-semibold mb-0.5">
+                      Localização
+                    </p>
+                    <p className="text-[12px] text-foreground/70 truncate">{location}</p>
+                  </div>
+                  {latitude != null && longitude != null && (
+                    <div className="shrink-0 flex items-center gap-1 text-[9px] text-primary/50 font-medium">
+                      <span>Ir</span>
+                      <ExternalLink className="w-3 h-3" />
+                    </div>
+                  )}
+                </button>
+              </div>
+            )}
+
+            {/* ── Barbers Section ── */}
+            <div className="px-5">
+              <div className="flex items-center gap-2 mb-3">
+                <Users className="w-3.5 h-3.5 text-muted-foreground/25" />
+                <h3 className="text-[9px] uppercase tracking-[0.14em] text-muted-foreground/35 font-bold">
+                  Profissionais
+                </h3>
+                {!loadingBarbers && barbers.length > 0 && (
+                  <span className="text-[9px] tabular-nums text-muted-foreground/20 font-medium">
+                    {barbers.length}
+                  </span>
                 )}
-              >
-                {saving ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : isCurrent ? (
-                  "Barbearia atual"
-                ) : isDub ? (
-                  "Voltar para DUB"
-                ) : (
-                  "Escolher esta barbearia"
-                )}
-              </button>
+              </div>
+
+              {loadingBarbers ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="w-4 h-4 text-muted-foreground/25 animate-spin" />
+                </div>
+              ) : barbers.length === 0 ? (
+                <p className="text-[11px] text-muted-foreground/25 text-center py-6">
+                  Nenhum profissional disponível
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {barbers.map((barber, i) => (
+                    <motion.div
+                      key={barber.id}
+                      initial={{ opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: i * 0.04, duration: 0.25 }}
+                      className="flex items-center gap-3 p-3 rounded-xl bg-card/50 border border-border/10"
+                    >
+                      <div className="w-11 h-11 rounded-full overflow-hidden bg-muted/15 border border-border/10 shrink-0">
+                        {barber.foto_url ? (
+                          <img src={barber.foto_url} alt={barber.apelido} className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <span className="text-[14px] font-semibold text-muted-foreground/25">
+                              {barber.apelido.charAt(0).toUpperCase()}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[13px] font-semibold text-foreground truncate">{barber.apelido}</p>
+                        {barber.avgRating != null && barber.totalReviews > 0 && (
+                          <div className="flex items-center gap-1 mt-0.5">
+                            <Star className="w-[10px] h-[10px] fill-amber-400 text-amber-400" />
+                            <span className="text-[10px] font-semibold tabular-nums text-foreground/50">{barber.avgRating.toFixed(1)}</span>
+                            <span className="text-[8px] text-muted-foreground/25">({barber.totalReviews})</span>
+                          </div>
+                        )}
+                      </div>
+                      <Scissors className="w-3.5 h-3.5 text-muted-foreground/10 shrink-0" />
+                    </motion.div>
+                  ))}
+                </div>
+              )}
             </div>
-          </motion.div>
-        </>
+          </div>
+
+          {/* ── Fixed CTA ── */}
+          <div
+            className="absolute bottom-0 left-0 right-0 p-4 pb-[calc(1rem+env(safe-area-inset-bottom))]"
+            style={{ background: "linear-gradient(to top, hsl(var(--background)) 60%, transparent)" }}
+          >
+            <button
+              onClick={onSelect}
+              disabled={saving || isCurrent}
+              className={cn(
+                "w-full h-[48px] rounded-xl font-semibold text-[14px] tracking-wide",
+                "flex items-center justify-center gap-2",
+                "transition-all duration-200 active:scale-[0.97]",
+                isCurrent
+                  ? "bg-card border border-primary/15 text-primary/50"
+                  : "bg-foreground text-background shadow-md shadow-foreground/8"
+              )}
+            >
+              {saving ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : isCurrent ? (
+                "Barbearia atual"
+              ) : isDub ? (
+                "Voltar para DUB"
+              ) : (
+                "Escolher esta barbearia"
+              )}
+            </button>
+          </div>
+        </motion.div>
       )}
     </AnimatePresence>
   );
