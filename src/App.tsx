@@ -149,9 +149,36 @@ function AuthSessionGuard({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+function ScrollLockGuard() {
+  const location = useLocation();
+
+  useEffect(() => {
+    const isSupportRoute = location.pathname === "/suporte";
+
+    if (isSupportRoute) {
+      return;
+    }
+
+    document.documentElement.classList.remove("lock-scroll");
+    document.body.classList.remove("lock-scroll");
+
+    document.documentElement.style.overflow = "";
+    document.body.style.overflow = "";
+    document.documentElement.style.position = "";
+    document.body.style.position = "";
+    document.documentElement.style.width = "";
+    document.body.style.width = "";
+    document.documentElement.style.height = "";
+    document.body.style.height = "";
+  }, [location.pathname]);
+
+  return null;
+}
+
 function AppRoutes() {
   return (
     <AuthSessionGuard>
+      <ScrollLockGuard />
       <MaintenanceWrapper>
         <Routes>
           <Route path="/" element={<Index />} />
