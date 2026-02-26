@@ -47,11 +47,52 @@ export function BarbershopDetailSheet({
 }: BarbershopDetailSheetProps) {
   const [barbers, setBarbers] = useState<Barber[]>([]);
   const [loadingBarbers, setLoadingBarbers] = useState(false);
+  const [bannerUrl, setBannerUrl] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) { return; }
     loadBarbers();
+    loadBanner();
   }, [open, tenantId]);
+
+  const loadBanner = async () => {
+    try {
+      if (tenantId) {
+        // Get owner_user_id from tenant, then banner from profiles
+        const { data: tenant } = await supabase
+          .from("tenants")
+          .select("owner_user_id")
+          .eq("id", tenantId)
+          .single();
+        if (tenant?.owner_user_id) {
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("banner_url")
+            .eq("id", tenant.owner_user_id)
+            .single();
+          setBannerUrl(profile?.banner_url || null);
+        }
+      } else {
+        // DUB: get admin user's banner
+        const { data: adminRole } = await supabase
+          .from("user_roles")
+          .select("user_id")
+          .eq("role", "admin")
+          .limit(1)
+          .single();
+        if (adminRole?.user_id) {
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("banner_url")
+            .eq("id", adminRole.user_id)
+            .single();
+          setBannerUrl(profile?.banner_url || null);
+        }
+      }
+    } catch (err) {
+      console.error("Error loading banner:", err);
+    }
+  };
 
   const loadBarbers = async () => {
     setLoadingBarbers(true);
@@ -122,46 +163,73 @@ export function BarbershopDetailSheet({
           transition={{ type: "spring", damping: 30, stiffness: 300 }}
           className="fixed inset-0 z-50 flex flex-col bg-background"
         >
-          {/* ── Top Bar ── */}
-          <div className="flex-shrink-0 flex items-center gap-3 px-4 pt-[calc(env(safe-area-inset-top)+0.75rem)] pb-3">
-            <button
-              onClick={onClose}
-              className="w-8 h-8 flex items-center justify-center rounded-xl bg-card/80 border border-border/30 active:scale-90 transition-transform"
-            >
-              <ArrowLeft className="w-4 h-4 text-muted-foreground" strokeWidth={2} />
-            </button>
-            <span className="text-[13px] font-semibold text-foreground/70 tracking-tight truncate">
-              Detalhes
-            </span>
-          </div>
-
           {/* ── Scrollable Content ── */}
           <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain pb-32">
-            {/* Hero — Logo + Name */}
-            <div className="flex flex-col items-center px-6 pt-4 pb-6">
-              <div className={cn(
-                "w-20 h-20 rounded-2xl flex items-center justify-center overflow-hidden mb-4",
-                "bg-card border-2 border-border/15 shadow-lg shadow-background/30"
-              )}>
-                {tenantLogo ? (
-                  <img src={tenantLogo} alt={tenantName} className="w-full h-full object-cover" />
-                ) : (
-                  <Scissors className="w-8 h-8 text-muted-foreground/20" />
-                )}
-              </div>
 
-              <h1 className="text-[20px] font-bold text-foreground tracking-tight text-center">
+            {/* ── Hero Banner ── */}
+            <div className="relative w-full" style={{ minHeight: bannerUrl ? 220 : 140 }}>
+              {bannerUrl ? (
+                <>
+                  <img
+                    src={bannerUrl}
+                    alt={`Banner ${tenantName}`}
+                    className="absolute inset-0 w-full h-full object-cover"
+                  />
+                  {/* Gradient overlay for readability */}
+                  <div
+                    className="absolute inset-0"
+                    style={{
+                      background: "linear-gradient(to bottom, hsl(var(--background) / 0.3) 0%, hsl(var(--background) / 0.7) 60%, hsl(var(--background)) 100%)"
+                    }}
+                  />
+                </>
+              ) : (
+                /* Subtle gradient fallback */
+                <div
+                  className="absolute inset-0"
+                  style={{
+                    background: "linear-gradient(to bottom, hsl(var(--card)) 0%, hsl(var(--background)) 100%)"
+                  }}
+                />
+              )}
+
+              {/* Back button — floats on top of banner */}
+              <button
+                onClick={onClose}
+                className="absolute top-[calc(env(safe-area-inset-top)+0.75rem)] left-4 z-10 w-8 h-8 flex items-center justify-center rounded-xl bg-background/60 backdrop-blur-md border border-border/20 active:scale-90 transition-transform"
+              >
+                <ArrowLeft className="w-4 h-4 text-foreground" strokeWidth={2} />
+              </button>
+
+              {/* Logo — centered, overlapping bottom of banner */}
+              <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 z-10">
+                <div className={cn(
+                  "w-[72px] h-[72px] rounded-2xl flex items-center justify-center overflow-hidden",
+                  "bg-card border-[3px] border-background shadow-lg shadow-background/40"
+                )}>
+                  {tenantLogo ? (
+                    <img src={tenantLogo} alt={tenantName} className="w-full h-full object-cover" />
+                  ) : (
+                    <Scissors className="w-7 h-7 text-muted-foreground/20" />
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* ── Name + Info (below logo) ── */}
+            <div className="flex flex-col items-center px-6 pt-12 pb-5">
+              <h1 className="text-[19px] font-bold text-foreground tracking-tight text-center">
                 {tenantName}
               </h1>
 
               {tenantSlogan && (
-                <p className="text-[11px] text-muted-foreground/40 mt-1 text-center italic">
+                <p className="text-[11px] text-muted-foreground/40 mt-0.5 text-center italic">
                   {tenantSlogan}
                 </p>
               )}
 
               {/* Rating + Distance chips */}
-              <div className="flex items-center gap-2.5 mt-4">
+              <div className="flex items-center gap-2.5 mt-3.5">
                 {avgRating != null && totalReviews > 0 && (
                   <div className="flex items-center gap-1.5 bg-card border border-border/15 rounded-lg px-2.5 py-1.5">
                     <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
