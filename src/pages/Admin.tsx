@@ -244,7 +244,7 @@ const Admin = () => {
 
   // ========== LAYOUT DESKTOP ==========
   return (
-    <div className="relative flex h-screen w-full overflow-hidden bg-[#0E0E11]">
+    <div className="relative flex h-[100dvh] w-full overflow-hidden bg-[#0E0E11]">
         {/* Efeitos de luz premium no fundo */}
         <div className="pointer-events-none fixed inset-0 z-0">
           {/* Luz vermelha principal - canto superior direito */}
@@ -268,8 +268,8 @@ const Admin = () => {
         <AdminSidebar />
         
         {/* Conteúdo principal */}
-        <main className="relative z-10 flex-1 flex flex-col h-screen overflow-hidden transition-all duration-300">
-          <div className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-none">
+        <main className="relative z-10 flex-1 flex flex-col h-full overflow-hidden transition-all duration-300">
+          <div className="flex-1 overflow-y-auto overflow-x-hidden overscroll-contain touch-pan-y [webkit-overflow-scrolling:touch] scrollbar-none">
             <div className="p-6 lg:p-8 max-w-[1600px] mx-auto">
               <Suspense fallback={<LoadingFallback />}>
                 <Routes>

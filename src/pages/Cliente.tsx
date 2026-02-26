@@ -560,7 +560,7 @@ const Cliente = () => {
 
 
       {/* Scrollable Content */}
-      <div className="flex-1 overflow-y-auto overscroll-contain pb-24">
+      <div className="flex-1 overflow-y-auto overscroll-contain touch-pan-y [webkit-overflow-scrolling:touch] pb-24">
         <div className="max-w-lg mx-auto px-4 pt-4 pb-6">
           
           {/* Header */}
