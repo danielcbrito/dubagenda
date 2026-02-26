@@ -231,22 +231,12 @@ export function WalletSheet({ open, onOpenChange, userId }: WalletSheetProps) {
             </div>
           </motion.div>
 
-          {/* Ações rápidas */}
-          <div className="flex items-center justify-around">
+          {/* Ação: Recarregar */}
+          <div className="flex items-center justify-center">
             <QuickAction
               icon={Plus}
               label="Recarregar"
               onClick={() => handleComingSoon("Recarga")}
-            />
-            <QuickAction
-              icon={ArrowDownToLine}
-              label="Retirar"
-              onClick={() => handleComingSoon("Retirada")}
-            />
-            <QuickAction
-              icon={Send}
-              label="Transferir"
-              onClick={() => handleComingSoon("Transferência")}
             />
           </div>
         </div>
