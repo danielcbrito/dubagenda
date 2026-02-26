@@ -72,7 +72,13 @@ function MaintenanceWrapper({ children }: { children: React.ReactNode }) {
 
   // Public routes (login, signup, etc.) are always accessible
   if (isPublicRoute) {
-    return <>{children}</>;
+    return (
+      <div className="flex flex-col min-h-dvh">
+        <div className="flex-1 flex flex-col min-h-0">
+          {children}
+        </div>
+      </div>
+    );
   }
 
   // Allowed users can access everything
@@ -153,11 +159,11 @@ function ScrollLockGuard() {
   const location = useLocation();
 
   useEffect(() => {
-    const isSupportRoute = location.pathname === "/suporte";
-
-    if (isSupportRoute) {
-      return;
+    if (location.pathname === "/suporte") {
+      // A própria tela de suporte gerencia o lock de scroll.
+      // O guard global continua limpando estilos residuais em todas as rotas.
     }
+
 
     document.documentElement.classList.remove("lock-scroll");
     document.body.classList.remove("lock-scroll");
