@@ -4,8 +4,6 @@ import { motion } from "framer-motion";
 import {
   User,
   Shield,
-  Wrench,
-  Bell,
   ChevronRight,
   LogOut,
   Sun,
@@ -17,6 +15,7 @@ import {
   HelpCircle,
   Store,
   MapPin,
+  Bell,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -44,17 +43,22 @@ import { BarbershopDetailsSheet } from "@/components/client/BarbershopDetailsShe
 interface ProfileSectionProps {
   title: string;
   children: React.ReactNode;
+  delay?: number;
 }
-function ProfileSection({ title, children }: ProfileSectionProps) {
+function ProfileSection({ title, children, delay = 0 }: ProfileSectionProps) {
   return (
-    <div>
-      <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground mb-1.5 px-5">
+    <motion.div
+      initial={{ opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay, duration: 0.3 }}
+    >
+      <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground/50 mb-2 px-1">
         {title}
       </p>
-      <div className="mx-4 rounded-xl bg-secondary/30 border border-border/30 overflow-hidden divide-y divide-border/20">
+      <div className="rounded-xl bg-card border border-border/30 overflow-hidden divide-y divide-border/20">
         {children}
       </div>
-    </div>
+    </motion.div>
   );
 }
 
@@ -71,19 +75,36 @@ function ProfileItem({ icon: Icon, label, onClick, trailing, badge, danger }: Pr
     <button
       onClick={onClick}
       className={cn(
-        "w-full flex items-center gap-3 px-4 py-3 transition-colors",
-        "hover:bg-secondary/50 active:bg-secondary/70",
+        "w-full flex items-center gap-3 px-3.5 py-3 transition-colors",
+        "active:bg-secondary/50 active:scale-[0.99] transition-all",
         danger && "text-destructive"
       )}
     >
-      <Icon className={cn("h-[18px] w-[18px]", danger ? "text-destructive" : "text-muted-foreground")} strokeWidth={1.8} />
-      <span className={cn("flex-1 text-left text-[13px] font-medium", danger ? "text-destructive" : "text-foreground")}>{label}</span>
+      <div className={cn(
+        "w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0",
+        danger ? "bg-destructive/10" : "bg-secondary/50"
+      )}>
+        <Icon
+          className={cn("h-4 w-4", danger ? "text-destructive" : "text-muted-foreground")}
+          strokeWidth={1.8}
+        />
+      </div>
+      <span
+        className={cn(
+          "flex-1 text-left text-[13px] font-medium",
+          danger ? "text-destructive" : "text-foreground"
+        )}
+      >
+        {label}
+      </span>
       {badge && (
-        <span className="px-1.5 py-0.5 bg-primary text-primary-foreground text-[9px] font-bold rounded-full min-w-[20px] text-center">
+        <span className="px-1.5 py-0.5 bg-primary/15 text-primary text-[9px] font-bold rounded-md min-w-[20px] text-center uppercase tracking-wider">
           {badge}
         </span>
       )}
-      {trailing || <ChevronRight className="h-4 w-4 text-muted-foreground/50" />}
+      {trailing || (
+        <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/30 flex-shrink-0" />
+      )}
     </button>
   );
 }
@@ -93,18 +114,22 @@ function ThemeToggleItem() {
   const isDark = resolvedTheme === "dark";
 
   return (
-    <div className="w-full flex items-center gap-3 px-4 py-3">
-      {isDark ? (
-        <Moon className="h-[18px] w-[18px] text-muted-foreground" strokeWidth={1.8} />
-      ) : (
-        <Sun className="h-[18px] w-[18px] text-muted-foreground" strokeWidth={1.8} />
-      )}
-      <span className="flex-1 text-left text-[13px] font-medium text-foreground">Tema</span>
+    <div className="w-full flex items-center gap-3 px-3.5 py-3">
+      <div className="w-8 h-8 rounded-lg bg-secondary/50 flex items-center justify-center flex-shrink-0">
+        {isDark ? (
+          <Moon className="h-4 w-4 text-muted-foreground" strokeWidth={1.8} />
+        ) : (
+          <Sun className="h-4 w-4 text-muted-foreground" strokeWidth={1.8} />
+        )}
+      </div>
+      <span className="flex-1 text-left text-[13px] font-medium text-foreground">
+        {isDark ? "Modo escuro" : "Modo claro"}
+      </span>
       <button
         onClick={() => setTheme(isDark ? "light" : "dark")}
         className={cn(
           "relative w-10 h-[22px] rounded-full transition-colors duration-200",
-          isDark ? "bg-primary" : "bg-muted"
+          isDark ? "bg-primary" : "bg-muted-foreground/20"
         )}
       >
         <motion.div
@@ -180,25 +205,20 @@ export default function ClientePerfil() {
     const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", user.id);
     if (roles?.[0]) setUserRole(roles[0].role);
 
-    // Load credits
     const { data: creditsData } = await supabase.rpc("get_user_available_credits", { p_user_id: user.id });
     if (creditsData !== null) setAvailableCredits(Number(creditsData));
 
-    // Load points
     const { data: pontosData } = await supabase.from("pontos").select("pontos").eq("user_id", user.id).maybeSingle();
     if (pontosData) setPoints(pontosData.pontos);
 
-    // Load completed appointments count
     const { count } = await supabase.from("agendamentos").select("*", { count: "exact", head: true })
       .eq("user_id", user.id).eq("status", "completed");
     setCompletedAppointments(count || 0);
 
-    // Load redemptions
     const { data: resgates } = await supabase.from("resgates").select("id")
       .eq("user_id", user.id).eq("status", "available");
     setRedemptions(resgates?.length || 0);
 
-    // Load pontos necessários
     const { data: promo } = await supabase.from("promocoes").select("pontos_necessarios").eq("ativo", true).limit(1).maybeSingle();
     if (promo?.pontos_necessarios) setPontosNecessarios(promo.pontos_necessarios);
   };
@@ -224,129 +244,144 @@ export default function ClientePerfil() {
     : null;
 
   return (
-    <div className="min-h-screen pb-20">
-      <div className="pt-10 pb-8 space-y-6">
-        {/* Identity Section */}
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex flex-col items-center gap-2 px-5"
-        >
-          <div className="relative">
-            <div className="h-20 w-20 rounded-full border-2 border-border/50 overflow-hidden bg-muted flex items-center justify-center">
-              {avatarUrl ? (
-                <img src={avatarUrl} alt="Avatar" className="h-full w-full object-cover" />
-              ) : (
-                <span className="text-xl font-bold text-foreground">
-                  {profile?.nome ? getInitials(profile.nome) : "U"}
+    <div className="flex flex-col" style={{ height: "calc(100dvh - 56px)" }}>
+      {/* Scrollable area */}
+      <div className="flex-1 min-h-0 relative">
+        <div
+          className="absolute top-0 left-0 right-0 h-4 z-10 pointer-events-none"
+          style={{ background: "linear-gradient(to bottom, hsl(var(--background)), transparent)" }}
+        />
+        <div className="h-full overflow-y-auto overscroll-contain pb-8">
+          <div className="px-4 pt-8 pb-4 space-y-6">
+
+            {/* Identity */}
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex flex-col items-center gap-2.5"
+            >
+              <div className="relative">
+                <div className="h-[72px] w-[72px] rounded-full border-2 border-border/40 overflow-hidden bg-card flex items-center justify-center shadow-sm">
+                  {avatarUrl ? (
+                    <img src={avatarUrl} alt="Avatar" className="h-full w-full object-cover" />
+                  ) : (
+                    <span className="text-lg font-bold text-foreground tabular-nums">
+                      {profile?.nome ? getInitials(profile.nome) : "U"}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <div className="text-center space-y-1">
+                <p className="text-[15px] font-semibold text-foreground tracking-tight">
+                  {profile?.nome || "Carregando..."}
+                </p>
+                <p className="text-[11px] text-muted-foreground/60">{userEmail}</p>
+                <span className="inline-block mt-1 text-[9px] uppercase tracking-[0.12em] bg-primary/10 text-primary px-2 py-0.5 rounded-md font-bold">
+                  {userRole}
                 </span>
-              )}
-            </div>
-          </div>
+              </div>
+            </motion.div>
 
-          <div className="text-center">
-            <p className="text-[15px] font-semibold text-foreground">
-              {profile?.nome || "Carregando..."}
-            </p>
-            <p className="text-[12px] text-muted-foreground mt-0.5">{userEmail}</p>
-            <span className="inline-block mt-1.5 text-[10px] uppercase tracking-wider bg-primary/10 text-primary px-2 py-0.5 rounded font-semibold">
-              {userRole}
-            </span>
-          </div>
-        </motion.div>
+            {/* Conta */}
+            <ProfileSection title="Conta" delay={0.05}>
+              <ProfileItem
+                icon={Wallet}
+                label="Minha Carteira"
+                badge={availableCredits > 0 ? `R$ ${availableCredits}` : undefined}
+                onClick={() => navigate("/cliente/carteira")}
+              />
+              <ProfileItem
+                icon={CreditCard}
+                label="Meus Planos"
+                onClick={() => setPlansOpen(true)}
+              />
+              <ProfileItem
+                icon={User}
+                label="Meus Dados"
+                onClick={() => navigate("/cliente/dados-pessoais")}
+              />
+              <ProfileItem
+                icon={Shield}
+                label="Segurança"
+                onClick={() => navigate("/cliente/seguranca")}
+              />
+            </ProfileSection>
 
-        {/* Conta */}
-        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
-          <ProfileSection title="Conta">
-            <ProfileItem
-              icon={Wallet}
-              label="Minha Carteira"
-              badge={availableCredits > 0 ? `R$ ${availableCredits}` : undefined}
-              onClick={() => navigate("/cliente/carteira")}
-            />
-            <ProfileItem
-              icon={CreditCard}
-              label="Meus Planos"
-              onClick={() => setPlansOpen(true)}
-            />
-            <ProfileItem icon={User} label="Meus Dados" onClick={() => navigate("/cliente/dados-pessoais")} />
-            <ProfileItem icon={Shield} label="Segurança" onClick={() => navigate("/cliente/seguranca")} />
-          </ProfileSection>
-        </motion.div>
+            {/* Preferências */}
+            <ProfileSection title="Preferências" delay={0.1}>
+              <ProfileItem
+                icon={Store}
+                label={isDubExclusive ? "Barbearia DUB" : "Minha Barbearia"}
+                badge={isDubExclusive ? "Exclusivo" : preferredShopName || undefined}
+                onClick={() => setShopDetailsOpen(true)}
+              />
+              <ProfileItem
+                icon={MapPin}
+                label="Encontrar barbearias"
+                onClick={() => {
+                  if (!profile?.barbearia_preferida_id) {
+                    setShowDiscoverConfirm(true);
+                  } else {
+                    navigate("/escolher-barbearia?mode=change");
+                  }
+                }}
+              />
+              <ProfileItem
+                icon={Bell}
+                label="Notificações"
+                onClick={() => setNotificationsOpen(true)}
+              />
+              <ThemeToggleItem />
+            </ProfileSection>
 
-        {/* Preferências */}
-        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-          <ProfileSection title="Preferências">
-            <ProfileItem
-              icon={Store}
-              label={isDubExclusive ? "Barbearia DUB" : "Minha Barbearia"}
-              badge={isDubExclusive ? "Exclusivo" : preferredShopName || undefined}
-              onClick={() => setShopDetailsOpen(true)}
-            />
-            <ProfileItem
-              icon={MapPin}
-              label="Encontrar barbearias perto de mim"
-              onClick={() => {
-                // If user is DUB exclusive (no preferred shop), ask for confirmation
-                if (!profile?.barbearia_preferida_id) {
-                  setShowDiscoverConfirm(true);
-                } else {
-                  navigate("/escolher-barbearia?mode=change");
+            {/* Mais */}
+            <ProfileSection title="Mais" delay={0.15}>
+              <ProfileItem
+                icon={History}
+                label="Histórico de Agendamentos"
+                onClick={() => setHistoryOpen(true)}
+              />
+              <ProfileItem
+                icon={Gift}
+                label="Programa de Pontos"
+                badge={redemptions > 0 ? `${redemptions} disponível` : undefined}
+                onClick={() => setPointsModalOpen(true)}
+              />
+              <ProfileItem
+                icon={HelpCircle}
+                label="Central de Ajuda"
+                trailing={
+                  <span className="text-[8px] uppercase tracking-[0.1em] text-muted-foreground/40 bg-muted/50 px-1.5 py-0.5 rounded font-semibold">
+                    Em breve
+                  </span>
                 }
-              }}
-            />
-            <ProfileItem
-              icon={Bell}
-              label="Notificações"
-              onClick={() => setNotificationsOpen(true)}
-            />
-            <ThemeToggleItem />
-          </ProfileSection>
-        </motion.div>
+                onClick={() => toast.info("Em breve")}
+              />
+            </ProfileSection>
 
-        {/* Mais */}
-        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
-          <ProfileSection title="Mais">
-            <ProfileItem
-              icon={History}
-              label="Histórico de Agendamentos"
-              onClick={() => setHistoryOpen(true)}
-            />
-            <ProfileItem
-              icon={Gift}
-              label="Programa de Pontos"
-              badge={redemptions > 0 ? `${redemptions} disponível` : undefined}
-              onClick={() => setPointsModalOpen(true)}
-            />
-            <ProfileItem
-              icon={HelpCircle}
-              label="Central de Ajuda"
-              trailing={
-                <span className="text-[9px] uppercase tracking-wider text-muted-foreground/40 bg-muted/50 px-1.5 py-0.5 rounded font-medium">
-                  Em breve
-                </span>
-              }
-              onClick={() => toast.info("Em breve")}
-            />
-          </ProfileSection>
-        </motion.div>
+            {/* Logout */}
+            <motion.div
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+            >
+              <button
+                onClick={handleLogout}
+                disabled={isLoggingOut}
+                className="w-full h-11 rounded-xl text-[13px] font-medium text-destructive hover:bg-destructive/10 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+              >
+                <LogOut className="h-4 w-4" />
+                {isLoggingOut ? "Saindo..." : "Sair da conta"}
+              </button>
+            </motion.div>
 
-        {/* Logout */}
-        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="px-4">
-          <button
-            onClick={handleLogout}
-            disabled={isLoggingOut}
-            className="w-full h-11 rounded-lg text-[13px] font-medium text-destructive hover:bg-destructive/10 transition-colors flex items-center justify-center gap-2"
-          >
-            <LogOut className="h-4 w-4" />
-            {isLoggingOut ? "Saindo..." : "Sair da conta"}
-          </button>
-        </motion.div>
-
-        {/* Version */}
-        <p className="text-center text-[10px] text-muted-foreground/30">
-          Barbearia Dub • v1.0.0
-        </p>
+            {/* Version */}
+            <p className="text-center text-[9px] text-muted-foreground/25 tracking-wider uppercase">
+              Barbearia Dub · v1.0.0
+            </p>
+          </div>
+        </div>
       </div>
 
       <BottomNavigation
@@ -367,7 +402,7 @@ export default function ClientePerfil() {
         pontosNecessarios={pontosNecessarios}
       />
 
-      {/* Confirmation Dialog — Leave DUB Exclusive */}
+      {/* Confirmation Dialog */}
       <AlertDialog open={showDiscoverConfirm} onOpenChange={setShowDiscoverConfirm}>
         <AlertDialogContent className="max-w-[340px] rounded-2xl">
           <AlertDialogHeader>
@@ -380,8 +415,7 @@ export default function ClientePerfil() {
           <AlertDialogFooter className="gap-2 sm:gap-2">
             <AlertDialogCancel className="rounded-xl text-[13px]">Cancelar</AlertDialogCancel>
             <AlertDialogAction
-              className="rounded-xl text-[13px]"
-              style={{ background: "var(--gradient-primary)" }}
+              className="rounded-xl text-[13px] bg-primary text-primary-foreground"
               onClick={() => navigate("/escolher-barbearia?mode=change")}
             >
               Quero explorar
