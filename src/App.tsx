@@ -65,14 +65,14 @@ function MaintenanceWrapper({ children }: { children: React.ReactNode }) {
     location.pathname === route || location.pathname.startsWith('/auth')
   );
 
-  // If still loading, show nothing (to avoid flash)
-  if (isLoading) {
-    return null;
-  }
-
-  // Public routes (login, signup, etc.) are always accessible
+  // Public routes are ALWAYS accessible — never block them, even while loading
   if (isPublicRoute) {
     return <>{children}</>;
+  }
+
+  // For protected routes, wait for maintenance status to load
+  if (isLoading) {
+    return null;
   }
 
   // Allowed users can access everything
