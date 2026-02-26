@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
-import { MapPin, Search, Scissors, Crown, Navigation, Loader2, Star, ArrowLeft, Route } from "lucide-react";
+import { MapPin, Search, Scissors, Crown, Navigation, Loader2, Star, Route } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -277,27 +277,19 @@ const EscolherBarbearia = () => {
     <div className="flex flex-col bg-background" style={{ height: "100dvh" }}>
       {/* ══════ Header ══════ */}
       <div className="flex-shrink-0 px-4 pt-[calc(env(safe-area-inset-top)+0.5rem)] pb-2">
-        <div className="flex items-center gap-3 mb-3">
+        <div className="flex items-center gap-1 mb-3">
           <button
             onClick={handleBack}
-            className="w-8 h-8 flex items-center justify-center rounded-xl bg-card/80 border border-border/30 active:scale-90 transition-transform"
+            className="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-secondary/50 active:scale-95 transition-all text-foreground"
           >
-            <ArrowLeft className="w-4 h-4 text-muted-foreground" strokeWidth={2} />
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M9 14L4 9l5-5" />
+              <path d="M4 9h10a4 4 0 0 1 4 4v1" />
+            </svg>
           </button>
-          <div className="flex-1">
-            <h1 className="text-[15px] font-bold text-foreground tracking-tight">
-              {isChangeMode ? "Trocar barbearia" : "Barbearias"}
-            </h1>
-          </div>
-          {locationStatus === "granted" && (
-            <span className="inline-flex items-center gap-1 text-[9px] text-emerald-500 font-medium">
-              <Navigation className="w-[10px] h-[10px]" />
-              GPS ativo
-            </span>
-          )}
-          {locationStatus === "requesting" && (
-            <Loader2 className="w-3 h-3 text-muted-foreground/40 animate-spin" />
-          )}
+          <p className="text-[19px] font-medium text-foreground leading-none">
+            {isChangeMode ? "Trocar barbearia" : "Barbearias"}
+          </p>
         </div>
 
         {/* Search */}
@@ -310,9 +302,9 @@ const EscolherBarbearia = () => {
             onChange={(e) => setSearch(e.target.value)}
             className={cn(
               "w-full h-10 pl-9 pr-3 rounded-xl text-[13px]",
-              "bg-card/60 border border-border/30 text-foreground",
-              "placeholder:text-muted-foreground/30",
-              "focus:outline-none focus:border-primary/25",
+              "bg-card border border-border/30 text-foreground",
+              "placeholder:text-muted-foreground/50",
+              "focus:outline-none focus:border-primary/30",
               "transition-colors duration-150"
             )}
           />
@@ -346,7 +338,7 @@ const EscolherBarbearia = () => {
                   className={cn(
                     "w-full rounded-2xl border p-0 text-left overflow-hidden",
                     "active:scale-[0.98] transition-all duration-200",
-                    "bg-card border-primary/10",
+                    "bg-card border-primary/15 shadow-soft",
                   )}
                 >
                   {/* Inner layout */}
@@ -366,20 +358,20 @@ const EscolherBarbearia = () => {
                           <span className="text-[15px] font-bold text-foreground tracking-tight">Barbearia DUB</span>
                           <Crown className="w-3 h-3 text-primary/50" />
                         </div>
-                        <p className="text-[10px] text-muted-foreground/40 mt-0.5">Corte premium • Cidade Ipava</p>
+                        <p className="text-[10px] text-muted-foreground/60 mt-0.5">Corte premium • Cidade Ipava</p>
 
                         {/* Badges row */}
                         <div className="flex items-center gap-2 mt-2">
                           {dubRating && (
-                            <span className="inline-flex items-center gap-1 bg-background/60 rounded-md px-1.5 py-0.5">
+                            <span className="inline-flex items-center gap-1 bg-muted/50 rounded-md px-1.5 py-0.5">
                               <Star className="w-[10px] h-[10px] fill-amber-400 text-amber-400" />
-                              <span className="text-[10px] font-bold tabular-nums text-foreground/70">{dubRating.avg.toFixed(1)}</span>
+                              <span className="text-[10px] font-bold tabular-nums text-foreground/80">{dubRating.avg.toFixed(1)}</span>
                             </span>
                           )}
                           {locationStatus === "granted" && dubDistance != null && (
-                            <span className="inline-flex items-center gap-0.5 bg-background/60 rounded-md px-1.5 py-0.5">
-                              <Route className="w-[10px] h-[10px] text-muted-foreground/40" />
-                              <span className="text-[10px] font-semibold tabular-nums text-muted-foreground/50">{formatDistance(dubDistance)}</span>
+                            <span className="inline-flex items-center gap-0.5 bg-muted/50 rounded-md px-1.5 py-0.5">
+                              <Route className="w-[10px] h-[10px] text-muted-foreground/50" />
+                              <span className="text-[10px] font-semibold tabular-nums text-muted-foreground/60">{formatDistance(dubDistance)}</span>
                             </span>
                           )}
                           {isDubSelected && (
@@ -431,21 +423,21 @@ const EscolherBarbearia = () => {
                     onClick={() => setSelectedShop(tenant.id)}
                     className={cn(
                       "w-full rounded-2xl border p-3.5 text-left",
-                      "active:scale-[0.98] transition-all duration-200",
-                      "bg-card/60",
-                      isCurrent ? "border-primary/15" : "border-border/10",
+                      "active:scale-[0.985] transition-all duration-200",
+                      "bg-card shadow-soft",
+                      isCurrent ? "border-primary/20" : "border-border/30",
                     )}
                   >
                     <div className="flex items-center gap-3.5">
                       {/* Logo */}
                       <div className={cn(
                         "w-12 h-12 rounded-xl flex items-center justify-center shrink-0 overflow-hidden",
-                        "bg-background border border-border/15"
+                        "bg-muted/30 border border-border/20"
                       )}>
                         {tenant.logo_url ? (
                           <img src={tenant.logo_url} alt={tenant.nome} className="w-full h-full object-cover" />
                         ) : (
-                          <Scissors className="w-5 h-5 text-muted-foreground/20" />
+                          <Scissors className="w-5 h-5 text-muted-foreground/30" />
                         )}
                       </div>
 
@@ -459,8 +451,8 @@ const EscolherBarbearia = () => {
 
                         {(tenant.bairro || tenant.cidade) && (
                           <div className="flex items-center gap-1 mt-0.5">
-                            <MapPin className="w-[9px] h-[9px] text-muted-foreground/20 shrink-0" />
-                            <span className="text-[10px] text-muted-foreground/35 truncate">
+                            <MapPin className="w-[9px] h-[9px] text-muted-foreground/40 shrink-0" />
+                            <span className="text-[10px] text-muted-foreground/60 truncate">
                               {[tenant.bairro, tenant.cidade].filter(Boolean).join(", ")}
                             </span>
                           </div>
@@ -469,16 +461,16 @@ const EscolherBarbearia = () => {
                         {/* Badges */}
                         <div className="flex items-center gap-2 mt-1.5">
                           {tenant.avgRating != null && tenant.totalReviews != null && tenant.totalReviews > 0 && (
-                            <span className="inline-flex items-center gap-1 bg-background/60 rounded-md px-1.5 py-0.5">
+                            <span className="inline-flex items-center gap-1 bg-muted/50 rounded-md px-1.5 py-0.5">
                               <Star className="w-[10px] h-[10px] fill-amber-400 text-amber-400" />
-                              <span className="text-[10px] font-bold tabular-nums text-foreground/70">{tenant.avgRating.toFixed(1)}</span>
+                              <span className="text-[10px] font-bold tabular-nums text-foreground/80">{tenant.avgRating.toFixed(1)}</span>
                             </span>
                           )}
 
                           {locationStatus === "granted" && tenant.distance != null && (
-                            <span className="inline-flex items-center gap-0.5 bg-background/60 rounded-md px-1.5 py-0.5">
-                              <Route className="w-[10px] h-[10px] text-muted-foreground/40" />
-                              <span className="text-[10px] font-semibold tabular-nums text-muted-foreground/50">{formatDistance(tenant.distance)}</span>
+                            <span className="inline-flex items-center gap-0.5 bg-muted/50 rounded-md px-1.5 py-0.5">
+                              <Route className="w-[10px] h-[10px] text-muted-foreground/50" />
+                              <span className="text-[10px] font-semibold tabular-nums text-muted-foreground/60">{formatDistance(tenant.distance)}</span>
                             </span>
                           )}
 
