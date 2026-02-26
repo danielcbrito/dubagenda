@@ -361,11 +361,13 @@ const Auth = () => {
           transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
           className="flex flex-col items-center mb-6"
         >
-          <img
-            src={logoDub}
-            alt="DUB"
-            className="w-14 h-14 object-contain mb-4"
-          />
+          {signupOrigin === "dub_exclusive" && (
+            <img
+              src={logoDub}
+              alt="DUB"
+              className="w-14 h-14 object-contain mb-4"
+            />
+          )}
           <h1 className="text-2xl font-bold text-foreground tracking-tight font-display">
             {isSignup ? "Criar conta" : "Bem-vindo de volta"}
           </h1>
