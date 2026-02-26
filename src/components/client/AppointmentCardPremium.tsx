@@ -137,7 +137,7 @@ export function AppointmentCardPremium({
 
         <div className="px-4 py-3">
           {/* Top row: Service + Date circle (top-right) */}
-          <div className="flex items-start justify-between gap-3 mb-1">
+          <div className="flex items-start justify-between gap-3 mb-0.5">
             <h3 className="font-bold text-foreground text-[15px] leading-snug break-words flex-1 min-w-0">
               {appointment.servico?.nome || "Serviço"}
             </h3>
