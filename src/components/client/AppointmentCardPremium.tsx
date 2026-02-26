@@ -135,7 +135,7 @@ export function AppointmentCardPremium({
         {/* Top accent bar with status color */}
         <div className="h-[3px]" style={{ background: statusConfig.color }} />
 
-        <div className="px-4 pt-3 pb-2.5">
+        <div className="px-4 pt-3 pb-3">
           {/* Top row: Service + Date circle (top-right) */}
           <div className="flex items-start justify-between gap-3 mb-0">
             <h3 className="font-bold text-foreground text-[15px] leading-snug break-words flex-1 min-w-0">
@@ -171,7 +171,7 @@ export function AppointmentCardPremium({
           </div>
 
           {/* Bottom row: Time · Value ——— Status (right) */}
-          <div className="flex items-center gap-2.5 text-[11px] pt-2 border-t border-border/20">
+          <div className="flex items-center gap-2.5 text-[11px] pt-2.5 mt-1 border-t border-border/20">
             <div className="flex items-center gap-1">
               <Clock className="w-3.5 h-3.5 text-foreground/40" />
               <span className="font-semibold text-foreground/70 tabular-nums">{appointment.hora}</span>
