@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Scissors, MapPin, ChevronRight } from "lucide-react";
@@ -7,12 +8,25 @@ import landingHero from "@/assets/landing-hero-new.jpg";
 const Index = () => {
   const navigate = useNavigate();
 
+  useEffect(() => {
+    const html = document.documentElement;
+    const body = document.body;
+
+    html.classList.remove("lock-scroll");
+    body.classList.remove("lock-scroll");
+    html.style.removeProperty("overflow");
+    body.style.removeProperty("overflow");
+    html.style.removeProperty("overscroll-behavior");
+    body.style.removeProperty("overscroll-behavior");
+    body.style.removeProperty("-webkit-overflow-scrolling");
+  }, []);
+
   const handleDiscover = () => {
     navigate("/escolher-barbearia");
   };
 
   return (
-    <div className="flex flex-col bg-background" style={{ height: "100dvh" }}>
+    <div className="flex-1 flex flex-col min-h-0 overflow-hidden bg-background">
       <div className="flex-1 min-h-0 relative">
         <div
           className="absolute top-0 left-0 right-0 h-4 z-10 pointer-events-none"
@@ -23,7 +37,7 @@ const Index = () => {
           className="h-full overflow-y-auto overscroll-contain touch-pan-y pb-8"
           style={{ WebkitOverflowScrolling: "touch" }}
         >
-          <div className="relative min-h-[112dvh] flex flex-col">
+          <div className="relative min-h-[100svh] flex flex-col">
             <div className="absolute inset-0 pointer-events-none">
               <img
                 src={landingHero}
@@ -71,12 +85,8 @@ const Index = () => {
                       <Scissors className="w-[18px] h-[18px] text-primary-foreground" />
                     </div>
                     <div className="flex-1 text-left">
-                      <span className="block text-[14px] font-bold text-primary-foreground">
-                        Seja Cliente Exclusivo DUB
-                      </span>
-                      <span className="block text-[11px] text-primary-foreground/60 mt-0.5">
-                        Acesse as unidades DUB e agende
-                      </span>
+                      <span className="block text-[14px] font-bold text-primary-foreground">Seja Cliente Exclusivo DUB</span>
+                      <span className="block text-[11px] text-primary-foreground/60 mt-0.5">Acesse as unidades DUB e agende</span>
                     </div>
                     <ChevronRight className="w-5 h-5 text-primary-foreground/50 group-hover:translate-x-0.5 transition-transform flex-shrink-0" />
                   </div>
@@ -91,12 +101,8 @@ const Index = () => {
                       <MapPin className="w-[18px] h-[18px] text-foreground" />
                     </div>
                     <div className="flex-1 text-left">
-                      <span className="block text-[14px] font-medium text-foreground">
-                        Encontrar Barbearias
-                      </span>
-                      <span className="block text-[11px] text-muted-foreground mt-0.5">
-                        As melhores perto de você
-                      </span>
+                      <span className="block text-[14px] font-medium text-foreground">Encontrar Barbearias</span>
+                      <span className="block text-[11px] text-muted-foreground mt-0.5">As melhores perto de você</span>
                     </div>
                     <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:translate-x-0.5 transition-transform flex-shrink-0" />
                   </div>
@@ -120,4 +126,5 @@ const Index = () => {
 };
 
 export default Index;
+
 
