@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Star, MapPin, Navigation, ArrowLeft, Scissors, Users, Loader2, ExternalLink } from "lucide-react";
+import { Star, MapPin, Navigation, Scissors, Users, Loader2, ExternalLink } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 
@@ -39,6 +39,16 @@ function formatDistance(km: number): string {
   return `${Math.round(km)} km`;
 }
 
+/** Custom curved back arrow SVG */
+function BackArrow() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M9 14L4 9l5-5" />
+      <path d="M4 9h10a4 4 0 0 1 4 4v1" />
+    </svg>
+  );
+}
+
 export function BarbershopDetailSheet({
   open, onClose, tenantId, tenantName, tenantLogo, tenantSlogan,
   tenantBairro, tenantCidade, tenantEstado,
@@ -50,14 +60,13 @@ export function BarbershopDetailSheet({
   const [bannerUrl, setBannerUrl] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!open) { return; }
+    if (!open) return;
     loadBarbers();
     loadBanner();
   }, [open, tenantId]);
 
   const loadBanner = async () => {
     try {
-      // Get any barber from this context to use get_admin_banner_for_barber
       let query = supabase
         .from("barbeiros")
         .select("id")
@@ -148,14 +157,14 @@ export function BarbershopDetailSheet({
           initial={{ opacity: 0, x: "100%" }}
           animate={{ opacity: 1, x: 0 }}
           exit={{ opacity: 0, x: "100%" }}
-          transition={{ type: "spring", damping: 30, stiffness: 300 }}
+          transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
           className="fixed inset-0 z-50 flex flex-col bg-background"
         >
           {/* ── Scrollable Content ── */}
           <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain pb-32">
 
             {/* ── Hero Banner ── */}
-            <div className="relative w-full" style={{ minHeight: bannerUrl ? 220 : 140 }}>
+            <div className="relative w-full" style={{ minHeight: bannerUrl ? 240 : 160 }}>
               {bannerUrl ? (
                 <>
                   <img
@@ -163,37 +172,35 @@ export function BarbershopDetailSheet({
                     alt={`Banner ${tenantName}`}
                     className="absolute inset-0 w-full h-full object-cover"
                   />
-                  {/* Gradient overlay for readability */}
                   <div
                     className="absolute inset-0"
                     style={{
-                      background: "linear-gradient(to bottom, hsl(var(--background) / 0.3) 0%, hsl(var(--background) / 0.7) 60%, hsl(var(--background)) 100%)"
+                      background: "linear-gradient(to bottom, hsl(var(--background) / 0.15) 0%, hsl(var(--background) / 0.55) 50%, hsl(var(--background)) 100%)"
                     }}
                   />
                 </>
               ) : (
-                /* Subtle gradient fallback */
                 <div
                   className="absolute inset-0"
                   style={{
-                    background: "linear-gradient(to bottom, hsl(var(--card)) 0%, hsl(var(--background)) 100%)"
+                    background: "linear-gradient(180deg, hsl(var(--card)) 0%, hsl(var(--background)) 100%)"
                   }}
                 />
               )}
 
-              {/* Back button — floats on top of banner */}
+              {/* Back button */}
               <button
                 onClick={onClose}
-                className="absolute top-[calc(env(safe-area-inset-top)+0.75rem)] left-4 z-10 w-8 h-8 flex items-center justify-center rounded-xl bg-background/60 backdrop-blur-md border border-border/20 active:scale-90 transition-transform"
+                className="absolute top-[calc(env(safe-area-inset-top)+0.75rem)] left-3 z-10 w-10 h-10 flex items-center justify-center rounded-lg bg-background/50 backdrop-blur-md border border-border/20 active:scale-95 transition-all text-foreground"
               >
-                <ArrowLeft className="w-4 h-4 text-foreground" strokeWidth={2} />
+                <BackArrow />
               </button>
 
               {/* Logo — centered, overlapping bottom of banner */}
               <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 z-10">
                 <div className={cn(
-                  "w-[72px] h-[72px] rounded-2xl flex items-center justify-center overflow-hidden",
-                  "bg-card border-[3px] border-background shadow-lg shadow-background/40"
+                  "w-20 h-20 rounded-2xl flex items-center justify-center overflow-hidden",
+                  "bg-card border-[3px] border-background shadow-premium"
                 )}>
                   {tenantLogo ? (
                     <img src={tenantLogo} alt={tenantName} className="w-full h-full object-cover" />
@@ -204,31 +211,31 @@ export function BarbershopDetailSheet({
               </div>
             </div>
 
-            {/* ── Name + Info (below logo) ── */}
-            <div className="flex flex-col items-center px-6 pt-12 pb-5">
-              <h1 className="text-[19px] font-bold text-foreground tracking-tight text-center">
+            {/* ── Name + Info ── */}
+            <div className="flex flex-col items-center px-6 pt-14 pb-4">
+              <h1 className="text-[19px] font-medium font-display text-foreground tracking-tight text-center leading-tight">
                 {tenantName}
               </h1>
 
               {tenantSlogan && (
-                <p className="text-[11px] text-muted-foreground/40 mt-0.5 text-center italic">
+                <p className="text-[11px] text-muted-foreground/50 mt-1 text-center italic leading-snug max-w-[220px]">
                   {tenantSlogan}
                 </p>
               )}
 
               {/* Rating + Distance chips */}
-              <div className="flex items-center gap-2.5 mt-3.5">
+              <div className="flex items-center gap-2 mt-4">
                 {avgRating != null && totalReviews > 0 && (
-                  <div className="flex items-center gap-1.5 bg-card border border-border/15 rounded-lg px-2.5 py-1.5">
+                  <div className="flex items-center gap-1.5 bg-card border border-border/20 rounded-lg px-2.5 py-1.5">
                     <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-                    <span className="text-[12px] font-bold tabular-nums text-foreground">{avgRating.toFixed(1)}</span>
-                    <span className="text-[10px] text-muted-foreground/40">({totalReviews})</span>
+                    <span className="text-[12px] font-semibold tabular-nums text-foreground">{avgRating.toFixed(1)}</span>
+                    <span className="text-[9px] text-muted-foreground/40">({totalReviews})</span>
                   </div>
                 )}
 
                 {distance != null && (
-                  <div className="flex items-center gap-1.5 bg-card border border-border/15 rounded-lg px-2.5 py-1.5">
-                    <Navigation className="w-3 h-3 text-primary/50" />
+                  <div className="flex items-center gap-1.5 bg-card border border-border/20 rounded-lg px-2.5 py-1.5">
+                    <Navigation className="w-3 h-3 text-primary/60" />
                     <span className="text-[12px] font-semibold tabular-nums text-foreground">{formatDistance(distance)}</span>
                   </div>
                 )}
@@ -237,21 +244,21 @@ export function BarbershopDetailSheet({
 
             {/* ── Location Card ── */}
             {location && (
-              <div className="px-5 mb-5">
+              <div className="px-5 mb-6">
                 <button
                   onClick={handleOpenMaps}
                   disabled={latitude == null || longitude == null}
                   className={cn(
                     "w-full flex items-center gap-3 p-3.5 rounded-xl",
                     "bg-card/60 border border-border/15",
-                    "active:scale-[0.99] transition-all"
+                    "active:scale-[0.985] transition-all"
                   )}
                 >
                   <div className="w-10 h-10 rounded-xl bg-primary/8 flex items-center justify-center shrink-0">
                     <MapPin className="w-[18px] h-[18px] text-primary/60" />
                   </div>
                   <div className="flex-1 text-left min-w-0">
-                    <p className="text-[8px] uppercase tracking-[0.15em] text-muted-foreground/35 font-semibold mb-0.5">
+                    <p className="text-[9px] uppercase tracking-[0.1em] text-muted-foreground/40 font-semibold mb-0.5">
                       Localização
                     </p>
                     <p className="text-[12px] text-foreground/70 truncate">{location}</p>
@@ -270,7 +277,7 @@ export function BarbershopDetailSheet({
             <div className="px-5">
               <div className="flex items-center gap-2 mb-3">
                 <Users className="w-3.5 h-3.5 text-muted-foreground/25" />
-                <h3 className="text-[9px] uppercase tracking-[0.14em] text-muted-foreground/35 font-bold">
+                <h3 className="text-[9px] uppercase tracking-[0.1em] text-muted-foreground/40 font-bold">
                   Profissionais
                 </h3>
                 {!loadingBarbers && barbers.length > 0 && (
@@ -293,10 +300,10 @@ export function BarbershopDetailSheet({
                   {barbers.map((barber, i) => (
                     <motion.div
                       key={barber.id}
-                      initial={{ opacity: 0, y: 6 }}
+                      initial={{ opacity: 0, y: 8 }}
                       animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: i * 0.04, duration: 0.25 }}
-                      className="flex items-center gap-3 p-3 rounded-xl bg-card/50 border border-border/10"
+                      transition={{ delay: i * 0.04, duration: 0.2 }}
+                      className="flex items-center gap-3 p-3 rounded-xl bg-card/50 border border-border/10 active:scale-[0.985] transition-transform"
                     >
                       <div className="w-11 h-11 rounded-full overflow-hidden bg-muted/15 border border-border/10 shrink-0">
                         {barber.foto_url ? (
@@ -336,12 +343,12 @@ export function BarbershopDetailSheet({
               onClick={onSelect}
               disabled={saving || isCurrent}
               className={cn(
-                "w-full h-[48px] rounded-xl font-semibold text-[14px] tracking-wide",
+                "w-full h-[50px] rounded-xl font-semibold text-[14px] tracking-wide",
                 "flex items-center justify-center gap-2",
-                "transition-all duration-200 active:scale-[0.97]",
+                "transition-all duration-200 active:scale-[0.985]",
                 isCurrent
                   ? "bg-card border border-primary/15 text-primary/50"
-                  : "bg-foreground text-background shadow-md shadow-foreground/8"
+                  : "bg-primary text-primary-foreground shadow-glow-red"
               )}
             >
               {saving ? (
