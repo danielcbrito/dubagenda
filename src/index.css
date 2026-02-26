@@ -236,23 +236,14 @@ body {
     -webkit-text-size-adjust: 100%;
     text-size-adjust: 100%;
     background: hsl(var(--background));
-    background-attachment: fixed;
+    background-attachment: scroll;
   }
 
   /* ☀️ Light mode body background — limpo e definido */
   .light body,
   body.light {
     background: hsl(var(--background));
-    background-attachment: fixed;
-  }
-
-  /* Mobile/Touch: evita travamentos de rolagem com background fixo */
-  @media (max-width: 1024px), (pointer: coarse) {
-    body,
-    .light body,
-    body.light {
-      background-attachment: scroll;
-    }
+    background-attachment: scroll;
   }
   
   #root {
