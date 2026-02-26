@@ -58,6 +58,7 @@ const EscolherBarbearia = () => {
   const [locationStatus, setLocationStatus] = useState<"idle" | "requesting" | "granted" | "denied">("idle");
   const [dubRating, setDubRating] = useState<{ avg: number; count: number } | null>(null);
   const [selectedShop, setSelectedShop] = useState<string | null>(null); // "dub" or tenant id
+  const [hasAutoOpened, setHasAutoOpened] = useState(false);
 
   const isChangeMode = searchParams.get("mode") === "change";
   const shouldOpenCurrent = searchParams.get("open") === "current";
@@ -88,13 +89,14 @@ const EscolherBarbearia = () => {
 
   // ── Auto-open current barbershop when coming from profile ──
   useEffect(() => {
-    if (!shouldOpenCurrent || isLoading || selectedShop) return;
+    if (!shouldOpenCurrent || isLoading || hasAutoOpened) return;
+    setHasAutoOpened(true);
     if (currentPreferred) {
       setSelectedShop(currentPreferred);
     } else {
       setSelectedShop("dub");
     }
-  }, [shouldOpenCurrent, isLoading, currentPreferred]);
+  }, [shouldOpenCurrent, isLoading, hasAutoOpened, currentPreferred]);
 
   // ── Geolocation ──
   useEffect(() => {
