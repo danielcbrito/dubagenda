@@ -9,46 +9,25 @@ const Index = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const unlockScroll = () => {
-      document.documentElement.classList.remove("lock-scroll");
-      document.body.classList.remove("lock-scroll");
-
-      document.documentElement.style.overflow = "";
-      document.body.style.overflow = "";
-      document.documentElement.style.position = "";
-      document.body.style.position = "";
-      document.documentElement.style.height = "";
-      document.body.style.height = "";
-      document.documentElement.style.width = "";
-      document.body.style.width = "";
-      document.documentElement.style.top = "";
-      document.body.style.top = "";
-      document.documentElement.style.left = "";
-      document.body.style.left = "";
-      document.documentElement.style.right = "";
-      document.body.style.right = "";
-      document.documentElement.style.bottom = "";
-      document.body.style.bottom = "";
-      document.documentElement.style.paddingRight = "";
-      document.body.style.paddingRight = "";
-      document.documentElement.style.removeProperty("touch-action");
-      document.body.style.removeProperty("touch-action");
-      document.documentElement.style.removeProperty("overscroll-behavior");
-      document.body.style.removeProperty("overscroll-behavior");
+    const resetScrollState = (element: HTMLElement) => {
+      element.style.overflow = "";
+      element.style.position = "";
+      element.style.height = "";
+      element.style.width = "";
+      element.style.top = "";
+      element.style.left = "";
+      element.style.right = "";
+      element.style.bottom = "";
+      element.style.paddingRight = "";
+      element.style.removeProperty("touch-action");
+      element.style.removeProperty("overscroll-behavior");
     };
 
-    unlockScroll();
+    document.documentElement.classList.remove("lock-scroll");
+    document.body.classList.remove("lock-scroll");
 
-    const observer = new MutationObserver(() => {
-      unlockScroll();
-    });
-
-    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class", "style"] });
-    observer.observe(document.body, { attributes: true, attributeFilter: ["class", "style"] });
-
-    return () => {
-      observer.disconnect();
-    };
+    resetScrollState(document.documentElement);
+    resetScrollState(document.body);
   }, []);
 
   const handleDiscover = () => {
@@ -56,7 +35,7 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-[100dvh] bg-background relative overflow-x-hidden touch-pan-y">
+    <div className="min-h-[100dvh] bg-background relative overflow-x-hidden">
       <div className="relative min-h-[108dvh] flex flex-col">
         <div className="absolute inset-0 pointer-events-none">
           <img
@@ -100,7 +79,7 @@ const Index = () => {
             {/* Primary — Seja Cliente */}
             <button
               onClick={() => navigate("/auth")}
-              className="group w-full rounded-2xl active:scale-[0.98] transition-transform duration-150"
+              className="group w-full rounded-2xl active:scale-[0.98] transition-transform duration-150 touch-pan-y"
               style={{
                 background: "var(--gradient-primary)",
                 boxShadow: "var(--shadow-glow-red)",
@@ -125,7 +104,7 @@ const Index = () => {
             {/* Secondary — Encontrar Barbearias */}
             <button
               onClick={handleDiscover}
-              className="group w-full rounded-2xl border border-border/50 bg-card/80 backdrop-blur-sm active:scale-[0.98] transition-transform duration-150"
+              className="group w-full rounded-2xl border border-border/50 bg-card/80 backdrop-blur-sm active:scale-[0.98] transition-transform duration-150 touch-pan-y"
             >
               <div className="flex items-center gap-4 px-5 py-4">
                 <div className="w-10 h-10 rounded-xl bg-muted/80 flex items-center justify-center flex-shrink-0">
