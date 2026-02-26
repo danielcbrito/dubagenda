@@ -38,7 +38,7 @@ const Index = () => {
             <h1 className="text-[2.25rem] font-bold text-foreground tracking-tight leading-none font-display">
               DUB <span className="text-primary">Agenda</span>
             </h1>
-            <p className="text-[13px] text-muted-foreground mt-2.5">Seu estilo, na palma da mão.</p>
+            <p className="text-[13px] text-foreground/70 mt-2.5">Seu estilo, na palma da mão.</p>
           </motion.div>
 
           <motion.div
