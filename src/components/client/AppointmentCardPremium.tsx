@@ -171,7 +171,7 @@ export function AppointmentCardPremium({
           </div>
 
           {/* Bottom row: Time · Value ——— Status (right) */}
-          <div className="flex items-center gap-2.5 text-[11px] pt-2.5 border-t border-border/20">
+          <div className="flex items-center gap-2.5 text-[11px] pt-4 mt-2 border-t border-border/20">
             <div className="flex items-center gap-1">
               <Clock className="w-3.5 h-3.5 text-foreground/40" />
               <span className="font-semibold text-foreground/70 tabular-nums">{appointment.hora}</span>
