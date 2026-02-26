@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Scissors, MapPin, ChevronRight } from "lucide-react";
@@ -7,16 +8,44 @@ import landingHero from "@/assets/landing-hero-new.jpg";
 const Index = () => {
   const navigate = useNavigate();
 
+  useEffect(() => {
+    const unlockScroll = () => {
+      document.documentElement.classList.remove("lock-scroll");
+      document.body.classList.remove("lock-scroll");
+      document.documentElement.style.overflow = "";
+      document.body.style.overflow = "";
+      document.documentElement.style.position = "";
+      document.body.style.position = "";
+      document.documentElement.style.height = "";
+      document.body.style.height = "";
+      document.documentElement.style.width = "";
+      document.body.style.width = "";
+    };
+
+    unlockScroll();
+
+    const observer = new MutationObserver(() => {
+      unlockScroll();
+    });
+
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class", "style"] });
+    observer.observe(document.body, { attributes: true, attributeFilter: ["class", "style"] });
+
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
+
   const handleDiscover = () => {
     navigate("/escolher-barbearia");
   };
 
   return (
     <div
-      className="h-[100dvh] bg-background relative overflow-x-hidden overflow-y-auto overscroll-contain"
-      style={{ WebkitOverflowScrolling: "touch", touchAction: "pan-y" }}
+      className="h-[100svh] bg-background relative overflow-x-hidden overflow-y-scroll overscroll-contain"
+      style={{ WebkitOverflowScrolling: "touch" }}
     >
-      <div className="relative min-h-[100dvh] flex flex-col">
+      <div className="relative min-h-[108svh] flex flex-col">
         <div className="absolute inset-0 pointer-events-none">
           <img
             src={landingHero}
