@@ -65,14 +65,14 @@ function MaintenanceWrapper({ children }: { children: React.ReactNode }) {
     location.pathname === route || location.pathname.startsWith('/auth')
   );
 
-  // Public routes are ALWAYS accessible — never block them, even while loading
-  if (isPublicRoute) {
-    return <>{children}</>;
-  }
-
-  // For protected routes, wait for maintenance status to load
+  // If still loading, show nothing (to avoid flash)
   if (isLoading) {
     return null;
+  }
+
+  // Public routes (login, signup, etc.) are always accessible
+  if (isPublicRoute) {
+    return <>{children}</>;
   }
 
   // Allowed users can access everything
@@ -159,58 +159,17 @@ function ScrollLockGuard() {
       return;
     }
 
-    const hasBlockingOverlay = () => {
-      const overlaySelectors = [
-        "[role='dialog'][data-state='open']",
-        "[data-radix-dialog-content][data-state='open']",
-        "[data-vaul-drawer][data-state='open']",
-        "[data-slot='sheet-content'][data-state='open']",
-      ];
+    document.documentElement.classList.remove("lock-scroll");
+    document.body.classList.remove("lock-scroll");
 
-      return overlaySelectors.some((selector) => document.querySelector(selector));
-    };
-
-    const unlockIfSafe = () => {
-      if (hasBlockingOverlay()) {
-        return;
-      }
-
-      document.documentElement.classList.remove("lock-scroll");
-      document.body.classList.remove("lock-scroll");
-
-      const targets = [document.documentElement, document.body];
-      for (const target of targets) {
-        target.style.removeProperty("overflow");
-        target.style.removeProperty("overflow-y");
-        target.style.removeProperty("position");
-        target.style.removeProperty("width");
-        target.style.removeProperty("height");
-        target.style.removeProperty("top");
-        target.style.removeProperty("left");
-        target.style.removeProperty("right");
-        target.style.removeProperty("inset");
-      }
-    };
-
-    unlockIfSafe();
-
-    const observer = new MutationObserver(() => {
-      unlockIfSafe();
-    });
-
-    observer.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ["class", "style"],
-    });
-
-    observer.observe(document.body, {
-      attributes: true,
-      attributeFilter: ["class", "style"],
-      childList: true,
-      subtree: true,
-    });
-
-    return () => observer.disconnect();
+    document.documentElement.style.overflow = "";
+    document.body.style.overflow = "";
+    document.documentElement.style.position = "";
+    document.body.style.position = "";
+    document.documentElement.style.width = "";
+    document.body.style.width = "";
+    document.documentElement.style.height = "";
+    document.body.style.height = "";
   }, [location.pathname]);
 
   return null;

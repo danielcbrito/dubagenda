@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Scissors, MapPin, ChevronRight } from "lucide-react";
@@ -7,13 +8,44 @@ import landingHero from "@/assets/landing-hero-new.jpg";
 const Index = () => {
   const navigate = useNavigate();
 
+  useEffect(() => {
+    const unlockScroll = () => {
+      document.documentElement.classList.remove("lock-scroll");
+      document.body.classList.remove("lock-scroll");
+      document.documentElement.style.overflow = "";
+      document.body.style.overflow = "";
+      document.documentElement.style.position = "";
+      document.body.style.position = "";
+      document.documentElement.style.height = "";
+      document.body.style.height = "";
+      document.documentElement.style.width = "";
+      document.body.style.width = "";
+    };
+
+    unlockScroll();
+
+    const observer = new MutationObserver(() => {
+      unlockScroll();
+    });
+
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class", "style"] });
+    observer.observe(document.body, { attributes: true, attributeFilter: ["class", "style"] });
+
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
+
   const handleDiscover = () => {
     navigate("/escolher-barbearia");
   };
 
   return (
-    <main className="min-h-[100dvh] bg-background relative overflow-x-hidden touch-pan-y">
-      <div className="relative min-h-[110dvh] flex flex-col">
+    <div
+      className="h-[100svh] bg-background relative overflow-x-hidden overflow-y-scroll overscroll-contain"
+      style={{ WebkitOverflowScrolling: "touch" }}
+    >
+      <div className="relative min-h-[108svh] flex flex-col">
         <div className="absolute inset-0 pointer-events-none">
           <img
             src={landingHero}
@@ -22,11 +54,12 @@ const Index = () => {
             loading="eager"
           />
           <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-background" />
-          <div className="absolute inset-0 bg-gradient-to-t from-background via-background/70 to-transparent" style={{ top: "40%" }} />
+          <div className="absolute inset-0 bg-gradient-to-t from-background via-background/70 to-transparent" style={{ top: '40%' }} />
         </div>
 
         {/* Content */}
         <div className="relative z-10 flex flex-col flex-1 px-6 pt-[env(safe-area-inset-top)]">
+
           {/* Spacer */}
           <div className="flex-1" />
 
@@ -111,9 +144,8 @@ const Index = () => {
           </motion.p>
         </div>
       </div>
-    </main>
+    </div>
   );
 };
 
 export default Index;
-
