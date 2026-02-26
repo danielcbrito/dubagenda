@@ -206,7 +206,7 @@ function ThemeColorSync() {
 }
 
 const App = () => (
-  <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+  <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
     <ThemeColorSync />
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>

@@ -57,37 +57,25 @@ export function BarbershopDetailSheet({
 
   const loadBanner = async () => {
     try {
+      // Get any barber from this context to use get_admin_banner_for_barber
+      let query = supabase
+        .from("barbeiros")
+        .select("id")
+        .eq("ativo", true)
+        .is("deleted_at", null)
+        .limit(1);
+
       if (tenantId) {
-        // Get owner_user_id from tenant, then banner from profiles
-        const { data: tenant } = await supabase
-          .from("tenants")
-          .select("owner_user_id")
-          .eq("id", tenantId)
-          .single();
-        if (tenant?.owner_user_id) {
-          const { data: profile } = await supabase
-            .from("profiles")
-            .select("banner_url")
-            .eq("id", tenant.owner_user_id)
-            .single();
-          setBannerUrl(profile?.banner_url || null);
-        }
+        query = query.eq("tenant_id", tenantId);
       } else {
-        // DUB: get admin user's banner
-        const { data: adminRole } = await supabase
-          .from("user_roles")
-          .select("user_id")
-          .eq("role", "admin")
-          .limit(1)
-          .single();
-        if (adminRole?.user_id) {
-          const { data: profile } = await supabase
-            .from("profiles")
-            .select("banner_url")
-            .eq("id", adminRole.user_id)
-            .single();
-          setBannerUrl(profile?.banner_url || null);
-        }
+        query = query.is("tenant_id", null);
+      }
+
+      const { data: barberData } = await query.single();
+      if (barberData?.id) {
+        const { data: banner } = await supabase
+          .rpc("get_admin_banner_for_barber", { p_barbeiro_id: barberData.id });
+        setBannerUrl(banner || null);
       }
     } catch (err) {
       console.error("Error loading banner:", err);
