@@ -108,6 +108,7 @@ export function AppointmentCardPremium({
   const rescheduleRequested = appointment.remarcacao_solicitada === true;
   const canCancel = (appointment.status === "pending" || appointment.status === "confirmed") && !isAwaitingBarberApproval && !rescheduleRequested;
   const needsConfirmation = appointment.status === "completed" && !appointment.cliente_confirmou && onConfirm;
+  const hasActionSection = (rescheduleRequested && !isCancelled) || !!needsConfirmation || (canCancel && !rescheduleRequested);
 
   const externalPayment = payments.find(p => p.agendamento_id === appointment.id);
   const inlinePayment = appointment.pagamentos?.find(p => p.status === "paid");
@@ -220,68 +221,70 @@ export function AppointmentCardPremium({
         </div>
 
         {/* Action sections */}
-        <div className="px-4 pb-4">
-          {/* Reschedule banner */}
-          {rescheduleRequested && !isCancelled && (
-            <div className="mt-1 p-2.5 rounded-lg bg-destructive/5 border border-destructive/10">
-              <div className="flex items-start gap-1.5">
-                <AlertCircle className="w-3.5 h-3.5 text-destructive/60 mt-0.5 flex-shrink-0" />
-                <div className="flex-1">
-                  <p className="text-[11px] font-semibold text-destructive/70 mb-0.5">
-                    Remarcação Solicitada
-                  </p>
-                  {appointment.motivo_remarcacao && (
-                    <p className="text-[10px] text-muted-foreground/50">
-                      {appointment.motivo_remarcacao}
+        {hasActionSection && (
+          <div className="px-4 pb-4">
+            {/* Reschedule banner */}
+            {rescheduleRequested && !isCancelled && (
+              <div className="mt-1 p-2.5 rounded-lg bg-destructive/5 border border-destructive/10">
+                <div className="flex items-start gap-1.5">
+                  <AlertCircle className="w-3.5 h-3.5 text-destructive/60 mt-0.5 flex-shrink-0" />
+                  <div className="flex-1">
+                    <p className="text-[11px] font-semibold text-destructive/70 mb-0.5">
+                      Remarcação Solicitada
                     </p>
-                  )}
+                    {appointment.motivo_remarcacao && (
+                      <p className="text-[10px] text-muted-foreground/50">
+                        {appointment.motivo_remarcacao}
+                      </p>
+                    )}
+                  </div>
                 </div>
+                <Button
+                  onClick={() => setRescheduleModalOpen(true)}
+                  size="sm"
+                  className="w-full mt-2 h-8 text-[11px]"
+                >
+                  <Calendar className="w-3 h-3 mr-1.5" />
+                  Remarcar
+                </Button>
               </div>
-              <Button
-                onClick={() => setRescheduleModalOpen(true)}
-                size="sm"
-                className="w-full mt-2 h-8 text-[11px]"
-              >
-                <Calendar className="w-3 h-3 mr-1.5" />
-                Remarcar
-              </Button>
-            </div>
-          )}
+            )}
 
-          {/* Confirmation */}
-          {needsConfirmation && (
-            <Button
-              onClick={() => onConfirm?.(appointment.id)}
-              size="sm"
-              className="w-full mt-1 h-8 text-[11px]"
-            >
-              <Check className="w-3 h-3 mr-1.5" />
-              Confirmar Presença
-            </Button>
-          )}
+            {/* Confirmation */}
+            {needsConfirmation && (
+              <Button
+                onClick={() => onConfirm?.(appointment.id)}
+                size="sm"
+                className="w-full mt-1 h-8 text-[11px]"
+              >
+                <Check className="w-3 h-3 mr-1.5" />
+                Confirmar Presença
+              </Button>
+            )}
 
-          {/* Actions */}
-          {canCancel && !rescheduleRequested && (
-            <div className="flex gap-2 mt-1">
-              <Button
-                onClick={() => setRescheduleModalOpen(true)}
-                size="sm"
-                variant="outline"
-                className="flex-1 h-8 text-[11px] rounded-lg border-border/40"
-              >
-                Remarcar
-              </Button>
-              <Button
-                onClick={() => setCancelModalOpen(true)}
-                size="sm"
-                variant="outline"
-                className="flex-1 h-8 text-[11px] rounded-lg border-destructive/20 text-destructive hover:bg-destructive/5"
-              >
-                Cancelar
-              </Button>
-            </div>
-          )}
-        </div>
+            {/* Actions */}
+            {canCancel && !rescheduleRequested && (
+              <div className="flex gap-2 mt-1">
+                <Button
+                  onClick={() => setRescheduleModalOpen(true)}
+                  size="sm"
+                  variant="outline"
+                  className="flex-1 h-8 text-[11px] rounded-lg border-border/40"
+                >
+                  Remarcar
+                </Button>
+                <Button
+                  onClick={() => setCancelModalOpen(true)}
+                  size="sm"
+                  variant="outline"
+                  className="flex-1 h-8 text-[11px] rounded-lg border-destructive/20 text-destructive hover:bg-destructive/5"
+                >
+                  Cancelar
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
       </motion.div>
 
       <RescheduleAppointmentModal
