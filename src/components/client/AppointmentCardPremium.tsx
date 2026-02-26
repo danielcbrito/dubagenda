@@ -157,7 +157,7 @@ export function AppointmentCardPremium({
           </div>
 
           {/* Shop + Barber only */}
-          <div className="flex items-center gap-1.5 flex-wrap mb-2.5">
+          <div className="flex items-center gap-1.5 flex-wrap mb-2.5 -mt-0.5">
             <div className="flex items-center gap-1 px-2 py-[3px] rounded-md bg-muted/70 border border-border/30">
               <Store className="w-3 h-3 text-foreground/50" />
               <span className="text-[10px] font-semibold text-foreground/70 truncate">{shopName}</span>
