@@ -11,7 +11,8 @@ interface PendingReview {
 }
 
 /**
- * Hook para buscar agendamentos concluídos que ainda não foram avaliados
+ * Hook para buscar agendamentos concluídos com barbeiros que ainda não foram avaliados.
+ * Cada barbeiro só pode ter 1 avaliação por usuário — se já avaliou, não aparece como pendente.
  */
 export function usePendingReviews(userId: string | null) {
   const [pendingReviews, setPendingReviews] = useState<PendingReview[]>([]);
@@ -38,18 +39,24 @@ export function usePendingReviews(userId: string | null) {
         return;
       }
 
-      // Buscar avaliações já feitas pelo usuário
-      const appointmentIds = completed.map((a) => a.id);
+      // Buscar barbeiros já avaliados pelo usuário (1 review por barbeiro)
+      const barberIds = [...new Set(completed.map((a) => a.barbeiro_id).filter(Boolean))] as string[];
+      
       const { data: existingReviews } = await supabase
         .from("barbeiro_avaliacoes")
-        .select("appointment_id")
+        .select("barber_id")
         .eq("user_id", userId)
-        .in("appointment_id", appointmentIds);
+        .in("barber_id", barberIds);
 
-      const reviewedIds = new Set((existingReviews || []).map((r) => r.appointment_id));
+      const reviewedBarberIds = new Set((existingReviews || []).map((r) => r.barber_id));
 
-      // Filtrar somente os não avaliados
-      const unreviewed = completed.filter((a) => !reviewedIds.has(a.id));
+      // Filtrar: mostrar apenas o agendamento mais recente de cada barbeiro NÃO avaliado
+      const seenBarbers = new Set<string>();
+      const unreviewed = completed.filter((a) => {
+        if (!a.barbeiro_id || reviewedBarberIds.has(a.barbeiro_id) || seenBarbers.has(a.barbeiro_id)) return false;
+        seenBarbers.add(a.barbeiro_id);
+        return true;
+      });
 
       if (unreviewed.length === 0) {
         setPendingReviews([]);
@@ -57,11 +64,10 @@ export function usePendingReviews(userId: string | null) {
       }
 
       // Buscar dados dos barbeiros
-      const barberIds = [...new Set(unreviewed.map((a) => a.barbeiro_id).filter(Boolean))];
       const { data: barbers } = await supabase
         .from("barbeiros")
         .select("id, apelido, foto_url")
-        .in("id", barberIds as string[]);
+        .in("id", [...seenBarbers]);
 
       const barberMap = new Map((barbers || []).map((b) => [b.id, b]));
 
