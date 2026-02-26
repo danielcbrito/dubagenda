@@ -27,6 +27,7 @@ import ClienteCarteira from "./pages/ClienteCarteira";
 import ClientePerfil from "./pages/ClientePerfil";
 import ClienteDadosPessoais from "./pages/ClienteDadosPessoais";
 import ClienteSeguranca from "./pages/ClienteSeguranca";
+import ClienteBarbearia from "./pages/ClienteBarbearia";
 import SupportChat from "./pages/SupportChat";
 import NotFound from "./pages/NotFound";
 import BarberReviews from "./pages/BarberReviews";
@@ -227,6 +228,7 @@ function AppRoutes() {
           <Route path="/cliente/perfil" element={<ClientePerfil />} />
           <Route path="/cliente/dados-pessoais" element={<ClienteDadosPessoais />} />
           <Route path="/cliente/seguranca" element={<ClienteSeguranca />} />
+          <Route path="/cliente/barbearia" element={<ClienteBarbearia />} />
           <Route path="/cliente/barbeiro/:barberId/avaliacoes" element={<BarberReviews />} />
           <Route path="/suporte" element={<SupportChat />} />
           <Route path="/escolher-barbearia" element={<EscolherBarbearia />} />
