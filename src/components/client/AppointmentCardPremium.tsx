@@ -121,86 +121,100 @@ export function AppointmentCardPremium({
     appointment.observacoes?.toLowerCase().includes('resgate')
   );
 
+  const shopName = appointment.barbeiro?.tenant?.nome || "Barbearia DUB";
+
   return (
     <>
       <motion.div
         initial={{ opacity: 0, y: 6 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: index * 0.06, duration: 0.25 }}
-        className="rounded-xl overflow-hidden border border-border bg-card active:scale-[0.99] transition-transform"
-        style={{ boxShadow: "var(--shadow-card)" }}
+        className="rounded-xl overflow-hidden border border-border/60 bg-card active:scale-[0.99] transition-transform"
+        style={{ boxShadow: "0 1px 4px hsl(var(--foreground) / 0.06)" }}
       >
-        <div className="p-4">
-          {/* Header */}
-          <div className="flex items-start justify-between mb-2.5">
+        {/* Top accent bar with status color */}
+        <div className="h-[3px]" style={{ background: statusConfig.color }} />
+
+        <div className="p-3.5">
+          {/* Row 1: Service name + Date badge */}
+          <div className="flex items-start justify-between gap-3 mb-2">
             <div className="flex-1 min-w-0">
-              <h3 className="font-semibold text-foreground text-[13px] mb-1 truncate">
+              <h3 className="font-bold text-foreground text-[14px] leading-tight truncate">
                 {appointment.servico?.nome || "Serviço"}
               </h3>
-              <div 
-                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[9px] font-semibold uppercase tracking-wider"
-                style={{
-                  background: statusConfig.bgColor,
-                  color: statusConfig.color,
-                  border: `1px solid ${statusConfig.borderColor}`,
-                }}
-              >
-                <StatusIcon className="w-2.5 h-2.5" />
-                {statusConfig.label}
-              </div>
             </div>
-
-            <div className="flex flex-col items-end gap-1.5">
-              <div className="text-center px-2.5 py-1.5 rounded-lg bg-muted/60">
-                <p className="text-[8px] text-muted-foreground uppercase font-semibold tracking-wider">
-                  {format(new Date(`${appointment.data}T12:00:00`), "MMM", { locale: ptBR })}
-                </p>
-                <p className="text-sm font-bold text-foreground leading-none tabular-nums">
-                  {format(new Date(`${appointment.data}T12:00:00`), "dd", { locale: ptBR })}
-                </p>
-              </div>
-              {appointment.barbeiro?.apelido && (
-                <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-muted/40">
-                  <Scissors className="w-2.5 h-2.5 text-muted-foreground/50" />
-                  <span className="text-[9px] text-foreground/60 font-medium">
-                    {appointment.barbeiro.apelido}
-                  </span>
-                </div>
-              )}
+            <div className="flex-shrink-0 text-center px-2 py-1 rounded-lg bg-muted/80 min-w-[42px]">
+              <p className="text-[7px] text-muted-foreground uppercase font-bold tracking-widest leading-none mb-0.5">
+                {format(new Date(`${appointment.data}T12:00:00`), "MMM", { locale: ptBR })}
+              </p>
+              <p className="text-[15px] font-bold text-foreground leading-none tabular-nums">
+                {format(new Date(`${appointment.data}T12:00:00`), "dd", { locale: ptBR })}
+              </p>
             </div>
           </div>
 
-          {/* Barbershop tag */}
-          <div className="flex items-center gap-1 mb-2.5">
-            <Store className="w-2.5 h-2.5 text-muted-foreground/40" />
-            <span className="text-[9px] text-muted-foreground/50 font-medium tracking-wide">
-              {appointment.barbeiro?.tenant?.nome || "Barbearia DUB"}
-            </span>
+          {/* Row 2: Shop + Barber + Status — single row, compact */}
+          <div className="flex items-center gap-1.5 flex-wrap mb-2.5">
+            {/* Barbershop */}
+            <div className="flex items-center gap-1 px-2 py-[3px] rounded-md bg-muted/70 border border-border/30">
+              <Store className="w-3 h-3 text-foreground/50" />
+              <span className="text-[10px] font-semibold text-foreground/70">
+                {shopName}
+              </span>
+            </div>
+
+            {/* Barber */}
+            {appointment.barbeiro?.apelido && (
+              <div className="flex items-center gap-1 px-2 py-[3px] rounded-md bg-muted/70 border border-border/30">
+                <Scissors className="w-3 h-3 text-foreground/50" />
+                <span className="text-[10px] font-semibold text-foreground/70">
+                  {appointment.barbeiro.apelido}
+                </span>
+              </div>
+            )}
+
+            {/* Status badge */}
+            <div
+              className="flex items-center gap-1 px-2 py-[3px] rounded-md text-[9px] font-bold uppercase tracking-wider"
+              style={{
+                background: statusConfig.bgColor,
+                color: statusConfig.color,
+                border: `1px solid ${statusConfig.borderColor}`,
+              }}
+            >
+              <StatusIcon className="w-2.5 h-2.5" />
+              {statusConfig.label}
+            </div>
           </div>
 
-          {/* Details */}
-          <div className="flex items-center gap-3 text-[11px] text-muted-foreground mb-3">
+          {/* Row 3: Time + Price/Plan info */}
+          <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
             <div className="flex items-center gap-1">
-              <Clock className="w-3 h-3 text-muted-foreground/60" />
-              <span className="font-medium tabular-nums">{appointment.hora}</span>
+              <Clock className="w-3.5 h-3.5 text-foreground/40" />
+              <span className="font-semibold text-foreground/70 tabular-nums">{appointment.hora}</span>
             </div>
+
+            <span className="text-border">|</span>
+
             {isPlanAppointment ? (
               <div className="flex items-center gap-1">
-                <Crown className="w-3 h-3 text-primary/60" />
-                <span className="text-[10px] font-semibold text-primary/60">Plano</span>
+                <Crown className="w-3 h-3 text-primary" />
+                <span className="text-[10px] font-bold text-primary">Plano</span>
               </div>
             ) : isFreeAppointment ? (
               <div className="flex items-center gap-1">
-                <Gift className="w-3 h-3 text-emerald-500/60" />
-                <span className="text-[10px] font-semibold text-emerald-500/60">Grátis</span>
+                <Gift className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
+                <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">Grátis</span>
               </div>
             ) : appointment.preco ? (
-              <div className="flex items-center gap-1">
-                <span className="font-semibold text-foreground tabular-nums">
+              <div className="flex items-center gap-1.5">
+                <span className="font-bold text-foreground tabular-nums">
                   R$ {appointment.preco.toFixed(2)}
                 </span>
                 {isPaid && (
-                  <span className="text-[8px] text-emerald-600 dark:text-emerald-400 font-semibold uppercase tracking-wider">Pago</span>
+                  <span className="text-[8px] text-emerald-600 dark:text-emerald-400 font-bold uppercase tracking-wider bg-emerald-500/10 px-1.5 py-0.5 rounded">
+                    Pago
+                  </span>
                 )}
               </div>
             ) : null}
@@ -208,7 +222,7 @@ export function AppointmentCardPremium({
 
           {/* Reschedule banner */}
           {rescheduleRequested && !isCancelled && (
-            <div className="mb-3 p-2.5 rounded-lg bg-destructive/5 border border-destructive/10">
+            <div className="mt-3 p-2.5 rounded-lg bg-destructive/5 border border-destructive/10">
               <div className="flex items-start gap-1.5">
                 <AlertCircle className="w-3.5 h-3.5 text-destructive/60 mt-0.5 flex-shrink-0" />
                 <div className="flex-1">
@@ -235,10 +249,10 @@ export function AppointmentCardPremium({
 
           {/* Confirmation */}
           {needsConfirmation && (
-            <Button 
+            <Button
               onClick={() => onConfirm?.(appointment.id)}
               size="sm"
-              className="w-full mb-2.5 h-8 text-[11px]"
+              className="w-full mt-3 h-8 text-[11px]"
             >
               <Check className="w-3 h-3 mr-1.5" />
               Confirmar Presença
@@ -247,20 +261,20 @@ export function AppointmentCardPremium({
 
           {/* Actions */}
           {canCancel && !rescheduleRequested && (
-            <div className="flex gap-2">
-              <Button 
+            <div className="flex gap-2 mt-3">
+              <Button
                 onClick={() => setRescheduleModalOpen(true)}
                 size="sm"
                 variant="outline"
-                className="flex-1 h-8 text-[11px] rounded-lg border-border/30"
+                className="flex-1 h-8 text-[11px] rounded-lg border-border/40"
               >
                 Remarcar
               </Button>
-              <Button 
+              <Button
                 onClick={() => setCancelModalOpen(true)}
                 size="sm"
                 variant="outline"
-                className="flex-1 h-8 text-[11px] rounded-lg border-destructive/20 text-destructive/70 hover:bg-destructive/5"
+                className="flex-1 h-8 text-[11px] rounded-lg border-destructive/20 text-destructive hover:bg-destructive/5"
               >
                 Cancelar
               </Button>
