@@ -19,7 +19,7 @@ const Index = () => {
           <img
             src={landingHero}
             alt="Fundo premium da DUB Agenda"
-            className="w-full h-full object-cover object-[center_30%]"
+            className="w-full h-full object-cover object-[center_15%]"
             loading="eager"
           />
           <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-background" />
