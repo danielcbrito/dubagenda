@@ -22,8 +22,7 @@ const Index = () => {
             className="w-full h-full object-cover object-[center_0%] md:object-[center_15%]"
             loading="eager"
           />
-          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-background" />
-          <div className="absolute inset-0 bg-gradient-to-t from-background via-background/70 to-transparent" style={{ top: "40%" }} />
+          <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent" style={{ top: "60%" }} />
         </div>
 
         {/* Content */}
