@@ -992,9 +992,7 @@ div:has(> a[href*="lovable.dev"]) {
 /* Lock scroll utility */
 .lock-scroll {
   overflow: hidden !important;
-  position: fixed !important;
-  width: 100% !important;
-  height: 100% !important;
+  overscroll-behavior: none !important;
 }
 
 /* Scrollable content */
