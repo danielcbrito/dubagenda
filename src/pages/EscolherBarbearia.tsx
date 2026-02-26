@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
-import { MapPin, Search, Scissors, ChevronRight, Check, Crown, Navigation, Loader2, Star, ArrowLeft, Route, ExternalLink } from "lucide-react";
+import { motion } from "framer-motion";
+import { MapPin, Search, Scissors, Crown, Navigation, Loader2, Star, ArrowLeft, Route } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import logoDub from "@/assets/logo-dub.png";
+import { BarbershopDetailSheet } from "@/components/discover/BarbershopDetailSheet";
 
 // ── Types ──
 interface Tenant {
@@ -40,44 +41,6 @@ function formatDistance(km: number): string {
   return `${Math.round(km)}km`;
 }
 
-// ── Sub-components ──
-
-function RatingStars({ rating, count }: { rating: number; count: number }) {
-  return (
-    <span className="inline-flex items-center gap-1">
-      <Star className="w-[10px] h-[10px] fill-amber-400 text-amber-400" />
-      <span className="text-[10px] font-semibold tabular-nums text-foreground/70">{rating.toFixed(1)}</span>
-      <span className="text-[9px] text-muted-foreground/40">({count})</span>
-    </span>
-  );
-}
-
-function DistanceBadge({ km, lat, lng }: { km: number | null; lat?: number | null; lng?: number | null }) {
-  const handleRoute = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (lat != null && lng != null) {
-      window.open(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`, "_blank");
-    }
-  };
-
-  return (
-    <button
-      onClick={handleRoute}
-      disabled={lat == null || lng == null}
-      className={cn(
-        "inline-flex items-center gap-0.5 text-[9px] font-medium tabular-nums",
-        lat != null && lng != null
-          ? "text-primary/60 active:scale-90 transition-transform"
-          : "text-muted-foreground/50"
-      )}
-    >
-      <Route className="w-[10px] h-[10px]" />
-      {km != null ? formatDistance(km) : "—"}
-      {lat != null && lng != null && <ExternalLink className="w-[8px] h-[8px] ml-0.5" />}
-    </button>
-  );
-}
-
 // ── DUB Coordinates (Rua Ferrador, 108 – Cidade Ipava, São Paulo) ──
 const DUB_COORDS = { lat: -23.7219695, lng: -46.7615913 };
 
@@ -94,6 +57,7 @@ const EscolherBarbearia = () => {
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [locationStatus, setLocationStatus] = useState<"idle" | "requesting" | "granted" | "denied">("idle");
   const [dubRating, setDubRating] = useState<{ avg: number; count: number } | null>(null);
+  const [selectedShop, setSelectedShop] = useState<string | null>(null); // "dub" or tenant id
 
   const isChangeMode = searchParams.get("mode") === "change";
   const isAuthenticated = !!userId;
@@ -299,14 +263,20 @@ const EscolherBarbearia = () => {
     (t.bairro && t.bairro.toLowerCase().includes(search.toLowerCase())) ||
     (t.cidade && t.cidade.toLowerCase().includes(search.toLowerCase()))
   );
-  const leftDub = !!currentPreferred;
   const isDubSelected = !currentPreferred;
+  const dubDistance = userLocation
+    ? haversineDistance(userLocation.lat, userLocation.lng, DUB_COORDS.lat, DUB_COORDS.lng)
+    : null;
+
+  // ── Selected tenant for sheet ──
+  const selectedTenant = selectedShop && selectedShop !== "dub"
+    ? filtered.find(t => t.id === selectedShop) || null
+    : null;
 
   return (
     <div className="flex flex-col bg-background" style={{ height: "100dvh" }}>
       {/* ══════ Header ══════ */}
       <div className="flex-shrink-0 px-4 pt-[calc(env(safe-area-inset-top)+0.5rem)] pb-2">
-        {/* Top bar */}
         <div className="flex items-center gap-3 mb-3">
           <button
             onClick={handleBack}
@@ -322,7 +292,7 @@ const EscolherBarbearia = () => {
           {locationStatus === "granted" && (
             <span className="inline-flex items-center gap-1 text-[9px] text-emerald-500 font-medium">
               <Navigation className="w-[10px] h-[10px]" />
-              Próximas
+              GPS ativo
             </span>
           )}
           {locationStatus === "requesting" && (
@@ -335,7 +305,7 @@ const EscolherBarbearia = () => {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/30" />
           <input
             type="text"
-            placeholder="Buscar barbearia..."
+            placeholder="Buscar por nome, bairro ou cidade..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className={cn(
@@ -360,88 +330,78 @@ const EscolherBarbearia = () => {
           {isLoading ? (
             <div className="flex flex-col items-center justify-center py-20">
               <div className="w-6 h-6 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
-              <p className="text-[11px] text-muted-foreground/40 mt-3">Carregando...</p>
+              <p className="text-[11px] text-muted-foreground/40 mt-3">Buscando barbearias...</p>
             </div>
           ) : (
-            <div className="space-y-2 pt-1">
-              {/* ═══ DUB Card ═══ */}
+            <div className="space-y-2.5 pt-1">
+
+              {/* ═══ DUB Card — Premium ═══ */}
               <motion.div
                 initial={{ opacity: 0, y: 6 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.35, ease: [0.25, 0.46, 0.45, 0.94] }}
               >
                 <button
-                  onClick={handleBackToDub}
-                  disabled={!!saving}
+                  onClick={() => setSelectedShop("dub")}
                   className={cn(
-                    "w-full rounded-xl border p-3 text-left",
-                    "active:scale-[0.99] transition-all duration-150",
-                    "bg-card/80 border-primary/15",
-                    saving === "dub" && "opacity-70",
-                    saving && saving !== "dub" && "opacity-40"
+                    "w-full rounded-2xl border p-0 text-left overflow-hidden",
+                    "active:scale-[0.98] transition-all duration-200",
+                    "bg-card border-primary/10",
                   )}
                 >
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0 bg-muted/20 border border-border/20">
-                      <img src={logoDub} alt="DUB" className="w-6 h-6 object-contain" />
-                    </div>
-
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1.5 mb-0.5">
-                        <span className="text-[13px] font-semibold text-foreground">Barbearia DUB</span>
-                        <Crown className="w-[10px] h-[10px] text-primary/60" />
+                  {/* Inner layout */}
+                  <div className="p-3.5">
+                    <div className="flex items-center gap-3.5">
+                      {/* Logo — elevated */}
+                      <div className={cn(
+                        "w-14 h-14 rounded-2xl flex items-center justify-center shrink-0",
+                        "bg-background border-2 border-border/15",
+                        "shadow-md shadow-background/50"
+                      )}>
+                        <img src={logoDub} alt="DUB" className="w-8 h-8 object-contain" />
                       </div>
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-[10px] text-muted-foreground/50">Corte premium</span>
-                        {dubRating && (
-                          <RatingStars rating={dubRating.avg} count={dubRating.count} />
-                        )}
-                        {locationStatus === "granted" && userLocation && (
-                          <DistanceBadge
-                            km={haversineDistance(userLocation.lat, userLocation.lng, DUB_COORDS.lat, DUB_COORDS.lng)}
-                            lat={DUB_COORDS.lat}
-                            lng={DUB_COORDS.lng}
-                          />
-                        )}
-                      </div>
-                    </div>
 
-                    <div className="shrink-0">
-                      {saving === "dub" ? (
-                        <div className="w-4 h-4 border-[1.5px] border-primary/25 border-t-primary rounded-full animate-spin" />
-                      ) : isDubSelected ? (
-                        <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center">
-                          <Check className="w-3 h-3 text-primary-foreground" strokeWidth={3} />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[15px] font-bold text-foreground tracking-tight">Barbearia DUB</span>
+                          <Crown className="w-3 h-3 text-primary/50" />
                         </div>
-                      ) : (
-                        <ChevronRight className="w-4 h-4 text-muted-foreground/20" />
-                      )}
+                        <p className="text-[10px] text-muted-foreground/40 mt-0.5">Corte premium • Cidade Ipava</p>
+
+                        {/* Badges row */}
+                        <div className="flex items-center gap-2 mt-2">
+                          {dubRating && (
+                            <span className="inline-flex items-center gap-1 bg-background/60 rounded-md px-1.5 py-0.5">
+                              <Star className="w-[10px] h-[10px] fill-amber-400 text-amber-400" />
+                              <span className="text-[10px] font-bold tabular-nums text-foreground/70">{dubRating.avg.toFixed(1)}</span>
+                            </span>
+                          )}
+                          {locationStatus === "granted" && dubDistance != null && (
+                            <span className="inline-flex items-center gap-0.5 bg-background/60 rounded-md px-1.5 py-0.5">
+                              <Route className="w-[10px] h-[10px] text-muted-foreground/40" />
+                              <span className="text-[10px] font-semibold tabular-nums text-muted-foreground/50">{formatDistance(dubDistance)}</span>
+                            </span>
+                          )}
+                          {isDubSelected && (
+                            <span className="text-[8px] font-bold uppercase tracking-wider bg-primary/10 text-primary px-1.5 py-0.5 rounded-md">
+                              Atual
+                            </span>
+                          )}
+                        </div>
+                      </div>
                     </div>
                   </div>
-
-                  <AnimatePresence>
-                    {leftDub && (
-                      <motion.p
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: "auto" }}
-                        exit={{ opacity: 0, height: 0 }}
-                        className="text-[10px] text-primary/60 font-medium mt-2 pt-2 border-t border-border/10 text-center"
-                      >
-                        Voltar para DUB
-                      </motion.p>
-                    )}
-                  </AnimatePresence>
                 </button>
               </motion.div>
 
               {/* ── Divider ── */}
               {filtered.length > 0 && (
-                <div className="flex items-center gap-2 py-1.5 px-0.5">
-                  <div className="flex-1 h-px bg-border/15" />
-                  <span className="text-[8px] uppercase tracking-[0.12em] text-muted-foreground/25 font-semibold">
+                <div className="flex items-center gap-2 py-1 px-0.5">
+                  <div className="flex-1 h-px bg-border/10" />
+                  <span className="text-[8px] uppercase tracking-[0.15em] text-muted-foreground/20 font-bold">
                     Parceiras
                   </span>
-                  <div className="flex-1 h-px bg-border/15" />
+                  <div className="flex-1 h-px bg-border/10" />
                 </div>
               )}
 
@@ -468,71 +428,66 @@ const EscolherBarbearia = () => {
                     initial={{ opacity: 0, y: 5 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.04 + index * 0.03, duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] }}
-                    onClick={() => handleSelect(tenant.id)}
-                    disabled={!!saving || isCurrent}
+                    onClick={() => setSelectedShop(tenant.id)}
                     className={cn(
-                      "w-full rounded-xl border p-3 text-left",
-                      "active:scale-[0.99] transition-all duration-150",
+                      "w-full rounded-2xl border p-3.5 text-left",
+                      "active:scale-[0.98] transition-all duration-200",
                       "bg-card/60",
-                      isCurrent ? "border-primary/20" : "border-border/20",
-                      saving === tenant.id && "opacity-70",
-                      saving && saving !== tenant.id && !isCurrent && "opacity-40"
+                      isCurrent ? "border-primary/15" : "border-border/10",
                     )}
                   >
-                    <div className="flex items-center gap-3">
-                      {/* Avatar */}
-                      <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0 overflow-hidden bg-muted/20 border border-border/15">
+                    <div className="flex items-center gap-3.5">
+                      {/* Logo */}
+                      <div className={cn(
+                        "w-12 h-12 rounded-xl flex items-center justify-center shrink-0 overflow-hidden",
+                        "bg-background border border-border/15"
+                      )}>
                         {tenant.logo_url ? (
                           <img src={tenant.logo_url} alt={tenant.nome} className="w-full h-full object-cover" />
                         ) : (
-                          <Scissors className="w-4 h-4 text-muted-foreground/25" />
+                          <Scissors className="w-5 h-5 text-muted-foreground/20" />
                         )}
                       </div>
 
                       {/* Info */}
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-1.5 mb-0.5">
-                          <span className="text-[13px] font-semibold text-foreground truncate">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[14px] font-bold text-foreground truncate tracking-tight">
                             {tenant.nome}
                           </span>
+                        </div>
+
+                        {(tenant.bairro || tenant.cidade) && (
+                          <div className="flex items-center gap-1 mt-0.5">
+                            <MapPin className="w-[9px] h-[9px] text-muted-foreground/20 shrink-0" />
+                            <span className="text-[10px] text-muted-foreground/35 truncate">
+                              {[tenant.bairro, tenant.cidade].filter(Boolean).join(", ")}
+                            </span>
+                          </div>
+                        )}
+
+                        {/* Badges */}
+                        <div className="flex items-center gap-2 mt-1.5">
+                          {tenant.avgRating != null && tenant.totalReviews != null && tenant.totalReviews > 0 && (
+                            <span className="inline-flex items-center gap-1 bg-background/60 rounded-md px-1.5 py-0.5">
+                              <Star className="w-[10px] h-[10px] fill-amber-400 text-amber-400" />
+                              <span className="text-[10px] font-bold tabular-nums text-foreground/70">{tenant.avgRating.toFixed(1)}</span>
+                            </span>
+                          )}
+
+                          {locationStatus === "granted" && tenant.distance != null && (
+                            <span className="inline-flex items-center gap-0.5 bg-background/60 rounded-md px-1.5 py-0.5">
+                              <Route className="w-[10px] h-[10px] text-muted-foreground/40" />
+                              <span className="text-[10px] font-semibold tabular-nums text-muted-foreground/50">{formatDistance(tenant.distance)}</span>
+                            </span>
+                          )}
+
                           {isCurrent && (
-                            <span className="text-[7px] font-bold uppercase tracking-wider bg-primary/10 text-primary px-1.5 py-px rounded-full shrink-0">
+                            <span className="text-[8px] font-bold uppercase tracking-wider bg-primary/10 text-primary px-1.5 py-0.5 rounded-md">
                               Atual
                             </span>
                           )}
                         </div>
-
-                        <div className="flex items-center gap-2 flex-wrap">
-                          {(tenant.bairro || tenant.cidade) && (
-                            <span className="inline-flex items-center gap-0.5 min-w-0">
-                              <MapPin className="w-[10px] h-[10px] text-muted-foreground/25 shrink-0" />
-                              <span className="text-[10px] text-muted-foreground/40 truncate">
-                                {[tenant.bairro, tenant.cidade].filter(Boolean).join(", ")}
-                              </span>
-                            </span>
-                          )}
-
-                          {tenant.avgRating != null && tenant.totalReviews != null && tenant.totalReviews > 0 && (
-                            <RatingStars rating={tenant.avgRating} count={tenant.totalReviews} />
-                          )}
-
-                          {locationStatus === "granted" && (
-                            <DistanceBadge km={tenant.distance ?? null} lat={tenant.latitude} lng={tenant.longitude} />
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Right */}
-                      <div className="shrink-0">
-                        {saving === tenant.id ? (
-                          <div className="w-4 h-4 border-[1.5px] border-primary/25 border-t-primary rounded-full animate-spin" />
-                        ) : isCurrent ? (
-                          <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center">
-                            <Check className="w-3 h-3 text-primary-foreground" strokeWidth={3} />
-                          </div>
-                        ) : (
-                          <ChevronRight className="w-4 h-4 text-muted-foreground/15" />
-                        )}
                       </div>
                     </div>
                   </motion.button>
@@ -542,6 +497,51 @@ const EscolherBarbearia = () => {
           )}
         </div>
       </div>
+
+      {/* ══════ Detail Sheet — DUB ══════ */}
+      <BarbershopDetailSheet
+        open={selectedShop === "dub"}
+        onClose={() => setSelectedShop(null)}
+        tenantId={null}
+        tenantName="Barbearia DUB"
+        tenantLogo={logoDub}
+        tenantSlogan="Corte premium"
+        tenantBairro="Cidade Ipava"
+        tenantCidade="São Paulo"
+        tenantEstado="SP"
+        avgRating={dubRating?.avg ?? null}
+        totalReviews={dubRating?.count ?? 0}
+        distance={dubDistance}
+        latitude={DUB_COORDS.lat}
+        longitude={DUB_COORDS.lng}
+        isCurrent={isDubSelected}
+        saving={saving === "dub"}
+        onSelect={handleBackToDub}
+        isDub
+      />
+
+      {/* ══════ Detail Sheet — Tenant ══════ */}
+      {selectedTenant && (
+        <BarbershopDetailSheet
+          open={!!selectedTenant}
+          onClose={() => setSelectedShop(null)}
+          tenantId={selectedTenant.id}
+          tenantName={selectedTenant.nome}
+          tenantLogo={selectedTenant.logo_url}
+          tenantSlogan={selectedTenant.slogan}
+          tenantBairro={selectedTenant.bairro}
+          tenantCidade={selectedTenant.cidade}
+          tenantEstado={selectedTenant.estado}
+          avgRating={selectedTenant.avgRating ?? null}
+          totalReviews={selectedTenant.totalReviews ?? 0}
+          distance={selectedTenant.distance ?? null}
+          latitude={selectedTenant.latitude}
+          longitude={selectedTenant.longitude}
+          isCurrent={currentPreferred === selectedTenant.id}
+          saving={saving === selectedTenant.id}
+          onSelect={() => handleSelect(selectedTenant.id)}
+        />
+      )}
     </div>
   );
 };
