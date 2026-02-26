@@ -52,11 +52,11 @@ function RatingStars({ rating, count }: { rating: number; count: number }) {
   );
 }
 
-function DistanceBadge({ km }: { km: number }) {
+function DistanceBadge({ km }: { km: number | null; }) {
   return (
     <span className="inline-flex items-center gap-0.5 text-[9px] font-medium tabular-nums text-muted-foreground/50">
       <Route className="w-[10px] h-[10px]" />
-      {formatDistance(km)}
+      {km != null ? formatDistance(km) : "—"}
     </span>
   );
 }
@@ -489,8 +489,8 @@ const EscolherBarbearia = () => {
                             <RatingStars rating={tenant.avgRating} count={tenant.totalReviews} />
                           )}
 
-                          {tenant.distance != null && (
-                            <DistanceBadge km={tenant.distance} />
+                          {locationStatus === "granted" && (
+                            <DistanceBadge km={tenant.distance ?? null} />
                           )}
                         </div>
                       </div>
