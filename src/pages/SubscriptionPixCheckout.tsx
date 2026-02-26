@@ -1,7 +1,8 @@
 import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Copy, Check, Loader2, Clock, AlertCircle, CheckCircle2, ArrowLeft, ShieldCheck, Lock, Crown } from "lucide-react";
+import { Copy, Check, Loader2, Clock, AlertCircle, CheckCircle2, ShieldCheck, Lock, Crown } from "lucide-react";
+import { BackArrow } from "@/components/ui/back-arrow";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import pixIcon from "@/assets/pix-icon.png";
@@ -202,7 +203,7 @@ const SubscriptionPixCheckout = () => {
               onClick={goBack}
               className="w-8 h-8 flex items-center justify-center rounded-full text-muted-foreground hover:text-foreground transition-colors"
             >
-              <ArrowLeft className="w-4 h-4" />
+              <BackArrow size={18} />
             </button>
             <div className="flex items-center gap-2">
               <img src={logo} alt="Logo" className="w-7 h-7 rounded-full object-cover" />

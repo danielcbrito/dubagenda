@@ -6,7 +6,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { z } from "zod";
 import logoDub from "@/assets/logo-dub.png";
-import { Loader2, Mail, CheckCircle2, ArrowLeft } from "lucide-react";
+import { Loader2, Mail, CheckCircle2 } from "lucide-react";
+import { BackArrow } from "@/components/ui/back-arrow";
 import { motion } from "framer-motion";
 
 const emailSchema = z.object({
@@ -96,7 +97,7 @@ const ForgotPassword = () => {
           onClick={() => navigate("/auth")}
           className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors"
         >
-          <ArrowLeft className="w-4 h-4" />
+          <BackArrow size={18} />
           <span className="text-[13px]">Voltar</span>
         </button>
       </motion.div>

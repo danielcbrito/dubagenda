@@ -6,10 +6,10 @@ import {
   CheckCircle2, 
   AlertCircle, 
   Loader2,
-  ArrowLeft,
   Crown,
   Sparkles
 } from "lucide-react";
+import { BackArrow } from "@/components/ui/back-arrow";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
@@ -288,7 +288,7 @@ export function SubscribePlanSheet({ open, onOpenChange, userId }: SubscribePlan
               onClick={() => onOpenChange(false)}
               className="w-8 h-8 flex items-center justify-center rounded-lg bg-card border border-border/40 hover:bg-muted transition-colors"
             >
-              <ArrowLeft className="w-4 h-4 text-foreground" />
+              <BackArrow size={18} className="text-foreground" />
             </button>
             <h1 className="text-sm font-semibold text-foreground tracking-tight">Escolha seu Plano</h1>
           </div>

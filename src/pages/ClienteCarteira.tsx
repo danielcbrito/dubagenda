@@ -1,8 +1,8 @@
 import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
+import { BackArrow } from "@/components/ui/back-arrow";
 import {
-  ChevronLeft,
   Eye,
   EyeOff,
   Plus,
@@ -360,7 +360,7 @@ export default function ClienteCarteira() {
             onClick={() => navigate("/cliente")}
             className="w-8 h-8 flex items-center justify-center rounded-full bg-card border border-border hover:bg-muted transition-colors"
           >
-            <ChevronLeft className="w-4 h-4 text-foreground" />
+            <BackArrow size={18} className="text-foreground" />
           </button>
           <h1 className="text-base font-semibold text-foreground">Carteira</h1>
           <div className="w-8" />

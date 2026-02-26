@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
+import { BackArrow } from "@/components/ui/back-arrow";
 import {
-  ArrowLeft,
   KeyRound,
   Lock,
   Eye,
@@ -238,7 +238,7 @@ export default function ClienteSeguranca() {
           onClick={goBack}
           className="h-7 w-7 rounded-md bg-muted/40 flex items-center justify-center hover:bg-muted/60 transition-colors"
         >
-          <ArrowLeft className="h-3.5 w-3.5 text-foreground" />
+          <BackArrow size={16} className="text-foreground" />
         </button>
         <h1 className="text-[14px] font-semibold tracking-tight text-foreground">{viewTitle}</h1>
       </div>

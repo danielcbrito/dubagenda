@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Star, User, MessageSquare } from "lucide-react";
+import { Star, User, MessageSquare } from "lucide-react";
+import { BackArrow } from "@/components/ui/back-arrow";
 import { motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
@@ -74,7 +75,7 @@ const BarberReviews = () => {
             onClick={() => navigate(-1)}
             className="w-9 h-9 rounded-full bg-secondary flex items-center justify-center hover:bg-secondary/80 transition-colors"
           >
-            <ArrowLeft className="w-5 h-5 text-foreground" />
+            <BackArrow size={20} className="text-foreground" />
           </button>
           <h1 className="text-lg font-bold text-foreground">Avaliações</h1>
         </div>

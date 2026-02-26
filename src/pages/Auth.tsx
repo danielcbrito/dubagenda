@@ -5,7 +5,8 @@ import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { z } from "zod";
-import { Loader2, Eye, EyeOff, User, Mail, Phone, Lock, CreditCard, ArrowLeft } from "lucide-react";
+import { Loader2, Eye, EyeOff, User, Mail, Phone, Lock, CreditCard } from "lucide-react";
+import { BackArrow } from "@/components/ui/back-arrow";
 import { formatPhone, validatePhone, formatCPF, validateCPF } from "@/lib/validators";
 import { cn } from "@/lib/utils";
 import { SupportChatBubble } from "@/components/support/SupportChatBubble";
@@ -346,7 +347,7 @@ const Auth = () => {
           onClick={() => navigate("/")}
           className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors"
         >
-          <ArrowLeft className="w-4 h-4" />
+          <BackArrow size={18} />
           <span className="text-[13px]">Voltar</span>
         </button>
       </motion.div>
