@@ -136,13 +136,28 @@ export function AppointmentCardPremium({
         <div className="h-[3px]" style={{ background: statusConfig.color }} />
 
         <div className="px-4 py-3.5">
-          {/* Line 1: Service name — free and bold */}
-          <h3 className="font-bold text-foreground text-[14px] leading-tight break-words mb-2">
-            {appointment.servico?.nome || "Serviço"}
-          </h3>
+          {/* Top row: Service + Date circle (top-right) */}
+          <div className="flex items-start justify-between gap-3 mb-3">
+            <h3 className="font-bold text-foreground text-[15px] leading-snug break-words flex-1 min-w-0">
+              {appointment.servico?.nome || "Serviço"}
+            </h3>
+            <div className="flex flex-col items-center flex-shrink-0">
+              <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground leading-none">
+                {format(new Date(`${appointment.data}T12:00:00`), "EEE", { locale: ptBR })}
+              </span>
+              <div
+                className="w-10 h-10 rounded-full flex items-center justify-center mt-0.5"
+                style={{ background: statusConfig.bgColor, border: `1.5px solid ${statusConfig.borderColor}` }}
+              >
+                <span className="text-[16px] font-bold tabular-nums" style={{ color: statusConfig.color }}>
+                  {format(new Date(`${appointment.data}T12:00:00`), "dd")}
+                </span>
+              </div>
+            </div>
+          </div>
 
-          {/* Line 2: Status + Shop + Barber — all inline */}
-          <div className="flex items-center gap-1.5 flex-wrap mb-2.5">
+          {/* Badges row: Status + Shop + Barber */}
+          <div className="flex items-center gap-1.5 flex-wrap mb-3">
             <div
               className="flex items-center gap-1 px-2 py-[3px] rounded-md text-[9px] font-bold uppercase tracking-wider"
               style={{
@@ -166,8 +181,8 @@ export function AppointmentCardPremium({
             )}
           </div>
 
-          {/* Line 3: Time + Price + Date circle — all inline */}
-          <div className="flex items-center gap-2.5 text-[11px]">
+          {/* Bottom row: Time · Value */}
+          <div className="flex items-center gap-2.5 text-[11px] pt-2.5 border-t border-border/20">
             <div className="flex items-center gap-1">
               <Clock className="w-3.5 h-3.5 text-foreground/40" />
               <span className="font-semibold text-foreground/70 tabular-nums">{appointment.hora}</span>
@@ -197,25 +212,6 @@ export function AppointmentCardPremium({
                 )}
               </div>
             ) : null}
-
-            <span className="flex-1" />
-
-            {/* Date circle — bottom right */}
-            <div className="flex items-center gap-1.5 flex-shrink-0">
-              <div className="flex flex-col items-center">
-                <span className="text-[8px] font-bold uppercase tracking-widest text-muted-foreground leading-none">
-                  {format(new Date(`${appointment.data}T12:00:00`), "EEE", { locale: ptBR })}
-                </span>
-                <div
-                  className="w-9 h-9 rounded-full flex items-center justify-center mt-0.5"
-                  style={{ background: statusConfig.bgColor, border: `1.5px solid ${statusConfig.borderColor}` }}
-                >
-                  <span className="text-[15px] font-bold tabular-nums" style={{ color: statusConfig.color }}>
-                    {format(new Date(`${appointment.data}T12:00:00`), "dd")}
-                  </span>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
 
