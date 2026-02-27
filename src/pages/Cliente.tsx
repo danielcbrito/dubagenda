@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Calendar } from "lucide-react";
+import { Calendar, Crown } from "lucide-react";
 import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -385,12 +385,12 @@ const Cliente = () => {
     } else {
       setActiveSubscription(null);
 
-      // Verificar assinatura pendente (suspended = pagamento não finalizado)
+      // Verificar assinatura pendente (suspended ou pending_cash)
       const { data: pendingSub } = await supabase
         .from("assinaturas")
         .select("id, status, plano_id, created_at, payment_method, pix_qr_code, pix_payload, asaas_payment_id, pix_expires_at, plano:planos(nome, preco_mensal)")
         .eq("user_id", userId)
-        .eq("status", "suspended")
+        .in("status", ["suspended", "pending_cash"] as any)
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();
@@ -590,32 +590,54 @@ const Cliente = () => {
                 />
               ) : pendingSubscription ? (
                 <div className="space-y-4">
-                  <PendingSubscriptionBanner
-                    planName={(pendingSubscription as any).plano?.nome || "Plano"}
-                    onFinalize={() => {
-                      const ps = pendingSubscription as any;
-                      if (ps.payment_method === "pix" && ps.pix_qr_code && ps.pix_expires_at) {
-                        const pixExpiresAt = new Date(ps.pix_expires_at).getTime();
-                        if (pixExpiresAt > Date.now()) {
-                          const pixCheckoutData = {
-                            pixQrCode: ps.pix_qr_code,
-                            pixPayload: ps.pix_payload,
-                            subscriptionId: ps.id,
-                            asaasPaymentId: ps.asaas_payment_id,
-                            expiresAt: ps.pix_expires_at,
-                            value: ps.plano?.preco_mensal || 0,
-                            planName: ps.plano?.nome || "Plano",
-                          };
-                          sessionStorage.setItem("subscription_pix_checkout_data", JSON.stringify(pixCheckoutData));
-                          navigate("/cliente/assinatura-pix");
-                          return;
+                  {(pendingSubscription as any).status === 'pending_cash' ? (
+                    <motion.div
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4"
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-amber-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                          <Crown className="w-4 h-4 text-amber-500" />
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-[13px] font-semibold text-foreground">
+                            {(pendingSubscription as any).plano?.nome || "Plano"} — Aguardando pagamento
+                          </p>
+                          <p className="text-[11px] text-muted-foreground mt-1">
+                            Apresente o pagamento em dinheiro ao barbeiro. Após a confirmação, seus cortes serão liberados.
+                          </p>
+                        </div>
+                      </div>
+                    </motion.div>
+                  ) : (
+                    <PendingSubscriptionBanner
+                      planName={(pendingSubscription as any).plano?.nome || "Plano"}
+                      onFinalize={() => {
+                        const ps = pendingSubscription as any;
+                        if (ps.payment_method === "pix" && ps.pix_qr_code && ps.pix_expires_at) {
+                          const pixExpiresAt = new Date(ps.pix_expires_at).getTime();
+                          if (pixExpiresAt > Date.now()) {
+                            const pixCheckoutData = {
+                              pixQrCode: ps.pix_qr_code,
+                              pixPayload: ps.pix_payload,
+                              subscriptionId: ps.id,
+                              asaasPaymentId: ps.asaas_payment_id,
+                              expiresAt: ps.pix_expires_at,
+                              value: ps.plano?.preco_mensal || 0,
+                              planName: ps.plano?.nome || "Plano",
+                            };
+                            sessionStorage.setItem("subscription_pix_checkout_data", JSON.stringify(pixCheckoutData));
+                            navigate("/cliente/assinatura-pix");
+                            return;
+                          }
                         }
-                      }
-                      navigate("/cliente/assinar", { 
-                        state: { resumePlanId: ps.plano_id }
-                      });
-                    }}
-                  />
+                        navigate("/cliente/assinar", { 
+                          state: { resumePlanId: ps.plano_id }
+                        });
+                      }}
+                    />
+                  )}
                   <LoyaltyCard
                     points={points}
                     redemptions={redemptions}

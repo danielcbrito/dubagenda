@@ -7,6 +7,7 @@ import { format, subDays, startOfDay } from "date-fns";
 import { cn } from "@/lib/utils";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { useBarbeiroLogado } from "@/hooks/useBarbeiroLogado";
+import { AdminPendingCashSubscriptions } from "@/components/admin/AdminPendingCashSubscriptions";
 
 interface Stats {
   todayAppointments: number;
@@ -282,6 +283,9 @@ export function AdminDashboard() {
           <p className="text-muted-foreground text-sm">Visão geral do seu negócio • {format(new Date(), "dd 'de' MMMM, yyyy")}</p>
         </div>
       </div>
+
+      {/* Pending Cash Subscriptions */}
+      <AdminPendingCashSubscriptions />
 
       {/* Stats Grid - 4 cards organizados */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
