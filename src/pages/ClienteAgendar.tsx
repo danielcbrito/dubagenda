@@ -120,6 +120,8 @@ const ClienteAgendar = () => {
 
   const totalDuration = (selectedServices || []).reduce((sum, s) => sum + getEffectiveDuration(s) * (serviceQuantities[s.id] || 1), 0);
 
+  // Fonte única do barbeiro selecionado (fallback para assinatura vinculada)
+  const selectedBarberId = selectedBarber?.id || activeSubscription?.barbeiro_id || null;
   const availabilityTenantId = selectedBarber?.tenant_id ?? (preferredShop?.id ?? null);
 
   const { 
@@ -131,7 +133,7 @@ const ClienteAgendar = () => {
     selectedDate, 
     totalDuration,
     isRescheduling ? rescheduleAppointmentId : null,
-    selectedBarber?.id || null,
+    selectedBarberId,
     availabilityTenantId
   );
 
@@ -636,7 +638,7 @@ const ClienteAgendar = () => {
    */
   const loadClosedDates = useCallback(async (monthStart: Date, monthEnd: Date) => {
     try {
-      const barbeiroId = selectedBarber?.id || null;
+      const barbeiroId = selectedBarberId || null;
       const startStr = format(monthStart, 'yyyy-MM-dd');
       const endStr = format(monthEnd, 'yyyy-MM-dd');
       const allDays = eachDayOfInterval({ start: monthStart, end: monthEnd });
@@ -713,7 +715,7 @@ const ClienteAgendar = () => {
     } catch (error) {
       console.error('[loadClosedDates] Erro:', error);
     }
-  }, [selectedBarber?.id]);
+  }, [selectedBarberId]);
 
   const incrementServiceQty = (serviceId: string) => {
     setServiceQuantities(q => ({
@@ -740,7 +742,7 @@ const ClienteAgendar = () => {
     // Normal: 1=Barbeiro, 2=Serviços, 3=Data, 4=Horário, 5=Pagamento, 6=Confirmação
     
     // Step 1: Validar barbeiro
-    if (step === 1 && !selectedBarber) {
+    if (step === 1 && !selectedBarberId) {
       toast.error("Selecione um profissional");
       return;
     }
@@ -868,7 +870,7 @@ const ClienteAgendar = () => {
       const mainService = selectedServices[0];
       const bookingData = {
         servico_id: mainService.id,
-        barbeiro_id: selectedBarber?.id || null,
+        barbeiro_id: selectedBarberId || null,
         data: format(selectedDate, 'yyyy-MM-dd'),
         hora: selectedTime,
         duracao: totalDuration,
@@ -1004,7 +1006,7 @@ const ClienteAgendar = () => {
       const dateStr = format(selectedDate!, 'yyyy-MM-dd');
 
       const { data: validation, error: validationError } = await supabase.functions.invoke('validate-appointment', {
-        body: { data: dateStr, hora: selectedTime, duracao: totalDuration, userId: session.user.id, barberId: selectedBarber?.id }
+        body: { data: dateStr, hora: selectedTime, duracao: totalDuration, userId: session.user.id, barberId: selectedBarberId }
       });
 
       if (validationError || !validation?.valid) {
@@ -1019,7 +1021,7 @@ const ClienteAgendar = () => {
         .insert({
           user_id: session.user.id,
           servico_id: mainService.id,
-          barbeiro_id: selectedBarber?.id || null,
+          barbeiro_id: selectedBarberId || null,
           data: dateStr,
           hora: selectedTime,
           duracao: totalDuration,
@@ -1084,7 +1086,7 @@ const ClienteAgendar = () => {
           hora: selectedTime,
           duracao: totalDuration,
           userId: session.user.id,
-          barberId: selectedBarber?.id,
+          barberId: selectedBarberId,
           excludeAppointmentId: isRescheduling ? rescheduleAppointmentId : undefined
         }
       });
@@ -1121,7 +1123,7 @@ const ClienteAgendar = () => {
         .insert({
           user_id: session.user.id,
           servico_id: mainService.id,
-          barbeiro_id: selectedBarber?.id || null,
+          barbeiro_id: selectedBarberId || null,
           data: dateStr,
           hora: selectedTime,
           duracao: totalDuration,
@@ -1214,7 +1216,7 @@ const ClienteAgendar = () => {
           hora: selectedTime,
           duracao: totalDuration,
           userId: session.user.id,
-          barberId: selectedBarber?.id
+          barberId: selectedBarberId
         }
       });
 
@@ -1235,7 +1237,7 @@ const ClienteAgendar = () => {
         .insert({
           user_id: session.user.id,
           servico_id: mainService.id,
-          barbeiro_id: selectedBarber?.id || null,
+          barbeiro_id: selectedBarberId || null,
           data: dateStr,
           hora: selectedTime,
           duracao: totalDuration,
@@ -1425,7 +1427,7 @@ const ClienteAgendar = () => {
           hora: selectedTime,
           duracao: totalDuration,
           userId: session.user.id,
-          barberId: selectedBarber?.id,
+          barberId: selectedBarberId,
           excludeAppointmentId: rescheduleAppointmentId
         }
       });
