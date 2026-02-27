@@ -39,6 +39,7 @@ interface AvailabilityRequest {
   duration: number;
   excludeAppointmentId?: string;
   barbeiroId?: string;
+  barberId?: string; // compatibilidade retroativa
   tenantId?: string | null;
 }
 
@@ -171,11 +172,12 @@ Deno.serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     const body: AvailabilityRequest = await req.json();
-    const { date, duration, excludeAppointmentId, barbeiroId, tenantId } = body;
+    const { date, duration, excludeAppointmentId, barbeiroId, barberId, tenantId } = body;
+    const resolvedBarbeiroId = barbeiroId ?? barberId;
 
     console.log('='.repeat(70));
     console.log('[check-availability] INICIANDO VERIFICAÇÃO');
-    console.log(`[check-availability] Data: ${date} | Duração solicitada: ${duration}min | Barbeiro: ${barbeiroId || 'N/A'} | Tenant: ${tenantId === null ? 'DUB' : (tenantId || 'N/A')}`);
+    console.log(`[check-availability] Data: ${date} | Duração solicitada: ${duration}min | Barbeiro: ${resolvedBarbeiroId || 'N/A'} | Tenant: ${tenantId === null ? 'DUB' : (tenantId || 'N/A')}`);
 
     if (!date || !duration || duration <= 0) {
       return new Response(
@@ -184,9 +186,9 @@ Deno.serve(async (req) => {
       );
     }
 
-    if (!barbeiroId && tenantId === undefined) {
+    if (!resolvedBarbeiroId && tenantId === undefined) {
       return new Response(
-        JSON.stringify({ success: false, message: 'Contexto inválido: informe barbeiroId ou tenantId.' }),
+        JSON.stringify({ success: false, message: 'Contexto inválido: informe barbeiroId/barberId ou tenantId.' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
       );
     }
@@ -198,13 +200,13 @@ Deno.serve(async (req) => {
     // Prioridade: 1) Exceção do barbeiro, 2) Exceção geral, 3) Config do barbeiro, 4) Config geral
     let config: BusinessHoursConfig;
 
-    if (barbeiroId) {
+    if (resolvedBarbeiroId) {
       // Se barbeiro especificado, verificar exceções e config do barbeiro
       const { data: excecaoBarbeiroData } = await supabase
         .from('horarios_excepcionais_barbeiro')
         .select('*')
         .eq('data', date)
-        .eq('barbeiro_id', barbeiroId)
+        .eq('barbeiro_id', resolvedBarbeiroId)
         .maybeSingle();
 
       if (excecaoBarbeiroData) {
@@ -227,7 +229,7 @@ Deno.serve(async (req) => {
           .maybeSingle();
 
         if (excecaoGlobalData) {
-          console.log(`[check-availability] EXCEÇÃO GLOBAL encontrada para ${date} (barbeiro ${barbeiroId})`);
+          console.log(`[check-availability] EXCEÇÃO GLOBAL encontrada para ${date} (barbeiro ${resolvedBarbeiroId})`);
           config = {
             aberto: excecaoGlobalData.aberto,
             hora_abertura: excecaoGlobalData.hora_abertura || '09:00',
@@ -241,12 +243,12 @@ Deno.serve(async (req) => {
           const { data: configBarbeiroData } = await supabase
             .from('configuracoes_horario_barbeiro')
             .select('*')
-            .eq('barbeiro_id', barbeiroId)
+            .eq('barbeiro_id', resolvedBarbeiroId)
             .eq('dia_semana', dayOfWeek)
             .maybeSingle();
 
           if (configBarbeiroData) {
-            console.log(`[check-availability] Config do barbeiro ${barbeiroId} para dia ${dayOfWeek}:`, JSON.stringify({
+            console.log(`[check-availability] Config do barbeiro ${resolvedBarbeiroId} para dia ${dayOfWeek}:`, JSON.stringify({
               aberto: configBarbeiroData.aberto,
               hora_almoco_inicio: configBarbeiroData.hora_almoco_inicio,
               hora_almoco_fim: configBarbeiroData.hora_almoco_fim,
@@ -262,7 +264,7 @@ Deno.serve(async (req) => {
               delay_entre_servicos: configBarbeiroData.delay_entre_servicos || 10
             };
           } else {
-            console.log(`[check-availability] Sem config para barbeiro ${barbeiroId} dia ${dayOfWeek}, usando global`);
+            console.log(`[check-availability] Sem config para barbeiro ${resolvedBarbeiroId} dia ${dayOfWeek}, usando global`);
             // Fallback para config geral (já verifica horarios_excepcionais)
             config = await getDefaultConfig(supabase, date, dayOfWeek);
           }
@@ -297,7 +299,7 @@ Deno.serve(async (req) => {
     // Resolver escopo de conflito (barbeiro específico ou tenant inteiro)
     let scopedBarberIds: string[] | null = null;
 
-    if (!barbeiroId) {
+    if (!resolvedBarbeiroId) {
       scopedBarberIds = await resolveScopedBarberIds(supabase, tenantId ?? null);
       console.log(`[check-availability] Escopo por tenant: ${tenantId === null ? 'DUB' : tenantId} | Barbeiros ativos: ${scopedBarberIds.length}`);
     }
@@ -306,7 +308,7 @@ Deno.serve(async (req) => {
     let appointments: Array<{ id: string; hora: string; duracao: number; status: string; barbeiro_id: string | null }> = [];
     let pendingBookings: Array<{ id: string; hora: string; duracao: number; expires_at: string; barbeiro_id: string | null }> = [];
 
-    const shouldQueryByScope = Boolean(barbeiroId) || Boolean(scopedBarberIds && scopedBarberIds.length > 0);
+    const shouldQueryByScope = Boolean(resolvedBarbeiroId) || Boolean(scopedBarberIds && scopedBarberIds.length > 0);
 
     if (shouldQueryByScope) {
       // Buscar agendamentos com status bloqueante
@@ -316,8 +318,8 @@ Deno.serve(async (req) => {
         .eq('data', date)
         .in('status', BLOCKING_STATUSES);
 
-      if (barbeiroId) {
-        appointmentsQuery = appointmentsQuery.eq('barbeiro_id', barbeiroId);
+      if (resolvedBarbeiroId) {
+        appointmentsQuery = appointmentsQuery.eq('barbeiro_id', resolvedBarbeiroId);
       } else if (scopedBarberIds) {
         appointmentsQuery = appointmentsQuery.in('barbeiro_id', scopedBarberIds);
       }
@@ -345,8 +347,8 @@ Deno.serve(async (req) => {
         .eq('data', date)
         .gt('expires_at', now.toISOString());
 
-      if (barbeiroId) {
-        pendingQuery = pendingQuery.eq('barbeiro_id', barbeiroId);
+      if (resolvedBarbeiroId) {
+        pendingQuery = pendingQuery.eq('barbeiro_id', resolvedBarbeiroId);
       } else if (scopedBarberIds) {
         pendingQuery = pendingQuery.in('barbeiro_id', scopedBarberIds);
       }
