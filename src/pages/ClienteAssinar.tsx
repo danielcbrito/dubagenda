@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { BackArrow } from "@/components/ui/back-arrow";
 import { 
   ArrowRight,
+  Banknote,
   Check, 
   CheckCircle2, 
   Crown,
@@ -270,7 +271,7 @@ const ClienteAssinar = () => {
   const [selectedTenantId, setSelectedTenantId] = useState<string | null | "dub">(null); // "dub" = DUB global, string = tenant UUID
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
   const [selectedBarber, setSelectedBarber] = useState<Barber | null>(null);
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<"pix" | "card" | null>("pix");
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<"pix" | "card" | "cash" | null>("pix");
 
   // UI
   const [loading, setLoading] = useState(false);
@@ -450,7 +451,30 @@ const ClienteAssinar = () => {
         return;
       }
 
-      if (selectedPaymentMethod === "card") {
+      if (selectedPaymentMethod === "cash") {
+        // Pagamento em dinheiro: criar assinatura pendente aguardando confirmação do barbeiro
+        // Limpar assinaturas suspended/pending_cash anteriores
+        await supabase
+          .from('assinaturas')
+          .delete()
+          .eq('user_id', session.user.id)
+          .in('status', ['suspended', 'pending_cash']);
+
+        const { error: insertError } = await supabase
+          .from('assinaturas')
+          .insert({
+            user_id: session.user.id,
+            plano_id: selectedPlan.id,
+            barbeiro_id: selectedBarber.id,
+            status: 'pending_cash' as any,
+            payment_method: 'cash' as any,
+          });
+
+        if (insertError) throw insertError;
+
+        toast.success("Solicitação enviada! Apresente o pagamento ao barbeiro para ativação do plano.");
+        navigate("/cliente");
+      } else if (selectedPaymentMethod === "card") {
         const { data, error } = await supabase.functions.invoke('create-subscription-card', {
           body: { planoId: selectedPlan.id, barbeiroId: selectedBarber.id }
         });
@@ -892,6 +916,37 @@ const ClienteAssinar = () => {
                     </div>
                   </div>
                 </motion.button>
+
+                {/* Cash */}
+                <motion.button
+                  onClick={() => setSelectedPaymentMethod("cash")}
+                  className={cn(
+                    "w-full rounded-xl border p-4 text-left transition-all active:scale-[0.99]",
+                    selectedPaymentMethod === "cash"
+                      ? "border-primary/60 bg-primary/5 shadow-sm"
+                      : "border-border/50 bg-card hover:border-border hover:shadow-sm"
+                  )}
+                >
+                  <div className="flex items-center gap-3.5">
+                    <div className="w-10 h-10 rounded-xl bg-muted/30 flex items-center justify-center flex-shrink-0">
+                      <Banknote className="w-5 h-5 text-muted-foreground/50" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[13px] font-semibold text-foreground">Dinheiro</p>
+                      <p className="text-[11px] text-muted-foreground mt-0.5">
+                        Pague presencialmente • Barbeiro confirma
+                      </p>
+                    </div>
+                    <div className={cn(
+                      "w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all",
+                      selectedPaymentMethod === "cash"
+                        ? "bg-primary border-primary"
+                        : "border-muted-foreground/30"
+                    )}>
+                      {selectedPaymentMethod === "cash" && <Check className="w-3 h-3 text-primary-foreground" strokeWidth={3} />}
+                    </div>
+                  </div>
+                </motion.button>
               </div>
 
               {/* Security seal */}
@@ -1049,20 +1104,22 @@ const ClienteAssinar = () => {
                   style={{ background: "linear-gradient(90deg, transparent, hsl(var(--primary) / 0.4), transparent)" }}
                 />
                 <div className="flex items-center justify-between px-3.5 py-2.5">
-                  <div className="flex items-center gap-2.5">
+                    <div className="flex items-center gap-2.5">
                     <div 
                       className="flex items-center justify-center w-8 h-8 rounded-lg"
                       style={{ background: "linear-gradient(135deg, hsl(var(--primary) / 0.15), hsl(var(--primary) / 0.05))" }}
                     >
                       {selectedPaymentMethod === "pix" ? (
                         <img src={pixIcon} alt="PIX" className="w-3.5 h-3.5" />
+                      ) : selectedPaymentMethod === "cash" ? (
+                        <Banknote className="w-3.5 h-3.5 text-primary" />
                       ) : (
                         <CreditCard className="w-3.5 h-3.5 text-primary" />
                       )}
                     </div>
                     <div>
                       <div className="text-[10px] text-muted-foreground/60">
-                        {selectedPaymentMethod === "pix" ? "Pagar via Pix" : "Pagar via Cartão"}
+                        {selectedPaymentMethod === "pix" ? "Pagar via Pix" : selectedPaymentMethod === "cash" ? "Pagar em Dinheiro" : "Pagar via Cartão"}
                       </div>
                       <div className="flex items-baseline gap-0.5 mt-0.5">
                         <span className="text-[10px] text-muted-foreground/50">R$</span>

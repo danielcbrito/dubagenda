@@ -3915,7 +3915,12 @@ export type Database = {
       financial_entry_type: "income" | "expense"
       payment_method: "card" | "pix" | "cash"
       payment_status: "pending" | "paid" | "failed" | "refunded" | "overdue"
-      subscription_status: "active" | "cancelled" | "past_due" | "suspended"
+      subscription_status:
+        | "active"
+        | "cancelled"
+        | "past_due"
+        | "suspended"
+        | "pending_cash"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -4056,7 +4061,13 @@ export const Constants = {
       financial_entry_type: ["income", "expense"],
       payment_method: ["card", "pix", "cash"],
       payment_status: ["pending", "paid", "failed", "refunded", "overdue"],
-      subscription_status: ["active", "cancelled", "past_due", "suspended"],
+      subscription_status: [
+        "active",
+        "cancelled",
+        "past_due",
+        "suspended",
+        "pending_cash",
+      ],
     },
   },
 } as const
