@@ -320,14 +320,14 @@ const ClienteAgendar = () => {
             }
             const { data: tenantServices } = await svcQuery;
             
-            if (tenantServices && tenantServices.length === 1) {
-              // Apenas 1 serviço: auto-selecionar e pular para data
+            if (tenantServices && tenantServices.length >= 1) {
+              // Auto-selecionar o primeiro serviço e pular para data
               setSelectedServices([tenantServices[0]]);
               setServices(tenantServices);
               setStep(subscription.barbeiro ? 2 : 1);
             } else {
-              // Múltiplos serviços: mostrar seleção
-              setServices(tenantServices || []);
+              // Sem serviços disponíveis
+              setServices([]);
               setStep(subscription.barbeiro ? 2 : 1);
             }
           }
