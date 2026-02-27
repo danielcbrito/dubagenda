@@ -3631,7 +3631,7 @@ export type Database = {
           connected_at: string | null
           created_at: string
           id: string
-          instance_name: string
+          instance_name: string | null
           qrcode_base64: string | null
           status: string
           updated_at: string
@@ -3642,7 +3642,7 @@ export type Database = {
           connected_at?: string | null
           created_at?: string
           id?: string
-          instance_name: string
+          instance_name?: string | null
           qrcode_base64?: string | null
           status?: string
           updated_at?: string
@@ -3653,7 +3653,7 @@ export type Database = {
           connected_at?: string | null
           created_at?: string
           id?: string
-          instance_name?: string
+          instance_name?: string | null
           qrcode_base64?: string | null
           status?: string
           updated_at?: string

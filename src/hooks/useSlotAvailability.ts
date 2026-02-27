@@ -153,6 +153,17 @@ export function useSlotAvailability(
       return;
     }
 
+    // Regra crítica: disponibilidade SEMPRE por barbeiro
+    if (!barbeiroId) {
+      console.log('[useSlotAvailability] Barbeiro não selecionado, não consultar disponibilidade global');
+      setSlots([]);
+      setOccupiedSlots([]);
+      setError(null);
+      lastSlotsRef.current = [];
+      isInitialLoadRef.current = true;
+      return;
+    }
+
     // Cancelar requisição anterior se existir
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
@@ -504,7 +515,7 @@ export function useSlotAvailability(
    * Usa partial updates para evitar scroll jump
    */
   useEffect(() => {
-    if (!selectedDate || serviceDuration <= 0) return;
+    if (!selectedDate || serviceDuration <= 0 || !barbeiroId) return;
 
     const dateStr = format(selectedDate, 'yyyy-MM-dd');
 
@@ -603,6 +614,10 @@ export function useSlotAvailability(
   }> => {
     if (!selectedDate) {
       return { available: false, message: 'Data não selecionada' };
+    }
+
+    if (!barbeiroId) {
+      return { available: false, message: 'Selecione um profissional antes de continuar.' };
     }
 
     const dateStr = format(selectedDate, 'yyyy-MM-dd');

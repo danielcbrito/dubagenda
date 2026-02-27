@@ -10,7 +10,8 @@ interface AppointmentRequest {
   hora: string;
   duracao: number;
   userId: string;
-  barberId?: string; // Filtrar por barbeiro específico
+  barberId?: string; // compatibilidade atual
+  barbeiroId?: string; // compatibilidade retroativa
   excludeAppointmentId?: string; // Para reagendamentos - excluir o agendamento atual
 }
 
@@ -50,9 +51,17 @@ Deno.serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const { data, hora, duracao, userId, barberId, excludeAppointmentId }: AppointmentRequest = await req.json();
+    const { data, hora, duracao, userId, barberId, barbeiroId, excludeAppointmentId }: AppointmentRequest = await req.json();
+    const resolvedBarberId = barberId ?? barbeiroId;
     
-    console.log('[validate-appointment] Iniciando validação:', { data, hora, duracao, userId, barberId, excludeAppointmentId });
+    console.log('[validate-appointment] Iniciando validação:', { data, hora, duracao, userId, barberId: resolvedBarberId, excludeAppointmentId });
+
+    if (!resolvedBarberId) {
+      return new Response(
+        JSON.stringify({ valid: false, message: 'Selecione um profissional para continuar.' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+      );
+    }
 
     // Parse the date and get day of week
     const appointmentDate = new Date(data + 'T12:00:00'); // Parse as local date
@@ -66,11 +75,11 @@ Deno.serve(async (req) => {
     let configError: any = null;
 
     // 1) Exceção do barbeiro para esta data
-    if (barberId) {
+    if (resolvedBarberId) {
       const result = await supabase
         .from('horarios_excepcionais_barbeiro')
         .select('*')
-        .eq('barbeiro_id', barberId)
+        .eq('barbeiro_id', resolvedBarberId)
         .eq('data', data)
         .maybeSingle();
       if (result.data) {
@@ -93,11 +102,11 @@ Deno.serve(async (req) => {
     }
 
     // 3) Config padrão do barbeiro para o dia da semana
-    if (!configData && barberId) {
+    if (!configData && resolvedBarberId) {
       const result = await supabase
         .from('configuracoes_horario_barbeiro')
         .select('*')
-        .eq('barbeiro_id', barberId)
+        .eq('barbeiro_id', resolvedBarberId)
         .eq('dia_semana', dayOfWeek)
         .maybeSingle();
       if (result.data && result.data.aberto !== null) {
@@ -208,9 +217,9 @@ Deno.serve(async (req) => {
       .eq('data', data)
       .in('status', ['pending', 'confirmed', 'completed']);
     
-    // Filtrar por barbeiro se informado
-    if (barberId) {
-      agendamentosQuery = agendamentosQuery.eq('barbeiro_id', barberId);
+    // Filtrar estritamente por barbeiro
+    if (resolvedBarberId) {
+      agendamentosQuery = agendamentosQuery.eq('barbeiro_id', resolvedBarberId);
     }
     
     // Excluir o próprio agendamento (para reagendamentos)
@@ -268,8 +277,8 @@ Deno.serve(async (req) => {
       .eq('data', data)
       .gt('expires_at', new Date().toISOString());
     
-    if (barberId) {
-      pendingQuery = pendingQuery.eq('barbeiro_id', barberId);
+    if (resolvedBarberId) {
+      pendingQuery = pendingQuery.eq('barbeiro_id', resolvedBarberId);
     }
 
     const { data: pendingBookings, error: pendingError } = await pendingQuery;
