@@ -462,6 +462,60 @@ serve(async (req) => {
       );
     }
 
+    // ─── PAY SERVICE (wallet debit for appointment) ───
+    if (action === "pay_service") {
+      const { amount, appointmentId } = body;
+
+      if (!amount || amount <= 0) {
+        return new Response(
+          JSON.stringify({ error: "Valor inválido" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      if (!appointmentId) {
+        return new Response(
+          JSON.stringify({ error: "ID do agendamento é obrigatório" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const { data: currentBalance } = await supabase
+        .rpc("get_or_create_wallet_balance", { p_user_id: user.id });
+
+      if (!currentBalance || currentBalance < amount) {
+        return new Response(
+          JSON.stringify({ error: "Saldo insuficiente na carteira" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Debit from wallet
+      await supabase
+        .from("wallet_balances")
+        .update({ balance: currentBalance - amount })
+        .eq("user_id", user.id);
+
+      // Create transaction record
+      await supabase
+        .from("wallet_transactions")
+        .insert({
+          user_id: user.id,
+          type: "payment",
+          amount,
+          status: "completed",
+          description: `Pagamento de serviço via carteira - R$ ${amount.toFixed(2)}`,
+        });
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          newBalance: currentBalance - amount,
+        }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     return new Response(
       JSON.stringify({ error: "Ação não reconhecida" }),
       { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }

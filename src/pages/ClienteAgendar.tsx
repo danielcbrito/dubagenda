@@ -2,7 +2,7 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { BackArrow } from "@/components/ui/back-arrow";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowLeft, ArrowRight, Clock, Check, Tag, CreditCard, Landmark, Loader2, Calendar as CalendarIcon, Shield, Zap, Star, Store, ChevronRight, Crown } from "lucide-react";
+import { ArrowLeft, ArrowRight, Clock, Check, Tag, CreditCard, Landmark, Loader2, Calendar as CalendarIcon, Shield, Zap, Star, Store, ChevronRight, Crown, Wallet } from "lucide-react";
 import logoDub from "@/assets/logo-dub.png";
 import pixIcon from "@/assets/pix-icon.png";
 import { toast } from "sonner";
@@ -66,7 +66,8 @@ const ClienteAgendar = () => {
   const [selectedTime, setSelectedTime] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState(1);
-  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'pix'>('cash');
+  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'pix' | 'wallet'>('cash');
+  const [walletBalance, setWalletBalance] = useState(0);
   const [processingPayment, setProcessingPayment] = useState(false);
   const [availableCredits, setAvailableCredits] = useState(0);
   const [userId, setUserId] = useState<string | null>(null);
@@ -442,6 +443,12 @@ const ClienteAgendar = () => {
 
       if (error) throw error;
       setAvailableCredits(creditsData || 0);
+
+      // Fetch wallet balance
+      const { data: walletData } = await supabase.functions.invoke('wallet-operations', {
+        body: { action: 'get_balance' }
+      });
+      setWalletBalance(walletData?.balance || 0);
     } catch (error) {
       console.error("Error loading credits:", error);
     }
@@ -926,6 +933,60 @@ const ClienteAgendar = () => {
           return;
         }
         throw new Error("Não foi possível iniciar o pagamento.");
+      }
+
+      // === Pagamento via Carteira (wallet) ===
+      if (paymentMethod === 'wallet') {
+        // Create appointment first via create-payment (cash mode)
+        const payload: any = {
+          bookingData,
+          metodo: 'wallet',
+          creditsUsed: 0,
+          rescheduleFromId: isRescheduling ? rescheduleAppointmentId : undefined,
+        };
+
+        const { data, error } = await supabase.functions.invoke('create-payment', {
+          body: payload,
+        });
+
+        if (error) throw error;
+        if (data?.error) throw new Error(data.error);
+
+        // Debit wallet
+        const { data: walletResult, error: walletError } = await supabase.functions.invoke('wallet-operations', {
+          body: {
+            action: 'pay_service',
+            amount: finalPrice,
+            appointmentId: data.appointmentId,
+          },
+        });
+
+        if (walletError || walletResult?.error) {
+          throw new Error(walletResult?.error || "Erro ao debitar carteira");
+        }
+
+        if (appliedCoupon && data.appointmentId) {
+          await registerCouponUsage(data.appointmentId);
+        }
+
+        sessionStorage.removeItem('isRescheduling');
+        sessionStorage.removeItem('rescheduleAppointmentId');
+
+        const { data: profile } = await supabase.from('profiles').select('nome, telefone').eq('id', session.user.id).single();
+        sendNovoAgendamentoEvent({
+          agendamento_id: data.appointmentId || '',
+          cliente_id: session.user.id,
+          cliente_nome: profile?.nome || session.user.email || 'Cliente',
+          cliente_telefone: profile?.telefone,
+          servico: serviceNames,
+          data: format(selectedDate, 'yyyy-MM-dd'),
+          hora: selectedTime,
+          preco: finalPrice
+        });
+
+        toast.success("Agendamento criado! Pagamento debitado da carteira.");
+        navigate("/cliente");
+        return;
       }
 
       // === Pagamento na Barbearia (cash) ===
@@ -2080,6 +2141,51 @@ const ClienteAgendar = () => {
                 </div>
               </motion.button>
 
+              {/* Pagar com Saldo da Carteira */}
+              {walletBalance > 0 && (
+                <motion.button
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => { setPaymentMethod('wallet'); setUseRedemption(false); }}
+                  disabled={walletBalance < getTotalPrice()}
+                  className={cn(
+                    "w-full rounded-xl border p-4 text-left transition-all mt-3",
+                    walletBalance < getTotalPrice() && "opacity-50 cursor-not-allowed",
+                    paymentMethod === 'wallet' && !useRedemption
+                      ? "border-emerald-500/50 bg-emerald-500/5 ring-1 ring-emerald-500/20"
+                      : "border-border/20 bg-card/50 hover:border-border/40"
+                  )}
+                >
+                  <div className="flex items-center gap-3.5">
+                    <div className={cn(
+                      "w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0",
+                      paymentMethod === 'wallet' && !useRedemption ? "bg-emerald-500/10" : "bg-muted/20"
+                    )}>
+                      <Wallet className={cn(
+                        "w-5 h-5 transition-colors",
+                        paymentMethod === 'wallet' && !useRedemption ? "text-emerald-500" : "text-muted-foreground/30"
+                      )} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[13px] font-semibold text-foreground/70">Pagar com Carteira</p>
+                      <p className="text-[11px] text-muted-foreground/50 mt-0.5">
+                        {walletBalance >= getTotalPrice() 
+                          ? `Saldo: R$ ${walletBalance.toFixed(2).replace('.', ',')}`
+                          : `Saldo insuficiente: R$ ${walletBalance.toFixed(2).replace('.', ',')}`
+                        }
+                      </p>
+                    </div>
+                    <div className={cn(
+                      "w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all",
+                      paymentMethod === 'wallet' && !useRedemption
+                        ? "bg-emerald-500 border-emerald-500"
+                        : "border-muted-foreground/20"
+                    )}>
+                      {paymentMethod === 'wallet' && !useRedemption && <Check className="w-3 h-3 text-primary-foreground" strokeWidth={3} />}
+                    </div>
+                  </div>
+                </motion.button>
+              )}
+
               {/* Resgate Grátis */}
               {canUseRedemption && (
                 <div className="mt-5">
@@ -2312,6 +2418,7 @@ const ClienteAgendar = () => {
                   label="Forma de Pagamento"
                   value={
                     useRedemption && getTotalPrice() === 0 ? "Resgate de Fidelidade" :
+                    paymentMethod === 'wallet' ? "Carteira do App" :
                     availableCredits >= getTotalPrice() ? "Créditos do App" :
                     "Pagar na Barbearia"
                   }
@@ -2446,11 +2553,13 @@ const ClienteAgendar = () => {
                       <img src={pixIcon} alt="PIX" className="w-5 h-5 object-contain" />
                     ) : paymentMethod === "card" ? (
                       <CreditCard className="w-5 h-5 text-primary" />
+                    ) : paymentMethod === "wallet" ? (
+                      <Wallet className="w-5 h-5 text-emerald-500" />
                     ) : (
                       <Landmark className="w-5 h-5 text-primary" />
                     )}
                     <span className="text-[12px] text-muted-foreground/70">
-                      {paymentMethod === "pix" ? "Pagar via Pix" : paymentMethod === "card" ? "Pagar via Cartão" : "Pagar na Barbearia"}
+                      {paymentMethod === "pix" ? "Pagar via Pix" : paymentMethod === "card" ? "Pagar via Cartão" : paymentMethod === "wallet" ? "Pagar via Carteira" : "Pagar na Barbearia"}
                     </span>
                   </div>
                   <div className="flex items-baseline gap-1">
