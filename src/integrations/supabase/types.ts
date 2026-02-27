@@ -1679,6 +1679,7 @@ export type Database = {
           categoria: string
           chave: string
           id: number
+          tenant_id: string | null
           valor: string
         }
         Insert: {
@@ -1687,6 +1688,7 @@ export type Database = {
           categoria: string
           chave: string
           id?: number
+          tenant_id?: string | null
           valor: string
         }
         Update: {
@@ -1695,9 +1697,18 @@ export type Database = {
           categoria?: string
           chave?: string
           id?: number
+          tenant_id?: string | null
           valor?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "informacoes_empresa_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       logs_agendamentos: {
         Row: {
@@ -3034,6 +3045,41 @@ export type Database = {
           valor_taxa?: number
         }
         Relationships: []
+      }
+      tenant_clientes: {
+        Row: {
+          added_by: string | null
+          blocked: boolean
+          created_at: string
+          id: string
+          tenant_id: string
+          user_id: string
+        }
+        Insert: {
+          added_by?: string | null
+          blocked?: boolean
+          created_at?: string
+          id?: string
+          tenant_id: string
+          user_id: string
+        }
+        Update: {
+          added_by?: string | null
+          blocked?: boolean
+          created_at?: string
+          id?: string
+          tenant_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_clientes_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       tenant_members: {
         Row: {

@@ -182,6 +182,7 @@ export function useSlotAvailability(
             duration: serviceDuration,
             excludeAppointmentId: excludeAppointmentId || undefined,
             barbeiroId: barbeiroId || undefined,
+            barberId: barbeiroId || undefined, // compatibilidade com versões antigas da Edge Function
             tenantId: tenantId !== undefined ? tenantId : undefined
           }),
           signal: abortControllerRef.current.signal
@@ -712,7 +713,7 @@ export function useSlotAvailability(
       console.error('[verifySlotAvailability] Erro geral:', err);
       return { available: false, message: 'Erro ao verificar disponibilidade' };
     }
-  }, [selectedDate, serviceDuration, excludeAppointmentId]);
+  }, [selectedDate, serviceDuration, excludeAppointmentId, barbeiroId]);
 
   return {
     slots,
