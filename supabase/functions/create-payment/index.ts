@@ -192,7 +192,7 @@ interface CreatePaymentRequest {
     preco: number;
     observacoes?: string;
   };
-  metodo: 'cash';
+  metodo: 'cash' | 'wallet';
   rescheduleFromId?: string;
   creditsUsed?: number;
 }
@@ -271,7 +271,7 @@ serve(async (req) => {
         status: 'pending',
         barbeiro_confirmou: false,
         cliente_confirmou: false,
-        payment_method: 'cash',
+        payment_method: metodo || 'cash',
         remarcado_de: rescheduleFromId || null,
       })
       .select()
@@ -314,9 +314,9 @@ serve(async (req) => {
     await supabase.from('pagamentos').insert({
       user_id: user.id,
       agendamento_id: appointment.id,
-      metodo: 'cash',
+      metodo: metodo || 'cash',
       valor: bookingData.preco,
-      status: 'pending',
+      status: metodo === 'wallet' ? 'paid' : 'pending',
     });
 
     return new Response(
