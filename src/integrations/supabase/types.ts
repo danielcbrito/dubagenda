@@ -1906,6 +1906,64 @@ export type Database = {
           },
         ]
       }
+      pagamentos_plano_barbearia: {
+        Row: {
+          assinatura_id: string
+          barbeiro_id: string | null
+          competencia: string
+          confirmado_por: string
+          created_at: string
+          id: string
+          observacoes: string | null
+          user_id: string
+          valor: number
+        }
+        Insert: {
+          assinatura_id: string
+          barbeiro_id?: string | null
+          competencia: string
+          confirmado_por: string
+          created_at?: string
+          id?: string
+          observacoes?: string | null
+          user_id: string
+          valor: number
+        }
+        Update: {
+          assinatura_id?: string
+          barbeiro_id?: string | null
+          competencia?: string
+          confirmado_por?: string
+          created_at?: string
+          id?: string
+          observacoes?: string | null
+          user_id?: string
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pagamentos_plano_barbearia_assinatura_id_fkey"
+            columns: ["assinatura_id"]
+            isOneToOne: false
+            referencedRelation: "assinaturas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pagamentos_plano_barbearia_barbeiro_id_fkey"
+            columns: ["barbeiro_id"]
+            isOneToOne: false
+            referencedRelation: "barbeiros"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pagamentos_plano_barbearia_barbeiro_id_fkey"
+            columns: ["barbeiro_id"]
+            isOneToOne: false
+            referencedRelation: "barbeiros_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pedido_itens: {
         Row: {
           created_at: string
@@ -3755,6 +3813,10 @@ export type Database = {
         Returns: undefined
       }
       auto_hide_old_cancelled_appointments: { Args: never; Returns: undefined }
+      auto_suspend_expired_cash_subscriptions: {
+        Args: never
+        Returns: undefined
+      }
       calcular_saldo_barbeiro: {
         Args: { p_barbeiro_id?: string; p_user_id: string }
         Returns: {
