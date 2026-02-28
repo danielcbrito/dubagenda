@@ -64,7 +64,7 @@ serve(async (req) => {
       .from("assinaturas")
       .select("*")
       .eq("user_id", user.id)
-      .in("status", ["active", "suspended"])
+      .in("status", ["active", "suspended", "pending_cash"])
       .maybeSingle();
 
     if (subError) throw new Error("Erro ao buscar assinatura");
@@ -105,9 +105,9 @@ serve(async (req) => {
     }
 
     // Para suspended (nunca ativas), deletar; para active, marcar cancelled
-    if (subscription.status === "suspended") {
+    if (subscription.status === "suspended" || subscription.status === "pending_cash") {
       await supabase.from("assinaturas").delete().eq("id", subscription.id);
-      console.log("[cancel-subscription] Suspended subscription deleted");
+      console.log("[cancel-subscription] Pending subscription deleted");
     } else {
       await supabase
         .from("assinaturas")
