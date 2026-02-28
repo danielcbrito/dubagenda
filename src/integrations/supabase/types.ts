@@ -409,6 +409,7 @@ export type Database = {
         Row: {
           asaas_payment_id: string | null
           barbeiro_id: string | null
+          cash_payment_confirmed: boolean | null
           created_at: string | null
           gateway_subscription_id: string | null
           id: string
@@ -425,6 +426,7 @@ export type Database = {
         Insert: {
           asaas_payment_id?: string | null
           barbeiro_id?: string | null
+          cash_payment_confirmed?: boolean | null
           created_at?: string | null
           gateway_subscription_id?: string | null
           id?: string
@@ -441,6 +443,7 @@ export type Database = {
         Update: {
           asaas_payment_id?: string | null
           barbeiro_id?: string | null
+          cash_payment_confirmed?: boolean | null
           created_at?: string | null
           gateway_subscription_id?: string | null
           id?: string
