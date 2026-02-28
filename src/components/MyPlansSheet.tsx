@@ -85,7 +85,7 @@ export function MyPlansSheet({ open, onOpenChange, userId, onSubscriptionChanged
           )
         `)
         .eq("user_id", userId)
-        .in("status", ["active", "suspended"])
+        .in("status", ["active", "suspended", "pending_cash"])
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();
@@ -116,6 +116,10 @@ export function MyPlansSheet({ open, onOpenChange, userId, onSubscriptionChanged
         label: "PENDENTE", 
         className: "bg-primary/10 text-primary ring-1 ring-primary/20" 
       },
+      pending_cash: { 
+        label: "AGUARDANDO", 
+        className: "bg-amber-500/10 text-amber-500 ring-1 ring-amber-500/20" 
+      },
       past_due: { 
         label: "VENCIDO", 
         className: "bg-destructive/10 text-destructive ring-1 ring-destructive/20" 
@@ -129,6 +133,7 @@ export function MyPlansSheet({ open, onOpenChange, userId, onSubscriptionChanged
   };
 
   const isSuspended = subscription?.status === "suspended";
+  const isPendingCash = subscription?.status === "pending_cash";
 
   const handleSubscribeClick = () => {
     onOpenChange(false);
@@ -287,6 +292,15 @@ export function MyPlansSheet({ open, onOpenChange, userId, onSubscriptionChanged
                         </div>
                       )}
 
+                      {/* Pending Cash info */}
+                      {isPendingCash && (
+                        <div className="pt-1">
+                          <p className="text-[11px] text-muted-foreground mb-2">
+                            Apresente o pagamento em dinheiro ao barbeiro para ativar o plano.
+                          </p>
+                        </div>
+                      )}
+
                       {/* Suspended CTA */}
                       {isSuspended && (
                         <div className="pt-1">
@@ -342,7 +356,7 @@ export function MyPlansSheet({ open, onOpenChange, userId, onSubscriptionChanged
                         <div className="text-left">
                           <p className="text-xs font-semibold text-foreground">Formas de Pagamento</p>
                           <p className="text-[11px] text-muted-foreground">
-                            {subscription.payment_method === 'card' ? 'Cartão • Débito automático' : 'PIX mensal'}
+                            {subscription.payment_method === 'cash' ? 'Dinheiro • Na barbearia' : subscription.payment_method === 'card' ? 'Cartão • Débito automático' : 'PIX mensal'}
                           </p>
                         </div>
                       </div>
@@ -355,7 +369,7 @@ export function MyPlansSheet({ open, onOpenChange, userId, onSubscriptionChanged
                     onClick={() => setCancelDialogOpen(true)}
                     className="w-full py-2.5 text-xs text-destructive/70 hover:text-destructive transition-colors"
                   >
-                    {isSuspended ? "Cancelar assinatura pendente" : "Cancelar assinatura"}
+                    {isSuspended || isPendingCash ? "Cancelar assinatura pendente" : "Cancelar assinatura"}
                   </button>
                 </motion.div>
               )}

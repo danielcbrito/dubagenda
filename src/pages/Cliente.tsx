@@ -657,6 +657,12 @@ const Cliente = () => {
                           <p className="text-[11px] text-muted-foreground mt-1">
                             Apresente o pagamento em dinheiro ao barbeiro. Após a confirmação, seus cortes serão liberados.
                           </p>
+                          <button
+                            onClick={() => setPlansSheetOpen(true)}
+                            className="text-[11px] text-primary font-semibold mt-2 hover:underline"
+                          >
+                            Ver detalhes / Cancelar
+                          </button>
                         </div>
                       </div>
                     </motion.div>
