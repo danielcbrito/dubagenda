@@ -1,4 +1,4 @@
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, Banknote, QrCode } from "lucide-react";
 import { motion } from "framer-motion";
 
 interface PlanTrackerCardProps {
@@ -6,6 +6,7 @@ interface PlanTrackerCardProps {
   usedAppointments: number;
   totalAppointments: number;
   nextBillingDate: string;
+  paymentMethod?: string | null;
   onViewDetails: () => void;
 }
 
@@ -38,6 +39,7 @@ export function PlanTrackerCard({
   usedAppointments,
   totalAppointments,
   nextBillingDate,
+  paymentMethod,
   onViewDetails,
 }: PlanTrackerCardProps) {
   const remaining = Math.max(0, totalAppointments - usedAppointments);
@@ -72,8 +74,17 @@ export function PlanTrackerCard({
             <h3 className="text-foreground font-semibold text-sm tracking-tight">
               {planName}
             </h3>
-            <p className="text-muted-foreground text-xs mt-0.5">
-              Renova em {formattedDate}
+            <p className="text-muted-foreground text-xs mt-0.5 flex items-center gap-1.5">
+              <span>Renova em {formattedDate}</span>
+              {paymentMethod && (
+                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-muted text-muted-foreground text-[10px] font-semibold uppercase tracking-wider">
+                  {paymentMethod === 'cash' ? (
+                    <><Banknote className="w-3 h-3" /> Dinheiro</>
+                  ) : (
+                    <><QrCode className="w-3 h-3" /> PIX</>
+                  )}
+                </span>
+              )}
             </p>
           </div>
 

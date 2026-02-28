@@ -586,6 +586,7 @@ const Cliente = () => {
                   usedAppointments={planUsageCount}
                   totalAppointments={4}
                   nextBillingDate={activeSubscription.next_billing_date || ""}
+                  paymentMethod={activeSubscription.payment_method}
                   onViewDetails={() => setPlansSheetOpen(true)}
                 />
               ) : pendingSubscription ? (
