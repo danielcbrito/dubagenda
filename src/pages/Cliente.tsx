@@ -604,22 +604,6 @@ const Cliente = () => {
                         <p className="text-[11px] text-muted-foreground mt-1 leading-relaxed">
                           Agende e vá à barbearia — pague o valor do plano no local. Após o barbeiro confirmar, seus próximos cortes serão liberados automaticamente.
                         </p>
-                        {planUsageCount === 0 && (
-                          <Button
-                            size="sm"
-                            onClick={() => {
-                              if (activeSubscription?.barbeiro_id) {
-                                navigate(`/cliente/agendar?barber=${activeSubscription.barbeiro_id}`);
-                              } else {
-                                navigate("/cliente/agendar");
-                              }
-                            }}
-                            className="mt-2.5 h-8 text-xs font-semibold rounded-lg"
-                          >
-                            <Calendar className="w-3.5 h-3.5 mr-1.5" />
-                            Agendar primeiro corte
-                          </Button>
-                        )}
                         {planUsageCount > 0 && (
                           <p className="text-[10px] text-amber-600 dark:text-amber-400 font-semibold mt-2">
                             ⏳ Aguardando confirmação do barbeiro para liberar os demais cortes
