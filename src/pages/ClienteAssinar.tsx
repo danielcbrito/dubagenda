@@ -452,7 +452,7 @@ const ClienteAssinar = () => {
       }
 
       if (selectedPaymentMethod === "cash") {
-        // Pagamento em dinheiro: criar assinatura pendente aguardando confirmação do barbeiro
+        // Pagamento em dinheiro: ativar plano imediatamente com 1 corte liberado
         // Limpar assinaturas suspended/pending_cash anteriores
         await supabase
           .from('assinaturas')
@@ -460,20 +460,35 @@ const ClienteAssinar = () => {
           .eq('user_id', session.user.id)
           .in('status', ['suspended', 'pending_cash']);
 
+        // Também limpar assinaturas ativas com cash não confirmado (tentativas anteriores)
+        await supabase
+          .from('assinaturas')
+          .delete()
+          .eq('user_id', session.user.id)
+          .eq('status', 'active')
+          .eq('cash_payment_confirmed', false);
+
+        const nextBilling = new Date();
+        nextBilling.setMonth(nextBilling.getMonth() + 1);
+        const nextBillingStr = `${nextBilling.getFullYear()}-${String(nextBilling.getMonth() + 1).padStart(2, '0')}-${String(nextBilling.getDate()).padStart(2, '0')}`;
+
         const { error: insertError } = await supabase
           .from('assinaturas')
           .insert({
             user_id: session.user.id,
             plano_id: selectedPlan.id,
             barbeiro_id: selectedBarber.id,
-            status: 'pending_cash' as any,
+            status: 'active' as any,
             payment_method: 'cash' as any,
+            cash_payment_confirmed: false,
+            next_billing_date: nextBillingStr,
           });
 
         if (insertError) throw insertError;
 
-        toast.success("Solicitação enviada! Apresente o pagamento ao barbeiro para ativação do plano.");
-        navigate("/cliente");
+        toast.success("Plano ativado! Agende seu primeiro corte — você pagará na barbearia.");
+        // Redirecionar direto para agendar com o barbeiro do plano
+        navigate(`/cliente/agendar?barber=${selectedBarber.id}`);
       } else if (selectedPaymentMethod === "card") {
         const { data, error } = await supabase.functions.invoke('create-subscription-card', {
           body: { planoId: selectedPlan.id, barbeiroId: selectedBarber.id }

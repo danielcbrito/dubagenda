@@ -41,11 +41,13 @@ export function AdminPendingCashSubscriptions() {
   const loadPending = async () => {
     setLoading(true);
     try {
+      // Buscar assinaturas cash ativas mas ainda não confirmadas (cash_payment_confirmed = false)
+      // E também as antigas pending_cash por retrocompatibilidade
       const { data, error } = await supabase
         .from("assinaturas")
-        .select("id, created_at, user_id, plano_id, barbeiro_id")
-        .eq("status", "pending_cash" as any)
+        .select("id, created_at, user_id, plano_id, barbeiro_id, status, cash_payment_confirmed")
         .eq("payment_method", "cash")
+        .or("status.eq.pending_cash,and(status.eq.active,cash_payment_confirmed.eq.false)" as any)
         .order("created_at", { ascending: true });
 
       if (error) throw error;
@@ -87,13 +89,14 @@ export function AdminPendingCashSubscriptions() {
         .from("assinaturas")
         .update({
           status: "active" as any,
+          cash_payment_confirmed: true,
           next_billing_date: format(nextBilling, "yyyy-MM-dd"),
         })
         .eq("id", sub.id);
 
       if (error) throw error;
 
-      toast.success(`✅ Plano ativado para ${sub.profile?.nome || "cliente"}!`);
+      toast.success(`✅ Pagamento confirmado e plano liberado para ${sub.profile?.nome || "cliente"}!`);
       loadPending();
     } catch (error) {
       console.error("Erro ao confirmar:", error);
