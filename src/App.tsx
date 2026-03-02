@@ -48,7 +48,6 @@ const PUBLIC_ROUTES = [
   '/esqueci-senha',
   '/resetar-senha',
   '/escolher-barbearia',
-  '/b'
 ];
 
 function MaintenanceWrapper({ children }: { children: React.ReactNode }) {
@@ -66,8 +65,15 @@ function MaintenanceWrapper({ children }: { children: React.ReactNode }) {
 
   // Check if current route is public (before login)
   const isPublicRoute = PUBLIC_ROUTES.some(route => 
-    location.pathname === route || location.pathname.startsWith('/auth') || location.pathname.startsWith('/b/')
+    location.pathname === route || location.pathname.startsWith('/auth')
   );
+
+  // Also treat /:slug (barbershop public pages) as public
+  const isBarbershopSlug = !location.pathname.startsWith('/admin') && 
+    !location.pathname.startsWith('/cliente') && 
+    !location.pathname.startsWith('/ti') &&
+    !location.pathname.startsWith('/suporte') &&
+    location.pathname.split('/').filter(Boolean).length === 1;
 
   // If still loading, show nothing (to avoid flash)
   if (isLoading) {
@@ -75,7 +81,7 @@ function MaintenanceWrapper({ children }: { children: React.ReactNode }) {
   }
 
   // Public routes (login, signup, etc.) are always accessible
-  if (isPublicRoute) {
+  if (isPublicRoute || isBarbershopSlug) {
     return (
       <div className="flex flex-col min-h-dvh">
         <div className="flex-1 flex flex-col min-h-0">
@@ -235,7 +241,7 @@ function AppRoutes() {
           <Route path="/cliente/barbeiro/:barberId/avaliacoes" element={<BarberReviews />} />
           <Route path="/suporte" element={<SupportChat />} />
           <Route path="/escolher-barbearia" element={<EscolherBarbearia />} />
-          <Route path="/b/:slug" element={<BarbershopPublic />} />
+          <Route path="/:slug" element={<BarbershopPublic />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </MaintenanceWrapper>
