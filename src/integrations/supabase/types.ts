@@ -3990,20 +3990,31 @@ export type Database = {
           ativo: boolean | null
           foto_url: string | null
           id: string | null
+          tenant_id: string | null
         }
         Insert: {
           apelido?: string | null
           ativo?: boolean | null
           foto_url?: string | null
           id?: string | null
+          tenant_id?: string | null
         }
         Update: {
           apelido?: string | null
           ativo?: boolean | null
           foto_url?: string | null
           id?: string | null
+          tenant_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "barbeiros_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Functions: {
