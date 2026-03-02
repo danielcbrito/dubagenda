@@ -65,7 +65,7 @@ function MaintenanceWrapper({ children }: { children: React.ReactNode }) {
 
   // Check if current route is public (before login)
   const isPublicRoute = PUBLIC_ROUTES.some(route => 
-    location.pathname === route || location.pathname.startsWith('/auth')
+    location.pathname === route || location.pathname.startsWith('/auth') || location.pathname.startsWith('/b/')
   );
 
   // Also treat /:slug (barbershop public pages) as public
@@ -241,6 +241,7 @@ function AppRoutes() {
           <Route path="/cliente/barbeiro/:barberId/avaliacoes" element={<BarberReviews />} />
           <Route path="/suporte" element={<SupportChat />} />
           <Route path="/escolher-barbearia" element={<EscolherBarbearia />} />
+          <Route path="/b/:slug" element={<BarbershopPublic />} />
           <Route path="/:slug" element={<BarbershopPublic />} />
           <Route path="*" element={<NotFound />} />
         </Routes>

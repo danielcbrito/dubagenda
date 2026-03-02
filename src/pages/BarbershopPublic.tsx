@@ -113,15 +113,36 @@ const BarbershopPublic = () => {
 
     // Fallback 2: maybe the slug is a barber name — find their tenant
     if (!data) {
-      const { data: barberMatch } = await supabase
+      const normalizedSlug = slug!.replace(/-/g, ' ');
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(slug!);
+
+      let barberMatch: { tenant_id: string | null } | null = null;
+
+      const { data: barberByName } = await supabase
         .from("barbeiros")
         .select("tenant_id")
-        .ilike("apelido", slug!.replace(/-/g, ' '))
+        .ilike("apelido", normalizedSlug)
         .eq("ativo", true)
         .is("deleted_at", null)
         .not("tenant_id", "is", null)
         .limit(1)
         .maybeSingle();
+
+      barberMatch = barberByName;
+
+      if (!barberMatch && isUuid) {
+        const { data: barberById } = await supabase
+          .from("barbeiros")
+          .select("tenant_id")
+          .eq("id", slug!)
+          .eq("ativo", true)
+          .is("deleted_at", null)
+          .not("tenant_id", "is", null)
+          .limit(1)
+          .maybeSingle();
+
+        barberMatch = barberById;
+      }
 
       if (barberMatch?.tenant_id) {
         const { data: tenantFromBarber } = await supabase
