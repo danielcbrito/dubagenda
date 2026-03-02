@@ -12,6 +12,7 @@ import { BarbershopDetailSheet } from "@/components/discover/BarbershopDetailShe
 interface Tenant {
   id: string;
   nome: string;
+  slug?: string | null;
   slogan: string | null;
   logo_url: string | null;
   cidade: string | null;
@@ -41,6 +42,14 @@ function formatDistance(km: number): string {
   return `${Math.round(km)}km`;
 }
 
+function normalizeText(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-zA-Z0-9]/g, "")
+    .toLowerCase();
+}
+
 // ── DUB Coordinates (Rua Ferrador, 108 – Cidade Ipava, São Paulo) ──
 const DUB_COORDS = { lat: -23.7219695, lng: -46.7615913 };
 
@@ -57,6 +66,7 @@ const EscolherBarbearia = () => {
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [locationStatus, setLocationStatus] = useState<"idle" | "requesting" | "granted" | "denied">("idle");
   const [dubRating, setDubRating] = useState<{ avg: number; count: number } | null>(null);
+  const [dubTenant, setDubTenant] = useState<Tenant | null>(null);
   const [selectedShop, setSelectedShop] = useState<string | null>(null); // "dub" or tenant id
   const [hasAutoOpened, setHasAutoOpened] = useState(false);
 
@@ -91,12 +101,19 @@ const EscolherBarbearia = () => {
   useEffect(() => {
     if (!shouldOpenCurrent || isLoading || hasAutoOpened) return;
     setHasAutoOpened(true);
-    if (currentPreferred) {
-      setSelectedShop(currentPreferred);
-    } else {
+
+    if (!currentPreferred) {
       setSelectedShop("dub");
+      return;
     }
-  }, [shouldOpenCurrent, isLoading, hasAutoOpened, currentPreferred]);
+
+    if (dubTenant?.id && currentPreferred === dubTenant.id) {
+      setSelectedShop("dub");
+      return;
+    }
+
+    setSelectedShop(currentPreferred);
+  }, [shouldOpenCurrent, isLoading, hasAutoOpened, currentPreferred, dubTenant?.id]);
 
   // ── Geolocation ──
   useEffect(() => {
@@ -117,7 +134,7 @@ const EscolherBarbearia = () => {
     setIsLoading(true);
     const { data, error } = await supabase
       .from("tenants")
-      .select("id, nome, slogan, logo_url, cidade, bairro, estado, latitude, longitude")
+      .select("id, nome, slug, slogan, logo_url, cidade, bairro, estado, latitude, longitude")
       .eq("ativo", true)
       .eq("onboarding_completed", true)
       .order("nome");
@@ -126,12 +143,14 @@ const EscolherBarbearia = () => {
       console.error("Erro ao carregar barbearias:", error);
       toast.error("Erro ao carregar barbearias");
       setTenants([]);
+      setDubTenant(null);
       setIsLoading(false);
       return;
     }
 
     const tenantList = (data as Tenant[]) || [];
     let curatedTenants = tenantList;
+    let dubTenantFromList: Tenant | null = null;
 
     if (tenantList.length > 0) {
       const tenantIds = tenantList.map((t) => t.id);
@@ -146,6 +165,13 @@ const EscolherBarbearia = () => {
         (barbers ?? []).map((b) => b.tenant_id).filter((tid): tid is string => !!tid)
       );
       curatedTenants = tenantList.filter((t) => activeTenantIds.has(t.id));
+
+      dubTenantFromList =
+        curatedTenants.find((t) => {
+          const slugNormalized = normalizeText(t.slug ?? "");
+          const nameNormalized = normalizeText(t.nome ?? "");
+          return slugNormalized === "barbeariadub" || nameNormalized === "barbeariadub";
+        }) ?? null;
 
       if (barbers && barbers.length > 0) {
         const barberIds = barbers.map((b) => b.id);
@@ -167,19 +193,30 @@ const EscolherBarbearia = () => {
           }
           for (const t of curatedTenants) {
             const stats = tenantRatings.get(t.id);
-            if (stats) { t.avgRating = stats.sum / stats.count; t.totalReviews = stats.count; }
+            if (stats) {
+              t.avgRating = stats.sum / stats.count;
+              t.totalReviews = stats.count;
+            }
           }
         }
       }
     }
 
-    // DUB ratings
-    const { data: dubBarbers } = await supabase
+    const partnerTenants = curatedTenants.filter((t) => t.id !== dubTenantFromList?.id);
+
+    let dubBarbersQuery = supabase
       .from("barbeiros")
       .select("id")
-      .is("tenant_id", null)
       .eq("ativo", true)
       .is("deleted_at", null);
+
+    if (dubTenantFromList?.id) {
+      dubBarbersQuery = dubBarbersQuery.or(`tenant_id.eq.${dubTenantFromList.id},tenant_id.is.null`);
+    } else {
+      dubBarbersQuery = dubBarbersQuery.is("tenant_id", null);
+    }
+
+    const { data: dubBarbers } = await dubBarbersQuery;
 
     if (dubBarbers && dubBarbers.length > 0) {
       const dubBarberIds = dubBarbers.map((b) => b.id);
@@ -191,10 +228,15 @@ const EscolherBarbearia = () => {
       if (dubReviews && dubReviews.length > 0) {
         const sum = dubReviews.reduce((s, r) => s + r.rating, 0);
         setDubRating({ avg: sum / dubReviews.length, count: dubReviews.length });
+      } else {
+        setDubRating(null);
       }
+    } else {
+      setDubRating(null);
     }
 
-    setTenants(curatedTenants);
+    setDubTenant(dubTenantFromList);
+    setTenants(partnerTenants);
     setIsLoading(false);
   };
 
@@ -276,10 +318,15 @@ const EscolherBarbearia = () => {
     (t.bairro && t.bairro.toLowerCase().includes(search.toLowerCase())) ||
     (t.cidade && t.cidade.toLowerCase().includes(search.toLowerCase()))
   );
-  const isDubSelected = !currentPreferred;
+  const isDubSelected = !currentPreferred || (dubTenant?.id ? currentPreferred === dubTenant.id : false);
+  const dubCoords = {
+    lat: dubTenant?.latitude ?? DUB_COORDS.lat,
+    lng: dubTenant?.longitude ?? DUB_COORDS.lng,
+  };
   const dubDistance = userLocation
-    ? haversineDistance(userLocation.lat, userLocation.lng, DUB_COORDS.lat, DUB_COORDS.lng)
+    ? haversineDistance(userLocation.lat, userLocation.lng, dubCoords.lat, dubCoords.lng)
     : null;
+  const dubLocationLabel = [dubTenant?.bairro ?? "Cidade Ipava", dubTenant?.cidade ?? "São Paulo"].filter(Boolean).join(", ");
 
   // ── Selected tenant for sheet ──
   const selectedTenant = selectedShop && selectedShop !== "dub"
@@ -359,19 +406,23 @@ const EscolherBarbearia = () => {
                     <div className="flex items-center gap-3.5">
                       {/* Logo — elevated */}
                       <div className={cn(
-                        "w-14 h-14 rounded-2xl flex items-center justify-center shrink-0",
+                        "w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 overflow-hidden",
                         "bg-background border-2 border-border/15",
                         "shadow-md shadow-background/50"
                       )}>
-                        <img src={logoDub} alt="DUB" className="w-8 h-8 object-contain" />
+                        {dubTenant?.logo_url ? (
+                          <img src={dubTenant.logo_url} alt={dubTenant.nome} className="w-full h-full object-cover" />
+                        ) : (
+                          <img src={logoDub} alt="DUB" className="w-8 h-8 object-contain" />
+                        )}
                       </div>
 
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1.5">
-                          <span className="text-[15px] font-bold text-foreground tracking-tight">Barbearia DUB</span>
+                          <span className="text-[15px] font-bold text-foreground tracking-tight">{dubTenant?.nome ?? "Barbearia DUB"}</span>
                           <Crown className="w-3 h-3 text-primary/50" />
                         </div>
-                        <p className="text-[10px] text-muted-foreground/60 mt-0.5">Corte premium • Cidade Ipava</p>
+                        <p className="text-[10px] text-muted-foreground/60 mt-0.5">{dubTenant?.slogan ?? "Corte premium"} • {dubLocationLabel}</p>
 
                         {/* Badges row */}
                         <div className="flex items-center gap-2 mt-2">
@@ -507,22 +558,23 @@ const EscolherBarbearia = () => {
       <BarbershopDetailSheet
         open={selectedShop === "dub"}
         onClose={() => setSelectedShop(null)}
-        tenantId={null}
-        tenantName="Barbearia DUB"
-        tenantLogo={logoDub}
-        tenantSlogan="Corte premium"
-        tenantBairro="Cidade Ipava"
-        tenantCidade="São Paulo"
-        tenantEstado="SP"
+        tenantId={dubTenant?.id ?? null}
+        tenantName={dubTenant?.nome ?? "Barbearia DUB"}
+        tenantLogo={dubTenant?.logo_url ?? logoDub}
+        tenantSlogan={dubTenant?.slogan ?? "Corte premium"}
+        tenantBairro={dubTenant?.bairro ?? "Cidade Ipava"}
+        tenantCidade={dubTenant?.cidade ?? "São Paulo"}
+        tenantEstado={dubTenant?.estado ?? "SP"}
         avgRating={dubRating?.avg ?? null}
         totalReviews={dubRating?.count ?? 0}
         distance={dubDistance}
-        latitude={DUB_COORDS.lat}
-        longitude={DUB_COORDS.lng}
+        latitude={dubTenant?.latitude ?? DUB_COORDS.lat}
+        longitude={dubTenant?.longitude ?? DUB_COORDS.lng}
         isCurrent={isDubSelected}
         saving={saving === "dub"}
         onSelect={handleBackToDub}
         isDub
+        includeGlobalBarbers={!!dubTenant?.id}
       />
 
       {/* ══════ Detail Sheet — Tenant ══════ */}
