@@ -62,6 +62,14 @@ const BarbershopPublic = () => {
   const [avgRating, setAvgRating] = useState<number | null>(null);
   const [totalReviews, setTotalReviews] = useState(0);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  // Check auth
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setIsLoggedIn(!!session);
+    });
+  }, []);
 
   // Geolocation
   useEffect(() => {
@@ -81,15 +89,29 @@ const BarbershopPublic = () => {
 
   const loadTenant = async () => {
     setLoading(true);
-    const { data, error } = await supabase
+
+    // Try exact slug match first
+    let { data, error } = await supabase
       .from("tenants")
       .select("id, nome, slogan, logo_url, telefone, whatsapp, email, site, rua, numero, bairro, cidade, estado, endereco_completo, latitude, longitude")
       .eq("slug", slug)
       .eq("ativo", true)
       .eq("onboarding_completed", true)
-      .single();
+      .maybeSingle();
 
-    if (error || !data) {
+    // Fallback: case-insensitive ilike match
+    if (!data) {
+      const { data: fallbackData } = await supabase
+        .from("tenants")
+        .select("id, nome, slogan, logo_url, telefone, whatsapp, email, site, rua, numero, bairro, cidade, estado, endereco_completo, latitude, longitude")
+        .ilike("slug", slug!)
+        .eq("ativo", true)
+        .eq("onboarding_completed", true)
+        .maybeSingle();
+      data = fallbackData;
+    }
+
+    if (!data) {
       setNotFound(true);
       setLoading(false);
       return;
@@ -182,7 +204,17 @@ const BarbershopPublic = () => {
 
   const handleJoin = () => {
     if (tenant) {
-      navigate(`/auth?mode=signup&origin=discover&tenant=${tenant.id}`);
+      if (isLoggedIn) {
+        navigate(`/escolher-barbearia?mode=change`);
+      } else {
+        navigate(`/auth?mode=signup&origin=discover&tenant=${tenant.id}`);
+      }
+    }
+  };
+
+  const handleLogin = () => {
+    if (tenant) {
+      navigate(`/auth?mode=login&origin=discover&tenant=${tenant.id}`);
     }
   };
 
@@ -429,21 +461,55 @@ const BarbershopPublic = () => {
         className="absolute bottom-0 left-0 right-0 p-4 pb-[calc(1rem+env(safe-area-inset-bottom))]"
         style={{ background: "linear-gradient(to top, hsl(var(--background)) 60%, transparent)" }}
       >
-        <motion.button
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5 }}
-          onClick={handleJoin}
-          className={cn(
-            "w-full h-[52px] rounded-xl font-semibold text-[14px] tracking-wide",
-            "flex items-center justify-center gap-2",
-            "transition-all duration-200 active:scale-[0.985]",
-            "bg-foreground text-background shadow-lg"
-          )}
-        >
-          <span>Quero ser cliente</span>
-          <ArrowRight className="w-4 h-4" />
-        </motion.button>
+        {isLoggedIn ? (
+          <motion.button
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5 }}
+            onClick={handleJoin}
+            className={cn(
+              "w-full h-[52px] rounded-xl font-semibold text-[14px] tracking-wide",
+              "flex items-center justify-center gap-2",
+              "transition-all duration-200 active:scale-[0.985]",
+              "bg-foreground text-background shadow-lg"
+            )}
+          >
+            <span>Escolher esta barbearia</span>
+            <ArrowRight className="w-4 h-4" />
+          </motion.button>
+        ) : (
+          <div className="flex gap-2.5">
+            <motion.button
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5 }}
+              onClick={handleLogin}
+              className={cn(
+                "flex-1 h-[52px] rounded-xl font-semibold text-[13px] tracking-wide",
+                "flex items-center justify-center gap-1.5",
+                "transition-all duration-200 active:scale-[0.985]",
+                "bg-card border border-border text-foreground"
+              )}
+            >
+              Já sou cliente
+            </motion.button>
+            <motion.button
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.55 }}
+              onClick={handleJoin}
+              className={cn(
+                "flex-1 h-[52px] rounded-xl font-semibold text-[13px] tracking-wide",
+                "flex items-center justify-center gap-1.5",
+                "transition-all duration-200 active:scale-[0.985]",
+                "bg-foreground text-background shadow-lg"
+              )}
+            >
+              <span>Criar conta</span>
+              <ArrowRight className="w-4 h-4" />
+            </motion.button>
+          </div>
+        )}
       </div>
     </div>
   );
