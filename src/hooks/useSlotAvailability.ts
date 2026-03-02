@@ -267,10 +267,12 @@ export function useSlotAvailability(
     try {
       console.log('[useSlotAvailability FALLBACK] Iniciando carregamento direto...');
       
+      // CRITICAL: Usar timezone de Brasília (igual ao backend)
       const now = new Date();
-      const todayStr = format(now, 'yyyy-MM-dd');
+      const brasilNow = new Date(now.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
+      const todayStr = `${brasilNow.getFullYear()}-${String(brasilNow.getMonth() + 1).padStart(2, '0')}-${String(brasilNow.getDate()).padStart(2, '0')}`;
       const isToday = dateStr === todayStr;
-      const currentMinutes = now.getHours() * 60 + now.getMinutes();
+      const currentMinutes = brasilNow.getHours() * 60 + brasilNow.getMinutes();
       const minimumAdvanceMinutes = isToday ? currentMinutes + MINIMUM_ADVANCE_MINUTES : 0;
 
       // Buscar configuração do dia com exceções

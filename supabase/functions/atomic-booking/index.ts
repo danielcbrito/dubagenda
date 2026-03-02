@@ -10,7 +10,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.80.0';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
 const BLOCKING_STATUSES = ['pending', 'confirmed', 'completed'];
@@ -126,6 +126,22 @@ Deno.serve(async (req) => {
         JSON.stringify({ success: false, message: `Horário fora do expediente (${openTime}-${closeTime}).` }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 409 }
       );
+    }
+
+    // Validar horário de almoço
+    const lunchStartMinutes = resolvedConfig.hora_almoco_inicio ? (() => { const [h, m] = resolvedConfig.hora_almoco_inicio.split(':').map(Number); return h * 60 + m; })() : null;
+    const lunchEndMinutes = resolvedConfig.hora_almoco_fim ? (() => { const [h, m] = resolvedConfig.hora_almoco_fim.split(':').map(Number); return h * 60 + m; })() : null;
+
+    if (lunchStartMinutes !== null && lunchEndMinutes !== null) {
+      if (slotStartMinutes < lunchEndMinutes && slotEndMinutes > lunchStartMinutes) {
+        const lunchStart = resolvedConfig.hora_almoco_inicio;
+        const lunchEnd = resolvedConfig.hora_almoco_fim;
+        console.log(`[atomic-booking] ❌ Horário de almoço: ${time} vs ${lunchStart}-${lunchEnd}`);
+        return new Response(
+          JSON.stringify({ success: false, message: `Horário de almoço (${lunchStart}-${lunchEnd}).` }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 409 }
+        );
+      }
     }
 
     // Verificar agendamentos existentes (FILTRADO POR BARBEIRO)
