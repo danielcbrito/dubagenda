@@ -8,6 +8,7 @@ import { BrowserRouter, Routes, Route, useNavigate, useLocation } from "react-ro
 import { useMaintenanceMode } from "@/hooks/useMaintenanceMode";
 import { MaintenanceScreen } from "@/components/MaintenanceScreen";
 import { MaintenanceWarningBanner } from "@/components/MaintenanceWarningBanner";
+import { GlobalErrorBoundary } from "@/components/GlobalErrorBoundary";
 import { supabase } from "@/integrations/supabase/client";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
@@ -263,18 +264,20 @@ function ThemeColorSync() {
 }
 
 const App = () => (
-  <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
-    <ThemeColorSync />
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <AppRoutes />
-        </BrowserRouter>
-      </TooltipProvider>
-    </QueryClientProvider>
-  </ThemeProvider>
+  <GlobalErrorBoundary>
+    <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
+      <ThemeColorSync />
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <AppRoutes />
+          </BrowserRouter>
+        </TooltipProvider>
+      </QueryClientProvider>
+    </ThemeProvider>
+  </GlobalErrorBoundary>
 );
 
 export default App;
