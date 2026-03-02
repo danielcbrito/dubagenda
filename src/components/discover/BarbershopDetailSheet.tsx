@@ -32,6 +32,7 @@ interface BarbershopDetailSheetProps {
   saving: boolean;
   onSelect: () => void;
   isDub?: boolean;
+  includeGlobalBarbers?: boolean;
 }
 
 function formatDistance(km: number): string {
@@ -54,6 +55,7 @@ export function BarbershopDetailSheet({
   tenantBairro, tenantCidade, tenantEstado,
   avgRating, totalReviews, distance, latitude, longitude,
   isCurrent, saving, onSelect, isDub,
+  includeGlobalBarbers = false,
 }: BarbershopDetailSheetProps) {
   const [barbers, setBarbers] = useState<Barber[]>([]);
   const [loadingBarbers, setLoadingBarbers] = useState(false);
@@ -63,7 +65,7 @@ export function BarbershopDetailSheet({
     if (!open) return;
     loadBarbers();
     loadBanner();
-  }, [open, tenantId]);
+  }, [open, tenantId, includeGlobalBarbers]);
 
   const loadBanner = async () => {
     try {
@@ -74,7 +76,9 @@ export function BarbershopDetailSheet({
         .is("deleted_at", null)
         .limit(1);
 
-      if (tenantId) {
+      if (tenantId && includeGlobalBarbers) {
+        query = query.or(`tenant_id.eq.${tenantId},tenant_id.is.null`);
+      } else if (tenantId) {
         query = query.eq("tenant_id", tenantId);
       } else {
         query = query.is("tenant_id", null);
@@ -100,7 +104,9 @@ export function BarbershopDetailSheet({
         .eq("ativo", true)
         .is("deleted_at", null);
 
-      if (tenantId) {
+      if (tenantId && includeGlobalBarbers) {
+        query = query.or(`tenant_id.eq.${tenantId},tenant_id.is.null`);
+      } else if (tenantId) {
         query = query.eq("tenant_id", tenantId);
       } else {
         query = query.is("tenant_id", null);
