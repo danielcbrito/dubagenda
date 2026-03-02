@@ -3463,6 +3463,7 @@ export type Database = {
           rua: string | null
           site: string | null
           slogan: string | null
+          slug: string | null
           telefone: string | null
           trial_ends_at: string | null
           updated_at: string
@@ -3490,6 +3491,7 @@ export type Database = {
           rua?: string | null
           site?: string | null
           slogan?: string | null
+          slug?: string | null
           telefone?: string | null
           trial_ends_at?: string | null
           updated_at?: string
@@ -3517,6 +3519,7 @@ export type Database = {
           rua?: string | null
           site?: string | null
           slogan?: string | null
+          slug?: string | null
           telefone?: string | null
           trial_ends_at?: string | null
           updated_at?: string
@@ -4065,6 +4068,7 @@ export type Database = {
         Returns: string
       }
       format_phone_for_whatsapp: { Args: { phone: string }; Returns: string }
+      generate_tenant_slug: { Args: { tenant_name: string }; Returns: string }
       get_admin_banner_for_barber: {
         Args: { p_barbeiro_id: string }
         Returns: string
