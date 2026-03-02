@@ -33,6 +33,7 @@ import SupportChat from "./pages/SupportChat";
 import NotFound from "./pages/NotFound";
 import BarberReviews from "./pages/BarberReviews";
 import EscolherBarbearia from "./pages/EscolherBarbearia";
+import BarbershopPublic from "./pages/BarbershopPublic";
 
 const queryClient = new QueryClient();
 
@@ -46,7 +47,8 @@ const PUBLIC_ROUTES = [
   '/escolher-verificacao',
   '/esqueci-senha',
   '/resetar-senha',
-  '/escolher-barbearia'
+  '/escolher-barbearia',
+  '/b'
 ];
 
 function MaintenanceWrapper({ children }: { children: React.ReactNode }) {
@@ -64,7 +66,7 @@ function MaintenanceWrapper({ children }: { children: React.ReactNode }) {
 
   // Check if current route is public (before login)
   const isPublicRoute = PUBLIC_ROUTES.some(route => 
-    location.pathname === route || location.pathname.startsWith('/auth')
+    location.pathname === route || location.pathname.startsWith('/auth') || location.pathname.startsWith('/b/')
   );
 
   // If still loading, show nothing (to avoid flash)
@@ -233,6 +235,7 @@ function AppRoutes() {
           <Route path="/cliente/barbeiro/:barberId/avaliacoes" element={<BarberReviews />} />
           <Route path="/suporte" element={<SupportChat />} />
           <Route path="/escolher-barbearia" element={<EscolherBarbearia />} />
+          <Route path="/b/:slug" element={<BarbershopPublic />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </MaintenanceWrapper>
