@@ -3107,6 +3107,122 @@ export type Database = {
         }
         Relationships: []
       }
+      tenant_assinaturas: {
+        Row: {
+          cakto_customer_email: string | null
+          cakto_order_id: string | null
+          cakto_subscription_id: string | null
+          cancelled_at: string | null
+          created_at: string | null
+          id: string
+          next_billing_date: string | null
+          paid_at: string | null
+          payment_method: string | null
+          payment_reference: string | null
+          plano_id: string | null
+          qtd_barbeiros: number
+          status: Database["public"]["Enums"]["tenant_subscription_status"]
+          subscription_start: string | null
+          tenant_id: string
+          trial_end: string
+          trial_start: string
+          updated_at: string | null
+        }
+        Insert: {
+          cakto_customer_email?: string | null
+          cakto_order_id?: string | null
+          cakto_subscription_id?: string | null
+          cancelled_at?: string | null
+          created_at?: string | null
+          id?: string
+          next_billing_date?: string | null
+          paid_at?: string | null
+          payment_method?: string | null
+          payment_reference?: string | null
+          plano_id?: string | null
+          qtd_barbeiros?: number
+          status?: Database["public"]["Enums"]["tenant_subscription_status"]
+          subscription_start?: string | null
+          tenant_id: string
+          trial_end?: string
+          trial_start?: string
+          updated_at?: string | null
+        }
+        Update: {
+          cakto_customer_email?: string | null
+          cakto_order_id?: string | null
+          cakto_subscription_id?: string | null
+          cancelled_at?: string | null
+          created_at?: string | null
+          id?: string
+          next_billing_date?: string | null
+          paid_at?: string | null
+          payment_method?: string | null
+          payment_reference?: string | null
+          plano_id?: string | null
+          qtd_barbeiros?: number
+          status?: Database["public"]["Enums"]["tenant_subscription_status"]
+          subscription_start?: string | null
+          tenant_id?: string
+          trial_end?: string
+          trial_start?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_assinaturas_plano_id_fkey"
+            columns: ["plano_id"]
+            isOneToOne: false
+            referencedRelation: "tenant_planos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_assinaturas_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tenant_cakto_events: {
+        Row: {
+          cakto_order_id: string | null
+          created_at: string
+          event_type: string
+          id: string
+          payload: Json
+          processed: boolean
+          tenant_id: string | null
+        }
+        Insert: {
+          cakto_order_id?: string | null
+          created_at?: string
+          event_type: string
+          id?: string
+          payload?: Json
+          processed?: boolean
+          tenant_id?: string | null
+        }
+        Update: {
+          cakto_order_id?: string | null
+          created_at?: string
+          event_type?: string
+          id?: string
+          payload?: Json
+          processed?: boolean
+          tenant_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_cakto_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tenant_clientes: {
         Row: {
           added_by: string | null
@@ -3212,6 +3328,83 @@ export type Database = {
           },
         ]
       }
+      tenant_plano_faixas: {
+        Row: {
+          created_at: string
+          id: string
+          max_barbeiros: number | null
+          min_barbeiros: number
+          plano_id: string
+          preco_cheio: number
+          preco_promocional: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          max_barbeiros?: number | null
+          min_barbeiros?: number
+          plano_id: string
+          preco_cheio: number
+          preco_promocional: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          max_barbeiros?: number | null
+          min_barbeiros?: number
+          plano_id?: string
+          preco_cheio?: number
+          preco_promocional?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_plano_faixas_plano_id_fkey"
+            columns: ["plano_id"]
+            isOneToOne: false
+            referencedRelation: "tenant_planos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tenant_planos: {
+        Row: {
+          ativo: boolean | null
+          created_at: string | null
+          descricao: string | null
+          destaque: boolean | null
+          funcionalidades: Json | null
+          id: string
+          nome: string
+          preco_anual: number | null
+          preco_mensal: number
+          updated_at: string | null
+        }
+        Insert: {
+          ativo?: boolean | null
+          created_at?: string | null
+          descricao?: string | null
+          destaque?: boolean | null
+          funcionalidades?: Json | null
+          id?: string
+          nome: string
+          preco_anual?: number | null
+          preco_mensal?: number
+          updated_at?: string | null
+        }
+        Update: {
+          ativo?: boolean | null
+          created_at?: string | null
+          descricao?: string | null
+          destaque?: boolean | null
+          funcionalidades?: Json | null
+          id?: string
+          nome?: string
+          preco_anual?: number | null
+          preco_mensal?: number
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       tenant_webhook_config: {
         Row: {
           ativo: boolean | null
@@ -3271,6 +3464,7 @@ export type Database = {
           site: string | null
           slogan: string | null
           telefone: string | null
+          trial_ends_at: string | null
           updated_at: string
           whatsapp: string | null
         }
@@ -3297,6 +3491,7 @@ export type Database = {
           site?: string | null
           slogan?: string | null
           telefone?: string | null
+          trial_ends_at?: string | null
           updated_at?: string
           whatsapp?: string | null
         }
@@ -3323,6 +3518,7 @@ export type Database = {
           site?: string | null
           slogan?: string | null
           telefone?: string | null
+          trial_ends_at?: string | null
           updated_at?: string
           whatsapp?: string | null
         }
@@ -3903,6 +4099,19 @@ export type Database = {
           updated_at: string
         }[]
       }
+      get_tenant_subscription_status: {
+        Args: { p_tenant_id: string }
+        Returns: {
+          days_remaining: number
+          is_active: boolean
+          is_expired: boolean
+          is_trial: boolean
+          plano_nome: string
+          preco_mensal: number
+          status: string
+          trial_end: string
+        }[]
+      }
       get_user_available_credits: {
         Args: { p_user_id: string }
         Returns: number
@@ -3986,6 +4195,12 @@ export type Database = {
         | "past_due"
         | "suspended"
         | "pending_cash"
+      tenant_subscription_status:
+        | "trialing"
+        | "active"
+        | "expired"
+        | "cancelled"
+        | "past_due"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -4132,6 +4347,13 @@ export const Constants = {
         "past_due",
         "suspended",
         "pending_cash",
+      ],
+      tenant_subscription_status: [
+        "trialing",
+        "active",
+        "expired",
+        "cancelled",
+        "past_due",
       ],
     },
   },
