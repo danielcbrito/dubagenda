@@ -111,6 +111,38 @@ const BarbershopPublic = () => {
       data = fallbackData;
     }
 
+    // Fallback 2: maybe the slug is a barber name — find their tenant
+    if (!data) {
+      const { data: barberMatch } = await supabase
+        .from("barbeiros")
+        .select("tenant_id")
+        .ilike("apelido", slug!.replace(/-/g, ' '))
+        .eq("ativo", true)
+        .is("deleted_at", null)
+        .not("tenant_id", "is", null)
+        .limit(1)
+        .maybeSingle();
+
+      if (barberMatch?.tenant_id) {
+        const { data: tenantFromBarber } = await supabase
+          .from("tenants")
+          .select("id, nome, slogan, logo_url, telefone, whatsapp, email, site, rua, numero, bairro, cidade, estado, endereco_completo, latitude, longitude, slug")
+          .eq("id", barberMatch.tenant_id)
+          .eq("ativo", true)
+          .eq("onboarding_completed", true)
+          .maybeSingle();
+
+        if (tenantFromBarber) {
+          // Redirect to correct tenant slug URL
+          if (tenantFromBarber.slug && tenantFromBarber.slug !== slug) {
+            navigate(`/${tenantFromBarber.slug}`, { replace: true });
+            return;
+          }
+          data = tenantFromBarber;
+        }
+      }
+    }
+
     if (!data) {
       setNotFound(true);
       setLoading(false);
