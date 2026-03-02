@@ -198,12 +198,13 @@ const BarbershopPublic = () => {
   const loadBarbers = async (tenantId: string) => {
     setLoadingBarbers(true);
     try {
+      // Fetch barbers: both tenant-specific AND global (tenant_id IS NULL)
       const { data: barberData } = await supabase
         .from("barbeiros")
-        .select("id, apelido, foto_url")
-        .eq("tenant_id", tenantId)
+        .select("id, apelido, foto_url, tenant_id")
         .eq("ativo", true)
-        .is("deleted_at", null);
+        .is("deleted_at", null)
+        .or(`tenant_id.eq.${tenantId},tenant_id.is.null`);
 
       if (!barberData || barberData.length === 0) {
         setBarbers([]);
