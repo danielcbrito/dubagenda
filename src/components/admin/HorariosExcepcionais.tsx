@@ -55,17 +55,16 @@ export default function HorariosExcepcionais() {
     motivo: ''
   });
 
-  const { barbeiroId, loading: loadingBarbeiro } = useBarbeiroLogado();
+  const { barbeiroId } = useBarbeiroLogado();
 
   // Determina qual tabela usar: barbeiro logado = tabela específica, admin global = tabela global
   const tableName = barbeiroId ? 'horarios_excepcionais_barbeiro' : 'horarios_excepcionais';
 
   useEffect(() => {
-    // CRÍTICO: esperar o hook resolver para não usar tabela global por engano
-    if (!loadingBarbeiro) {
+    if (barbeiroId !== undefined) {
       loadExcecoes();
     }
-  }, [loadingBarbeiro, barbeiroId]);
+  }, [barbeiroId]);
 
   const loadExcecoes = async () => {
     try {
@@ -91,11 +90,6 @@ export default function HorariosExcepcionais() {
   };
 
   const handleAddExcecao = async () => {
-    if (loadingBarbeiro) {
-      toast.error('Aguarde o carregamento...');
-      return;
-    }
-
     if (!novaExcecao.data) {
       toast.error('Selecione uma data');
       return;

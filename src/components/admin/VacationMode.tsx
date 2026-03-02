@@ -26,17 +26,16 @@ export default function VacationMode() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  const { barbeiroId, loading: loadingBarbeiro } = useBarbeiroLogado();
+  const { barbeiroId } = useBarbeiroLogado();
 
   // Determina qual tabela usar
   const tableName = barbeiroId ? 'horarios_excepcionais_barbeiro' : 'horarios_excepcionais';
 
   useEffect(() => {
-    // CRÍTICO: esperar o hook resolver para não usar tabela global por engano
-    if (!loadingBarbeiro) {
+    if (barbeiroId !== undefined) {
       loadVacationPeriods();
     }
-  }, [loadingBarbeiro, barbeiroId]);
+  }, [barbeiroId]);
 
   const loadVacationPeriods = async () => {
     try {

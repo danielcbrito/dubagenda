@@ -24,7 +24,6 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { useBarbeiroLogado } from "@/hooks/useBarbeiroLogado";
 
 interface MobileManualBookingModalProps {
   open: boolean;
@@ -59,7 +58,6 @@ export function MobileManualBookingModal({
   initialTime, 
   onSuccess 
 }: MobileManualBookingModalProps) {
-  const { barbeiroId } = useBarbeiroLogado();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [services, setServices] = useState<Service[]>([]);
@@ -140,29 +138,14 @@ export function MobileManualBookingModal({
     try {
       const dayOfWeek = new Date(date + "T12:00:00").getDay();
       
-      // Carregar configuração de horário com hierarquia: exceção barbeiro > exceção global > config barbeiro > config global
-      const horarioPromise = supabase.from("configuracoes_horario").select("*").eq("dia_semana", dayOfWeek).maybeSingle();
-      const exceptionalPromise = supabase.from("horarios_excepcionais").select("*").eq("data", date).maybeSingle();
-      const appointmentsPromise = supabase.from("agendamentos").select("hora, duracao").eq("data", date).in("status", ["pending", "confirmed", "completed"]);
-
-      let excBarbeiroData: any = null;
-      let cfgBarbeiroData: any = null;
-
-      if (barbeiroId) {
-        const [excBRes, cfgBRes] = await Promise.all([
-          supabase.from("horarios_excepcionais_barbeiro").select("*").eq("data", date).eq("barbeiro_id", barbeiroId).maybeSingle(),
-          supabase.from("configuracoes_horario_barbeiro").select("*").eq("dia_semana", dayOfWeek).eq("barbeiro_id", barbeiroId).maybeSingle()
-        ]);
-        excBarbeiroData = excBRes.data;
-        cfgBarbeiroData = cfgBRes.data;
-      }
-
+      // Carregar configuração de horário
       const [horarioRes, exceptionalRes, appointmentsRes] = await Promise.all([
-        horarioPromise, exceptionalPromise, appointmentsPromise
+        supabase.from("configuracoes_horario").select("*").eq("dia_semana", dayOfWeek).maybeSingle(),
+        supabase.from("horarios_excepcionais").select("*").eq("data", date).maybeSingle(),
+        supabase.from("agendamentos").select("hora, duracao").eq("data", date).in("status", ["pending", "confirmed", "completed"])
       ]);
 
-      // Hierarquia: exceção barbeiro > exceção global > config barbeiro > config global
-      const config = excBarbeiroData || exceptionalRes.data || cfgBarbeiroData || horarioRes.data || {
+      const config = exceptionalRes.data || horarioRes.data || {
         hora_abertura: "08:00",
         hora_fechamento: "20:00",
         hora_almoco_inicio: null,
