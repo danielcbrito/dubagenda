@@ -1,6 +1,7 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.80.0";
+import postgres from "https://deno.land/x/postgresjs@v3.4.4/mod.js";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -299,6 +300,35 @@ const AVAILABLE_TOOLS = [
           user_email: { type: "string", description: "Email do usuário" }
         },
         required: ["user_email"]
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "executar_sql",
+      description: "Executa SQL DIRETO no banco de dados PostgreSQL. Pode fazer SELECT, UPDATE, INSERT, DELETE, CREATE TABLE, ALTER TABLE, CREATE FUNCTION, DROP, etc. Acesso TOTAL ao banco. Use para investigações avançadas, correções complexas, criação de índices, etc. SEMPRE registre o motivo. Para queries destrutivas (DELETE, DROP, ALTER), tenha certeza absoluta.",
+      parameters: {
+        type: "object",
+        properties: {
+          sql: { type: "string", description: "Query SQL a executar (ex: SELECT * FROM profiles WHERE blocked = true)" },
+          motivo: { type: "string", description: "Motivo da execução (obrigatório para auditoria)" }
+        },
+        required: ["sql", "motivo"]
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "listar_estrutura_banco",
+      description: "Lista TODAS as tabelas do banco de dados com suas colunas, tipos e constraints. Use para entender a estrutura antes de executar SQL complexo.",
+      parameters: {
+        type: "object",
+        properties: {
+          tabela: { type: "string", description: "Nome de uma tabela específica para ver detalhes (opcional). Se vazio, lista todas as tabelas." }
+        },
+        required: []
       }
     }
   }
@@ -966,6 +996,154 @@ async function executeFunction(functionName: string, args: any, supabase: any, c
         break;
       }
 
+      // ========================================
+      // EXECUTAR SQL DIRETO
+      // ========================================
+      case "executar_sql": {
+        const { sql, motivo } = args;
+
+        if (!motivo) {
+          result = { erro: 'Motivo é obrigatório para executar SQL' };
+          break;
+        }
+
+        // Bloquear operações ultra-destrutivas
+        const sqlUpper = sql.toUpperCase().trim();
+        const blocked = ['DROP DATABASE', 'DROP SCHEMA', 'TRUNCATE ALL', 'DELETE FROM auth.', 'DROP TABLE auth.', 'ALTER TABLE auth.'];
+        if (blocked.some(b => sqlUpper.includes(b))) {
+          result = { erro: 'Operação bloqueada por segurança. Tabelas do schema auth e operações destrutivas globais não são permitidas.' };
+          break;
+        }
+
+        const dbUrl = Deno.env.get('SUPABASE_DB_URL');
+        if (!dbUrl) {
+          result = { erro: 'SUPABASE_DB_URL não configurado' };
+          break;
+        }
+
+        let sqlConn;
+        try {
+          sqlConn = postgres(dbUrl, { max: 1, idle_timeout: 5 });
+          const rows = await sqlConn.unsafe(sql);
+
+          // Log de auditoria
+          await supabase.from('ai_actions_log').insert({
+            conversation_id: conversationId,
+            user_id: args.user_id || null,
+            action_type: 'raw_sql',
+            action_name: 'executar_sql',
+            parameters: { sql: sql.slice(0, 1000), motivo },
+            result: { rows_count: rows?.length || 0, sample: JSON.stringify(rows?.slice?.(0, 5) || rows).slice(0, 2000) },
+            success: true,
+            auto_approved: true,
+            created_at: new Date().toISOString()
+          });
+
+          const isSelect = sqlUpper.startsWith('SELECT') || sqlUpper.startsWith('WITH');
+          result = {
+            sucesso: true,
+            tipo: isSelect ? 'consulta' : 'execução',
+            registros: rows?.length || 0,
+            dados: rows?.slice?.(0, 50) || rows,
+            motivo
+          };
+        } catch (sqlError: any) {
+          console.error('SQL Error:', sqlError);
+          result = { sucesso: false, erro: sqlError.message, sql_enviado: sql.slice(0, 200) };
+        } finally {
+          if (sqlConn) await sqlConn.end().catch(() => {});
+        }
+        break;
+      }
+
+      // ========================================
+      // LISTAR ESTRUTURA DO BANCO
+      // ========================================
+      case "listar_estrutura_banco": {
+        const { tabela } = args;
+        const dbUrl = Deno.env.get('SUPABASE_DB_URL');
+        if (!dbUrl) { result = { erro: 'SUPABASE_DB_URL não configurado' }; break; }
+
+        let sqlConn;
+        try {
+          sqlConn = postgres(dbUrl, { max: 1, idle_timeout: 5 });
+
+          if (tabela) {
+            // Detalhes de uma tabela específica
+            const columns = await sqlConn.unsafe(`
+              SELECT column_name, data_type, is_nullable, column_default, 
+                     character_maximum_length, udt_name
+              FROM information_schema.columns 
+              WHERE table_schema = 'public' AND table_name = '${tabela.replace(/'/g, "''")}'
+              ORDER BY ordinal_position
+            `);
+
+            const constraints = await sqlConn.unsafe(`
+              SELECT tc.constraint_name, tc.constraint_type, kcu.column_name,
+                     ccu.table_name AS foreign_table, ccu.column_name AS foreign_column
+              FROM information_schema.table_constraints tc
+              JOIN information_schema.key_column_usage kcu ON tc.constraint_name = kcu.constraint_name
+              LEFT JOIN information_schema.constraint_column_usage ccu ON tc.constraint_name = ccu.constraint_name
+              WHERE tc.table_schema = 'public' AND tc.table_name = '${tabela.replace(/'/g, "''")}'
+            `);
+
+            const indexes = await sqlConn.unsafe(`
+              SELECT indexname, indexdef FROM pg_indexes 
+              WHERE schemaname = 'public' AND tablename = '${tabela.replace(/'/g, "''")}'
+            `);
+
+            const policies = await sqlConn.unsafe(`
+              SELECT policyname, cmd, qual, with_check 
+              FROM pg_policies 
+              WHERE schemaname = 'public' AND tablename = '${tabela.replace(/'/g, "''")}'
+            `);
+
+            result = {
+              tabela,
+              colunas: columns,
+              constraints,
+              indices: indexes,
+              politicas_rls: policies,
+              total_colunas: columns.length
+            };
+          } else {
+            // Listar todas as tabelas
+            const tables = await sqlConn.unsafe(`
+              SELECT table_name, 
+                     (SELECT COUNT(*) FROM information_schema.columns c WHERE c.table_name = t.table_name AND c.table_schema = 'public') as column_count
+              FROM information_schema.tables t
+              WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
+              ORDER BY table_name
+            `);
+
+            const views = await sqlConn.unsafe(`
+              SELECT table_name FROM information_schema.views WHERE table_schema = 'public' ORDER BY table_name
+            `);
+
+            const functions = await sqlConn.unsafe(`
+              SELECT routine_name, data_type as return_type
+              FROM information_schema.routines 
+              WHERE routine_schema = 'public' AND routine_type = 'FUNCTION'
+              ORDER BY routine_name
+            `);
+
+            result = {
+              tabelas: tables,
+              views: views,
+              funcoes: functions?.slice(0, 30),
+              total_tabelas: tables.length,
+              total_views: views.length,
+              total_funcoes: functions?.length || 0
+            };
+          }
+        } catch (sqlError: any) {
+          result = { sucesso: false, erro: sqlError.message };
+        } finally {
+          if (sqlConn) await sqlConn.end().catch(() => {});
+        }
+        break;
+      }
+
       default:
         result = { erro: `Função '${functionName}' não encontrada` };
     }
@@ -1085,31 +1263,42 @@ Você PODE e DEVE resolver sozinha:
 - Atualizar dados de perfil com problema
 - Corrigir status de agendamentos inconsistentes
 - Abrir tickets quando não conseguir resolver
+- **EXECUTAR SQL DIRETO** para qualquer operação avançada no banco
 
-Use \`atualizar_dados\` para correções diretas. Sempre registre o motivo.
+Use \`atualizar_dados\` para correções simples e \`executar_sql\` para operações complexas. Sempre registre o motivo.
 
-### 4. PERGUNTAS ESTRATÉGICAS
+### 4. PODER SQL TOTAL 🔥
+Você tem acesso SQL COMPLETO ao banco PostgreSQL:
+- \`executar_sql\` — roda QUALQUER query SQL (SELECT, UPDATE, INSERT, DELETE, CREATE, ALTER, etc.)
+- \`listar_estrutura_banco\` — mostra tabelas, colunas, constraints, índices e políticas RLS
+- Use para investigações avançadas, correções em massa, JOINs complexos, análises agregadas
+- BLOQUEADO apenas: DROP DATABASE, DROP SCHEMA, alterações no schema auth
+
+### 5. PERGUNTAS ESTRATÉGICAS
 Quando NÃO tem dados suficientes, faça perguntas INTELIGENTES:
 - "Qual barbeiro você tentou agendar?" (não "qual é o ID do barbeiro")
 - "Foi hoje que você tentou?" (não "qual data no formato YYYY-MM-DD")
 - "O pagamento foi por PIX ou cartão?" (opções claras)
 - NUNCA faça mais de 2 perguntas por vez
 
-### 5. PAGAMENTOS — REGRA CRÍTICA ⚠️
+### 6. PAGAMENTOS — REGRA CRÍTICA ⚠️
 **O MAIOR ERRO É DIZER QUE O CLIENTE TEM PAGAMENTO EM ABERTO QUANDO NÃO TEM!**
 
 - PIX gerado e não pago em 30+ minutos = EXPIRADO = NÃO É DÍVIDA
 - Pagamento pending + agendamento cancelado = ABANDONADO = NÃO É DÍVIDA
 - SOMENTE pagamento pending + criado há menos de 30 min + sem data_pagamento = AGUARDANDO confirmação
 - Se encontrar PIX expirados, use \`limpar_pagamentos_expirados\` para resolver
-- Resposta correta: "Não se preocupe! Aquele era só um PIX que expirou, você não tem nenhuma pendência. Já limpei aqui pra não aparecer mais."
 
-### 6. VERIFICAÇÃO GLOBAL vs INDIVIDUAL
-Quando cliente relata problema de agendamento/pagamento:
+### 7. VERIFICAÇÃO GLOBAL vs INDIVIDUAL
+Quando cliente relata problema:
 1. Primeiro verifique se é SÓ dele → diagnóstico do usuário
 2. Depois verifique se é GLOBAL → \`verificar_problema_global\`
 3. Se for global → ticket URGENTE imediato
 4. Se for individual → investigue e resolva
+
+### 8. CÓDIGO DO PROJETO
+O projeto é React + TypeScript + Tailwind + shadcn/ui + Supabase.
+Você NÃO pode editar código-fonte diretamente (roda em runtime), mas pode diagnosticar bugs via SQL e abrir tickets detalhados.
 
 ## DADOS DO CONTEXTO
 - **Usuário**: ${!isGuest ? user.id : 'visitante (não logado)'}
@@ -1124,11 +1313,12 @@ ${APP_KNOWLEDGE}
 1. Se usuário NÃO está logado → pode dar informações gerais mas não acessar dados pessoais
 2. Se conta bloqueada → ticket IMEDIATO (prioridade alta)
 3. Se problema financeiro real → ticket prioridade CRÍTICA
-4. NUNCA diga "não tenho acesso" — você TEM acesso a TUDO
+4. NUNCA diga "não tenho acesso" — você TEM acesso a TUDO (banco + SQL direto)
 5. NUNCA peça dados que pode buscar sozinha
 6. Se não consegue resolver → abra ticket E informe o protocolo
 7. Se resolver → confirme com confiança: "Pronto, tá resolvido!"
-8. Use \`consultar_tabela\` para investigar QUALQUER coisa — barbeiros, serviços, configurações, etc.`;
+8. Use \`executar_sql\` para qualquer investigação ou correção avançada
+9. Use \`listar_estrutura_banco\` para entender a estrutura antes de queries complexas`;
 
     // ========================================
     // CHAMADA DA IA
