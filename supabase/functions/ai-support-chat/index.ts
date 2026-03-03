@@ -4,7 +4,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.80.0";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
 // ========================================
@@ -12,75 +12,114 @@ const corsHeaders = {
 // ========================================
 
 const APP_KNOWLEDGE = `
-# SISTEMA DUB - BASE DE CONHECIMENTO COMPLETA
+# SISTEMA DUB — BASE DE CONHECIMENTO COMPLETA PARA IA AUTÔNOMA
 
-## FUNCIONALIDADES PRINCIPAIS
+## ARQUITETURA DO SISTEMA
+- Frontend: React + TypeScript + Tailwind + shadcn/ui
+- Backend: Supabase (PostgreSQL + Edge Functions + Auth + Storage)
+- Gateway de Pagamento: Asaas (PIX, Cartão, Boleto)
+- IA: Lovable AI Gateway (Gemini)
+- Notificações: WhatsApp via webhook + Evolution API
 
-### Agendamentos
-- Cliente escolhe: serviço → data → horário → barbeiro (opcional)
-- Status possíveis: pending, confirmed, completed, cancelled_by_user, cancelled_by_admin, no_show
-- Barbeiro confirma atendimento (libera ponto de fidelidade)
-- Cliente pode remarcar até 2h antes do horário
+## TABELAS PRINCIPAIS (você tem acesso TOTAL)
+- profiles: dados do usuário (nome, telefone, cpf, avatar_url, blocked, etc.)
+- agendamentos: todos os agendamentos (data, hora, status, barbeiro_id, servico_id, preco, etc.)
+- pagamentos: registros de pagamento (valor, status, metodo, gateway_payment_id, agendamento_id, assinatura_id)
+- pending_bookings: reservas temporárias de PIX (expiram em 15min)
+- pontos: pontos de fidelidade acumulados
+- resgates: cortes grátis disponíveis
+- creditos: créditos/cashback disponíveis
+- assinaturas: planos de assinatura ativos
+- planos: definições dos planos disponíveis
+- plano_agendamentos_usos: controle de uso dos planos
+- barbeiros: profissionais cadastrados (apelido, ativo, tenant_id)
+- servicos: serviços oferecidos (nome, preco, duracao_minutos)
+- configuracoes_horario: horários globais da barbearia
+- configuracoes_horario_barbeiro: horários INDIVIDUAIS por barbeiro (FONTE DA VERDADE para disponibilidade)
+- horarios_excepcionais: feriados e folgas globais
+- horarios_excepcionais_barbeiro: folgas individuais por barbeiro
+- support_tickets: tickets de suporte abertos
+- support_conversations: conversas de suporte
+- support_messages: mensagens das conversas
+- webhook_logs: logs de webhooks recebidos (Asaas)
+- logs_agendamentos: histórico de alterações em agendamentos
+- ai_actions_log: log de ações executadas pela IA
+- wallet_balances: saldo da carteira digital
+- wallet_transactions: transações da carteira
+- system_logs: logs gerais do sistema
+- webhook_config: configurações gerais (manutenção, webhook URL, etc.)
+- promocoes: promoções de fidelidade configuradas
+- anuncios_app: anúncios/banners do app
 
-### Sistema de Fidelidade
-- 1 corte completado e confirmado = 1 ponto
-- 5 pontos acumulados = 1 resgate (corte grátis) disponível
-- Resgate válido por 90 dias após geração
-- Apenas cortes pagos geram pontos (cortes grátis não contam)
+## FLUXOS CRÍTICOS
 
-### Pagamentos
-- Métodos: PIX, Cartão de Crédito, Dinheiro (na barbearia)
-- Gateway: Asaas
-- Webhook processa confirmação em até 5 minutos
-- Créditos podem ser usados como pagamento parcial
+### Agendamento
+1. Cliente escolhe serviço(s) → data → horário → barbeiro
+2. Sistema verifica disponibilidade via configuracoes_horario_barbeiro + horarios_excepcionais_barbeiro
+3. Pagamento (PIX/Cartão/Dinheiro/Plano/Resgate/Crédito)
+4. Status inicial: "pending" (aguardando confirmação do barbeiro)
+5. Barbeiro confirma → status "confirmed"
+6. Atendimento concluído → barbeiro marca "completed" → ponto de fidelidade
+
+### REGRA CRÍTICA DE PAGAMENTOS PENDENTES
+- Quando um cliente gera um PIX e NÃO paga, fica um registro em "pending_bookings" e/ou "pagamentos" com status "pending"
+- Esses registros NÃO significam que o cliente DEVE algo. O PIX simplesmente expirou.
+- pending_bookings expiram automaticamente após 15 minutos
+- NUNCA diga ao cliente que ele tem "pagamento em aberto" se o PIX expirou sem ser pago
+- Para verificar: se pagamentos.status = 'pending' E pagamentos.data_pagamento IS NULL E criado há mais de 30 min → É UM PIX EXPIRADO, NÃO UMA DÍVIDA
+- Pagamentos com status 'paid' e data_pagamento preenchida = pagamento CONFIRMADO
+- Pagamentos com status 'refunded' = já foram estornados
+- Pagamentos com status 'pending' + agendamento cancelado = pagamento abandonado (ignorar)
+
+### Horários e Disponibilidade
+- Cada barbeiro tem sua PRÓPRIA configuração em configuracoes_horario_barbeiro
+- Inclui: hora_abertura, hora_fechamento, hora_almoco_inicio, hora_almoco_fim, delay_entre_servicos
+- horarios_excepcionais_barbeiro sobrepõem a configuração normal
+- Um slot é ocupado se: existe agendamento não-cancelado que ocupa aquele período (hora + duração)
+- Slots que INVADEM o horário de almoço são bloqueados (ex: serviço de 35min às 12:30 invade almoço às 13:00)
+
+### Fidelidade
+- 1 corte completado + confirmado pelo barbeiro = 1 ponto (exceto cortes grátis)
+- Meta definida em promocoes.pontos_necessarios (geralmente 5 ou 8)
+- Ao atingir meta → pontos zerados → 1 resgate criado (válido 90 dias)
+- Se já tem resgate disponível, NÃO acumula mais pontos
 
 ### Planos de Assinatura
-- Assinatura mensal com créditos recorrentes
-- Prioridade em horários
-- Descontos em serviços adicionais
+- Pagamento: PIX (Asaas), Cartão (Asaas), ou Dinheiro (na barbearia)
+- Dinheiro: ativa imediatamente mas limita a 1 uso até barbeiro confirmar pagamento (cash_payment_confirmed)
+- Limite mensal de agendamentos definido em planos.limite_agendamentos_mes
+- Uso rastreado em plano_agendamentos_usos
 
-### Créditos
-- Gerados por: promoções, cancelamentos reembolsados, planos
-- Expiram após período definido (geralmente 90-180 dias)
-- Podem ser usados parcialmente
+## PROBLEMAS COMUNS E DIAGNÓSTICO
 
-## PROBLEMAS COMUNS E SOLUÇÕES
+### "Pagamento em aberto" (FALSO POSITIVO FREQUENTE)
+→ Verificar pagamentos.status = 'pending' + data_pagamento IS NULL + created_at antigo
+→ Se PIX expirou: NÃO é dívida, apenas registro abandonado
+→ Verificar se agendamento associado foi cancelado
+→ RESPOSTA CORRETA: "Não se preocupe, aquele pagamento era apenas uma tentativa de PIX que expirou. Você não tem nenhuma pendência financeira."
 
-### "Meus pontos não creditaram"
-→ VERIFICAR: barbeiro_confirmou = true no agendamento
-→ VERIFICAR: status = completed
-→ VERIFICAR: ponto_liberado = true
-→ SOLUÇÃO: Se atendimento foi feito mas não confirmado, o barbeiro precisa confirmar
+### "Não consigo agendar"
+→ 1. Verificar configuracoes_horario_barbeiro do barbeiro escolhido
+→ 2. Verificar horarios_excepcionais_barbeiro para a data
+→ 3. Verificar agendamentos existentes no dia/hora
+→ 4. Verificar se o serviço existe e está ativo
+→ 5. Se TODOS os usuários afetados → problema sistêmico → ticket urgente
+→ 6. Se SÓ esse usuário → verificar perfil, assinatura, bloqueio
 
-### "Não consigo agendar / sem horários"
-→ VERIFICAR: configuracoes_horario do dia
-→ VERIFICAR: horarios_excepcionais (feriados, folgas)
-→ VERIFICAR: agendamentos existentes no slot
-→ VERIFICAR: barbeiros ativos
+### "Pontos não creditaram"
+→ Verificar agendamentos com status=completed E barbeiro_confirmou=true E ponto_liberado=false
+→ Se encontrar: corrigir automaticamente
+→ Se barbeiro não confirmou: informar que o barbeiro precisa finalizar o atendimento no app
 
-### "Pagamento não confirmou"
-→ VERIFICAR: tabela pagamentos (status, gateway_payment_id)
-→ VERIFICAR: webhook_logs para eventos do Asaas
-→ AGUARDAR: até 5 minutos para webhook processar
-→ VERIFICAR: pending_bookings se foi PIX
-
-### "Resgate expirado / não consigo usar"
-→ VERIFICAR: resgates.expired_at > now()
-→ VERIFICAR: resgates.status = 'available'
-→ VERIFICAR: resgates.used_at IS NULL
-
-### "Erro 202 / Pagamento pendente"
-→ VERIFICAR: pending_bookings para ver se há reserva ativa
-→ VERIFICAR: se QR code foi gerado mas não pago
-→ SOLUÇÃO: Cliente pode tentar novo pagamento
-
-### "Conta bloqueada"
-→ VERIFICAR: profiles.blocked = true
-→ NECESSÁRIO: Escalar para suporte humano (admin deve desbloquear)
+### "Meu plano não está funcionando"
+→ Verificar assinaturas.status = 'active'
+→ Verificar plano_agendamentos_usos para ver se atingiu o limite
+→ Verificar cash_payment_confirmed se for pagamento em dinheiro
+→ Verificar next_billing_date (pode estar expirado)
 `;
 
 // ========================================
-// FUNÇÕES DISPONÍVEIS PARA A IA (EXPANDIDAS)
+// FERRAMENTAS DA IA — ACESSO TOTAL
 // ========================================
 
 const AVAILABLE_TOOLS = [
@@ -88,14 +127,11 @@ const AVAILABLE_TOOLS = [
     type: "function",
     function: {
       name: "diagnosticar_usuario_completo",
-      description: "Diagnóstico completo do usuário: perfil, agendamentos, pagamentos, pontos, resgates, créditos, assinatura, e erros recentes. Use SEMPRE como primeira ação para entender o contexto.",
+      description: "Diagnóstico COMPLETO do usuário: perfil, agendamentos, pagamentos, pontos, resgates, créditos, assinatura, reservas pendentes. SEMPRE use como PRIMEIRA ação.",
       parameters: {
         type: "object",
         properties: {
-          user_id: {
-            type: "string",
-            description: "ID do usuário no formato UUID"
-          }
+          user_id: { type: "string", description: "ID do usuário (UUID)" }
         },
         required: ["user_id"]
       }
@@ -104,15 +140,86 @@ const AVAILABLE_TOOLS = [
   {
     type: "function",
     function: {
-      name: "verificar_agendamento_especifico",
-      description: "Verifica detalhes de um agendamento específico, incluindo pagamento associado, status de confirmação e logs.",
+      name: "consultar_tabela",
+      description: "Consulta QUALQUER tabela do banco de dados. Use para investigar problemas, verificar dados, entender o estado do sistema. Tabelas disponíveis: profiles, agendamentos, pagamentos, pending_bookings, pontos, resgates, creditos, assinaturas, planos, plano_agendamentos_usos, barbeiros, servicos, configuracoes_horario, configuracoes_horario_barbeiro, horarios_excepcionais, horarios_excepcionais_barbeiro, support_tickets, webhook_logs, logs_agendamentos, wallet_balances, wallet_transactions, system_logs, webhook_config, promocoes, anuncios_app, barbeiro_avaliacoes, comissoes, depositos, financial_entries.",
       parameters: {
         type: "object",
         properties: {
-          agendamento_id: {
+          tabela: { type: "string", description: "Nome da tabela" },
+          filtros: {
+            type: "object",
+            description: "Filtros como pares chave:valor (ex: {\"user_id\": \"xxx\", \"status\": \"active\"})"
+          },
+          select: { type: "string", description: "Colunas a retornar (ex: 'id, nome, status'). Padrão: '*'" },
+          order_by: { type: "string", description: "Coluna para ordenação (ex: 'created_at')" },
+          order_asc: { type: "boolean", description: "true=ascendente, false=descendente. Padrão: false" },
+          limite: { type: "number", description: "Máximo de registros. Padrão: 10" }
+        },
+        required: ["tabela"]
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "atualizar_dados",
+      description: "Atualiza dados em QUALQUER tabela para corrigir problemas. Use com responsabilidade. Registra tudo no log de ações. Tabelas permitidas: agendamentos, pagamentos, pontos, resgates, profiles, assinaturas, pending_bookings, plano_agendamentos_usos, creditos.",
+      parameters: {
+        type: "object",
+        properties: {
+          tabela: { type: "string", description: "Nome da tabela" },
+          filtros: { type: "object", description: "Filtros para localizar o registro (ex: {\"id\": \"xxx\"})" },
+          dados: { type: "object", description: "Dados a atualizar (ex: {\"status\": \"completed\", \"ponto_liberado\": true})" },
+          motivo: { type: "string", description: "Motivo da alteração (obrigatório para auditoria)" }
+        },
+        required: ["tabela", "filtros", "dados", "motivo"]
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "verificar_problema_global",
+      description: "Verifica se um problema é GLOBAL (afeta todos os usuários) ou ESPECÍFICO (só um usuário). Útil para bugs de agendamento, pagamento, etc.",
+      parameters: {
+        type: "object",
+        properties: {
+          tipo_problema: {
             type: "string",
-            description: "ID do agendamento"
-          }
+            enum: ["agendamento", "pagamento", "login", "disponibilidade", "plano"],
+            description: "Tipo de problema a verificar"
+          },
+          data: { type: "string", description: "Data para verificar (YYYY-MM-DD), se aplicável" },
+          barbeiro_id: { type: "string", description: "ID do barbeiro, se aplicável" }
+        },
+        required: ["tipo_problema"]
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "verificar_configuracao_barbeiro",
+      description: "Verifica TODAS as configurações de horário de um barbeiro específico: dias de funcionamento, horários, almoço, exceções.",
+      parameters: {
+        type: "object",
+        properties: {
+          barbeiro_id: { type: "string", description: "ID do barbeiro" },
+          data: { type: "string", description: "Data específica para verificar (YYYY-MM-DD), opcional" }
+        },
+        required: ["barbeiro_id"]
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "verificar_agendamento_especifico",
+      description: "Verifica detalhes completos de um agendamento: pagamento, confirmação, logs, serviço, barbeiro.",
+      parameters: {
+        type: "object",
+        properties: {
+          agendamento_id: { type: "string", description: "ID do agendamento" }
         },
         required: ["agendamento_id"]
       }
@@ -121,40 +228,12 @@ const AVAILABLE_TOOLS = [
   {
     type: "function",
     function: {
-      name: "verificar_disponibilidade",
-      description: "Verifica horários disponíveis para agendamento em uma data específica.",
+      name: "analisar_pagamentos_usuario",
+      description: "Analisa TODOS os pagamentos de um usuário, separando pagos, pendentes reais, PIX expirados e abandonados. Evita falsos positivos de 'pagamento em aberto'.",
       parameters: {
         type: "object",
         properties: {
-          data: {
-            type: "string",
-            description: "Data no formato YYYY-MM-DD"
-          },
-          servico_id: {
-            type: "string",
-            description: "ID do serviço (opcional)"
-          }
-        },
-        required: ["data"]
-      }
-    }
-  },
-  {
-    type: "function",
-    function: {
-      name: "verificar_pagamento_detalhado",
-      description: "Verifica status detalhado de pagamentos, incluindo logs de webhook e reservas pendentes.",
-      parameters: {
-        type: "object",
-        properties: {
-          user_id: {
-            type: "string",
-            description: "ID do usuário"
-          },
-          payment_id: {
-            type: "string",
-            description: "ID do pagamento (opcional)"
-          }
+          user_id: { type: "string", description: "ID do usuário" }
         },
         required: ["user_id"]
       }
@@ -164,24 +243,48 @@ const AVAILABLE_TOOLS = [
     type: "function",
     function: {
       name: "corrigir_ponto_fidelidade",
-      description: "Libera ponto de fidelidade manualmente para um agendamento que foi completado mas não teve o ponto creditado. REQUER CONFIRMAÇÃO do usuário antes de executar.",
+      description: "Libera ponto de fidelidade para agendamento completado mas sem ponto creditado. REQUER confirmação do usuário.",
       parameters: {
         type: "object",
         properties: {
-          agendamento_id: {
-            type: "string",
-            description: "ID do agendamento"
-          },
-          user_id: {
-            type: "string",
-            description: "ID do usuário"
-          },
-          confirmado_pelo_usuario: {
-            type: "boolean",
-            description: "Se o usuário confirmou que o atendimento foi realizado"
-          }
+          agendamento_id: { type: "string", description: "ID do agendamento" },
+          user_id: { type: "string", description: "ID do usuário" },
+          confirmado_pelo_usuario: { type: "boolean", description: "Se o usuário confirmou que o atendimento foi realizado" }
         },
         required: ["agendamento_id", "user_id", "confirmado_pelo_usuario"]
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "limpar_pagamentos_expirados",
+      description: "Limpa registros de pagamentos PIX expirados que ficaram 'pending' para um usuário. Não afeta pagamentos reais.",
+      parameters: {
+        type: "object",
+        properties: {
+          user_id: { type: "string", description: "ID do usuário" }
+        },
+        required: ["user_id"]
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "criar_ticket_automatico",
+      description: "Abre ticket de suporte quando a IA não consegue resolver. NÃO pede permissão — informa que foi aberto.",
+      parameters: {
+        type: "object",
+        properties: {
+          user_id: { type: "string", description: "ID do usuário" },
+          titulo: { type: "string", description: "Título curto do problema" },
+          descricao: { type: "string", description: "Descrição com diagnósticos realizados" },
+          prioridade: { type: "string", enum: ["low", "medium", "high", "critical"] },
+          categoria: { type: "string", enum: ["bug", "payment", "auth", "booking", "loyalty", "other"] },
+          diagnosticos_realizados: { type: "object", description: "Dados dos diagnósticos feitos" }
+        },
+        required: ["titulo", "descricao", "prioridade", "categoria"]
       }
     }
   },
@@ -193,88 +296,41 @@ const AVAILABLE_TOOLS = [
       parameters: {
         type: "object",
         properties: {
-          user_email: {
-            type: "string",
-            description: "Email do usuário"
-          }
+          user_email: { type: "string", description: "Email do usuário" }
         },
         required: ["user_email"]
-      }
-    }
-  },
-  {
-    type: "function",
-    function: {
-      name: "criar_ticket_automatico",
-      description: "Abre ticket de suporte automaticamente quando não é possível resolver o problema. NÃO pede permissão - informa que foi aberto.",
-      parameters: {
-        type: "object",
-        properties: {
-          user_id: {
-            type: "string",
-            description: "ID do usuário"
-          },
-          titulo: {
-            type: "string",
-            description: "Título curto e claro do problema"
-          },
-          descricao: {
-            type: "string",
-            description: "Descrição detalhada incluindo diagnósticos já realizados"
-          },
-          prioridade: {
-            type: "string",
-            enum: ["low", "medium", "high", "critical"],
-            description: "low: dúvida simples, medium: problema comum, high: afeta uso, critical: bloqueio total ou perda financeira"
-          },
-          categoria: {
-            type: "string",
-            enum: ["bug", "payment", "auth", "booking", "loyalty", "other"],
-            description: "Categoria principal do problema"
-          },
-          diagnosticos_realizados: {
-            type: "object",
-            description: "Objeto com todos os diagnósticos já feitos"
-          }
-        },
-        required: ["titulo", "descricao", "prioridade", "categoria"]
-      }
-    }
-  },
-  {
-    type: "function",
-    function: {
-      name: "solicitar_confirmacao_acao",
-      description: "Solicita confirmação do usuário antes de executar uma ação que modifica dados. Use para ações críticas.",
-      parameters: {
-        type: "object",
-        properties: {
-          acao: {
-            type: "string",
-            description: "Nome da ação a ser executada"
-          },
-          descricao_acao: {
-            type: "string",
-            description: "Descrição clara do que será feito"
-          },
-          impacto: {
-            type: "string",
-            description: "Impacto esperado da ação"
-          }
-        },
-        required: ["acao", "descricao_acao", "impacto"]
       }
     }
   }
 ];
 
 // ========================================
-// UTILITÁRIOS
+// TABELAS PERMITIDAS PARA ESCRITA
 // ========================================
 
-async function sleep(ms: number) {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
+const WRITABLE_TABLES = [
+  'agendamentos', 'pagamentos', 'pontos', 'resgates',
+  'profiles', 'assinaturas', 'pending_bookings',
+  'plano_agendamentos_usos', 'creditos'
+];
+
+const READABLE_TABLES = [
+  'profiles', 'agendamentos', 'pagamentos', 'pending_bookings',
+  'pontos', 'resgates', 'creditos', 'assinaturas', 'planos',
+  'plano_agendamentos_usos', 'barbeiros', 'servicos',
+  'configuracoes_horario', 'configuracoes_horario_barbeiro',
+  'horarios_excepcionais', 'horarios_excepcionais_barbeiro',
+  'support_tickets', 'webhook_logs', 'logs_agendamentos',
+  'wallet_balances', 'wallet_transactions', 'system_logs',
+  'webhook_config', 'promocoes', 'anuncios_app',
+  'barbeiro_avaliacoes', 'comissoes', 'depositos',
+  'financial_entries', 'categorias', 'discount_coupons',
+  'discount_coupon_redemptions'
+];
+
+// ========================================
+// UTILITÁRIOS
+// ========================================
 
 async function logAIAction(supabase: any, data: any) {
   try {
@@ -284,25 +340,16 @@ async function logAIAction(supabase: any, data: any) {
   }
 }
 
-async function retryWithBackoff<T>(
-  fn: () => Promise<T>,
-  maxRetries: number = 3,
-  initialDelay: number = 1000
-): Promise<T> {
+async function retryWithBackoff<T>(fn: () => Promise<T>, maxRetries = 3, initialDelay = 1000): Promise<T> {
   let lastError: any;
-  
   for (let attempt = 0; attempt < maxRetries; attempt++) {
     try {
       return await fn();
     } catch (error) {
       lastError = error;
-      if (attempt < maxRetries - 1) {
-        const delay = initialDelay * Math.pow(2, attempt);
-        await sleep(delay);
-      }
+      if (attempt < maxRetries - 1) await new Promise(r => setTimeout(r, initialDelay * Math.pow(2, attempt)));
     }
   }
-  
   throw lastError;
 }
 
@@ -311,11 +358,11 @@ async function retryWithBackoff<T>(
 // ========================================
 
 async function executeFunction(functionName: string, args: any, supabase: any, conversationId: string) {
-  console.log(`🔧 Executando: ${functionName}`, args);
-  
+  console.log(`🔧 Executando: ${functionName}`, JSON.stringify(args).slice(0, 500));
+
   const actionLog: any = {
     conversation_id: conversationId,
-    user_id: args.user_id,
+    user_id: args.user_id || null,
     action_type: 'function_call',
     action_name: functionName,
     parameters: args,
@@ -325,141 +372,362 @@ async function executeFunction(functionName: string, args: any, supabase: any, c
 
   try {
     let result: any;
-    
+
     switch (functionName) {
+
       // ========================================
       // DIAGNÓSTICO COMPLETO
       // ========================================
       case "diagnosticar_usuario_completo": {
         const { user_id } = args;
-        
-        // Perfil
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('nome, telefone, blocked, created_at')
-          .eq('id', user_id)
-          .single();
 
-        // Agendamentos (últimos 10)
-        const { data: appointments } = await supabase
-          .from('agendamentos')
-          .select(`
-            id, data, hora, status, 
-            barbeiro_confirmou, cliente_confirmou, 
-            ponto_liberado, is_free, preco,
-            servico_id, created_at
-          `)
-          .eq('user_id', user_id)
-          .order('data', { ascending: false })
-          .limit(10);
+        const [
+          { data: profile },
+          { data: appointments },
+          { data: payments },
+          { data: points },
+          { data: redemptions },
+          { data: credits },
+          { data: subscription },
+          { data: pendingBookings },
+          { data: recentLogs },
+          { data: planUses }
+        ] = await Promise.all([
+          supabase.from('profiles').select('nome, telefone, blocked, cpf, created_at, avatar_url').eq('id', user_id).single(),
+          supabase.from('agendamentos').select('id, data, hora, status, barbeiro_confirmou, cliente_confirmou, ponto_liberado, is_free, preco, payment_method, tipo_agendamento, servico_id, barbeiro_id, observacoes, created_at, cancelado_em').eq('user_id', user_id).order('data', { ascending: false }).limit(15),
+          supabase.from('pagamentos').select('id, valor, status, metodo, created_at, data_pagamento, gateway_payment_id, agendamento_id, assinatura_id').eq('user_id', user_id).order('created_at', { ascending: false }).limit(10),
+          supabase.from('pontos').select('pontos, last_awarded_at, promocao_id').eq('user_id', user_id).single(),
+          supabase.from('resgates').select('id, status, created_at, expired_at, used_at, appointment_id').eq('user_id', user_id).order('created_at', { ascending: false }).limit(5),
+          supabase.from('creditos').select('id, valor, origem, usado, expires_at, created_at').eq('user_id', user_id).eq('usado', false),
+          supabase.from('assinaturas').select('id, status, next_billing_date, plano_id, payment_method, cash_payment_confirmed, created_at').eq('user_id', user_id).order('created_at', { ascending: false }).limit(3),
+          supabase.from('pending_bookings').select('*').eq('user_id', user_id).order('created_at', { ascending: false }).limit(5),
+          supabase.from('system_logs').select('level, message, category, created_at').eq('user_id', user_id).in('level', ['error', 'warn']).order('created_at', { ascending: false }).limit(5),
+          supabase.from('plano_agendamentos_usos').select('id, agendamento_id, competencia, released_at, created_at').eq('user_id', user_id).order('created_at', { ascending: false }).limit(10)
+        ]);
 
-        // Pagamentos (últimos 5)
-        const { data: payments } = await supabase
-          .from('pagamentos')
-          .select('id, valor, status, metodo, created_at, data_pagamento, gateway_payment_id')
-          .eq('user_id', user_id)
-          .order('created_at', { ascending: false })
-          .limit(5);
+        // Análise inteligente
+        const issues: string[] = [];
+        const now = new Date();
 
-        // Pontos
-        const { data: points } = await supabase
-          .from('pontos')
-          .select('pontos, last_awarded_at, promocao_id')
-          .eq('user_id', user_id)
-          .single();
+        if (profile?.blocked) issues.push('⚠️ CONTA BLOQUEADA');
 
-        // Resgates disponíveis
-        const { data: redemptions } = await supabase
-          .from('resgates')
-          .select('id, status, created_at, expired_at, used_at')
-          .eq('user_id', user_id)
-          .order('created_at', { ascending: false })
-          .limit(5);
+        // Pontos não creditados
+        const missingPoints = appointments?.filter((a: any) =>
+          a.status === 'completed' && a.barbeiro_confirmou === true && !a.ponto_liberado && !a.is_free
+        );
+        if (missingPoints?.length > 0) issues.push(`${missingPoints.length} agendamento(s) completado(s) sem ponto creditado — pode corrigir automaticamente`);
 
-        // Créditos disponíveis
-        const { data: credits } = await supabase
-          .from('creditos')
-          .select('id, valor, origem, usado, expires_at, created_at')
-          .eq('user_id', user_id)
-          .eq('usado', false);
+        // Pagamentos REALMENTE pendentes vs PIX expirados
+        const realPending: any[] = [];
+        const expiredPix: any[] = [];
+        payments?.forEach((p: any) => {
+          if (p.status === 'pending' && !p.data_pagamento) {
+            const created = new Date(p.created_at);
+            const diffMin = (now.getTime() - created.getTime()) / 60000;
+            if (diffMin > 30) {
+              expiredPix.push(p);
+            } else {
+              realPending.push(p);
+            }
+          }
+        });
+        if (expiredPix.length > 0) issues.push(`${expiredPix.length} PIX expirado(s) (NÃO é dívida, apenas registro abandonado)`);
+        if (realPending.length > 0) issues.push(`${realPending.length} pagamento(s) aguardando confirmação recente`);
+
+        // Resgates expirados
+        const expiredRedemptions = redemptions?.filter((r: any) =>
+          r.status === 'available' && new Date(r.expired_at) < now
+        );
+        if (expiredRedemptions?.length > 0) issues.push(`${expiredRedemptions.length} resgate(s) expirado(s)`);
 
         // Assinatura
-        const { data: subscription } = await supabase
-          .from('assinaturas')
-          .select('id, status, next_billing_date, plano_id')
-          .eq('user_id', user_id)
-          .eq('status', 'active')
-          .single();
+        const activeSub = subscription?.find((s: any) => s.status === 'active');
+        const pendingSub = subscription?.find((s: any) => s.status === 'pending_cash');
 
-        // Reservas pendentes
-        const { data: pendingBookings } = await supabase
-          .from('pending_bookings')
-          .select('*')
-          .eq('user_id', user_id)
-          .order('created_at', { ascending: false })
-          .limit(3);
-
-        // Erros recentes
-        const { data: recentLogs } = await supabase
-          .from('system_logs')
-          .select('level, message, category, created_at')
-          .eq('user_id', user_id)
-          .in('level', ['error', 'warn'])
-          .order('created_at', { ascending: false })
-          .limit(5);
-
-        // Análise automática de problemas
-        const issues: string[] = [];
-        
-        if (profile?.blocked) {
-          issues.push('CONTA BLOQUEADA - necessita intervenção humana');
-        }
-        
-        const completedWithoutPoints = appointments?.filter((a: any) => 
-          a.status === 'completed' && 
-          a.barbeiro_confirmou === true && 
-          a.ponto_liberado === false &&
-          !a.is_free
-        );
-        if (completedWithoutPoints?.length > 0) {
-          issues.push(`${completedWithoutPoints.length} agendamento(s) completado(s) sem ponto creditado`);
-        }
-
-        const pendingPayments = payments?.filter((p: any) => p.status === 'pending');
-        if (pendingPayments?.length > 0) {
-          issues.push(`${pendingPayments.length} pagamento(s) pendente(s)`);
-        }
-
-        const expiredRedemptions = redemptions?.filter((r: any) => 
-          r.status === 'available' && 
-          new Date(r.expired_at) < new Date()
-        );
-        if (expiredRedemptions?.length > 0) {
-          issues.push(`${expiredRedemptions.length} resgate(s) expirado(s)`);
-        }
+        // Plan uses
+        const activeUses = planUses?.filter((u: any) => !u.released_at) || [];
 
         result = {
           perfil: {
             nome: profile?.nome,
             telefone: profile?.telefone,
             bloqueado: profile?.blocked,
+            cpf: profile?.cpf ? '***' + profile.cpf.slice(-4) : null,
             cliente_desde: profile?.created_at
           },
           resumo: {
             pontos_atuais: points?.pontos || 0,
-            resgates_disponiveis: redemptions?.filter((r: any) => r.status === 'available' && new Date(r.expired_at) > new Date()).length || 0,
+            resgates_disponiveis: redemptions?.filter((r: any) => r.status === 'available' && new Date(r.expired_at) > now).length || 0,
             creditos_disponiveis: credits?.reduce((sum: number, c: any) => sum + Number(c.valor), 0) || 0,
-            tem_assinatura: !!subscription,
-            status_assinatura: subscription?.status
+            tem_assinatura: !!activeSub,
+            status_assinatura: activeSub?.status || pendingSub?.status || 'nenhuma',
+            plano_id: activeSub?.plano_id || pendingSub?.plano_id,
+            usos_plano_ativos: activeUses.length,
+            cash_confirmed: activeSub?.cash_payment_confirmed
           },
-          agendamentos_recentes: appointments?.slice(0, 5),
-          pagamentos_recentes: payments?.slice(0, 3),
+          agendamentos_recentes: appointments?.slice(0, 8),
+          pagamentos: {
+            confirmados: payments?.filter((p: any) => p.status === 'paid'),
+            pendentes_reais: realPending,
+            pix_expirados: expiredPix.length,
+            total_registros: payments?.length
+          },
           reservas_pendentes: pendingBookings,
           problemas_detectados: issues,
-          erros_recentes: recentLogs
+          erros_recentes: recentLogs,
+          agendamentos_sem_ponto: missingPoints?.map((a: any) => ({ id: a.id, data: a.data }))
         };
+        break;
+      }
 
-        console.log('✅ Diagnóstico completo:', result);
+      // ========================================
+      // CONSULTAR QUALQUER TABELA
+      // ========================================
+      case "consultar_tabela": {
+        const { tabela, filtros, select, order_by, order_asc, limite } = args;
+
+        if (!READABLE_TABLES.includes(tabela)) {
+          result = { erro: `Tabela '${tabela}' não está disponível para consulta. Tabelas disponíveis: ${READABLE_TABLES.join(', ')}` };
+          break;
+        }
+
+        let query = supabase.from(tabela).select(select || '*');
+
+        if (filtros && typeof filtros === 'object') {
+          for (const [key, value] of Object.entries(filtros)) {
+            if (value === null) {
+              query = query.is(key, null);
+            } else if (typeof value === 'boolean') {
+              query = query.eq(key, value);
+            } else {
+              query = query.eq(key, value);
+            }
+          }
+        }
+
+        if (order_by) {
+          query = query.order(order_by, { ascending: order_asc ?? false });
+        }
+
+        query = query.limit(limite || 10);
+
+        const { data, error } = await query;
+        if (error) {
+          result = { erro: error.message };
+        } else {
+          result = { tabela, total_registros: data?.length || 0, dados: data };
+        }
+        break;
+      }
+
+      // ========================================
+      // ATUALIZAR DADOS (COM AUDITORIA)
+      // ========================================
+      case "atualizar_dados": {
+        const { tabela, filtros, dados, motivo } = args;
+
+        if (!WRITABLE_TABLES.includes(tabela)) {
+          result = { erro: `Tabela '${tabela}' não é editável pela IA. Tabelas editáveis: ${WRITABLE_TABLES.join(', ')}` };
+          break;
+        }
+
+        if (!motivo) {
+          result = { erro: 'Motivo é obrigatório para alterações' };
+          break;
+        }
+
+        // Buscar estado anterior
+        let beforeQuery = supabase.from(tabela).select('*');
+        for (const [key, value] of Object.entries(filtros)) {
+          beforeQuery = beforeQuery.eq(key, value);
+        }
+        const { data: beforeData } = await beforeQuery;
+
+        if (!beforeData || beforeData.length === 0) {
+          result = { erro: 'Registro não encontrado com os filtros fornecidos' };
+          break;
+        }
+
+        // Executar update
+        let updateQuery = supabase.from(tabela).update(dados);
+        for (const [key, value] of Object.entries(filtros)) {
+          updateQuery = updateQuery.eq(key, value);
+        }
+        const { error: updateError, data: afterData } = await updateQuery.select();
+
+        if (updateError) {
+          result = { erro: updateError.message };
+          break;
+        }
+
+        // Log de auditoria
+        actionLog.before_state = beforeData[0];
+        actionLog.after_state = afterData?.[0] || dados;
+
+        await supabase.from('ai_actions_log').insert({
+          conversation_id: conversationId,
+          user_id: args.user_id || beforeData[0]?.user_id || null,
+          action_type: 'data_update',
+          action_name: `update_${tabela}`,
+          parameters: { tabela, filtros, dados, motivo },
+          before_state: beforeData[0],
+          after_state: afterData?.[0] || dados,
+          success: true,
+          auto_approved: true,
+          created_at: new Date().toISOString()
+        });
+
+        result = {
+          sucesso: true,
+          tabela,
+          registros_afetados: afterData?.length || 1,
+          motivo,
+          antes: beforeData[0],
+          depois: afterData?.[0] || dados
+        };
+        break;
+      }
+
+      // ========================================
+      // VERIFICAR PROBLEMA GLOBAL
+      // ========================================
+      case "verificar_problema_global": {
+        const { tipo_problema, data: dataStr, barbeiro_id } = args;
+        const now = new Date();
+        const today = now.toISOString().split('T')[0];
+
+        switch (tipo_problema) {
+          case "agendamento": {
+            // Verificar agendamentos criados nas últimas 2h
+            const twoHoursAgo = new Date(now.getTime() - 2 * 60 * 60 * 1000).toISOString();
+            const { data: recentBookings } = await supabase
+              .from('agendamentos')
+              .select('id, user_id, status, created_at')
+              .gte('created_at', twoHoursAgo)
+              .order('created_at', { ascending: false })
+              .limit(20);
+
+            const { data: recentErrors } = await supabase
+              .from('system_logs')
+              .select('message, category, created_at')
+              .eq('level', 'error')
+              .gte('created_at', twoHoursAgo)
+              .limit(10);
+
+            const uniqueUsers = new Set(recentBookings?.map((b: any) => b.user_id));
+
+            result = {
+              tipo: 'agendamento',
+              agendamentos_recentes_2h: recentBookings?.length || 0,
+              usuarios_distintos: uniqueUsers.size,
+              erros_recentes: recentErrors?.length || 0,
+              detalhes_erros: recentErrors?.slice(0, 5),
+              sistema_funcionando: (recentBookings?.length || 0) > 0 && (recentErrors?.length || 0) === 0,
+              diagnostico: (recentBookings?.length || 0) === 0 && (recentErrors?.length || 0) > 0
+                ? 'POSSÍVEL PROBLEMA GLOBAL — sem agendamentos recentes e erros detectados'
+                : 'Sistema aparenta estar funcionando normalmente'
+            };
+            break;
+          }
+
+          case "disponibilidade": {
+            const targetDate = dataStr || today;
+            let query = supabase.from('agendamentos')
+              .select('id, hora, barbeiro_id, status')
+              .eq('data', targetDate)
+              .not('status', 'in', '("cancelled_by_user","cancelled_by_admin")');
+
+            if (barbeiro_id) query = query.eq('barbeiro_id', barbeiro_id);
+            const { data: dayAppointments } = await query;
+
+            // Verificar configuração
+            const dayOfWeek = new Date(targetDate + 'T12:00:00').getDay();
+            let configQuery = supabase.from('configuracoes_horario_barbeiro')
+              .select('*')
+              .eq('dia_semana', dayOfWeek);
+            if (barbeiro_id) configQuery = configQuery.eq('barbeiro_id', barbeiro_id);
+            const { data: configs } = await configQuery;
+
+            // Exceções
+            let excQuery = supabase.from('horarios_excepcionais_barbeiro').select('*').eq('data', targetDate);
+            if (barbeiro_id) excQuery = excQuery.eq('barbeiro_id', barbeiro_id);
+            const { data: exceptions } = await excQuery;
+
+            result = {
+              data: targetDate,
+              dia_semana: ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'][dayOfWeek],
+              agendamentos_no_dia: dayAppointments?.length || 0,
+              horarios_ocupados: dayAppointments?.map((a: any) => `${a.hora} (${a.status})`),
+              configuracoes: configs,
+              excecoes: exceptions,
+              barbeiros_fechados: configs?.filter((c: any) => !c.aberto).length || 0
+            };
+            break;
+          }
+
+          case "pagamento": {
+            const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000).toISOString();
+            const { data: recentPayments } = await supabase
+              .from('pagamentos')
+              .select('id, status, metodo, created_at')
+              .gte('created_at', oneHourAgo)
+              .order('created_at', { ascending: false })
+              .limit(20);
+
+            const paid = recentPayments?.filter((p: any) => p.status === 'paid').length || 0;
+            const pending = recentPayments?.filter((p: any) => p.status === 'pending').length || 0;
+            const failed = recentPayments?.filter((p: any) => p.status === 'failed').length || 0;
+
+            result = {
+              tipo: 'pagamento',
+              ultima_hora: { total: recentPayments?.length, pagos: paid, pendentes: pending, falhados: failed },
+              gateway_funcionando: paid > 0 || (pending > 0 && failed === 0),
+              diagnostico: failed > 2 ? 'POSSÍVEL PROBLEMA NO GATEWAY — múltiplas falhas' : 'Gateway aparenta estar normal'
+            };
+            break;
+          }
+
+          default:
+            result = { erro: 'Tipo de problema não reconhecido' };
+        }
+        break;
+      }
+
+      // ========================================
+      // VERIFICAR CONFIGURAÇÃO DO BARBEIRO
+      // ========================================
+      case "verificar_configuracao_barbeiro": {
+        const { barbeiro_id, data: dataStr } = args;
+
+        const [
+          { data: barber },
+          { data: configs },
+          { data: exceptions }
+        ] = await Promise.all([
+          supabase.from('barbeiros').select('id, apelido, ativo, tenant_id').eq('id', barbeiro_id).single(),
+          supabase.from('configuracoes_horario_barbeiro').select('*').eq('barbeiro_id', barbeiro_id).order('dia_semana', { ascending: true }),
+          supabase.from('horarios_excepcionais_barbeiro').select('*').eq('barbeiro_id', barbeiro_id).order('data', { ascending: false }).limit(10)
+        ]);
+
+        let dayConfig = null;
+        let dayException = null;
+        if (dataStr) {
+          const dow = new Date(dataStr + 'T12:00:00').getDay();
+          dayConfig = configs?.find((c: any) => c.dia_semana === dow);
+          dayException = exceptions?.find((e: any) => e.data === dataStr);
+        }
+
+        result = {
+          barbeiro: barber,
+          configuracoes_semanais: configs,
+          excecoes_recentes: exceptions,
+          ...(dataStr ? {
+            data_consultada: dataStr,
+            configuracao_do_dia: dayException || dayConfig,
+            tem_excecao: !!dayException,
+            aberto: dayException ? dayException.aberto : dayConfig?.aberto
+          } : {})
+        };
         break;
       }
 
@@ -468,129 +736,98 @@ async function executeFunction(functionName: string, args: any, supabase: any, c
       // ========================================
       case "verificar_agendamento_especifico": {
         const { agendamento_id } = args;
-        
-        const { data: appointment } = await supabase
-          .from('agendamentos')
-          .select(`
-            *,
-            servicos (nome, preco, duracao_minutos),
-            barbeiros (apelido)
-          `)
-          .eq('id', agendamento_id)
-          .single();
+
+        const [
+          { data: appointment },
+          { data: payment },
+          { data: logs }
+        ] = await Promise.all([
+          supabase.from('agendamentos').select('*, servicos(nome, preco, duracao_minutos), barbeiros(apelido)').eq('id', agendamento_id).single(),
+          supabase.from('pagamentos').select('*').eq('agendamento_id', agendamento_id).order('created_at', { ascending: false }).limit(1),
+          supabase.from('logs_agendamentos').select('*').eq('agendamento_id', agendamento_id).order('timestamp', { ascending: false }).limit(10)
+        ]);
 
         if (!appointment) {
           result = { erro: 'Agendamento não encontrado' };
           break;
         }
 
-        // Pagamento associado
-        const { data: payment } = await supabase
-          .from('pagamentos')
-          .select('*')
-          .eq('agendamento_id', agendamento_id)
-          .single();
-
-        // Logs do agendamento
-        const { data: logs } = await supabase
-          .from('logs_agendamentos')
-          .select('*')
-          .eq('agendamento_id', agendamento_id)
-          .order('timestamp', { ascending: false })
-          .limit(10);
-
         result = {
           agendamento: appointment,
           servico: appointment.servicos,
           barbeiro: appointment.barbeiros,
-          pagamento: payment,
+          pagamento: payment?.[0] || null,
           historico_alteracoes: logs
         };
         break;
       }
 
       // ========================================
-      // VERIFICAR DISPONIBILIDADE
+      // ANALISAR PAGAMENTOS (INTELIGENTE)
       // ========================================
-      case "verificar_disponibilidade": {
-        const { data: dataStr, servico_id } = args;
-        
-        const dayOfWeek = new Date(dataStr).getDay();
-        
-        // Configuração de horário do dia
-        const { data: config } = await supabase
-          .from('configuracoes_horario')
-          .select('*')
-          .eq('dia_semana', dayOfWeek)
-          .single();
+      case "analisar_pagamentos_usuario": {
+        const { user_id } = args;
+        const now = new Date();
 
-        // Horário excepcional
-        const { data: exception } = await supabase
-          .from('horarios_excepcionais')
-          .select('*')
-          .eq('data', dataStr)
-          .single();
-
-        // Agendamentos existentes
-        const { data: existingAppointments } = await supabase
-          .from('agendamentos')
-          .select('hora, duracao, status')
-          .eq('data', dataStr)
-          .not('status', 'in', '("cancelled_by_user","cancelled_by_admin","excluido")');
-
-        result = {
-          data: dataStr,
-          dia_semana: ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'][dayOfWeek],
-          configuracao_normal: config,
-          horario_excepcional: exception,
-          aberto: exception ? exception.aberto : (config?.aberto ?? false),
-          agendamentos_existentes: existingAppointments?.length || 0,
-          horarios_ocupados: existingAppointments?.map((a: any) => a.hora)
-        };
-        break;
-      }
-
-      // ========================================
-      // VERIFICAR PAGAMENTO DETALHADO
-      // ========================================
-      case "verificar_pagamento_detalhado": {
-        const { user_id, payment_id } = args;
-        
-        let paymentsQuery = supabase
+        const { data: payments } = await supabase
           .from('pagamentos')
-          .select('*')
+          .select('id, valor, status, metodo, created_at, data_pagamento, gateway_payment_id, agendamento_id, assinatura_id')
           .eq('user_id', user_id)
           .order('created_at', { ascending: false })
-          .limit(5);
-        
-        if (payment_id) {
-          paymentsQuery = supabase
-            .from('pagamentos')
-            .select('*')
-            .eq('id', payment_id)
-            .single();
+          .limit(20);
+
+        const analysis = {
+          pagos: [] as any[],
+          pendentes_reais: [] as any[],
+          pix_expirados: [] as any[],
+          abandonados: [] as any[],
+          estornados: [] as any[]
+        };
+
+        for (const p of (payments || [])) {
+          if (p.status === 'paid') {
+            analysis.pagos.push(p);
+          } else if (p.status === 'refunded') {
+            analysis.estornados.push(p);
+          } else if (p.status === 'pending') {
+            const created = new Date(p.created_at);
+            const diffMin = (now.getTime() - created.getTime()) / 60000;
+
+            // Verificar se agendamento associado foi cancelado
+            if (p.agendamento_id) {
+              const { data: apt } = await supabase
+                .from('agendamentos')
+                .select('status')
+                .eq('id', p.agendamento_id)
+                .single();
+              if (apt?.status?.includes('cancelled')) {
+                analysis.abandonados.push({ ...p, motivo: 'agendamento cancelado' });
+                continue;
+              }
+            }
+
+            if (diffMin > 30 && !p.data_pagamento) {
+              analysis.pix_expirados.push({ ...p, minutos_desde_criacao: Math.round(diffMin) });
+            } else {
+              analysis.pendentes_reais.push(p);
+            }
+          }
         }
 
-        const { data: payments } = await paymentsQuery;
-
-        // Webhook logs recentes
-        const { data: webhookLogs } = await supabase
-          .from('webhook_logs')
-          .select('*')
-          .eq('provider', 'asaas')
-          .order('created_at', { ascending: false })
-          .limit(10);
-
-        // Reservas pendentes
-        const { data: pendingBookings } = await supabase
-          .from('pending_bookings')
-          .select('*')
-          .eq('user_id', user_id);
-
         result = {
-          pagamentos: payments,
-          webhooks_recentes: webhookLogs?.slice(0, 5),
-          reservas_pendentes: pendingBookings
+          resumo: {
+            total: payments?.length || 0,
+            pagos: analysis.pagos.length,
+            pendentes_reais: analysis.pendentes_reais.length,
+            pix_expirados: analysis.pix_expirados.length,
+            abandonados: analysis.abandonados.length,
+            estornados: analysis.estornados.length,
+            tem_divida_real: analysis.pendentes_reais.length > 0
+          },
+          detalhes: analysis,
+          conclusao: analysis.pendentes_reais.length === 0
+            ? 'Cliente NÃO tem nenhuma pendência financeira real. PIX expirados são apenas registros abandonados.'
+            : `Cliente tem ${analysis.pendentes_reais.length} pagamento(s) pendente(s) recente(s) que podem estar aguardando confirmação do gateway.`
         };
         break;
       }
@@ -600,17 +837,12 @@ async function executeFunction(functionName: string, args: any, supabase: any, c
       // ========================================
       case "corrigir_ponto_fidelidade": {
         const { agendamento_id, user_id, confirmado_pelo_usuario } = args;
-        
+
         if (!confirmado_pelo_usuario) {
-          result = {
-            sucesso: false,
-            requer_confirmacao: true,
-            mensagem: 'Esta ação requer confirmação do usuário de que o atendimento foi realizado'
-          };
+          result = { sucesso: false, requer_confirmacao: true, mensagem: 'Preciso que você confirme que o atendimento foi realizado antes de liberar o ponto.' };
           break;
         }
 
-        // Verificar agendamento
         const { data: appointment } = await supabase
           .from('agendamentos')
           .select('*')
@@ -618,65 +850,66 @@ async function executeFunction(functionName: string, args: any, supabase: any, c
           .eq('user_id', user_id)
           .single();
 
-        if (!appointment) {
-          result = { sucesso: false, erro: 'Agendamento não encontrado' };
-          break;
-        }
-
-        if (appointment.ponto_liberado) {
-          result = { sucesso: false, erro: 'Ponto já foi creditado para este agendamento' };
-          break;
-        }
-
-        if (appointment.is_free) {
-          result = { sucesso: false, erro: 'Cortes grátis não geram pontos de fidelidade' };
-          break;
-        }
+        if (!appointment) { result = { sucesso: false, erro: 'Agendamento não encontrado' }; break; }
+        if (appointment.ponto_liberado) { result = { sucesso: false, erro: 'Ponto já foi creditado' }; break; }
+        if (appointment.is_free) { result = { sucesso: false, erro: 'Cortes grátis não geram pontos' }; break; }
 
         // Atualizar agendamento
-        const { error: updateError } = await supabase
-          .from('agendamentos')
-          .update({ 
-            ponto_liberado: true, 
-            barbeiro_confirmou: true,
-            status: 'completed'
-          })
-          .eq('id', agendamento_id);
+        await supabase.from('agendamentos').update({
+          ponto_liberado: true,
+          barbeiro_confirmou: true,
+          status: 'completed'
+        }).eq('id', agendamento_id);
 
-        if (updateError) {
-          result = { sucesso: false, erro: updateError.message };
-          break;
-        }
-
-        // Adicionar ponto
-        const { data: currentPoints } = await supabase
-          .from('pontos')
-          .select('pontos')
-          .eq('user_id', user_id)
-          .single();
+        // Atualizar pontos
+        const { data: currentPoints } = await supabase.from('pontos').select('pontos').eq('user_id', user_id).single();
 
         if (currentPoints) {
-          await supabase
-            .from('pontos')
-            .update({ 
-              pontos: currentPoints.pontos + 1,
-              last_awarded_at: new Date().toISOString()
-            })
-            .eq('user_id', user_id);
+          await supabase.from('pontos').update({
+            pontos: currentPoints.pontos + 1,
+            last_awarded_at: new Date().toISOString()
+          }).eq('user_id', user_id);
         } else {
-          await supabase
-            .from('pontos')
-            .insert({ user_id, pontos: 1, last_awarded_at: new Date().toISOString() });
+          await supabase.from('pontos').insert({ user_id, pontos: 1, last_awarded_at: new Date().toISOString() });
         }
 
-        // Log da ação
         actionLog.before_state = { ponto_liberado: false, pontos: currentPoints?.pontos || 0 };
         actionLog.after_state = { ponto_liberado: true, pontos: (currentPoints?.pontos || 0) + 1 };
 
+        result = { sucesso: true, mensagem: 'Ponto creditado com sucesso!', novos_pontos: (currentPoints?.pontos || 0) + 1 };
+        break;
+      }
+
+      // ========================================
+      // LIMPAR PAGAMENTOS EXPIRADOS
+      // ========================================
+      case "limpar_pagamentos_expirados": {
+        const { user_id } = args;
+        const thirtyMinAgo = new Date(Date.now() - 30 * 60 * 1000).toISOString();
+
+        // Limpar pending_bookings expirados
+        const { data: expiredBookings } = await supabase
+          .from('pending_bookings')
+          .delete()
+          .eq('user_id', user_id)
+          .lt('expires_at', new Date().toISOString())
+          .select();
+
+        // Marcar pagamentos PIX antigos como expirados
+        const { data: expiredPayments } = await supabase
+          .from('pagamentos')
+          .update({ status: 'expired' })
+          .eq('user_id', user_id)
+          .eq('status', 'pending')
+          .is('data_pagamento', null)
+          .lt('created_at', thirtyMinAgo)
+          .select();
+
         result = {
           sucesso: true,
-          mensagem: 'Ponto creditado com sucesso',
-          novos_pontos: (currentPoints?.pontos || 0) + 1
+          reservas_limpas: expiredBookings?.length || 0,
+          pagamentos_marcados_expirados: expiredPayments?.length || 0,
+          mensagem: 'Registros antigos limpos com sucesso. Nenhuma pendência real.'
         };
         break;
       }
@@ -686,84 +919,39 @@ async function executeFunction(functionName: string, args: any, supabase: any, c
       // ========================================
       case "reenviar_email_confirmacao": {
         const { user_email } = args;
-        
-        const { error } = await supabase.functions.invoke('send-confirmation-email', {
-          body: { email: user_email }
-        });
-
-        if (error) {
-          result = { sucesso: false, erro: error.message };
-        } else {
-          result = { sucesso: true, mensagem: 'Email reenviado' };
-        }
+        const { error } = await supabase.functions.invoke('send-confirmation-email', { body: { email: user_email } });
+        result = error ? { sucesso: false, erro: error.message } : { sucesso: true, mensagem: 'Email reenviado' };
         break;
       }
 
       // ========================================
-      // CRIAR TICKET AUTOMÁTICO
+      // CRIAR TICKET
       // ========================================
       case "criar_ticket_automatico": {
         const { user_id, titulo, descricao, prioridade, categoria, diagnosticos_realizados } = args;
-        
-        // Buscar dados do usuário
-        let userName = '';
-        let userPhone = '';
-        let userEmail = '';
-        
-        if (user_id) {
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('nome, telefone')
-            .eq('id', user_id)
-            .single();
-          
-          userName = profile?.nome || '';
-          userPhone = profile?.telefone || '';
-        }
 
         try {
           const { data: ticket, error } = await retryWithBackoff(async () => {
-            return await supabase
-              .from('support_tickets')
-              .insert({
-                user_id: user_id || null,
-                conversation_id: conversationId,
-                title: titulo,
-                description: descricao,
-                priority: prioridade,
-                category: categoria,
-                status: 'open',
-                metadata: {
-                  created_by_ai: true,
-                  auto_created: true,
-                  diagnosticos: diagnosticos_realizados,
-                  timestamp: new Date().toISOString()
-                }
-              })
-              .select()
-              .single();
+            return await supabase.from('support_tickets').insert({
+              user_id: user_id || null,
+              conversation_id: conversationId,
+              title: titulo,
+              description: descricao,
+              priority: prioridade,
+              category: categoria,
+              status: 'open',
+              metadata: { created_by_ai: true, auto_created: true, diagnosticos: diagnosticos_realizados, timestamp: new Date().toISOString() }
+            }).select().single();
           }, 3, 2000);
 
           if (error) throw error;
-
-          result = {
-            sucesso: true,
-            ticket_id: ticket.id,
-            protocolo: ticket.id.substring(0, 8).toUpperCase(),
-            mensagem: `Ticket aberto automaticamente — protocolo ${ticket.id.substring(0, 8).toUpperCase()}`
-          };
+          result = { sucesso: true, ticket_id: ticket.id, protocolo: ticket.id.substring(0, 8).toUpperCase(), mensagem: `Ticket aberto — protocolo ${ticket.id.substring(0, 8).toUpperCase()}` };
         } catch (error: any) {
-          console.error('Erro ao criar ticket:', error);
-          
-          // Fallback: pending_ticket
           const pendingId = `PT-${Date.now()}`;
           await supabase.from('pending_tickets').insert({
             pending_ticket_id: pendingId,
             conversation_id: conversationId,
             user_id,
-            user_name: userName,
-            user_phone: userPhone,
-            user_email: userEmail,
             summary: titulo,
             description: descricao,
             priority: prioridade,
@@ -771,50 +959,28 @@ async function executeFunction(functionName: string, args: any, supabase: any, c
             status: 'pending',
             last_error: error.message,
             payload: { diagnosticos_realizados }
-          });
+          }).catch(() => {});
 
-          result = {
-            sucesso: true,
-            pending: true,
-            protocolo: pendingId,
-            mensagem: `Registrei seu caso (${pendingId}) — suporte já foi notificado`
-          };
+          result = { sucesso: true, pending: true, protocolo: pendingId, mensagem: `Registrei seu caso (${pendingId}) — suporte foi notificado` };
         }
         break;
       }
 
-      // ========================================
-      // SOLICITAR CONFIRMAÇÃO
-      // ========================================
-      case "solicitar_confirmacao_acao": {
-        const { acao, descricao_acao, impacto } = args;
-        
-        result = {
-          requer_confirmacao: true,
-          acao,
-          descricao: descricao_acao,
-          impacto,
-          instrucao: 'Por favor, confirme se deseja que eu execute esta ação respondendo "sim" ou "confirmo"'
-        };
-        break;
-      }
-
       default:
-        result = { erro: 'Função não encontrada' };
+        result = { erro: `Função '${functionName}' não encontrada` };
     }
-    
+
     actionLog.success = true;
-    actionLog.result = result;
+    actionLog.result = typeof result === 'string' ? result : JSON.stringify(result).slice(0, 2000);
     await logAIAction(supabase, actionLog);
-    
+
     return JSON.stringify(result);
-    
+
   } catch (error: any) {
     console.error(`❌ Erro em ${functionName}:`, error);
     actionLog.success = false;
     actionLog.error_message = error.message;
     await logAIAction(supabase, actionLog);
-    
     return JSON.stringify({ sucesso: false, erro: error.message });
   }
 }
@@ -830,158 +996,142 @@ serve(async (req) => {
 
   try {
     const { message, conversationId, guestName, guestEmail } = await req.json();
-    
+
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const lovableApiKey = Deno.env.get('LOVABLE_API_KEY')!;
-    
+
     const supabase = createClient(supabaseUrl, supabaseKey);
-    
+
     // Autenticação
     const authHeader = req.headers.get('Authorization');
     let user = null;
     let isGuest = false;
-    
+
     if (authHeader) {
       const token = authHeader.replace('Bearer ', '');
       const { data: { user: authUser } } = await supabase.auth.getUser(token);
       if (authUser) user = authUser;
     }
-    
+
     if (!user) {
       isGuest = true;
       user = { id: `guest-${Date.now()}`, email: guestEmail };
     }
 
-    console.log('📩 Mensagem:', { userId: user.id, isGuest });
+    console.log('📩 Mensagem:', { userId: user.id, isGuest, msg: message?.slice(0, 100) });
 
     // Buscar ou criar conversa
     let conversation;
     if (conversationId) {
-      const { data } = await supabase
-        .from('support_conversations')
-        .select('*')
-        .eq('id', conversationId)
-        .single();
+      const { data } = await supabase.from('support_conversations').select('*').eq('id', conversationId).single();
       conversation = data;
     }
 
     if (!conversation) {
-      const { data: newConv } = await supabase
-        .from('support_conversations')
-        .insert({ 
-          user_id: isGuest ? null : user.id,
-          status: 'active',
-          metadata: isGuest ? { guest_name: guestName, guest_email: guestEmail, is_guest: true } : {}
-        })
-        .select()
-        .single();
+      const { data: newConv } = await supabase.from('support_conversations').insert({
+        user_id: isGuest ? null : user.id,
+        status: 'active',
+        metadata: isGuest ? { guest_name: guestName, guest_email: guestEmail, is_guest: true } : {}
+      }).select().single();
       conversation = newConv;
     }
 
-    // Salvar mensagem do usuário
-    await supabase.from('support_messages').insert({
-      conversation_id: conversation.id,
-      role: 'user',
-      content: message
-    });
+    // Salvar mensagem
+    await supabase.from('support_messages').insert({ conversation_id: conversation.id, role: 'user', content: message });
 
-    // Buscar histórico completo da conversa
+    // Histórico
     const { data: allMessages } = await supabase
       .from('support_messages')
       .select('role, content')
       .eq('conversation_id', conversation.id)
       .order('created_at', { ascending: true })
-      .limit(30);
+      .limit(40);
 
-    const conversationHistory = allMessages?.map(msg => ({
-      role: msg.role,
-      content: msg.content
-    })) || [];
+    const conversationHistory = allMessages?.map(msg => ({ role: msg.role, content: msg.content })) || [];
 
     // ========================================
-    // PROMPT DO AGENTE INTELIGENTE
+    // SYSTEM PROMPT — IA LIBERAL E INTELIGENTE
     // ========================================
 
-    const systemPrompt = `# AGENTE DE SUPORTE INTELIGENTE — DUB
+    const systemPrompt = `# AGENTE DE SUPORTE AUTÔNOMO — DUB
 
-Você é um agente de IA AUTÔNOMO com acesso TOTAL aos dados do sistema. Sua missão é RESOLVER problemas, não apenas conversar.
+Você é a IA de suporte mais poderosa do sistema DUB. Tem acesso TOTAL ao banco de dados, pode LER e EDITAR qualquer dado. Sua missão: RESOLVER problemas, não enrolar.
 
-## IDENTIDADE
-- Nome: Assistente DUB
-- Capacidade: Acesso a dados + execução de ações
-- Objetivo: Resolver 90% dos problemas automaticamente
+## PERSONALIDADE
+- Fale em português SIMPLES e DIRETO, como se fosse um amigo que entende do assunto
+- Nada de termos técnicos pro cliente (nada de "banco de dados", "query", "status pending")
+- Seja gentil mas objetivo: "Já verifiquei aqui e..." / "Pronto, resolvi!" / "Achei o problema..."
+- Use emojis com moderação (1-2 por mensagem, no máximo)
+- Máximo 3-5 frases por resposta
 
-## COMPORTAMENTO OBRIGATÓRIO
+## REGRAS DE OURO
 
-### 1. DIAGNÓSTICO PRIMEIRO
-- SEMPRE use \`diagnosticar_usuario_completo\` como primeira ação
-- Analise os dados ANTES de responder
-- Identifique problemas mesmo que o usuário não saiba explicar
+### 1. DIAGNÓSTICO PRIMEIRO — SEMPRE
+- SEMPRE use \`diagnosticar_usuario_completo\` como PRIMEIRA ação
+- Analise TUDO antes de responder
+- NÃO faça perguntas que você pode responder consultando os dados
 
-### 2. RESOLVER, NÃO PERGUNTAR
-- Se você TEM a informação, USE
-- Se você PODE resolver, RESOLVA
-- NÃO faça perguntas que você pode responder sozinho
+### 2. INVESTIGAÇÃO PROFUNDA
+- Se o problema é de agendamento → use \`verificar_configuracao_barbeiro\` + \`verificar_problema_global\`
+- Se o problema é de pagamento → use \`analisar_pagamentos_usuario\` (NÃO o diagnóstico genérico)
+- Se precisa de dados específicos → use \`consultar_tabela\` para QUALQUER tabela
+- Se suspeita de bug → use \`verificar_problema_global\` para checar se é só esse cliente ou todos
 
-### 3. AÇÕES AUTÔNOMAS vs AÇÕES COM CONFIRMAÇÃO
+### 3. RESOLUÇÃO AUTÔNOMA
+Você PODE e DEVE resolver sozinha:
+- Corrigir pontos não creditados (com confirmação do cliente)
+- Limpar pagamentos PIX expirados que causam confusão
+- Atualizar dados de perfil com problema
+- Corrigir status de agendamentos inconsistentes
+- Abrir tickets quando não conseguir resolver
 
-**EXECUTAR AUTOMATICAMENTE (sem pedir):**
-- Diagnósticos e verificações
-- Abrir tickets
-- Reenviar emails
-- Consultar horários
+Use \`atualizar_dados\` para correções diretas. Sempre registre o motivo.
 
-**PEDIR CONFIRMAÇÃO (ação crítica):**
-- Corrigir pontos manualmente
-- Alterar dados do perfil
-- Cancelar/remarcar agendamentos
+### 4. PERGUNTAS ESTRATÉGICAS
+Quando NÃO tem dados suficientes, faça perguntas INTELIGENTES:
+- "Qual barbeiro você tentou agendar?" (não "qual é o ID do barbeiro")
+- "Foi hoje que você tentou?" (não "qual data no formato YYYY-MM-DD")
+- "O pagamento foi por PIX ou cartão?" (opções claras)
+- NUNCA faça mais de 2 perguntas por vez
 
-### 4. TICKETS AUTOMÁTICOS
-Quando identificar que NÃO consegue resolver:
-- Abra o ticket IMEDIATAMENTE
-- NÃO pergunte "posso abrir um ticket?"
-- Diga: "Abri um ticket (protocolo XXX) para resolver isso"
+### 5. PAGAMENTOS — REGRA CRÍTICA ⚠️
+**O MAIOR ERRO É DIZER QUE O CLIENTE TEM PAGAMENTO EM ABERTO QUANDO NÃO TEM!**
 
-### 5. FORMATO DE RESPOSTA
-- Máximo 3-4 frases
-- Tom: profissional, direto, confiante
-- Informe AÇÕES executadas: "Verifiquei seus dados e encontrei X"
-- Próximo passo claro ou "Pronto, resolvido!"
+- PIX gerado e não pago em 30+ minutos = EXPIRADO = NÃO É DÍVIDA
+- Pagamento pending + agendamento cancelado = ABANDONADO = NÃO É DÍVIDA
+- SOMENTE pagamento pending + criado há menos de 30 min + sem data_pagamento = AGUARDANDO confirmação
+- Se encontrar PIX expirados, use \`limpar_pagamentos_expirados\` para resolver
+- Resposta correta: "Não se preocupe! Aquele era só um PIX que expirou, você não tem nenhuma pendência. Já limpei aqui pra não aparecer mais."
+
+### 6. VERIFICAÇÃO GLOBAL vs INDIVIDUAL
+Quando cliente relata problema de agendamento/pagamento:
+1. Primeiro verifique se é SÓ dele → diagnóstico do usuário
+2. Depois verifique se é GLOBAL → \`verificar_problema_global\`
+3. Se for global → ticket URGENTE imediato
+4. Se for individual → investigue e resolva
 
 ## DADOS DO CONTEXTO
-
 - **Usuário**: ${!isGuest ? user.id : 'visitante (não logado)'}
 - **Email**: ${user.email || 'não disponível'}
 - **Conversa**: ${conversation.id}
 - **Logado**: ${!isGuest ? 'Sim' : 'Não'}
 
 ## BASE DE CONHECIMENTO
-
 ${APP_KNOWLEDGE}
 
-## FERRAMENTAS DISPONÍVEIS
+## REGRAS FINAIS
+1. Se usuário NÃO está logado → pode dar informações gerais mas não acessar dados pessoais
+2. Se conta bloqueada → ticket IMEDIATO (prioridade alta)
+3. Se problema financeiro real → ticket prioridade CRÍTICA
+4. NUNCA diga "não tenho acesso" — você TEM acesso a TUDO
+5. NUNCA peça dados que pode buscar sozinha
+6. Se não consegue resolver → abra ticket E informe o protocolo
+7. Se resolver → confirme com confiança: "Pronto, tá resolvido!"
+8. Use \`consultar_tabela\` para investigar QUALQUER coisa — barbeiros, serviços, configurações, etc.`;
 
-Use as funções para:
-- \`diagnosticar_usuario_completo\`: SEMPRE usar primeiro
-- \`verificar_agendamento_especifico\`: detalhes de um agendamento
-- \`verificar_disponibilidade\`: horários livres
-- \`verificar_pagamento_detalhado\`: status de pagamentos
-- \`corrigir_ponto_fidelidade\`: liberar ponto (requer confirmação)
-- \`criar_ticket_automatico\`: abrir ticket (automático)
-
-## REGRAS CRÍTICAS
-
-1. Se usuário NÃO está logado → funcionalidades limitadas, pedir login
-2. Se conta bloqueada → ticket imediato (não pode resolver)
-3. Se problema financeiro crítico → ticket de prioridade alta
-4. NUNCA diga "não tenho acesso" se você TEM acesso
-5. NUNCA peça dados que você pode buscar
-
-Seja o melhor agente de suporte: eficiente, direto e resolutivo.`;
-    
     // ========================================
-    // CHAMADA DA IA COM TOOLS
+    // CHAMADA DA IA
     // ========================================
 
     const initialPayload = {
@@ -991,8 +1141,8 @@ Seja o melhor agente de suporte: eficiente, direto e resolutivo.`;
         ...conversationHistory
       ],
       tools: AVAILABLE_TOOLS,
-      temperature: 0.6,
-      max_tokens: 1500
+      temperature: 0.5,
+      max_tokens: 2000
     };
 
     let aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
@@ -1007,13 +1157,24 @@ Seja o melhor agente de suporte: eficiente, direto e resolutivo.`;
     if (!aiResponse.ok) {
       const errorText = await aiResponse.text();
       console.error('AI Error:', aiResponse.status, errorText);
+
+      if (aiResponse.status === 429) {
+        return new Response(JSON.stringify({ error: 'Rate limit', response: 'Estou recebendo muitas mensagens agora. Aguarde um minutinho e tente de novo! 😊' }), {
+          status: 429,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+
       throw new Error(`AI error: ${aiResponse.status}`);
     }
 
     let aiData = await aiResponse.json();
     let choice = aiData.choices[0];
     let iterations = 0;
-    const maxIterations = 8; // Mais iterações para resolver problemas complexos
+    const maxIterations = 12; // Mais iterações para resolver problemas complexos
+
+    // Acumular mensagens para contexto
+    const messageHistory = [...initialPayload.messages];
 
     // ========================================
     // LOOP DE TOOL CALLING
@@ -1021,41 +1182,49 @@ Seja o melhor agente de suporte: eficiente, direto e resolutivo.`;
 
     while (choice.finish_reason === 'tool_calls' && iterations < maxIterations) {
       iterations++;
-      console.log(`🔄 Iteração ${iterations}`);
+      console.log(`🔄 Iteração ${iterations}/${maxIterations}`);
 
       const toolCalls = choice.message.tool_calls;
       const toolResults = [];
 
-      for (const toolCall of toolCalls) {
+      // Executar tools em paralelo quando possível
+      const promises = toolCalls.map(async (toolCall: any) => {
         const functionName = toolCall.function.name;
-        const functionArgs = JSON.parse(toolCall.function.arguments);
-        
+        let functionArgs;
+        try {
+          functionArgs = JSON.parse(toolCall.function.arguments);
+        } catch {
+          functionArgs = {};
+        }
+
         // Injetar user_id se não fornecido
         if (!functionArgs.user_id && !isGuest) {
           functionArgs.user_id = user.id;
         }
-        
+
         const result = await executeFunction(functionName, functionArgs, supabase, conversation.id);
-        
-        toolResults.push({
+
+        return {
           tool_call_id: toolCall.id,
-          role: 'tool',
+          role: 'tool' as const,
           name: functionName,
           content: result
-        });
-      }
+        };
+      });
 
-      // Continuar conversa
+      const results = await Promise.all(promises);
+      toolResults.push(...results);
+
+      // Acumular no histórico
+      messageHistory.push(choice.message);
+      messageHistory.push(...toolResults);
+
       const followUpPayload = {
         model: 'google/gemini-2.5-flash',
-        messages: [
-          ...initialPayload.messages,
-          choice.message,
-          ...toolResults
-        ],
+        messages: messageHistory,
         tools: AVAILABLE_TOOLS,
-        temperature: 0.6,
-        max_tokens: 1500
+        temperature: 0.5,
+        max_tokens: 2000
       };
 
       aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
@@ -1068,7 +1237,9 @@ Seja o melhor agente de suporte: eficiente, direto e resolutivo.`;
       });
 
       if (!aiResponse.ok) {
-        throw new Error(`AI error: ${aiResponse.status}`);
+        const errText = await aiResponse.text();
+        console.error(`AI Error iteration ${iterations}:`, aiResponse.status, errText);
+        break;
       }
 
       aiData = await aiResponse.json();
@@ -1076,7 +1247,7 @@ Seja o melhor agente de suporte: eficiente, direto e resolutivo.`;
     }
 
     // Resposta final
-    const assistantMessage = choice.message.content || 'Desculpe, ocorreu um erro. Tente novamente.';
+    const assistantMessage = choice.message?.content || 'Desculpe, tive um probleminha técnico. Pode tentar de novo? 😊';
 
     // Salvar resposta
     await supabase.from('support_messages').insert({
@@ -1085,11 +1256,7 @@ Seja o melhor agente de suporte: eficiente, direto e resolutivo.`;
       content: assistantMessage
     });
 
-    // Atualizar last_message_at
-    await supabase
-      .from('support_conversations')
-      .update({ last_message_at: new Date().toISOString() })
-      .eq('id', conversation.id);
+    await supabase.from('support_conversations').update({ last_message_at: new Date().toISOString() }).eq('id', conversation.id);
 
     return new Response(JSON.stringify({
       conversationId: conversation.id,
@@ -1100,9 +1267,9 @@ Seja o melhor agente de suporte: eficiente, direto e resolutivo.`;
 
   } catch (error) {
     console.error('❌ Erro:', error);
-    return new Response(JSON.stringify({ 
+    return new Response(JSON.stringify({
       error: error instanceof Error ? error.message : 'Erro desconhecido',
-      response: 'Desculpe, ocorreu um erro temporário. Por favor, tente novamente em alguns segundos.'
+      response: 'Ops, tive um probleminha. Tenta de novo em alguns segundos! 😊'
     }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
