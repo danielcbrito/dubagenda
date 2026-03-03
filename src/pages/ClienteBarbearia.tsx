@@ -107,7 +107,7 @@ export default function ClienteBarbearia() {
       {/* Header */}
       <div className="flex items-center gap-3 px-4 pt-[env(safe-area-inset-top)] h-14">
         <button
-          onClick={() => navigate(-1)}
+          onClick={() => navigate("/cliente/perfil")}
           className="w-8 h-8 rounded-xl bg-secondary/50 flex items-center justify-center active:scale-90 transition-transform"
         >
           <ArrowLeft className="w-4 h-4 text-foreground" strokeWidth={1.8} />

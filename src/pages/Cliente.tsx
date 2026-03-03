@@ -455,7 +455,7 @@ const Cliente = () => {
   const handleLogout = async () => {
     await supabase.auth.signOut();
     toast.success("Logout realizado");
-    navigate("/");
+    navigate("/auth");
   };
 
   const handleResumePayment = (bookingId: string) => {
