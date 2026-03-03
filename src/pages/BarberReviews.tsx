@@ -72,7 +72,7 @@ const BarberReviews = () => {
       <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-border">
         <div className="max-w-lg mx-auto px-4 py-4 flex items-center gap-3">
           <button
-            onClick={() => navigate(-1)}
+            onClick={() => navigate("/cliente")}
             className="w-9 h-9 rounded-full bg-secondary flex items-center justify-center hover:bg-secondary/80 transition-colors"
           >
             <BackArrow size={20} className="text-foreground" />
