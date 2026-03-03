@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { MapPin, Search, Scissors, Navigation, Loader2, Star, Route, TrendingUp, ChevronRight, Sparkles } from "lucide-react";
+import { Search, Scissors, Star, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -37,11 +37,7 @@ function haversineDistance(lat1: number, lon1: number, lat2: number, lon2: numbe
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-function formatDistance(km: number): string {
-  if (km < 1) return `${Math.round(km * 1000)}m`;
-  if (km < 10) return `${km.toFixed(1)}km`;
-  return `${Math.round(km)}km`;
-}
+// formatDistance removed — using inline natural language in cards
 
 function normalizeText(value: string): string {
   return value
@@ -59,23 +55,20 @@ const SkeletonCard = ({ delay = 0 }: { delay?: number }) => (
     initial={{ opacity: 0 }}
     animate={{ opacity: 1 }}
     transition={{ delay }}
-    className="rounded-2xl border border-border/20 bg-card p-4"
+    className="py-5 border-b border-border/10"
   >
-    <div className="flex items-center gap-3.5">
-      <div className="w-14 h-14 rounded-2xl bg-muted/40 animate-pulse" />
-      <div className="flex-1 space-y-2.5">
-        <div className="h-4 w-32 bg-muted/40 rounded-lg animate-pulse" />
-        <div className="h-3 w-44 bg-muted/30 rounded-md animate-pulse" />
-        <div className="flex gap-2">
-          <div className="h-5 w-14 bg-muted/30 rounded-md animate-pulse" />
-          <div className="h-5 w-16 bg-muted/30 rounded-md animate-pulse" />
-        </div>
+    <div className="flex items-center gap-4">
+      <div className="w-[52px] h-[52px] rounded-[14px] bg-muted/30 animate-pulse" />
+      <div className="flex-1 space-y-2">
+        <div className="h-[14px] w-28 bg-muted/30 rounded animate-pulse" />
+        <div className="h-[11px] w-40 bg-muted/20 rounded animate-pulse" />
       </div>
+      <div className="w-8 h-8 rounded-full bg-muted/20 animate-pulse" />
     </div>
   </motion.div>
 );
 
-/** Individual barbershop card */
+/** Individual barbershop card — editorial minimal */
 const BarbershopCard = ({
   tenant,
   index,
@@ -89,134 +82,86 @@ const BarbershopCard = ({
   locationGranted: boolean;
   onClick: () => void;
 }) => {
-  const locationLabel = [tenant.bairro, tenant.cidade].filter(Boolean).join(", ");
   const hasRating = tenant.avgRating != null && (tenant.totalReviews ?? 0) > 0;
-  const isHighRated = hasRating && (tenant.avgRating ?? 0) >= 4.5;
+
+  // Clean distance text
+  const distanceText = locationGranted && tenant.distance != null
+    ? tenant.distance < 1
+      ? `a ${Math.round(tenant.distance * 1000)}m de você`
+      : tenant.distance < 10
+        ? `a ${tenant.distance.toFixed(1)}km de você`
+        : `a ${Math.round(tenant.distance)}km de você`
+    : null;
 
   return (
     <motion.button
-      initial={{ opacity: 0, y: 12 }}
+      initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{
-        delay: 0.06 + index * 0.05,
-        duration: 0.4,
+        delay: 0.04 + index * 0.04,
+        duration: 0.35,
         ease: [0.25, 0.46, 0.45, 0.94],
       }}
-      whileTap={{ scale: 0.975 }}
+      whileTap={{ scale: 0.98 }}
       onClick={onClick}
       className={cn(
-        "w-full rounded-2xl border p-0 text-left overflow-hidden group",
-        "transition-all duration-300",
-        "bg-card",
-        isCurrent
-          ? "border-primary/25 shadow-[0_0_20px_-6px_hsl(var(--primary)/0.15)]"
-          : "border-border/20 hover:border-border/40",
-        "hover:shadow-[0_8px_30px_-10px_hsl(var(--foreground)/0.08)]"
+        "w-full py-4 text-left group",
+        "transition-all duration-200",
+        index > 0 && "border-t border-border/8"
       )}
     >
-      <div className="p-4">
-        <div className="flex items-center gap-3.5">
-          {/* Logo */}
-          <div className={cn(
-            "relative w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 overflow-hidden",
-            "bg-muted/20 border border-border/15",
-            "transition-transform duration-300 group-hover:scale-105"
-          )}>
-            {tenant.logo_url ? (
-              <img src={tenant.logo_url} alt={tenant.nome} className="w-full h-full object-cover" />
-            ) : tenant.isDub ? (
-              <img src={logoDub} alt="DUB" className="w-8 h-8 object-contain" />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-muted/40 to-muted/20">
-                <span className="text-[18px] font-bold text-muted-foreground/40">
-                  {tenant.nome.charAt(0).toUpperCase()}
-                </span>
-              </div>
-            )}
-            {/* Subtle verified dot for high-rated */}
-            {isHighRated && (
-              <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-emerald-500 border-2 border-card flex items-center justify-center">
-                <Star className="w-2 h-2 fill-white text-white" />
-              </div>
-            )}
-          </div>
-
-          {/* Info */}
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-1.5">
-              <span className="text-[15px] font-bold text-foreground truncate tracking-tight">
-                {tenant.nome}
+      <div className="flex items-center gap-3.5">
+        {/* Logo — clean rounded square */}
+        <div className={cn(
+          "relative w-[52px] h-[52px] rounded-[14px] flex items-center justify-center shrink-0 overflow-hidden",
+          "bg-card border border-border/15",
+          "transition-transform duration-300 group-active:scale-95"
+        )}>
+          {tenant.logo_url ? (
+            <img src={tenant.logo_url} alt={tenant.nome} className="w-full h-full object-cover" />
+          ) : tenant.isDub ? (
+            <img src={logoDub} alt="DUB" className="w-7 h-7 object-contain" />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center bg-muted/20">
+              <span className="text-[17px] font-bold text-muted-foreground/30">
+                {tenant.nome.charAt(0).toUpperCase()}
               </span>
             </div>
+          )}
+        </div>
 
-            {tenant.slogan && (
-              <p className="text-[10px] text-muted-foreground/50 mt-0.5 italic truncate">
-                {tenant.slogan}
-              </p>
+        {/* Info — minimal, clean */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="text-[14px] font-semibold text-foreground truncate leading-tight">
+              {tenant.nome}
+            </span>
+            {hasRating && (
+              <span className="flex items-center gap-0.5 shrink-0">
+                <Star className="w-[10px] h-[10px] fill-amber-400 text-amber-400" />
+                <span className="text-[11px] font-medium tabular-nums text-foreground/60">
+                  {tenant.avgRating!.toFixed(1)}
+                </span>
+              </span>
             )}
-
-            {locationLabel && !tenant.slogan && (
-              <div className="flex items-center gap-1 mt-0.5">
-                <MapPin className="w-[9px] h-[9px] text-muted-foreground/30 shrink-0" />
-                <span className="text-[10px] text-muted-foreground/50 truncate">
-                  {locationLabel}
-                </span>
-              </div>
-            )}
-
-            {/* Badges row */}
-            <div className="flex items-center gap-1.5 mt-2 flex-wrap">
-              {hasRating && (
-                <span className={cn(
-                  "inline-flex items-center gap-1 rounded-lg px-2 py-[3px]",
-                  isHighRated
-                    ? "bg-amber-500/10 ring-1 ring-amber-500/20"
-                    : "bg-muted/40"
-                )}>
-                  <Star className={cn(
-                    "w-[10px] h-[10px]",
-                    isHighRated ? "fill-amber-400 text-amber-400" : "fill-amber-400/70 text-amber-400/70"
-                  )} />
-                  <span className={cn(
-                    "text-[10px] font-bold tabular-nums",
-                    isHighRated ? "text-amber-500" : "text-foreground/70"
-                  )}>
-                    {tenant.avgRating!.toFixed(1)}
-                  </span>
-                  <span className="text-[8px] text-muted-foreground/40">
-                    ({tenant.totalReviews})
-                  </span>
-                </span>
-              )}
-
-              {locationGranted && tenant.distance != null && (
-                <span className="inline-flex items-center gap-1 bg-muted/40 rounded-lg px-2 py-[3px]">
-                  <Navigation className="w-[9px] h-[9px] text-primary/50" />
-                  <span className="text-[10px] font-semibold tabular-nums text-muted-foreground/60">
-                    {formatDistance(tenant.distance)}
-                  </span>
-                </span>
-              )}
-
-              {locationLabel && tenant.slogan && (
-                <span className="inline-flex items-center gap-1 bg-muted/30 rounded-lg px-2 py-[3px]">
-                  <MapPin className="w-[9px] h-[9px] text-muted-foreground/30" />
-                  <span className="text-[9px] text-muted-foreground/40 truncate max-w-[100px]">
-                    {locationLabel}
-                  </span>
-                </span>
-              )}
-
-              {isCurrent && (
-                <span className="text-[8px] font-bold uppercase tracking-wider bg-primary/10 text-primary px-2 py-[3px] rounded-lg ring-1 ring-primary/15">
-                  Sua barbearia
-                </span>
-              )}
-            </div>
           </div>
 
-          {/* Arrow hint */}
-          <ChevronRight className="w-4 h-4 text-muted-foreground/15 shrink-0 transition-transform duration-200 group-hover:translate-x-0.5 group-hover:text-muted-foreground/30" />
+          {/* Subtitle: slogan or location — only ONE line */}
+          <p className="text-[11px] text-muted-foreground/50 mt-0.5 truncate leading-tight">
+            {tenant.slogan || [tenant.bairro, tenant.cidade].filter(Boolean).join(", ") || "Barbearia"}
+          </p>
+
+          {/* Distance — natural language, subtle */}
+          {distanceText && (
+            <p className="text-[10px] text-primary/50 mt-1 font-medium">
+              {distanceText}
+            </p>
+          )}
+        </div>
+
+        {/* Minimal arrow */}
+        <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 bg-muted/15 transition-colors group-hover:bg-muted/30">
+          <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/30" />
         </div>
       </div>
     </motion.button>
@@ -491,59 +436,46 @@ const EscolherBarbearia = () => {
   return (
     <div className="flex flex-col bg-background" style={{ height: "100dvh" }}>
       {/* ══════ Header ══════ */}
-      <div className="flex-shrink-0 px-4 pt-[calc(env(safe-area-inset-top)+0.5rem)] pb-3">
-        <div className="flex items-center gap-1 mb-3">
+      <div className="flex-shrink-0 px-5 pt-[calc(env(safe-area-inset-top)+0.75rem)] pb-4">
+        <div className="flex items-center gap-2 mb-4">
           <button
             onClick={handleBack}
-            className="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-secondary/50 active:scale-95 transition-all text-foreground"
+            className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-muted/30 active:scale-90 transition-all text-foreground"
           >
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
               <path d="M9 14L4 9l5-5" />
               <path d="M4 9h10a4 4 0 0 1 4 4v1" />
             </svg>
           </button>
           <div>
-            <p className="text-[19px] font-bold text-foreground leading-none tracking-tight">
-              {isChangeMode ? "Trocar barbearia" : "Descubra"}
-            </p>
-            <p className="text-[10px] text-muted-foreground/40 mt-0.5">
-              {totalShops > 0 && !isLoading
-                ? `${totalShops} ${totalShops === 1 ? "barbearia disponível" : "barbearias disponíveis"}`
-                : "Encontre seu estilo"
-              }
-            </p>
+            <h1 className="text-[18px] font-bold text-foreground leading-none tracking-tight">
+              {isChangeMode ? "Trocar barbearia" : "Encontre seu estilo"}
+            </h1>
+            {totalShops > 0 && !isLoading && (
+              <p className="text-[10px] text-muted-foreground/35 mt-0.5 font-medium">
+                {totalShops} {totalShops === 1 ? "barbearia" : "barbearias"} perto de você
+              </p>
+            )}
           </div>
         </div>
 
-        {/* Search */}
+        {/* Search — clean pill */}
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/25" />
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-[15px] h-[15px] text-muted-foreground/20" />
           <input
             type="text"
-            placeholder="Buscar por nome, bairro ou cidade..."
+            placeholder="Buscar barbearia..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className={cn(
-              "w-full h-11 pl-9 pr-3 rounded-xl text-[13px]",
-              "bg-card border border-border/20 text-foreground",
-              "placeholder:text-muted-foreground/35",
-              "focus:outline-none focus:border-primary/30 focus:ring-1 focus:ring-primary/10",
+              "w-full h-10 pl-10 pr-4 rounded-full text-[13px]",
+              "bg-muted/15 border-0 text-foreground",
+              "placeholder:text-muted-foreground/30",
+              "focus:outline-none focus:ring-1 focus:ring-border/30",
               "transition-all duration-200"
             )}
           />
         </div>
-
-        {/* Location status hint */}
-        {locationStatus === "granted" && !isLoading && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            className="flex items-center gap-1.5 mt-2 px-1"
-          >
-            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            <span className="text-[9px] text-emerald-500/60 font-medium">Ordenado por proximidade</span>
-          </motion.div>
-        )}
       </div>
 
       {/* ══════ Scrollable list ══════ */}
@@ -553,11 +485,11 @@ const EscolherBarbearia = () => {
           style={{ background: "linear-gradient(to bottom, hsl(var(--background)), transparent)" }}
         />
 
-        <div className="h-full overflow-y-auto overscroll-contain px-4 pb-24">
+        <div className="h-full overflow-y-auto overscroll-contain px-5 pb-24">
           {isLoading ? (
-            <div className="space-y-3 pt-2">
-              {[0, 1, 2, 3].map(i => (
-                <SkeletonCard key={i} delay={i * 0.08} />
+            <div className="pt-2">
+              {[0, 1, 2, 3, 4].map(i => (
+                <SkeletonCard key={i} delay={i * 0.06} />
               ))}
             </div>
           ) : filtered.length === 0 ? (
@@ -566,23 +498,21 @@ const EscolherBarbearia = () => {
               animate={{ opacity: 1, y: 0 }}
               className="flex flex-col items-center py-20"
             >
-              <div className="w-14 h-14 rounded-2xl bg-card border border-border/20 flex items-center justify-center mb-3">
-                <Scissors className="w-6 h-6 text-muted-foreground/20" />
-              </div>
-              <p className="text-[13px] font-medium text-muted-foreground/50">
-                {search ? "Nenhum resultado encontrado" : "Sem barbearias disponíveis"}
+              <Scissors className="w-6 h-6 text-muted-foreground/15 mb-3" />
+              <p className="text-[13px] text-muted-foreground/40">
+                {search ? "Nenhum resultado" : "Sem barbearias disponíveis"}
               </p>
               {search && (
                 <button
                   onClick={() => setSearch("")}
-                  className="mt-2 text-[11px] text-primary/60 hover:text-primary transition-colors"
+                  className="mt-2 text-[11px] text-primary/50 hover:text-primary transition-colors"
                 >
                   Limpar busca
                 </button>
               )}
             </motion.div>
           ) : (
-            <div className="space-y-2.5 pt-1">
+            <div className="pt-1">
               {filtered.map((tenant, index) => (
                 <BarbershopCard
                   key={tenant.id}
