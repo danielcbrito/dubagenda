@@ -49,6 +49,49 @@ function haversineDistance(lat1: number, lon1: number, lat2: number, lon2: numbe
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
+function normalizeText(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-zA-Z0-9]/g, "")
+    .toLowerCase();
+}
+
+const DUB_COORDS = { lat: -23.7219695, lng: -46.7615913 };
+
+const DUB_FALLBACK = {
+  slogan: "Corte premium",
+  logoUrl: logoDub,
+  rua: "Rua Ferrador",
+  numero: "108",
+  bairro: "Cidade Ipava",
+  cidade: "São Paulo",
+  estado: "SP",
+  enderecoCompleto: "Rua Ferrador, 108 - Cidade Ipava, São Paulo - SP",
+};
+
+function applyTenantFallbacks(tenant: TenantInfo, currentSlug?: string): TenantInfo {
+  const isDub =
+    normalizeText(tenant.nome) === "barbeariadub" ||
+    normalizeText(currentSlug || "") === "barbeariadub";
+
+  if (!isDub) return tenant;
+
+  return {
+    ...tenant,
+    slogan: tenant.slogan || DUB_FALLBACK.slogan,
+    logo_url: tenant.logo_url || DUB_FALLBACK.logoUrl,
+    rua: tenant.rua || DUB_FALLBACK.rua,
+    numero: tenant.numero || DUB_FALLBACK.numero,
+    bairro: tenant.bairro || DUB_FALLBACK.bairro,
+    cidade: tenant.cidade || DUB_FALLBACK.cidade,
+    estado: tenant.estado || DUB_FALLBACK.estado,
+    endereco_completo: tenant.endereco_completo || DUB_FALLBACK.enderecoCompleto,
+    latitude: tenant.latitude ?? DUB_COORDS.lat,
+    longitude: tenant.longitude ?? DUB_COORDS.lng,
+  };
+}
+
 const BarbershopPublic = () => {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
@@ -170,7 +213,7 @@ const BarbershopPublic = () => {
       return;
     }
 
-    setTenant(data as TenantInfo);
+    setTenant(applyTenantFallbacks(data as TenantInfo, slug));
     setLoading(false);
     loadBarbers(data.id);
     loadBanner(data.id);
@@ -276,8 +319,16 @@ const BarbershopPublic = () => {
     ? haversineDistance(userLocation.lat, userLocation.lng, tenant.latitude, tenant.longitude)
     : null;
 
+  const streetLine = tenant
+    ? [tenant.rua, tenant.numero].filter(Boolean).join(", ")
+    : "";
+
   const location = tenant
     ? [tenant.bairro, tenant.cidade, tenant.estado].filter(Boolean).join(", ")
+    : "";
+
+  const fullAddress = tenant
+    ? (tenant.endereco_completo?.trim() || [streetLine, location].filter(Boolean).join(" • "))
     : "";
 
   // ── Loading ──
@@ -367,7 +418,7 @@ const BarbershopPublic = () => {
               {tenant.logo_url ? (
                 <img src={tenant.logo_url} alt={tenant.nome} className="w-full h-full object-cover" />
               ) : (
-                <Scissors className="w-7 h-7 text-muted-foreground/40" />
+                <img src={logoDub} alt="Logo DUB" className="w-9 h-9 object-contain" />
               )}
             </div>
           </div>
@@ -410,7 +461,7 @@ const BarbershopPublic = () => {
         </motion.div>
 
         {/* ── Location Card ── */}
-        {location && (
+        {(fullAddress || location) && (
           <motion.div
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
@@ -431,9 +482,14 @@ const BarbershopPublic = () => {
               </div>
               <div className="flex-1 text-left min-w-0">
                 <p className="text-[9px] uppercase tracking-[0.1em] text-muted-foreground font-semibold mb-0.5">
-                  Localização
+                  Endereço
                 </p>
-                <p className="text-[12px] text-foreground truncate">{location}</p>
+                {fullAddress && (
+                  <p className="text-[12px] text-foreground leading-snug">{fullAddress}</p>
+                )}
+                {location && location !== fullAddress && (
+                  <p className="text-[10px] text-muted-foreground mt-0.5 truncate">{location}</p>
+                )}
               </div>
               {tenant.latitude != null && tenant.longitude != null && (
                 <div className="shrink-0 flex items-center gap-1 text-[9px] text-primary font-medium">
