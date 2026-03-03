@@ -1713,6 +1713,107 @@ export type Database = {
           },
         ]
       }
+      instagram_connections: {
+        Row: {
+          access_token: string
+          barbeiro_id: string
+          created_at: string
+          id: string
+          ig_user_id: string
+          ig_username: string
+          profile_picture_url: string | null
+          show_posts_on_landing: boolean
+          token_expires_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          access_token: string
+          barbeiro_id: string
+          created_at?: string
+          id?: string
+          ig_user_id: string
+          ig_username: string
+          profile_picture_url?: string | null
+          show_posts_on_landing?: boolean
+          token_expires_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          access_token?: string
+          barbeiro_id?: string
+          created_at?: string
+          id?: string
+          ig_user_id?: string
+          ig_username?: string
+          profile_picture_url?: string | null
+          show_posts_on_landing?: boolean
+          token_expires_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "instagram_connections_barbeiro_id_fkey"
+            columns: ["barbeiro_id"]
+            isOneToOne: true
+            referencedRelation: "barbeiros"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "instagram_connections_barbeiro_id_fkey"
+            columns: ["barbeiro_id"]
+            isOneToOne: true
+            referencedRelation: "barbeiros_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      instagram_posts_cache: {
+        Row: {
+          cached_at: string
+          caption: string | null
+          connection_id: string
+          id: string
+          ig_post_id: string
+          media_type: string
+          media_url: string
+          permalink: string | null
+          post_timestamp: string | null
+          thumbnail_url: string | null
+        }
+        Insert: {
+          cached_at?: string
+          caption?: string | null
+          connection_id: string
+          id?: string
+          ig_post_id: string
+          media_type: string
+          media_url: string
+          permalink?: string | null
+          post_timestamp?: string | null
+          thumbnail_url?: string | null
+        }
+        Update: {
+          cached_at?: string
+          caption?: string | null
+          connection_id?: string
+          id?: string
+          ig_post_id?: string
+          media_type?: string
+          media_url?: string
+          permalink?: string | null
+          post_timestamp?: string | null
+          thumbnail_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "instagram_posts_cache_connection_id_fkey"
+            columns: ["connection_id"]
+            isOneToOne: false
+            referencedRelation: "instagram_connections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       logs_agendamentos: {
         Row: {
           acao: string
