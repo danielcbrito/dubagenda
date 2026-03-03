@@ -120,7 +120,7 @@ const Auth = () => {
       const isDub = tenantNormalized === "barbeariadub";
 
       const updateData = isDub
-        ? { barbearia_preferida_id: null as string | null, signup_origin: "dub_exclusive" }
+        ? { barbearia_preferida_id: preSelectedTenant, signup_origin: "dub_exclusive" }
         : { barbearia_preferida_id: preSelectedTenant, signup_origin: "discover" };
 
       await supabase
