@@ -237,7 +237,7 @@ const Cliente = () => {
     if (!user) return;
     const interval = setInterval(() => {
       loadUserData(user.id);
-    }, 20000);
+    }, 60000); // Reduced from 20s to 60s — realtime handles instant updates
     return () => clearInterval(interval);
   }, [user]);
 
@@ -254,107 +254,58 @@ const Cliente = () => {
   };
 
   const loadUserData = async (userId: string) => {
-    const { data: creditsData } = await supabase
-      .rpc('get_user_available_credits', { p_user_id: userId });
-    
-    setAvailableCredits(creditsData || 0);
-
-    const { data: profileData } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("id", userId)
-      .single();
-    
-    setProfile(profileData);
-
-    const { data: appointmentsData } = await supabase
-      .from("agendamentos")
-      .select(`
-        id,
-        data,
-        hora,
-        status,
-        duracao,
-        preco,
-        observacoes,
-        cancelado_em,
-        visivel_para_usuario,
-        cliente_confirmou,
-        barbeiro_confirmou,
-        ponto_liberado,
-        remarcacao_solicitada,
-        motivo_remarcacao,
-        payment_method,
-        tipo_agendamento,
-        is_free,
+    // Batch all independent queries in parallel for speed
+    const [
+      creditsResult,
+      profileResult,
+      appointmentsResult,
+      paymentsResult,
+      pontosResult,
+      completedCountResult,
+    ] = await Promise.all([
+      supabase.rpc('get_user_available_credits', { p_user_id: userId }),
+      supabase.from("profiles").select("*").eq("id", userId).single(),
+      supabase.from("agendamentos").select(`
+        id, data, hora, status, duracao, preco, observacoes, cancelado_em,
+        visivel_para_usuario, cliente_confirmou, barbeiro_confirmou, ponto_liberado,
+        remarcacao_solicitada, motivo_remarcacao, payment_method, tipo_agendamento, is_free,
         servico:servicos(nome),
         barbeiro:barbeiros(apelido, tenant:tenants(nome)),
         pagamentos(metodo, status)
-      `)
-      .eq("user_id", userId)
-      .eq("visivel_para_usuario", true)
-      .order("data", { ascending: false })
-      .limit(5);
+      `).eq("user_id", userId).eq("visivel_para_usuario", true).order("data", { ascending: false }).limit(5),
+      supabase.from("pagamentos").select("id, metodo, status, agendamento_id").eq("user_id", userId),
+      supabase.from("pontos").select("pontos").eq("user_id", userId).maybeSingle(),
+      supabase.from("agendamentos").select("*", { count: 'exact', head: true }).eq("user_id", userId).eq("status", "completed"),
+    ]);
 
-    setAppointments(appointmentsData || []);
-    
+    setAvailableCredits(creditsResult.data || 0);
+    setProfile(profileResult.data);
+    setAppointments(appointmentsResult.data || []);
+    setPayments(paymentsResult.data || []);
+    setPoints(pontosResult.data?.pontos || 0);
+    setCompletedAppointments(completedCountResult.count || 0);
+
+    // Cancellations filter
     const twoDaysAgo = new Date();
     twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
-    
-    const recentlyCancelled = (appointmentsData || []).filter(apt => 
+    const recentlyCancelled = (appointmentsResult.data || []).filter(apt => 
       apt.status === 'cancelled_by_admin' && 
       apt.cancelado_em &&
       new Date(apt.cancelado_em) > twoDaysAgo &&
       apt.observacoes?.includes("Cancelado em massa:")
     );
-    
     setRecentCancellations(recentlyCancelled);
 
-    const { data: paymentsData } = await supabase
-      .from("pagamentos")
-      .select("*")
-      .eq("user_id", userId);
-    
-    setPayments(paymentsData || []);
-
-    // Buscar pontos diretamente da tabela pontos (fonte de verdade, gerenciada pelo trigger)
-    const { data: pontosData } = await supabase
-      .from("pontos")
-      .select("pontos")
-      .eq("user_id", userId)
-      .maybeSingle();
-
-    const currentPoints = pontosData?.pontos || 0;
-    
-    // Contar total de cortes concluídos (incluindo grátis) para estatísticas
-    const { count: totalCompletedCount } = await supabase
-      .from("agendamentos")
-      .select("*", { count: 'exact', head: true })
-      .eq("user_id", userId)
-      .eq("status", "completed");
-
-    setCompletedAppointments(totalCompletedCount || 0);
-
-    // Buscar resgates disponíveis (verificando se não há agendamento ativo com resgate)
-    const { data: activeResgateApt } = await supabase
-      .from("agendamentos")
-      .select("id")
-      .eq("user_id", userId)
-      .eq("payment_method", "resgate")
-      .in("status", ["pending", "confirmed", "completed"])
-      .limit(1);
+    // Second batch: redemptions + subscriptions (depend on nothing above)
+    const [activeResgateResult, redemptionsResult] = await Promise.all([
+      supabase.from("agendamentos").select("id").eq("user_id", userId).eq("payment_method", "resgate").in("status", ["pending", "confirmed", "completed"]).limit(1),
+      supabase.from("resgates").select("id, status").eq("user_id", userId).eq("status", "available"),
+    ]);
 
     let availableRedemptions = 0;
-    if (!activeResgateApt || activeResgateApt.length === 0) {
-      const { data: allRedemptions } = await supabase
-        .from("resgates")
-        .select("id, status")
-        .eq("user_id", userId)
-        .eq("status", "available");
-      availableRedemptions = allRedemptions?.length || 0;
+    if (!activeResgateResult.data || activeResgateResult.data.length === 0) {
+      availableRedemptions = redemptionsResult.data?.length || 0;
     }
-
-    setPoints(currentPoints);
     setRedemptions(availableRedemptions);
 
     // Buscar assinatura ativa do usuário
