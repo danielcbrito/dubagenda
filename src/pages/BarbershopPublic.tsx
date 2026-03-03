@@ -299,13 +299,44 @@ const BarbershopPublic = () => {
     }
   };
 
-  const handleJoin = () => {
-    if (tenant) {
-      if (isLoggedIn) {
-        navigate(`/escolher-barbearia?mode=change`);
-      } else {
-        navigate(`/auth?mode=signup&origin=discover&tenant=${tenant.id}`);
+  const [saving, setSaving] = useState(false);
+
+  const handleJoin = async () => {
+    if (!tenant) return;
+
+    if (!isLoggedIn) {
+      navigate(`/auth?mode=signup&origin=discover&tenant=${tenant.id}`);
+      return;
+    }
+
+    // Logged in → select directly and go to home
+    setSaving(true);
+    try {
+      const isDub = normalizeText(tenant.nome) === "barbeariadub";
+      const updateData = isDub
+        ? { barbearia_preferida_id: null as string | null, signup_origin: "dub_exclusive" }
+        : { barbearia_preferida_id: tenant.id, signup_origin: "discover" };
+
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        navigate(`/auth?mode=login&origin=discover&tenant=${tenant.id}`);
+        return;
       }
+
+      const { error } = await supabase
+        .from("profiles")
+        .update(updateData)
+        .eq("id", session.user.id);
+
+      if (error) throw error;
+
+      navigate("/cliente");
+    } catch (err) {
+      console.error("Erro ao selecionar barbearia:", err);
+      const { toast } = await import("sonner");
+      toast.error("Erro ao selecionar. Tente novamente.");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -577,15 +608,23 @@ const BarbershopPublic = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.5 }}
             onClick={handleJoin}
+            disabled={saving}
             className={cn(
               "w-full h-[52px] rounded-xl font-semibold text-[14px] tracking-wide",
               "flex items-center justify-center gap-2",
               "transition-all duration-200 active:scale-[0.985]",
-              "bg-foreground text-background shadow-lg"
+              "bg-foreground text-background shadow-lg",
+              saving && "opacity-70 pointer-events-none"
             )}
           >
-            <span>Escolher esta barbearia</span>
-            <ArrowRight className="w-4 h-4" />
+            {saving ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <>
+                <span>Escolher esta barbearia</span>
+                <ArrowRight className="w-4 h-4" />
+              </>
+            )}
           </motion.button>
         ) : (
           <div className="flex gap-2.5">
