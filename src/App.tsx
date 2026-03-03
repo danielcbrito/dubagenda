@@ -10,30 +10,42 @@ import { MaintenanceScreen } from "@/components/MaintenanceScreen";
 import { MaintenanceWarningBanner } from "@/components/MaintenanceWarningBanner";
 import { GlobalErrorBoundary } from "@/components/GlobalErrorBoundary";
 import { supabase } from "@/integrations/supabase/client";
-import Index from "./pages/Index";
-import Auth from "./pages/Auth";
-import AuthCallback from "./pages/AuthCallback";
-import EmailVerification from "./pages/EmailVerification";
-import VerificarWhatsApp from "./pages/VerificarWhatsApp";
-import EscolherVerificacao from "./pages/EscolherVerificacao";
-import ForgotPassword from "./pages/ForgotPassword";
-import ResetPassword from "./pages/ResetPassword";
-import Cliente from "./pages/Cliente";
-import ClienteAgendar from "./pages/ClienteAgendar";
-import ClienteAssinar from "./pages/ClienteAssinar";
-import ClientePagamento from "./pages/ClientePagamento";
-import ClientePixCheckout from "./pages/ClientePixCheckout";
-import SubscriptionPixCheckout from "./pages/SubscriptionPixCheckout";
-import ClienteCarteira from "./pages/ClienteCarteira";
-import ClientePerfil from "./pages/ClientePerfil";
-import ClienteDadosPessoais from "./pages/ClienteDadosPessoais";
-import ClienteSeguranca from "./pages/ClienteSeguranca";
-import ClienteBarbearia from "./pages/ClienteBarbearia";
-import SupportChat from "./pages/SupportChat";
-import NotFound from "./pages/NotFound";
-import BarberReviews from "./pages/BarberReviews";
-import EscolherBarbearia from "./pages/EscolherBarbearia";
-import BarbershopPublic from "./pages/BarbershopPublic";
+import { lazy, Suspense } from "react";
+
+// Lazy-loaded routes for reduced initial bundle
+const Index = lazy(() => import("./pages/Index"));
+const Auth = lazy(() => import("./pages/Auth"));
+const AuthCallback = lazy(() => import("./pages/AuthCallback"));
+const EmailVerification = lazy(() => import("./pages/EmailVerification"));
+const VerificarWhatsApp = lazy(() => import("./pages/VerificarWhatsApp"));
+const EscolherVerificacao = lazy(() => import("./pages/EscolherVerificacao"));
+const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
+const ResetPassword = lazy(() => import("./pages/ResetPassword"));
+const Cliente = lazy(() => import("./pages/Cliente"));
+const ClienteAgendar = lazy(() => import("./pages/ClienteAgendar"));
+const ClienteAssinar = lazy(() => import("./pages/ClienteAssinar"));
+const ClientePagamento = lazy(() => import("./pages/ClientePagamento"));
+const ClientePixCheckout = lazy(() => import("./pages/ClientePixCheckout"));
+const SubscriptionPixCheckout = lazy(() => import("./pages/SubscriptionPixCheckout"));
+const ClienteCarteira = lazy(() => import("./pages/ClienteCarteira"));
+const ClientePerfil = lazy(() => import("./pages/ClientePerfil"));
+const ClienteDadosPessoais = lazy(() => import("./pages/ClienteDadosPessoais"));
+const ClienteSeguranca = lazy(() => import("./pages/ClienteSeguranca"));
+const ClienteBarbearia = lazy(() => import("./pages/ClienteBarbearia"));
+const SupportChat = lazy(() => import("./pages/SupportChat"));
+const NotFound = lazy(() => import("./pages/NotFound"));
+const BarberReviews = lazy(() => import("./pages/BarberReviews"));
+const EscolherBarbearia = lazy(() => import("./pages/EscolherBarbearia"));
+const BarbershopPublic = lazy(() => import("./pages/BarbershopPublic"));
+
+/** Minimal loading fallback */
+function PageLoader() {
+  return (
+    <div className="flex items-center justify-center min-h-dvh bg-background">
+      <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+    </div>
+  );
+}
 
 const queryClient = new QueryClient();
 
@@ -218,33 +230,35 @@ function AppRoutes() {
     <AuthSessionGuard>
       <ScrollLockGuard />
       <MaintenanceWrapper>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/auth" element={<Auth />} />
-          <Route path="/auth/callback" element={<AuthCallback />} />
-          <Route path="/verificar-email" element={<EmailVerification />} />
-          <Route path="/verificar-whatsapp" element={<VerificarWhatsApp />} />
-          <Route path="/escolher-verificacao" element={<EscolherVerificacao />} />
-          <Route path="/esqueci-senha" element={<ForgotPassword />} />
-          <Route path="/resetar-senha" element={<ResetPassword />} />
-          <Route path="/cliente" element={<Cliente />} />
-          <Route path="/cliente/agendar" element={<ClienteAgendar />} />
-          <Route path="/cliente/assinar" element={<ClienteAssinar />} />
-          <Route path="/cliente/pagamento" element={<ClientePagamento />} />
-          <Route path="/cliente/pix-checkout" element={<ClientePixCheckout />} />
-          <Route path="/cliente/assinatura-pix" element={<SubscriptionPixCheckout />} />
-          <Route path="/cliente/carteira" element={<ClienteCarteira />} />
-          <Route path="/cliente/perfil" element={<ClientePerfil />} />
-          <Route path="/cliente/dados-pessoais" element={<ClienteDadosPessoais />} />
-          <Route path="/cliente/seguranca" element={<ClienteSeguranca />} />
-          <Route path="/cliente/barbearia" element={<ClienteBarbearia />} />
-          <Route path="/cliente/barbeiro/:barberId/avaliacoes" element={<BarberReviews />} />
-          <Route path="/suporte" element={<SupportChat />} />
-          <Route path="/escolher-barbearia" element={<EscolherBarbearia />} />
-          <Route path="/b/:slug" element={<BarbershopPublic />} />
-          <Route path="/:slug" element={<BarbershopPublic />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+        <Suspense fallback={<PageLoader />}>
+          <Routes>
+            <Route path="/" element={<Index />} />
+            <Route path="/auth" element={<Auth />} />
+            <Route path="/auth/callback" element={<AuthCallback />} />
+            <Route path="/verificar-email" element={<EmailVerification />} />
+            <Route path="/verificar-whatsapp" element={<VerificarWhatsApp />} />
+            <Route path="/escolher-verificacao" element={<EscolherVerificacao />} />
+            <Route path="/esqueci-senha" element={<ForgotPassword />} />
+            <Route path="/resetar-senha" element={<ResetPassword />} />
+            <Route path="/cliente" element={<Cliente />} />
+            <Route path="/cliente/agendar" element={<ClienteAgendar />} />
+            <Route path="/cliente/assinar" element={<ClienteAssinar />} />
+            <Route path="/cliente/pagamento" element={<ClientePagamento />} />
+            <Route path="/cliente/pix-checkout" element={<ClientePixCheckout />} />
+            <Route path="/cliente/assinatura-pix" element={<SubscriptionPixCheckout />} />
+            <Route path="/cliente/carteira" element={<ClienteCarteira />} />
+            <Route path="/cliente/perfil" element={<ClientePerfil />} />
+            <Route path="/cliente/dados-pessoais" element={<ClienteDadosPessoais />} />
+            <Route path="/cliente/seguranca" element={<ClienteSeguranca />} />
+            <Route path="/cliente/barbearia" element={<ClienteBarbearia />} />
+            <Route path="/cliente/barbeiro/:barberId/avaliacoes" element={<BarberReviews />} />
+            <Route path="/suporte" element={<SupportChat />} />
+            <Route path="/escolher-barbearia" element={<EscolherBarbearia />} />
+            <Route path="/b/:slug" element={<BarbershopPublic />} />
+            <Route path="/:slug" element={<BarbershopPublic />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </Suspense>
       </MaintenanceWrapper>
     </AuthSessionGuard>
   );
