@@ -104,12 +104,28 @@ const Auth = () => {
       }
     }
 
-    // If tenant was pre-selected (from discover flow), save it now
+    // If tenant was pre-selected (from discover/public link flow), save it now
     const preSelectedTenant = searchParams.get("tenant");
     if (preSelectedTenant) {
+      // Check if this is DUB (set null + dub_exclusive) or a regular tenant
+      const { data: tenantData } = await supabase
+        .from("tenants")
+        .select("nome")
+        .eq("id", preSelectedTenant)
+        .single();
+
+      const tenantNormalized = tenantData?.nome
+        ? tenantData.nome.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9]/g, "").toLowerCase()
+        : "";
+      const isDub = tenantNormalized === "barbeariadub";
+
+      const updateData = isDub
+        ? { barbearia_preferida_id: null as string | null, signup_origin: "dub_exclusive" }
+        : { barbearia_preferida_id: preSelectedTenant, signup_origin: "discover" };
+
       await supabase
         .from("profiles")
-        .update({ barbearia_preferida_id: preSelectedTenant, signup_origin: "discover" })
+        .update(updateData)
         .eq("id", userId);
       navigate("/cliente");
       return;
