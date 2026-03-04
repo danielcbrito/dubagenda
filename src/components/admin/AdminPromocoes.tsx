@@ -62,10 +62,18 @@ export function AdminPromocoes() {
 
   const loadPromocoes = async () => {
     try {
-      const { data, error } = await supabase
+      const currentTenantId = await getBarberTenantId();
+
+      let query = supabase
         .from("promocoes")
         .select("*")
         .order("created_at", { ascending: false });
+
+      if (currentTenantId) {
+        query = query.eq("tenant_id", currentTenantId);
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
       setPromocoes(data || []);
