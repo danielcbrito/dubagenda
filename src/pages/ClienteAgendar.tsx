@@ -1152,12 +1152,12 @@ const ClienteAgendar = () => {
           hora: selectedTime,
           duracao: totalDuration,
           preco: 0,
-          status: "pending",
+          status: "confirmed",
           observacoes: `Corte grátis - Resgate do programa de fidelidade. ${selectedServices.length > 1 ? 'Serviços: ' + serviceNames : ''}`,
           payment_method: 'resgate',
           is_free: true,
-          barbeiro_confirmou: false,
-          cliente_confirmou: false,
+          barbeiro_confirmou: true,
+          cliente_confirmou: true,
         })
         .select()
         .single();
@@ -1254,13 +1254,13 @@ const ClienteAgendar = () => {
           hora: selectedTime,
           duracao: totalDuration,
           preco: 0,
-          status: "pending",
+          status: "confirmed",
           observacoes: observacoesText,
           payment_method: 'credit',
           is_free: true,
           remarcado_de: isRescheduling ? rescheduleAppointmentId : null,
-          barbeiro_confirmou: false,
-          cliente_confirmou: false,
+          barbeiro_confirmou: true,
+          cliente_confirmou: true,
         })
         .select()
         .single();
@@ -1368,13 +1368,13 @@ const ClienteAgendar = () => {
           hora: selectedTime,
           duracao: totalDuration,
           preco: 0,
-          status: "pending",
+          status: "confirmed",
           observacoes: `Agendamento via ${activeSubscription.plano_nome}. ${selectedServices.length > 1 ? 'Serviços: ' + serviceNames : ''}`,
           payment_method: 'plano',
           tipo_agendamento: 'plano',
           is_free: true,
-          barbeiro_confirmou: false,
-          cliente_confirmou: false,
+          barbeiro_confirmou: true,
+          cliente_confirmou: true,
         })
         .select()
         .single();
@@ -1576,9 +1576,9 @@ const ClienteAgendar = () => {
           data: dateStr,
           hora: selectedTime,
           duracao: totalDuration,
-          status: 'pending',
-          barbeiro_confirmou: false,
-          cliente_confirmou: false,
+          status: 'confirmed',
+          barbeiro_confirmou: true,
+          cliente_confirmou: true,
           updated_at: new Date().toISOString(),
         } as any)
         .eq("id", rescheduleAppointmentId);

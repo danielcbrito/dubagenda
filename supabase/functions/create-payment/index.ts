@@ -268,9 +268,9 @@ serve(async (req) => {
         duracao: bookingData.duracao,
         preco: bookingData.preco,
         observacoes: bookingData.observacoes,
-        status: 'pending',
-        barbeiro_confirmou: false,
-        cliente_confirmou: false,
+        status: 'confirmed',
+        barbeiro_confirmou: true,
+        cliente_confirmou: true,
         payment_method: metodo || 'cash',
         remarcado_de: rescheduleFromId || null,
       })
