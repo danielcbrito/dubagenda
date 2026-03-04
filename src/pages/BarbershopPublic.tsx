@@ -71,17 +71,38 @@ const DUB_FALLBACK = {
   enderecoCompleto: "Rua Ferrador, 108 - Cidade Ipava, São Paulo - SP",
 };
 
+function isPersonalImageUrl(url?: string | null): boolean {
+  if (!url) return false;
+
+  const value = url.trim().toLowerCase();
+  if (!value) return false;
+
+  return (
+    value.includes("/storage/v1/object/public/avatars/") ||
+    value.startsWith("avatars/") ||
+    value.includes("/storage/v1/object/public/barber-photos/") ||
+    value.startsWith("barber-photos/")
+  );
+}
+
 function applyTenantFallbacks(tenant: TenantInfo, currentSlug?: string): TenantInfo {
   const isDub =
     normalizeText(tenant.nome) === "barbeariadub" ||
     normalizeText(currentSlug || "") === "barbeariadub";
 
-  if (!isDub) return tenant;
+  const safeLogoUrl = isPersonalImageUrl(tenant.logo_url) ? null : tenant.logo_url;
+
+  if (!isDub) {
+    return {
+      ...tenant,
+      logo_url: safeLogoUrl,
+    };
+  }
 
   return {
     ...tenant,
     slogan: tenant.slogan || DUB_FALLBACK.slogan,
-    logo_url: tenant.logo_url || DUB_FALLBACK.logoUrl,
+    logo_url: safeLogoUrl || DUB_FALLBACK.logoUrl,
     rua: tenant.rua || DUB_FALLBACK.rua,
     numero: tenant.numero || DUB_FALLBACK.numero,
     bairro: tenant.bairro || DUB_FALLBACK.bairro,
@@ -295,14 +316,38 @@ const BarbershopPublic = () => {
         setTotalReviews(totalCount);
       }
 
-      setBarbers(barberData.map(b => {
+      const enrichedBarbers = barberData.map(b => {
         const stats = ratingMap.get(b.id);
         return {
           ...b,
           avgRating: stats ? stats.sum / stats.count : null,
           totalReviews: stats?.count || 0,
         };
-      }));
+      });
+
+      const barberPhotoSet = new Set(
+        enrichedBarbers
+          .map((b) => b.foto_url?.trim())
+          .filter((url): url is string => Boolean(url))
+      );
+
+      setTenant((prev) => {
+        if (!prev?.logo_url) return prev;
+
+        const normalizedLogo = prev.logo_url.trim();
+        if (!normalizedLogo) return { ...prev, logo_url: null };
+
+        if (barberPhotoSet.has(normalizedLogo) || isPersonalImageUrl(normalizedLogo)) {
+          return {
+            ...prev,
+            logo_url: normalizeText(prev.nome) === "barbeariadub" ? DUB_FALLBACK.logoUrl : null,
+          };
+        }
+
+        return prev;
+      });
+
+      setBarbers(enrichedBarbers);
     } catch (err) {
       console.error("Error loading barbers:", err);
     } finally {
@@ -367,6 +412,12 @@ const BarbershopPublic = () => {
   };
 
   const isDubTenant = tenant ? normalizeText(tenant.nome) === "barbeariadub" : false;
+  const resolvedLogoUrl = tenant?.logo_url && !isPersonalImageUrl(tenant.logo_url)
+    ? tenant.logo_url
+    : isDubTenant
+      ? DUB_FALLBACK.logoUrl
+      : null;
+
   const isCurrent = isLoggedIn && tenant && (
     isDubTenant ? !currentPreferred : currentPreferred === tenant.id
   );
@@ -489,10 +540,10 @@ const BarbershopPublic = () => {
               "w-20 h-20 rounded-2xl flex items-center justify-center overflow-hidden",
               "bg-card border-[3px] border-background shadow-lg"
             )}>
-              {tenant.logo_url ? (
-                <img src={tenant.logo_url} alt={tenant.nome} className="w-full h-full object-cover" />
+              {resolvedLogoUrl ? (
+                <img src={resolvedLogoUrl} alt={tenant.nome} className="w-full h-full object-cover" />
               ) : (
-                <img src={logoDub} alt="Logo DUB" className="w-9 h-9 object-contain" />
+                <Scissors className="w-7 h-7 text-muted-foreground/40" />
               )}
             </div>
           </div>
