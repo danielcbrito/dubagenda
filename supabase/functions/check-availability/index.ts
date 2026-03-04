@@ -1,5 +1,5 @@
 /**
- * CHECK-AVAILABILITY EDGE FUNCTION
+ * CHECK-AVAILABILITY EDGE FUNCTION — V5 (2026-03-04)
  * 
  * FONTE ÚNICA DA VERDADE para disponibilidade de horários.
  * Esta função é a ÚNICA que deve ser consultada para verificar disponibilidade.
@@ -12,7 +12,8 @@
  * REGRA DE DISPONIBILIDADE:
  * próximo_horário_disponível = horário_fim_do_serviço + delay (10min)
  * 
- * Exemplo: Serviço 18:30 (30min) → termina 19:00 + 10min delay = próximo às 19:10
+ * ISOLAMENTO: barbeiroId é OBRIGATÓRIO para retorno de slots válidos.
+ * Sem barbeiroId, retorna erro 400 (não slots vazios).
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.80.0';
