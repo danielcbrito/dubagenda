@@ -2476,6 +2476,61 @@ export type Database = {
           },
         ]
       }
+      portfolio_images: {
+        Row: {
+          barbeiro_id: string
+          caption: string | null
+          created_at: string
+          id: string
+          image_url: string
+          ordem: number
+          tenant_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          barbeiro_id: string
+          caption?: string | null
+          created_at?: string
+          id?: string
+          image_url: string
+          ordem?: number
+          tenant_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          barbeiro_id?: string
+          caption?: string | null
+          created_at?: string
+          id?: string
+          image_url?: string
+          ordem?: number
+          tenant_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portfolio_images_barbeiro_id_fkey"
+            columns: ["barbeiro_id"]
+            isOneToOne: false
+            referencedRelation: "barbeiros"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portfolio_images_barbeiro_id_fkey"
+            columns: ["barbeiro_id"]
+            isOneToOne: false
+            referencedRelation: "barbeiros_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portfolio_images_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       produto_imagens: {
         Row: {
           alt: string | null
