@@ -151,9 +151,14 @@ export function AdminAgenda() {
     loadAllAppointments();
 
     // Real-time subscription - silent updates
+    // FILTRO POR BARBEIRO: só notifica sobre agendamentos do barbeiro logado
+    const channelFilter = barbeiroId
+      ? { event: '*' as const, schema: 'public' as const, table: 'agendamentos' as const, filter: `barbeiro_id=eq.${barbeiroId}` }
+      : { event: '*' as const, schema: 'public' as const, table: 'agendamentos' as const };
+
     const channel = supabase
-      .channel('admin-agenda-premium')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'agendamentos' }, (payload) => {
+      .channel(`admin-agenda-premium-${barbeiroId || 'all'}`)
+      .on('postgres_changes', channelFilter, (payload) => {
         // Silent reload without toast spam
         loadAppointments(date, true);
         loadAllAppointments();
