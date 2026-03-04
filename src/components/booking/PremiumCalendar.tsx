@@ -169,13 +169,17 @@ export function PremiumCalendar({ selectedDate, onSelectDate, disabledDates = []
                 className={cn(
                   "relative aspect-square rounded-xl transition-all duration-200",
                   "flex items-center justify-center",
+                  // Dias indisponíveis: muito apagados, sem borda
                   !isCurrentMonth && "opacity-[0.015]",
                   isClosed && "opacity-[0.01] cursor-not-allowed",
                   isDisabled && !isClosed && !isCurrentMonth && "opacity-[0.015] cursor-not-allowed",
                   isDisabled && isCurrentMonth && !isClosed && "opacity-[0.015] cursor-not-allowed",
-                  !isDisabled && !isSelected && "hover:bg-secondary/50",
-                  isSelected && "bg-primary text-primary-foreground shadow-lg shadow-primary/25 scale-105",
-                  isCurrentDay && !isSelected && !isClosed && "ring-1 ring-primary/50"
+                  // Dias disponíveis: borda branca sutil
+                  !isDisabled && !isSelected && "ring-1 ring-foreground/25 hover:bg-secondary/50",
+                  // Dia selecionado
+                  isSelected && "bg-primary text-primary-foreground shadow-lg shadow-primary/25 scale-105 ring-0",
+                  // Dia de hoje
+                  isCurrentDay && !isSelected && !isClosed && !isDisabled && "ring-1 ring-primary/60"
                 )}
               >
                 <span className={cn(
@@ -187,11 +191,6 @@ export function PremiumCalendar({ selectedDate, onSelectDate, disabledDates = []
                 )}>
                   {format(day, "d")}
                 </span>
-
-                {/* Today indicator ring */}
-                {isCurrentDay && !isSelected && !isClosed && (
-                  <div className="absolute inset-0 rounded-xl ring-1 ring-primary/30 pointer-events-none" />
-                )}
               </motion.button>
             );
           })}
