@@ -724,6 +724,71 @@ const ClienteAgendar = () => {
     }
   }, [selectedBarberId]);
 
+  useEffect(() => {
+    if (isInitializing) return;
+
+    const tenantId = selectedBarber?.tenant_id ?? (preferredShop?.id ?? null);
+
+    const syncBookingData = async () => {
+      try {
+        let servicesQuery = supabase.from("servicos").select("*").eq("ativo", true).order("preco");
+        let barbersQuery = supabase.from("barbeiros").select("id, apelido, foto_url, tenant_id").eq("ativo", true).order("apelido");
+
+        if (tenantId) {
+          servicesQuery = servicesQuery.eq("tenant_id", tenantId);
+          barbersQuery = barbersQuery.eq("tenant_id", tenantId);
+        } else {
+          servicesQuery = servicesQuery.is("tenant_id", null);
+          barbersQuery = barbersQuery.is("tenant_id", null);
+        }
+
+        const [{ data: nextServices }, { data: nextBarbers }] = await Promise.all([servicesQuery, barbersQuery]);
+
+        const safeServices = nextServices || [];
+        const safeBarbers = nextBarbers || [];
+
+        setServices(safeServices);
+        setBarbers(safeBarbers);
+        setSelectedServices((prev) => prev.filter((service) => safeServices.some((item) => item.id === service.id)));
+
+        if (selectedBarberId) {
+          const refreshedBarber = safeBarbers.find((barber) => barber.id === selectedBarberId) || null;
+          setSelectedBarber(refreshedBarber);
+        }
+
+        const baseDate = selectedDate || new Date();
+        const monthStart = new Date(baseDate.getFullYear(), baseDate.getMonth(), 1);
+        const monthEnd = new Date(baseDate.getFullYear(), baseDate.getMonth() + 1, 0);
+        await loadClosedDates(monthStart, monthEnd);
+        refreshSlots();
+      } catch (error) {
+        console.error("[syncBookingData] Erro ao sincronizar dados:", error);
+      }
+    };
+
+    const channel = supabase
+      .channel(`cliente-agendar-sync-${tenantId ?? 'dub'}-${selectedBarberId ?? 'none'}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'servicos' }, syncBookingData)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'barbeiros' }, syncBookingData)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'configuracoes_horario' }, syncBookingData)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'configuracoes_horario_barbeiro' }, syncBookingData)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'horarios_excepcionais' }, syncBookingData)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'horarios_excepcionais_barbeiro' }, syncBookingData)
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [
+    isInitializing,
+    selectedBarber?.tenant_id,
+    preferredShop?.id,
+    selectedDate,
+    selectedBarberId,
+    loadClosedDates,
+    refreshSlots,
+  ]);
+
   const incrementServiceQty = (serviceId: string) => {
     setServiceQuantities(q => ({
       ...q,

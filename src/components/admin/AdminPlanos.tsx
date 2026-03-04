@@ -26,6 +26,7 @@ import { Plus, Sparkles, MoreVertical, Trash2, Pencil, AlertTriangle, Check, Cro
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+import { useBarbeiroLogado } from "@/hooks/useBarbeiroLogado";
 
 interface Plano {
   id: string;
@@ -39,6 +40,7 @@ interface Plano {
 }
 
 export function AdminPlanos() {
+  const { barbeiro } = useBarbeiroLogado();
   const [planos, setPlanos] = useState<Plano[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -69,12 +71,30 @@ export function AdminPlanos() {
     };
   }, []);
 
+  const getBarberTenantId = async (): Promise<string | null> => {
+    if (!barbeiro) return null;
+    const { data } = await supabase
+      .from("barbeiros")
+      .select("tenant_id")
+      .eq("id", barbeiro.id)
+      .maybeSingle();
+    return data?.tenant_id || null;
+  };
+
   const loadPlanos = async () => {
     try {
-      const { data, error } = await supabase
+      const tenantId = await getBarberTenantId();
+
+      let query = supabase
         .from("planos")
         .select("*")
         .order("prioridade_agendamento", { ascending: false });
+
+      if (tenantId) {
+        query = query.eq("tenant_id", tenantId);
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
       
@@ -139,20 +159,31 @@ export function AdminPlanos() {
     }
 
     try {
-      const payload = {
+      const tenantId = await getBarberTenantId();
+      const payload: any = {
         ...newPlano,
         beneficios_json: newPlano.beneficios_json.filter(b => b.trim() !== "")
       };
 
       if (editingPlano) {
-        const { error } = await supabase
+        let updateQuery = supabase
           .from("planos")
           .update(payload)
           .eq("id", editingPlano.id);
 
+        if (tenantId) {
+          updateQuery = updateQuery.eq("tenant_id", tenantId);
+        }
+
+        const { error } = await updateQuery;
+
         if (error) throw error;
         toast.success("Plano atualizado com sucesso!");
       } else {
+        if (tenantId) {
+          payload.tenant_id = tenantId;
+        }
+
         const { error } = await supabase
           .from("planos")
           .insert([payload]);

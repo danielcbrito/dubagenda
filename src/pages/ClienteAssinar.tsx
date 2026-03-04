@@ -404,6 +404,50 @@ const ClienteAssinar = () => {
     setBarbers(data || []);
   };
 
+  useEffect(() => {
+    if (selectedTenantId === null) return;
+
+    const tenantId = selectedTenantId === "dub" ? null : selectedTenantId;
+
+    const syncTenantData = async () => {
+      try {
+        let plansQuery = supabase.from('planos').select('*').eq('ativo', true).order('preco_mensal');
+        let barbersQuery = supabase.from('barbeiros').select('id, apelido, foto_url, tenant_id').eq('ativo', true).order('apelido');
+
+        if (tenantId) {
+          plansQuery = plansQuery.eq('tenant_id', tenantId);
+          barbersQuery = barbersQuery.eq('tenant_id', tenantId);
+        } else {
+          plansQuery = plansQuery.is('tenant_id', null);
+          barbersQuery = barbersQuery.is('tenant_id', null);
+        }
+
+        const [{ data: nextPlans }, { data: nextBarbers }] = await Promise.all([plansQuery, barbersQuery]);
+
+        const safePlans = nextPlans || [];
+        const safeBarbers = nextBarbers || [];
+
+        setPlans(safePlans);
+        setBarbers(safeBarbers);
+
+        setSelectedPlan((prev) => prev ? safePlans.find((p) => p.id === prev.id) || null : null);
+        setSelectedBarber((prev) => prev ? safeBarbers.find((b) => b.id === prev.id) || null : null);
+      } catch (error) {
+        console.error('Erro ao sincronizar dados de assinatura:', error);
+      }
+    };
+
+    const channel = supabase
+      .channel(`cliente-assinar-sync-${tenantId ?? 'dub'}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'planos' }, syncTenantData)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'barbeiros' }, syncTenantData)
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [selectedTenantId]);
+
   // ─── Handlers ─────────────────────────────
   const handleSelectShop = async (tenantId: string | null) => {
     // tenantId = null means DUB
