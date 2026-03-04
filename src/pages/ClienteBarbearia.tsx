@@ -78,14 +78,22 @@ export default function ClienteBarbearia() {
       if (tenant) setBarbershop(tenant);
       setIsDub(false);
     } else {
+      // Mesmo sem barbearia preferida, busca o tenant DUB para pegar logo dinâmica
+      const { data: dubTenant } = await supabase
+        .from("tenants")
+        .select("id, nome, slogan, logo_url, telefone, whatsapp, email, site, rua, numero, bairro, cidade, estado, endereco_completo")
+        .ilike("nome", "%DUB%")
+        .limit(1)
+        .maybeSingle();
+      if (dubTenant) setBarbershop(dubTenant);
       setIsDub(true);
     }
     setLoading(false);
   };
 
-  const name = isDub ? "Barbearia DUB" : barbershop?.nome || "";
-  const slogan = isDub ? "Referência em corte masculino premium" : barbershop?.slogan;
-  const logoUrl = isDub ? logoDub : barbershop?.logo_url;
+  const name = isDub ? (barbershop?.nome || "Barbearia DUB") : barbershop?.nome || "";
+  const slogan = isDub ? (barbershop?.slogan || "Referência em corte masculino premium") : barbershop?.slogan;
+  const logoUrl = barbershop?.logo_url || logoDub;
 
   const address = barbershop?.endereco_completo ||
     [barbershop?.rua, barbershop?.numero, barbershop?.bairro, barbershop?.cidade, barbershop?.estado]
