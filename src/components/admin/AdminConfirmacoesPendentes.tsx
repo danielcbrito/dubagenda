@@ -37,9 +37,14 @@ export function AdminConfirmacoesPendentes() {
   useEffect(() => {
     loadPending();
 
+    // FILTRO POR BARBEIRO no canal realtime
+    const channelFilter = barbeiroId
+      ? { event: '*' as const, schema: 'public' as const, table: 'agendamentos' as const, filter: `barbeiro_id=eq.${barbeiroId}` }
+      : { event: '*' as const, schema: 'public' as const, table: 'agendamentos' as const };
+
     const channel = supabase
-      .channel('admin-confirmacoes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'agendamentos' }, () => {
+      .channel(`admin-confirmacoes-${barbeiroId || 'all'}`)
+      .on('postgres_changes', channelFilter, () => {
         loadPending();
       })
       .subscribe();

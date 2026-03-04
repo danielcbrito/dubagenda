@@ -164,14 +164,14 @@ export function AdminMobileAgenda({ onAppointmentClick, onAddClick }: AdminMobil
   useEffect(() => {
     loadAppointments(selectedDate);
 
-    // Real-time subscription
+    // Real-time subscription — FILTRO POR BARBEIRO para não misturar agendas
+    const channelFilter = barbeiroId
+      ? { event: '*' as const, schema: 'public' as const, table: 'agendamentos' as const, filter: `barbeiro_id=eq.${barbeiroId}` }
+      : { event: '*' as const, schema: 'public' as const, table: 'agendamentos' as const };
+
     const channel = supabase
-      .channel('mobile-agenda-updates')
-      .on('postgres_changes', { 
-        event: '*', 
-        schema: 'public', 
-        table: 'agendamentos' 
-      }, () => {
+      .channel(`mobile-agenda-updates-${barbeiroId || 'all'}`)
+      .on('postgres_changes', channelFilter, () => {
         loadAppointments(selectedDate, true);
       })
       .subscribe();
