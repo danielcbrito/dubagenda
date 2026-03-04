@@ -644,11 +644,14 @@ const ClienteAgendar = () => {
    * Carrega os dias fechados para o mês visível no calendário.
    */
   const loadClosedDates = useCallback(async (monthStart: Date, monthEnd: Date) => {
+    // Bloquear TODOS os dias do novo mês enquanto carrega, evitando que dias fechados apareçam como disponíveis
+    const allDaysOfMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
+    setClosedDates(allDaysOfMonth);
     try {
       const barbeiroId = selectedBarberId || null;
       const startStr = format(monthStart, 'yyyy-MM-dd');
       const endStr = format(monthEnd, 'yyyy-MM-dd');
-      const allDays = eachDayOfInterval({ start: monthStart, end: monthEnd });
+      const allDays = allDaysOfMonth;
 
       let weeklyClosedDays: number[] = [];
 
