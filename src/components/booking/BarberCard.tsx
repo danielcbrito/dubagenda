@@ -38,7 +38,7 @@ export function BarberCard({ barber, isSelected, onSelect, rating }: BarberCardP
         "bg-card/60 active:scale-[0.99]",
         isSelected
           ? "border-primary/40 bg-primary/5"
-          : "border-border/25 hover:border-border/50"
+          : "border-border/50 hover:border-border"
       )}
     >
       <div className="flex items-center gap-2.5">
@@ -55,7 +55,7 @@ export function BarberCard({ barber, isSelected, onSelect, rating }: BarberCardP
             />
           ) : (
             <div className="w-full h-full bg-muted/20 flex items-center justify-center">
-              <User className="w-5 h-5 text-muted-foreground/40" />
+              <User className="w-5 h-5 text-muted-foreground" />
             </div>
           )}
         </div>
@@ -64,7 +64,7 @@ export function BarberCard({ barber, isSelected, onSelect, rating }: BarberCardP
         <div className="flex-1 min-w-0">
           <h3 className={cn(
             "text-[13px] font-semibold truncate transition-colors",
-            isSelected ? "text-primary" : "text-foreground/80"
+            isSelected ? "text-primary" : "text-foreground"
           )}>
             {barber.apelido}
           </h3>
@@ -79,25 +79,25 @@ export function BarberCard({ barber, isSelected, onSelect, rating }: BarberCardP
                     className={cn(
                       "w-2.5 h-2.5",
                       star <= Math.round(rating.average)
-                        ? "fill-primary/70 text-primary/70"
-                        : "text-muted-foreground/15"
+                        ? "fill-primary text-primary"
+                        : "text-muted-foreground/30"
                     )}
                   />
                 ))}
               </div>
-              <span className="text-[10px] text-muted-foreground/50 tabular-nums">
+              <span className="text-[10px] text-muted-foreground tabular-nums">
                 {rating.average.toFixed(1)}
               </span>
               <button
                 onClick={handleViewReviews}
-                className="text-[10px] text-muted-foreground/40 hover:text-muted-foreground/70 flex items-center gap-0.5 transition-colors ml-0.5"
+                className="text-[10px] text-muted-foreground hover:text-foreground flex items-center gap-0.5 transition-colors ml-0.5"
               >
                 <span>{rating.count} avaliações</span>
                 <ChevronRight className="w-2.5 h-2.5" />
               </button>
             </div>
           ) : (
-            <p className="text-[10px] text-muted-foreground/30 mt-0.5">
+            <p className="text-[10px] text-muted-foreground mt-0.5">
               Profissional
             </p>
           )}
@@ -108,7 +108,7 @@ export function BarberCard({ barber, isSelected, onSelect, rating }: BarberCardP
           "flex-shrink-0 w-5 h-5 rounded-full border-[1.5px] transition-all duration-200 flex items-center justify-center",
           isSelected 
             ? "bg-primary border-primary"
-            : "border-muted-foreground/20"
+            : "border-muted-foreground/40"
         )}>
           {isSelected && (
             <motion.div

@@ -167,10 +167,10 @@ export function PremiumCalendar({ selectedDate, onSelectDate, disabledDates = []
                 className={cn(
                   "relative aspect-square rounded-xl transition-all duration-200",
                   "flex items-center justify-center",
-                  !isCurrentMonth && "opacity-15",
-                  isClosed && "opacity-10 cursor-not-allowed",
-                  isDisabled && !isClosed && !isCurrentMonth && "opacity-15 cursor-not-allowed",
-                  isDisabled && isCurrentMonth && !isClosed && "opacity-25 cursor-not-allowed",
+                  !isCurrentMonth && "opacity-20",
+                  isClosed && "opacity-15 cursor-not-allowed",
+                  isDisabled && !isClosed && !isCurrentMonth && "opacity-20 cursor-not-allowed",
+                  isDisabled && isCurrentMonth && !isClosed && "opacity-30 cursor-not-allowed",
                   !isDisabled && !isSelected && "hover:bg-secondary/50",
                   isSelected && "bg-primary text-primary-foreground shadow-lg shadow-primary/25 scale-105",
                   isCurrentDay && !isSelected && !isClosed && "ring-1 ring-primary/50"
