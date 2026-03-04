@@ -46,6 +46,8 @@ export function PremiumCalendar({ selectedDate, onSelectDate, disabledDates = []
 
   const isDateDisabled = (date: Date) => {
     if (!date) return true;
+    // Dias de outros meses são SEMPRE indisponíveis
+    if (!isSameMonth(date, currentMonth)) return true;
     const today = startOfDay(new Date());
     if (isBefore(date, today)) return true;
     if (minDate && isBefore(date, startOfDay(minDate))) return true;
