@@ -197,15 +197,75 @@ Deno.serve(async (req) => {
       try {
         const { data: barbeiro } = await supabase
           .from('barbeiros')
-          .select('apelido')
+          .select('apelido, tenant_id')
           .eq('id', eventPayload.barbeiro_id)
           .single();
         
         if (barbeiro) {
           eventPayload.barbeiro_nome = barbeiro.apelido;
+          // Incluir tenant_id nos detalhes
+          if (!eventPayload.detalhes) eventPayload.detalhes = {};
+          (eventPayload.detalhes as any).tenant_id = barbeiro.tenant_id;
         }
       } catch (e) {
         console.warn('[send-webhook-event] Não foi possível buscar dados do barbeiro:', e);
+      }
+    }
+
+    // ====================================================
+    // SEMPRE buscar instância WhatsApp do barbeiro
+    // ====================================================
+    let whatsappInstance: { instance_name: string | null; api_key: string | null; status: string } | null = null;
+    
+    // Tentar buscar barbeiro_id do agendamento se não tiver
+    let barbeiroIdToUse = eventPayload.barbeiro_id;
+    if (!barbeiroIdToUse && eventPayload.agendamento_id) {
+      try {
+        const { data: apt } = await supabase
+          .from('agendamentos')
+          .select('barbeiro_id')
+          .eq('id', eventPayload.agendamento_id)
+          .single();
+        if (apt?.barbeiro_id) {
+          barbeiroIdToUse = apt.barbeiro_id;
+          eventPayload.barbeiro_id = apt.barbeiro_id;
+        }
+      } catch (e) {
+        console.warn('[send-webhook-event] Não foi possível buscar barbeiro_id do agendamento:', e);
+      }
+    }
+
+    if (barbeiroIdToUse) {
+      try {
+        const { data: inst } = await supabase
+          .from('whatsapp_instances')
+          .select('instance_name, api_key, status')
+          .eq('barbeiro_id', barbeiroIdToUse)
+          .eq('status', 'connected')
+          .limit(1)
+          .single();
+        
+        if (inst) {
+          whatsappInstance = inst;
+          console.log('[send-webhook-event] WhatsApp instance encontrada:', inst.instance_name);
+        }
+      } catch (e) {
+        console.warn('[send-webhook-event] Nenhuma instância WhatsApp encontrada para barbeiro:', barbeiroIdToUse);
+      }
+
+      // Buscar tenant_id se ainda não temos
+      if (!eventPayload.detalhes || !(eventPayload.detalhes as any).tenant_id) {
+        try {
+          const { data: barb } = await supabase
+            .from('barbeiros')
+            .select('tenant_id')
+            .eq('id', barbeiroIdToUse)
+            .single();
+          if (barb?.tenant_id) {
+            if (!eventPayload.detalhes) eventPayload.detalhes = {};
+            (eventPayload.detalhes as any).tenant_id = barb.tenant_id;
+          }
+        } catch (e) { /* ignore */ }
       }
     }
 
@@ -251,8 +311,27 @@ Deno.serve(async (req) => {
 
     console.log('[send-webhook-event] Enviando para:', config.webhook_url);
     console.log('[send-webhook-event] Telefone WhatsApp:', eventPayload.cliente_telefone_whatsapp);
+    console.log('[send-webhook-event] WhatsApp Instance:', whatsappInstance?.instance_name || 'N/A');
     console.log('[send-webhook-event] Mensagem:', eventPayload.mensagem);
-    console.log('[send-webhook-event] Payload completo:', JSON.stringify(eventPayload, null, 2));
+
+    // Montar payload final com instância WhatsApp
+    const finalPayload: Record<string, unknown> = {
+      ...eventPayload,
+      whatsapp_instance: whatsappInstance ? {
+        instance_name: whatsappInstance.instance_name,
+        api_key: whatsappInstance.api_key,
+        status: whatsappInstance.status,
+      } : null,
+      contatos: [{
+        cliente_id: eventPayload.cliente_id,
+        cliente_nome: eventPayload.cliente_nome,
+        cliente_telefone: eventPayload.cliente_telefone,
+        cliente_telefone_whatsapp: eventPayload.cliente_telefone_whatsapp,
+        mensagem: eventPayload.mensagem,
+      }],
+    };
+
+    console.log('[send-webhook-event] Payload completo:', JSON.stringify(finalPayload, null, 2));
 
     // Enviar evento para o webhook
     const webhookResponse = await fetch(config.webhook_url, {
@@ -260,7 +339,7 @@ Deno.serve(async (req) => {
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(eventPayload),
+      body: JSON.stringify(finalPayload),
     });
 
     if (!webhookResponse.ok) {
