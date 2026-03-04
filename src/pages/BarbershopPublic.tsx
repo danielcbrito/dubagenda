@@ -5,6 +5,7 @@ import { Star, MapPin, Navigation, Scissors, Users, Loader2, ExternalLink, Chevr
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import logoDub from "@/assets/logo-dub.png";
+import { BarberProfileSheet } from "@/components/discover/BarberProfileSheet";
 
 interface Barber {
   id: string;
@@ -316,6 +317,7 @@ const BarbershopPublic = () => {
   };
 
   const [saving, setSaving] = useState(false);
+  const [selectedBarber, setSelectedBarber] = useState<Barber | null>(null);
 
   const handleJoin = async () => {
     if (!tenant) return;
@@ -603,12 +605,13 @@ const BarbershopPublic = () => {
           ) : (
             <div className="space-y-2">
               {barbers.map((barber, i) => (
-                <motion.div
+                <motion.button
                   key={barber.id}
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.4 + i * 0.04, duration: 0.2 }}
-                  className="flex items-center gap-3 p-3 rounded-xl bg-card border border-border/30"
+                  onClick={() => setSelectedBarber(barber)}
+                  className="w-full flex items-center gap-3 p-3 rounded-xl bg-card border border-border/30 active:scale-[0.985] transition-transform text-left"
                 >
                   <div className="w-11 h-11 rounded-full overflow-hidden bg-muted/30 border border-border/20 shrink-0">
                     {barber.foto_url ? (
@@ -631,7 +634,8 @@ const BarbershopPublic = () => {
                       </div>
                     )}
                   </div>
-                </motion.div>
+                  <ChevronRight className="w-4 h-4 text-muted-foreground/30 shrink-0" />
+                </motion.button>
               ))}
             </div>
           )}
@@ -707,6 +711,16 @@ const BarbershopPublic = () => {
           </div>
         )}
       </div>
+      {/* Barber Profile Sheet */}
+      <BarberProfileSheet
+        open={!!selectedBarber}
+        onClose={() => setSelectedBarber(null)}
+        barberId={selectedBarber?.id || null}
+        barberName={selectedBarber?.apelido || ""}
+        barberPhoto={selectedBarber?.foto_url || null}
+        barberAvgRating={selectedBarber?.avgRating ?? null}
+        barberTotalReviews={selectedBarber?.totalReviews || 0}
+      />
     </div>
   );
 };
