@@ -193,7 +193,9 @@ export function useSlotAvailability(
             duration: serviceDuration,
             excludeAppointmentId: excludeAppointmentId || undefined,
             barbeiroId: barbeiroId || undefined,
-            barberId: barbeiroId || undefined, // compatibilidade com versões antigas da Edge Function
+            barberId: barbeiroId || undefined, // compatibilidade com versões antigas da Edge Function (camelCase)
+            barbeiro_id: barbeiroId || undefined, // compatibilidade com deployments legados (snake_case)
+            barber_id: barbeiroId || undefined, // compatibilidade com payload EN legado (snake_case)
             tenantId: tenantId !== undefined ? tenantId : undefined
           }),
           signal: abortControllerRef.current.signal
