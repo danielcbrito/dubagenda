@@ -169,11 +169,8 @@ export function PremiumCalendar({ selectedDate, onSelectDate, disabledDates = []
                 className={cn(
                   "relative aspect-square rounded-xl transition-all duration-200",
                   "flex items-center justify-center",
-                  // Dias indisponíveis: muito apagados, sem borda
-                  !isCurrentMonth && "opacity-[0.015]",
-                  isClosed && "opacity-[0.01] cursor-not-allowed",
-                  isDisabled && !isClosed && !isCurrentMonth && "opacity-[0.015] cursor-not-allowed",
-                  isDisabled && isCurrentMonth && !isClosed && "opacity-[0.015] cursor-not-allowed",
+                  // Dias indisponíveis: sem borda, opacidade normal (texto controla visibilidade)
+                  ((!isCurrentMonth) || isClosed || (isDisabled && isCurrentMonth && !isClosed)) && "cursor-not-allowed",
                   // Dias disponíveis: borda branca sutil
                   !isDisabled && !isSelected && "ring-1 ring-foreground/25 hover:bg-secondary/50",
                   // Dia selecionado
@@ -185,9 +182,12 @@ export function PremiumCalendar({ selectedDate, onSelectDate, disabledDates = []
                 <span className={cn(
                   "text-[13px] font-medium",
                   isSelected && "font-semibold text-primary-foreground",
-                  !isCurrentMonth && "text-muted-foreground",
+                  // Dias indisponíveis: cinza muito escuro, quase preto
+                  !isCurrentMonth && "text-foreground/[0.08]",
+                  isCurrentMonth && isClosed && "text-foreground/[0.08]",
+                  isCurrentMonth && isDisabled && !isClosed && "text-foreground/[0.08]",
+                  // Dias disponíveis: branco forte
                   isCurrentMonth && !isSelected && !isDisabled && "text-foreground font-semibold",
-                  isCurrentMonth && isDisabled && "text-muted-foreground"
                 )}>
                   {format(day, "d")}
                 </span>
