@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useBarbeiroLogado } from "@/hooks/useBarbeiroLogado";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,6 +22,7 @@ interface Promocao {
 }
 
 export function AdminPromocoes() {
+  const { barbeiro } = useBarbeiroLogado();
   const [promocoes, setPromocoes] = useState<Promocao[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -31,6 +33,17 @@ export function AdminPromocoes() {
     pontos_necessarios: 5,
     weekly_required: false,
   });
+
+  // Helper para obter tenant_id do barbeiro logado
+  const getBarberTenantId = async (): Promise<string | null> => {
+    if (!barbeiro) return null;
+    const { data } = await supabase
+      .from("barbeiros")
+      .select("tenant_id")
+      .eq("id", barbeiro.id)
+      .maybeSingle();
+    return data?.tenant_id || null;
+  };
 
   useEffect(() => {
     loadPromocoes();
@@ -66,9 +79,15 @@ export function AdminPromocoes() {
 
   const handleCreatePromo = async () => {
     try {
+      const tenantId = await getBarberTenantId();
+      const payload: any = { ...newPromo };
+      if (tenantId) {
+        payload.tenant_id = tenantId;
+      }
+
       const { error } = await supabase
         .from("promocoes")
-        .insert([newPromo]);
+        .insert([payload]);
 
       if (error) throw error;
       

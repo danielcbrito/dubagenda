@@ -4164,6 +4164,10 @@ export type Database = {
         }
         Returns: Json
       }
+      ensure_default_loyalty_promotion: {
+        Args: { p_tenant_id: string }
+        Returns: undefined
+      }
       ensure_tenant_barber: {
         Args: { p_apelido: string; p_user_id: string }
         Returns: string
@@ -4232,6 +4236,11 @@ export type Database = {
         Args: { p_user_id: string }
         Returns: number
       }
+      get_user_loyalty_required_points: {
+        Args: { p_user_id: string }
+        Returns: number
+      }
+      get_user_preferred_tenant_id: { Args: never; Returns: string }
       get_user_tenant_id: { Args: never; Returns: string }
       has_role: {
         Args: {

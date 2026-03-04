@@ -203,12 +203,30 @@ const Cliente = () => {
   // Buscar pontos_necessarios da promoção ativa + realtime
   useEffect(() => {
     const fetchPontosNecessarios = async () => {
-      const { data } = await supabase
+      // Obter tenant preferido do perfil do usuário
+      let tenantId: string | null = null;
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        const { data: prof } = await supabase
+          .from("profiles")
+          .select("barbearia_preferida_id")
+          .eq("id", session.user.id)
+          .single();
+        tenantId = prof?.barbearia_preferida_id || null;
+      }
+
+      let query = supabase
         .from("promocoes")
         .select("pontos_necessarios")
-        .eq("ativo", true)
-        .limit(1)
-        .maybeSingle();
+        .eq("ativo", true);
+
+      if (tenantId) {
+        query = query.eq("tenant_id", tenantId);
+      } else {
+        query = query.is("tenant_id", null);
+      }
+
+      const { data } = await query.limit(1).maybeSingle();
       
       if (data?.pontos_necessarios && data.pontos_necessarios >= 2) {
         setPontosNecessarios(data.pontos_necessarios);

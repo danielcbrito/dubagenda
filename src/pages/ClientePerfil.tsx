@@ -219,7 +219,14 @@ export default function ClientePerfil() {
       .eq("user_id", user.id).eq("status", "available");
     setRedemptions(resgates?.length || 0);
 
-    const { data: promo } = await supabase.from("promocoes").select("pontos_necessarios").eq("ativo", true).limit(1).maybeSingle();
+    // Buscar promoção filtrada pelo tenant preferido
+    let promoQuery = supabase.from("promocoes").select("pontos_necessarios").eq("ativo", true);
+    if (prof?.barbearia_preferida_id) {
+      promoQuery = promoQuery.eq("tenant_id", prof.barbearia_preferida_id);
+    } else {
+      promoQuery = promoQuery.is("tenant_id", null);
+    }
+    const { data: promo } = await promoQuery.limit(1).maybeSingle();
     if (promo?.pontos_necessarios) setPontosNecessarios(promo.pontos_necessarios);
   };
 

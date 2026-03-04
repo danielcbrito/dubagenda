@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useBarbeiroLogado } from "@/hooks/useBarbeiroLogado";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -43,6 +44,7 @@ interface Servico {
 }
 
 export function AdminCortes() {
+  const { barbeiro } = useBarbeiroLogado();
   const [servicos, setServicos] = useState<Servico[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -78,11 +80,28 @@ export function AdminCortes() {
 
   const loadServicos = async () => {
     try {
-      const { data, error } = await supabase
+      // Determinar tenant_id do barbeiro logado
+      let tenantId: string | null = null;
+      if (barbeiro) {
+        const { data: barberData } = await supabase
+          .from("barbeiros")
+          .select("tenant_id")
+          .eq("id", barbeiro.id)
+          .maybeSingle();
+        tenantId = barberData?.tenant_id || null;
+      }
+
+      let query = supabase
         .from("servicos")
         .select("*")
         .order("nome");
 
+      // Filtrar pelo tenant do barbeiro logado
+      if (tenantId) {
+        query = query.eq("tenant_id", tenantId);
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
       setServicos(data || []);
     } catch (error: any) {
@@ -132,7 +151,18 @@ export function AdminCortes() {
       return;
     }
 
-    const payload = {
+    // Obter tenant_id do barbeiro logado
+    let tenantId: string | null = null;
+    if (barbeiro) {
+      const { data: barberData } = await supabase
+        .from("barbeiros")
+        .select("tenant_id")
+        .eq("id", barbeiro.id)
+        .maybeSingle();
+      tenantId = barberData?.tenant_id || null;
+    }
+
+    const payload: any = {
       nome: formData.nome.trim(),
       descricao: formData.descricao.trim() || null,
       preco: parseFloat(formData.preco),
@@ -150,6 +180,10 @@ export function AdminCortes() {
         if (error) throw error;
         toast.success("Corte atualizado com sucesso");
       } else {
+        // Incluir tenant_id na criação de novos serviços
+        if (tenantId) {
+          payload.tenant_id = tenantId;
+        }
         const { error } = await supabase.from("servicos").insert(payload);
 
         if (error) throw error;
