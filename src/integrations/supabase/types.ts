@@ -4178,6 +4178,10 @@ export type Database = {
         Args: { p_barbeiro_id: string }
         Returns: string
       }
+      get_client_loyalty_required_points: {
+        Args: { p_user_id: string }
+        Returns: number
+      }
       get_maintenance_status: {
         Args: never
         Returns: {

@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Plus, Gift, Trash2, Sparkles } from "lucide-react";
+import { Plus, Gift, Trash2, Sparkles, Pencil } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { GeneratePromotionAIModal } from "./GeneratePromotionAIModal";
@@ -19,6 +19,7 @@ interface Promocao {
   pontos_necessarios: number;
   ativo: boolean;
   weekly_required: boolean;
+  tenant_id: string | null;
 }
 
 export function AdminPromocoes() {
@@ -26,6 +27,8 @@ export function AdminPromocoes() {
   const [promocoes, setPromocoes] = useState<Promocao[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingPromo, setEditingPromo] = useState<Promocao | null>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [aiModalOpen, setAiModalOpen] = useState(false);
   const [newPromo, setNewPromo] = useState({
     nome: "",
@@ -110,6 +113,29 @@ export function AdminPromocoes() {
     } catch (error) {
       console.error("Error creating promo:", error);
       toast.error("Erro ao criar promoção");
+    }
+  };
+
+  const handleUpdatePromo = async () => {
+    if (!editingPromo) return;
+    try {
+      const { error } = await supabase
+        .from("promocoes")
+        .update({
+          nome: editingPromo.nome,
+          descricao: editingPromo.descricao,
+          pontos_necessarios: editingPromo.pontos_necessarios,
+          weekly_required: editingPromo.weekly_required,
+        })
+        .eq("id", editingPromo.id);
+
+      if (error) throw error;
+      toast.success("Promoção atualizada com sucesso!");
+      setEditDialogOpen(false);
+      setEditingPromo(null);
+    } catch (error) {
+      console.error("Error updating promo:", error);
+      toast.error("Erro ao atualizar promoção");
     }
   };
 
@@ -243,12 +269,23 @@ export function AdminPromocoes() {
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2">
                     <Switch
                       checked={promo.ativo}
                       onCheckedChange={() => handleTogglePromo(promo.id, promo.ativo)}
                       className="data-[state=checked]:bg-primary"
                     />
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      onClick={() => {
+                        setEditingPromo({ ...promo });
+                        setEditDialogOpen(true);
+                      }}
+                      className="hover:bg-primary/20 hover:text-primary transition-all"
+                    >
+                      <Pencil className="w-4 h-4" strokeWidth={2} />
+                    </Button>
                     <Button
                       size="icon"
                       variant="ghost"
@@ -287,6 +324,55 @@ export function AdminPromocoes() {
           )}
         </div>
       )}
+
+      {/* Edit Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar Promoção</DialogTitle>
+          </DialogHeader>
+          {editingPromo && (
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium">Nome</label>
+                <Input
+                  value={editingPromo.nome}
+                  onChange={(e) => setEditingPromo({ ...editingPromo, nome: e.target.value })}
+                  className="input-premium"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium">Descrição</label>
+                <Textarea
+                  value={editingPromo.descricao || ""}
+                  onChange={(e) => setEditingPromo({ ...editingPromo, descricao: e.target.value })}
+                  className="input-premium"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium">Pontos Necessários</label>
+                <Input
+                  type="number"
+                  min={2}
+                  value={editingPromo.pontos_necessarios}
+                  onChange={(e) => setEditingPromo({ ...editingPromo, pontos_necessarios: parseInt(e.target.value) || 2 })}
+                  className="input-premium"
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <Switch
+                  checked={editingPromo.weekly_required}
+                  onCheckedChange={(checked) => setEditingPromo({ ...editingPromo, weekly_required: checked })}
+                />
+                <label className="text-sm">Requer frequência semanal</label>
+              </div>
+              <Button onClick={handleUpdatePromo} className="w-full">
+                Salvar Alterações
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <GeneratePromotionAIModal
         open={aiModalOpen}
