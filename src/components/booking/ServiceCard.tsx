@@ -38,7 +38,7 @@ export function ServiceCard({
         "active:scale-[0.99]",
         isSelected 
           ? "bg-primary/5 border-primary/30 ring-1 ring-primary/10" 
-          : "bg-card border-border/30 hover:border-border/50"
+          : "bg-card border-border/50 hover:border-border"
       )}
     >
       <div className="flex items-start justify-between gap-3">
@@ -51,18 +51,18 @@ export function ServiceCard({
             {service.nome}
           </h3>
           {service.descricao && (
-            <p className="text-[11px] text-muted-foreground/60 mb-2 line-clamp-1">
+            <p className="text-[11px] text-muted-foreground mb-2 line-clamp-1">
               {service.descricao}
             </p>
           )}
           
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-1 text-[11px] text-muted-foreground/50">
+            <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
               <Clock className="w-3 h-3" />
               <span>{duration * (quantity || 1)} min</span>
             </div>
             <div className="flex items-baseline gap-0.5">
-              <span className="text-[10px] text-muted-foreground/40">R$</span>
+              <span className="text-[10px] text-muted-foreground">R$</span>
               <span className="text-[13px] font-semibold text-foreground tabular-nums">
                 {(service.preco * (quantity || 1)).toFixed(2).replace('.', ',')}
               </span>
@@ -124,7 +124,7 @@ export function ServiceCard({
                 onClick={onToggle}
                 className={cn(
                   "w-5 h-5 rounded-full border-2 transition-all flex items-center justify-center",
-                  "border-muted-foreground/20"
+                  "border-muted-foreground/40"
                 )}
                 aria-label="Selecionar serviço"
               />
