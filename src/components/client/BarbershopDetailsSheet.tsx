@@ -55,9 +55,9 @@ function InfoRow({ icon: Icon, label, value, href }: { icon: React.ElementType; 
 export function BarbershopDetailsSheet({ open, onOpenChange, barbershop, isDub }: BarbershopDetailsSheetProps) {
   if (!barbershop && !isDub) return null;
 
-  const name = isDub ? "Barbearia DUB" : barbershop?.nome || "";
-  const slogan = isDub ? "Referência em corte masculino premium" : barbershop?.slogan;
-  const logoUrl = isDub ? logoDub : barbershop?.logo_url;
+  const name = isDub ? (barbershop?.nome || "Barbearia DUB") : barbershop?.nome || "";
+  const slogan = isDub ? (barbershop?.slogan || "Referência em corte masculino premium") : barbershop?.slogan;
+  const logoUrl = barbershop?.logo_url || logoDub;
 
   const address = barbershop?.endereco_completo ||
     [barbershop?.rua, barbershop?.numero, barbershop?.bairro, barbershop?.cidade, barbershop?.estado]
