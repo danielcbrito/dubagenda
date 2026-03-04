@@ -1,5 +1,6 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { ThemeProvider } from "next-themes";
+import { SplashScreen } from "@/components/SplashScreen";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -287,6 +288,24 @@ function ThemeColorSync() {
   return null;
 }
 
+function AppWithSplash() {
+  const [showSplash, setShowSplash] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setShowSplash(false), 2000);
+    return () => clearTimeout(timer);
+  }, []);
+
+  return (
+    <>
+      <SplashScreen visible={showSplash} />
+      <BrowserRouter>
+        <AppRoutes />
+      </BrowserRouter>
+    </>
+  );
+}
+
 const App = () => (
   <GlobalErrorBoundary>
     <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
@@ -295,9 +314,7 @@ const App = () => (
         <TooltipProvider>
           <Toaster />
           <Sonner />
-          <BrowserRouter>
-            <AppRoutes />
-          </BrowserRouter>
+          <AppWithSplash />
         </TooltipProvider>
       </QueryClientProvider>
     </ThemeProvider>
