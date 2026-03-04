@@ -325,8 +325,8 @@ async function convertPendingToAppointment(
       duracao: pb.duracao,
       preco: pb.preco,
       observacoes: pb.observacoes,
-      status: "pending",
-      barbeiro_confirmou: false,
+      status: "confirmed",
+      barbeiro_confirmou: true,
       cliente_confirmou: true,
       payment_method: pb.payment_method || "pix",
     })
