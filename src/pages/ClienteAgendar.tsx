@@ -953,34 +953,6 @@ const ClienteAgendar = () => {
           : undefined,
       };
 
-      // === PIX via Asaas (QR Code inline) ===
-      if (paymentMethod === 'pix') {
-        const { data, error } = await supabase.functions.invoke('create-asaas-pix', {
-          body: {
-            bookingData,
-            rescheduleFromId: isRescheduling ? rescheduleAppointmentId : undefined,
-          },
-        });
-
-        if (error) throw error;
-        if (data?.error) throw new Error(data.error);
-
-        if (data?.pixQrCode && data?.pixPayload) {
-          // Enriquecer dados com informações do agendamento para a tela de checkout
-          const enrichedData = {
-            ...data,
-            serviceName: serviceNames,
-            barberName: selectedBarber?.apelido || "Profissional",
-            bookingDate: format(selectedDate, "dd/MM/yyyy"),
-            bookingTime: selectedTime,
-          };
-          sessionStorage.setItem('pix_checkout_data', JSON.stringify(enrichedData));
-          navigate('/cliente/pix-checkout');
-          return;
-        }
-        throw new Error("Não foi possível gerar o QR Code PIX.");
-      }
-
       // === Cartão via Asaas Checkout ===
       if (paymentMethod === 'card') {
         const { data, error } = await supabase.functions.invoke('create-asaas-card', {
@@ -1000,12 +972,17 @@ const ClienteAgendar = () => {
         throw new Error("Não foi possível iniciar o pagamento.");
       }
 
-      // === Pagamento via Carteira (wallet) ===
+      // === Pagamento via Carteira (wallet) — suporta pagamento parcial ===
       if (paymentMethod === 'wallet') {
-        // Create appointment first via create-payment (cash mode)
+        const walletDebit = Math.min(walletBalance, finalPrice);
+        const remainderCash = finalPrice - walletDebit;
+
         const payload: any = {
-          bookingData,
-          metodo: 'wallet',
+          bookingData: {
+            ...bookingData,
+            preco: finalPrice,
+          },
+          metodo: remainderCash > 0 ? 'cash' : 'wallet',
           creditsUsed: 0,
           rescheduleFromId: isRescheduling ? rescheduleAppointmentId : undefined,
         };
@@ -1017,17 +994,19 @@ const ClienteAgendar = () => {
         if (error) throw error;
         if (data?.error) throw new Error(data.error);
 
-        // Debit wallet
-        const { data: walletResult, error: walletError } = await supabase.functions.invoke('wallet-operations', {
-          body: {
-            action: 'pay_service',
-            amount: finalPrice,
-            appointmentId: data.appointmentId,
-          },
-        });
+        // Debit wallet (only the available amount)
+        if (walletDebit > 0) {
+          const { data: walletResult, error: walletError } = await supabase.functions.invoke('wallet-operations', {
+            body: {
+              action: 'pay_service',
+              amount: walletDebit,
+              appointmentId: data.appointmentId,
+            },
+          });
 
-        if (walletError || walletResult?.error) {
-          throw new Error(walletResult?.error || "Erro ao debitar carteira");
+          if (walletError || walletResult?.error) {
+            throw new Error(walletResult?.error || "Erro ao debitar carteira");
+          }
         }
 
         if (appliedCoupon && data.appointmentId) {
@@ -1037,9 +1016,11 @@ const ClienteAgendar = () => {
         sessionStorage.removeItem('isRescheduling');
         sessionStorage.removeItem('rescheduleAppointmentId');
 
-        // Webhook de confirmação é enviado automaticamente pelo trigger do banco de dados
-
-        toast.success("Agendamento criado! Pagamento debitado da carteira.");
+        if (remainderCash > 0) {
+          toast.success(`R$ ${walletDebit.toFixed(2)} debitado da carteira. Pague R$ ${remainderCash.toFixed(2)} na barbearia.`);
+        } else {
+          toast.success("Agendamento criado! Pagamento debitado da carteira.");
+        }
         navigate("/cliente");
         return;
       }
@@ -2115,43 +2096,6 @@ const ClienteAgendar = () => {
                 </div>
               </div>
 
-              {/* PIX */}
-              <motion.button
-                whileTap={{ scale: 0.98 }}
-                onClick={() => { setPaymentMethod('pix'); setUseRedemption(false); }}
-                className={cn(
-                  "w-full rounded-xl border p-4 text-left transition-all mb-3",
-                  paymentMethod === 'pix' && !useRedemption
-                    ? "border-primary/50 bg-primary/5 ring-1 ring-primary/20"
-                    : "border-border/20 bg-card/50 hover:border-border/40"
-                )}
-              >
-                <div className="flex items-center gap-3.5">
-                  <div className={cn(
-                    "w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0",
-                    paymentMethod === 'pix' && !useRedemption ? "bg-primary/10" : "bg-muted/20"
-                  )}>
-                    <img src={pixIcon} alt="PIX" className="w-5 h-5 object-contain" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[13px] font-semibold text-foreground/70">Pagar via Pix</p>
-                    <p className="text-[11px] text-muted-foreground/50 mt-0.5">
-                      Pagamento instantâneo com QR Code
-                    </p>
-                  </div>
-                  <div className={cn(
-                    "w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all",
-                    paymentMethod === 'pix' && !useRedemption
-                      ? "bg-primary border-primary"
-                      : "border-muted-foreground/20"
-                  )}>
-                    {paymentMethod === 'pix' && !useRedemption && <Check className="w-3 h-3 text-primary-foreground" strokeWidth={3} />}
-                  </div>
-                </div>
-              </motion.button>
-
-              {/* Cartão - desabilitado */}
-
               {/* Pagar na Barbearia */}
               <motion.button
                 whileTap={{ scale: 0.98 }}
@@ -2195,10 +2139,8 @@ const ClienteAgendar = () => {
                 <motion.button
                   whileTap={{ scale: 0.98 }}
                   onClick={() => { setPaymentMethod('wallet'); setUseRedemption(false); }}
-                  disabled={walletBalance < getTotalPrice()}
                   className={cn(
                     "w-full rounded-xl border p-4 text-left transition-all mt-3",
-                    walletBalance < getTotalPrice() && "opacity-50 cursor-not-allowed",
                     paymentMethod === 'wallet' && !useRedemption
                       ? "border-emerald-500/50 bg-emerald-500/5 ring-1 ring-emerald-500/20"
                       : "border-border/20 bg-card/50 hover:border-border/40"
@@ -2218,8 +2160,8 @@ const ClienteAgendar = () => {
                       <p className="text-[13px] font-semibold text-foreground/70">Pagar com Carteira</p>
                       <p className="text-[11px] text-muted-foreground/50 mt-0.5">
                         {walletBalance >= getTotalPrice() 
-                          ? `Saldo: R$ ${walletBalance.toFixed(2).replace('.', ',')}`
-                          : `Saldo insuficiente: R$ ${walletBalance.toFixed(2).replace('.', ',')}`
+                          ? `Saldo: R$ ${walletBalance.toFixed(2).replace('.', ',')} — cobre tudo`
+                          : `Saldo: R$ ${walletBalance.toFixed(2).replace('.', ',')} — restante na barbearia`
                         }
                       </p>
                     </div>
@@ -2467,7 +2409,8 @@ const ClienteAgendar = () => {
                   label="Forma de Pagamento"
                   value={
                     useRedemption && getTotalPrice() === 0 ? "Resgate de Fidelidade" :
-                    paymentMethod === 'wallet' ? "Carteira do App" :
+                    paymentMethod === 'wallet' && walletBalance >= getTotalPrice() ? "Carteira do App" :
+                    paymentMethod === 'wallet' && walletBalance < getTotalPrice() ? `Carteira (R$ ${walletBalance.toFixed(2).replace('.', ',')}) + Barbearia (R$ ${(getTotalPrice() - walletBalance).toFixed(2).replace('.', ',')})` :
                     availableCredits >= getTotalPrice() ? "Créditos do App" :
                     "Pagar na Barbearia"
                   }
