@@ -40,7 +40,9 @@ interface AvailabilityRequest {
   duration: number;
   excludeAppointmentId?: string;
   barbeiroId?: string;
-  barberId?: string; // compatibilidade retroativa
+  barberId?: string; // compatibilidade retroativa (camelCase)
+  barbeiro_id?: string; // compatibilidade legada (snake_case)
+  barber_id?: string; // compatibilidade legada (snake_case EN)
   tenantId?: string | null;
 }
 
@@ -173,8 +175,8 @@ Deno.serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     const body: AvailabilityRequest = await req.json();
-    const { date, duration, excludeAppointmentId, barbeiroId, barberId, tenantId } = body;
-    const resolvedBarbeiroId = barbeiroId ?? barberId;
+    const { date, duration, excludeAppointmentId, barbeiroId, barberId, barbeiro_id, barber_id, tenantId } = body;
+    const resolvedBarbeiroId = barbeiroId ?? barberId ?? barbeiro_id ?? barber_id;
 
     console.log('='.repeat(70));
     console.log('[check-availability] INICIANDO VERIFICAÇÃO');
