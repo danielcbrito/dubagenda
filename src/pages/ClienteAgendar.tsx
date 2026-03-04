@@ -10,7 +10,7 @@ import { ptBR } from "date-fns/locale";
 import { format, eachDayOfInterval, getDay } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useSlotAvailability } from "@/hooks/useSlotAvailability";
-import { sendNovoAgendamentoEvent, sendRemarcacaoConcluidaEvent } from "@/lib/webhookService";
+import { sendRemarcacaoConcluidaEvent } from "@/lib/webhookService";
 import { motion, AnimatePresence } from "framer-motion";
 
 // Premium Components
@@ -1037,17 +1037,7 @@ const ClienteAgendar = () => {
         sessionStorage.removeItem('isRescheduling');
         sessionStorage.removeItem('rescheduleAppointmentId');
 
-        const { data: profile } = await supabase.from('profiles').select('nome, telefone').eq('id', session.user.id).single();
-        sendNovoAgendamentoEvent({
-          agendamento_id: data.appointmentId || '',
-          cliente_id: session.user.id,
-          cliente_nome: profile?.nome || session.user.email || 'Cliente',
-          cliente_telefone: profile?.telefone,
-          servico: serviceNames,
-          data: format(selectedDate, 'yyyy-MM-dd'),
-          hora: selectedTime,
-          preco: finalPrice
-        });
+        // Webhook de confirmação é enviado automaticamente pelo trigger do banco de dados
 
         toast.success("Agendamento criado! Pagamento debitado da carteira.");
         navigate("/cliente");
@@ -1084,17 +1074,7 @@ const ClienteAgendar = () => {
       sessionStorage.removeItem('isRescheduling');
       sessionStorage.removeItem('rescheduleAppointmentId');
       
-      const { data: profile } = await supabase.from('profiles').select('nome, telefone').eq('id', session.user.id).single();
-      sendNovoAgendamentoEvent({
-        agendamento_id: data.appointmentId || '',
-        cliente_id: session.user.id,
-        cliente_nome: profile?.nome || session.user.email || 'Cliente',
-        cliente_telefone: profile?.telefone,
-        servico: serviceNames,
-        data: format(selectedDate, 'yyyy-MM-dd'),
-        hora: selectedTime,
-        preco: finalPrice
-      });
+      // Webhook de confirmação é enviado automaticamente pelo trigger do banco de dados
       
       toast.success("Agendamento criado! Pague na barbearia.");
       navigate("/cliente");
@@ -1166,17 +1146,7 @@ const ClienteAgendar = () => {
 
       await markRedemptionAsUsed(appointment.id);
 
-      const { data: profile } = await supabase.from('profiles').select('nome, telefone').eq('id', session.user.id).single();
-      sendNovoAgendamentoEvent({
-        agendamento_id: appointment.id,
-        cliente_id: session.user.id,
-        cliente_nome: profile?.nome || 'Cliente',
-        cliente_telefone: profile?.telefone,
-        servico: serviceNames,
-        data: dateStr,
-        hora: selectedTime,
-        preco: 0
-      });
+      // Webhook de confirmação é enviado automaticamente pelo trigger do banco de dados
 
       toast.success("Corte grátis resgatado com sucesso!");
       navigate("/cliente");
@@ -1291,17 +1261,7 @@ const ClienteAgendar = () => {
       sessionStorage.removeItem('isRescheduling');
       sessionStorage.removeItem('rescheduleAppointmentId');
 
-      const { data: profile } = await supabase.from('profiles').select('nome, telefone').eq('id', session.user.id).single();
-      sendNovoAgendamentoEvent({
-        agendamento_id: appointment.id,
-        cliente_id: session.user.id,
-        cliente_nome: profile?.nome || session.user.email || 'Cliente',
-        cliente_telefone: profile?.telefone,
-        servico: serviceNames,
-        data: dateStr,
-        hora: selectedTime,
-        preco: 0
-      });
+      // Webhook de confirmação é enviado automaticamente pelo trigger do banco de dados
 
       toast.success("Agendamento criado! Créditos aplicados com sucesso.");
       navigate("/cliente");
@@ -1391,17 +1351,7 @@ const ClienteAgendar = () => {
           status: "paid",
         });
 
-      const { data: profile } = await supabase.from('profiles').select('nome, telefone').eq('id', session.user.id).single();
-      sendNovoAgendamentoEvent({
-        agendamento_id: appointment.id,
-        cliente_id: session.user.id,
-        cliente_nome: profile?.nome || session.user.email || 'Cliente',
-        cliente_telefone: profile?.telefone,
-        servico: serviceNames,
-        data: dateStr,
-        hora: selectedTime,
-        preco: 0
-      });
+      // Webhook de confirmação é enviado automaticamente pelo trigger do banco de dados
 
       toast.success(`Agendamento criado! Usando seu ${activeSubscription.plano_nome}.`);
       navigate("/cliente");

@@ -7,7 +7,7 @@ import { CheckCircle, XCircle, Calendar as CalendarIcon, Clock, User } from "luc
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { sendAgendamentoConfirmadoEvent, sendAgendamentoCanceladoEvent } from "@/lib/webhookService";
+import { sendAgendamentoCanceladoEvent } from "@/lib/webhookService";
 import { useBarbeiroLogado } from "@/hooks/useBarbeiroLogado";
 
 interface PendingAppointment {
@@ -158,16 +158,7 @@ export function AdminConfirmacoesPendentes() {
         data: data.data
       });
 
-      // Enviar evento para webhook
-      sendAgendamentoConfirmadoEvent({
-        agendamento_id: appointmentId,
-        cliente_id: data.user_id,
-        cliente_nome: appointmentToConfirm?.profile?.nome || "Cliente",
-        servico: appointmentToConfirm?.servico?.nome || "Serviço",
-        data: data.data,
-        hora: data.hora,
-        preco: data.preco
-      });
+      // Webhook de confirmação é enviado automaticamente pelo trigger do banco de dados (trg_send_confirm_message_on_barber_confirm)
 
       // Criar notificação para o cliente
       const { error: notifError } = await supabase
