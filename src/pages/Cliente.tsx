@@ -251,12 +251,37 @@ const Cliente = () => {
     };
   }, []);
 
+  // Realtime sync for plans, services, subscriptions changes by barbers
   useEffect(() => {
     if (!user) return;
+
+    const channel = supabase
+      .channel('cliente-global-sync')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'planos' }, () => {
+        loadUserData(user.id);
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'servicos' }, () => {
+        loadUserData(user.id);
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'assinaturas', filter: `user_id=eq.${user.id}` }, () => {
+        loadUserData(user.id);
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'pontos', filter: `user_id=eq.${user.id}` }, () => {
+        loadUserData(user.id);
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'resgates', filter: `user_id=eq.${user.id}` }, () => {
+        loadUserData(user.id);
+      })
+      .subscribe();
+
     const interval = setInterval(() => {
       loadUserData(user.id);
-    }, 60000); // Reduced from 20s to 60s — realtime handles instant updates
-    return () => clearInterval(interval);
+    }, 120000); // Fallback polling every 2 min — realtime handles instant updates
+
+    return () => {
+      supabase.removeChannel(channel);
+      clearInterval(interval);
+    };
   }, [user]);
 
   const checkAuth = async () => {
