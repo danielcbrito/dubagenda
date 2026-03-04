@@ -1,12 +1,12 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { Search, Scissors, Star, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import logoDub from "@/assets/logo-dub.png";
-import { BarbershopDetailSheet } from "@/components/discover/BarbershopDetailSheet";
+
 
 // ── Types ──
 interface Tenant {
@@ -180,7 +180,6 @@ const EscolherBarbearia = () => {
   const [currentPreferred, setCurrentPreferred] = useState<string | null>(null);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [locationStatus, setLocationStatus] = useState<"idle" | "requesting" | "granted" | "denied">("idle");
-  const [selectedShop, setSelectedShop] = useState<string | null>(null);
   const [hasAutoOpened, setHasAutoOpened] = useState(false);
 
   const isChangeMode = searchParams.get("mode") === "change";
@@ -214,12 +213,14 @@ const EscolherBarbearia = () => {
   useEffect(() => {
     if (!shouldOpenCurrent || isLoading || hasAutoOpened) return;
     setHasAutoOpened(true);
-    const dubTenant = allTenants.find(t => t.isDub);
-    if (!currentPreferred) {
-      if (dubTenant) setSelectedShop(dubTenant.id);
-      return;
+    const targetId = currentPreferred || allTenants.find(t => t.isDub)?.id;
+    if (targetId) {
+      const target = allTenants.find(t => t.id === targetId);
+      if (target) {
+        const slug = target.slug || target.id;
+        navigate(`/${slug}?from=${isChangeMode ? "change" : "discover"}`, { replace: true });
+      }
     }
-    setSelectedShop(currentPreferred);
   }, [shouldOpenCurrent, isLoading, hasAutoOpened, currentPreferred, allTenants]);
 
   // ── Geolocation ──
@@ -408,20 +409,6 @@ const EscolherBarbearia = () => {
 
   const handleBack = () => navigate(isChangeMode ? "/cliente/perfil" : "/");
 
-  // ── Selected tenant for detail sheet ──
-  const selectedTenant = selectedShop
-    ? allTenants.find(t => t.id === selectedShop) || null
-    : null;
-
-  const selectedDistance = selectedTenant && userLocation && selectedTenant.latitude && selectedTenant.longitude
-    ? haversineDistance(userLocation.lat, userLocation.lng, selectedTenant.latitude, selectedTenant.longitude)
-    : null;
-
-  const isDubSelected = (tenantId: string) => {
-    const t = allTenants.find(x => x.id === tenantId);
-    if (!t?.isDub) return false;
-    return !currentPreferred || currentPreferred === t.id;
-  };
 
   const isTenantCurrent = (tenantId: string) => {
     const t = allTenants.find(x => x.id === tenantId);
@@ -520,7 +507,11 @@ const EscolherBarbearia = () => {
                   index={index}
                   isCurrent={isTenantCurrent(tenant.id)}
                   locationGranted={locationStatus === "granted"}
-                  onClick={() => setSelectedShop(tenant.id)}
+                  onClick={() => {
+                    const tenantSlug = tenant.slug || tenant.id;
+                    const fromParam = isChangeMode ? "change" : "discover";
+                    navigate(`/${tenantSlug}?from=${fromParam}`);
+                  }}
                 />
               ))}
             </div>
@@ -528,30 +519,6 @@ const EscolherBarbearia = () => {
         </div>
       </div>
 
-      {/* ══════ Detail Sheet ══════ */}
-      {selectedTenant && (
-        <BarbershopDetailSheet
-          open={!!selectedTenant}
-          onClose={() => setSelectedShop(null)}
-          tenantId={selectedTenant.id}
-          tenantName={selectedTenant.nome}
-          tenantLogo={selectedTenant.logo_url}
-          tenantSlogan={selectedTenant.slogan}
-          tenantBairro={selectedTenant.bairro}
-          tenantCidade={selectedTenant.cidade}
-          tenantEstado={selectedTenant.estado}
-          avgRating={selectedTenant.avgRating ?? null}
-          totalReviews={selectedTenant.totalReviews ?? 0}
-          distance={selectedDistance}
-          latitude={selectedTenant.latitude}
-          longitude={selectedTenant.longitude}
-          isCurrent={isTenantCurrent(selectedTenant.id)}
-          saving={saving === selectedTenant.id}
-          onSelect={() => handleSelect(selectedTenant.id)}
-          isDub={selectedTenant.isDub}
-          includeGlobalBarbers={!!selectedTenant.isDub}
-        />
-      )}
     </div>
   );
 };

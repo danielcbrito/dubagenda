@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Star, MapPin, Navigation, Scissors, Users, Loader2, ExternalLink, ChevronRight, ArrowRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -95,6 +95,11 @@ function applyTenantFallbacks(tenant: TenantInfo, currentSlug?: string): TenantI
 const BarbershopPublic = () => {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
+  const fromContext = searchParams.get("from"); // "discover" | "change" | null
+  const isFromDiscover = fromContext === "discover" || fromContext === "change";
+  const isChangeMode = fromContext === "change";
 
   const [tenant, setTenant] = useState<TenantInfo | null>(null);
   const [barbers, setBarbers] = useState<Barber[]>([]);
@@ -106,11 +111,22 @@ const BarbershopPublic = () => {
   const [totalReviews, setTotalReviews] = useState(0);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [currentPreferred, setCurrentPreferred] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
 
-  // Check auth
+  // Check auth + preferred barbershop
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       setIsLoggedIn(!!session);
+      if (session) {
+        setUserId(session.user.id);
+        const { data: prof } = await supabase
+          .from("profiles")
+          .select("barbearia_preferida_id")
+          .eq("id", session.user.id)
+          .single();
+        setCurrentPreferred(prof?.barbearia_preferida_id || null);
+      }
     });
   }, []);
 
@@ -330,7 +346,9 @@ const BarbershopPublic = () => {
 
       if (error) throw error;
 
-      navigate("/cliente");
+      const { toast } = await import("sonner");
+      toast.success(isChangeMode ? "Barbearia atualizada!" : "Barbearia selecionada!");
+      navigate(isChangeMode ? "/cliente/perfil" : "/cliente");
     } catch (err) {
       console.error("Erro ao selecionar barbearia:", err);
       const { toast } = await import("sonner");
@@ -345,6 +363,11 @@ const BarbershopPublic = () => {
       navigate(`/auth?mode=login&origin=discover&tenant=${tenant.id}`);
     }
   };
+
+  const isDubTenant = tenant ? normalizeText(tenant.nome) === "barbeariadub" : false;
+  const isCurrent = isLoggedIn && tenant && (
+    isDubTenant ? !currentPreferred : currentPreferred === tenant.id
+  );
 
   const distance = userLocation && tenant?.latitude != null && tenant?.longitude != null
     ? haversineDistance(userLocation.lat, userLocation.lng, tenant.latitude, tenant.longitude)
@@ -429,14 +452,32 @@ const BarbershopPublic = () => {
             />
           )}
 
-          {/* Powered by DUB badge */}
+          {/* Back / Home button */}
           <div className="absolute top-[calc(env(safe-area-inset-top)+0.75rem)] left-3 z-10">
             <button
-              onClick={() => navigate("/")}
+              onClick={() => {
+                if (isFromDiscover) {
+                  navigate(isChangeMode ? "/escolher-barbearia?mode=change" : "/escolher-barbearia");
+                } else {
+                  navigate("/");
+                }
+              }}
               className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-background/60 backdrop-blur-md border border-border/30 active:scale-95 transition-all"
             >
-              <img src={logoDub} alt="DUB" className="w-4 h-4 object-contain" />
-              <span className="text-[9px] font-bold text-foreground/70 uppercase tracking-wider">DUB Agenda</span>
+              {isFromDiscover ? (
+                <>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="text-foreground/70">
+                    <path d="M9 14L4 9l5-5" />
+                    <path d="M4 9h10a4 4 0 0 1 4 4v1" />
+                  </svg>
+                  <span className="text-[9px] font-bold text-foreground/70 uppercase tracking-wider">Voltar</span>
+                </>
+              ) : (
+                <>
+                  <img src={logoDub} alt="DUB" className="w-4 h-4 object-contain" />
+                  <span className="text-[9px] font-bold text-foreground/70 uppercase tracking-wider">DUB Agenda</span>
+                </>
+              )}
             </button>
           </div>
 
@@ -608,17 +649,23 @@ const BarbershopPublic = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.5 }}
             onClick={handleJoin}
-            disabled={saving}
+            disabled={saving || !!isCurrent}
             className={cn(
               "w-full h-[52px] rounded-xl font-semibold text-[14px] tracking-wide",
               "flex items-center justify-center gap-2",
               "transition-all duration-200 active:scale-[0.985]",
-              "bg-foreground text-background shadow-lg",
+              isCurrent
+                ? "bg-card border border-border text-muted-foreground"
+                : "bg-foreground text-background shadow-lg",
               saving && "opacity-70 pointer-events-none"
             )}
           >
             {saving ? (
               <Loader2 className="w-4 h-4 animate-spin" />
+            ) : isCurrent ? (
+              "Barbearia atual"
+            ) : isDubTenant ? (
+              "Voltar para DUB"
             ) : (
               <>
                 <span>Escolher esta barbearia</span>
