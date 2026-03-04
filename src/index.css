@@ -22,18 +22,18 @@ All colors MUST be HSL. */
   :root {
     /* 🎨 PURE BLACK PREMIUM THEME (default = dark) */
     
-    /* Backgrounds - Preto puro e limpo */
-    --background: 0 0% 5%;     /* #0D0D0D */
-    --background-elevated: 0 0% 10%;
-    --foreground: 0 0% 96%;
+    /* Backgrounds - Preto puro #000000 para máximo contraste */
+    --background: 0 0% 0%;      /* #000000 */
+    --background-elevated: 0 0% 4%;
+    --foreground: 0 0% 100%;    /* #FFFFFF */
 
     /* Cards — sutilmente elevados */
-    --card: 0 0% 10%;
-    --card-elevated: 0 0% 13%;
-    --card-foreground: 0 0% 96%;
+    --card: 0 0% 7%;            /* #111111 */
+    --card-elevated: 0 0% 10%;
+    --card-foreground: 0 0% 100%;
 
-    --popover: 0 0% 10%;
-    --popover-foreground: 0 0% 96%;
+    --popover: 0 0% 7%;
+    --popover-foreground: 0 0% 100%;
 
     /* Vermelho Premium */
     --primary: 0 78% 57%;
@@ -42,10 +42,10 @@ All colors MUST be HSL. */
 
     /* Secondary */
     --secondary: 0 0% 14%;
-    --secondary-foreground: 0 0% 92%;
+    --secondary-foreground: 0 0% 94%;
 
     --muted: 0 0% 16%;
-    --muted-foreground: 0 0% 60%;
+    --muted-foreground: 0 0% 70%;  /* #B3B3B3 — WCAG AA em #000 */
 
     --accent: 0 78% 57%;
     --accent-foreground: 0 0% 100%;
@@ -56,13 +56,13 @@ All colors MUST be HSL. */
     --gold-foreground: 0 0% 10%;
 
     --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 98%;
+    --destructive-foreground: 0 0% 100%;
 
     --success: 142 76% 45%;
-    --success-foreground: 0 0% 98%;
+    --success-foreground: 0 0% 100%;
 
-    /* Bordas — sutis no preto */
-    --border: 0 0% 18%;
+    /* Bordas — mais visíveis no preto puro */
+    --border: 0 0% 15%;         /* #262626 */
     --border-glow: 0 78% 57% / 0.3;
     --input: 0 0% 14%;
     --ring: 0 78% 55%;
@@ -111,47 +111,47 @@ All colors MUST be HSL. */
     --transition-bounce: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
   }
 
-  /* ☀️ LIGHT THEME — Premium Branco com Alto Contraste */
+  /* ☀️ LIGHT THEME — Premium Branco com Alto Contraste WCAG AAA */
   .light {
-    --background: 0 0% 96%;       /* #F5F5F5 - Fundo limpo */
-    --background-elevated: 0 0% 100%;
-    --foreground: 0 0% 6%;        /* #0F0F0F - Texto máximo contraste */
+    --background: 0 0% 100%;      /* #FFFFFF */
+    --background-elevated: 0 0% 98%;
+    --foreground: 0 0% 0%;        /* #000000 — máximo contraste */
 
     --card: 0 0% 100%;
     --card-elevated: 0 0% 100%;
-    --card-foreground: 0 0% 6%;
+    --card-foreground: 0 0% 0%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 6%;
+    --popover-foreground: 0 0% 0%;
 
-    /* Vermelho Premium — forte e presente */
+    /* Vermelho Premium — forte e acessível */
     --primary: 0 85% 42%;
     --primary-glow: 0 85% 52%;
     --primary-foreground: 0 0% 100%;
 
     /* Secondary — definido */
-    --secondary: 0 0% 92%;
-    --secondary-foreground: 0 0% 10%;
+    --secondary: 0 0% 96%;
+    --secondary-foreground: 0 0% 6%;
 
-    --muted: 0 0% 93%;
-    --muted-foreground: 0 0% 32%;  /* Mais escuro — legível em qualquer tela */
+    --muted: 0 0% 96%;
+    --muted-foreground: 0 0% 29%;  /* #4A4A4A — WCAG AA em branco */
 
     --accent: 0 85% 42%;
     --accent-foreground: 0 0% 100%;
 
     /* Dourado */
-    --gold: 40 75% 42%;
-    --gold-glow: 40 75% 52%;
+    --gold: 40 75% 38%;
+    --gold-glow: 40 75% 48%;
     --gold-foreground: 0 0% 100%;
 
-    --destructive: 0 84% 48%;
+    --destructive: 0 84% 45%;
     --destructive-foreground: 0 0% 100%;
 
-    --success: 142 76% 32%;
+    --success: 142 76% 30%;
     --success-foreground: 0 0% 100%;
 
     /* Bordas — mais visíveis */
-    --border: 0 0% 82%;
+    --border: 0 0% 83%;           /* #D4D4D4 */
     --border-glow: 0 85% 42% / 0.2;
     --input: 0 0% 89%;
     --ring: 0 85% 42%;
