@@ -269,7 +269,7 @@ function ThemeColorSync() {
   useEffect(() => {
     const observer = new MutationObserver(() => {
       const isDark = document.documentElement.classList.contains("dark");
-      const color = isDark ? "#0D0D0D" : "#F5F5F5";
+      const color = isDark ? "#0F172A" : "#FFFFFF";
       document
         .querySelectorAll('meta[name="theme-color"]')
         .forEach((meta) => meta.setAttribute("content", color));
@@ -278,7 +278,7 @@ function ThemeColorSync() {
 
     // Set initial value
     const isDark = document.documentElement.classList.contains("dark");
-    const color = isDark ? "#0D0D0D" : "#F5F5F5";
+    const color = isDark ? "#0F172A" : "#FFFFFF";
     document
       .querySelectorAll('meta[name="theme-color"]')
       .forEach((meta) => meta.setAttribute("content", color));
