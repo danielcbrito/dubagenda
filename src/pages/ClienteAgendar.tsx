@@ -2200,43 +2200,7 @@ const ClienteAgendar = () => {
                 </div>
               </motion.button>
 
-              {/* Cartão */}
-              <motion.button
-                whileTap={{ scale: 0.98 }}
-                onClick={() => { setPaymentMethod('card'); setUseRedemption(false); }}
-                className={cn(
-                  "w-full rounded-xl border p-4 text-left transition-all mb-3",
-                  paymentMethod === 'card' && !useRedemption
-                    ? "border-primary/50 bg-primary/5 ring-1 ring-primary/20"
-                    : "border-border/20 bg-card/50 hover:border-border/40"
-                )}
-              >
-                <div className="flex items-center gap-3.5">
-                  <div className={cn(
-                    "w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0",
-                    paymentMethod === 'card' && !useRedemption ? "bg-primary/10" : "bg-muted/20"
-                  )}>
-                    <CreditCard className={cn(
-                      "w-5 h-5 transition-colors",
-                      paymentMethod === 'card' && !useRedemption ? "text-primary" : "text-muted-foreground/30"
-                    )} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[13px] font-semibold text-foreground/70">Pagar via Cartão</p>
-                    <p className="text-[11px] text-muted-foreground/50 mt-0.5">
-                      Crédito ou débito via checkout seguro
-                    </p>
-                  </div>
-                  <div className={cn(
-                    "w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all",
-                    paymentMethod === 'card' && !useRedemption
-                      ? "bg-primary border-primary"
-                      : "border-muted-foreground/20"
-                  )}>
-                    {paymentMethod === 'card' && !useRedemption && <Check className="w-3 h-3 text-primary-foreground" strokeWidth={3} />}
-                  </div>
-                </div>
-              </motion.button>
+              {/* Cartão - desabilitado */}
 
               {/* Pagar na Barbearia */}
               <motion.button
