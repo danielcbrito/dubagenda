@@ -610,7 +610,7 @@ const ClienteAssinar = () => {
                         onClick={() => !hasActiveSubscription && plans[currentPlanIndex] && handleSelectPlan(plans[currentPlanIndex])}
                         disabled={hasActiveSubscription}
                         className={cn(
-                          "w-full h-14 rounded-xl text-base font-semibold flex items-center justify-center gap-2.5 active:scale-[0.97] transition-transform",
+                          "w-full h-[3.75rem] rounded-xl text-base font-semibold flex items-center justify-center gap-2.5 active:scale-[0.97] transition-transform",
                           "bg-primary text-primary-foreground",
                           hasActiveSubscription && "opacity-50 cursor-not-allowed"
                         )}
