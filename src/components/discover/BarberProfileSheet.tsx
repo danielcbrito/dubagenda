@@ -165,7 +165,6 @@ export function BarberProfileSheet({
                   barberIds={[barberId]}
                   barberMap={new Map([[barberId, { name: barberName, photo: barberPhoto }]])}
                   maxVisible={6}
-                  title="Trabalhos"
                   showAttribution={false}
                 />
               </div>
