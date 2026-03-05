@@ -2097,7 +2097,7 @@ const ClienteAgendar = () => {
                       {getFormattedServiceNames()}
                     </p>
                     <p className="text-[11px] text-muted-foreground/50 mt-0.5">
-                      {getTotalDuration()} min • {selectedBarber?.apelido} • {selectedDate ? format(selectedDate, "dd/MM", { locale: ptBR }) : ""} às {selectedTime}
+                      {getTotalDuration()} min • {selectedBarber?.apelido} • {selectedDate ? format(selectedDate, "dd/MM", { locale: ptBR }) : ""} às {selectedTime} → {getEndTime()}
                     </p>
                   </div>
                   <div className="flex items-baseline gap-0.5">
