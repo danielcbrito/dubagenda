@@ -981,7 +981,7 @@ const Cliente = () => {
       {/* Bottom Navigation */}
       <BottomNavigation
         onProfileClick={() => setProfileSheetOpen(true)}
-        onSupportClick={() => navigate('/suporte')}
+        onPlansClick={() => setPlansSheetOpen(true)}
       />
     </div>
   );
