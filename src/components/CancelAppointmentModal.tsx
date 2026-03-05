@@ -155,35 +155,43 @@ export function CancelAppointmentModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Cancelar Agendamento</DialogTitle>
-          <DialogDescription>
-            Tem certeza que deseja cancelar este agendamento definitivamente?
-          </DialogDescription>
-        </DialogHeader>
-        
-        <div className="space-y-3">
+      <DialogContent className="sm:max-w-[360px] rounded-2xl border-border/60 bg-background p-0 overflow-hidden shadow-2xl">
+        {/* Header visual */}
+        <div className="flex flex-col items-center pt-7 pb-4 px-6">
+          <div className="w-14 h-14 rounded-full bg-destructive/10 flex items-center justify-center mb-4">
+            <Loader2 className="w-6 h-6 text-destructive" style={{ animation: 'none' }} />
+          </div>
+          <DialogHeader className="text-center space-y-1.5">
+            <DialogTitle className="text-[17px] font-bold text-foreground tracking-tight">
+              Cancelar Agendamento
+            </DialogTitle>
+            <DialogDescription className="text-[13px] text-muted-foreground leading-relaxed max-w-[260px] mx-auto">
+              Tem certeza que deseja cancelar este agendamento definitivamente?
+            </DialogDescription>
+          </DialogHeader>
+        </div>
+
+        <div className="px-6 pb-6 space-y-4">
           {refundAmount > 0 && (
-            <div className="p-3 bg-primary/10 rounded-md text-sm">
-              💰 O valor de <strong>R$ {refundAmount.toFixed(2)}</strong> será <strong>adicionado ao saldo da sua carteira</strong> automaticamente.
+            <div className="p-3.5 bg-emerald-500/10 dark:bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-[13px] text-emerald-700 dark:text-emerald-400 leading-relaxed text-center">
+              💰 <strong>R$ {refundAmount.toFixed(2)}</strong> será adicionado ao saldo da sua carteira.
             </div>
           )}
-          
+
           <div className="flex gap-3">
             <Button
               onClick={() => onOpenChange(false)}
               variant="outline"
-              className="flex-1"
+              className="flex-1 h-12 rounded-xl text-[14px] font-semibold border-border"
               disabled={cancelling}
             >
               Voltar
             </Button>
-            
+
             <Button
               onClick={handleCancelDefinitely}
               disabled={cancelling}
-              className="flex-1"
+              className="flex-1 h-12 rounded-xl text-[14px] font-semibold"
               variant="destructive"
             >
               {cancelling ? (
