@@ -367,15 +367,8 @@ const ClienteAssinar = () => {
   const handleBack = () => {
     if (step === 4) { setStep(3); setSelectedPaymentMethod("pix"); }
     else if (step === 3) { setStep(2); setSelectedBarber(null); }
-    else if (step === 2) {
-      if (currentPlanIndex > 0) {
-        setCurrentPlanIndex(prev => prev - 1);
-      } else {
-        navigate("/cliente");
-      }
-    } else {
-      navigate("/cliente");
-    }
+    else if (step === 2) { navigate("/cliente"); }
+    else { navigate("/cliente"); }
   };
 
   const selectedShopName = selectedTenantId === "dub"
@@ -482,7 +475,7 @@ const ClienteAssinar = () => {
             </motion.div>
           )}
 
-          {/* ═══ Step 2: Planos — Full screen showcase ═══ */}
+          {/* ═══ Step 2: Planos — Horizontal Swipe Carousel ═══ */}
           {step === 2 && (
             <motion.div key="step2" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               className="h-full flex flex-col">
@@ -500,156 +493,140 @@ const ClienteAssinar = () => {
                   <p className="text-xs text-muted-foreground/60 mt-1">Esta barbearia ainda não possui planos</p>
                 </div>
               ) : (
-                <AnimatePresence mode="wait">
-                  <motion.div
-                    key={currentPlanIndex}
-                    initial={{ opacity: 0, x: 40 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -40 }}
-                    transition={{ duration: 0.2, ease: "easeOut" }}
-                    className="flex-1 flex flex-col min-h-0"
+                <div className="flex-1 flex flex-col min-h-0">
+                  {/* Swipeable plan carousel */}
+                  <div
+                    ref={(el) => {
+                      if (!el) return;
+                      const handleScroll = () => {
+                        const scrollLeft = el.scrollLeft;
+                        const width = el.offsetWidth;
+                        const newIndex = Math.round(scrollLeft / width);
+                        if (newIndex !== currentPlanIndex && newIndex >= 0 && newIndex < plans.length) {
+                          setCurrentPlanIndex(newIndex);
+                        }
+                      };
+                      el.onscroll = handleScroll;
+                    }}
+                    className="flex-1 min-h-0 flex overflow-x-auto overscroll-x-contain snap-x snap-mandatory"
+                    style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}
                   >
-                    {(() => {
-                      const plan = plans[currentPlanIndex];
-                      if (!plan) return null;
+                    {plans.map((plan, planIdx) => {
                       const benefits = Array.isArray(plan.beneficios_json) ? plan.beneficios_json : [];
-                      const isPopular = plan.nome.toLowerCase().includes('barba') || currentPlanIndex === Math.floor(plans.length / 2);
+                      const isPopular = plan.nome.toLowerCase().includes('barba') || planIdx === Math.floor(plans.length / 2);
 
                       return (
-                        <>
-                          {/* Scrollable content */}
-                          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
-                            <div className="px-5 pt-2 pb-8 max-w-md mx-auto">
+                        <div
+                          key={plan.id}
+                          className="w-full flex-shrink-0 snap-center overflow-y-auto overscroll-y-contain"
+                        >
+                          <div className="px-5 pt-2 pb-8 max-w-md mx-auto">
 
-                              {/* Popular tag */}
-                              {isPopular && (
-                                <div className="flex items-center gap-1.5 mb-4">
-                                  <div className="flex items-center gap-1 bg-primary/10 px-2.5 py-1 rounded-full">
-                                    <Sparkles className="w-3 h-3 text-primary" />
-                                    <span className="text-[10px] font-bold uppercase tracking-widest text-primary">Mais popular</span>
-                                  </div>
+                            {isPopular && (
+                              <div className="flex items-center gap-1.5 mb-4">
+                                <div className="flex items-center gap-1 bg-primary/10 px-2.5 py-1 rounded-full">
+                                  <Sparkles className="w-3 h-3 text-primary" />
+                                  <span className="text-[10px] font-bold uppercase tracking-widest text-primary">Mais popular</span>
                                 </div>
-                              )}
+                              </div>
+                            )}
 
-                              {/* Plan name */}
-                              <h2 className="text-2xl font-bold text-foreground tracking-tight mb-1">
-                                {plan.nome}
-                              </h2>
-                              <p className="text-[13px] text-muted-foreground leading-relaxed mb-6">
-                                {plan.descricao}
+                            <h2 className="text-2xl font-bold text-foreground tracking-tight mb-1">
+                              {plan.nome}
+                            </h2>
+                            <p className="text-[13px] text-muted-foreground leading-relaxed mb-6">
+                              {plan.descricao}
+                            </p>
+
+                            <div className="flex items-baseline gap-1 mb-8">
+                              <span className="text-sm text-muted-foreground">R$</span>
+                              <span className="text-[42px] font-extrabold text-foreground tabular-nums tracking-tighter leading-none">
+                                {plan.preco_mensal.toFixed(2).replace('.', ',')}
+                              </span>
+                              <span className="text-sm text-muted-foreground">/mês</span>
+                            </div>
+
+                            <div className="space-y-3.5">
+                              <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/40">
+                                Incluído no plano
                               </p>
 
-                              {/* Price */}
-                              <div className="flex items-baseline gap-1 mb-8">
-                                <span className="text-sm text-muted-foreground">R$</span>
-                                <span className="text-[42px] font-extrabold text-foreground tabular-nums tracking-tighter leading-none">
-                                  {plan.preco_mensal.toFixed(2).replace('.', ',')}
+                              <div className="flex items-center gap-3">
+                                <CheckCircle2 className="w-4 h-4 text-primary flex-shrink-0" />
+                                <span className="text-[14px] text-foreground font-medium">
+                                  {plan.limite_agendamentos_mes} agendamentos por mês
                                 </span>
-                                <span className="text-sm text-muted-foreground">/mês</span>
                               </div>
 
-                              {/* Benefits */}
-                              <div className="space-y-3.5">
-                                <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/40">
-                                  Incluído no plano
-                                </p>
-
-                                <div className="flex items-center gap-3">
+                              {benefits.map((benefit: string, i: number) => (
+                                <div key={i} className="flex items-center gap-3">
                                   <CheckCircle2 className="w-4 h-4 text-primary flex-shrink-0" />
-                                  <span className="text-[14px] text-foreground font-medium">
-                                    {plan.limite_agendamentos_mes} agendamentos por mês
-                                  </span>
+                                  <span className="text-[14px] text-foreground/80">{benefit}</span>
                                 </div>
-
-                                {benefits.map((benefit: string, i: number) => (
-                                  <motion.div
-                                    key={i}
-                                    className="flex items-center gap-3"
-                                    initial={{ opacity: 0, y: 4 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ delay: 0.1 + i * 0.03 }}
-                                  >
-                                    <CheckCircle2 className="w-4 h-4 text-primary flex-shrink-0" />
-                                    <span className="text-[14px] text-foreground/80">{benefit}</span>
-                                  </motion.div>
-                                ))}
-                              </div>
-
-                              {/* Barbearia badge */}
-                              <div className="mt-8 flex items-center gap-2.5 py-3 border-t border-border/30">
-                                <div className="w-7 h-7 rounded-lg bg-muted/40 flex items-center justify-center overflow-hidden flex-shrink-0">
-                                  {selectedTenantId === "dub" ? (
-                                    <img src={logoDub} alt="DUB" className="w-4 h-4 object-contain" />
-                                  ) : (
-                                    <Scissors className="w-3.5 h-3.5 text-muted-foreground/50" />
-                                  )}
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <p className="text-[11px] text-muted-foreground/50">{selectedShopName}</p>
-                                </div>
-                                <button onClick={handleChangeShop} className="text-[11px] text-primary font-medium">
-                                  Trocar
-                                </button>
-                              </div>
+                              ))}
                             </div>
-                          </div>
 
-                          {/* Fixed bottom area */}
-                          <div className="flex-shrink-0 px-5 pb-[max(env(safe-area-inset-bottom),1rem)] pt-3 border-t border-border/20 bg-background">
-                            <div className="max-w-md mx-auto">
-                              {/* Plan dots */}
-                              {plans.length > 1 && (
-                                <div className="flex items-center justify-center gap-1.5 mb-4">
-                                  {plans.map((_, i) => (
-                                    <button
-                                      key={i}
-                                      onClick={() => setCurrentPlanIndex(i)}
-                                      className={cn(
-                                        "rounded-full transition-all duration-300",
-                                        i === currentPlanIndex
-                                          ? "w-5 h-1.5 bg-primary"
-                                          : "w-1.5 h-1.5 bg-muted-foreground/25 hover:bg-muted-foreground/40"
-                                      )}
-                                    />
-                                  ))}
-                                </div>
-                              )}
-
-                              {/* Action buttons */}
-                              <div className="flex gap-2.5">
-                                {currentPlanIndex < plans.length - 1 && (
-                                  <button
-                                    onClick={() => setCurrentPlanIndex(prev => prev + 1)}
-                                    className="flex-1 h-12 rounded-xl border border-border/50 bg-card text-sm font-semibold text-foreground flex items-center justify-center gap-2 active:scale-[0.97] transition-transform"
-                                  >
-                                    Ver próximo
-                                    <ChevronRight className="w-4 h-4" />
-                                  </button>
+                            <div className="mt-8 flex items-center gap-2.5 py-3 border-t border-border/30">
+                              <div className="w-7 h-7 rounded-lg bg-muted/40 flex items-center justify-center overflow-hidden flex-shrink-0">
+                                {selectedTenantId === "dub" ? (
+                                  <img src={logoDub} alt="DUB" className="w-4 h-4 object-contain" />
+                                ) : (
+                                  <Scissors className="w-3.5 h-3.5 text-muted-foreground/50" />
                                 )}
-                                <button
-                                  onClick={() => !hasActiveSubscription && handleSelectPlan(plan)}
-                                  disabled={hasActiveSubscription}
-                                  className={cn(
-                                    "flex-1 h-12 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 active:scale-[0.97] transition-transform",
-                                    "bg-primary text-primary-foreground",
-                                    hasActiveSubscription && "opacity-50 cursor-not-allowed"
-                                  )}
-                                >
-                                  Assinar este plano
-                                  <ArrowRight className="w-4 h-4" />
-                                </button>
                               </div>
-
-                              <p className="text-[10px] text-center text-muted-foreground/40 mt-3">
-                                Cancele quando quiser • Sem fidelidade
-                              </p>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-[11px] text-muted-foreground/50">{selectedShopName}</p>
+                              </div>
+                              <button onClick={handleChangeShop} className="text-[11px] text-primary font-medium">
+                                Trocar
+                              </button>
                             </div>
                           </div>
-                        </>
+                        </div>
                       );
-                    })()}
-                  </motion.div>
-                </AnimatePresence>
+                    })}
+                  </div>
+
+                  {/* Fixed bottom area */}
+                  <div className="flex-shrink-0 px-5 pb-[max(env(safe-area-inset-bottom),1rem)] pt-3 border-t border-border/20 bg-background">
+                    <div className="max-w-md mx-auto">
+                      {plans.length > 1 && (
+                        <div className="flex items-center justify-center gap-1.5 mb-4">
+                          {plans.map((_, i) => (
+                            <div
+                              key={i}
+                              className={cn(
+                                "rounded-full transition-all duration-300",
+                                i === currentPlanIndex
+                                  ? "w-5 h-1.5 bg-primary"
+                                  : "w-1.5 h-1.5 bg-muted-foreground/25"
+                              )}
+                            />
+                          ))}
+                        </div>
+                      )}
+
+                      <button
+                        onClick={() => !hasActiveSubscription && plans[currentPlanIndex] && handleSelectPlan(plans[currentPlanIndex])}
+                        disabled={hasActiveSubscription}
+                        className={cn(
+                          "w-full h-12 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 active:scale-[0.97] transition-transform",
+                          "bg-primary text-primary-foreground",
+                          hasActiveSubscription && "opacity-50 cursor-not-allowed"
+                        )}
+                      >
+                        Assinar este plano
+                        <ArrowRight className="w-4 h-4" />
+                      </button>
+
+                      {plans.length > 1 && (
+                        <p className="text-[10px] text-center text-muted-foreground/40 mt-3">
+                          Deslize para ver outros planos • Cancele quando quiser
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
               )}
             </motion.div>
           )}
