@@ -1,5 +1,5 @@
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from "lucide-react";
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, isBefore, startOfDay, startOfWeek, endOfWeek } from "date-fns";
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, isToday, isBefore, startOfDay, startOfWeek, endOfWeek } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { useState, useMemo, useEffect } from "react";
@@ -156,6 +156,7 @@ export function PremiumCalendar({ selectedDate, onSelectDate, disabledDates = []
             const isSelected = selectedDate && isSameDay(day, selectedDate);
             const isClosed = isDateClosed(day);
             const isDisabled = isDateDisabled(day);
+            const isCurrentDay = isToday(day);
 
             return (
               <motion.button
@@ -170,7 +171,8 @@ export function PremiumCalendar({ selectedDate, onSelectDate, disabledDates = []
                   "flex items-center justify-center",
                   ((!isCurrentMonth) || isClosed || (isDisabled && isCurrentMonth && !isClosed)) && "cursor-not-allowed",
                   !isDisabled && !isSelected && "hover:bg-secondary/50",
-                  isSelected && "bg-primary text-primary-foreground shadow-lg shadow-primary/25 scale-105"
+                  isSelected && "bg-primary text-primary-foreground shadow-lg shadow-primary/25 scale-105",
+                  isCurrentDay && !isSelected && !isDisabled && "ring-1 ring-primary/60"
                 )}
               >
                 <span className={cn(
