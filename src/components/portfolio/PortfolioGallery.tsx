@@ -50,8 +50,8 @@ export function PortfolioGallery({
     setLoading(true);
     try {
       const { data, error } = await supabase
-        .from("barbeiro_portfolio")
-        .select("id, barbeiro_id, image_url, descricao")
+        .from("portfolio_images")
+        .select("id, barbeiro_id, image_url, caption")
         .in("barbeiro_id", barberIds)
         .order("ordem", { ascending: true })
         .order("created_at", { ascending: false });
@@ -61,7 +61,10 @@ export function PortfolioGallery({
       const enriched: PortfolioImage[] = (data || []).map((img) => {
         const barber = barberMap?.get(img.barbeiro_id);
         return {
-          ...img,
+          id: img.id,
+          barbeiro_id: img.barbeiro_id,
+          image_url: img.image_url,
+          descricao: img.caption,
           barber_name: barber?.name || "",
           barber_photo: barber?.photo || null,
         };
