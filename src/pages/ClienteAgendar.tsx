@@ -2024,33 +2024,19 @@ const ClienteAgendar = () => {
               ) : (
                 <>
                   <div className="grid grid-cols-3 gap-3">
-                    {availableSlots.map((slot) => (
+                    {availableSlots.filter(slot => slot.available).map((slot) => (
                       <TimeSlot
                         key={slot.time}
                         time={slot.time}
                         isSelected={selectedTime === slot.time}
-                        isDisabled={!slot.available}
+                        isDisabled={false}
                         onSelect={() => {
-                          if (slot.available) {
-                            setSelectedTime(slot.time);
-                            setUnavailableMessage(null);
-                          } else {
-                            if (slot.blockedReason === 'minimum_advance') {
-                              setUnavailableMessage("É necessário 30 minutos de antecedência.");
-                            } else {
-                              setUnavailableMessage("Este horário já foi agendado.");
-                            }
-                          }
+                          setSelectedTime(slot.time);
+                          setUnavailableMessage(null);
                         }}
                       />
                     ))}
                   </div>
-
-                  {unavailableMessage && (
-                    <div className="mt-4 p-3 rounded-xl bg-destructive/10 border border-destructive/20 text-center">
-                      <p className="text-sm text-destructive font-medium">{unavailableMessage}</p>
-                    </div>
-                  )}
 
                   {/* Premium Time Selection Bar */}
                   <TimeSelectionBar
