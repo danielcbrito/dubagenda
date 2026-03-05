@@ -153,23 +153,19 @@ export function PremiumCalendar({ selectedDate, onSelectDate, disabledDates = []
                   "aspect-square rounded-xl flex flex-col items-center justify-center relative mx-auto w-full transition-all duration-200",
                   "active:scale-[0.92]",
                   disabled && "cursor-not-allowed",
-                  isSelected && "bg-primary shadow-[0_2px_16px_hsl(var(--primary)/0.4)] scale-[1.06]",
-                  !isSelected && isCurrentDay && !disabled && "ring-[1.5px] ring-primary/40",
+                  isSelected && "ring-[2.5px] ring-primary bg-primary/10 scale-[1.06]",
                   !isSelected && !disabled && "hover:bg-secondary/50",
                 )}
               >
                 <span className={cn(
                   "text-[14px] tabular-nums leading-none",
-                  isSelected && "font-extrabold text-primary-foreground",
+                  isSelected && "font-extrabold text-primary",
+                  isCurrentMonth && isCurrentDay && !isSelected && !disabled && "font-bold text-primary",
                   isCurrentMonth && disabled && !isSelected && "text-muted-foreground/15 font-normal",
-                  isCurrentMonth && !disabled && !isSelected && "font-semibold text-foreground",
+                  isCurrentMonth && !disabled && !isSelected && !isCurrentDay && "font-semibold text-foreground",
                 )}>
                   {format(day, "d")}
                 </span>
-
-                {isCurrentDay && !isSelected && !disabled && (
-                  <span className="absolute bottom-[5px] left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-primary" />
-                )}
               </motion.button>
             );
           })}
