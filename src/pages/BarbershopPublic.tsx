@@ -599,39 +599,20 @@ const BarbershopPublic = () => {
               onClick={handleOpenMaps}
               disabled={tenant.latitude == null || tenant.longitude == null}
               className={cn(
-                "w-full flex items-start gap-4 p-4 rounded-2xl",
+                "w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl",
                 "bg-card border border-border/30",
-                "dark:shadow-[0_0_20px_rgba(66,133,244,0.06)]",
-                "shadow-[0_2px_12px_rgba(0,0,0,0.06)]",
-                "active:scale-[0.98] transition-all duration-200"
+                "active:scale-[0.985] transition-all duration-200"
               )}
             >
-              {/* Google Maps icon — grande e impactante */}
-              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500/10 to-green-500/10 dark:from-blue-500/15 dark:to-green-500/15 flex items-center justify-center shrink-0 border border-blue-500/10">
-                <img 
-                  src={googleMapsIcon} 
-                  alt="Google Maps" 
-                  className="w-11 h-11 object-contain drop-shadow-[0_2px_10px_rgba(66,133,244,0.4)]" 
-                />
+              <div className="w-9 h-9 rounded-lg bg-blue-500/8 dark:bg-blue-500/12 flex items-center justify-center shrink-0">
+                <img src={googleMapsIcon} alt="Maps" className="w-6 h-6 object-contain drop-shadow-[0_1px_4px_rgba(66,133,244,0.25)]" />
               </div>
-
-              <div className="flex-1 text-left min-w-0 pt-0.5">
-                <p className="text-[9px] uppercase tracking-[0.12em] text-muted-foreground/60 font-semibold mb-1">
-                  Localização
-                </p>
-                {fullAddress && (
-                  <p className="text-[13px] text-foreground leading-relaxed font-medium">{fullAddress}</p>
-                )}
-                {location && location !== fullAddress && (
-                  <p className="text-[11px] text-muted-foreground mt-1 truncate">{location}</p>
-                )}
-                {tenant.latitude != null && tenant.longitude != null && (
-                  <div className="flex items-center gap-1.5 mt-2">
-                    <span className="text-[10px] font-semibold text-primary tracking-wide uppercase">Abrir no mapa</span>
-                    <ExternalLink className="w-3 h-3 text-primary" />
-                  </div>
-                )}
-              </div>
+              <p className="flex-1 text-[12px] text-foreground text-left truncate">
+                {fullAddress || location || "Ver localização"}
+              </p>
+              {tenant.latitude != null && tenant.longitude != null && (
+                <ExternalLink className="w-3.5 h-3.5 text-muted-foreground/40 shrink-0" />
+              )}
             </button>
           </motion.div>
         )}
