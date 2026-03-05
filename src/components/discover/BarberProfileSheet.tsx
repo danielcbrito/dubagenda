@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { PortfolioGallery } from "@/components/portfolio/PortfolioGallery";
 
 interface Review {
   id: string;
@@ -156,6 +157,19 @@ export function BarberProfileSheet({
                 </span>
               </div>
             </div>
+
+            {/* ── Portfolio ── */}
+            {barberId && (
+              <div className="pt-1">
+                <PortfolioGallery
+                  barberIds={[barberId]}
+                  barberMap={new Map([[barberId, { name: barberName, photo: barberPhoto }]])}
+                  maxVisible={6}
+                  title="Trabalhos"
+                  showAttribution={false}
+                />
+              </div>
+            )}
 
             {/* ── Rating Distribution ── */}
             {!loading && reviews.length > 0 && (

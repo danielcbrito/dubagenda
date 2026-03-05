@@ -604,6 +604,51 @@ export type Database = {
           },
         ]
       }
+      barbeiro_portfolio: {
+        Row: {
+          barbeiro_id: string
+          created_at: string
+          descricao: string | null
+          id: string
+          image_url: string
+          ordem: number | null
+          updated_at: string
+        }
+        Insert: {
+          barbeiro_id: string
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          image_url: string
+          ordem?: number | null
+          updated_at?: string
+        }
+        Update: {
+          barbeiro_id?: string
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          image_url?: string
+          ordem?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "barbeiro_portfolio_barbeiro_id_fkey"
+            columns: ["barbeiro_id"]
+            isOneToOne: false
+            referencedRelation: "barbeiros"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "barbeiro_portfolio_barbeiro_id_fkey"
+            columns: ["barbeiro_id"]
+            isOneToOne: false
+            referencedRelation: "barbeiros_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       barbeiro_servico_duracao: {
         Row: {
           barbeiro_id: string

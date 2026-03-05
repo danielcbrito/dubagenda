@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import logoDub from "@/assets/logo-dub.png";
 import { BarberProfileSheet } from "@/components/discover/BarberProfileSheet";
+import { PortfolioGallery } from "@/components/portfolio/PortfolioGallery";
 
 interface Barber {
   id: string;
@@ -623,6 +624,23 @@ const BarbershopPublic = () => {
                 </div>
               )}
             </button>
+          </motion.div>
+        )}
+
+        {/* ── Portfolio Section ── */}
+        {barbers.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+          >
+            <PortfolioGallery
+              barberIds={barbers.map(b => b.id)}
+              barberMap={new Map(barbers.map(b => [b.id, { name: b.apelido, photo: b.foto_url }]))}
+              maxVisible={6}
+              title="Nossos Cortes"
+              showAttribution={true}
+            />
           </motion.div>
         )}
 
