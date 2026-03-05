@@ -295,7 +295,8 @@ const ClienteAgendar = () => {
 
           if (subscription.servico) {
             setSelectedServices([subscription.servico]);
-            setStep(subscription.barbeiro ? 2 : 1);
+            // Barbeiro + serviço pré-selecionados → pular direto para data (step 3)
+            setStep(subscription.barbeiro ? 3 : 1);
           } else if (subscription.servico_id) {
             // servico_id exists but fetch failed — load it directly
             const { data: fallbackServico } = await supabase
@@ -305,11 +306,11 @@ const ClienteAgendar = () => {
               .maybeSingle();
             if (fallbackServico) {
               setSelectedServices([fallbackServico]);
-              setStep(subscription.barbeiro ? 2 : 1);
+              setStep(subscription.barbeiro ? 3 : 1);
             } else {
               // Service truly doesn't exist — show service selection
               await loadServices(tenantId);
-              setStep(subscription.barbeiro ? 2 : 1);
+              setStep(subscription.barbeiro ? 3 : 1);
             }
           } else {
             let barberTenantId = tenantId;
@@ -333,10 +334,10 @@ const ClienteAgendar = () => {
             if (tenantServices && tenantServices.length >= 1) {
               setSelectedServices([tenantServices[0]]);
               setServices(tenantServices);
-              setStep(subscription.barbeiro ? 2 : 1);
+              setStep(subscription.barbeiro ? 3 : 1);
             } else {
               setServices([]);
-              setStep(subscription.barbeiro ? 2 : 1);
+              setStep(subscription.barbeiro ? 3 : 1);
             }
           }
           setIsInitializing(false);
@@ -792,6 +793,8 @@ const ClienteAgendar = () => {
     
     // Plano SEM serviço: step 2 = serviço
     const _planNeedsService = isPlanFlow && !activeSubscription?.servico_id;
+    // Plano COM barbeiro + serviço: barbeiro (1) e serviço (2) são pulados → começa no 3
+    const _planHasBoth = isPlanFlow && !!activeSubscription?.barbeiro && !!activeSubscription?.servico_id;
     
     // Step 2: Serviços (não-plano normal OU plano sem serviço vinculado)
     const serviceStep = _planNeedsService ? 2 : (!isPlanFlow && !isRescheduling ? 2 : -1);
@@ -801,14 +804,14 @@ const ClienteAgendar = () => {
     }
     
     // Validação de data
-    const dateStep = _planNeedsService ? 3 : isPlanFlow ? 2 : isRescheduling ? 2 : 3;
+    const dateStep = _planHasBoth ? 3 : _planNeedsService ? 3 : isPlanFlow ? 2 : isRescheduling ? 2 : 3;
     if (step === dateStep && !selectedDate) {
       toast.error("Selecione uma data");
       return;
     }
     
     // Validação de horário
-    const timeStep = _planNeedsService ? 4 : isPlanFlow ? 3 : isRescheduling ? 3 : 4;
+    const timeStep = _planHasBoth ? 4 : _planNeedsService ? 4 : isPlanFlow ? 3 : isRescheduling ? 3 : 4;
     if (step === timeStep && !selectedTime) {
       toast.error("Selecione um horário");
       return;
@@ -843,8 +846,14 @@ const ClienteAgendar = () => {
       return;
     }
     
-    // Fluxo de plano COM serviço: após horário (step 3), vai para confirmação (step 4)
-    if (isPlanFlow && !_planNeedsService && step === 3) {
+    // Fluxo de plano COM barbeiro + serviço: após horário (step 4), vai para confirmação (step 5)
+    if (_planHasBoth && step === 4) {
+      setStep(5);
+      return;
+    }
+    
+    // Fluxo de plano COM serviço (sem barbeiro pré-selecionado): após horário (step 3), vai para confirmação (step 4)
+    if (isPlanFlow && !_planNeedsService && !_planHasBoth && step === 3) {
       setStep(4);
       return;
     }
@@ -1582,7 +1591,13 @@ const ClienteAgendar = () => {
       return;
     }
     
-    // Assinante com barbeiro pré-selecionado (com ou sem isPlanFlow): step 2 = primeira etapa visível
+    // Assinante com barbeiro + serviço pré-selecionados: step 3 (data) é a primeira etapa visível
+    if (isPlanFlow && activeSubscription?.barbeiro && activeSubscription?.servico_id && step === 3) {
+      navigate("/cliente");
+      return;
+    }
+    
+    // Assinante com barbeiro pré-selecionado (sem serviço): step 2 = primeira etapa visível
     if (activeSubscription?.barbeiro && step === 2) {
       navigate("/cliente");
       return;
@@ -1613,9 +1628,11 @@ const ClienteAgendar = () => {
     : isPlanFlow ? (planNeedsService ? 5 : 4) 
     : isRescheduling ? 4 : 6;
   
-  // Ajustar step visual para plano com barbeiro auto-selecionado
-  const currentDisplayStep = isPlanFlow && activeSubscription?.barbeiro 
-    ? Math.min(step - 1, totalSteps) 
+  // Ajustar step visual para plano com barbeiro + serviço auto-selecionados (começa no step 3)
+  const currentDisplayStep = isPlanFlow && activeSubscription?.barbeiro && activeSubscription?.servico_id
+    ? Math.min(step - 2, totalSteps) 
+    : isPlanFlow && activeSubscription?.barbeiro
+    ? Math.min(step - 1, totalSteps)
     : Math.min(step, totalSteps);
 
   const pageVariants = {
@@ -2208,8 +2225,8 @@ const ClienteAgendar = () => {
           </motion.div>
         )}
 
-        {/* Confirmação Plano: Step 4 (com serviço) ou Step 5 (sem serviço) */}
-        {isPlanFlow && ((planNeedsService && step === 5) || (!planNeedsService && step === 4)) && (
+        {/* Confirmação Plano: Step 4 (com serviço, sem barbeiro pré), Step 5 (sem serviço OU com barbeiro+serviço pré) */}
+        {isPlanFlow && ((planNeedsService && step === 5) || (!planNeedsService && activeSubscription?.barbeiro && step === 5) || (!planNeedsService && !activeSubscription?.barbeiro && step === 4)) && (
           <motion.div
             key="step-plan-confirmation"
             variants={pageVariants}
