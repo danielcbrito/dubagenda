@@ -11,25 +11,22 @@ const Index = () => {
   return (
     <div className="fixed inset-0 flex flex-col overflow-hidden bg-background">
       <div className="relative flex-1 flex flex-col">
-        {/* ── Image — diagonal: top-right high, bottom-left low, with gradient fade ── */}
-        <div
-          className="absolute inset-0 pointer-events-none"
-          style={{ clipPath: "polygon(0 0, 100% 0, 100% 52%, 0 32%)" }}
-        >
+        {/* ── Image — top portion, fades into background with gradient ── */}
+        <div className="absolute top-0 left-0 right-0 h-[55%] pointer-events-none">
           <img
             src={landingTools}
             alt="Ferramentas premium de barbearia"
             className="w-full h-full object-cover object-center"
             loading="eager"
           />
-          {/* Gradient fade at the diagonal edge */}
+          {/* Smooth gradient fade — no hard line */}
           <div
             className="absolute inset-0"
             style={{
-              background: "linear-gradient(to bottom, transparent 20%, hsl(var(--background)) 95%)",
+              background: "linear-gradient(to bottom, transparent 30%, hsl(var(--background)) 100%)",
             }}
           />
-          {/* Warm ambient */}
+          {/* Warm ambient glow */}
           <div
             className="absolute inset-0 opacity-20"
             style={{
@@ -38,15 +35,16 @@ const Index = () => {
           />
         </div>
 
-        {/* Ambient light effects */}
+        {/* Ambient light on content area */}
         <div
-          className="absolute bottom-[25%] left-1/2 -translate-x-1/2 w-[350px] h-[350px] pointer-events-none opacity-[0.03] dark:opacity-[0.05]"
+          className="absolute bottom-[20%] left-1/2 -translate-x-1/2 w-[350px] h-[350px] pointer-events-none opacity-[0.03] dark:opacity-[0.05]"
           style={{ background: "radial-gradient(circle, hsl(var(--primary)), transparent 70%)" }}
         />
 
         {/* ── Content ── */}
         <div className="relative z-10 flex flex-col flex-1 px-6 pt-[env(safe-area-inset-top)] pb-[calc(env(safe-area-inset-bottom,0px)+1.5rem)]">
-          <div className="flex-1 min-h-[48%]" />
+          {/* Push content so title overlaps slightly with image fade */}
+          <div className="flex-1 min-h-[42%]" />
 
           {/* Brand */}
           <motion.div
@@ -78,7 +76,7 @@ const Index = () => {
             transition={{ duration: 0.6, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
             className="w-full max-w-sm mx-auto space-y-3 mb-5"
           >
-            {/* Primary — Exclusivo DUB com logo */}
+            {/* Primary — Exclusivo DUB */}
             <button
               onClick={() => navigate("/auth")}
               className="group relative w-full overflow-hidden rounded-2xl bg-primary text-primary-foreground active:scale-[0.97] transition-all duration-200"
@@ -88,9 +86,11 @@ const Index = () => {
                 style={{ background: "radial-gradient(circle at center, hsl(var(--primary-foreground) / 0.12), transparent 60%)" }}
               />
               <div className="flex items-center gap-3.5 px-5 py-4">
-                <div className="w-10 h-10 rounded-xl bg-primary-foreground/15 flex items-center justify-center flex-shrink-0">
-                  <img src={logoDub} alt="DUB" className="w-6 h-6 object-contain" />
-                </div>
+                <img
+                  src={logoDub}
+                  alt="DUB"
+                  className="w-8 h-8 object-contain flex-shrink-0 drop-shadow-[0_1px_3px_rgba(255,255,255,0.2)]"
+                />
                 <div className="flex-1 text-left">
                   <span className="block text-[15px] font-bold tracking-tight">
                     Seja Cliente Exclusivo DUB
@@ -99,7 +99,7 @@ const Index = () => {
                     Acesse e agende nas unidades DUB
                   </span>
                 </div>
-                <ArrowRight className="w-4.5 h-4.5 opacity-40 group-active:translate-x-0.5 transition-transform flex-shrink-0" />
+                <ArrowRight className="w-4 h-4 opacity-40 group-active:translate-x-0.5 transition-transform flex-shrink-0" />
               </div>
             </button>
 
@@ -120,7 +120,7 @@ const Index = () => {
                     As melhores perto de você
                   </span>
                 </div>
-                <ArrowRight className="w-4.5 h-4.5 text-muted-foreground/30 group-active:translate-x-0.5 transition-transform flex-shrink-0" />
+                <ArrowRight className="w-4 h-4 text-muted-foreground/30 group-active:translate-x-0.5 transition-transform flex-shrink-0" />
               </div>
             </button>
           </motion.div>
