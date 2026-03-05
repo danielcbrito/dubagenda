@@ -37,12 +37,12 @@ function NavItem({ icon: Icon, label, isActive, onClick }: NavItemProps) {
 
 interface BottomNavigationProps {
   onProfileClick: () => void;
-  onSupportClick?: () => void;
+  onPlansClick: () => void;
 }
 
 export function BottomNavigation({
   onProfileClick,
-  onSupportClick,
+  onPlansClick,
 }: BottomNavigationProps) {
   const location = useLocation();
   const navigate = useNavigate();
@@ -73,8 +73,7 @@ export function BottomNavigation({
           <NavItem
             icon={Crown}
             label="Planos"
-            isActive={isActive("/cliente/assinar")}
-            onClick={() => navigate("/cliente/assinar")}
+            onClick={onPlansClick}
           />
           <NavItem
             icon={User}

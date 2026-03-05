@@ -393,7 +393,7 @@ export default function ClientePerfil() {
 
       <BottomNavigation
         onProfileClick={() => {}}
-        onSupportClick={() => navigate("/suporte")}
+        onPlansClick={() => navigate("/cliente/assinar")}
       />
 
       {/* Sub-sheets */}
