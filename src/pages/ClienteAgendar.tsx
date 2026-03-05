@@ -522,19 +522,14 @@ const ClienteAgendar = () => {
       }
 
       const planoData = subscription.plano as any;
-      const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-      const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
 
-      // Parallel: month appointments + servico + barbeiro
-      const [monthRes, servicoRes, barbeiroRes] = await Promise.all([
+      // Fonte de verdade do consumo: usos vinculados à assinatura ativa
+      const [usageRes, servicoRes, barbeiroRes] = await Promise.all([
         supabase
-          .from("agendamentos")
-          .select("id")
-          .eq("user_id", uid)
-          .eq("tipo_agendamento", "plano")
-          .gte("data", format(startOfMonth, 'yyyy-MM-dd'))
-          .lte("data", format(endOfMonth, 'yyyy-MM-dd'))
-          .not("status", "in", "('cancelled_by_user','cancelled_by_admin')"),
+          .from("plano_agendamentos_usos")
+          .select("id", { count: "exact", head: true })
+          .eq("assinatura_id", subscription.id)
+          .is("released_at", null),
         planoData.servico_id
           ? supabase.from("servicos").select("id, nome, descricao, duracao_minutos, preco").eq("id", planoData.servico_id).single()
           : Promise.resolve({ data: null }),
@@ -543,7 +538,7 @@ const ClienteAgendar = () => {
           : Promise.resolve({ data: null }),
       ]);
 
-      const usedCount = monthRes.error ? 0 : (monthRes.data?.length || 0);
+      const usedCount = usageRes.error ? 0 : (usageRes.count || 0);
 
       const activeSubscriptionData: ActiveSubscription = {
         id: subscription.id,
@@ -1645,12 +1640,12 @@ const ClienteAgendar = () => {
           </div>
           
           <h1 className="text-2xl font-bold text-foreground mb-3">
-            Limite Mensal Atingido
+            Limite do Plano Atingido
           </h1>
           
           <p className="text-muted-foreground mb-6">
             Você já utilizou todos os {activeSubscription?.limite_agendamentos_mes || 4} agendamentos 
-            do seu plano <span className="text-primary font-semibold">{activeSubscription?.plano_nome}</span> este mês.
+            do seu plano <span className="text-primary font-semibold">{activeSubscription?.plano_nome}</span> neste ciclo.
           </p>
           
           <div className="bg-card border border-border rounded-2xl p-4 mb-6">
@@ -2274,7 +2269,7 @@ const ClienteAgendar = () => {
                 </div>
                 
                 <div className="flex justify-between items-center pt-3 border-t border-primary/20">
-                  <span className="text-sm text-muted-foreground">Agendamentos este mês</span>
+                  <span className="text-sm text-muted-foreground">Agendamentos no plano</span>
                   <span className="text-sm font-semibold text-foreground">
                     {(activeSubscription?.agendamentos_usados || 0) + 1}/{activeSubscription?.limite_agendamentos_mes || 4}
                   </span>
