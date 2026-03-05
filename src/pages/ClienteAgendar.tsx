@@ -106,9 +106,9 @@ const ClienteAgendar = () => {
   const isPlanEligible =
     !isRescheduling &&
     isPlanFlow &&
-    !!activeSubscription?.servico &&
+    !!activeSubscription?.servico_id &&
     (selectedServices?.length ?? 0) === 1 &&
-    selectedServices?.[0]?.id === activeSubscription.servico.id &&
+    selectedServices?.[0]?.id === activeSubscription.servico_id &&
     activeSubscription.agendamentos_usados < activeSubscription.limite_agendamentos_mes;
 
   // Avaliações dos barbeiros
@@ -295,6 +295,21 @@ const ClienteAgendar = () => {
           if (subscription.servico) {
             setSelectedServices([subscription.servico]);
             setStep(subscription.barbeiro ? 2 : 1);
+          } else if (subscription.servico_id) {
+            // servico_id exists but fetch failed — load it directly
+            const { data: fallbackServico } = await supabase
+              .from("servicos")
+              .select("id, nome, descricao, duracao_minutos, preco")
+              .eq("id", subscription.servico_id)
+              .maybeSingle();
+            if (fallbackServico) {
+              setSelectedServices([fallbackServico]);
+              setStep(subscription.barbeiro ? 2 : 1);
+            } else {
+              // Service truly doesn't exist — show service selection
+              await loadServices(tenantId);
+              setStep(subscription.barbeiro ? 2 : 1);
+            }
           } else {
             let barberTenantId = tenantId;
             if (subscription.barbeiro_id) {
@@ -793,7 +808,7 @@ const ClienteAgendar = () => {
     }
     
     // Plano SEM serviço: step 2 = serviço
-    const _planNeedsService = isPlanFlow && !activeSubscription?.servico;
+    const _planNeedsService = isPlanFlow && !activeSubscription?.servico_id;
     
     // Step 2: Serviços (não-plano normal OU plano sem serviço vinculado)
     const serviceStep = _planNeedsService ? 2 : (!isPlanFlow && !isRescheduling ? 2 : -1);
@@ -1602,7 +1617,7 @@ const ClienteAgendar = () => {
   };
 
   // Plano SEM serviço vinculado: precisa de seleção de serviço adicional
-  const planNeedsService = isPlanFlow && !activeSubscription?.servico;
+  const planNeedsService = isPlanFlow && !activeSubscription?.servico_id;
   
   // Cálculo de steps por fluxo:
   // Plano COM serviço + barbeiro: 3 etapas (Data, Horário, Confirmação)
