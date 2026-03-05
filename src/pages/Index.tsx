@@ -89,7 +89,7 @@ const Index = () => {
                 <img
                   src={logoDub}
                   alt="DUB"
-                  className="w-8 h-8 object-contain flex-shrink-0 drop-shadow-[0_1px_3px_rgba(255,255,255,0.2)]"
+                  className="w-10 h-10 object-contain flex-shrink-0 drop-shadow-[0_1px_4px_rgba(255,255,255,0.25)]"
                 />
                 <div className="flex-1 text-left">
                   <span className="block text-[15px] font-bold tracking-tight">
@@ -106,17 +106,17 @@ const Index = () => {
             {/* Secondary — Encontrar Barbearias */}
             <button
               onClick={() => navigate("/escolher-barbearia")}
-              className="group w-full overflow-hidden rounded-2xl border border-border/50 bg-card/80 text-foreground active:scale-[0.97] transition-all duration-200"
+              className="group w-full overflow-hidden rounded-2xl border border-border bg-card text-foreground active:scale-[0.97] transition-all duration-200 shadow-sm"
             >
               <div className="flex items-center gap-3.5 px-5 py-4">
-                <div className="w-10 h-10 rounded-xl bg-muted/80 flex items-center justify-center flex-shrink-0">
-                  <MapPin className="w-[18px] h-[18px] text-muted-foreground" strokeWidth={2} />
+                <div className="w-10 h-10 rounded-xl bg-muted flex items-center justify-center flex-shrink-0">
+                  <MapPin className="w-[18px] h-[18px] text-foreground/70" strokeWidth={2} />
                 </div>
                 <div className="flex-1 text-left">
-                  <span className="block text-[15px] font-medium tracking-tight">
+                  <span className="block text-[15px] font-semibold tracking-tight text-foreground">
                     Encontrar Barbearias
                   </span>
-                  <span className="block text-[11px] text-muted-foreground mt-0.5">
+                  <span className="block text-[11px] text-muted-foreground/80 mt-0.5">
                     As melhores perto de você
                   </span>
                 </div>
