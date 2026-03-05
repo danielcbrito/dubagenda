@@ -277,7 +277,7 @@ export function AppointmentCardPremium({
                   onClick={() => setCancelModalOpen(true)}
                   size="sm"
                   variant="outline"
-                  className="flex-1 h-8 text-[11px] rounded-lg border-destructive/20 text-destructive hover:bg-destructive/5"
+                  className="flex-1 h-8 text-[11px] rounded-lg border-destructive/30 text-destructive hover:bg-destructive hover:text-destructive-foreground transition-colors"
                 >
                   Cancelar
                 </Button>

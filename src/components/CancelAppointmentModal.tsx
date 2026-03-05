@@ -155,17 +155,14 @@ export function CancelAppointmentModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[360px] rounded-2xl border-border/60 bg-background p-0 overflow-hidden shadow-2xl">
-        {/* Header visual */}
-        <div className="flex flex-col items-center pt-7 pb-4 px-6">
-          <div className="w-[52px] h-[52px] rounded-full border-2 border-destructive/30 bg-destructive/5 flex items-center justify-center mb-4">
-            <X className="w-6 h-6 text-destructive" strokeWidth={2.5} />
-          </div>
-          <DialogHeader className="text-center space-y-1.5">
-            <DialogTitle className="text-[17px] font-bold text-foreground tracking-tight">
+      <DialogContent className="sm:max-w-[360px] rounded-2xl border-border/60 bg-background p-0 overflow-hidden shadow-2xl [&>button]:w-8 [&>button]:h-8 [&>button]:top-4 [&>button]:right-4">
+        {/* Header */}
+        <div className="flex flex-col items-center pt-8 pb-3 px-6">
+          <DialogHeader className="text-center space-y-2">
+            <DialogTitle className="text-[19px] font-bold text-foreground tracking-tight">
               Cancelar Agendamento
             </DialogTitle>
-            <DialogDescription className="text-[13px] text-muted-foreground leading-relaxed max-w-[260px] mx-auto">
+            <DialogDescription className="text-[14px] text-muted-foreground leading-relaxed max-w-[280px] mx-auto">
               Tem certeza que deseja cancelar este agendamento definitivamente?
             </DialogDescription>
           </DialogHeader>
@@ -178,32 +175,21 @@ export function CancelAppointmentModal({
             </div>
           )}
 
-          <div className="flex gap-3">
-            <Button
-              onClick={() => onOpenChange(false)}
-              variant="outline"
-              className="flex-1 h-12 rounded-xl text-[14px] font-semibold border-border"
-              disabled={cancelling}
-            >
-              Voltar
-            </Button>
-
-            <Button
-              onClick={handleCancelDefinitely}
-              disabled={cancelling}
-              className="flex-1 h-12 rounded-xl text-[14px] font-semibold"
-              variant="destructive"
-            >
-              {cancelling ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Processando...
-                </>
-              ) : (
-                "Confirmar Cancelamento"
-              )}
-            </Button>
-          </div>
+          <Button
+            onClick={handleCancelDefinitely}
+            disabled={cancelling}
+            className="w-full h-[50px] rounded-xl text-[15px] font-semibold"
+            variant="destructive"
+          >
+            {cancelling ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Processando...
+              </>
+            ) : (
+              "Confirmar Cancelamento"
+            )}
+          </Button>
         </div>
       </DialogContent>
     </Dialog>
