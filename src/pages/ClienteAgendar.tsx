@@ -1548,6 +1548,16 @@ const ClienteAgendar = () => {
     return selectedServices.reduce((sum, s) => sum + getEffectiveDuration(s) * (serviceQuantities[s.id] || 1), 0);
   };
 
+  /** Calcula o horário de término baseado no horário de início + duração total */
+  const getEndTime = () => {
+    if (!selectedTime) return "";
+    const [hours, minutes] = selectedTime.split(":").map(Number);
+    const totalMinutes = hours * 60 + minutes + getTotalDuration();
+    const endHours = Math.floor(totalMinutes / 60) % 24;
+    const endMins = totalMinutes % 60;
+    return `${String(endHours).padStart(2, "0")}:${String(endMins).padStart(2, "0")}`;
+  };
+
   const getCorteService = () => {
     return selectedServices.find(s => 
       s.nome.toLowerCase().includes('corte') && 
@@ -2367,7 +2377,7 @@ const ClienteAgendar = () => {
                 
                 <SummaryRow 
                   label="Horário"
-                  value={selectedTime}
+                  value={`${selectedTime} → ${getEndTime()}`}
                 />
               </div>
 
@@ -2451,7 +2461,7 @@ const ClienteAgendar = () => {
                 
                 <SummaryRow 
                   label="Horário"
-                  value={selectedTime}
+                  value={`${selectedTime} → ${getEndTime()}`}
                 />
                 
                 <div className="border-t border-border" />
@@ -2536,7 +2546,7 @@ const ClienteAgendar = () => {
                 
                 <SummaryRow 
                   label="Novo Horário"
-                  value={selectedTime}
+                  value={`${selectedTime} → ${getEndTime()}`}
                 />
                 
                 <div className="border-t border-border" />
