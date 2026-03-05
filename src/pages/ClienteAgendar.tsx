@@ -286,55 +286,35 @@ const ClienteAgendar = () => {
         const restantes = subscription.limite_agendamentos_mes - subscription.agendamentos_usados;
 
         if (restantes > 0) {
-          setIsPlanFlow(true);
-
           if (subscription.barbeiro) {
             setSelectedBarber(subscription.barbeiro);
             loadBarberCustomDurations(subscription.barbeiro.id); // non-blocking
           }
 
-          if (subscription.servico) {
-            setSelectedServices([subscription.servico]);
-            // Barbeiro + serviço pré-selecionados → pular direto para data (step 3)
-            setStep(subscription.barbeiro ? 3 : 1);
-          } else if (subscription.servico_id) {
-            // servico_id exists but fetch failed — load it directly
+          let includedService: Service | null = subscription.servico;
+
+          if (!includedService && subscription.servico_id) {
             const { data: fallbackServico } = await supabase
               .from("servicos")
               .select("id, nome, descricao, duracao_minutos, preco")
               .eq("id", subscription.servico_id)
               .maybeSingle();
-            if (fallbackServico) {
-              setSelectedServices([fallbackServico]);
-              setStep(subscription.barbeiro ? 3 : 1);
-            } else {
-              // Service truly doesn't exist — show service selection
-              await loadServices(tenantId);
-              setStep(subscription.barbeiro ? 3 : 1);
-            }
-          } else {
-            // Plano SEM serviço vinculado — mostrar tela de seleção de serviço
-            let barberTenantId = tenantId;
-            if (subscription.barbeiro_id) {
-              const { data: barberData } = await supabase
-                .from("barbeiros")
-                .select("tenant_id")
-                .eq("id", subscription.barbeiro_id)
-                .maybeSingle();
-              barberTenantId = barberData?.tenant_id || tenantId;
-            }
-            
-            let svcQuery = supabase.from("servicos").select("*").eq("ativo", true).order("preco");
-            if (barberTenantId) {
-              svcQuery = svcQuery.eq("tenant_id", barberTenantId);
-            } else {
-              svcQuery = svcQuery.is("tenant_id", null);
-            }
-            const { data: tenantServices } = await svcQuery;
-            setServices(tenantServices || []);
-            // NÃO pré-selecionar nenhum serviço — o cliente escolhe
-            setStep(subscription.barbeiro ? 2 : 1);
+
+            includedService = fallbackServico || null;
           }
+
+          // Plano ativo SEM serviço válido vinculado → bloquear fluxo para evitar seleção indevida
+          if (!includedService) {
+            setSubscriptionBlocked(true);
+            toast.error("Seu plano não possui um serviço válido vinculado. Fale com o suporte da barbearia.");
+            setIsInitializing(false);
+            return;
+          }
+
+          setIsPlanFlow(true);
+          setSelectedServices([includedService]);
+          // Barbeiro + serviço pré-selecionados → pular direto para data (step 3)
+          setStep(subscription.barbeiro ? 3 : 1);
           setIsInitializing(false);
           return;
         }
@@ -607,6 +587,9 @@ const ClienteAgendar = () => {
   };
 
   const toggleService = (service: Service) => {
+    // Em fluxo de plano com serviço vinculado, bloqueia alteração de serviços adicionais
+    if (isPlanFlow && !!activeSubscription?.servico_id) return;
+
     setSelectedServices(prev => {
       const existing = prev || [];
       const exists = existing.find(s => s.id === service.id);
@@ -757,6 +740,8 @@ const ClienteAgendar = () => {
   ]);
 
   const incrementServiceQty = (serviceId: string) => {
+    if (isPlanFlow && !!activeSubscription?.servico_id) return;
+
     setServiceQuantities(q => ({
       ...q,
       [serviceId]: Math.min((q[serviceId] || 1) + 1, 5)
@@ -764,6 +749,8 @@ const ClienteAgendar = () => {
   };
 
   const decrementServiceQty = (service: Service) => {
+    if (isPlanFlow && !!activeSubscription?.servico_id) return;
+
     const current = serviceQuantities[service.id] || 1;
     if (current <= 1) {
       toggleService(service);
@@ -1830,8 +1817,8 @@ const ClienteAgendar = () => {
           </motion.div>
         )}
 
-        {/* Data: Step 2 (Plano com serviço/Remarcação), Step 3 (Plano sem serviço/Normal) */}
-        {(((isPlanFlow && !planNeedsService) && step === 2) || (planNeedsService && step === 3) || (isRescheduling && step === 2) || (!isPlanFlow && !isRescheduling && step === 3)) && (
+        {/* Data: Step 3 (Plano com barbeiro+serviço), Step 2 (Plano sem barbeiro), Step 3 (Plano sem serviço/Normal), Step 2 (Remarcação) */}
+        {(((isPlanFlow && !planNeedsService && !!activeSubscription?.barbeiro) && step === 3) || ((isPlanFlow && !planNeedsService && !activeSubscription?.barbeiro) && step === 2) || (planNeedsService && step === 3) || (isRescheduling && step === 2) || (!isPlanFlow && !isRescheduling && step === 3)) && (
           <motion.div
             key="step-date"
             variants={pageVariants}
@@ -1884,8 +1871,8 @@ const ClienteAgendar = () => {
           </motion.div>
         )}
 
-        {/* Horário: Step 3 (Plano com serviço/Remarcação), Step 4 (Plano sem serviço/Normal) */}
-        {(((isPlanFlow && !planNeedsService) && step === 3) || (planNeedsService && step === 4) || (isRescheduling && step === 3) || (!isPlanFlow && !isRescheduling && step === 4)) && (
+        {/* Horário: Step 4 (Plano com barbeiro+serviço), Step 3 (Plano sem barbeiro), Step 4 (Plano sem serviço/Normal), Step 3 (Remarcação) */}
+        {(((isPlanFlow && !planNeedsService && !!activeSubscription?.barbeiro) && step === 4) || ((isPlanFlow && !planNeedsService && !activeSubscription?.barbeiro) && step === 3) || (planNeedsService && step === 4) || (isRescheduling && step === 3) || (!isPlanFlow && !isRescheduling && step === 4)) && (
           <motion.div
             key="step-time"
             variants={pageVariants}
@@ -1919,7 +1906,7 @@ const ClienteAgendar = () => {
                     {selectedBarber?.apelido} está com agenda cheia neste dia.
                   </p>
                   <button
-                    onClick={() => setStep(planNeedsService ? 3 : isPlanFlow ? 2 : isRescheduling ? 2 : 3)}
+                    onClick={() => setStep(planNeedsService ? 3 : (isPlanFlow && activeSubscription?.barbeiro ? 3 : isPlanFlow ? 2 : isRescheduling ? 2 : 3))}
                     className="px-6 py-3 border border-border rounded-xl text-foreground hover:bg-secondary transition-all"
                   >
                     Escolher outra data
