@@ -12,9 +12,10 @@ interface PremiumCalendarProps {
   closedDates?: Date[];
   minDate?: Date;
   onMonthChange?: (monthStart: Date, monthEnd: Date) => void;
+  loading?: boolean;
 }
 
-export function PremiumCalendar({ selectedDate, onSelectDate, disabledDates = [], closedDates = [], minDate, onMonthChange }: PremiumCalendarProps) {
+export function PremiumCalendar({ selectedDate, onSelectDate, disabledDates = [], closedDates = [], minDate, onMonthChange, loading = false }: PremiumCalendarProps) {
   const [currentMonth, setCurrentMonth] = useState(startOfMonth(selectedDate || new Date()));
   const [direction, setDirection] = useState(0);
 
@@ -126,10 +127,10 @@ export function PremiumCalendar({ selectedDate, onSelectDate, disabledDates = []
           key={currentMonth.toISOString()}
           custom={direction}
           initial={{ opacity: 0, x: direction > 0 ? 30 : -30 }}
-          animate={{ opacity: 1, x: 0 }}
+          animate={{ opacity: loading ? 0.4 : 1, x: 0 }}
           exit={{ opacity: 0, x: direction < 0 ? 30 : -30 }}
           transition={{ duration: 0.2, ease: "easeOut" }}
-          className="grid grid-cols-7 gap-y-1 px-4 pb-5"
+          className={cn("grid grid-cols-7 gap-y-1 px-4 pb-5", loading && "pointer-events-none")}
         >
           {calendarDays.map((day, idx) => {
             const isCurrentMonth = isSameMonth(day, currentMonth);
