@@ -214,9 +214,11 @@ const ClienteAgendar = () => {
         }
       }
 
-      await loadBarbers(tenantId);
-      await loadUserCredits();
-      await loadAvailableRedemptions();
+      await Promise.all([
+        loadBarbers(tenantId),
+        loadUserCredits(),
+        loadAvailableRedemptions(),
+      ]);
 
       // Auto-select barber from query param (e.g., after subscription)
       const barberFromParam = searchParams.get("barber");
@@ -1656,11 +1658,11 @@ const ClienteAgendar = () => {
     exit: { opacity: 0, x: -20 }
   };
 
-  // Loading gate — previne flash do step 1 enquanto inicializa
+  // Loading gate — mesmo visual do PageLoader (Suspense) para transição seamless
   if (isInitializing) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+      <div className="flex items-center justify-center min-h-dvh bg-background">
+        <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
