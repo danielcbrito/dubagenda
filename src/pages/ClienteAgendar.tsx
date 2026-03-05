@@ -262,7 +262,7 @@ const ClienteAgendar = () => {
           
           const [, resumeBarberResult, resumeServiceResult] = await Promise.all([
             loadServices(tenantId),
-            resumeData.barberId ? supabase.from("barbeiros").select("id, apelido, foto_url").eq("id", resumeData.barberId).maybeSingle() : null,
+            resumeData.barberId ? supabase.from("barbeiros").select("id, apelido, foto_url, tenant_id").eq("id", resumeData.barberId).maybeSingle() : null,
             resumeData.servicoId ? supabase.from("servicos").select("*").eq("id", resumeData.servicoId).maybeSingle() : null,
           ]);
           
@@ -534,7 +534,7 @@ const ClienteAgendar = () => {
           ? supabase.from("servicos").select("id, nome, descricao, duracao_minutos, preco").eq("id", planoData.servico_id).single()
           : Promise.resolve({ data: null }),
         subscription.barbeiro_id
-          ? supabase.from("barbeiros").select("id, apelido, foto_url").eq("id", subscription.barbeiro_id).single()
+          ? supabase.from("barbeiros").select("id, apelido, foto_url, tenant_id").eq("id", subscription.barbeiro_id).single()
           : Promise.resolve({ data: null }),
       ]);
 
@@ -582,7 +582,7 @@ const ClienteAgendar = () => {
     try {
       const { data: appointment, error } = await supabase
         .from("agendamentos")
-        .select(`*, servico:servicos(*), barbeiro:barbeiros(id, apelido, foto_url)`)
+        .select(`*, servico:servicos(*), barbeiro:barbeiros(id, apelido, foto_url, tenant_id)`)
         .eq("id", appointmentId)
         .single();
 
@@ -717,7 +717,10 @@ const ClienteAgendar = () => {
 
         setServices(safeServices);
         setBarbers(safeBarbers);
-        setSelectedServices((prev) => prev.filter((service) => safeServices.some((item) => item.id === service.id)));
+        // Para fluxo de plano, NÃO remover o serviço pré-selecionado do plano
+        if (!isPlanFlow) {
+          setSelectedServices((prev) => prev.filter((service) => safeServices.some((item) => item.id === service.id)));
+        }
 
         if (selectedBarberId) {
           const refreshedBarber = safeBarbers.find((barber) => barber.id === selectedBarberId) || null;
