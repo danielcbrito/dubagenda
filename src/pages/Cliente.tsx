@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Calendar, Crown, Banknote, Store, ChevronRight, Star, Scissors, User } from "lucide-react";
+import { Calendar, Crown, Banknote, Store, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -611,73 +611,25 @@ const Cliente = () => {
               />
             </div>
 
-            {/* Barbershop Card */}
+            {/* Barbershop Card — minimal inline */}
             {dataLoaded && (
-              <div className="mb-5">
-                <motion.div
-                  initial={{ opacity: 0, y: 6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.05 }}
-                  className="rounded-xl border border-border/40 bg-card dark:bg-card/60 shadow-[0_2px_12px_rgba(0,0,0,0.06)] dark:shadow-none overflow-hidden"
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="mb-5 flex items-center gap-2.5 px-1"
+              >
+                <Store className="w-4 h-4 text-muted-foreground/40 flex-shrink-0" />
+                <p className="text-[12px] text-muted-foreground/60 font-medium truncate flex-1">
+                  {preferredShop?.nome || "Barbearia DUB"}
+                </p>
+                <button
+                  onClick={() => navigate("/escolher-barbearia")}
+                  className="text-[10px] text-primary font-semibold flex items-center gap-0.5 active:opacity-70 transition-opacity flex-shrink-0"
                 >
-                  <div className="flex items-center gap-3 px-4 py-3.5">
-                    <div className="w-10 h-10 rounded-xl bg-primary/10 dark:bg-primary/15 flex items-center justify-center flex-shrink-0 ring-1 ring-primary/20">
-                      <Store className="w-[18px] h-[18px] text-primary" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[9px] uppercase tracking-[0.1em] text-muted-foreground font-semibold mb-0.5">Sua Barbearia</p>
-                      <p className="text-[14px] font-bold text-foreground truncate leading-tight">
-                        {preferredShop?.nome || "Barbearia DUB"}
-                      </p>
-                    </div>
-                    <button
-                      onClick={() => navigate("/escolher-barbearia")}
-                      className="text-[10px] text-primary font-semibold flex items-center gap-1 active:opacity-70 transition-opacity"
-                    >
-                      Trocar
-                      <ChevronRight className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-
-                  {/* Professionals */}
-                  {shopBarbers.length > 0 && (
-                    <div className="border-t border-border/30 px-4 py-3">
-                      <p className="text-[9px] uppercase tracking-[0.12em] text-muted-foreground/50 font-semibold mb-2.5">
-                        Profissionais
-                      </p>
-                      <div className="flex gap-3 overflow-x-auto pb-1" style={{ scrollSnapType: "x mandatory" }}>
-                        {shopBarbers.map((barber) => (
-                          <motion.button
-                            key={barber.id}
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            onClick={() => navigate(`/barbeiro/${barber.id}/avaliacoes`)}
-                            className="flex flex-col items-center gap-1.5 min-w-[64px] active:scale-95 transition-transform"
-                            style={{ scrollSnapAlign: "start" }}
-                          >
-                            <div className="w-12 h-12 rounded-xl overflow-hidden bg-muted/20 border border-border/30 flex-shrink-0">
-                              {barber.foto_url ? (
-                                <img src={barber.foto_url} alt={barber.apelido} className="w-full h-full object-cover" />
-                              ) : (
-                                <div className="w-full h-full flex items-center justify-center">
-                                  <User className="w-5 h-5 text-muted-foreground/40" />
-                                </div>
-                              )}
-                            </div>
-                            <p className="text-[10px] font-semibold text-foreground truncate max-w-[64px]">{barber.apelido}</p>
-                            {barber.avgRating !== null && (
-                              <div className="flex items-center gap-0.5">
-                                <Star className="w-3 h-3 text-amber-400 fill-amber-400" />
-                                <span className="text-[9px] font-bold tabular-nums text-muted-foreground">{barber.avgRating.toFixed(1)}</span>
-                              </div>
-                            )}
-                          </motion.button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </motion.div>
-              </div>
+                  Trocar
+                  <ChevronRight className="w-3 h-3" />
+                </button>
+              </motion.div>
             )}
             
             {/* Plan Tracker ou Loyalty Card */}
