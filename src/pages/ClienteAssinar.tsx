@@ -8,6 +8,7 @@ import {
   Banknote,
   Check, 
   CheckCircle2, 
+  ChevronRight,
   Crown,
   CreditCard,
   Loader2,
@@ -16,7 +17,9 @@ import {
   Scissors,
   Shield,
   Sparkles,
+  Star,
   User,
+  Zap,
 } from "lucide-react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
@@ -275,8 +278,9 @@ const ClienteAssinar = () => {
 
   // UI
   const [loading, setLoading] = useState(false);
-  const [step, setStep] = useState(resumePlanId ? 0 : 0); // starts loading, auto-selects preferred shop
+  const [step, setStep] = useState(resumePlanId ? 0 : 0);
   const [hasActiveSubscription, setHasActiveSubscription] = useState(false);
+  const [planShowcaseIndex, setPlanShowcaseIndex] = useState<number | null>(0); // null = show selection list
 
   const { ratings } = useBarberRatings(barbers.map(b => b.id));
 
@@ -311,7 +315,8 @@ const ClienteAssinar = () => {
       setSelectedTenantId(key);
       await loadPlansForTenant(tenantId);
       await loadBarbersForTenant(tenantId);
-      setStep(2); // pula direto para planos
+      setPlanShowcaseIndex(0); // start with showcase
+      setStep(2);
     } catch (err) {
       console.error("Erro ao carregar barbearia preferida:", err);
       // Fallback: vai para seleção manual
@@ -450,7 +455,6 @@ const ClienteAssinar = () => {
 
   // ─── Handlers ─────────────────────────────
   const handleSelectShop = async (tenantId: string | null) => {
-    // tenantId = null means DUB
     const key = tenantId || "dub";
     setSelectedTenantId(key);
     setSelectedPlan(null);
@@ -458,6 +462,7 @@ const ClienteAssinar = () => {
 
     await loadPlansForTenant(tenantId);
     await loadBarbersForTenant(tenantId);
+    setPlanShowcaseIndex(0); // start showcase
     setStep(2);
   };
 
@@ -578,11 +583,17 @@ const ClienteAssinar = () => {
       setSelectedPaymentMethod("pix");
     } else if (step === 3) {
       setStep(2);
+      setPlanShowcaseIndex(null); // go back to selection, not showcase
       setSelectedBarber(null);
     } else if (step === 2) {
-      navigate("/cliente");
+      if (planShowcaseIndex !== null && planShowcaseIndex > 0) {
+        setPlanShowcaseIndex(prev => (prev ?? 1) - 1);
+      } else if (planShowcaseIndex === null) {
+        setPlanShowcaseIndex(0); // go back to showcase
+      } else {
+        navigate("/cliente");
+      }
     } else if (step === 1) {
-      // Voltando da seleção manual de barbearia → volta para planos da preferida
       navigate("/cliente");
     } else {
       navigate("/cliente");
@@ -598,7 +609,7 @@ const ClienteAssinar = () => {
     : step === 1
       ? "Escolha a barbearia"
       : step === 2
-        ? "Escolha seu plano"
+        ? (planShowcaseIndex !== null ? "Conheça nossos planos" : "Escolha seu plano")
         : step === 3
           ? "Escolha seu barbeiro"
           : "Forma de pagamento";
@@ -741,67 +752,249 @@ const ClienteAssinar = () => {
             </motion.div>
           )}
 
-          {/* ═══ Step 2: Seleção de Plano ═══ */}
+          {/* ═══ Step 2: Planos (Showcase + Seleção) ═══ */}
           {step === 2 && (
             <motion.div
               key="step2"
               initial={{ opacity: 0, x: 16 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -16 }}
-              className="space-y-3 pb-28"
+              className="pb-28"
             >
-              {/* Selected shop badge + change button */}
-              <div className="flex items-center justify-between bg-card border border-border/40 rounded-xl p-3 mb-2">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-lg bg-muted/40 flex items-center justify-center overflow-hidden flex-shrink-0">
-                    {selectedTenantId === "dub" ? (
-                      <img src={logoDub} alt="DUB" className="w-5 h-5 object-contain" />
-                    ) : (
-                      (() => {
-                        const t = tenants.find(t => t.id === selectedTenantId);
-                        return t?.logo_url
-                          ? <img src={t.logo_url} alt={t.nome} className="w-full h-full object-cover" />
-                          : <Scissors className="w-4 h-4 text-muted-foreground/50" />;
-                      })()
-                    )}
-                  </div>
-                  <div>
-                    <p className="text-[10px] text-muted-foreground/60 uppercase tracking-wider font-medium">Barbearia</p>
-                    <p className="text-[13px] font-semibold text-foreground">{selectedShopName}</p>
-                  </div>
-                </div>
-                <button
-                  onClick={handleChangeShop}
-                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-medium text-primary hover:bg-primary/5 transition-colors"
-                >
-                  <RefreshCw className="w-3 h-3" />
-                  Trocar
-                </button>
-              </div>
+              {/* ─── Showcase Phase: Full-screen per plan ─── */}
+              {planShowcaseIndex !== null && plans.length > 0 && (
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={planShowcaseIndex}
+                    initial={{ opacity: 0, x: 50 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -50 }}
+                    transition={{ duration: 0.22, ease: "easeOut" }}
+                    className="flex flex-col items-center"
+                  >
+                    {(() => {
+                      const plan = plans[planShowcaseIndex];
+                      const benefits = Array.isArray(plan?.beneficios_json) ? plan.beneficios_json : [];
+                      const icons = [Crown, Star, Zap, Shield];
+                      const PlanIcon = icons[planShowcaseIndex % icons.length];
+                      const isFirst = planShowcaseIndex === 0;
 
-              {plans.length === 0 ? (
+                      return (
+                        <div className="flex flex-col items-center text-center w-full">
+                          {/* Icon */}
+                          <motion.div
+                            initial={{ scale: 0.7, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            transition={{ delay: 0.08, type: "spring", stiffness: 200 }}
+                            className="relative mb-5"
+                          >
+                            <div className={cn(
+                              "w-20 h-20 rounded-2xl flex items-center justify-center",
+                              isFirst ? "bg-primary/15" : "bg-muted/50"
+                            )}>
+                              <PlanIcon className={cn("w-9 h-9", isFirst ? "text-primary" : "text-muted-foreground")} />
+                            </div>
+                            {isFirst && (
+                              <motion.div
+                                initial={{ opacity: 0, scale: 0.8 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                transition={{ delay: 0.25 }}
+                                className="absolute -top-2 -right-3 bg-primary text-primary-foreground px-2 py-0.5 rounded-md"
+                              >
+                                <div className="flex items-center gap-1">
+                                  <Sparkles className="w-2.5 h-2.5" />
+                                  <span className="text-[9px] font-bold uppercase tracking-wider">Popular</span>
+                                </div>
+                              </motion.div>
+                            )}
+                          </motion.div>
+
+                          {/* Name + Description */}
+                          <motion.div
+                            initial={{ opacity: 0, y: 8 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.12 }}
+                            className="mb-5"
+                          >
+                            <h2 className="text-2xl font-bold text-foreground tracking-tight">{plan.nome}</h2>
+                            <p className="text-xs text-muted-foreground mt-1.5 max-w-[280px] mx-auto leading-relaxed">{plan.descricao}</p>
+                          </motion.div>
+
+                          {/* Price */}
+                          <motion.div
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            transition={{ delay: 0.16 }}
+                            className="flex items-baseline gap-1 mb-6"
+                          >
+                            <span className="text-[11px] text-muted-foreground font-medium">R$</span>
+                            <span className="text-5xl font-extrabold text-foreground tabular-nums tracking-tighter">
+                              {plan.preco_mensal.toFixed(2).replace('.', ',')}
+                            </span>
+                            <span className="text-sm text-muted-foreground font-medium">/mês</span>
+                          </motion.div>
+
+                          {/* Benefits card */}
+                          <motion.div
+                            initial={{ opacity: 0, y: 16 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.2 }}
+                            className="w-full text-left"
+                          >
+                            <div className="rounded-2xl border border-border/40 bg-card p-5 space-y-4 mb-6">
+                              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">
+                                TUDO QUE VOCÊ RECEBE
+                              </p>
+                              <div className="space-y-3">
+                                {benefits.map((benefit: string, i: number) => (
+                                  <motion.div
+                                    key={i}
+                                    className="flex items-start gap-3"
+                                    initial={{ opacity: 0, x: -8 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    transition={{ delay: 0.25 + i * 0.04 }}
+                                  >
+                                    <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                                      <CheckCircle2 className="w-3.5 h-3.5 text-primary" />
+                                    </div>
+                                    <span className="text-[14px] text-foreground/85 leading-snug font-medium">{benefit}</span>
+                                  </motion.div>
+                                ))}
+                              </div>
+                            </div>
+                          </motion.div>
+
+                          {/* Dots */}
+                          <div className="flex items-center gap-1.5 mb-5">
+                            {plans.map((_, i) => (
+                              <div
+                                key={i}
+                                className={cn(
+                                  "rounded-full transition-all duration-300",
+                                  i === planShowcaseIndex
+                                    ? "w-5 h-1.5 bg-primary"
+                                    : i < planShowcaseIndex
+                                      ? "w-1.5 h-1.5 bg-primary/40"
+                                      : "w-1.5 h-1.5 bg-muted-foreground/25"
+                                )}
+                              />
+                            ))}
+                          </div>
+
+                          {/* CTA */}
+                          <motion.div
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.35 }}
+                            className="w-full space-y-2"
+                          >
+                            <Button
+                              onClick={() => {
+                                if (planShowcaseIndex < plans.length - 1) {
+                                  setPlanShowcaseIndex(prev => (prev ?? 0) + 1);
+                                } else {
+                                  setPlanShowcaseIndex(null); // go to selection
+                                }
+                              }}
+                              className="w-full h-12 text-sm font-bold rounded-xl bg-foreground hover:bg-foreground/90 text-background"
+                            >
+                              {planShowcaseIndex < plans.length - 1 ? (
+                                <div className="flex items-center gap-2">
+                                  <span>Próximo plano</span>
+                                  <ChevronRight className="w-4 h-4" />
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-2">
+                                  <span>Escolher meu plano</span>
+                                  <ArrowRight className="w-4 h-4" />
+                                </div>
+                              )}
+                            </Button>
+                            {planShowcaseIndex < plans.length - 1 && (
+                              <button
+                                onClick={() => setPlanShowcaseIndex(null)}
+                                className="w-full py-2 text-[11px] text-muted-foreground/60 font-medium hover:text-muted-foreground transition-colors"
+                              >
+                                Pular e escolher plano
+                              </button>
+                            )}
+                            <p className="text-[10px] text-center text-muted-foreground/50">
+                              Cancele quando quiser • Sem fidelidade
+                            </p>
+                          </motion.div>
+                        </div>
+                      );
+                    })()}
+                  </motion.div>
+                </AnimatePresence>
+              )}
+
+              {/* ─── Selection Phase: All plans as cards ─── */}
+              {planShowcaseIndex === null && (
                 <motion.div
-                  initial={{ opacity: 0, y: 12 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="flex flex-col items-center justify-center py-14"
+                  initial={{ opacity: 0, x: 50 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.25 }}
+                  className="space-y-3"
                 >
-                  <div className="w-14 h-14 rounded-full bg-muted/50 flex items-center justify-center mb-3">
-                    <Crown className="w-6 h-6 text-muted-foreground/40" />
+                  {/* Selected shop badge + change button */}
+                  <div className="flex items-center justify-between bg-card border border-border/40 rounded-xl p-3 mb-2">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-lg bg-muted/40 flex items-center justify-center overflow-hidden flex-shrink-0">
+                        {selectedTenantId === "dub" ? (
+                          <img src={logoDub} alt="DUB" className="w-5 h-5 object-contain" />
+                        ) : (
+                          (() => {
+                            const t = tenants.find(t => t.id === selectedTenantId);
+                            return t?.logo_url
+                              ? <img src={t.logo_url} alt={t.nome} className="w-full h-full object-cover" />
+                              : <Scissors className="w-4 h-4 text-muted-foreground/50" />;
+                          })()
+                        )}
+                      </div>
+                      <div>
+                        <p className="text-[10px] text-muted-foreground/60 uppercase tracking-wider font-medium">Barbearia</p>
+                        <p className="text-[13px] font-semibold text-foreground">{selectedShopName}</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={handleChangeShop}
+                      className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-medium text-primary hover:bg-primary/5 transition-colors"
+                    >
+                      <RefreshCw className="w-3 h-3" />
+                      Trocar
+                    </button>
                   </div>
-                  <p className="text-sm font-medium text-muted-foreground">Nenhum plano disponível</p>
-                  <p className="text-xs text-muted-foreground/60 mt-1">Esta barbearia ainda não possui planos</p>
+
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50 text-center pb-1">
+                    SELECIONE O IDEAL PARA VOCÊ
+                  </p>
+
+                  {plans.length === 0 ? (
+                    <motion.div
+                      initial={{ opacity: 0, y: 12 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="flex flex-col items-center justify-center py-14"
+                    >
+                      <div className="w-14 h-14 rounded-full bg-muted/50 flex items-center justify-center mb-3">
+                        <Crown className="w-6 h-6 text-muted-foreground/40" />
+                      </div>
+                      <p className="text-sm font-medium text-muted-foreground">Nenhum plano disponível</p>
+                      <p className="text-xs text-muted-foreground/60 mt-1">Esta barbearia ainda não possui planos</p>
+                    </motion.div>
+                  ) : (
+                    plans.map((plan, index) => (
+                      <PlanCard 
+                        key={plan.id}
+                        plan={plan}
+                        isSelected={selectedPlan?.id === plan.id}
+                        isPopular={index === Math.floor(plans.length / 2)}
+                        onSelect={() => setSelectedPlan(plan)}
+                        disabled={hasActiveSubscription}
+                      />
+                    ))
+                  )}
                 </motion.div>
-              ) : (
-                plans.map((plan, index) => (
-                  <PlanCard 
-                    key={plan.id}
-                    plan={plan}
-                    isSelected={selectedPlan?.id === plan.id}
-                    isPopular={index === Math.floor(plans.length / 2)}
-                    onSelect={() => setSelectedPlan(plan)}
-                    disabled={hasActiveSubscription}
-                  />
-                ))
               )}
             </motion.div>
           )}
