@@ -627,28 +627,11 @@ const BarbershopPublic = () => {
           </motion.div>
         )}
 
-        {/* ── Portfolio Section ── */}
-        {barbers.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-          >
-            <PortfolioGallery
-              barberIds={barbers.map(b => b.id)}
-              barberMap={new Map(barbers.map(b => [b.id, { name: b.apelido, photo: b.foto_url }]))}
-              maxVisible={6}
-              title="Nossos Cortes"
-              showAttribution={true}
-            />
-          </motion.div>
-        )}
-
-        {/* ── Barbers Section ── */}
+        {/* ── Barbers Section (ALWAYS on top) ── */}
         <motion.div
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.35 }}
+          transition={{ delay: 0.3 }}
           className="px-5"
         >
           <div className="flex items-center gap-2 mb-3">
@@ -709,6 +692,23 @@ const BarbershopPublic = () => {
             </div>
           )}
         </motion.div>
+
+        {/* ── Portfolio Section (below barbers) ── */}
+        {barbers.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.45 }}
+          >
+            <PortfolioGallery
+              barberIds={barbers.map(b => b.id)}
+              barberMap={new Map(barbers.map(b => [b.id, { name: b.apelido, photo: b.foto_url }]))}
+              maxVisible={9}
+              title="Portfólio"
+              showAttribution={false}
+            />
+          </motion.div>
+        )}
       </div>
 
       {/* ── Fixed CTA ── */}

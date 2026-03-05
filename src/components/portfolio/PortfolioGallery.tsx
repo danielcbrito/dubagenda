@@ -132,7 +132,7 @@ export function PortfolioGallery({
           </span>
         </div>
 
-        {/* Masonry-style grid */}
+        {/* Clean 3-column grid */}
         <div className="grid grid-cols-3 gap-1.5">
           {visibleImages.map((img, i) => (
             <motion.button
@@ -140,15 +140,8 @@ export function PortfolioGallery({
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: i * 0.04, duration: 0.25 }}
-              onClick={() => openLightbox(showAll ? i : i)}
-              className={cn(
-                "relative rounded-lg overflow-hidden bg-muted/20",
-                "active:scale-[0.97] transition-transform",
-                // Make first image larger for visual interest
-                i === 0 && visibleImages.length > 3
-                  ? "col-span-2 row-span-2 aspect-square"
-                  : "aspect-square"
-              )}
+              onClick={() => openLightbox(i)}
+              className="relative aspect-square rounded-lg overflow-hidden bg-muted/20 active:scale-[0.97] transition-transform"
             >
               <img
                 src={img.image_url}
