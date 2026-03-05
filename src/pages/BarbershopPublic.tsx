@@ -693,19 +693,19 @@ const BarbershopPublic = () => {
           )}
         </motion.div>
 
-        {/* ── Portfolio Section (below barbers) ── */}
+        {/* ── Portfolio Section (below barbers, with spacing) ── */}
         {barbers.length > 0 && (
           <motion.div
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.45 }}
+            className="mt-6"
           >
             <PortfolioGallery
               barberIds={barbers.map(b => b.id)}
               barberMap={new Map(barbers.map(b => [b.id, { name: b.apelido, photo: b.foto_url }]))}
               maxVisible={9}
-              title="Portfólio"
-              showAttribution={false}
+              showAttribution={true}
             />
           </motion.div>
         )}
