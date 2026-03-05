@@ -1,8 +1,8 @@
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from "lucide-react";
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, isToday, isBefore, startOfDay, startOfWeek, endOfWeek } from "date-fns";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, addMonths, subMonths, isToday, isBefore, startOfDay, getDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface PremiumCalendarProps {
@@ -14,180 +14,176 @@ interface PremiumCalendarProps {
   onMonthChange?: (monthStart: Date, monthEnd: Date) => void;
 }
 
-/**
- * Calendário premium para agendamento — design inspirado na agenda admin.
- * - disabledDates: datas desabilitadas (genérico)
- * - closedDates: datas em que a barbearia está FECHADA (ficam transparentes e não clicáveis)
- */
-export function PremiumCalendar({ selectedDate, onSelectDate, disabledDates = [], closedDates = [], minDate, onMonthChange }: PremiumCalendarProps) {
-  const [currentMonth, setCurrentMonth] = useState(startOfMonth(selectedDate || new Date()));
-  const [direction, setDirection] = useState(0);
+const MONTH_LIST = Array.from({ length: 12 }, (_, i) => i);
 
-  // Notificar mudança de mês para que o pai carregue os dias fechados
+export function PremiumCalendar({ selectedDate, onSelectDate, disabledDates = [], closedDates = [], minDate, onMonthChange }: PremiumCalendarProps) {
+  const now = new Date();
+  const [currentMonth, setCurrentMonth] = useState(startOfMonth(selectedDate || now));
+  const daysScrollRef = useRef<HTMLDivElement>(null);
+  const monthScrollRef = useRef<HTMLDivElement>(null);
+  const selectedDayRef = useRef<HTMLButtonElement>(null);
+
+  // Notify parent of month change
   useEffect(() => {
     if (onMonthChange) {
-      const start = startOfMonth(currentMonth);
-      const end = endOfMonth(currentMonth);
-      onMonthChange(start, end);
+      onMonthChange(startOfMonth(currentMonth), endOfMonth(currentMonth));
     }
   }, [currentMonth, onMonthChange]);
 
-  const calendarDays = useMemo(() => {
-    const monthStart = startOfMonth(currentMonth);
-    const monthEnd = endOfMonth(currentMonth);
-    const calendarStart = startOfWeek(monthStart, { weekStartsOn: 0 });
-    const calendarEnd = endOfWeek(monthEnd, { weekStartsOn: 0 });
-    return eachDayOfInterval({ start: calendarStart, end: calendarEnd });
+  // Generate months for carousel (current year + next year)
+  const months = useMemo(() => {
+    const result: Date[] = [];
+    const startYear = now.getFullYear();
+    for (let y = startYear; y <= startYear + 1; y++) {
+      for (let m = 0; m < 12; m++) {
+        const d = new Date(y, m, 1);
+        // Only show current month onwards
+        if (d >= startOfMonth(now)) {
+          result.push(d);
+        }
+      }
+    }
+    return result;
+  }, []);
+
+  // Days in current month
+  const days = useMemo(() => {
+    return eachDayOfInterval({ start: startOfMonth(currentMonth), end: endOfMonth(currentMonth) });
   }, [currentMonth]);
 
-  const isDateClosed = (date: Date) => {
+  const isDateClosed = useCallback((date: Date) => {
     return closedDates.some(d => isSameDay(d, date));
-  };
+  }, [closedDates]);
 
-  const isDateDisabled = (date: Date) => {
-    if (!date) return true;
-    // Dias de outros meses são SEMPRE indisponíveis
-    if (!isSameMonth(date, currentMonth)) return true;
+  const isDateDisabled = useCallback((date: Date) => {
     const today = startOfDay(new Date());
     if (isBefore(date, today)) return true;
     if (minDate && isBefore(date, startOfDay(minDate))) return true;
     if (isDateClosed(date)) return true;
     return disabledDates.some(d => isSameDay(d, date));
+  }, [disabledDates, closedDates, minDate]);
+
+  const handleMonthSelect = (month: Date) => {
+    setCurrentMonth(month);
   };
 
-  const handlePrevMonth = () => {
-    setDirection(-1);
-    setCurrentMonth(prev => subMonths(prev, 1));
-  };
+  // Scroll to selected day when it changes
+  useEffect(() => {
+    if (selectedDayRef.current && daysScrollRef.current) {
+      const container = daysScrollRef.current;
+      const el = selectedDayRef.current;
+      const scrollLeft = el.offsetLeft - container.offsetWidth / 2 + el.offsetWidth / 2;
+      container.scrollTo({ left: scrollLeft, behavior: "smooth" });
+    }
+  }, [selectedDate, currentMonth]);
 
-  const handleNextMonth = () => {
-    setDirection(1);
-    setCurrentMonth(prev => addMonths(prev, 1));
-  };
+  // Scroll to active month in carousel
+  useEffect(() => {
+    if (monthScrollRef.current) {
+      const activeBtn = monthScrollRef.current.querySelector('[data-active="true"]');
+      if (activeBtn) {
+        const container = monthScrollRef.current;
+        const el = activeBtn as HTMLElement;
+        const scrollLeft = el.offsetLeft - container.offsetWidth / 2 + el.offsetWidth / 2;
+        container.scrollTo({ left: scrollLeft, behavior: "smooth" });
+      }
+    }
+  }, [currentMonth]);
 
-  const goToToday = () => {
-    const today = new Date();
-    setCurrentMonth(startOfMonth(today));
-    onSelectDate(today);
-  };
-
-  const weekDays = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
-
-  const variants = {
-    enter: (dir: number) => ({
-      x: dir > 0 ? 50 : -50,
-      opacity: 0
-    }),
-    center: {
-      x: 0,
-      opacity: 1
-    },
-    exit: (dir: number) => ({
-      x: dir < 0 ? 50 : -50,
-      opacity: 0
-    })
-  };
+  const weekDayShort = (date: Date) => format(date, "EEE", { locale: ptBR }).replace(".", "");
 
   return (
-    <div 
-      className="w-full rounded-2xl overflow-hidden"
-      style={{
-        background: "linear-gradient(135deg, hsl(var(--card) / 0.95), hsl(var(--card) / 0.7))",
-        border: "1px solid hsl(var(--border) / 0.3)",
-        boxShadow: "0 8px 32px rgba(0, 0, 0, 0.15)"
-      }}
-    >
-      {/* Header */}
-      <div className="flex items-center justify-between px-5 py-3.5 border-b border-border/10">
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2">
-            <CalendarIcon className="w-4 h-4 text-primary" />
-            <h3 className="text-base font-semibold tracking-wide text-foreground capitalize">
-              {format(currentMonth, "MMMM yyyy", { locale: ptBR })}
-            </h3>
-          </div>
-          <button
-            onClick={goToToday}
-            className="px-2.5 py-1 text-[10px] font-semibold tracking-wide uppercase rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-all duration-300"
-          >
-            Hoje
-          </button>
-        </div>
-
-        <div className="flex items-center gap-0.5">
-          <button
-            onClick={handlePrevMonth}
-            className="p-2 rounded-lg hover:bg-secondary/50 transition-all duration-300 group"
-          >
-            <ChevronLeft className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors" />
-          </button>
-          <button
-            onClick={handleNextMonth}
-            className="p-2 rounded-lg hover:bg-secondary/50 transition-all duration-300 group"
-          >
-            <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors" />
-          </button>
-        </div>
+    <div className="w-full">
+      {/* Month Carousel */}
+      <div
+        ref={monthScrollRef}
+        className="flex gap-2 overflow-x-auto pb-3 px-1 scrollbar-hide"
+        style={{ scrollSnapType: "x mandatory", WebkitOverflowScrolling: "touch" }}
+      >
+        {months.map((month) => {
+          const isActive = month.getFullYear() === currentMonth.getFullYear() && month.getMonth() === currentMonth.getMonth();
+          return (
+            <button
+              key={month.toISOString()}
+              data-active={isActive}
+              onClick={() => handleMonthSelect(month)}
+              style={{ scrollSnapAlign: "center" }}
+              className={cn(
+                "flex-shrink-0 px-4 py-2 rounded-xl text-[12px] font-semibold capitalize transition-all duration-200",
+                isActive
+                  ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25"
+                  : "bg-card text-muted-foreground hover:bg-secondary/50 border border-border/30"
+              )}
+            >
+              {format(month, "MMM yyyy", { locale: ptBR })}
+            </button>
+          );
+        })}
       </div>
 
-      {/* Weekday headers */}
-      <div className="grid grid-cols-7 px-4 py-2.5 border-b border-border/10">
-        {weekDays.map(day => (
-          <div key={day} className="text-center text-[10px] font-medium text-muted-foreground/60 uppercase tracking-wider">
-            {day}
-          </div>
-        ))}
-      </div>
-
-      {/* Calendar Grid */}
-      <AnimatePresence mode="wait" custom={direction}>
+      {/* Days horizontal scroll */}
+      <AnimatePresence mode="wait">
         <motion.div
           key={currentMonth.toISOString()}
-          custom={direction}
-          variants={variants}
-          initial="enter"
-          animate="center"
-          exit="exit"
-          transition={{ duration: 0.2, ease: "easeOut" }}
-          className="grid grid-cols-7 gap-1 p-3"
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -8 }}
+          transition={{ duration: 0.2 }}
         >
-          {calendarDays.map((day, idx) => {
-            const isCurrentMonth = isSameMonth(day, currentMonth);
-            const isSelected = selectedDate && isSameDay(day, selectedDate);
-            const isClosed = isDateClosed(day);
-            const isDisabled = isDateDisabled(day);
-            const isCurrentDay = isToday(day);
+          <div
+            ref={daysScrollRef}
+            className="flex gap-2.5 overflow-x-auto py-3 px-1 scrollbar-hide overscroll-contain"
+            style={{
+              scrollSnapType: "x mandatory",
+              WebkitOverflowScrolling: "touch",
+              paddingLeft: "calc(50% - 24px)",
+              paddingRight: "calc(50% - 24px)",
+            }}
+          >
+            {days.map((day, idx) => {
+              const isSelected = selectedDate && isSameDay(day, selectedDate);
+              const disabled = isDateDisabled(day);
+              const isCurrentDay = isToday(day);
 
-            return (
-              <motion.button
-                key={day.toISOString()}
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: idx * 0.008, duration: 0.15 }}
-                onClick={() => !isDisabled && onSelectDate(day)}
-                disabled={isDisabled}
-                className={cn(
-                  "relative aspect-square rounded-xl transition-all duration-200",
-                  "flex items-center justify-center",
-                  ((!isCurrentMonth) || isClosed || (isDisabled && isCurrentMonth && !isClosed)) && "cursor-not-allowed",
-                  !isDisabled && !isSelected && "hover:bg-secondary/50",
-                  isSelected && "bg-primary text-primary-foreground shadow-lg shadow-primary/25 scale-105",
-                  isCurrentDay && !isSelected && !isDisabled && "ring-1 ring-primary/60"
-                )}
-              >
-                <span className={cn(
-                  "text-[13px] font-medium",
-                  isSelected && "font-bold text-primary-foreground",
-                  !isCurrentMonth && "text-foreground/[0.08]",
-                  isCurrentMonth && isClosed && "text-foreground/[0.08]",
-                  isCurrentMonth && isDisabled && !isClosed && "text-foreground/[0.08]",
-                  isCurrentMonth && !isSelected && !isDisabled && "text-foreground font-bold",
-                )}>
-                  {format(day, "d")}
-                </span>
-              </motion.button>
-            );
-          })}
+              return (
+                <motion.button
+                  key={day.toISOString()}
+                  ref={isSelected ? selectedDayRef : undefined}
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: idx * 0.012, duration: 0.15 }}
+                  onClick={() => !disabled && onSelectDate(day)}
+                  disabled={disabled}
+                  style={{ scrollSnapAlign: "center" }}
+                  className={cn(
+                    "flex-shrink-0 flex flex-col items-center gap-1 w-[48px] py-2.5 rounded-2xl transition-all duration-200",
+                    disabled && "opacity-[0.15] cursor-not-allowed",
+                    !disabled && !isSelected && "hover:bg-secondary/50",
+                    isSelected && "bg-foreground scale-105 shadow-lg shadow-foreground/15",
+                    !isSelected && isCurrentDay && !disabled && "ring-1 ring-primary/40",
+                    !isSelected && !disabled && "bg-card border border-border/20"
+                  )}
+                >
+                  <span className={cn(
+                    "text-[9px] font-medium uppercase tracking-wider",
+                    isSelected ? "text-background" : "text-muted-foreground/60"
+                  )}>
+                    {weekDayShort(day)}
+                  </span>
+                  <span className={cn(
+                    "text-[17px] tabular-nums transition-all",
+                    isSelected ? "font-bold text-background" : "font-bold text-foreground",
+                  )}>
+                    {format(day, "d")}
+                  </span>
+                  {/* Dot indicator for today */}
+                  {isCurrentDay && !isSelected && !disabled && (
+                    <div className="w-1 h-1 rounded-full bg-primary" />
+                  )}
+                </motion.button>
+              );
+            })}
+          </div>
         </motion.div>
       </AnimatePresence>
     </div>
