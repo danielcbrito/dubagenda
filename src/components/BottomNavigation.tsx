@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Home, ShoppingBag, Headphones, User } from "lucide-react";
+import { Home, ShoppingBag, Crown, User } from "lucide-react";
 import { motion } from "framer-motion";
 import { useLocation, useNavigate } from "react-router-dom";
 import { StoreComingSoonDialog } from "./client/StoreComingSoonDialog";
@@ -37,7 +37,7 @@ function NavItem({ icon: Icon, label, isActive, onClick }: NavItemProps) {
 
 interface BottomNavigationProps {
   onProfileClick: () => void;
-  onSupportClick: () => void;
+  onSupportClick?: () => void;
 }
 
 export function BottomNavigation({
@@ -71,10 +71,10 @@ export function BottomNavigation({
             onClick={() => setStoreDialogOpen(true)}
           />
           <NavItem
-            icon={Headphones}
-            label="Suporte"
-            isActive={isActive("/suporte")}
-            onClick={onSupportClick}
+            icon={Crown}
+            label="Planos"
+            isActive={isActive("/cliente/assinar")}
+            onClick={() => navigate("/cliente/assinar")}
           />
           <NavItem
             icon={User}
