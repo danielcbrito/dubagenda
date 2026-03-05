@@ -487,7 +487,7 @@ const ClienteAgendar = () => {
   const loadActiveSubscriptionOptimized = async (uid: string | null): Promise<ActiveSubscription | null> => {
     if (!uid) return null;
     try {
-      const { data: subscription, error } = await supabase
+      const { data: subscriptions, error } = await supabase
         .from("assinaturas")
         .select(`
           id,
@@ -499,9 +499,16 @@ const ClienteAgendar = () => {
         `)
         .eq("user_id", uid)
         .eq("status", "active")
-        .maybeSingle();
+        .order("created_at", { ascending: false })
+        .limit(1);
 
-      if (error || !subscription || !subscription.plano) return null;
+      const subscription = subscriptions?.[0] || null;
+
+      if (error) {
+        console.error('[loadActiveSubscription] Erro na query:', error.message);
+        return null;
+      }
+      if (!subscription || !subscription.plano) return null;
 
       const today = new Date();
       today.setHours(0, 0, 0, 0);
@@ -1832,7 +1839,12 @@ const ClienteAgendar = () => {
                 </h2>
                 <p className="text-[12px] text-muted-foreground/60 mt-1.5">
                   {isPlanFlow && activeSubscription ? (
-                    <>{activeSubscription.servico?.nome || getFormattedServiceNames()} • {selectedBarber?.apelido}</>
+                    <>
+                      <span className="text-primary font-semibold">{activeSubscription.plano_nome}</span>
+                      {" • "}
+                      {activeSubscription.servico?.nome || getFormattedServiceNames()}
+                      {selectedBarber ? ` • ${selectedBarber.apelido}` : ""}
+                    </>
                   ) : selectedBarber ? (
                     <>com {selectedBarber.apelido}</>
                   ) : (
