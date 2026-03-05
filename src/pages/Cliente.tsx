@@ -406,14 +406,11 @@ const Cliente = () => {
       setExpiredSubscription(null);
       setPendingSubscription(null);
 
-      // Contar usos do plano no mês atual
-      const now = new Date();
-      const competencia = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
-      
+      // Contar usos do plano pela assinatura ativa (fonte única)
       const { count: usageCount } = await supabase
         .from("plano_agendamentos_usos")
-        .select("*", { count: 'exact', head: true })
-        .eq("user_id", userId)
+        .select("id", { count: 'exact', head: true })
+        .eq("assinatura_id", activeSub.id)
         .is("released_at", null);
 
       setPlanUsageCount(usageCount || 0);
