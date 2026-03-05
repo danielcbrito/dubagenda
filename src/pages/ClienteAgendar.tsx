@@ -161,6 +161,7 @@ const ClienteAgendar = () => {
 
   // Carregar barbeiros (filtrado pelo tenant da barbearia preferida)
   const loadBarbers = async (tenantId?: string | null) => {
+    // Busca filtrada + todos em paralelo
     let query = supabase
       .from("barbeiros")
       .select("id, apelido, foto_url, tenant_id")
@@ -168,23 +169,21 @@ const ClienteAgendar = () => {
       .order("apelido");
 
     if (tenantId) {
-      // Filtra barbeiros da barbearia preferida
       query = query.eq("tenant_id", tenantId);
     } else {
-      // Fluxo DUB exclusivo: barbeiros sem tenant (globais)
       query = query.is("tenant_id", null);
     }
 
-    const { data } = await query;
-    setBarbers(data || []);
-
-    // Também carrega todos para "ver outras barbearias"
-    const { data: all } = await supabase
+    const allQuery = supabase
       .from("barbeiros")
       .select("id, apelido, foto_url, tenant_id")
       .eq("ativo", true)
       .order("apelido");
-    setAllBarbers(all || []);
+
+    const [filtered, all] = await Promise.all([query, allQuery]);
+    setBarbers(filtered.data || []);
+    setAllBarbers(all.data || []);
+    return filtered.data || [];
   };
 
   // Initialize booking
@@ -192,88 +191,39 @@ const ClienteAgendar = () => {
     const initializeBooking = async () => {
       setIsInitializing(true);
 
-      // Carregar barbearia preferida do perfil
+      // SINGLE session call — reused everywhere
       const { data: { session } } = await supabase.auth.getSession();
+      const uid = session?.user?.id || null;
+      if (uid) setUserId(uid);
+
+      // Carregar barbearia preferida do perfil
       let tenantId: string | null = null;
-      if (session) {
+      if (uid) {
         const { data: profile } = await supabase
           .from("profiles")
           .select("barbearia_preferida_id")
-          .eq("id", session.user.id)
+          .eq("id", uid)
           .single();
 
         if (profile?.barbearia_preferida_id) {
           tenantId = profile.barbearia_preferida_id;
-          // Buscar nome da barbearia
-          const { data: tenant } = await supabase
+          // Buscar nome da barbearia (non-blocking — will set state async)
+          supabase
             .from("tenants")
             .select("id, nome")
             .eq("id", tenantId)
-            .single();
-          if (tenant) setPreferredShop(tenant);
+            .single()
+            .then(({ data: tenant }) => { if (tenant) setPreferredShop(tenant); });
         }
       }
 
-      await Promise.all([
-        loadBarbers(tenantId),
-        loadUserCredits(),
-        loadAvailableRedemptions(),
-      ]);
-
-      // Auto-select barber from query param (e.g., after subscription)
-      const barberFromParam = searchParams.get("barber");
-      if (barberFromParam) {
-        const barbersList = (await supabase.from("barbeiros").select("id, apelido, foto_url, tenant_id").eq("ativo", true).order("apelido")).data || [];
-        const matchedBarber = barbersList.find((b: Barber) => b.id === barberFromParam);
-        if (matchedBarber) {
-          setSelectedBarber(matchedBarber);
-          await loadBarberCustomDurations(matchedBarber.id);
-          // Remove param from URL
-          setSearchParams(prev => {
-            prev.delete("barber");
-            return prev;
-          }, { replace: true });
-        }
-      }
-
-      // Verificar se deve retomar direto para a etapa de pagamento (PIX expirado)
+      // Check fast session-storage flags BEFORE heavy queries
       const resumePaymentRaw = sessionStorage.getItem("resumeToPaymentStep");
-      if (resumePaymentRaw) {
-        sessionStorage.removeItem("resumeToPaymentStep");
-        try {
-          const resumeData = JSON.parse(resumePaymentRaw);
-          await loadServices(tenantId);
-
-          // Pré-selecionar barbeiro (filtrado pelo tenant)
-          await loadBarbers(tenantId);
-          const resumeBarber = barbers.find((b: Barber) => b.id === resumeData.barberId) 
-            || (await supabase.from("barbeiros").select("id, apelido, foto_url").eq("id", resumeData.barberId).maybeSingle()).data;
-          if (resumeBarber) {
-            setSelectedBarber(resumeBarber);
-            await loadBarberCustomDurations(resumeBarber.id);
-          }
-
-          // Pré-selecionar serviço (já carregado com tenant filter acima)
-          const resumeService = services.find((s: Service) => s.id === resumeData.servicoId)
-            || (await supabase.from("servicos").select("*").eq("id", resumeData.servicoId).maybeSingle()).data;
-          if (resumeService) setSelectedServices([resumeService]);
-
-          // Pré-selecionar data e hora
-          if (resumeData.date) setSelectedDate(new Date(`${resumeData.date}T12:00:00`));
-          if (resumeData.time) setSelectedTime(resumeData.time);
-
-          // Ir direto para o step 5 (pagamento)
-          setStep(5);
-          setIsInitializing(false);
-          return;
-        } catch (e) {
-          console.error("Erro ao restaurar dados de pagamento:", e);
-        }
-      }
-
       const isReschedulingSession = sessionStorage.getItem('isRescheduling');
       const appointmentId = sessionStorage.getItem('rescheduleAppointmentId');
+      const barberFromParam = searchParams.get("barber");
 
+      // Rescheduling — early exit, minimal queries
       if (isReschedulingSession === 'true' && appointmentId) {
         setIsRescheduling(true);
         setRescheduleAppointmentId(appointmentId);
@@ -282,27 +232,70 @@ const ClienteAgendar = () => {
         return;
       }
 
-      const subscription = await loadActiveSubscription();
+      // MEGA PARALLEL: all independent data in one shot
+      const [barbersList, , , subscription] = await Promise.all([
+        loadBarbers(tenantId),
+        loadUserCreditsOptimized(uid),
+        loadAvailableRedemptionsOptimized(uid),
+        loadActiveSubscriptionOptimized(uid),
+      ]);
+
+      // Auto-select barber from query param
+      if (barberFromParam && barbersList) {
+        const matchedBarber = barbersList.find((b: Barber) => b.id === barberFromParam);
+        if (matchedBarber) {
+          setSelectedBarber(matchedBarber);
+          loadBarberCustomDurations(matchedBarber.id); // non-blocking
+          setSearchParams(prev => {
+            prev.delete("barber");
+            return prev;
+          }, { replace: true });
+        }
+      }
+
+      // Resume payment step
+      if (resumePaymentRaw) {
+        sessionStorage.removeItem("resumeToPaymentStep");
+        try {
+          const resumeData = JSON.parse(resumePaymentRaw);
+          
+          const [, resumeBarberResult, resumeServiceResult] = await Promise.all([
+            loadServices(tenantId),
+            resumeData.barberId ? supabase.from("barbeiros").select("id, apelido, foto_url").eq("id", resumeData.barberId).maybeSingle() : null,
+            resumeData.servicoId ? supabase.from("servicos").select("*").eq("id", resumeData.servicoId).maybeSingle() : null,
+          ]);
+          
+          if (resumeBarberResult?.data) {
+            setSelectedBarber(resumeBarberResult.data);
+            loadBarberCustomDurations(resumeBarberResult.data.id);
+          }
+          if (resumeServiceResult?.data) setSelectedServices([resumeServiceResult.data]);
+          if (resumeData.date) setSelectedDate(new Date(`${resumeData.date}T12:00:00`));
+          if (resumeData.time) setSelectedTime(resumeData.time);
+
+          setStep(5);
+          setIsInitializing(false);
+          return;
+        } catch (e) {
+          console.error("Erro ao restaurar dados de pagamento:", e);
+        }
+      }
 
       if (subscription) {
         const restantes = subscription.limite_agendamentos_mes - subscription.agendamentos_usados;
 
         if (restantes > 0) {
-          // SEMPRE ativar isPlanFlow para assinantes
           setIsPlanFlow(true);
 
-          // Auto-selecionar barbeiro do plano
           if (subscription.barbeiro) {
             setSelectedBarber(subscription.barbeiro);
-            await loadBarberCustomDurations(subscription.barbeiro.id);
+            loadBarberCustomDurations(subscription.barbeiro.id); // non-blocking
           }
 
           if (subscription.servico) {
-            // Plano COM serviço vinculado: pula direto para data
             setSelectedServices([subscription.servico]);
-            setStep(subscription.barbeiro ? 2 : 1); // 2=data, 1=barbeiro
+            setStep(subscription.barbeiro ? 2 : 1);
           } else {
-            // Plano SEM serviço vinculado: tentar auto-selecionar
             let barberTenantId = tenantId;
             if (subscription.barbeiro_id) {
               const { data: barberData } = await supabase
@@ -313,7 +306,6 @@ const ClienteAgendar = () => {
               barberTenantId = barberData?.tenant_id || tenantId;
             }
             
-            // Buscar serviços do tenant
             let svcQuery = supabase.from("servicos").select("*").eq("ativo", true).order("preco");
             if (barberTenantId) {
               svcQuery = svcQuery.eq("tenant_id", barberTenantId);
@@ -323,12 +315,10 @@ const ClienteAgendar = () => {
             const { data: tenantServices } = await svcQuery;
             
             if (tenantServices && tenantServices.length >= 1) {
-              // Auto-selecionar o primeiro serviço e pular para data
               setSelectedServices([tenantServices[0]]);
               setServices(tenantServices);
               setStep(subscription.barbeiro ? 2 : 1);
             } else {
-              // Sem serviços disponíveis
               setServices([]);
               setStep(subscription.barbeiro ? 2 : 1);
             }
@@ -337,7 +327,6 @@ const ClienteAgendar = () => {
           return;
         }
 
-        // Limite atingido - bloquear fluxo
         setSubscriptionLimitReached(true);
         setIsInitializing(false);
         return;
@@ -433,68 +422,55 @@ const ClienteAgendar = () => {
     setServices(data || []);
   };
 
-  const loadUserCredits = async () => {
+  const loadUserCreditsOptimized = async (uid: string | null) => {
+    if (!uid) return;
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
+      // Parallel: credits RPC + wallet edge function
+      const [creditsResult, walletResult] = await Promise.all([
+        supabase.rpc("get_user_available_credits", { p_user_id: uid }),
+        supabase.functions.invoke('wallet-operations', { body: { action: 'get_balance' } }),
+      ]);
 
-      setUserId(session.user.id);
-
-      const { data: creditsData, error } = await supabase
-        .rpc("get_user_available_credits", { p_user_id: session.user.id });
-
-      if (error) throw error;
-      setAvailableCredits(creditsData || 0);
-
-      // Fetch wallet balance
-      const { data: walletData } = await supabase.functions.invoke('wallet-operations', {
-        body: { action: 'get_balance' }
-      });
-      setWalletBalance(walletData?.balance || 0);
+      setAvailableCredits(creditsResult.data || 0);
+      setWalletBalance(walletResult.data?.balance || 0);
     } catch (error) {
       console.error("Error loading credits:", error);
     }
   };
 
-  const loadAvailableRedemptions = async () => {
+  const loadAvailableRedemptionsOptimized = async (uid: string | null) => {
+    if (!uid) return;
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
+      // Parallel: check active resgate appointments + available redemptions
+      const [activeRes, redemptionsRes] = await Promise.all([
+        supabase
+          .from("agendamentos")
+          .select("id")
+          .eq("user_id", uid)
+          .eq("payment_method", "resgate")
+          .in("status", ["pending", "confirmed", "completed"])
+          .limit(1),
+        supabase
+          .from("resgates")
+          .select("id, promocao_id")
+          .eq("user_id", uid)
+          .eq("status", "available")
+          .is("used_at", null),
+      ]);
 
-      // Verificar se já existe agendamento ativo usando resgate (anti-fraude)
-      const { data: activeResgateAppointments } = await supabase
-        .from("agendamentos")
-        .select("id")
-        .eq("user_id", session.user.id)
-        .eq("payment_method", "resgate")
-        .in("status", ["pending", "confirmed", "completed"])
-        .limit(1);
-
-      // Se já tem agendamento ativo com resgate, bloquear novos resgates
-      if (activeResgateAppointments && activeResgateAppointments.length > 0) {
+      if (activeRes.data && activeRes.data.length > 0) {
         setAvailableRedemptions([]);
         return;
       }
-
-      const { data: redemptions, error } = await supabase
-        .from("resgates")
-        .select("id, promocao_id")
-        .eq("user_id", session.user.id)
-        .eq("status", "available")
-        .is("used_at", null);
-
-      if (error) throw error;
-      setAvailableRedemptions(redemptions || []);
+      setAvailableRedemptions(redemptionsRes.data || []);
     } catch (error) {
       console.error("Error loading redemptions:", error);
     }
   };
 
-  const loadActiveSubscription = async (): Promise<ActiveSubscription | null> => {
+  const loadActiveSubscriptionOptimized = async (uid: string | null): Promise<ActiveSubscription | null> => {
+    if (!uid) return null;
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return null;
-
       const { data: subscription, error } = await supabase
         .from("assinaturas")
         .select(`
@@ -505,91 +481,83 @@ const ClienteAgendar = () => {
           barbeiro_id,
           plano:planos(nome, limite_agendamentos_mes, servico_id)
         `)
-        .eq("user_id", session.user.id)
+        .eq("user_id", uid)
         .eq("status", "active")
         .maybeSingle();
 
-      if (error) return null;
+      if (error || !subscription || !subscription.plano) return null;
 
-      if (subscription && subscription.plano) {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const billingDate = new Date(subscription.next_billing_date + 'T12:00:00');
-        billingDate.setHours(0, 0, 0, 0);
-        
-        const isOverdue = today > billingDate;
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const billingDate = new Date(subscription.next_billing_date + 'T12:00:00');
+      billingDate.setHours(0, 0, 0, 0);
+      
+      if (today > billingDate) {
+        setSubscriptionBlocked(true);
+        toast.error("Seu plano está vencido. Regularize o pagamento para continuar agendando.");
+        return null;
+      }
 
-        if (isOverdue) {
-          setSubscriptionBlocked(true);
-          toast.error("Seu plano está vencido. Regularize o pagamento para continuar agendando.");
-          return null;
-        }
+      const planoData = subscription.plano as any;
+      const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+      const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
 
-        const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-        const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-        
-        const { data: monthAppointments, error: countError } = await supabase
+      // Parallel: month appointments + servico + barbeiro
+      const [monthRes, servicoRes, barbeiroRes] = await Promise.all([
+        supabase
           .from("agendamentos")
           .select("id")
-          .eq("user_id", session.user.id)
+          .eq("user_id", uid)
           .eq("tipo_agendamento", "plano")
           .gte("data", format(startOfMonth, 'yyyy-MM-dd'))
           .lte("data", format(endOfMonth, 'yyyy-MM-dd'))
-          .not("status", "in", "('cancelled_by_user','cancelled_by_admin')");
+          .not("status", "in", "('cancelled_by_user','cancelled_by_admin')"),
+        planoData.servico_id
+          ? supabase.from("servicos").select("id, nome, descricao, duracao_minutos, preco").eq("id", planoData.servico_id).single()
+          : Promise.resolve({ data: null }),
+        subscription.barbeiro_id
+          ? supabase.from("barbeiros").select("id, apelido, foto_url").eq("id", subscription.barbeiro_id).single()
+          : Promise.resolve({ data: null }),
+      ]);
 
-        const usedCount = countError ? 0 : (monthAppointments?.length || 0);
-        const planoData = subscription.plano as any;
+      const usedCount = monthRes.error ? 0 : (monthRes.data?.length || 0);
 
-        let servicoVinculado: Service | null = null;
-        if (planoData.servico_id) {
-          const { data: servicoData } = await supabase
-            .from("servicos")
-            .select("id, nome, descricao, duracao_minutos, preco")
-            .eq("id", planoData.servico_id)
-            .single();
-          
-          if (servicoData) {
-            servicoVinculado = servicoData;
-          }
-        }
+      const activeSubscriptionData: ActiveSubscription = {
+        id: subscription.id,
+        plano_id: subscription.plano_id,
+        plano_nome: planoData.nome,
+        limite_agendamentos_mes: planoData.limite_agendamentos_mes,
+        agendamentos_usados: usedCount,
+        next_billing_date: subscription.next_billing_date,
+        status: subscription.status,
+        servico_id: planoData.servico_id || null,
+        servico: servicoRes.data as Service | null,
+        barbeiro_id: subscription.barbeiro_id || null,
+        barbeiro: barbeiroRes.data as Barber | null,
+      };
 
-        // Buscar barbeiro vinculado ao plano
-        let barbeiroVinculado: Barber | null = null;
-        if (subscription.barbeiro_id) {
-          const { data: barbeiroData } = await supabase
-            .from("barbeiros")
-            .select("id, apelido, foto_url")
-            .eq("id", subscription.barbeiro_id)
-            .single();
-          
-          if (barbeiroData) {
-            barbeiroVinculado = barbeiroData;
-          }
-        }
-
-        const activeSubscriptionData: ActiveSubscription = {
-          id: subscription.id,
-          plano_id: subscription.plano_id,
-          plano_nome: planoData.nome,
-          limite_agendamentos_mes: planoData.limite_agendamentos_mes,
-          agendamentos_usados: usedCount,
-          next_billing_date: subscription.next_billing_date,
-          status: subscription.status,
-          servico_id: planoData.servico_id || null,
-          servico: servicoVinculado,
-          barbeiro_id: subscription.barbeiro_id || null,
-          barbeiro: barbeiroVinculado,
-        };
-
-        setActiveSubscription(activeSubscriptionData);
-        return activeSubscriptionData;
-      }
-      
-      return null;
+      setActiveSubscription(activeSubscriptionData);
+      return activeSubscriptionData;
     } catch (error) {
       console.error("Error loading active subscription:", error);
       return null;
     }
+  };
+
+  // Legacy wrappers (used elsewhere in the component)
+  const loadUserCredits = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    return loadUserCreditsOptimized(session?.user?.id || null);
+  };
+
+  const loadAvailableRedemptions = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    return loadAvailableRedemptionsOptimized(session?.user?.id || null);
+  };
+
+  const loadActiveSubscription = async (): Promise<ActiveSubscription | null> => {
+    const { data: { session } } = await supabase.auth.getSession();
+    return loadActiveSubscriptionOptimized(session?.user?.id || null);
   };
 
   const loadAppointmentForReschedule = async (appointmentId: string) => {
