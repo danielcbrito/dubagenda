@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -7,7 +7,12 @@ import {
   AlertCircle, 
   Loader2,
   Crown,
-  Sparkles
+  Sparkles,
+  Star,
+  Zap,
+  Shield,
+  ChevronLeft,
+  ChevronRight
 } from "lucide-react";
 import { BackArrow } from "@/components/ui/back-arrow";
 import { toast } from "sonner";
@@ -32,99 +37,152 @@ interface SubscribePlanSheetProps {
 
 type LoadingState = "idle" | "loading" | "error" | "success";
 
-/** Card individual de plano — compacto e persuasivo */
-function PlanCard({ 
+/** Full-screen slide for a single plan */
+function PlanSlide({ 
   plan, 
   isHighlighted,
   onSubscribe,
-  isSubscribing 
+  isSubscribing,
+  index
 }: { 
   plan: Plan;
   isHighlighted?: boolean;
   onSubscribe: () => void;
   isSubscribing: boolean;
+  index: number;
 }) {
   const benefits = Array.isArray(plan.beneficios_json) ? plan.beneficios_json : [];
+  
+  const planIcons = [Crown, Star, Zap, Shield];
+  const PlanIcon = planIcons[index % planIcons.length];
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      className={cn(
-        "relative rounded-xl border transition-all overflow-hidden",
-        isHighlighted 
-          ? "border-primary/40 bg-card" 
-          : "border-border/40 bg-card"
-      )}
-    >
-      {isHighlighted && (
-        <div className="h-0.5 bg-gradient-to-r from-primary via-primary/60 to-transparent" />
-      )}
-
-      <div className="p-4 space-y-3.5">
-        {/* Popular badge */}
-        {isHighlighted && (
-          <div className="flex items-center gap-1.5">
-            <Sparkles className="w-3 h-3 text-primary" />
-            <span className="text-[10px] font-bold uppercase tracking-widest text-primary">
-              Recomendado
-            </span>
+    <div className="flex flex-col items-center justify-between h-full px-6 py-6">
+      {/* Top section — Icon + Name */}
+      <div className="flex flex-col items-center text-center space-y-4 pt-4">
+        {/* Plan icon with glow */}
+        <motion.div
+          initial={{ scale: 0.8, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ delay: 0.15, type: "spring", stiffness: 200 }}
+          className="relative"
+        >
+          <div className={cn(
+            "w-20 h-20 rounded-2xl flex items-center justify-center",
+            isHighlighted 
+              ? "bg-primary/15" 
+              : "bg-muted/60"
+          )}>
+            <PlanIcon className={cn(
+              "w-9 h-9",
+              isHighlighted ? "text-primary" : "text-muted-foreground"
+            )} />
           </div>
-        )}
-
-        {/* Name & Description */}
-        <div>
-          <h3 className="text-base font-bold text-foreground">{plan.nome}</h3>
-          <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{plan.descricao}</p>
-        </div>
-
-        {/* Price */}
-        <div className="flex items-baseline gap-0.5">
-          <span className="text-2xl font-bold text-primary tabular-nums">
-            R$ {Number(plan.preco_mensal).toFixed(2).replace('.', ',')}
-          </span>
-          <span className="text-xs text-muted-foreground">/mês</span>
-        </div>
-
-        {/* Benefits */}
-        {benefits.length > 0 && (
-          <div className="space-y-1.5 pt-3 border-t border-border/30">
-            {benefits.slice(0, 4).map((benefit: string, index: number) => (
-              <div key={index} className="flex items-center gap-2">
-                <CheckCircle2 className="w-3.5 h-3.5 text-primary flex-shrink-0" />
-                <span className="text-xs text-muted-foreground line-clamp-1">{benefit}</span>
+          {isHighlighted && (
+            <motion.div
+              initial={{ opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              className="absolute -top-2 -right-2 bg-primary text-primary-foreground px-2 py-0.5 rounded-md"
+            >
+              <div className="flex items-center gap-1">
+                <Sparkles className="w-2.5 h-2.5" />
+                <span className="text-[9px] font-bold uppercase tracking-wider">Popular</span>
               </div>
-            ))}
-            {benefits.length > 4 && (
-              <p className="text-[10px] text-primary/70 pl-5.5 font-medium">
-                +{benefits.length - 4} benefícios
-              </p>
-            )}
-          </div>
-        )}
+            </motion.div>
+          )}
+        </motion.div>
 
-        {/* CTA */}
+        {/* Plan name */}
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="space-y-1.5"
+        >
+          <h2 className="text-xl font-bold text-foreground tracking-tight">{plan.nome}</h2>
+          <p className="text-xs text-muted-foreground max-w-[260px] leading-relaxed">{plan.descricao}</p>
+        </motion.div>
+
+        {/* Price — hero element */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.25 }}
+          className="flex items-baseline gap-1 pt-2"
+        >
+          <span className="text-[10px] text-muted-foreground font-medium mt-1">R$</span>
+          <span className="text-4xl font-extrabold text-foreground tabular-nums tracking-tight">
+            {Number(plan.preco_mensal).toFixed(2).replace('.', ',')}
+          </span>
+          <span className="text-xs text-muted-foreground font-medium">/mês</span>
+        </motion.div>
+      </div>
+
+      {/* Middle section — Benefits */}
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3 }}
+        className="w-full flex-1 min-h-0 overflow-y-auto overscroll-contain py-5"
+      >
+        <div className="rounded-xl border border-border/40 bg-card p-4 space-y-3">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">
+            O QUE ESTÁ INCLUSO
+          </p>
+          <div className="space-y-2.5">
+            {benefits.map((benefit: string, i: number) => (
+              <motion.div 
+                key={i} 
+                className="flex items-start gap-3"
+                initial={{ opacity: 0, x: -8 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.35 + i * 0.04 }}
+              >
+                <div className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <CheckCircle2 className="w-3 h-3 text-primary" />
+                </div>
+                <span className="text-[13px] text-foreground/80 leading-snug">{benefit}</span>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Bottom section — CTA */}
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.4 }}
+        className="w-full space-y-2.5 pb-2"
+      >
         <Button
           onClick={onSubscribe}
           disabled={isSubscribing}
           className={cn(
-            "w-full h-10 text-xs font-semibold transition-all",
+            "w-full h-12 text-sm font-bold transition-all rounded-xl",
             isHighlighted
-              ? "bg-primary hover:bg-primary/90 text-primary-foreground"
-              : "bg-secondary hover:bg-secondary/80 text-secondary-foreground"
+              ? "bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/20"
+              : "bg-foreground hover:bg-foreground/90 text-background"
           )}
         >
           {isSubscribing ? (
-            <div className="flex items-center gap-1.5">
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            <div className="flex items-center gap-2">
+              <Loader2 className="w-4 h-4 animate-spin" />
               Processando...
             </div>
           ) : (
-            "Assinar Agora"
+            <div className="flex items-center gap-2">
+              <Crown className="w-4 h-4" />
+              Assinar Agora
+            </div>
           )}
         </Button>
-      </div>
-    </motion.div>
+        <p className="text-[10px] text-center text-muted-foreground/60">
+          Cancele quando quiser • Sem fidelidade
+        </p>
+      </motion.div>
+    </div>
   );
 }
 
@@ -133,9 +191,12 @@ export function SubscribePlanSheet({ open, onOpenChange, userId }: SubscribePlan
   const [loadingState, setLoadingState] = useState<LoadingState>("idle");
   const [subscribing, setSubscribing] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string>("");
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (open) {
+      setCurrentIndex(0);
       loadPlans();
     }
   }, [open]);
@@ -270,6 +331,22 @@ export function SubscribePlanSheet({ open, onOpenChange, userId }: SubscribePlan
     }
   };
 
+  const scrollToIndex = useCallback((index: number) => {
+    if (!scrollRef.current) return;
+    const container = scrollRef.current;
+    const slideWidth = container.offsetWidth;
+    container.scrollTo({ left: index * slideWidth, behavior: "smooth" });
+    setCurrentIndex(index);
+  }, []);
+
+  const handleScroll = useCallback(() => {
+    if (!scrollRef.current) return;
+    const container = scrollRef.current;
+    const slideWidth = container.offsetWidth;
+    const newIndex = Math.round(container.scrollLeft / slideWidth);
+    setCurrentIndex(newIndex);
+  }, []);
+
   if (!open) return null;
 
   return (
@@ -282,37 +359,59 @@ export function SubscribePlanSheet({ open, onOpenChange, userId }: SubscribePlan
           transition={{ type: "spring", damping: 30, stiffness: 300 }}
           className="fixed inset-0 z-50 bg-background flex flex-col"
         >
-          {/* Header — compacto */}
-          <div className="flex items-center gap-3 px-4 pt-[max(env(safe-area-inset-top),0.75rem)] pb-3">
-            <button
-              onClick={() => onOpenChange(false)}
-              className="w-8 h-8 flex items-center justify-center rounded-lg bg-card border border-border/40 hover:bg-muted transition-colors"
-            >
-              <BackArrow size={18} className="text-foreground" />
-            </button>
-            <h1 className="text-sm font-semibold text-foreground tracking-tight">Escolha seu Plano</h1>
+          {/* Header */}
+          <div className="flex items-center justify-between px-4 pt-[max(env(safe-area-inset-top),0.75rem)] pb-2 flex-shrink-0">
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => onOpenChange(false)}
+                className="w-8 h-8 flex items-center justify-center rounded-lg bg-card border border-border/40 hover:bg-muted transition-colors"
+              >
+                <BackArrow size={18} className="text-foreground" />
+              </button>
+              <h1 className="text-sm font-semibold text-foreground tracking-tight">Escolha seu Plano</h1>
+            </div>
+
+            {/* Pagination dots */}
+            {loadingState === "success" && plans.length > 1 && (
+              <div className="flex items-center gap-1.5 pr-1">
+                {plans.map((_, i) => (
+                  <button
+                    key={i}
+                    onClick={() => scrollToIndex(i)}
+                    className={cn(
+                      "rounded-full transition-all duration-300",
+                      i === currentIndex
+                        ? "w-5 h-1.5 bg-primary"
+                        : "w-1.5 h-1.5 bg-muted-foreground/25"
+                    )}
+                  />
+                ))}
+              </div>
+            )}
           </div>
 
-          {/* Content */}
-          <div className="flex-1 overflow-y-auto overscroll-contain px-4 pb-24">
+          {/* Content area */}
+          <div className="flex-1 min-h-0 relative">
             {/* Loading */}
             {loadingState === "loading" && (
-              <div className="space-y-3 pt-2">
-                {[1, 2].map((i) => (
-                  <div key={i} className="rounded-xl p-4 border border-border/40 bg-card">
-                    <Skeleton className="h-4 w-2/3 mb-2 bg-muted" />
-                    <Skeleton className="h-3 w-full mb-2 bg-muted" />
-                    <Skeleton className="h-6 w-28 mb-3 bg-muted" />
-                    <Skeleton className="h-12 w-full mb-2 bg-muted" />
-                    <Skeleton className="h-10 w-full bg-muted" />
-                  </div>
-                ))}
+              <div className="flex flex-col items-center justify-center h-full px-6 space-y-6">
+                <div className="w-20 h-20 rounded-2xl bg-muted animate-pulse" />
+                <div className="space-y-2 w-full max-w-[240px]">
+                  <Skeleton className="h-5 w-2/3 mx-auto bg-muted" />
+                  <Skeleton className="h-3 w-full bg-muted" />
+                  <Skeleton className="h-8 w-1/2 mx-auto bg-muted mt-4" />
+                </div>
+                <div className="space-y-2 w-full max-w-[300px] mt-6">
+                  {[1, 2, 3, 4].map(i => (
+                    <Skeleton key={i} className="h-6 w-full bg-muted" />
+                  ))}
+                </div>
               </div>
             )}
 
             {/* Error */}
             {loadingState === "error" && (
-              <div className="flex flex-col items-center justify-center pt-16 space-y-5">
+              <div className="flex flex-col items-center justify-center h-full px-6 space-y-5">
                 <div className="w-14 h-14 rounded-full bg-destructive/10 flex items-center justify-center">
                   <AlertCircle className="w-6 h-6 text-destructive" />
                 </div>
@@ -329,7 +428,7 @@ export function SubscribePlanSheet({ open, onOpenChange, userId }: SubscribePlan
 
             {/* Empty */}
             {loadingState === "success" && plans.length === 0 && (
-              <div className="flex flex-col items-center justify-center pt-16 space-y-5">
+              <div className="flex flex-col items-center justify-center h-full px-6 space-y-5">
                 <div className="w-14 h-14 rounded-full bg-muted/50 flex items-center justify-center">
                   <Crown className="w-6 h-6 text-muted-foreground" />
                 </div>
@@ -340,25 +439,51 @@ export function SubscribePlanSheet({ open, onOpenChange, userId }: SubscribePlan
               </div>
             )}
 
-            {/* Plans List */}
+            {/* Swipeable Plans Carousel */}
             {loadingState === "success" && plans.length > 0 && (
-              <div className="space-y-3 pt-1">
-                {plans.map((plan, index) => (
+              <>
+                <div
+                  ref={scrollRef}
+                  onScroll={handleScroll}
+                  className="h-full flex overflow-x-auto overscroll-x-contain snap-x snap-mandatory scrollbar-hide"
+                  style={{ scrollbarWidth: "none", msOverflowStyle: "none", WebkitOverflowScrolling: "touch" }}
+                >
+                  {plans.map((plan, index) => (
+                    <div
+                      key={plan.id}
+                      className="w-full h-full flex-shrink-0 snap-center"
+                    >
+                      <PlanSlide
+                        plan={plan}
+                        index={index}
+                        isHighlighted={index === 0}
+                        onSubscribe={() => handleSubscribe(plan.id)}
+                        isSubscribing={subscribing === plan.id}
+                      />
+                    </div>
+                  ))}
+                </div>
+
+                {/* Swipe hint for first load */}
+                {plans.length > 1 && currentIndex === 0 && (
                   <motion.div
-                    key={plan.id}
-                    initial={{ opacity: 0, y: 12 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.06 }}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ delay: 1.5 }}
+                    className="absolute bottom-32 left-0 right-0 flex justify-center pointer-events-none"
                   >
-                    <PlanCard
-                      plan={plan}
-                      isHighlighted={index === 0}
-                      onSubscribe={() => handleSubscribe(plan.id)}
-                      isSubscribing={subscribing === plan.id}
-                    />
+                    <motion.div
+                      animate={{ x: [0, 8, 0] }}
+                      transition={{ repeat: 3, duration: 0.8, ease: "easeInOut" }}
+                      className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-card/80 backdrop-blur-sm border border-border/30"
+                    >
+                      <span className="text-[10px] text-muted-foreground font-medium">Deslize para ver mais</span>
+                      <ChevronRight className="w-3 h-3 text-muted-foreground" />
+                    </motion.div>
                   </motion.div>
-                ))}
-              </div>
+                )}
+              </>
             )}
           </div>
         </motion.div>
