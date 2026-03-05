@@ -494,8 +494,8 @@ const ClienteAssinar = () => {
                 </div>
               ) : (
                 <div className="flex-1 flex flex-col min-h-0">
-                  {/* Swipeable plan carousel */}
-                  <div
+                   {/* Swipeable plan carousel */}
+                   <div
                     ref={(el) => {
                       if (!el) return;
                       const handleScroll = () => {
@@ -520,64 +520,69 @@ const ClienteAssinar = () => {
                           key={plan.id}
                           className="w-full flex-shrink-0 snap-center overflow-y-auto overscroll-y-contain"
                         >
-                          <div className="px-5 pt-2 pb-8 max-w-md mx-auto">
+                          <div className="px-6 pt-4 pb-8 max-w-md mx-auto">
 
                             {isPopular && (
-                              <div className="flex items-center gap-1.5 mb-4">
-                                <div className="flex items-center gap-1 bg-primary/10 px-2.5 py-1 rounded-full">
-                                  <Sparkles className="w-3 h-3 text-primary" />
-                                  <span className="text-[10px] font-bold uppercase tracking-widest text-primary">Mais popular</span>
-                                </div>
+                              <div className="mb-6">
+                                <span className="inline-flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-[0.15em] text-primary/80">
+                                  <Sparkles className="w-3 h-3" />
+                                  Mais popular
+                                </span>
                               </div>
                             )}
 
-                            <h2 className="text-2xl font-bold text-foreground tracking-tight mb-1">
+                            <h2 className="text-[22px] font-bold text-foreground tracking-tight leading-tight">
                               {plan.nome}
                             </h2>
-                            <p className="text-[13px] text-muted-foreground leading-relaxed mb-6">
+                            <p className="text-[13px] text-muted-foreground/70 leading-relaxed mt-2 max-w-[280px]">
                               {plan.descricao}
                             </p>
 
-                            <div className="flex items-baseline gap-1 mb-8">
-                              <span className="text-sm text-muted-foreground">R$</span>
-                              <span className="text-[42px] font-extrabold text-foreground tabular-nums tracking-tighter leading-none">
-                                {plan.preco_mensal.toFixed(2).replace('.', ',')}
+                            <div className="flex items-baseline gap-0.5 mt-8 mb-10">
+                              <span className="text-[13px] text-muted-foreground/60 font-medium">R$</span>
+                              <span className="text-[38px] font-extrabold text-foreground tabular-nums tracking-tight leading-none">
+                                {Math.floor(plan.preco_mensal)}
                               </span>
-                              <span className="text-sm text-muted-foreground">/mês</span>
+                              <span className="text-[22px] font-bold text-foreground/70 tabular-nums leading-none">
+                                ,{(plan.preco_mensal % 1).toFixed(2).slice(2)}
+                              </span>
+                              <span className="text-[12px] text-muted-foreground/50 ml-1">/mês</span>
                             </div>
 
-                            <div className="space-y-3.5">
-                              <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/40">
-                                Incluído no plano
+                            <div className="space-y-4">
+                              <p className="text-[9px] font-semibold uppercase tracking-[0.15em] text-muted-foreground/35">
+                                O que está incluído
                               </p>
 
-                              <div className="flex items-center gap-3">
-                                <CheckCircle2 className="w-4 h-4 text-primary flex-shrink-0" />
-                                <span className="text-[14px] text-foreground font-medium">
-                                  {plan.limite_agendamentos_mes} agendamentos por mês
+                              <div className="flex items-start gap-3">
+                                <div className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 mt-px">
+                                  <Check className="w-3 h-3 text-primary" strokeWidth={2.5} />
+                                </div>
+                                <span className="text-[13px] text-foreground/90">
+                                  {plan.limite_agendamentos_mes} agendamento{plan.limite_agendamentos_mes > 1 ? 's' : ''} por mês
                                 </span>
                               </div>
 
                               {benefits.map((benefit: string, i: number) => (
-                                <div key={i} className="flex items-center gap-3">
-                                  <CheckCircle2 className="w-4 h-4 text-primary flex-shrink-0" />
-                                  <span className="text-[14px] text-foreground/80">{benefit}</span>
+                                <div key={i} className="flex items-start gap-3">
+                                  <div className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 mt-px">
+                                    <Check className="w-3 h-3 text-primary" strokeWidth={2.5} />
+                                  </div>
+                                  <span className="text-[13px] text-foreground/75">{benefit}</span>
                                 </div>
                               ))}
                             </div>
 
-                            <div className="mt-8 flex items-center gap-2.5 py-3 border-t border-border/30">
-                              <div className="w-7 h-7 rounded-lg bg-muted/40 flex items-center justify-center overflow-hidden flex-shrink-0">
+                            <div className="mt-10 flex items-center gap-2.5 py-3 border-t border-border/20">
+                              <div className="w-6 h-6 rounded-md bg-muted/30 flex items-center justify-center overflow-hidden flex-shrink-0">
                                 {selectedTenantId === "dub" ? (
-                                  <img src={logoDub} alt="DUB" className="w-4 h-4 object-contain" />
+                                  <img src={logoDub} alt="DUB" className="w-3.5 h-3.5 object-contain" />
                                 ) : (
-                                  <Scissors className="w-3.5 h-3.5 text-muted-foreground/50" />
+                                  <Scissors className="w-3 h-3 text-muted-foreground/40" />
                                 )}
                               </div>
-                              <div className="flex-1 min-w-0">
-                                <p className="text-[11px] text-muted-foreground/50">{selectedShopName}</p>
-                              </div>
-                              <button onClick={handleChangeShop} className="text-[11px] text-primary font-medium">
+                              <span className="text-[11px] text-muted-foreground/45 flex-1">{selectedShopName}</span>
+                              <button onClick={handleChangeShop} className="text-[11px] text-primary/70 font-medium hover:text-primary transition-colors">
                                 Trocar
                               </button>
                             </div>
@@ -588,30 +593,14 @@ const ClienteAssinar = () => {
                   </div>
 
                   {/* Fixed bottom area */}
-                  <div className="flex-shrink-0 px-5 pb-[max(env(safe-area-inset-bottom),1rem)] pt-3 border-t border-border/20 bg-background">
+                  <div className="flex-shrink-0 px-6 pb-[max(env(safe-area-inset-bottom),1rem)] pt-4 bg-background">
                     <div className="max-w-md mx-auto">
-                      {plans.length > 1 && (
-                        <div className="flex items-center justify-center gap-1.5 mb-4">
-                          {plans.map((_, i) => (
-                            <div
-                              key={i}
-                              className={cn(
-                                "rounded-full transition-all duration-300",
-                                i === currentPlanIndex
-                                  ? "w-5 h-1.5 bg-primary"
-                                  : "w-1.5 h-1.5 bg-muted-foreground/25"
-                              )}
-                            />
-                          ))}
-                        </div>
-                      )}
-
                       <button
                         onClick={() => !hasActiveSubscription && plans[currentPlanIndex] && handleSelectPlan(plans[currentPlanIndex])}
                         disabled={hasActiveSubscription}
                         className={cn(
-                          "w-full h-[4.5rem] rounded-2xl text-[17px] font-bold flex items-center justify-center gap-2.5 active:scale-[0.97] transition-transform",
-                          "bg-primary text-primary-foreground",
+                          "w-full h-12 rounded-xl text-[14px] font-semibold flex items-center justify-center gap-2 active:scale-[0.97] transition-all",
+                          "bg-foreground text-background",
                           hasActiveSubscription && "opacity-50 cursor-not-allowed"
                         )}
                       >
@@ -619,9 +608,27 @@ const ClienteAssinar = () => {
                         <ArrowRight className="w-4 h-4" />
                       </button>
 
+                      <div className="flex items-center justify-center gap-3 mt-4">
+                        {plans.length > 1 && (
+                          <div className="flex items-center gap-1.5">
+                            {plans.map((_, i) => (
+                              <div
+                                key={i}
+                                className={cn(
+                                  "rounded-full transition-all duration-300",
+                                  i === currentPlanIndex
+                                    ? "w-4 h-1 bg-foreground"
+                                    : "w-1 h-1 bg-muted-foreground/20"
+                                )}
+                              />
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
                       {plans.length > 1 && (
-                        <p className="text-[10px] text-center text-muted-foreground/40 mt-3">
-                          Deslize para ver outros planos • Cancele quando quiser
+                        <p className="text-[10px] text-center text-muted-foreground/30 mt-2.5">
+                          Deslize para ver outros planos
                         </p>
                       )}
                     </div>
