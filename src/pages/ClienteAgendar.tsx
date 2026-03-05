@@ -313,6 +313,7 @@ const ClienteAgendar = () => {
               setStep(subscription.barbeiro ? 3 : 1);
             }
           } else {
+            // Plano SEM serviço vinculado — mostrar tela de seleção de serviço
             let barberTenantId = tenantId;
             if (subscription.barbeiro_id) {
               const { data: barberData } = await supabase
@@ -330,15 +331,9 @@ const ClienteAgendar = () => {
               svcQuery = svcQuery.is("tenant_id", null);
             }
             const { data: tenantServices } = await svcQuery;
-            
-            if (tenantServices && tenantServices.length >= 1) {
-              setSelectedServices([tenantServices[0]]);
-              setServices(tenantServices);
-              setStep(subscription.barbeiro ? 3 : 1);
-            } else {
-              setServices([]);
-              setStep(subscription.barbeiro ? 3 : 1);
-            }
+            setServices(tenantServices || []);
+            // NÃO pré-selecionar nenhum serviço — o cliente escolhe
+            setStep(subscription.barbeiro ? 2 : 1);
           }
           setIsInitializing(false);
           return;
