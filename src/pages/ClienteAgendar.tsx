@@ -1861,13 +1861,13 @@ const ClienteAgendar = () => {
             transition={{ duration: 0.3 }}
             className="min-h-screen pt-16 pb-24 px-4"
           >
-            <div className="max-w-2xl mx-auto">
+             <div className="max-w-2xl mx-auto">
               {/* Título da Etapa */}
-              <div className="mb-6 pt-1">
+              <div className="mb-8 pt-3">
                 <h2 className="text-xl font-semibold text-foreground">
                   Melhor dia pra você
                 </h2>
-                <p className="text-[12px] text-muted-foreground/60 mt-1">
+                <p className="text-[12px] text-muted-foreground/60 mt-1.5">
                   {isPlanFlow && activeSubscription ? (
                     <>{activeSubscription.servico?.nome || getFormattedServiceNames()} • {selectedBarber?.apelido}</>
                   ) : selectedBarber ? (

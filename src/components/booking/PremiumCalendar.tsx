@@ -57,52 +57,64 @@ export function PremiumCalendar({ selectedDate, onSelectDate, disabledDates = []
 
   const canGoPrev = !isBefore(subMonths(currentMonth, 1), startOfMonth(new Date()));
 
-  const weekDays = ["D", "S", "T", "Q", "Q", "S", "S"];
+  const weekDays = ["DOM", "SEG", "TER", "QUA", "QUI", "SEX", "SÁB"];
 
   return (
-    <div className="w-full">
+    <div
+      className="w-full rounded-2xl overflow-hidden border border-border/30"
+      style={{
+        background: "hsl(var(--card))",
+        boxShadow: "0 4px 24px rgba(0,0,0,0.12), 0 1px 4px rgba(0,0,0,0.08)",
+      }}
+    >
       {/* Month header */}
-      <div className="flex items-center justify-between px-2 mb-5">
+      <div className="flex items-center justify-between px-5 py-4">
         <button
           onClick={handlePrevMonth}
           disabled={!canGoPrev}
           className={cn(
-            "w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-200",
+            "w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-200",
             "active:scale-90",
             canGoPrev
-              ? "bg-card border border-border/30 text-foreground hover:bg-secondary/50"
-              : "opacity-20 cursor-not-allowed"
+              ? "text-foreground hover:bg-secondary/60"
+              : "opacity-15 cursor-not-allowed"
           )}
         >
-          <ChevronLeft className="w-4 h-4" />
+          <ChevronLeft className="w-5 h-5" />
         </button>
 
-        <motion.h2
-          key={currentMonth.toISOString()}
-          initial={{ opacity: 0, y: direction > 0 ? 8 : -8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.25 }}
-          className="text-base font-bold text-foreground capitalize tracking-wide"
-        >
-          {format(currentMonth, "MMMM yyyy", { locale: ptBR })}
-        </motion.h2>
+        <AnimatePresence mode="wait">
+          <motion.h2
+            key={currentMonth.toISOString()}
+            initial={{ opacity: 0, y: direction > 0 ? 10 : -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: direction > 0 ? -10 : 10 }}
+            transition={{ duration: 0.2 }}
+            className="text-[15px] font-bold text-foreground capitalize tracking-wide"
+          >
+            {format(currentMonth, "MMMM yyyy", { locale: ptBR })}
+          </motion.h2>
+        </AnimatePresence>
 
         <button
           onClick={handleNextMonth}
           className={cn(
-            "w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-200",
-            "bg-card border border-border/30 text-foreground hover:bg-secondary/50",
+            "w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-200",
+            "text-foreground hover:bg-secondary/60",
             "active:scale-90"
           )}
         >
-          <ChevronRight className="w-4 h-4" />
+          <ChevronRight className="w-5 h-5" />
         </button>
       </div>
 
+      {/* Divider */}
+      <div className="mx-5 h-px bg-border/20" />
+
       {/* Weekday labels */}
-      <div className="grid grid-cols-7 mb-2 px-1">
+      <div className="grid grid-cols-7 px-4 pt-4 pb-2">
         {weekDays.map((day, i) => (
-          <div key={i} className="text-center text-[10px] font-semibold text-muted-foreground/40 uppercase tracking-widest">
+          <div key={i} className="text-center text-[9px] font-semibold text-muted-foreground/50 uppercase tracking-[0.15em]">
             {day}
           </div>
         ))}
@@ -113,11 +125,11 @@ export function PremiumCalendar({ selectedDate, onSelectDate, disabledDates = []
         <motion.div
           key={currentMonth.toISOString()}
           custom={direction}
-          initial={{ opacity: 0, x: direction > 0 ? 40 : -40 }}
+          initial={{ opacity: 0, x: direction > 0 ? 30 : -30 }}
           animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: direction < 0 ? 40 : -40 }}
-          transition={{ duration: 0.22, ease: "easeOut" }}
-          className="grid grid-cols-7 gap-y-1.5 gap-x-1 px-1"
+          exit={{ opacity: 0, x: direction < 0 ? 30 : -30 }}
+          transition={{ duration: 0.2, ease: "easeOut" }}
+          className="grid grid-cols-7 gap-y-1 px-4 pb-5"
         >
           {calendarDays.map((day, idx) => {
             const isCurrentMonth = isSameMonth(day, currentMonth);
@@ -126,44 +138,37 @@ export function PremiumCalendar({ selectedDate, onSelectDate, disabledDates = []
             const isCurrentDay = isToday(day);
 
             if (!isCurrentMonth) {
-              return (
-                <div key={day.toISOString()} className="aspect-square" />
-              );
+              return <div key={day.toISOString()} className="aspect-square" />;
             }
 
             return (
               <motion.button
                 key={day.toISOString()}
-                initial={{ opacity: 0, scale: 0.85 }}
+                initial={{ opacity: 0, scale: 0.88 }}
                 animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: idx * 0.006, duration: 0.18 }}
+                transition={{ delay: idx * 0.005, duration: 0.15 }}
                 onClick={() => !disabled && onSelectDate(day)}
                 disabled={disabled}
                 className={cn(
-                  "aspect-square rounded-2xl flex items-center justify-center relative transition-all duration-200",
+                  "aspect-square rounded-xl flex flex-col items-center justify-center relative mx-auto w-full transition-all duration-200",
                   "active:scale-[0.92]",
                   disabled && "cursor-not-allowed",
-                  // Selected state - primary color with glow
-                  isSelected && "bg-primary shadow-[0_4px_20px_rgba(var(--primary-rgb,220,38,38),0.35)] scale-[1.08]",
-                  // Today indicator
-                  !isSelected && isCurrentDay && !disabled && "ring-[1.5px] ring-primary/50",
-                  // Normal available
-                  !isSelected && !disabled && "hover:bg-secondary/60",
+                  isSelected && "bg-primary shadow-[0_2px_16px_hsl(var(--primary)/0.4)] scale-[1.06]",
+                  !isSelected && isCurrentDay && !disabled && "ring-[1.5px] ring-primary/40",
+                  !isSelected && !disabled && "hover:bg-secondary/50",
                 )}
               >
                 <span className={cn(
-                  "text-[14px] tabular-nums relative z-10",
+                  "text-[14px] tabular-nums leading-none",
                   isSelected && "font-extrabold text-primary-foreground",
-                  !isCurrentMonth && "text-transparent",
                   isCurrentMonth && disabled && !isSelected && "text-muted-foreground/15 font-normal",
                   isCurrentMonth && !disabled && !isSelected && "font-semibold text-foreground",
                 )}>
                   {format(day, "d")}
                 </span>
 
-                {/* Today dot */}
                 {isCurrentDay && !isSelected && !disabled && (
-                  <span className="absolute bottom-1.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-primary" />
+                  <span className="absolute bottom-[5px] left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-primary" />
                 )}
               </motion.button>
             );
