@@ -21,12 +21,24 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
 import { Plus, Sparkles, MoreVertical, Trash2, Pencil, AlertTriangle, Check, Crown } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { useBarbeiroLogado } from "@/hooks/useBarbeiroLogado";
+
+interface Servico {
+  id: string;
+  nome: string;
+}
 
 interface Plano {
   id: string;
@@ -37,11 +49,14 @@ interface Plano {
   prioridade_agendamento: number | null;
   beneficios_json: string[] | null;
   ativo: boolean;
+  servico_id: string;
+  servico_nome?: string;
 }
 
 export function AdminPlanos() {
   const { barbeiro } = useBarbeiroLogado();
   const [planos, setPlanos] = useState<Plano[]>([]);
+  const [servicos, setServicos] = useState<Servico[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingPlano, setEditingPlano] = useState<Plano | null>(null);
@@ -54,10 +69,12 @@ export function AdminPlanos() {
     limite_agendamentos_mes: 4,
     prioridade_agendamento: 0,
     beneficios_json: [""],
+    servico_id: "",
   });
 
   useEffect(() => {
     loadPlanos();
+    loadServicos();
 
     const channel = supabase
       .channel('admin-planos')
@@ -81,13 +98,29 @@ export function AdminPlanos() {
     return data?.tenant_id || null;
   };
 
+  const loadServicos = async () => {
+    try {
+      const tenantId = await getBarberTenantId();
+      let query = supabase.from("servicos").select("id, nome").eq("ativo", true).order("nome");
+      if (tenantId) {
+        query = query.eq("tenant_id", tenantId);
+      } else {
+        query = query.is("tenant_id", null);
+      }
+      const { data } = await query;
+      setServicos(data || []);
+    } catch (err) {
+      console.error("Error loading servicos:", err);
+    }
+  };
+
   const loadPlanos = async () => {
     try {
       const tenantId = await getBarberTenantId();
 
       let query = supabase
         .from("planos")
-        .select("*")
+        .select("*, servico:servicos(nome)")
         .order("prioridade_agendamento", { ascending: false });
 
       if (tenantId) {
@@ -98,8 +131,9 @@ export function AdminPlanos() {
 
       if (error) throw error;
       
-      const normalizedData = (data || []).map(plano => ({
+      const normalizedData = (data || []).map((plano: any) => ({
         ...plano,
+        servico_nome: plano.servico?.nome || null,
         beneficios_json: Array.isArray(plano.beneficios_json) 
           ? plano.beneficios_json 
           : typeof plano.beneficios_json === 'string'
@@ -124,6 +158,7 @@ export function AdminPlanos() {
       limite_agendamentos_mes: 4,
       prioridade_agendamento: 0,
       beneficios_json: [""],
+      servico_id: "",
     });
     setEditingPlano(null);
   };
@@ -140,6 +175,7 @@ export function AdminPlanos() {
         beneficios_json: plano.beneficios_json && plano.beneficios_json.length > 0 
           ? plano.beneficios_json 
           : [""],
+        servico_id: plano.servico_id,
       });
     } else {
       resetForm();
@@ -155,6 +191,10 @@ export function AdminPlanos() {
   const handleSubmit = async () => {
     if (!newPlano.nome || newPlano.preco_mensal <= 0) {
       toast.error("Preencha nome e preço do plano");
+      return;
+    }
+    if (!newPlano.servico_id) {
+      toast.error("Selecione o serviço vinculado ao plano");
       return;
     }
 
@@ -317,6 +357,26 @@ export function AdminPlanos() {
                 />
               </div>
 
+              <div className="space-y-2">
+                <Label className="text-sm font-medium text-muted-foreground">Serviço vinculado *</Label>
+                <Select
+                  value={newPlano.servico_id}
+                  onValueChange={(value) => setNewPlano({ ...newPlano, servico_id: value })}
+                >
+                  <SelectTrigger className="h-11 bg-white/[0.03] border-white/[0.08] rounded-xl focus:border-primary focus:ring-1 focus:ring-primary/50 transition-all">
+                    <SelectValue placeholder="Selecione o serviço" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {servicos.map((s) => (
+                      <SelectItem key={s.id} value={s.id}>{s.nome}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-[11px] text-muted-foreground/60">
+                  O serviço que o assinante terá direito ao agendar pelo plano
+                </p>
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="preco" className="text-sm font-medium text-muted-foreground">Preço Mensal (R$) *</Label>
@@ -453,6 +513,9 @@ export function AdminPlanos() {
                 {/* Header */}
                 <div className="pr-10">
                   <h3 className="text-xl font-bold text-foreground mb-1">{plano.nome}</h3>
+                  {plano.servico_nome && (
+                    <p className="text-xs text-primary font-medium mb-1">✂️ {plano.servico_nome}</p>
+                  )}
                   {plano.descricao && (
                     <p className="text-sm text-muted-foreground line-clamp-2">{plano.descricao}</p>
                   )}
