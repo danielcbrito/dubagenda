@@ -638,7 +638,7 @@ const Cliente = () => {
                 <div className="rounded-xl h-[140px] bg-muted/10 animate-pulse" />
               ) : activeSubscription ? (
               <>
-                {/* Banner para assinantes cash que ainda não confirmaram pagamento */}
+                {/* Banner informativo para assinantes cash que ainda não confirmaram pagamento */}
                 {activeSubscription.payment_method === 'cash' && activeSubscription.cash_payment_confirmed === false && (
                   <motion.div
                     initial={{ opacity: 0, y: 8 }}
@@ -654,16 +654,11 @@ const Cliente = () => {
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-[13px] font-bold text-foreground">
-                          Primeiro corte liberado!
+                          Plano ativo — pagamento pendente
                         </p>
                         <p className="text-[11px] text-muted-foreground mt-1 leading-relaxed">
-                          Agende e vá à barbearia — pague o valor do plano no local. Após o barbeiro confirmar, seus próximos cortes serão liberados automaticamente.
+                          Seus cortes já estão liberados! Pague o valor do plano na barbearia para que o barbeiro confirme o recebimento.
                         </p>
-                        {planUsageCount > 0 && (
-                          <p className="text-[10px] text-amber-600 dark:text-amber-400 font-semibold mt-2">
-                            ⏳ Aguardando confirmação do barbeiro para liberar os demais cortes
-                          </p>
-                        )}
                       </div>
                     </div>
                   </motion.div>
@@ -671,7 +666,7 @@ const Cliente = () => {
                 <PlanTrackerCard
                   planName={(activeSubscription as any).plano?.nome || "Meu Plano"}
                   usedAppointments={planUsageCount}
-                  totalAppointments={activeSubscription.cash_payment_confirmed === false ? 1 : 4}
+                  totalAppointments={(activeSubscription as any).plano?.limite_agendamentos_mes || 4}
                   nextBillingDate={activeSubscription.next_billing_date || ""}
                   paymentMethod={activeSubscription.payment_method}
                   onViewDetails={() => setPlansSheetOpen(true)}

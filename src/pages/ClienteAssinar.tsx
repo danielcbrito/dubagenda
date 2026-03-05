@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { sendAssinaturaCashCriadaEvent } from "@/lib/webhookService";
 import { Button } from "@/components/ui/button";
 import { BackArrow } from "@/components/ui/back-arrow";
 import { 
@@ -330,6 +331,13 @@ const ClienteAssinar = () => {
           status: 'active' as any, payment_method: 'cash' as any, cash_payment_confirmed: false, next_billing_date: nextBillingStr,
         });
         if (insertError) throw insertError;
+        // Enviar notificação de assinatura cash (não bloqueia o fluxo)
+        sendAssinaturaCashCriadaEvent({
+          cliente_id: session.user.id,
+          plano_nome: selectedPlan.nome,
+          plano_preco: selectedPlan.preco_mensal,
+          barbeiro_id: selectedBarber.id,
+        }).catch(() => {});
         toast.success("Plano ativado! Agende seu primeiro corte.");
         navigate(`/cliente/agendar?barber=${selectedBarber.id}`);
       } else if (selectedPaymentMethod === "card") {

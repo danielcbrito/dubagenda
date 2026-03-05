@@ -856,6 +856,49 @@ export async function sendStatusAlteradoEvent(data: {
 }
 
 // ============================================================
+// EVENTOS DE ASSINATURA
+// ============================================================
+
+/**
+ * Evento: Cliente assinou um plano (cash)
+ */
+export async function sendAssinaturaCashCriadaEvent(data: {
+  cliente_id: string;
+  plano_nome: string;
+  plano_preco: number;
+  barbeiro_id: string;
+}): Promise<void> {
+  const cliente = await getClienteCompleto(data.cliente_id);
+  let barbeiro = { id: '', nome: '' };
+  if (data.barbeiro_id) {
+    barbeiro = await getBarbeiroCompleto(data.barbeiro_id);
+  }
+
+  await sendWebhookEvent({
+    evento: 'assinatura_cash_criada',
+    descricao: `Cliente assinou o plano "${data.plano_nome}" com pagamento em dinheiro`,
+    
+    cliente_id: data.cliente_id,
+    cliente_nome: cliente.nome,
+    cliente_telefone: cliente.telefone,
+    cliente_telefone_whatsapp: cliente.telefone_whatsapp,
+    cliente_email: cliente.email,
+    
+    barbeiro_id: barbeiro.id || data.barbeiro_id,
+    barbeiro_nome: barbeiro.nome,
+    
+    valor_total: data.plano_preco,
+    metodo_pagamento: 'cash',
+    
+    detalhes: {
+      plano_nome: data.plano_nome,
+      plano_preco: data.plano_preco,
+      status: 'aguardando_pagamento_presencial',
+    },
+  });
+}
+
+// ============================================================
 // EVENTOS DE HORÁRIO
 // ============================================================
 
