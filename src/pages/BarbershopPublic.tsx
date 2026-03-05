@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import logoDub from "@/assets/logo-dub.png";
 import { BarberProfileSheet } from "@/components/discover/BarberProfileSheet";
 import { PortfolioGallery } from "@/components/portfolio/PortfolioGallery";
+import googleMapsIcon from "@/assets/google-maps-icon.png";
 
 interface Barber {
   id: string;
@@ -603,8 +604,8 @@ const BarbershopPublic = () => {
                 "active:scale-[0.985] transition-all"
               )}
             >
-              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-                <MapPin className="w-[18px] h-[18px] text-primary" />
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 relative">
+                <img src={googleMapsIcon} alt="Google Maps" className="w-7 h-7 object-contain drop-shadow-[0_0_6px_rgba(66,133,244,0.3)]" />
               </div>
               <div className="flex-1 text-left min-w-0">
                 <p className="text-[9px] uppercase tracking-[0.1em] text-muted-foreground font-semibold mb-0.5">
