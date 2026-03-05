@@ -76,9 +76,9 @@ export function AppointmentCardPremium({
       case "completed":
         return { 
           label: "Concluído", 
-          color: "hsl(var(--gold))",
-          bgColor: "hsl(var(--gold) / 0.08)",
-          borderColor: "hsl(var(--gold) / 0.15)",
+          color: "#16a34a",
+          bgColor: "rgba(22, 163, 74, 0.12)",
+          borderColor: "rgba(22, 163, 74, 0.25)",
           icon: Check,
         };
       case "cancelled_by_user":
