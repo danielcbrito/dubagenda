@@ -9,7 +9,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2, X } from "lucide-react";
 
 interface CancelAppointmentModalProps {
   open: boolean;
@@ -158,8 +158,8 @@ export function CancelAppointmentModal({
       <DialogContent className="sm:max-w-[360px] rounded-2xl border-border/60 bg-background p-0 overflow-hidden shadow-2xl">
         {/* Header visual */}
         <div className="flex flex-col items-center pt-7 pb-4 px-6">
-          <div className="w-14 h-14 rounded-full bg-destructive/10 flex items-center justify-center mb-4">
-            <Loader2 className="w-6 h-6 text-destructive" style={{ animation: 'none' }} />
+          <div className="w-[52px] h-[52px] rounded-full border-2 border-destructive/30 bg-destructive/5 flex items-center justify-center mb-4">
+            <X className="w-6 h-6 text-destructive" strokeWidth={2.5} />
           </div>
           <DialogHeader className="text-center space-y-1.5">
             <DialogTitle className="text-[17px] font-bold text-foreground tracking-tight">
