@@ -149,18 +149,18 @@ export function PremiumCalendar({ selectedDate, onSelectDate, disabledDates = []
                 transition={{ delay: idx * 0.005, duration: 0.15 }}
                 onClick={() => !disabled && onSelectDate(day)}
                 disabled={disabled}
+                whileTap={!disabled ? { scale: 0.88 } : undefined}
                 className={cn(
                   "aspect-square rounded-xl flex flex-col items-center justify-center relative mx-auto w-full transition-all duration-200",
-                  "active:scale-[0.92]",
                   disabled && "cursor-not-allowed",
-                  isSelected && "ring-[2.5px] ring-primary bg-primary/10 scale-[1.06]",
+                  isSelected && "ring-[2.5px] ring-primary scale-[1.08]",
                   !isSelected && !disabled && "hover:bg-secondary/50",
                 )}
               >
                 <span className={cn(
-                  "text-[14px] tabular-nums leading-none",
+                  "text-[15px] tabular-nums leading-none",
                   isSelected && "font-extrabold text-primary",
-                  isCurrentMonth && isCurrentDay && !isSelected && !disabled && "font-bold text-primary",
+                  isCurrentMonth && isCurrentDay && !isSelected && !disabled && "font-black text-[hsl(0,85%,50%)] text-[16px]",
                   isCurrentMonth && disabled && !isSelected && "text-muted-foreground/15 font-normal",
                   isCurrentMonth && !disabled && !isSelected && !isCurrentDay && "font-semibold text-foreground",
                 )}>
