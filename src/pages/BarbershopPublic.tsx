@@ -604,8 +604,8 @@ const BarbershopPublic = () => {
                 "active:scale-[0.985] transition-all duration-200"
               )}
             >
-              <div className="w-9 h-9 rounded-lg bg-blue-500/8 dark:bg-blue-500/12 flex items-center justify-center shrink-0">
-                <img src={googleMapsIcon} alt="Maps" className="w-6 h-6 object-contain drop-shadow-[0_1px_4px_rgba(66,133,244,0.25)]" />
+              <div className="w-10 h-10 rounded-lg bg-blue-500/8 dark:bg-blue-500/12 flex items-center justify-center shrink-0">
+                <img src={googleMapsIcon} alt="Maps" className="w-7 h-7 object-contain drop-shadow-[0_1px_4px_rgba(66,133,244,0.25)]" />
               </div>
               <p className="flex-1 text-[12px] text-foreground text-left truncate">
                 {fullAddress || location || "Ver localização"}
