@@ -394,15 +394,31 @@ const ClienteAssinar = () => {
   return (
     <div className="fixed inset-0 flex flex-col bg-background">
       
-      {/* Header — only back arrow */}
+      {/* Header — back arrow + subtle page dots on step 2 */}
       <div className="flex-shrink-0 px-4 pt-[max(env(safe-area-inset-top),0.75rem)] pb-2">
-        <div className="max-w-2xl mx-auto">
+        <div className="max-w-2xl mx-auto flex items-center justify-between">
           <button 
             onClick={handleBack}
             className="w-9 h-9 flex items-center justify-center rounded-xl hover:bg-muted transition-colors active:scale-95"
           >
             <BackArrow size={22} className="text-foreground" />
           </button>
+
+          {step === 2 && plans.length > 1 && (
+            <div className="flex items-center gap-1">
+              {plans.map((_, i) => (
+                <div
+                  key={i}
+                  className={cn(
+                    "rounded-full transition-all duration-300",
+                    i === currentPlanIndex
+                      ? "w-1.5 h-1.5 bg-foreground"
+                      : "w-1 h-1 bg-muted-foreground/20"
+                  )}
+                />
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
