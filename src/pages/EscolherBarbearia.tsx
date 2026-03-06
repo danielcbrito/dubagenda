@@ -412,8 +412,6 @@ const EscolherBarbearia = () => {
 
 
   const isTenantCurrent = (tenantId: string) => {
-    const t = allTenants.find(x => x.id === tenantId);
-    if (t?.isDub) return !currentPreferred || currentPreferred === t.id;
     return currentPreferred === tenantId;
   };
 
