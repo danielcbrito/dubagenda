@@ -1851,8 +1851,11 @@ const ClienteAgendar = () => {
                   {isPlanFlow && activeSubscription ? (
                     <>
                       <span className="text-primary font-semibold">{activeSubscription.plano_nome}</span>
-                      {" • "}
-                      {activeSubscription.servico?.nome || getFormattedServiceNames()}
+                      {(() => {
+                        const serviceName = activeSubscription.servico?.nome || getFormattedServiceNames();
+                        return serviceName && serviceName.toLowerCase() !== activeSubscription.plano_nome?.toLowerCase()
+                          ? ` • ${serviceName}` : "";
+                      })()}
                       {selectedBarber ? ` • ${selectedBarber.apelido}` : ""}
                     </>
                   ) : selectedBarber ? (
