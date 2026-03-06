@@ -162,7 +162,7 @@ const ClienteAgendar = () => {
 
   // Carregar barbeiros (filtrado pelo tenant da barbearia preferida)
   const loadBarbers = async (tenantId?: string | null) => {
-    // Busca filtrada pelo tenant + todos em paralelo
+    // Busca filtrada + todos em paralelo
     let query = supabase
       .from("barbeiros")
       .select("id, apelido, foto_url, tenant_id")
@@ -172,10 +172,7 @@ const ClienteAgendar = () => {
     if (tenantId) {
       query = query.eq("tenant_id", tenantId);
     } else {
-      // Sem barbearia preferida → redirecionar para escolher barbearia
-      toast.error("Selecione uma barbearia antes de agendar.");
-      navigate("/cliente/barbearia");
-      return [];
+      query = query.is("tenant_id", null);
     }
 
     const allQuery = supabase
