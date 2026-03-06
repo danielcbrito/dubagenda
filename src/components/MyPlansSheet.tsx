@@ -151,8 +151,7 @@ export function MyPlansSheet({ open, onOpenChange, userId, onSubscriptionChanged
   const isPendingCash = subscription?.status === "pending_cash";
 
   const handleSubscribeClick = () => {
-    onOpenChange(false);
-    setTimeout(() => navigate("/cliente/assinar"), 300);
+    navigate("/cliente/assinar");
   };
 
   const handleCancelSubscription = async () => {
