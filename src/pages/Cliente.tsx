@@ -175,6 +175,7 @@ const Cliente = () => {
     } catch { /* ignore */ }
   }, [dataLoaded, points, redemptions, activeSubscription, pendingSubscription, expiredSubscription, planUsageCount, preferredShop, appointments, profile]);
 
+  useEffect(() => {
     checkAuth();
   }, []);
 
