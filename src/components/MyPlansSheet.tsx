@@ -151,8 +151,7 @@ export function MyPlansSheet({ open, onOpenChange, userId, onSubscriptionChanged
   const isPendingCash = subscription?.status === "pending_cash";
 
   const handleSubscribeClick = () => {
-    onOpenChange(false);
-    setTimeout(() => navigate("/cliente/assinar"), 300);
+    navigate("/cliente/assinar");
   };
 
   const handleCancelSubscription = async () => {
@@ -388,14 +387,9 @@ export function MyPlansSheet({ open, onOpenChange, userId, onSubscriptionChanged
                             </p>
                             <Button
                               onClick={() => {
-                                onOpenChange(false);
-                                setTimeout(
-                                  () =>
-                                    navigate("/cliente/assinar", {
-                                      state: { resumePlanId: subscription.plano?.id || null },
-                                    }),
-                                  300
-                                );
+                                navigate("/cliente/assinar", {
+                                  state: { resumePlanId: subscription.plano?.id || null },
+                                });
                               }}
                               className="w-full h-10 text-sm font-semibold"
                             >
@@ -427,8 +421,7 @@ export function MyPlansSheet({ open, onOpenChange, userId, onSubscriptionChanged
                     {!isSuspended && (
                       <button
                         onClick={() => {
-                          onOpenChange(false);
-                          setTimeout(() => navigate("/cliente/pagamento"), 300);
+                          navigate("/cliente/pagamento");
                         }}
                         className="w-full rounded-xl border border-border/40 bg-card p-3.5 flex items-center justify-between hover:bg-muted/50 transition-colors active:scale-[0.99]"
                       >
