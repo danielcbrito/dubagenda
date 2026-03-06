@@ -171,9 +171,8 @@ const ClienteAgendar = () => {
 
     if (tenantId) {
       query = query.eq("tenant_id", tenantId);
-    } else {
-      query = query.is("tenant_id", null);
     }
+    // Sem tenant preferido → mostrar todos os barbeiros ativos
 
     const allQuery = supabase
       .from("barbeiros")
