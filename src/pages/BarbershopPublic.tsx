@@ -378,9 +378,10 @@ const BarbershopPublic = () => {
     setSaving(true);
     try {
       const isDub = normalizeText(tenant.nome) === "barbeariadub";
-      const updateData = isDub
-        ? { barbearia_preferida_id: null as string | null, signup_origin: "dub_exclusive" }
-        : { barbearia_preferida_id: tenant.id, signup_origin: "discover" };
+      const updateData = {
+        barbearia_preferida_id: tenant.id,
+        signup_origin: isDub ? "dub_exclusive" : "discover",
+      };
 
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
