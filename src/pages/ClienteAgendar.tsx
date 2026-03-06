@@ -398,6 +398,7 @@ const ClienteAgendar = () => {
   }, []);
 
   const loadServices = async (tenantId?: string | null) => {
+    // Buscar serviços e IDs vinculados a planos em paralelo
     let query = supabase
       .from("servicos")
       .select("*")
@@ -410,8 +411,15 @@ const ClienteAgendar = () => {
       query = query.is("tenant_id", null);
     }
 
-    const { data } = await query;
-    setServices(data || []);
+    const [{ data: allServices }, { data: planLinks }] = await Promise.all([
+      query,
+      supabase.from("planos").select("servico_id").not("servico_id", "is", null),
+    ]);
+
+    // Excluir serviços que são dedicados a planos
+    const planServiceIds = new Set((planLinks || []).map((p: any) => p.servico_id));
+    const filtered = (allServices || []).filter((s: any) => !planServiceIds.has(s.id));
+    setServices(filtered);
   };
 
   const loadUserCreditsOptimized = async (uid: string | null) => {
@@ -689,9 +697,14 @@ const ClienteAgendar = () => {
           barbersQuery = barbersQuery.is("tenant_id", null);
         }
 
-        const [{ data: nextServices }, { data: nextBarbers }] = await Promise.all([servicesQuery, barbersQuery]);
+        const [{ data: nextServices }, { data: nextBarbers }, { data: planLinks }] = await Promise.all([
+          servicesQuery,
+          barbersQuery,
+          supabase.from("planos").select("servico_id").not("servico_id", "is", null),
+        ]);
 
-        const safeServices = nextServices || [];
+        const planServiceIds = new Set((planLinks || []).map((p: any) => p.servico_id));
+        const safeServices = (nextServices || []).filter((s: any) => !planServiceIds.has(s.id));
         const safeBarbers = nextBarbers || [];
 
         setServices(safeServices);
