@@ -513,7 +513,6 @@ const ClienteAssinar = () => {
                   >
                     {plans.map((plan, planIdx) => {
                       const benefits = Array.isArray(plan.beneficios_json) ? plan.beneficios_json : [];
-                      const isPopular = plan.nome.toLowerCase().includes('barba') || planIdx === Math.floor(plans.length / 2);
                       const dailyCost = (plan.preco_mensal / 30).toFixed(2).replace('.', ',');
 
                       return (
@@ -521,102 +520,96 @@ const ClienteAssinar = () => {
                           key={plan.id}
                           className="w-full flex-shrink-0 snap-center overflow-y-auto overscroll-y-contain"
                         >
-                          <div className="px-6 pt-3 pb-8 max-w-md mx-auto flex flex-col justify-between min-h-full">
+                          <div className="px-5 pt-2 pb-8 max-w-md mx-auto flex flex-col justify-between min-h-full">
                             <div>
-                              {/* Badge + Plan name */}
-                              <div className="mb-1">
-                                {isPopular && (
-                                  <motion.span
-                                    initial={{ opacity: 0, scale: 0.9 }}
-                                    animate={{ opacity: 1, scale: 1 }}
-                                    className="inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-[0.15em] text-primary mb-3"
-                                  >
-                                    <Sparkles className="w-3 h-3" />
-                                    Escolha favorita
-                                  </motion.span>
-                                )}
-                              </div>
-
+                              {/* Plan name */}
                               <motion.h2
                                 key={`name-${plan.id}`}
                                 initial={{ opacity: 0, y: 8 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ duration: 0.35, ease: "easeOut" }}
-                                className="text-[22px] font-bold text-foreground tracking-tight leading-tight"
+                                className="text-xl font-bold text-foreground tracking-tight leading-tight"
                               >
                                 {plan.nome}
                               </motion.h2>
                               
-                              <motion.p
-                                key={`desc-${plan.id}`}
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                transition={{ delay: 0.08, duration: 0.3 }}
-                                className="text-[13px] text-muted-foreground/65 leading-relaxed mt-1.5"
-                              >
-                                {plan.descricao}
-                              </motion.p>
+                              {plan.descricao && (
+                                <motion.p
+                                  key={`desc-${plan.id}`}
+                                  initial={{ opacity: 0 }}
+                                  animate={{ opacity: 1 }}
+                                  transition={{ delay: 0.06, duration: 0.3 }}
+                                  className="text-[13px] text-muted-foreground leading-relaxed mt-1"
+                                >
+                                  {plan.descricao}
+                                </motion.p>
+                              )}
 
-                              {/* PRICE — hero element */}
+                              {/* Price block */}
                               <motion.div
                                 key={`price-${plan.id}`}
-                                initial={{ opacity: 0, y: 12 }}
+                                initial={{ opacity: 0, y: 10 }}
                                 animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: 0.1, duration: 0.4, ease: "easeOut" }}
-                                className="mt-6 mb-2"
+                                transition={{ delay: 0.1, duration: 0.35 }}
+                                className="mt-6 mb-1"
                               >
                                 <div className="flex items-baseline">
-                                  <span className="text-[15px] text-muted-foreground/50 font-medium mr-1">R$</span>
-                                  <span className="text-[52px] font-extrabold text-foreground tabular-nums tracking-tighter leading-none">
+                                  <span className="text-sm text-muted-foreground font-medium mr-1">R$</span>
+                                  <span className="text-[44px] font-extrabold text-foreground tabular-nums tracking-tighter leading-none">
                                     {Math.floor(plan.preco_mensal)}
                                   </span>
-                                  <span className="text-[28px] font-bold text-foreground tabular-nums leading-none">
+                                  <span className="text-[22px] font-bold text-foreground tabular-nums leading-none">
                                     ,{(plan.preco_mensal % 1).toFixed(2).slice(2)}
                                   </span>
-                                  <span className="text-[12px] text-muted-foreground/40 font-medium ml-1.5 self-end mb-1">/mês</span>
+                                  <span className="text-xs text-muted-foreground/50 font-medium ml-1.5 self-end mb-0.5">/mês</span>
                                 </div>
-                                <p className="text-[11px] text-muted-foreground/40 mt-1.5">
-                                  Apenas R$ {dailyCost} por dia • Cancele quando quiser
+                                <p className="text-[11px] text-muted-foreground/40 mt-1">
+                                  R$ {dailyCost}/dia · Cancele quando quiser
                                 </p>
                               </motion.div>
 
-                              {/* Benefits */}
+                              {/* Divider */}
+                              <div className="h-px bg-border/20 my-5" />
+
+                              {/* What's included */}
                               <motion.div
                                 key={`benefits-${plan.id}`}
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
-                                transition={{ delay: 0.18, duration: 0.35 }}
-                                className="mt-6 space-y-3"
+                                transition={{ delay: 0.16, duration: 0.3 }}
                               >
-                                <div className="flex items-start gap-3 py-0.5">
-                                  <div className="w-[18px] h-[18px] rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5">
-                                    <Check className="w-2.5 h-2.5 text-primary" strokeWidth={3} />
-                                  </div>
-                                  <span className="text-[13px] text-foreground/90 leading-snug">
-                                    <span className="font-semibold">{plan.limite_agendamentos_mes} agendamento{plan.limite_agendamentos_mes > 1 ? 's' : ''}</span> incluídos por mês
-                                  </span>
-                                </div>
+                                <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground/40 mb-3">
+                                  O que está incluso
+                                </p>
 
-                                {benefits.map((benefit: string, i: number) => (
-                                  <motion.div
-                                    key={i}
-                                    initial={{ opacity: 0, x: -6 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    transition={{ delay: 0.22 + i * 0.04, duration: 0.25 }}
-                                    className="flex items-start gap-3 py-0.5"
-                                  >
-                                    <div className="w-[18px] h-[18px] rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5">
-                                      <Check className="w-2.5 h-2.5 text-primary" strokeWidth={3} />
-                                    </div>
-                                    <span className="text-[13px] text-foreground/70 leading-snug">{benefit}</span>
-                                  </motion.div>
-                                ))}
+                                <div className="space-y-3">
+                                  {/* Agendamentos */}
+                                  <div className="flex items-start gap-3">
+                                    <CheckCircle2 className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" strokeWidth={2} />
+                                    <span className="text-[13px] text-foreground leading-snug">
+                                      <span className="font-semibold">{plan.limite_agendamentos_mes}</span> agendamento{plan.limite_agendamentos_mes > 1 ? 's' : ''} por mês
+                                    </span>
+                                  </div>
+
+                                  {benefits.map((benefit: string, i: number) => (
+                                    <motion.div
+                                      key={i}
+                                      initial={{ opacity: 0, x: -4 }}
+                                      animate={{ opacity: 1, x: 0 }}
+                                      transition={{ delay: 0.2 + i * 0.04 }}
+                                      className="flex items-start gap-3"
+                                    >
+                                      <CheckCircle2 className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" strokeWidth={2} />
+                                      <span className="text-[13px] text-muted-foreground leading-snug">{benefit}</span>
+                                    </motion.div>
+                                  ))}
+                                </div>
                               </motion.div>
                             </div>
 
-                            {/* Shop info */}
+                            {/* Shop indicator */}
                             <div className="mt-8 flex items-center gap-2.5 py-2.5 border-t border-border/15">
-                              <div className="w-6 h-6 rounded-md bg-muted/25 flex items-center justify-center overflow-hidden flex-shrink-0">
+                              <div className="w-6 h-6 rounded-md bg-muted/30 flex items-center justify-center overflow-hidden flex-shrink-0">
                                 {selectedTenantId === "dub" ? (
                                   <img src={logoDub} alt="DUB" className="w-3.5 h-3.5 object-contain" />
                                 ) : (
