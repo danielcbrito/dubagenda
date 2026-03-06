@@ -421,8 +421,7 @@ export function MyPlansSheet({ open, onOpenChange, userId, onSubscriptionChanged
                     {!isSuspended && (
                       <button
                         onClick={() => {
-                          onOpenChange(false);
-                          setTimeout(() => navigate("/cliente/pagamento"), 300);
+                          navigate("/cliente/pagamento");
                         }}
                         className="w-full rounded-xl border border-border/40 bg-card p-3.5 flex items-center justify-between hover:bg-muted/50 transition-colors active:scale-[0.99]"
                       >
