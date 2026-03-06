@@ -162,7 +162,19 @@ const Cliente = () => {
     }
   }, [eligibleReviews, dataLoaded]);
 
+  // Persist home data to sessionStorage when loaded, so remount shows content instantly
   useEffect(() => {
+    if (!dataLoaded) return;
+    try {
+      sessionStorage.setItem("cliente_home_cache", JSON.stringify({
+        profile, appointments, pendingBookings, points,
+        completedAppointments, availableCredits, payments,
+        activeSubscription, expiredSubscription, pendingSubscription,
+        planUsageCount, redemptions, preferredShop, shopBarbers, pontosNecessarios,
+      }));
+    } catch { /* ignore */ }
+  }, [dataLoaded, points, redemptions, activeSubscription, pendingSubscription, expiredSubscription, planUsageCount, preferredShop, appointments, profile]);
+
     checkAuth();
   }, []);
 
