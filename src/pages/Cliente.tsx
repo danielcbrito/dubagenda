@@ -493,26 +493,6 @@ const Cliente = () => {
     setPendingBookings(pendingBookingsData || []);
     setDataLoaded(true);
 
-    // Persist essential data to sessionStorage so remounts show content instantly
-    try {
-      sessionStorage.setItem("cliente_home_cache", JSON.stringify({
-        profile: profileResult.data,
-        appointments: appointmentsResult.data || [],
-        pendingBookings: pendingBookingsData || [],
-        points: pontosResult.data?.pontos || 0,
-        completedAppointments: completedCountResult.count || 0,
-        availableCredits: creditsResult.data || 0,
-        payments: paymentsResult.data || [],
-        activeSubscription: activeSub,
-        expiredSubscription: expiredSubscription,
-        pendingSubscription: pendingSub || null,
-        planUsageCount: activeSub ? planUsageCount : 0,
-        redemptions: availableRedemptions,
-        preferredShop: preferredShop,
-        shopBarbers: shopBarbers,
-        pontosNecessarios,
-      }));
-    } catch { /* quota exceeded — ignore */ }
   };
 
   const handleLogout = async () => {
