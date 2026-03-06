@@ -67,7 +67,7 @@ const Cliente = () => {
   const [pendingBookings, setPendingBookings] = useState<any[]>([]);
   const [points, setPoints] = useState(0);
   const [redemptions, setRedemptions] = useState(0);
-  const [pontosNecessarios, setPontosNecessarios] = useState(5);
+  const [pontosNecessarios, setPontosNecessarios] = useState(8);
   
   const [pointsModalOpen, setPointsModalOpen] = useState(false);
   const [completedAppointments, setCompletedAppointments] = useState(0);

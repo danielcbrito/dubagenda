@@ -2434,7 +2434,7 @@ export type Database = {
           nome: string
           preco_mensal: number
           prioridade_agendamento: number | null
-          servico_id: string
+          servico_id: string | null
           tenant_id: string | null
           updated_at: string | null
         }
@@ -2448,7 +2448,7 @@ export type Database = {
           nome: string
           preco_mensal: number
           prioridade_agendamento?: number | null
-          servico_id: string
+          servico_id?: string | null
           tenant_id?: string | null
           updated_at?: string | null
         }
@@ -2462,7 +2462,7 @@ export type Database = {
           nome?: string
           preco_mensal?: number
           prioridade_agendamento?: number | null
-          servico_id?: string
+          servico_id?: string | null
           tenant_id?: string | null
           updated_at?: string | null
         }
