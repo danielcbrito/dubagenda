@@ -387,9 +387,10 @@ const EscolherBarbearia = () => {
     }
     setSaving(tenantId);
     try {
-      const updateData = tenant?.isDub
-        ? { barbearia_preferida_id: null as string | null, signup_origin: "dub_exclusive" }
-        : { barbearia_preferida_id: tenantId, signup_origin: "discover" };
+      const updateData = {
+        barbearia_preferida_id: tenantId,
+        signup_origin: tenant?.isDub ? "dub_exclusive" : "discover",
+      };
 
       const { error } = await supabase
         .from("profiles")
@@ -411,8 +412,6 @@ const EscolherBarbearia = () => {
 
 
   const isTenantCurrent = (tenantId: string) => {
-    const t = allTenants.find(x => x.id === tenantId);
-    if (t?.isDub) return !currentPreferred || currentPreferred === t.id;
     return currentPreferred === tenantId;
   };
 
