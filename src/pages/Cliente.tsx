@@ -59,33 +59,44 @@ interface Appointment {
   }>;
 }
 
+// Helper to read cached home data from sessionStorage
+const getHomeCache = () => {
+  try {
+    const raw = sessionStorage.getItem("cliente_home_cache");
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
+};
+
 const Cliente = () => {
   const navigate = useNavigate();
+  const cachedHome = useMemo(() => getHomeCache(), []);
+
   const [user, setUser] = useState<any>(null);
-  const [profile, setProfile] = useState<any>(null);
-  const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [pendingBookings, setPendingBookings] = useState<any[]>([]);
-  const [points, setPoints] = useState(0);
-  const [redemptions, setRedemptions] = useState(0);
-  const [pontosNecessarios, setPontosNecessarios] = useState(8);
+  const [profile, setProfile] = useState<any>(cachedHome?.profile || null);
+  const [appointments, setAppointments] = useState<Appointment[]>(cachedHome?.appointments || []);
+  const [pendingBookings, setPendingBookings] = useState<any[]>(cachedHome?.pendingBookings || []);
+  const [points, setPoints] = useState(cachedHome?.points ?? 0);
+  const [redemptions, setRedemptions] = useState(cachedHome?.redemptions ?? 0);
+  const [pontosNecessarios, setPontosNecessarios] = useState(cachedHome?.pontosNecessarios ?? 8);
   
   const [pointsModalOpen, setPointsModalOpen] = useState(false);
-  const [completedAppointments, setCompletedAppointments] = useState(0);
+  const [completedAppointments, setCompletedAppointments] = useState(cachedHome?.completedAppointments ?? 0);
   const [plansSheetOpen, setPlansSheetOpen] = useState(false);
   const [subscribeSheetOpen, setSubscribeSheetOpen] = useState(false);
   const [profileSheetOpen, setProfileSheetOpen] = useState(false);
   const [walletSheetOpen, setWalletSheetOpen] = useState(false);
   const [historySheetOpen, setHistorySheetOpen] = useState(false);
-  const [availableCredits, setAvailableCredits] = useState(0);
-  const [payments, setPayments] = useState<any[]>([]);
+  const [availableCredits, setAvailableCredits] = useState(cachedHome?.availableCredits ?? 0);
+  const [payments, setPayments] = useState<any[]>(cachedHome?.payments || []);
   const [recentCancellations, setRecentCancellations] = useState<Appointment[]>([]);
-  const [activeSubscription, setActiveSubscription] = useState<any>(null);
-  const [expiredSubscription, setExpiredSubscription] = useState<any>(null);
-  const [pendingSubscription, setPendingSubscription] = useState<any>(null);
-  const [planUsageCount, setPlanUsageCount] = useState(0);
-  const [dataLoaded, setDataLoaded] = useState(false);
-  const [preferredShop, setPreferredShop] = useState<{ id: string; nome: string } | null>(null);
-  const [shopBarbers, setShopBarbers] = useState<Array<{ id: string; apelido: string; foto_url: string | null; avgRating: number | null; totalReviews: number }>>([]);
+  const [activeSubscription, setActiveSubscription] = useState<any>(cachedHome?.activeSubscription || null);
+  const [expiredSubscription, setExpiredSubscription] = useState<any>(cachedHome?.expiredSubscription || null);
+  const [pendingSubscription, setPendingSubscription] = useState<any>(cachedHome?.pendingSubscription || null);
+  const [planUsageCount, setPlanUsageCount] = useState(cachedHome?.planUsageCount ?? 0);
+  // If we have cached data, mark as loaded immediately to avoid skeleton flash
+  const [dataLoaded, setDataLoaded] = useState(!!cachedHome);
+  const [preferredShop, setPreferredShop] = useState<{ id: string; nome: string } | null>(cachedHome?.preferredShop || null);
+  const [shopBarbers, setShopBarbers] = useState<Array<{ id: string; apelido: string; foto_url: string | null; avgRating: number | null; totalReviews: number }>>(cachedHome?.shopBarbers || []);
   const [barberProfileOpen, setBarberProfileOpen] = useState<string | null>(null);
   const [reviewModalData, setReviewModalData] = useState<{
     appointmentId: string;
