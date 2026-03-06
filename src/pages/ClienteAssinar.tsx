@@ -517,7 +517,7 @@ const ClienteAssinar = () => {
                           key={plan.id}
                           className="w-full flex-shrink-0 snap-center overflow-y-auto overscroll-y-contain"
                         >
-                          <div className="px-5 pt-2 pb-8 max-w-md mx-auto flex flex-col justify-between min-h-full">
+                          <div className="px-5 pt-4 pb-8 max-w-md mx-auto flex flex-col justify-between min-h-full">
                             <div>
                               {/* Plan name */}
                               <motion.h2
