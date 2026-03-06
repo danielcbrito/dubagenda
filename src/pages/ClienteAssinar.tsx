@@ -628,22 +628,6 @@ const ClienteAssinar = () => {
                   {/* Fixed bottom area — CTA */}
                   <div className="flex-shrink-0 px-6 pb-[max(env(safe-area-inset-bottom),1rem)] pt-3 bg-background">
                     <div className="max-w-md mx-auto">
-                      {plans.length > 1 && (
-                        <div className="flex items-center justify-center gap-1.5 mb-3">
-                          {plans.map((_, i) => (
-                            <div
-                              key={i}
-                              className={cn(
-                                "rounded-full transition-all duration-300",
-                                i === currentPlanIndex
-                                  ? "w-5 h-[5px] bg-primary"
-                                  : "w-[5px] h-[5px] bg-muted-foreground/15"
-                              )}
-                            />
-                          ))}
-                        </div>
-                      )}
-
                       <motion.button
                         whileTap={{ scale: 0.97 }}
                         onClick={() => !hasActiveSubscription && plans[currentPlanIndex] && handleSelectPlan(plans[currentPlanIndex])}
@@ -657,10 +641,6 @@ const ClienteAssinar = () => {
                         Assinar este plano
                         <ArrowRight className="w-4 h-4" />
                       </motion.button>
-
-                      <p className="text-center text-[10px] text-muted-foreground/30 mt-3">
-                        {plans.length > 1 ? "Deslize para comparar planos" : "Pagamento seguro · Cancele a qualquer momento"}
-                      </p>
                     </div>
                   </div>
                 </div>
