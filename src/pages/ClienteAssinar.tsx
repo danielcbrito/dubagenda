@@ -14,10 +14,8 @@ import {
   CreditCard,
   Loader2,
   MapPin,
-  RefreshCw,
   Scissors,
   Shield,
-  Sparkles,
   User,
 } from "lucide-react";
 import { toast } from "sonner";
