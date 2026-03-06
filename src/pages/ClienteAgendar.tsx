@@ -693,14 +693,12 @@ const ClienteAgendar = () => {
           barbersQuery = barbersQuery.is("tenant_id", null);
         }
 
-        const [{ data: nextServices }, { data: nextBarbers }, { data: planLinks }] = await Promise.all([
+        const [{ data: nextServices }, { data: nextBarbers }] = await Promise.all([
           servicesQuery,
           barbersQuery,
-          supabase.from("planos").select("servico_id").not("servico_id", "is", null),
         ]);
 
-        const planServiceIds = new Set((planLinks || []).map((p: any) => p.servico_id));
-        const safeServices = (nextServices || []).filter((s: any) => !planServiceIds.has(s.id));
+        const safeServices = nextServices || [];
         const safeBarbers = nextBarbers || [];
 
         setServices(safeServices);
