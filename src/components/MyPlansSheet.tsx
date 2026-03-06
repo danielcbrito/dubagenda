@@ -387,14 +387,9 @@ export function MyPlansSheet({ open, onOpenChange, userId, onSubscriptionChanged
                             </p>
                             <Button
                               onClick={() => {
-                                onOpenChange(false);
-                                setTimeout(
-                                  () =>
-                                    navigate("/cliente/assinar", {
-                                      state: { resumePlanId: subscription.plano?.id || null },
-                                    }),
-                                  300
-                                );
+                                navigate("/cliente/assinar", {
+                                  state: { resumePlanId: subscription.plano?.id || null },
+                                });
                               }}
                               className="w-full h-10 text-sm font-semibold"
                             >
