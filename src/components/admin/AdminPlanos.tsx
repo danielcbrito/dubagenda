@@ -21,13 +21,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { toast } from "sonner";
 import { Plus, Sparkles, MoreVertical, Trash2, Pencil, AlertTriangle, Check, Crown } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
@@ -35,10 +28,6 @@ import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { useBarbeiroLogado } from "@/hooks/useBarbeiroLogado";
 
-interface Servico {
-  id: string;
-  nome: string;
-}
 
 interface Plano {
   id: string;
@@ -56,7 +45,7 @@ interface Plano {
 export function AdminPlanos() {
   const { barbeiro } = useBarbeiroLogado();
   const [planos, setPlanos] = useState<Plano[]>([]);
-  const [servicos, setServicos] = useState<Servico[]>([]);
+  
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingPlano, setEditingPlano] = useState<Plano | null>(null);
@@ -69,12 +58,11 @@ export function AdminPlanos() {
     limite_agendamentos_mes: 4,
     prioridade_agendamento: 0,
     beneficios_json: [""],
-    servico_id: "",
+    duracao_minutos: 30,
   });
 
   useEffect(() => {
     loadPlanos();
-    loadServicos();
 
     const channel = supabase
       .channel('admin-planos')
@@ -98,21 +86,6 @@ export function AdminPlanos() {
     return data?.tenant_id || null;
   };
 
-  const loadServicos = async () => {
-    try {
-      const tenantId = await getBarberTenantId();
-      let query = supabase.from("servicos").select("id, nome").eq("ativo", true).order("nome");
-      if (tenantId) {
-        query = query.eq("tenant_id", tenantId);
-      } else {
-        query = query.is("tenant_id", null);
-      }
-      const { data } = await query;
-      setServicos(data || []);
-    } catch (err) {
-      console.error("Error loading servicos:", err);
-    }
-  };
 
   const loadPlanos = async () => {
     try {
@@ -158,14 +131,20 @@ export function AdminPlanos() {
       limite_agendamentos_mes: 4,
       prioridade_agendamento: 0,
       beneficios_json: [""],
-      servico_id: "",
+      duracao_minutos: 30,
     });
     setEditingPlano(null);
   };
 
-  const handleOpenDialog = (plano?: Plano) => {
+  const handleOpenDialog = async (plano?: Plano) => {
     if (plano) {
       setEditingPlano(plano);
+      // Fetch linked service duration
+      let duracao = 30;
+      if (plano.servico_id) {
+        const { data: srv } = await supabase.from("servicos").select("duracao_minutos").eq("id", plano.servico_id).maybeSingle();
+        if (srv) duracao = srv.duracao_minutos;
+      }
       setNewPlano({
         nome: plano.nome,
         descricao: plano.descricao || "",
@@ -175,7 +154,7 @@ export function AdminPlanos() {
         beneficios_json: plano.beneficios_json && plano.beneficios_json.length > 0 
           ? plano.beneficios_json 
           : [""],
-        servico_id: plano.servico_id,
+        duracao_minutos: duracao,
       });
     } else {
       resetForm();
@@ -193,19 +172,30 @@ export function AdminPlanos() {
       toast.error("Preencha nome e preço do plano");
       return;
     }
-    if (!newPlano.servico_id) {
-      toast.error("Selecione o serviço vinculado ao plano");
-      return;
-    }
 
     try {
       const tenantId = await getBarberTenantId();
-      const payload: any = {
-        ...newPlano,
-        beneficios_json: newPlano.beneficios_json.filter(b => b.trim() !== "")
-      };
 
       if (editingPlano) {
+        // Update linked service name + duration
+        if (editingPlano.servico_id) {
+          await supabase.from("servicos").update({
+            nome: newPlano.nome,
+            preco: newPlano.preco_mensal,
+            duracao_minutos: newPlano.duracao_minutos,
+            descricao: newPlano.descricao || null,
+          }).eq("id", editingPlano.servico_id);
+        }
+
+        const payload: any = {
+          nome: newPlano.nome,
+          descricao: newPlano.descricao,
+          preco_mensal: newPlano.preco_mensal,
+          limite_agendamentos_mes: newPlano.limite_agendamentos_mes,
+          prioridade_agendamento: newPlano.prioridade_agendamento,
+          beneficios_json: newPlano.beneficios_json.filter(b => b.trim() !== ""),
+        };
+
         let updateQuery = supabase
           .from("planos")
           .update(payload)
@@ -216,20 +206,44 @@ export function AdminPlanos() {
         }
 
         const { error } = await updateQuery;
-
         if (error) throw error;
         toast.success("Plano atualizado com sucesso!");
       } else {
-        if (tenantId) {
-          payload.tenant_id = tenantId;
-        }
+        // AUTO-CREATE a dedicated service for this plan
+        const servicoPayload: any = {
+          nome: newPlano.nome,
+          preco: newPlano.preco_mensal,
+          duracao_minutos: newPlano.duracao_minutos,
+          descricao: newPlano.descricao || null,
+          ativo: true,
+        };
+        if (tenantId) servicoPayload.tenant_id = tenantId;
+
+        const { data: newServico, error: srvError } = await supabase
+          .from("servicos")
+          .insert([servicoPayload])
+          .select("id")
+          .single();
+
+        if (srvError || !newServico) throw srvError || new Error("Erro ao criar serviço do plano");
+
+        const planoPayload: any = {
+          nome: newPlano.nome,
+          descricao: newPlano.descricao,
+          preco_mensal: newPlano.preco_mensal,
+          limite_agendamentos_mes: newPlano.limite_agendamentos_mes,
+          prioridade_agendamento: newPlano.prioridade_agendamento,
+          beneficios_json: newPlano.beneficios_json.filter(b => b.trim() !== ""),
+          servico_id: newServico.id,
+        };
+        if (tenantId) planoPayload.tenant_id = tenantId;
 
         const { error } = await supabase
           .from("planos")
-          .insert([payload]);
+          .insert([planoPayload]);
 
         if (error) throw error;
-        toast.success("Plano criado com sucesso!");
+        toast.success("Plano criado com sucesso! Serviço vinculado automaticamente.");
       }
       
       handleCloseDialog();
@@ -268,12 +282,18 @@ export function AdminPlanos() {
     if (!planoToDelete) return;
 
     try {
+      // Delete plan first (has FK to servico)
       const { error } = await supabase
         .from("planos")
         .delete()
         .eq("id", planoToDelete.id);
 
       if (error) throw error;
+
+      // Also delete the auto-created linked service
+      if (planoToDelete.servico_id) {
+        await supabase.from("servicos").delete().eq("id", planoToDelete.servico_id);
+      }
       
       toast.success("Plano removido com sucesso");
       loadPlanos();
@@ -358,24 +378,22 @@ export function AdminPlanos() {
               </div>
 
               <div className="space-y-2">
-                <Label className="text-sm font-medium text-muted-foreground">Serviço vinculado *</Label>
-                <Select
-                  value={newPlano.servico_id}
-                  onValueChange={(value) => setNewPlano({ ...newPlano, servico_id: value })}
-                >
-                  <SelectTrigger className="h-11 bg-white/[0.03] border-white/[0.08] rounded-xl focus:border-primary focus:ring-1 focus:ring-primary/50 transition-all">
-                    <SelectValue placeholder="Selecione o serviço" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {servicos.map((s) => (
-                      <SelectItem key={s.id} value={s.id}>{s.nome}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label htmlFor="duracao" className="text-sm font-medium text-muted-foreground">Duração do serviço (min) *</Label>
+                <Input
+                  id="duracao"
+                  type="number"
+                  min="5"
+                  step="5"
+                  placeholder="30"
+                  value={newPlano.duracao_minutos || ""}
+                  onChange={(e) => setNewPlano({ ...newPlano, duracao_minutos: parseInt(e.target.value) || 30 })}
+                  className="h-11 bg-white/[0.03] border-white/[0.08] rounded-xl focus:border-primary focus:ring-1 focus:ring-primary/50 transition-all"
+                />
                 <p className="text-[11px] text-muted-foreground/60">
-                  O serviço que o assinante terá direito ao agendar pelo plano
+                  Duração do atendimento para agendamentos deste plano
                 </p>
               </div>
+
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
