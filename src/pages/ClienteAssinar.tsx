@@ -396,23 +396,15 @@ const ClienteAssinar = () => {
   return (
     <div className="fixed inset-0 flex flex-col bg-background">
       
-      {/* Header */}
-      <div className="flex-shrink-0 px-4 pt-[max(env(safe-area-inset-top),0.75rem)] pb-3">
-        <div className="max-w-2xl mx-auto flex items-center gap-3">
+      {/* Header — only back arrow + step dots */}
+      <div className="flex-shrink-0 px-4 pt-[max(env(safe-area-inset-top),0.75rem)] pb-2">
+        <div className="max-w-2xl mx-auto flex items-center">
           <button 
             onClick={handleBack}
-            className="w-8 h-8 flex items-center justify-center rounded-lg bg-card border border-border/40 hover:bg-muted transition-colors"
+            className="w-9 h-9 flex items-center justify-center rounded-xl hover:bg-muted transition-colors active:scale-95"
           >
-            <BackArrow size={18} className="text-foreground" />
+            <BackArrow size={22} className="text-foreground" />
           </button>
-          <motion.p 
-            key={headerTitle}
-            initial={{ opacity: 0, x: -6 }}
-            animate={{ opacity: 1, x: 0 }}
-            className="text-sm font-semibold text-foreground tracking-tight"
-          >
-            {headerTitle}
-          </motion.p>
 
           {/* Step dots */}
           <div className="ml-auto flex items-center gap-1.5">
