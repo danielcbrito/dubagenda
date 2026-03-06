@@ -252,7 +252,7 @@ export function MyPlansSheet({ open, onOpenChange, userId, onSubscriptionChanged
                     initial={{ opacity: 0, y: 12 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.4 }}
-                    className="pt-12"
+                    className="pt-4"
                   >
                     {/* Visual top */}
                     <div className="text-center mb-8">
