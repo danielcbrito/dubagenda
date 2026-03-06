@@ -200,14 +200,13 @@ export function MyPlansSheet({ open, onOpenChange, userId, onSubscriptionChanged
             className="fixed inset-0 z-50 bg-background flex flex-col"
           >
             {/* ── Header ── */}
-            <div className="flex items-center gap-3 px-4 pt-[max(env(safe-area-inset-top),0.75rem)] pb-3 border-b border-border/30">
+            <div className="px-4 pt-[max(env(safe-area-inset-top),0.75rem)] pb-2">
               <button
                 onClick={() => onOpenChange(false)}
-                className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-muted transition-colors"
+                className="w-9 h-9 flex items-center justify-center rounded-xl hover:bg-muted transition-colors active:scale-95"
               >
-                <BackArrow size={18} className="text-foreground" />
+                <BackArrow size={22} className="text-foreground" />
               </button>
-              <h1 className="text-sm font-semibold text-foreground tracking-tight">Meus Planos</h1>
             </div>
 
             {/* ── Content ── */}
