@@ -651,22 +651,18 @@ const ClienteAssinar = () => {
                         onClick={() => !hasActiveSubscription && plans[currentPlanIndex] && handleSelectPlan(plans[currentPlanIndex])}
                         disabled={hasActiveSubscription}
                         className={cn(
-                          "w-full h-[52px] rounded-xl text-[15px] font-bold flex items-center justify-center gap-2 transition-all",
-                          "bg-primary text-primary-foreground",
-                          "shadow-[0_4px_20px_-4px_hsl(var(--primary)/0.4)]",
-                          hasActiveSubscription && "opacity-50 cursor-not-allowed shadow-none"
+                          "w-full h-[50px] rounded-xl text-sm font-semibold flex items-center justify-center gap-2 transition-all",
+                          "bg-foreground text-background",
+                          hasActiveSubscription && "opacity-50 cursor-not-allowed"
                         )}
                       >
-                        Assinar agora
+                        Assinar este plano
                         <ArrowRight className="w-4 h-4" />
                       </motion.button>
 
-                      <div className="flex items-center justify-center gap-2 mt-3">
-                        <Shield className="w-3 h-3 text-muted-foreground/25" />
-                        <p className="text-[10px] text-muted-foreground/30">
-                          {plans.length > 1 ? "Deslize para comparar planos" : "Pagamento seguro • Cancele a qualquer momento"}
-                        </p>
-                      </div>
+                      <p className="text-center text-[10px] text-muted-foreground/30 mt-3">
+                        {plans.length > 1 ? "Deslize para comparar planos" : "Pagamento seguro · Cancele a qualquer momento"}
+                      </p>
                     </div>
                   </div>
                 </div>
