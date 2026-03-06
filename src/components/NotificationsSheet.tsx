@@ -9,6 +9,7 @@ import {
   CheckCircle2,
   XCircle,
   Clock,
+  MessageCircleWarning,
 } from "lucide-react";
 import { BackArrow } from "@/components/ui/back-arrow";
 import { useNavigate } from "react-router-dom";
@@ -35,6 +36,8 @@ interface NotificationsSheetProps {
 
 function getNotifIcon(tipo: string, titulo: string) {
   const t = titulo.toLowerCase();
+  if (tipo === "whatsapp_desconectado" || t.includes("whatsapp"))
+    return <MessageCircleWarning className="w-4 h-4 text-amber-500" />;
   if (tipo === "cancelamento" || tipo === "cancelamento_massa" || t.includes("cancelad"))
     return <XCircle className="w-4 h-4 text-destructive" />;
   if (tipo === "remarcacao" || t.includes("remarc"))
