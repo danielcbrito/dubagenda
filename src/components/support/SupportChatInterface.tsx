@@ -1,4 +1,4 @@
-import { ArrowUp, Mic, StopCircle, Loader2, Paperclip, X, Plus, Clock, MessageSquarePlus } from "lucide-react";
+import { ArrowUp, Mic, StopCircle, Loader2, Paperclip, X, Plus, Clock, MessageSquarePlus, ExternalLink } from "lucide-react";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
