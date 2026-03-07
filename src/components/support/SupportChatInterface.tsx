@@ -1,10 +1,55 @@
-import { ArrowUp, Mic, StopCircle, Loader2, Paperclip, X, Plus, Clock, MessageSquarePlus } from "lucide-react";
+import { ArrowUp, Mic, StopCircle, Loader2, Paperclip, X, Plus, Clock, MessageSquarePlus, ExternalLink } from "lucide-react";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { BotAvatar } from "./BotAvatar";
+import whatsappLogo from "@/assets/whatsapp-logo.png";
+
+const ADMIN_WHATSAPP = "5511963390043";
+
+/** Renders message content with WhatsApp escalation blocks */
+function MessageContent({ content }: { content: string }) {
+  const escalationRegex = /\[WHATSAPP_ESCALATION\]([\s\S]*?)\[\/WHATSAPP_ESCALATION\]/;
+  const match = content.match(escalationRegex);
+
+  if (!match) {
+    return <p className="text-[13px] leading-[1.75] text-foreground/85 whitespace-pre-wrap break-words">{content}</p>;
+  }
+
+  const beforeBlock = content.slice(0, match.index).trim();
+  const afterBlock = content.slice((match.index || 0) + match[0].length).trim();
+  const messageText = match[1].trim();
+  const whatsappUrl = `https://wa.me/${ADMIN_WHATSAPP}?text=${encodeURIComponent(messageText)}`;
+
+  return (
+    <div className="space-y-3">
+      {beforeBlock && (
+        <p className="text-[13px] leading-[1.75] text-foreground/85 whitespace-pre-wrap break-words">{beforeBlock}</p>
+      )}
+      <motion.a
+        href={whatsappUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        initial={{ opacity: 0, y: 4 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
+        className="flex items-center gap-3 px-4 py-3 rounded-xl bg-emerald-500/10 dark:bg-emerald-500/15 border border-emerald-500/20 hover:bg-emerald-500/20 active:scale-[0.98] transition-all cursor-pointer no-underline"
+      >
+        <img src={whatsappLogo} alt="WhatsApp" className="w-7 h-7 shrink-0" />
+        <div className="flex-1 min-w-0">
+          <span className="text-[12px] font-semibold text-emerald-600 dark:text-emerald-400 block">Falar com Suporte Humano</span>
+          <span className="text-[10px] text-muted-foreground/60">Mensagem pronta — só enviar</span>
+        </div>
+        <ExternalLink className="w-3.5 h-3.5 text-emerald-500/60 shrink-0" />
+      </motion.a>
+      {afterBlock && (
+        <p className="text-[13px] leading-[1.75] text-foreground/85 whitespace-pre-wrap break-words">{afterBlock}</p>
+      )}
+    </div>
+  );
+}
 
 interface Message {
   role: "user" | "assistant";
@@ -409,7 +454,7 @@ export function SupportChatInterface() {
                         <BotAvatar size="sm" />
                       </div>
                       <div className="flex-1 min-w-0 pt-0.5">
-                        <p className="text-[13px] leading-[1.75] text-foreground/85 whitespace-pre-wrap break-words">{message.content}</p>
+                        <MessageContent content={message.content} />
                       </div>
                     </div>
                   )}
