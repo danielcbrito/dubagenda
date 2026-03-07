@@ -447,7 +447,7 @@ async function executeFunction(functionName: string, args: any, supabase: any, c
         );
         if (missingPoints?.length > 0) issues.push(`${missingPoints.length} agendamento(s) completado(s) sem ponto creditado — pode corrigir automaticamente`);
 
-        // Pagamentos REALMENTE pendentes vs PIX expirados
+        // Pagamentos (uso interno de diagnóstico, sem expor como problema por padrão)
         const realPending: any[] = [];
         const expiredPix: any[] = [];
         payments?.forEach((p: any) => {
@@ -461,8 +461,6 @@ async function executeFunction(functionName: string, args: any, supabase: any, c
             }
           }
         });
-        if (expiredPix.length > 0) issues.push(`${expiredPix.length} PIX expirado(s) (NÃO é dívida, apenas registro abandonado)`);
-        if (realPending.length > 0) issues.push(`${realPending.length} pagamento(s) aguardando confirmação recente`);
 
         // Resgates expirados
         const expiredRedemptions = redemptions?.filter((r: any) =>
@@ -497,10 +495,10 @@ async function executeFunction(functionName: string, args: any, supabase: any, c
           },
           agendamentos_recentes: appointments?.slice(0, 8),
           pagamentos: {
-            confirmados: payments?.filter((p: any) => p.status === 'paid'),
-            pendentes_reais: realPending,
-            pix_expirados: expiredPix.length,
-            total_registros: payments?.length
+            total_registros: payments?.length || 0,
+            confirmados_count: payments?.filter((p: any) => p.status === 'paid').length || 0,
+            pendentes_reais_count: realPending.length,
+            pix_expirados_count: expiredPix.length
           },
           reservas_pendentes: pendingBookings,
           problemas_detectados: issues,
@@ -1251,11 +1249,10 @@ Você é a IA de suporte do sistema DUB. Tem acesso ao banco de dados para CONSU
 - SEMPRE use essas referências ao falar de datas. Se o cliente disser "amanhã", use a data de AMANHÃ acima. NUNCA invente datas.
 
 ## PERSONALIDADE
-- Fale em português SIMPLES e DIRETO, como se fosse um amigo que entende do assunto
-- Nada de termos técnicos pro cliente (nada de "banco de dados", "query", "status pending")
-- Seja gentil mas objetivo: "Já verifiquei aqui e..." / "Pronto, resolvi!" / "Achei o problema..."
-- Use emojis com moderação (1-2 por mensagem, no máximo)
-- Máximo 3-5 frases por resposta
+- Fale em português SIMPLES e DIRETO
+- Nada de termos técnicos pro cliente
+- Resposta CURTA: no máximo 2 frases e até 280 caracteres (exceto bloco de escalação WhatsApp)
+- NÃO use listas numeradas longas, a menos que o cliente peça
 
 ## ⚠️ REGRAS DE SEGURANÇA — PROIBIÇÕES ABSOLUTAS ⚠️
 
@@ -1290,14 +1287,10 @@ Você é a IA de suporte do sistema DUB. Tem acesso ao banco de dados para CONSU
 - Se suspeita de bug → use \`verificar_problema_global\` para checar se é só esse cliente ou todos
 
 ### 3. PEDIR PRINTS E IMAGENS — INTELIGÊNCIA VISUAL 📸
-- Quando o cliente relatar um erro visual, comportamento estranho ou problema que não fica claro só pela descrição, **PEÇA UM PRINT/SCREENSHOT**
-- Diga algo como: "Pode me enviar um print da tela mostrando o erro? Assim consigo entender melhor o que está acontecendo! 📸"
-- Se o cliente enviar uma imagem/arquivo (aparecerá como URL no chat), **ANALISE o conteúdo** e use para entender o problema
-- Peça prints quando:
-  - O erro não aparece nos dados do banco
-  - O cliente descreve algo que pode ser visual (layout quebrado, botão não funciona, mensagem estranha)
-  - Você não consegue reproduzir o problema apenas consultando o banco
-  - O problema parece ser do app/interface e não dos dados
+- Quando o problema não ficar 100% claro, peça PRINT imediatamente
+- Faça apenas 1 pergunta por vez (priorize: "Pode me mandar um print da tela com o erro? 📸")
+- Evite perguntar barbeiro/serviço/data no primeiro retorno; investigue primeiro nos dados
+- Se o cliente enviar imagem/arquivo (URL no chat), use isso para diagnosticar
 
 ### 4. RESOLUÇÃO SEGURA
 Você PODE resolver sozinha (coisas seguras):
@@ -1307,12 +1300,10 @@ Você PODE resolver sozinha (coisas seguras):
 - Explicar como usar o app
 - Responder dúvidas gerais
 
-### 5. PERGUNTAS ESTRATÉGICAS
-Quando NÃO tem dados suficientes, faça perguntas INTELIGENTES:
-- "Qual barbeiro você tentou agendar?" (não "qual é o ID do barbeiro")
-- "Foi hoje que você tentou?" (não "qual data no formato YYYY-MM-DD")
-- "O pagamento foi por PIX ou cartão?" (opções claras)
-- NUNCA faça mais de 2 perguntas por vez
+### 5. FOCO NA RESOLUÇÃO
+- Primeiro: diga o que você já verificou e a ação prática
+- Segundo: peça print só se necessário
+- NUNCA enviar questionário com várias perguntas de uma vez
 
 ### 6. ESCALAÇÃO PARA WHATSAPP — REGRA CRÍTICA 🚀
 
@@ -1379,8 +1370,8 @@ ${APP_KNOWLEDGE}
         ...conversationHistory
       ],
       tools: AVAILABLE_TOOLS,
-      temperature: 0.5,
-      max_tokens: 2000
+      temperature: 0.2,
+      max_tokens: 420
     };
 
     let aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
@@ -1461,8 +1452,8 @@ ${APP_KNOWLEDGE}
         model: 'google/gemini-2.5-flash',
         messages: messageHistory,
         tools: AVAILABLE_TOOLS,
-        temperature: 0.5,
-        max_tokens: 2000
+        temperature: 0.2,
+        max_tokens: 420
       };
 
       aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
@@ -1484,8 +1475,33 @@ ${APP_KNOWLEDGE}
       choice = aiData.choices[0];
     }
 
-    // Resposta final
-    const assistantMessage = choice.message?.content || 'Desculpe, tive um probleminha técnico. Pode tentar de novo? 😊';
+    // Resposta final com filtro de segurança e concisão
+    const rawAssistantMessage = choice.message?.content || 'Desculpe, tive um probleminha técnico. Pode tentar de novo? 😊';
+    const userAskedPayment = /(pagamento|pagar|pix|cart[aã]o|cobran[çc]a|pend[êe]ncia|d[íi]vida|fatura|estorno|reembolso)/i.test(String(message || ''));
+    const hasEscalationBlock = rawAssistantMessage.includes('[WHATSAPP_ESCALATION]');
+
+    let assistantMessage = rawAssistantMessage;
+
+    if (!userAskedPayment && !hasEscalationBlock) {
+      assistantMessage = assistantMessage
+        .split('\n')
+        .filter((line: string) => !/(pagamento|pix|pend[êe]ncia|d[íi]vida|cobran[çc]a|fatura|estorno|reembolso)/i.test(line))
+        .join('\n')
+        .replace(/\n{3,}/g, '\n\n')
+        .trim();
+    }
+
+    if (!hasEscalationBlock) {
+      assistantMessage = assistantMessage.replace(/\s+/g, ' ').trim();
+      const maxChars = 320;
+      if (assistantMessage.length > maxChars) {
+        assistantMessage = `${assistantMessage.slice(0, maxChars).replace(/\s+\S*$/, '').trim()}...`;
+      }
+    }
+
+    if (!assistantMessage) {
+      assistantMessage = 'Entendi. Já estou analisando e vou te ajudar agora. Me manda um print da tela com o erro, por favor. 📸';
+    }
 
     // Salvar resposta
     await supabase.from('support_messages').insert({
