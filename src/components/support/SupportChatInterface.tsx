@@ -1,4 +1,4 @@
-import { ArrowUp, Mic, StopCircle, Loader2, Paperclip, X, Plus, Clock, MessageSquarePlus, ExternalLink } from "lucide-react";
+import { ArrowUp, Mic, StopCircle, Loader2, Paperclip, X, Plus, Clock, MessageSquarePlus, ExternalLink, FileText } from "lucide-react";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -6,20 +6,77 @@ import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { BotAvatar } from "./BotAvatar";
 import whatsappLogo from "@/assets/whatsapp-logo.png";
+import { composeMessageContent, isImageAttachment, parseMessageContent, type ChatAttachment } from "./chatMessageUtils";
 
 const ADMIN_WHATSAPP = "5511963390043";
 
+function AttachmentsRenderer({ attachments }: { attachments: ChatAttachment[] }) {
+  if (attachments.length === 0) return null;
+
+  const imageAttachments = attachments.filter(isImageAttachment);
+  const fileAttachments = attachments.filter((attachment) => !isImageAttachment(attachment));
+
+  return (
+    <div className="space-y-2">
+      {imageAttachments.length > 0 && (
+        <div className="grid grid-cols-2 gap-2">
+          {imageAttachments.map((attachment) => (
+            <a
+              key={attachment.url}
+              href={attachment.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block rounded-lg border border-border/50 overflow-hidden bg-card/60"
+            >
+              <img
+                src={attachment.url}
+                alt={attachment.name || "Anexo"}
+                loading="lazy"
+                className="w-full h-28 object-cover"
+              />
+            </a>
+          ))}
+        </div>
+      )}
+
+      {fileAttachments.length > 0 && (
+        <div className="space-y-1.5">
+          {fileAttachments.map((attachment) => (
+            <a
+              key={attachment.url}
+              href={attachment.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 rounded-lg border border-border/50 bg-card/60 px-2.5 py-2 text-[11px] text-foreground/80 no-underline"
+            >
+              <FileText className="h-3.5 w-3.5 text-muted-foreground" />
+              <span className="truncate flex-1">{attachment.name || "Arquivo anexado"}</span>
+              <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" />
+            </a>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /** Renders message content with WhatsApp escalation blocks */
 function MessageContent({ content }: { content: string }) {
+  const { text, attachments } = parseMessageContent(content);
   const escalationRegex = /\[WHATSAPP_ESCALATION\]([\s\S]*?)\[\/WHATSAPP_ESCALATION\]/;
-  const match = content.match(escalationRegex);
+  const match = text.match(escalationRegex);
 
   if (!match) {
-    return <p className="text-[13px] leading-[1.75] text-foreground/85 whitespace-pre-wrap break-words">{content}</p>;
+    return (
+      <div className="space-y-2.5">
+        {text && <p className="text-[13px] leading-[1.75] text-foreground/85 whitespace-pre-wrap break-words">{text}</p>}
+        <AttachmentsRenderer attachments={attachments} />
+      </div>
+    );
   }
 
-  const beforeBlock = content.slice(0, match.index).trim();
-  const afterBlock = content.slice((match.index || 0) + match[0].length).trim();
+  const beforeBlock = text.slice(0, match.index).trim();
+  const afterBlock = text.slice((match.index || 0) + match[0].length).trim();
   const messageText = match[1].trim();
   const whatsappUrl = `https://wa.me/${ADMIN_WHATSAPP}?text=${encodeURIComponent(messageText)}`;
 
@@ -47,6 +104,7 @@ function MessageContent({ content }: { content: string }) {
       {afterBlock && (
         <p className="text-[13px] leading-[1.75] text-foreground/85 whitespace-pre-wrap break-words">{afterBlock}</p>
       )}
+      <AttachmentsRenderer attachments={attachments} />
     </div>
   );
 }
