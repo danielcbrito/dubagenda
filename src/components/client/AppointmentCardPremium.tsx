@@ -90,6 +90,14 @@ export function AppointmentCardPremium({
           borderColor: "hsl(var(--destructive) / 0.12)",
           icon: X,
         };
+      case "no_show":
+        return {
+          label: "Faltou",
+          color: "hsl(var(--muted-foreground))",
+          bgColor: "hsl(var(--muted) / 0.08)",
+          borderColor: "hsl(var(--border) / 0.3)",
+          icon: AlertCircle,
+        };
       default:
         return { 
           label: status, 
