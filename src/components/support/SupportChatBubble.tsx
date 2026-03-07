@@ -1,34 +1,46 @@
 import { Headphones } from "lucide-react";
-import { useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
+import { useNavigate, useLocation } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
+
+/** Rotas onde o botão NÃO aparece */
+const HIDDEN_ROUTES = ["/suporte", "/auth", "/ti"];
 
 /**
- * Botão flutuante de suporte — Design Premium Compacto
+ * Botão flutuante de suporte — visível globalmente
+ * Dark mode: fundo branco, texto preto
+ * Light mode: fundo preto, texto branco
  */
 export function SupportChatBubble() {
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const isHidden = HIDDEN_ROUTES.some((r) => location.pathname.startsWith(r));
 
   return (
-    <motion.button
-      onClick={() => navigate('/suporte')}
-      className="fixed bottom-6 right-6 z-50 flex items-center gap-2.5 h-12 pl-3.5 pr-4 rounded-full bg-foreground text-background shadow-lg hover:shadow-xl transition-all duration-300"
-      whileHover={{ scale: 1.03 }}
-      whileTap={{ scale: 0.97 }}
-      initial={{ scale: 0, opacity: 0, y: 20 }}
-      animate={{ scale: 1, opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, delay: 0.5, type: "spring" }}
-    >
-      {/* Icon */}
-      <div className="relative">
-        <Headphones className="h-[18px] w-[18px]" />
-        {/* Online dot */}
-        <div className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-emerald-400 border border-foreground" />
-      </div>
-      
-      {/* Label */}
-      <span className="text-[12px] font-semibold tracking-wide">
-        Ajuda
-      </span>
-    </motion.button>
+    <AnimatePresence>
+      {!isHidden && (
+        <motion.button
+          key="support-bubble"
+          onClick={() => navigate("/suporte")}
+          className="fixed bottom-[calc(3.5rem+env(safe-area-inset-bottom)+1.75rem)] right-4 z-40 flex items-center gap-2 h-10 pl-3 pr-3.5 rounded-full bg-foreground text-background shadow-md shadow-foreground/10 active:scale-95 transition-transform"
+          initial={{ scale: 0, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          exit={{ scale: 0, opacity: 0 }}
+          transition={{ duration: 0.3, type: "spring" }}
+        >
+          {/* Icon */}
+          <div className="relative">
+            <Headphones className="h-4 w-4" />
+            {/* Online dot */}
+            <div className="absolute -top-0.5 -right-0.5 h-[7px] w-[7px] rounded-full bg-emerald-400 border-[1.5px] border-foreground" />
+          </div>
+
+          {/* Label */}
+          <span className="text-[11px] font-semibold tracking-wide">
+            Suporte
+          </span>
+        </motion.button>
+      )}
+    </AnimatePresence>
   );
 }
