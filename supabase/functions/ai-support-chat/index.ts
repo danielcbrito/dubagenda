@@ -1355,7 +1355,7 @@ serve(async (req) => {
     }
 
     // Salvar mensagem
-    await supabase.from('support_messages').insert({ conversation_id: conversation.id, role: 'user', content: message });
+    await supabase.from('support_messages').insert({ conversation_id: conversation.id, role: 'user', content: normalizedIncomingMessage });
 
     // Histórico
     const { data: allMessages } = await supabase
