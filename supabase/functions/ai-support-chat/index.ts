@@ -495,10 +495,10 @@ async function executeFunction(functionName: string, args: any, supabase: any, c
           },
           agendamentos_recentes: appointments?.slice(0, 8),
           pagamentos: {
-            confirmados: payments?.filter((p: any) => p.status === 'paid'),
-            pendentes_reais: realPending,
-            pix_expirados: expiredPix.length,
-            total_registros: payments?.length
+            total_registros: payments?.length || 0,
+            confirmados_count: payments?.filter((p: any) => p.status === 'paid').length || 0,
+            pendentes_reais_count: realPending.length,
+            pix_expirados_count: expiredPix.length
           },
           reservas_pendentes: pendingBookings,
           problemas_detectados: issues,
