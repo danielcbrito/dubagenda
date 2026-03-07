@@ -355,7 +355,13 @@ export function SupportChatInterface() {
 
     try {
       const { data, error } = await supabase.functions.invoke("ai-support-chat", {
-        body: { message: content, conversationId, guestName: "Usuário", guestEmail: "guest@example.com" }
+        body: {
+          message: content,
+          attachments: uploadedAttachments,
+          conversationId,
+          guestName: "Usuário",
+          guestEmail: "guest@example.com"
+        }
       });
       if (error) throw error;
       setMessages(prev => [...prev, { role: "assistant", content: data.response, timestamp: new Date() }]);
