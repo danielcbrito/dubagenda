@@ -1307,7 +1307,12 @@ serve(async (req) => {
   }
 
   try {
-    const { message, conversationId, guestName, guestEmail } = await req.json();
+    const { message, conversationId, guestName, guestEmail, attachments } = await req.json();
+    const incomingAttachments = normalizeIncomingAttachments(attachments);
+    const incomingText = typeof message === 'string' ? message : '';
+    const normalizedIncomingMessage = incomingAttachments.length > 0
+      ? `${incomingText}${incomingText ? '\n\n' : ''}${toAttachmentContentBlock(incomingAttachments)}`
+      : incomingText;
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
