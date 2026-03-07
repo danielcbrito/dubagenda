@@ -1370,8 +1370,8 @@ ${APP_KNOWLEDGE}
         ...conversationHistory
       ],
       tools: AVAILABLE_TOOLS,
-      temperature: 0.5,
-      max_tokens: 2000
+      temperature: 0.2,
+      max_tokens: 420
     };
 
     let aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
