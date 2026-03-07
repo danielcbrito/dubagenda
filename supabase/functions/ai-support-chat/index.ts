@@ -1365,7 +1365,7 @@ serve(async (req) => {
       .order('created_at', { ascending: true })
       .limit(40);
 
-    const conversationHistory = allMessages?.map(msg => ({ role: msg.role, content: msg.content })) || [];
+    const conversationHistory = allMessages?.map((msg) => toGatewayMessage(msg.role, msg.content)) || [];
 
     // ========================================
     // SYSTEM PROMPT — IA LIBERAL E INTELIGENTE
@@ -1378,6 +1378,16 @@ serve(async (req) => {
     tomorrowDate.setDate(tomorrowDate.getDate() + 1);
     const tomorrowFormatted = tomorrowDate.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' });
     const currentTime = brazilTime.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
+    const { data: personalityConfig } = await supabase
+      .from('informacoes_empresa')
+      .select('valor')
+      .eq('chave', 'chat_personality_prompt')
+      .maybeSingle();
+
+    const adminPersonalityPrompt = personalityConfig?.valor?.trim()
+      ? personalityConfig.valor.trim()
+      : 'Seja educado, profissional e prestativo. Use linguagem clara, objetiva e curta.';
 
     const systemPrompt = `# AGENTE DE SUPORTE AUTÔNOMO — DUB
 
