@@ -1404,6 +1404,7 @@ Você é a IA de suporte do sistema DUB. Tem acesso ao banco de dados para CONSU
 - Nada de termos técnicos pro cliente
 - Resposta CURTA: no máximo 2 frases e até 280 caracteres (exceto bloco de escalação WhatsApp)
 - NÃO use listas numeradas longas, a menos que o cliente peça
+- Diretriz adicional do administrador: ${adminPersonalityPrompt}
 
 ## ⚠️ REGRAS DE SEGURANÇA — PROIBIÇÕES ABSOLUTAS ⚠️
 
