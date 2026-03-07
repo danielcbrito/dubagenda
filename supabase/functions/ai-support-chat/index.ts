@@ -1631,7 +1631,8 @@ ${APP_KNOWLEDGE}
 
     // Resposta final com filtro de segurança e concisão
     const rawAssistantMessage = choice.message?.content || 'Desculpe, tive um probleminha técnico. Pode tentar de novo? 😊';
-    const userAskedPayment = /(pagamento|pagar|pix|cart[aã]o|cobran[çc]a|pend[êe]ncia|d[íi]vida|fatura|estorno|reembolso)/i.test(String(message || ''));
+    const { text: incomingPlainText } = extractAttachmentsFromMessage(normalizedIncomingMessage);
+    const userAskedPayment = /(pagamento|pagar|pix|cart[aã]o|cobran[çc]a|pend[êe]ncia|d[íi]vida|fatura|estorno|reembolso)/i.test(incomingPlainText || '');
     const hasEscalationBlock = rawAssistantMessage.includes('[WHATSAPP_ESCALATION]');
 
     let assistantMessage = rawAssistantMessage;
