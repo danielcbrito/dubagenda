@@ -1162,6 +1162,140 @@ async function executeFunction(functionName: string, args: any, supabase: any, c
 }
 
 // ========================================
+// HELPERS DE ANEXOS (TEXTO + IMAGEM)
+// ========================================
+
+interface IncomingAttachment {
+  name?: string;
+  url: string;
+  mimeType?: string;
+}
+
+const ATTACHMENTS_JSON_REGEX = /\[ATTACHMENTS_JSON\]([\s\S]*?)\[\/ATTACHMENTS_JSON\]/;
+const LEGACY_ATTACHMENTS_REGEX = /\[(\d+)\s+arquivo\(s\)\s+anexado\(s\):([\s\S]*?)\]/i;
+const IMAGE_URL_REGEX = /\.(png|jpe?g|gif|webp|bmp|svg)(\?.*)?$/i;
+
+function normalizeIncomingAttachments(raw: unknown): IncomingAttachment[] {
+  if (!Array.isArray(raw)) return [];
+
+  const seen = new Set<string>();
+  const list: IncomingAttachment[] = [];
+
+  for (const item of raw) {
+    if (!item || typeof item !== 'object') continue;
+
+    const maybe = item as Partial<IncomingAttachment>;
+    if (!maybe.url || typeof maybe.url !== 'string') continue;
+    if (seen.has(maybe.url)) continue;
+
+    seen.add(maybe.url);
+    list.push({
+      url: maybe.url,
+      name: typeof maybe.name === 'string' ? maybe.name : undefined,
+      mimeType: typeof maybe.mimeType === 'string' ? maybe.mimeType : undefined,
+    });
+  }
+
+  return list;
+}
+
+function parseLegacyAttachmentBlock(block: string): IncomingAttachment[] {
+  const lines = block.split('\n').map((line) => line.trim()).filter(Boolean);
+  const parsed: IncomingAttachment[] = [];
+
+  for (const line of lines) {
+    const named = line.match(/^-\s*(.*?):\s*(https?:\/\/\S+)$/i);
+    if (named) {
+      parsed.push({ name: named[1].trim(), url: named[2].trim() });
+      continue;
+    }
+
+    const urlMatch = line.match(/(https?:\/\/\S+)/i);
+    if (urlMatch) {
+      parsed.push({ url: urlMatch[1].trim() });
+    }
+  }
+
+  return parsed;
+}
+
+function extractAttachmentsFromMessage(content: string): { text: string; attachments: IncomingAttachment[] } {
+  let text = content || '';
+  let attachments: IncomingAttachment[] = [];
+
+  const jsonMatch = text.match(ATTACHMENTS_JSON_REGEX);
+  if (jsonMatch) {
+    try {
+      const decoded = decodeURIComponent(jsonMatch[1]);
+      const parsed = normalizeIncomingAttachments(JSON.parse(decoded));
+      attachments.push(...parsed);
+    } catch (_) {
+      // ignore malformed attachment payload
+    }
+
+    text = text.replace(jsonMatch[0], '').trim();
+  }
+
+  const legacyMatch = text.match(LEGACY_ATTACHMENTS_REGEX);
+  if (legacyMatch) {
+    attachments.push(...parseLegacyAttachmentBlock(legacyMatch[2] || ''));
+    text = text.replace(legacyMatch[0], '').trim();
+  }
+
+  const deduped = normalizeIncomingAttachments(attachments);
+
+  return {
+    text,
+    attachments: deduped,
+  };
+}
+
+function toAttachmentContentBlock(attachments: IncomingAttachment[]): string {
+  const normalized = normalizeIncomingAttachments(attachments);
+  if (normalized.length === 0) return '';
+
+  return `[ATTACHMENTS_JSON]${encodeURIComponent(JSON.stringify(normalized))}[/ATTACHMENTS_JSON]`;
+}
+
+function isImageAttachmentUrl(attachment: IncomingAttachment): boolean {
+  if (attachment.mimeType?.startsWith('image/')) return true;
+  return IMAGE_URL_REGEX.test(attachment.url);
+}
+
+function toGatewayMessage(role: string, content: string, explicitAttachments: IncomingAttachment[] = []) {
+  const parsed = extractAttachmentsFromMessage(content || '');
+  const merged = normalizeIncomingAttachments([...parsed.attachments, ...explicitAttachments]);
+
+  if (role !== 'user' || merged.length === 0) {
+    return { role, content: parsed.text || content || '' };
+  }
+
+  const contentParts: any[] = [];
+
+  if (parsed.text) {
+    contentParts.push({ type: 'text', text: parsed.text });
+  }
+
+  for (const attachment of merged) {
+    if (isImageAttachmentUrl(attachment)) {
+      contentParts.push({ type: 'image_url', image_url: { url: attachment.url } });
+    } else {
+      contentParts.push({
+        type: 'text',
+        text: `Arquivo anexado: ${attachment.name || 'arquivo'} (${attachment.url})`,
+      });
+    }
+  }
+
+  if (contentParts.length === 0) {
+    contentParts.push({ type: 'text', text: parsed.text || 'Mensagem do usuário' });
+  }
+
+function buildWhatsAppEscalationResponse(summary: string, email: string, conversationId: string): string {
+  return `Entendi o problema e já te direcionei para o suporte humano resolver agora.\n\n[WHATSAPP_ESCALATION]\nOlá! Preciso de ajuda com meu atendimento no DUB.\n\n📋 Resumo do problema:\n${summary}\n\n📧 Email: ${email || 'não informado'}\n🆔 Protocolo: ${conversationId}\n[/WHATSAPP_ESCALATION]`;
+}
+
+// ========================================
 // SERVIDOR PRINCIPAL
 // ========================================
 
@@ -1171,7 +1305,12 @@ serve(async (req) => {
   }
 
   try {
-    const { message, conversationId, guestName, guestEmail } = await req.json();
+    const { message, conversationId, guestName, guestEmail, attachments } = await req.json();
+    const incomingAttachments = normalizeIncomingAttachments(attachments);
+    const incomingText = typeof message === 'string' ? message : '';
+    const normalizedIncomingMessage = incomingAttachments.length > 0
+      ? `${incomingText}${incomingText ? '\n\n' : ''}${toAttachmentContentBlock(incomingAttachments)}`
+      : incomingText;
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -1195,7 +1334,7 @@ serve(async (req) => {
       user = { id: `guest-${Date.now()}`, email: guestEmail };
     }
 
-    console.log('📩 Mensagem:', { userId: user.id, isGuest, msg: message?.slice(0, 100) });
+    console.log('📩 Mensagem:', { userId: user.id, isGuest, msg: incomingText.slice(0, 100), attachments: incomingAttachments.length });
 
     // Buscar ou criar conversa
     let conversation;
@@ -1214,7 +1353,7 @@ serve(async (req) => {
     }
 
     // Salvar mensagem
-    await supabase.from('support_messages').insert({ conversation_id: conversation.id, role: 'user', content: message });
+    await supabase.from('support_messages').insert({ conversation_id: conversation.id, role: 'user', content: normalizedIncomingMessage });
 
     // Histórico
     const { data: allMessages } = await supabase
@@ -1224,7 +1363,7 @@ serve(async (req) => {
       .order('created_at', { ascending: true })
       .limit(40);
 
-    const conversationHistory = allMessages?.map(msg => ({ role: msg.role, content: msg.content })) || [];
+    const conversationHistory = allMessages?.map((msg) => toGatewayMessage(msg.role, msg.content)) || [];
 
     // ========================================
     // SYSTEM PROMPT — IA LIBERAL E INTELIGENTE
@@ -1237,6 +1376,16 @@ serve(async (req) => {
     tomorrowDate.setDate(tomorrowDate.getDate() + 1);
     const tomorrowFormatted = tomorrowDate.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' });
     const currentTime = brazilTime.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
+    const { data: personalityConfig } = await supabase
+      .from('informacoes_empresa')
+      .select('valor')
+      .eq('chave', 'chat_personality_prompt')
+      .maybeSingle();
+
+    const adminPersonalityPrompt = personalityConfig?.valor?.trim()
+      ? personalityConfig.valor.trim()
+      : 'Seja educado, profissional e prestativo. Use linguagem clara, objetiva e curta.';
 
     const systemPrompt = `# AGENTE DE SUPORTE AUTÔNOMO — DUB
 
@@ -1253,6 +1402,7 @@ Você é a IA de suporte do sistema DUB. Tem acesso ao banco de dados para CONSU
 - Nada de termos técnicos pro cliente
 - Resposta CURTA: no máximo 2 frases e até 280 caracteres (exceto bloco de escalação WhatsApp)
 - NÃO use listas numeradas longas, a menos que o cliente peça
+- Diretriz adicional do administrador: ${adminPersonalityPrompt}
 
 ## ⚠️ REGRAS DE SEGURANÇA — PROIBIÇÕES ABSOLUTAS ⚠️
 
@@ -1288,9 +1438,9 @@ Você é a IA de suporte do sistema DUB. Tem acesso ao banco de dados para CONSU
 
 ### 3. PEDIR PRINTS E IMAGENS — INTELIGÊNCIA VISUAL 📸
 - Quando o problema não ficar 100% claro, peça PRINT imediatamente
-- Faça apenas 1 pergunta por vez (priorize: "Pode me mandar um print da tela com o erro? 📸")
-- Evite perguntar barbeiro/serviço/data no primeiro retorno; investigue primeiro nos dados
-- Se o cliente enviar imagem/arquivo (URL no chat), use isso para diagnosticar
+- Se o cliente enviar print/imagem, analise visualmente e entregue diagnóstico + ação prática na resposta seguinte
+- Após receber print, NÃO pergunte barbeiro/serviço/data; use o que já sabe e os dados do sistema
+- Se a análise visual não for suficiente para resolver com confiança, escale para WhatsApp imediatamente
 
 ### 4. RESOLUÇÃO SEGURA
 Você PODE resolver sozinha (coisas seguras):
@@ -1313,6 +1463,7 @@ Quando você NÃO CONSEGUIR RESOLVER o problema do cliente, ou quando o problema
 - Reclamações sérias
 - Qualquer situação que precise de intervenção humana
 - O cliente pedir para falar com uma pessoa
+- Você já analisou print/imagem e ainda não conseguiu concluir com confiança
 
 Você DEVE encerrar a conversa direcionando o cliente para o WhatsApp do administrador com um resumo pré-escrito.
 
@@ -1357,7 +1508,8 @@ ${APP_KNOWLEDGE}
 7. Se resolver → confirme com confiança: "Pronto, tá resolvido!"
 8. NUNCA tome decisões sobre dinheiro ou pagamentos do cliente
 9. NUNCA mencione pagamentos pendentes/expirados proativamente — SÓ se o cliente perguntar
-10. Use SEMPRE as datas corretas de HOJE e AMANHÃ informadas acima — NUNCA invente datas`;
+10. Use SEMPRE as datas corretas de HOJE e AMANHÃ informadas acima — NUNCA invente datas
+11. Recebeu print e ficou em dúvida após 1 análise? ESCALE para WhatsApp, sem questionário adicional`;
 
     // ========================================
     // CHAMADA DA IA
@@ -1477,10 +1629,22 @@ ${APP_KNOWLEDGE}
 
     // Resposta final com filtro de segurança e concisão
     const rawAssistantMessage = choice.message?.content || 'Desculpe, tive um probleminha técnico. Pode tentar de novo? 😊';
-    const userAskedPayment = /(pagamento|pagar|pix|cart[aã]o|cobran[çc]a|pend[êe]ncia|d[íi]vida|fatura|estorno|reembolso)/i.test(String(message || ''));
-    const hasEscalationBlock = rawAssistantMessage.includes('[WHATSAPP_ESCALATION]');
+    const parsedIncomingMessage = extractAttachmentsFromMessage(normalizedIncomingMessage);
+    const incomingPlainText = parsedIncomingMessage.text || '';
+    const hasIncomingImage = parsedIncomingMessage.attachments.some(isImageAttachmentUrl);
+    const userAskedPayment = /(pagamento|pagar|pix|cart[aã]o|cobran[çc]a|pend[êe]ncia|d[íi]vida|fatura|estorno|reembolso)/i.test(incomingPlainText);
 
     let assistantMessage = rawAssistantMessage;
+    let hasEscalationBlock = assistantMessage.includes('[WHATSAPP_ESCALATION]');
+
+    const askedForBarberData = /(qual\s+barbeiro|qual\s+data|qual\s+hor[aá]rio|qual\s+servi[cç]o|pode\s+me\s+informar.*(barbeiro|data|hor[aá]rio|servi[cç]o))/i.test(assistantMessage);
+    const isErrorReport = /(erro|falha|bug|n[aã]o\s+consigo|não\s+consigo|problema|travou|n[aã]o\s+abre|não\s+abre|agendar)/i.test(incomingPlainText);
+
+    if (!hasEscalationBlock && isErrorReport && (hasIncomingImage || askedForBarberData)) {
+      const problemSummary = (incomingPlainText || 'Erro reportado no app com evidência em imagem').slice(0, 260);
+      assistantMessage = buildWhatsAppEscalationResponse(problemSummary, user.email || '', conversation.id);
+      hasEscalationBlock = true;
+    }
 
     if (!userAskedPayment && !hasEscalationBlock) {
       assistantMessage = assistantMessage
@@ -1500,7 +1664,9 @@ ${APP_KNOWLEDGE}
     }
 
     if (!assistantMessage) {
-      assistantMessage = 'Entendi. Já estou analisando e vou te ajudar agora. Me manda um print da tela com o erro, por favor. 📸';
+      assistantMessage = hasIncomingImage
+        ? buildWhatsAppEscalationResponse('Cliente enviou print com erro e precisa de apoio humano.', user.email || '', conversation.id)
+        : 'Entendi. Me manda um print da tela com o erro para eu te ajudar de forma direta. 📸';
     }
 
     // Salvar resposta
@@ -1529,4 +1695,6 @@ ${APP_KNOWLEDGE}
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
   }
-});
+}
+}
+);

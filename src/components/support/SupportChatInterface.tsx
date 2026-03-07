@@ -1,4 +1,4 @@
-import { ArrowUp, Mic, StopCircle, Loader2, Paperclip, X, Plus, Clock, MessageSquarePlus, ExternalLink } from "lucide-react";
+import { ArrowUp, Mic, StopCircle, Loader2, Paperclip, X, Plus, Clock, MessageSquarePlus, ExternalLink, FileText } from "lucide-react";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -6,20 +6,77 @@ import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { BotAvatar } from "./BotAvatar";
 import whatsappLogo from "@/assets/whatsapp-logo.png";
+import { composeMessageContent, isImageAttachment, parseMessageContent, type ChatAttachment } from "./chatMessageUtils";
 
 const ADMIN_WHATSAPP = "5511963390043";
 
+function AttachmentsRenderer({ attachments }: { attachments: ChatAttachment[] }) {
+  if (attachments.length === 0) return null;
+
+  const imageAttachments = attachments.filter(isImageAttachment);
+  const fileAttachments = attachments.filter((attachment) => !isImageAttachment(attachment));
+
+  return (
+    <div className="space-y-2">
+      {imageAttachments.length > 0 && (
+        <div className="grid grid-cols-2 gap-2">
+          {imageAttachments.map((attachment) => (
+            <a
+              key={attachment.url}
+              href={attachment.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block rounded-lg border border-border/50 overflow-hidden bg-card/60"
+            >
+              <img
+                src={attachment.url}
+                alt={attachment.name || "Anexo"}
+                loading="lazy"
+                className="w-full h-28 object-cover"
+              />
+            </a>
+          ))}
+        </div>
+      )}
+
+      {fileAttachments.length > 0 && (
+        <div className="space-y-1.5">
+          {fileAttachments.map((attachment) => (
+            <a
+              key={attachment.url}
+              href={attachment.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 rounded-lg border border-border/50 bg-card/60 px-2.5 py-2 text-[11px] text-foreground/80 no-underline"
+            >
+              <FileText className="h-3.5 w-3.5 text-muted-foreground" />
+              <span className="truncate flex-1">{attachment.name || "Arquivo anexado"}</span>
+              <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" />
+            </a>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /** Renders message content with WhatsApp escalation blocks */
 function MessageContent({ content }: { content: string }) {
+  const { text, attachments } = parseMessageContent(content);
   const escalationRegex = /\[WHATSAPP_ESCALATION\]([\s\S]*?)\[\/WHATSAPP_ESCALATION\]/;
-  const match = content.match(escalationRegex);
+  const match = text.match(escalationRegex);
 
   if (!match) {
-    return <p className="text-[13px] leading-[1.75] text-foreground/85 whitespace-pre-wrap break-words">{content}</p>;
+    return (
+      <div className="space-y-2.5">
+        {text && <p className="text-[13px] leading-[1.75] text-foreground/85 whitespace-pre-wrap break-words">{text}</p>}
+        <AttachmentsRenderer attachments={attachments} />
+      </div>
+    );
   }
 
-  const beforeBlock = content.slice(0, match.index).trim();
-  const afterBlock = content.slice((match.index || 0) + match[0].length).trim();
+  const beforeBlock = text.slice(0, match.index).trim();
+  const afterBlock = text.slice((match.index || 0) + match[0].length).trim();
   const messageText = match[1].trim();
   const whatsappUrl = `https://wa.me/${ADMIN_WHATSAPP}?text=${encodeURIComponent(messageText)}`;
 
@@ -47,6 +104,7 @@ function MessageContent({ content }: { content: string }) {
       {afterBlock && (
         <p className="text-[13px] leading-[1.75] text-foreground/85 whitespace-pre-wrap break-words">{afterBlock}</p>
       )}
+      <AttachmentsRenderer attachments={attachments} />
     </div>
   );
 }
@@ -258,9 +316,8 @@ export function SupportChatInterface() {
     const textToSend = messageText || input.trim();
     if (!textToSend && selectedFiles.length === 0) return;
 
-    // Upload files to Supabase Storage and get URLs
-    let fileDescriptions = "";
-    const uploadedUrls: string[] = [];
+    // Upload files to Supabase Storage and keep attachment metadata
+    const uploadedAttachments: ChatAttachment[] = [];
 
     if (selectedFiles.length > 0) {
       for (const file of selectedFiles) {
@@ -275,21 +332,20 @@ export function SupportChatInterface() {
             const { data: urlData } = supabase.storage
               .from('support-attachments')
               .getPublicUrl(uploadData.path);
-            uploadedUrls.push(urlData.publicUrl);
+
+            uploadedAttachments.push({
+              name: file.name,
+              url: urlData.publicUrl,
+              mimeType: file.type || undefined,
+            });
           }
         } catch (e) {
           console.error('Upload error:', e);
         }
       }
-
-      if (uploadedUrls.length > 0) {
-        fileDescriptions = `\n\n[${uploadedUrls.length} arquivo(s) anexado(s):\n${uploadedUrls.map((url, i) => `- ${selectedFiles[i]?.name}: ${url}`).join('\n')}]`;
-      } else {
-        fileDescriptions = `\n\n[${selectedFiles.length} arquivo(s) anexado(s): ${selectedFiles.map(f => f.name).join(', ')}]`;
-      }
     }
 
-    const content = textToSend + fileDescriptions;
+    const content = composeMessageContent(textToSend, uploadedAttachments);
 
     setMessages(prev => [...prev, { role: "user", content, timestamp: new Date() }]);
     setInput("");
@@ -299,7 +355,13 @@ export function SupportChatInterface() {
 
     try {
       const { data, error } = await supabase.functions.invoke("ai-support-chat", {
-        body: { message: content, conversationId, guestName: "Usuário", guestEmail: "guest@example.com" }
+        body: {
+          message: content,
+          attachments: uploadedAttachments,
+          conversationId,
+          guestName: "Usuário",
+          guestEmail: "guest@example.com"
+        }
       });
       if (error) throw error;
       setMessages(prev => [...prev, { role: "assistant", content: data.response, timestamp: new Date() }]);
@@ -463,32 +525,39 @@ export function SupportChatInterface() {
         <div ref={scrollAreaRef} className="flex-1 overflow-y-auto overscroll-contain">
           <div className="max-w-2xl mx-auto px-4 pt-2 pb-4">
             <AnimatePresence mode="popLayout">
-              {messages.map((message, index) => (
-                <motion.div
-                  key={index}
-                  initial={{ opacity: 0, y: 6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.2 }}
-                  className={cn("mb-4", message.role === "user" && "flex justify-end")}
-                >
-                  {message.role === "user" ? (
-                    <div className="max-w-[80%]">
-                      <div className="rounded-2xl rounded-br-sm px-3.5 py-2.5 bg-muted/70 dark:bg-muted/40 text-foreground">
-                        <p className="text-[13px] leading-relaxed whitespace-pre-wrap break-words">{message.content}</p>
+              {messages.map((message, index) => {
+                const parsedMessage = parseMessageContent(message.content);
+
+                return (
+                  <motion.div
+                    key={index}
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className={cn("mb-4", message.role === "user" && "flex justify-end")}
+                  >
+                    {message.role === "user" ? (
+                      <div className="max-w-[80%]">
+                        <div className="rounded-2xl rounded-br-sm px-3.5 py-2.5 bg-muted/70 dark:bg-muted/40 text-foreground space-y-2.5">
+                          {parsedMessage.text && (
+                            <p className="text-[13px] leading-relaxed whitespace-pre-wrap break-words">{parsedMessage.text}</p>
+                          )}
+                          <AttachmentsRenderer attachments={parsedMessage.attachments} />
+                        </div>
                       </div>
-                    </div>
-                  ) : (
-                    <div className="flex gap-2.5">
-                      <div className="shrink-0 mt-0.5">
-                        <BotAvatar size="sm" />
+                    ) : (
+                      <div className="flex gap-2.5">
+                        <div className="shrink-0 mt-0.5">
+                          <BotAvatar size="sm" />
+                        </div>
+                        <div className="flex-1 min-w-0 pt-0.5">
+                          <MessageContent content={message.content} />
+                        </div>
                       </div>
-                      <div className="flex-1 min-w-0 pt-0.5">
-                        <MessageContent content={message.content} />
-                      </div>
-                    </div>
-                  )}
-                </motion.div>
-              ))}
+                    )}
+                  </motion.div>
+                );
+              })}
             </AnimatePresence>
 
             {isLoading && (
