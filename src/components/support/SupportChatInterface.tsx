@@ -409,7 +409,7 @@ export function SupportChatInterface() {
                         <BotAvatar size="sm" />
                       </div>
                       <div className="flex-1 min-w-0 pt-0.5">
-                        <p className="text-[13px] leading-[1.75] text-foreground/85 whitespace-pre-wrap break-words">{message.content}</p>
+                        <MessageContent content={message.content} />
                       </div>
                     </div>
                   )}
