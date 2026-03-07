@@ -1162,6 +1162,142 @@ async function executeFunction(functionName: string, args: any, supabase: any, c
 }
 
 // ========================================
+// HELPERS DE ANEXOS (TEXTO + IMAGEM)
+// ========================================
+
+interface IncomingAttachment {
+  name?: string;
+  url: string;
+  mimeType?: string;
+}
+
+const ATTACHMENTS_JSON_REGEX = /\[ATTACHMENTS_JSON\]([\s\S]*?)\[\/ATTACHMENTS_JSON\]/;
+const LEGACY_ATTACHMENTS_REGEX = /\[(\d+)\s+arquivo\(s\)\s+anexado\(s\):([\s\S]*?)\]/i;
+const IMAGE_URL_REGEX = /\.(png|jpe?g|gif|webp|bmp|svg)(\?.*)?$/i;
+
+function normalizeIncomingAttachments(raw: unknown): IncomingAttachment[] {
+  if (!Array.isArray(raw)) return [];
+
+  const seen = new Set<string>();
+  const list: IncomingAttachment[] = [];
+
+  for (const item of raw) {
+    if (!item || typeof item !== 'object') continue;
+
+    const maybe = item as Partial<IncomingAttachment>;
+    if (!maybe.url || typeof maybe.url !== 'string') continue;
+    if (seen.has(maybe.url)) continue;
+
+    seen.add(maybe.url);
+    list.push({
+      url: maybe.url,
+      name: typeof maybe.name === 'string' ? maybe.name : undefined,
+      mimeType: typeof maybe.mimeType === 'string' ? maybe.mimeType : undefined,
+    });
+  }
+
+  return list;
+}
+
+function parseLegacyAttachmentBlock(block: string): IncomingAttachment[] {
+  const lines = block.split('\n').map((line) => line.trim()).filter(Boolean);
+  const parsed: IncomingAttachment[] = [];
+
+  for (const line of lines) {
+    const named = line.match(/^-\s*(.*?):\s*(https?:\/\/\S+)$/i);
+    if (named) {
+      parsed.push({ name: named[1].trim(), url: named[2].trim() });
+      continue;
+    }
+
+    const urlMatch = line.match(/(https?:\/\/\S+)/i);
+    if (urlMatch) {
+      parsed.push({ url: urlMatch[1].trim() });
+    }
+  }
+
+  return parsed;
+}
+
+function extractAttachmentsFromMessage(content: string): { text: string; attachments: IncomingAttachment[] } {
+  let text = content || '';
+  let attachments: IncomingAttachment[] = [];
+
+  const jsonMatch = text.match(ATTACHMENTS_JSON_REGEX);
+  if (jsonMatch) {
+    try {
+      const decoded = decodeURIComponent(jsonMatch[1]);
+      const parsed = normalizeIncomingAttachments(JSON.parse(decoded));
+      attachments.push(...parsed);
+    } catch (_) {
+      // ignore malformed attachment payload
+    }
+
+    text = text.replace(jsonMatch[0], '').trim();
+  }
+
+  const legacyMatch = text.match(LEGACY_ATTACHMENTS_REGEX);
+  if (legacyMatch) {
+    attachments.push(...parseLegacyAttachmentBlock(legacyMatch[2] || ''));
+    text = text.replace(legacyMatch[0], '').trim();
+  }
+
+  const deduped = normalizeIncomingAttachments(attachments);
+
+  return {
+    text,
+    attachments: deduped,
+  };
+}
+
+function toAttachmentContentBlock(attachments: IncomingAttachment[]): string {
+  const normalized = normalizeIncomingAttachments(attachments);
+  if (normalized.length === 0) return '';
+
+  return `[ATTACHMENTS_JSON]${encodeURIComponent(JSON.stringify(normalized))}[/ATTACHMENTS_JSON]`;
+}
+
+function isImageAttachmentUrl(attachment: IncomingAttachment): boolean {
+  if (attachment.mimeType?.startsWith('image/')) return true;
+  return IMAGE_URL_REGEX.test(attachment.url);
+}
+
+function toGatewayMessage(role: string, content: string, explicitAttachments: IncomingAttachment[] = []) {
+  const parsed = extractAttachmentsFromMessage(content || '');
+  const merged = normalizeIncomingAttachments([...parsed.attachments, ...explicitAttachments]);
+
+  if (role !== 'user' || merged.length === 0) {
+    return { role, content: parsed.text || content || '' };
+  }
+
+  const contentParts: any[] = [];
+
+  if (parsed.text) {
+    contentParts.push({ type: 'text', text: parsed.text });
+  }
+
+  for (const attachment of merged) {
+    if (isImageAttachmentUrl(attachment)) {
+      contentParts.push({ type: 'image_url', image_url: { url: attachment.url } });
+    } else {
+      contentParts.push({
+        type: 'text',
+        text: `Arquivo anexado: ${attachment.name || 'arquivo'} (${attachment.url})`,
+      });
+    }
+  }
+
+  if (contentParts.length === 0) {
+    contentParts.push({ type: 'text', text: parsed.text || 'Mensagem do usuário' });
+  }
+
+  return {
+    role,
+    content: contentParts,
+  };
+}
+
+// ========================================
 // SERVIDOR PRINCIPAL
 // ========================================
 
