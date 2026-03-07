@@ -136,7 +136,7 @@ export function AppointmentHistorySheet({
                         : apt.status === 'cancelled_by_admin'
                         ? 'Cancelado pelo Admin'
                         : apt.status === 'no_show'
-                        ? 'Não Compareceu'
+                        ? 'Faltou'
                         : apt.status}
                     </Badge>
                   </div>

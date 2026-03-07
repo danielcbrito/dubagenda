@@ -343,7 +343,7 @@ export function TIClientes() {
       completed: { label: "Concluído", color: "bg-emerald-500/10 text-emerald-400" },
       cancelled_by_admin: { label: "Cancelado", color: "bg-red-500/10 text-red-400" },
       cancelled_by_user: { label: "Cancelado", color: "bg-red-500/10 text-red-400" },
-      no_show: { label: "Não compareceu", color: "bg-orange-500/10 text-orange-400" },
+      no_show: { label: "Faltou", color: "bg-orange-500/10 text-orange-400" },
     };
     const s = statusMap[status] || { label: status, color: "bg-gray-500/10 text-gray-400" };
     return (
