@@ -1475,8 +1475,33 @@ ${APP_KNOWLEDGE}
       choice = aiData.choices[0];
     }
 
-    // Resposta final
-    const assistantMessage = choice.message?.content || 'Desculpe, tive um probleminha técnico. Pode tentar de novo? 😊';
+    // Resposta final com filtro de segurança e concisão
+    const rawAssistantMessage = choice.message?.content || 'Desculpe, tive um probleminha técnico. Pode tentar de novo? 😊';
+    const userAskedPayment = /(pagamento|pagar|pix|cart[aã]o|cobran[çc]a|pend[êe]ncia|d[íi]vida|fatura|estorno|reembolso)/i.test(String(message || ''));
+    const hasEscalationBlock = rawAssistantMessage.includes('[WHATSAPP_ESCALATION]');
+
+    let assistantMessage = rawAssistantMessage;
+
+    if (!userAskedPayment && !hasEscalationBlock) {
+      assistantMessage = assistantMessage
+        .split('\n')
+        .filter((line: string) => !/(pagamento|pix|pend[êe]ncia|d[íi]vida|cobran[çc]a|fatura|estorno|reembolso)/i.test(line))
+        .join('\n')
+        .replace(/\n{3,}/g, '\n\n')
+        .trim();
+    }
+
+    if (!hasEscalationBlock) {
+      assistantMessage = assistantMessage.replace(/\s+/g, ' ').trim();
+      const maxChars = 320;
+      if (assistantMessage.length > maxChars) {
+        assistantMessage = `${assistantMessage.slice(0, maxChars).replace(/\s+\S*$/, '').trim()}...`;
+      }
+    }
+
+    if (!assistantMessage) {
+      assistantMessage = 'Entendi. Já estou analisando e vou te ajudar agora. Me manda um print da tela com o erro, por favor. 📸';
+    }
 
     // Salvar resposta
     await supabase.from('support_messages').insert({
