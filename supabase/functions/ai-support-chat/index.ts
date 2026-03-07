@@ -1465,6 +1465,7 @@ Quando você NÃO CONSEGUIR RESOLVER o problema do cliente, ou quando o problema
 - Reclamações sérias
 - Qualquer situação que precise de intervenção humana
 - O cliente pedir para falar com uma pessoa
+- Você já analisou print/imagem e ainda não conseguiu concluir com confiança
 
 Você DEVE encerrar a conversa direcionando o cliente para o WhatsApp do administrador com um resumo pré-escrito.
 
