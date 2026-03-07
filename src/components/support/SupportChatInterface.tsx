@@ -535,6 +535,15 @@ export function SupportChatInterface() {
             "bg-card border border-border/60",
             "shadow-soft"
           )}>
+            {/* Hidden file input */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              accept="image/*,.pdf,.doc,.docx,.txt"
+              className="hidden"
+              onChange={handleFileSelect}
+            />
             {/* Attach file — left side */}
             <button
               type="button"
