@@ -1291,6 +1291,9 @@ function toGatewayMessage(role: string, content: string, explicitAttachments: In
     contentParts.push({ type: 'text', text: parsed.text || 'Mensagem do usuário' });
   }
 
+  return { role, content: contentParts };
+}
+
 function buildWhatsAppEscalationResponse(summary: string, email: string, conversationId: string): string {
   return `Entendi o problema e já te direcionei para o suporte humano resolver agora.\n\n[WHATSAPP_ESCALATION]\nOlá! Preciso de ajuda com meu atendimento no DUB.\n\n📋 Resumo do problema:\n${summary}\n\n📧 Email: ${email || 'não informado'}\n🆔 Protocolo: ${conversationId}\n[/WHATSAPP_ESCALATION]`;
 }
