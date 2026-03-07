@@ -1629,11 +1629,22 @@ ${APP_KNOWLEDGE}
 
     // Resposta final com filtro de segurança e concisão
     const rawAssistantMessage = choice.message?.content || 'Desculpe, tive um probleminha técnico. Pode tentar de novo? 😊';
-    const { text: incomingPlainText } = extractAttachmentsFromMessage(normalizedIncomingMessage);
-    const userAskedPayment = /(pagamento|pagar|pix|cart[aã]o|cobran[çc]a|pend[êe]ncia|d[íi]vida|fatura|estorno|reembolso)/i.test(incomingPlainText || '');
-    const hasEscalationBlock = rawAssistantMessage.includes('[WHATSAPP_ESCALATION]');
+    const parsedIncomingMessage = extractAttachmentsFromMessage(normalizedIncomingMessage);
+    const incomingPlainText = parsedIncomingMessage.text || '';
+    const hasIncomingImage = parsedIncomingMessage.attachments.some(isImageAttachmentUrl);
+    const userAskedPayment = /(pagamento|pagar|pix|cart[aã]o|cobran[çc]a|pend[êe]ncia|d[íi]vida|fatura|estorno|reembolso)/i.test(incomingPlainText);
 
     let assistantMessage = rawAssistantMessage;
+    let hasEscalationBlock = assistantMessage.includes('[WHATSAPP_ESCALATION]');
+
+    const askedForBarberData = /(qual\s+barbeiro|qual\s+data|qual\s+hor[aá]rio|qual\s+servi[cç]o|pode\s+me\s+informar.*(barbeiro|data|hor[aá]rio|servi[cç]o))/i.test(assistantMessage);
+    const isErrorReport = /(erro|falha|bug|n[aã]o\s+consigo|não\s+consigo|problema|travou|n[aã]o\s+abre|não\s+abre|agendar)/i.test(incomingPlainText);
+
+    if (!hasEscalationBlock && isErrorReport && (hasIncomingImage || askedForBarberData)) {
+      const problemSummary = (incomingPlainText || 'Erro reportado no app com evidência em imagem').slice(0, 260);
+      assistantMessage = buildWhatsAppEscalationResponse(problemSummary, user.email || '', conversation.id);
+      hasEscalationBlock = true;
+    }
 
     if (!userAskedPayment && !hasEscalationBlock) {
       assistantMessage = assistantMessage
@@ -1653,7 +1664,9 @@ ${APP_KNOWLEDGE}
     }
 
     if (!assistantMessage) {
-      assistantMessage = 'Entendi. Já estou analisando e vou te ajudar agora. Me manda um print da tela com o erro, por favor. 📸';
+      assistantMessage = hasIncomingImage
+        ? buildWhatsAppEscalationResponse('Cliente enviou print com erro e precisa de apoio humano.', user.email || '', conversation.id)
+        : 'Entendi. Me manda um print da tela com o erro para eu te ajudar de forma direta. 📸';
     }
 
     // Salvar resposta
