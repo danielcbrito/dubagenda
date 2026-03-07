@@ -447,7 +447,7 @@ async function executeFunction(functionName: string, args: any, supabase: any, c
         );
         if (missingPoints?.length > 0) issues.push(`${missingPoints.length} agendamento(s) completado(s) sem ponto creditado — pode corrigir automaticamente`);
 
-        // Pagamentos REALMENTE pendentes vs PIX expirados
+        // Pagamentos (uso interno de diagnóstico, sem expor como problema por padrão)
         const realPending: any[] = [];
         const expiredPix: any[] = [];
         payments?.forEach((p: any) => {
@@ -461,8 +461,6 @@ async function executeFunction(functionName: string, args: any, supabase: any, c
             }
           }
         });
-        if (expiredPix.length > 0) issues.push(`${expiredPix.length} PIX expirado(s) (NÃO é dívida, apenas registro abandonado)`);
-        if (realPending.length > 0) issues.push(`${realPending.length} pagamento(s) aguardando confirmação recente`);
 
         // Resgates expirados
         const expiredRedemptions = redemptions?.filter((r: any) =>
