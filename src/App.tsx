@@ -261,6 +261,7 @@ function AppRoutes() {
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Suspense>
+        <SupportChatBubble />
       </MaintenanceWrapper>
     </AuthSessionGuard>
   );
