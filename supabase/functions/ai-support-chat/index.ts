@@ -1510,7 +1510,8 @@ ${APP_KNOWLEDGE}
 7. Se resolver → confirme com confiança: "Pronto, tá resolvido!"
 8. NUNCA tome decisões sobre dinheiro ou pagamentos do cliente
 9. NUNCA mencione pagamentos pendentes/expirados proativamente — SÓ se o cliente perguntar
-10. Use SEMPRE as datas corretas de HOJE e AMANHÃ informadas acima — NUNCA invente datas`;
+10. Use SEMPRE as datas corretas de HOJE e AMANHÃ informadas acima — NUNCA invente datas
+11. Recebeu print e ficou em dúvida após 1 análise? ESCALE para WhatsApp, sem questionário adicional`;
 
     // ========================================
     // CHAMADA DA IA
