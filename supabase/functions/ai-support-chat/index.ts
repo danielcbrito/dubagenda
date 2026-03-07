@@ -1452,8 +1452,8 @@ ${APP_KNOWLEDGE}
         model: 'google/gemini-2.5-flash',
         messages: messageHistory,
         tools: AVAILABLE_TOOLS,
-        temperature: 0.5,
-        max_tokens: 2000
+        temperature: 0.2,
+        max_tokens: 420
       };
 
       aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
