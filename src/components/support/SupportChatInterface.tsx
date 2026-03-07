@@ -316,9 +316,8 @@ export function SupportChatInterface() {
     const textToSend = messageText || input.trim();
     if (!textToSend && selectedFiles.length === 0) return;
 
-    // Upload files to Supabase Storage and get URLs
-    let fileDescriptions = "";
-    const uploadedUrls: string[] = [];
+    // Upload files to Supabase Storage and keep attachment metadata
+    const uploadedAttachments: ChatAttachment[] = [];
 
     if (selectedFiles.length > 0) {
       for (const file of selectedFiles) {
@@ -333,21 +332,20 @@ export function SupportChatInterface() {
             const { data: urlData } = supabase.storage
               .from('support-attachments')
               .getPublicUrl(uploadData.path);
-            uploadedUrls.push(urlData.publicUrl);
+
+            uploadedAttachments.push({
+              name: file.name,
+              url: urlData.publicUrl,
+              mimeType: file.type || undefined,
+            });
           }
         } catch (e) {
           console.error('Upload error:', e);
         }
       }
-
-      if (uploadedUrls.length > 0) {
-        fileDescriptions = `\n\n[${uploadedUrls.length} arquivo(s) anexado(s):\n${uploadedUrls.map((url, i) => `- ${selectedFiles[i]?.name}: ${url}`).join('\n')}]`;
-      } else {
-        fileDescriptions = `\n\n[${selectedFiles.length} arquivo(s) anexado(s): ${selectedFiles.map(f => f.name).join(', ')}]`;
-      }
     }
 
-    const content = textToSend + fileDescriptions;
+    const content = composeMessageContent(textToSend, uploadedAttachments);
 
     setMessages(prev => [...prev, { role: "user", content, timestamp: new Date() }]);
     setInput("");
