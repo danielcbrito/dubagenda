@@ -258,9 +258,38 @@ export function SupportChatInterface() {
     const textToSend = messageText || input.trim();
     if (!textToSend && selectedFiles.length === 0) return;
 
-    const content = selectedFiles.length > 0
-      ? `${textToSend}\n\n[${selectedFiles.length} arquivo(s) anexado(s): ${selectedFiles.map(f => f.name).join(', ')}]`
-      : textToSend;
+    // Upload files to Supabase Storage and get URLs
+    let fileDescriptions = "";
+    const uploadedUrls: string[] = [];
+
+    if (selectedFiles.length > 0) {
+      for (const file of selectedFiles) {
+        try {
+          const ext = file.name.split('.').pop() || 'bin';
+          const filePath = `support/${conversationId || 'new'}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+          const { data: uploadData, error: uploadError } = await supabase.storage
+            .from('support-attachments')
+            .upload(filePath, file, { contentType: file.type });
+
+          if (!uploadError && uploadData) {
+            const { data: urlData } = supabase.storage
+              .from('support-attachments')
+              .getPublicUrl(uploadData.path);
+            uploadedUrls.push(urlData.publicUrl);
+          }
+        } catch (e) {
+          console.error('Upload error:', e);
+        }
+      }
+
+      if (uploadedUrls.length > 0) {
+        fileDescriptions = `\n\n[${uploadedUrls.length} arquivo(s) anexado(s):\n${uploadedUrls.map((url, i) => `- ${selectedFiles[i]?.name}: ${url}`).join('\n')}]`;
+      } else {
+        fileDescriptions = `\n\n[${selectedFiles.length} arquivo(s) anexado(s): ${selectedFiles.map(f => f.name).join(', ')}]`;
+      }
+    }
+
+    const content = textToSend + fileDescriptions;
 
     setMessages(prev => [...prev, { role: "user", content, timestamp: new Date() }]);
     setInput("");
@@ -506,6 +535,15 @@ export function SupportChatInterface() {
             "bg-card border border-border/60",
             "shadow-soft"
           )}>
+            {/* Hidden file input */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              accept="image/*,.pdf,.doc,.docx,.txt"
+              className="hidden"
+              onChange={handleFileSelect}
+            />
             {/* Attach file — left side */}
             <button
               type="button"
