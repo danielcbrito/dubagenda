@@ -1698,6 +1698,5 @@ ${APP_KNOWLEDGE}
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
   }
-}
-}
-);
+});
+
