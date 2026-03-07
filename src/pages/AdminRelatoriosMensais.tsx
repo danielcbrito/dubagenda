@@ -567,7 +567,7 @@ Sistema de Gestão - Barbearia
                               </div>
                               <div className="text-center p-3 rounded-lg bg-amber-500/10">
                                 <p className="text-2xl font-bold text-amber-500">{selectedReport.agendamentos_no_show}</p>
-                                <p className="text-xs text-muted-foreground">No-shows</p>
+                                <p className="text-xs text-muted-foreground">Faltas</p>
                               </div>
                             </div>
                           </CardContent>
