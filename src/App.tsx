@@ -12,6 +12,7 @@ import { MaintenanceWarningBanner } from "@/components/MaintenanceWarningBanner"
 import { GlobalErrorBoundary } from "@/components/GlobalErrorBoundary";
 import { supabase } from "@/integrations/supabase/client";
 import { lazy, Suspense } from "react";
+import { SupportChatBubble } from "@/components/support/SupportChatBubble";
 
 // Lazy-loaded routes for reduced initial bundle
 const Index = lazy(() => import("./pages/Index"));
