@@ -525,32 +525,39 @@ export function SupportChatInterface() {
         <div ref={scrollAreaRef} className="flex-1 overflow-y-auto overscroll-contain">
           <div className="max-w-2xl mx-auto px-4 pt-2 pb-4">
             <AnimatePresence mode="popLayout">
-              {messages.map((message, index) => (
-                <motion.div
-                  key={index}
-                  initial={{ opacity: 0, y: 6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.2 }}
-                  className={cn("mb-4", message.role === "user" && "flex justify-end")}
-                >
-                  {message.role === "user" ? (
-                    <div className="max-w-[80%]">
-                      <div className="rounded-2xl rounded-br-sm px-3.5 py-2.5 bg-muted/70 dark:bg-muted/40 text-foreground">
-                        <p className="text-[13px] leading-relaxed whitespace-pre-wrap break-words">{message.content}</p>
+              {messages.map((message, index) => {
+                const parsedMessage = parseMessageContent(message.content);
+
+                return (
+                  <motion.div
+                    key={index}
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className={cn("mb-4", message.role === "user" && "flex justify-end")}
+                  >
+                    {message.role === "user" ? (
+                      <div className="max-w-[80%]">
+                        <div className="rounded-2xl rounded-br-sm px-3.5 py-2.5 bg-muted/70 dark:bg-muted/40 text-foreground space-y-2.5">
+                          {parsedMessage.text && (
+                            <p className="text-[13px] leading-relaxed whitespace-pre-wrap break-words">{parsedMessage.text}</p>
+                          )}
+                          <AttachmentsRenderer attachments={parsedMessage.attachments} />
+                        </div>
                       </div>
-                    </div>
-                  ) : (
-                    <div className="flex gap-2.5">
-                      <div className="shrink-0 mt-0.5">
-                        <BotAvatar size="sm" />
+                    ) : (
+                      <div className="flex gap-2.5">
+                        <div className="shrink-0 mt-0.5">
+                          <BotAvatar size="sm" />
+                        </div>
+                        <div className="flex-1 min-w-0 pt-0.5">
+                          <MessageContent content={message.content} />
+                        </div>
                       </div>
-                      <div className="flex-1 min-w-0 pt-0.5">
-                        <MessageContent content={message.content} />
-                      </div>
-                    </div>
-                  )}
-                </motion.div>
-              ))}
+                    )}
+                  </motion.div>
+                );
+              })}
             </AnimatePresence>
 
             {isLoading && (
