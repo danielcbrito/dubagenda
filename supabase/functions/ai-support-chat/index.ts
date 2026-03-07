@@ -1336,7 +1336,7 @@ serve(async (req) => {
       user = { id: `guest-${Date.now()}`, email: guestEmail };
     }
 
-    console.log('📩 Mensagem:', { userId: user.id, isGuest, msg: message?.slice(0, 100) });
+    console.log('📩 Mensagem:', { userId: user.id, isGuest, msg: incomingText.slice(0, 100), attachments: incomingAttachments.length });
 
     // Buscar ou criar conversa
     let conversation;
