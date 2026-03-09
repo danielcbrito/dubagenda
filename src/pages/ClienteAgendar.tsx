@@ -273,9 +273,23 @@ const ClienteAgendar = () => {
         return;
       }
 
-      // MEGA PARALLEL: all independent data in one shot
+      // Carregar unidades do tenant + MEGA PARALLEL
+      let units: TenantUnit[] = [];
+      let effectiveUnitId: string | null = null;
+      
+      if (tenantId) {
+        units = await loadTenantUnits(tenantId);
+        
+        // Se tem unidade preferida e ela está nas unidades ativas, auto-selecionar
+        if (userPreferredUnitId && units.find(u => u.id === userPreferredUnitId)) {
+          const preferredUnit = units.find(u => u.id === userPreferredUnitId)!;
+          setSelectedUnit(preferredUnit);
+          effectiveUnitId = preferredUnit.id;
+        }
+      }
+
       const [barbersList, , , subscription] = await Promise.all([
-        loadBarbers(tenantId),
+        loadBarbers(tenantId, effectiveUnitId),
         loadUserCreditsOptimized(uid),
         loadAvailableRedemptionsOptimized(uid),
         loadActiveSubscriptionOptimized(uid),
