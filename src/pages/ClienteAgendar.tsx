@@ -1096,7 +1096,7 @@ const ClienteAgendar = () => {
       
       if (error.message?.includes('TIME_SLOT_UNAVAILABLE') || error.message?.includes('indisponível') || error.message?.includes('Horário')) {
         toast.error(error.message || "Horário indisponível. Escolha outro horário.");
-        setStep(3);
+        setStep(4);
         refreshSlots();
       } else {
         toast.error("Erro ao processar pagamento: " + (error.message || "Erro desconhecido"));
