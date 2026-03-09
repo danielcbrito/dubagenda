@@ -161,8 +161,17 @@ serve(async (req) => {
 
     // ========== SUBSCRIPTION CHECKOUT ==========
     if (body.planoId) {
-      const stripePriceId = PLAN_PRICE_MAP[body.planoId];
-      if (!stripePriceId) throw new Error("Plano não encontrado no Stripe");
+      // Buscar stripe_price_id dinamicamente do banco de dados
+      const { data: plano, error: planoError } = await supabaseAdmin
+        .from("planos")
+        .select("stripe_price_id")
+        .eq("id", body.planoId)
+        .single();
+
+      if (planoError || !plano) throw new Error("Plano não encontrado");
+      if (!plano.stripe_price_id) throw new Error("Este plano não possui um stripe_price_id configurado. Preencha na tabela planos.");
+
+      const stripePriceId = plano.stripe_price_id;
 
       const session = await stripe.checkout.sessions.create({
         customer: customerId,
