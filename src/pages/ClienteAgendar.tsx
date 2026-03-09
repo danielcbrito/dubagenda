@@ -1676,23 +1676,22 @@ const ClienteAgendar = () => {
   // Plano SEM serviço vinculado: precisa de seleção de serviço adicional
   const planNeedsService = isPlanFlow && !activeSubscription?.servico_id;
   
-  // Cálculo de steps por fluxo:
-  // Plano COM serviço + barbeiro: 3 etapas (Data, Horário, Confirmação)
-  // Plano SEM serviço + barbeiro: 4 etapas (Serviço, Data, Horário, Confirmação)
-  // Plano sem barbeiro: +1 (Barbeiro primeiro)
-  // Remarcação: 4 etapas (Barbeiro, Data, Horário, Confirmação)
-  // Normal: 6 etapas (Barbeiro, Serviços, Data, Horário, Pagamento, Confirmação)
-  const totalSteps = isPlanFlow && activeSubscription?.barbeiro 
-    ? (planNeedsService ? 4 : 3) 
-    : isPlanFlow ? (planNeedsService ? 5 : 4) 
-    : isRescheduling ? 4 : 6;
+  // Unidade extra step: se tem múltiplas unidades e nenhuma preferida, +1 step
+  const showsUnitStep = hasMultipleUnits && !preferredUnitId;
+  const unitStepOffset = showsUnitStep ? 1 : 0;
   
-  // Ajustar step visual para plano com barbeiro + serviço auto-selecionados (começa no step 3)
+  // Cálculo de steps por fluxo:
+  const totalSteps = isPlanFlow && activeSubscription?.barbeiro 
+    ? (planNeedsService ? 4 : 3) + unitStepOffset
+    : isPlanFlow ? (planNeedsService ? 5 : 4) + unitStepOffset
+    : isRescheduling ? 4 + unitStepOffset : 6 + unitStepOffset;
+  
+  // Ajustar step visual
   const currentDisplayStep = isPlanFlow && activeSubscription?.barbeiro && activeSubscription?.servico_id
-    ? Math.min(step - 2, totalSteps) 
+    ? Math.min(step - 2 + unitStepOffset, totalSteps) 
     : isPlanFlow && activeSubscription?.barbeiro
-    ? Math.min(step - 1, totalSteps)
-    : Math.min(step, totalSteps);
+    ? Math.min(step - 1 + unitStepOffset, totalSteps)
+    : Math.min(step + (showsUnitStep ? 1 : 0), totalSteps);
 
   const pageVariants = {
     initial: { opacity: 0, x: 20 },
