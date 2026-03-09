@@ -2,7 +2,7 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { BackArrow } from "@/components/ui/back-arrow";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowLeft, ArrowRight, Clock, Check, Tag, CreditCard, Landmark, Loader2, Calendar as CalendarIcon, Shield, Zap, Star, Store, ChevronRight, Crown, Wallet } from "lucide-react";
+import { ArrowLeft, ArrowRight, Clock, Check, Tag, CreditCard, Landmark, Loader2, Calendar as CalendarIcon, Shield, Zap, Star, Store, ChevronRight, Crown, Wallet, MapPin } from "lucide-react";
 import logoDub from "@/assets/logo-dub.png";
 import pixIcon from "@/assets/pix-icon.png";
 import { toast } from "sonner";
@@ -25,12 +25,23 @@ import { StepDots } from "@/components/booking/StepDots";
 import { BookingBottomBar } from "@/components/booking/BookingBottomBar";
 import { TimeSelectionBar } from "@/components/booking/TimeSelectionBar";
 import { FloatingActionBar } from "@/components/booking/FloatingActionBar";
+import { UnitSelector } from "@/components/booking/UnitSelector";
+
+interface TenantUnit {
+  id: string;
+  nome: string;
+  bairro: string | null;
+  cidade: string | null;
+  estado: string | null;
+  is_sede: boolean | null;
+}
 
 interface Barber {
   id: string;
   apelido: string;
   foto_url: string | null;
   tenant_id?: string | null;
+  unidade_id?: string | null;
 }
 
 interface Service {
@@ -103,6 +114,12 @@ const ClienteAgendar = () => {
   const [showingOtherShops, setShowingOtherShops] = useState(false);
   const [allBarbers, setAllBarbers] = useState<Barber[]>([]);
 
+  // Sistema de unidades
+  const [tenantUnits, setTenantUnits] = useState<TenantUnit[]>([]);
+  const [selectedUnit, setSelectedUnit] = useState<TenantUnit | null>(null);
+  const [preferredUnitId, setPreferredUnitId] = useState<string | null>(null);
+  const [hasMultipleUnits, setHasMultipleUnits] = useState(false);
+
   // Verificação se usuário pode usar o plano
   const isPlanEligible =
     !isRescheduling &&
@@ -160,12 +177,12 @@ const ClienteAgendar = () => {
     }
   }, []);
 
-  // Carregar barbeiros (filtrado pelo tenant da barbearia preferida)
-  const loadBarbers = async (tenantId?: string | null) => {
+  // Carregar barbeiros (filtrado pelo tenant da barbearia preferida e opcionalmente pela unidade)
+  const loadBarbers = async (tenantId?: string | null, unitId?: string | null) => {
     // Busca filtrada + todos em paralelo
     let query = supabase
       .from("barbeiros")
-      .select("id, apelido, foto_url, tenant_id")
+      .select("id, apelido, foto_url, tenant_id, unidade_id")
       .eq("ativo", true)
       .order("apelido");
 
@@ -175,9 +192,14 @@ const ClienteAgendar = () => {
       query = query.is("tenant_id", null);
     }
 
+    // Filtrar por unidade se selecionada
+    if (unitId) {
+      query = query.or(`unidade_id.eq.${unitId},unidade_id.is.null`);
+    }
+
     const allQuery = supabase
       .from("barbeiros")
-      .select("id, apelido, foto_url, tenant_id")
+      .select("id, apelido, foto_url, tenant_id, unidade_id")
       .eq("ativo", true)
       .order("apelido");
 
@@ -185,6 +207,21 @@ const ClienteAgendar = () => {
     setBarbers(filtered.data || []);
     setAllBarbers(all.data || []);
     return filtered.data || [];
+  };
+
+  // Carregar unidades do tenant
+  const loadTenantUnits = async (tenantId: string) => {
+    const { data } = await supabase
+      .from("tenant_unidades")
+      .select("id, nome, bairro, cidade, estado, is_sede")
+      .eq("tenant_id", tenantId)
+      .eq("ativo", true)
+      .order("is_sede", { ascending: false });
+    
+    const units = (data || []) as TenantUnit[];
+    setTenantUnits(units);
+    setHasMultipleUnits(units.length > 1);
+    return units;
   };
 
   // Initialize booking
@@ -197,17 +234,20 @@ const ClienteAgendar = () => {
       const uid = session?.user?.id || null;
       if (uid) setUserId(uid);
 
-      // Carregar barbearia preferida do perfil
+      // Carregar barbearia preferida + unidade preferida do perfil
       let tenantId: string | null = null;
+      let userPreferredUnitId: string | null = null;
       if (uid) {
         const { data: profile } = await supabase
           .from("profiles")
-          .select("barbearia_preferida_id")
+          .select("barbearia_preferida_id, unidade_preferida_id")
           .eq("id", uid)
           .single();
 
         if (profile?.barbearia_preferida_id) {
           tenantId = profile.barbearia_preferida_id;
+          userPreferredUnitId = (profile as any).unidade_preferida_id || null;
+          setPreferredUnitId(userPreferredUnitId);
           // Buscar nome da barbearia (non-blocking — will set state async)
           supabase
             .from("tenants")
@@ -233,9 +273,23 @@ const ClienteAgendar = () => {
         return;
       }
 
-      // MEGA PARALLEL: all independent data in one shot
+      // Carregar unidades do tenant + MEGA PARALLEL
+      let units: TenantUnit[] = [];
+      let effectiveUnitId: string | null = null;
+      
+      if (tenantId) {
+        units = await loadTenantUnits(tenantId);
+        
+        // Se tem unidade preferida e ela está nas unidades ativas, auto-selecionar
+        if (userPreferredUnitId && units.find(u => u.id === userPreferredUnitId)) {
+          const preferredUnit = units.find(u => u.id === userPreferredUnitId)!;
+          setSelectedUnit(preferredUnit);
+          effectiveUnitId = preferredUnit.id;
+        }
+      }
+
       const [barbersList, , , subscription] = await Promise.all([
-        loadBarbers(tenantId),
+        loadBarbers(tenantId, effectiveUnitId),
         loadUserCreditsOptimized(uid),
         loadAvailableRedemptionsOptimized(uid),
         loadActiveSubscriptionOptimized(uid),
@@ -325,6 +379,12 @@ const ClienteAgendar = () => {
       }
 
       await loadServices(tenantId);
+
+      // Se tem múltiplas unidades e nenhuma preferida, começar no step 0 (seleção de unidade)
+      if (units.length > 1 && !effectiveUnitId) {
+        setStep(0);
+      }
+
       setIsInitializing(false);
     };
 
@@ -683,7 +743,7 @@ const ClienteAgendar = () => {
     const syncBookingData = async () => {
       try {
         let servicesQuery = supabase.from("servicos").select("*").eq("ativo", true).order("preco");
-        let barbersQuery = supabase.from("barbeiros").select("id, apelido, foto_url, tenant_id").eq("ativo", true).order("apelido");
+        let barbersQuery = supabase.from("barbeiros").select("id, apelido, foto_url, tenant_id, unidade_id").eq("ativo", true).order("apelido");
 
         if (tenantId) {
           servicesQuery = servicesQuery.eq("tenant_id", tenantId);
@@ -920,6 +980,7 @@ const ClienteAgendar = () => {
         observacoes: selectedServices.length > 1 
           ? `Serviços: ${serviceNames}` 
           : undefined,
+        unidade_id: selectedUnit?.id || null,
       };
 
       // === Cartão via Asaas Checkout ===
@@ -1088,7 +1149,8 @@ const ClienteAgendar = () => {
           is_free: true,
           barbeiro_confirmou: true,
           cliente_confirmou: true,
-        })
+          unidade_id: selectedUnit?.id || null,
+        } as any)
         .select()
         .single();
 
@@ -1181,7 +1243,8 @@ const ClienteAgendar = () => {
           remarcado_de: isRescheduling ? rescheduleAppointmentId : null,
           barbeiro_confirmou: true,
           cliente_confirmou: true,
-        })
+          unidade_id: selectedUnit?.id || null,
+        } as any)
         .select()
         .single();
 
@@ -1285,7 +1348,8 @@ const ClienteAgendar = () => {
           is_free: true,
           barbeiro_confirmou: true,
           cliente_confirmou: true,
-        })
+          unidade_id: selectedUnit?.id || null,
+        } as any)
         .select()
         .single();
 
@@ -1574,9 +1638,19 @@ const ClienteAgendar = () => {
   const canUseRedemption = availableRedemptions.length > 0 && !!getCorteService();
 
   const handleBack = () => {
-    // Step 1 (Barbeiro) - volta para home
-    if (step === 1) {
+    // Step 0 (Unidade) - volta para home
+    if (step === 0) {
       navigate("/cliente");
+      return;
+    }
+
+    // Step 1 (Barbeiro) - se tem unidades e veio do step 0, volta para unidade
+    if (step === 1) {
+      if (hasMultipleUnits && !preferredUnitId) {
+        setStep(0);
+      } else {
+        navigate("/cliente");
+      }
       return;
     }
     
@@ -1606,23 +1680,22 @@ const ClienteAgendar = () => {
   // Plano SEM serviço vinculado: precisa de seleção de serviço adicional
   const planNeedsService = isPlanFlow && !activeSubscription?.servico_id;
   
-  // Cálculo de steps por fluxo:
-  // Plano COM serviço + barbeiro: 3 etapas (Data, Horário, Confirmação)
-  // Plano SEM serviço + barbeiro: 4 etapas (Serviço, Data, Horário, Confirmação)
-  // Plano sem barbeiro: +1 (Barbeiro primeiro)
-  // Remarcação: 4 etapas (Barbeiro, Data, Horário, Confirmação)
-  // Normal: 6 etapas (Barbeiro, Serviços, Data, Horário, Pagamento, Confirmação)
-  const totalSteps = isPlanFlow && activeSubscription?.barbeiro 
-    ? (planNeedsService ? 4 : 3) 
-    : isPlanFlow ? (planNeedsService ? 5 : 4) 
-    : isRescheduling ? 4 : 6;
+  // Unidade extra step: se tem múltiplas unidades e nenhuma preferida, +1 step
+  const showsUnitStep = hasMultipleUnits && !preferredUnitId;
+  const unitStepOffset = showsUnitStep ? 1 : 0;
   
-  // Ajustar step visual para plano com barbeiro + serviço auto-selecionados (começa no step 3)
+  // Cálculo de steps por fluxo:
+  const totalSteps = isPlanFlow && activeSubscription?.barbeiro 
+    ? (planNeedsService ? 4 : 3) + unitStepOffset
+    : isPlanFlow ? (planNeedsService ? 5 : 4) + unitStepOffset
+    : isRescheduling ? 4 + unitStepOffset : 6 + unitStepOffset;
+  
+  // Ajustar step visual
   const currentDisplayStep = isPlanFlow && activeSubscription?.barbeiro && activeSubscription?.servico_id
-    ? Math.min(step - 2, totalSteps) 
+    ? Math.min(step - 2 + unitStepOffset, totalSteps) 
     : isPlanFlow && activeSubscription?.barbeiro
-    ? Math.min(step - 1, totalSteps)
-    : Math.min(step, totalSteps);
+    ? Math.min(step - 1 + unitStepOffset, totalSteps)
+    : Math.min(step + (showsUnitStep ? 1 : 0), totalSteps);
 
   const pageVariants = {
     initial: { opacity: 0, x: 20 },
@@ -1710,6 +1783,57 @@ const ClienteAgendar = () => {
 
       {/* Content */}
       <AnimatePresence mode="wait">
+        {/* STEP 0: ESCOLHER UNIDADE (quando tenant tem múltiplas) */}
+        {step === 0 && hasMultipleUnits && (
+          <motion.div
+            key="step-0-unit"
+            variants={pageVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            transition={{ duration: 0.25 }}
+            className="min-h-screen pt-16 pb-32 px-4"
+          >
+            <div className="max-w-2xl mx-auto">
+              <div className="mb-6 pt-1">
+                <h2 className="text-xl font-semibold text-foreground">
+                  Qual unidade?
+                </h2>
+                <p className="text-[12px] text-muted-foreground/60 mt-1">
+                  Escolha onde quer ser atendido
+                </p>
+              </div>
+
+              <UnitSelector
+                units={tenantUnits}
+                selectedUnit={selectedUnit}
+                preferredUnitId={preferredUnitId}
+                userId={userId}
+                onSelect={(unit) => {
+                  setSelectedUnit(unit);
+                }}
+                onPreferredChange={(newId) => {
+                  setPreferredUnitId(newId);
+                }}
+              />
+            </div>
+
+            <FloatingActionBar
+              isVisible={!!selectedUnit}
+              onContinue={async () => {
+                // Recarregar barbeiros filtrados pela unidade selecionada
+                if (selectedUnit) {
+                  await loadBarbers(preferredShop?.id || null, selectedUnit.id);
+                }
+                setStep(1);
+              }}
+              label="Continuar"
+              subtitle={selectedUnit?.nome || ""}
+              icon={<MapPin className="w-4 h-4 text-primary" />}
+            />
+          </motion.div>
+        )}
+
         {/* STEP 1: ESCOLHER BARBEIRO */}
         {step === 1 && (
           <motion.div

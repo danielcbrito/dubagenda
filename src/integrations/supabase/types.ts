@@ -146,6 +146,7 @@ export type Database = {
           servico_id: string
           status: Database["public"]["Enums"]["appointment_status"] | null
           tipo_agendamento: string | null
+          unidade_id: string | null
           updated_at: string | null
           usado_redemption_id: string | null
           user_id: string
@@ -174,6 +175,7 @@ export type Database = {
           servico_id: string
           status?: Database["public"]["Enums"]["appointment_status"] | null
           tipo_agendamento?: string | null
+          unidade_id?: string | null
           updated_at?: string | null
           usado_redemption_id?: string | null
           user_id: string
@@ -202,6 +204,7 @@ export type Database = {
           servico_id?: string
           status?: Database["public"]["Enums"]["appointment_status"] | null
           tipo_agendamento?: string | null
+          unidade_id?: string | null
           updated_at?: string | null
           usado_redemption_id?: string | null
           user_id?: string
@@ -234,6 +237,13 @@ export type Database = {
             columns: ["servico_id"]
             isOneToOne: false
             referencedRelation: "servicos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agendamentos_unidade_id_fkey"
+            columns: ["unidade_id"]
+            isOneToOne: false
+            referencedRelation: "tenant_unidades"
             referencedColumns: ["id"]
           },
         ]
@@ -712,6 +722,7 @@ export type Database = {
           id: string
           setup_completed: boolean | null
           tenant_id: string | null
+          unidade_id: string | null
           updated_at: string | null
           user_id: string | null
         }
@@ -728,6 +739,7 @@ export type Database = {
           id?: string
           setup_completed?: boolean | null
           tenant_id?: string | null
+          unidade_id?: string | null
           updated_at?: string | null
           user_id?: string | null
         }
@@ -744,6 +756,7 @@ export type Database = {
           id?: string
           setup_completed?: boolean | null
           tenant_id?: string | null
+          unidade_id?: string | null
           updated_at?: string | null
           user_id?: string | null
         }
@@ -753,6 +766,13 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "barbeiros_unidade_id_fkey"
+            columns: ["unidade_id"]
+            isOneToOne: false
+            referencedRelation: "tenant_unidades"
             referencedColumns: ["id"]
           },
         ]
@@ -2674,6 +2694,7 @@ export type Database = {
           nome: string
           signup_origin: string | null
           telefone: string | null
+          unidade_preferida_id: string | null
           updated_at: string | null
           wallet_pin_hash: string | null
         }
@@ -2695,6 +2716,7 @@ export type Database = {
           nome: string
           signup_origin?: string | null
           telefone?: string | null
+          unidade_preferida_id?: string | null
           updated_at?: string | null
           wallet_pin_hash?: string | null
         }
@@ -2716,6 +2738,7 @@ export type Database = {
           nome?: string
           signup_origin?: string | null
           telefone?: string | null
+          unidade_preferida_id?: string | null
           updated_at?: string | null
           wallet_pin_hash?: string | null
         }
@@ -2725,6 +2748,13 @@ export type Database = {
             columns: ["barbearia_preferida_id"]
             isOneToOne: false
             referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profiles_unidade_preferida_id_fkey"
+            columns: ["unidade_preferida_id"]
+            isOneToOne: false
+            referencedRelation: "tenant_unidades"
             referencedColumns: ["id"]
           },
         ]
