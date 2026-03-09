@@ -642,7 +642,7 @@ const ClienteAgendar = () => {
         setSelectedBarber(appointment.barbeiro);
         await loadBarberCustomDurations(appointment.barbeiro.id);
       }
-      setStep(2);
+      setStep(3);
       toast.info("Escolha a nova data e horário");
     } catch (error) {
       console.error("Error loading appointment for reschedule:", error);
