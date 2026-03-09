@@ -394,6 +394,16 @@ const ClienteAgendar = () => {
         setStep(1);
       }
       setIsInitializing(false);
+      } catch (err) {
+        console.error("[initializeBooking] Fatal error:", err);
+        setIsInitializing(false);
+        // Fallback: try to show unit selection or barber selection
+        if (tenantUnits.length > 1) {
+          setStep(0);
+        } else {
+          setStep(1);
+        }
+      }
     };
 
     initializeBooking();
