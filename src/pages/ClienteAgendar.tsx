@@ -1640,64 +1640,67 @@ const ClienteAgendar = () => {
   const canUseRedemption = availableRedemptions.length > 0 && !!getCorteService();
 
   const handleBack = () => {
-    // Step 0 (Unidade) - volta para home
-    if (step === 0) {
+    // Step 1 (Serviços) — volta para home
+    if (step === 1) {
       navigate("/cliente");
       return;
     }
 
-    // Step 1 (Barbeiro) - se tem unidades e veio do step 0, volta para unidade
-    if (step === 1) {
-      if (hasMultipleUnits && !preferredUnitId) {
-        setStep(0);
-      } else {
+    // Step 0 (Unidade) — volta para serviços
+    if (step === 0) {
+      setStep(1);
+      return;
+    }
+
+    // Step 2 (Barbeiro)
+    if (step === 2) {
+      if (isPlanFlow && activeSubscription?.servico_id) {
+        // Serviço pré-selecionado pelo plano, step 1 foi pulado
         navigate("/cliente");
+      } else if (hasMultipleUnits && !preferredUnitId) {
+        setStep(0); // Volta para unidade
+      } else {
+        setStep(1); // Volta para serviços
       }
       return;
     }
-    
-    // Assinante com barbeiro + serviço pré-selecionados: step 3 (data) é a primeira etapa visível
-    if (isPlanFlow && activeSubscription?.barbeiro && activeSubscription?.servico_id && step === 3) {
-      navigate("/cliente");
-      return;
-    }
-    
-    // Assinante com barbeiro pré-selecionado (sem serviço): step 2 = primeira etapa visível
-    if (activeSubscription?.barbeiro && step === 2) {
-      navigate("/cliente");
+
+    // Step 3 (Data) — volta para barbeiro ou home
+    if (step === 3) {
+      if ((isPlanFlow && activeSubscription?.barbeiro && activeSubscription?.servico_id) || isRescheduling) {
+        navigate("/cliente"); // Primeira etapa visível
+      } else {
+        setStep(2);
+      }
       return;
     }
 
-    if (isPlanFlow && activeSubscription?.barbeiro) {
-      setStep(step - 1);
-    } else if (isPlanFlow) {
-      setStep(step - 1);
-    } else if (isRescheduling) {
-      setStep(step - 1);
-    } else {
-      setStep(step - 1);
-    }
+    // Demais steps: voltar um
+    setStep(step - 1);
   };
 
-  // Plano SEM serviço vinculado: precisa de seleção de serviço adicional
   const planNeedsService = isPlanFlow && !activeSubscription?.servico_id;
-  
-  // Unidade extra step: se tem múltiplas unidades e nenhuma preferida, +1 step
   const showsUnitStep = hasMultipleUnits && !preferredUnitId;
-  const unitStepOffset = showsUnitStep ? 1 : 0;
-  
-  // Cálculo de steps por fluxo:
-  const totalSteps = isPlanFlow && activeSubscription?.barbeiro 
-    ? (planNeedsService ? 4 : 3) + unitStepOffset
-    : isPlanFlow ? (planNeedsService ? 5 : 4) + unitStepOffset
-    : isRescheduling ? 4 + unitStepOffset : 6 + unitStepOffset;
-  
-  // Ajustar step visual
-  const currentDisplayStep = isPlanFlow && activeSubscription?.barbeiro && activeSubscription?.servico_id
-    ? Math.min(step - 2 + unitStepOffset, totalSteps) 
-    : isPlanFlow && activeSubscription?.barbeiro
-    ? Math.min(step - 1 + unitStepOffset, totalSteps)
-    : Math.min(step + (showsUnitStep ? 1 : 0), totalSteps);
+
+  // Build visible steps for the current flow
+  const visibleSteps = (() => {
+    const skipService = (isPlanFlow && activeSubscription?.servico_id) || isRescheduling;
+    const skipBarber = (isPlanFlow && activeSubscription?.barbeiro) || isRescheduling;
+    const skipUnit = !showsUnitStep || skipBarber;
+
+    const steps: number[] = [];
+    if (!skipService) steps.push(1); // Service
+    if (!skipUnit) steps.push(0); // Unit
+    if (!skipBarber) steps.push(2); // Barber
+    steps.push(3); // Date
+    steps.push(4); // Time
+    if (!isPlanFlow && !isRescheduling) steps.push(5); // Payment
+    steps.push(isPlanFlow || isRescheduling ? 5 : 6); // Confirm
+    return [...new Set(steps)];
+  })();
+
+  const totalSteps = visibleSteps.length;
+  const currentDisplayStep = Math.max(1, visibleSteps.indexOf(step) + 1);
 
   const pageVariants = {
     initial: { opacity: 0, x: 20 },
