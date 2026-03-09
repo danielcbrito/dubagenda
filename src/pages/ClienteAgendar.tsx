@@ -1650,25 +1650,25 @@ const ClienteAgendar = () => {
   const canUseRedemption = availableRedemptions.length > 0 && !!getCorteService();
 
   const handleBack = () => {
-    // Step 1 (Barbeiro) — volta para home
-    if (step === 1) {
+    // Step 0 (Unidade) — volta para home
+    if (step === 0) {
       navigate("/cliente");
       return;
     }
 
-    // Step 0 (Unidade) — volta para barbeiro
-    if (step === 0) {
-      setStep(1);
-      return;
-    }
-
-    // Step 2 (Serviço)
-    if (step === 2) {
+    // Step 1 (Barbeiro) — volta para unidade ou home
+    if (step === 1) {
       if (hasMultipleUnits && !preferredUnitId) {
         setStep(0); // Volta para unidade
       } else {
-        setStep(1); // Volta para barbeiro
+        navigate("/cliente");
       }
+      return;
+    }
+
+    // Step 2 (Serviço) — volta para barbeiro
+    if (step === 2) {
+      setStep(1);
       return;
     }
 
@@ -1699,9 +1699,9 @@ const ClienteAgendar = () => {
     const skipUnit = !showsUnitStep || skipBarber;
 
     const steps: number[] = [];
-    if (!skipBarber) steps.push(1); // Barber (now step 1)
-    if (!skipUnit) steps.push(0); // Unit
-    if (!skipService) steps.push(2); // Service (now step 2)
+    if (!skipUnit) steps.push(0); // Unit FIRST
+    if (!skipBarber) steps.push(1); // Barber
+    if (!skipService) steps.push(2); // Service
     steps.push(3); // Date
     steps.push(4); // Time
     if (!isPlanFlow && !isRescheduling) steps.push(5); // Payment
