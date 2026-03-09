@@ -1809,7 +1809,7 @@ const ClienteAgendar = () => {
             transition={{ duration: 0.25 }}
             className="min-h-screen pt-16 pb-32 px-4"
           >
-            <div className    ="max-w-2xl mx-auto">
+            <div className="max-w-2xl mx-auto">
               <div className="mb-6 pt-1">
                 <h2 className="text-xl font-semibold text-foreground">
                   Qual unidade?
