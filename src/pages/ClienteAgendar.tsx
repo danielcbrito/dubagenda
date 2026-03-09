@@ -832,48 +832,66 @@ const ClienteAgendar = () => {
   };
 
   const handleNextStep = async () => {
-    // NOVO FLUXO (Step 1 = Barbeiro para TODOS):
-    // Plano/Remarcação: 1=Barbeiro, 2=Data, 3=Horário, 4=Confirmação
-    // Normal: 1=Barbeiro, 2=Serviços, 3=Data, 4=Horário, 5=Pagamento, 6=Confirmação
-    
-    // Step 1: Validar barbeiro
-    if (step === 1 && !selectedBarberId) {
-      toast.error("Selecione um profissional");
+    // FLUXO: Service(1) → Gateway → Unit(0) → Barber(2) → Date(3) → Time(4) → Payment(5) → Confirm(6)
+
+    // Step 1: Validate services + Gateway (unit check)
+    if (step === 1) {
+      if (selectedServices.length === 0) {
+        toast.error("Selecione pelo menos um serviço");
+        return;
+      }
+      // Gateway: check if tenant has multiple units and no unit selected
+      if (hasMultipleUnits && !selectedUnit) {
+        setStep(0); // Go to unit selection
+      } else {
+        // Load barbers filtered by unit
+        await loadBarbers(preferredShop?.id || null, selectedUnit?.id || null);
+        setStep(2); // Go to barber selection
+      }
       return;
     }
-    
-    // Plano SEM serviço: step 2 = serviço
-    const _planNeedsService = isPlanFlow && !activeSubscription?.servico_id;
-    // Plano COM barbeiro + serviço: barbeiro (1) e serviço (2) são pulados → começa no 3
-    const _planHasBoth = isPlanFlow && !!activeSubscription?.barbeiro && !!activeSubscription?.servico_id;
-    
-    // Step 2: Serviços (não-plano normal OU plano sem serviço vinculado)
-    const serviceStep = _planNeedsService ? 2 : (!isPlanFlow && !isRescheduling ? 2 : -1);
-    if (step === serviceStep && selectedServices.length === 0) {
-      toast.error("Selecione pelo menos um serviço");
+
+    // Step 0: Validate unit selection
+    if (step === 0) {
+      if (!selectedUnit) {
+        toast.error("Selecione uma unidade");
+        return;
+      }
+      await loadBarbers(preferredShop?.id || null, selectedUnit.id);
+      setStep(2);
       return;
     }
-    
-    // Validação de data
-    const dateStep = _planHasBoth ? 3 : _planNeedsService ? 3 : isPlanFlow ? 2 : isRescheduling ? 2 : 3;
-    if (step === dateStep && !selectedDate) {
-      toast.error("Selecione uma data");
+
+    // Step 2: Validate barber
+    if (step === 2) {
+      if (!selectedBarberId) {
+        toast.error("Selecione um profissional");
+        return;
+      }
+      setStep(3);
       return;
     }
-    
-    // Validação de horário
-    const timeStep = _planHasBoth ? 4 : _planNeedsService ? 4 : isPlanFlow ? 3 : isRescheduling ? 3 : 4;
-    if (step === timeStep && !selectedTime) {
-      toast.error("Selecione um horário");
+
+    // Step 3: Validate date
+    if (step === 3) {
+      if (!selectedDate) {
+        toast.error("Selecione uma data");
+        return;
+      }
+      setStep(4);
       return;
     }
-    
-    // Verificar disponibilidade antes de avançar da etapa de horário
-    if (step === timeStep && selectedDate && selectedTime) {
+
+    // Step 4: Validate time + availability check
+    if (step === 4) {
+      if (!selectedTime) {
+        toast.error("Selecione um horário");
+        return;
+      }
+
       setLoading(true);
       try {
         const result = await verifySlotAvailability(selectedTime);
-        
         if (!result.available) {
           toast.error(result.message || "Este horário acabou de ser reservado. Por favor, escolha outro.");
           refreshSlots();
@@ -881,7 +899,6 @@ const ClienteAgendar = () => {
           setLoading(false);
           return;
         }
-        
         setLoading(false);
       } catch (err) {
         console.error('[handleNextStep] Erro:', err);
@@ -889,43 +906,26 @@ const ClienteAgendar = () => {
         toast.error("Erro ao verificar disponibilidade. Tente novamente.");
         return;
       }
-    }
-    
-    // Remarcação: após horário (step 3), vai para confirmação (step 4)
-    if (isRescheduling && step === 3) {
-      setStep(4);
-      return;
-    }
-    
-    // Fluxo de plano COM barbeiro + serviço: após horário (step 4), vai para confirmação (step 5)
-    if (_planHasBoth && step === 4) {
-      setStep(5);
-      return;
-    }
-    
-    // Fluxo de plano COM serviço (sem barbeiro pré-selecionado): após horário (step 3), vai para confirmação (step 4)
-    if (isPlanFlow && !_planNeedsService && !_planHasBoth && step === 3) {
-      setStep(4);
-      return;
-    }
-    
-    // Fluxo de plano SEM serviço: após horário (step 4), vai para confirmação (step 5)
-    if (isPlanFlow && _planNeedsService && step === 4) {
-      setStep(5);
-      return;
-    }
 
-    // Fluxo normal: após horário (step 4), verifica créditos
-    if (!isPlanFlow && !isRescheduling && step === 4) {
+      // Reschedule or Plan: go to confirmation (step 5)
+      if (isRescheduling || isPlanEligible) {
+        setStep(5);
+        return;
+      }
+
+      // Normal flow: check if credits cover total
       const totalPrice = getTotalPrice();
       if (availableCredits >= totalPrice) {
         setPaymentMethod('cash');
-        setStep(6); // Vai direto para confirmação final
+        setStep(6); // Skip payment, go to confirmation
         return;
       }
-      // Senão vai para pagamento (step 5)
+
+      setStep(5); // Go to payment selection
+      return;
     }
-    
+
+    // Step 5 (normal): payment → confirmation
     setStep(step + 1);
   };
 
