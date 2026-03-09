@@ -743,7 +743,7 @@ const ClienteAgendar = () => {
     const syncBookingData = async () => {
       try {
         let servicesQuery = supabase.from("servicos").select("*").eq("ativo", true).order("preco");
-        let barbersQuery = supabase.from("barbeiros").select("id, apelido, foto_url, tenant_id").eq("ativo", true).order("apelido");
+        let barbersQuery = supabase.from("barbeiros").select("id, apelido, foto_url, tenant_id, unidade_id").eq("ativo", true).order("apelido");
 
         if (tenantId) {
           servicesQuery = servicesQuery.eq("tenant_id", tenantId);
