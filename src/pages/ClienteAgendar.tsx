@@ -114,6 +114,12 @@ const ClienteAgendar = () => {
   const [showingOtherShops, setShowingOtherShops] = useState(false);
   const [allBarbers, setAllBarbers] = useState<Barber[]>([]);
 
+  // Sistema de unidades
+  const [tenantUnits, setTenantUnits] = useState<TenantUnit[]>([]);
+  const [selectedUnit, setSelectedUnit] = useState<TenantUnit | null>(null);
+  const [preferredUnitId, setPreferredUnitId] = useState<string | null>(null);
+  const [hasMultipleUnits, setHasMultipleUnits] = useState(false);
+
   // Verificação se usuário pode usar o plano
   const isPlanEligible =
     !isRescheduling &&
