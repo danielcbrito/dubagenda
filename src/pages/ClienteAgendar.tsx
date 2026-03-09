@@ -280,6 +280,7 @@ const ClienteAgendar = () => {
       
       if (tenantId) {
         units = await loadTenantUnits(tenantId);
+        console.log("[initializeBooking] Units loaded:", units.length, "tenantId:", tenantId);
         
         // Se tem unidade preferida e ela está nas unidades ativas, auto-selecionar
         if (userPreferredUnitId && units.find(u => u.id === userPreferredUnitId)) {
