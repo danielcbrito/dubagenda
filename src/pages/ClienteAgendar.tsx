@@ -372,7 +372,7 @@ const ClienteAgendar = () => {
           } else if (units.length > 1 && !effectiveUnitId) {
             setStep(0); // need unit selection first, then barber
           } else {
-            setStep(2); // go to barber selection
+            setStep(1); // go to barber selection (step 1 = barber)
           }
           setIsInitializing(false);
           return;
@@ -832,21 +832,30 @@ const ClienteAgendar = () => {
   };
 
   const handleNextStep = async () => {
-    // FLUXO: Service(1) → Gateway → Unit(0) → Barber(2) → Date(3) → Time(4) → Payment(5) → Confirm(6)
+    // FLUXO: Barber(1) → Gateway → Unit(0) → Service(2) → Date(3) → Time(4) → Payment(5) → Confirm(6)
 
-    // Step 1: Validate services + Gateway (unit check)
+    // Step 1: Validate barber + Gateway (unit check)
     if (step === 1) {
-      if (selectedServices.length === 0) {
-        toast.error("Selecione pelo menos um serviço");
+      if (!selectedBarberId) {
+        toast.error("Selecione um profissional");
+        return;
+      }
+      // Load custom durations for the selected barber
+      if (selectedBarber) {
+        await loadBarberCustomDurations(selectedBarber.id);
+      }
+      // If plan has service pre-selected, skip service step
+      if (isPlanFlow && activeSubscription?.servico_id) {
+        setStep(3); // Skip to date
         return;
       }
       // Gateway: check if tenant has multiple units and no unit selected
       if (hasMultipleUnits && !selectedUnit) {
         setStep(0); // Go to unit selection
       } else {
-        // Load barbers filtered by unit
-        await loadBarbers(preferredShop?.id || null, selectedUnit?.id || null);
-        setStep(2); // Go to barber selection
+        // Load services filtered by tenant
+        await loadServices(preferredShop?.id || null);
+        setStep(2); // Go to service selection
       }
       return;
     }
@@ -857,15 +866,15 @@ const ClienteAgendar = () => {
         toast.error("Selecione uma unidade");
         return;
       }
-      await loadBarbers(preferredShop?.id || null, selectedUnit.id);
+      await loadServices(preferredShop?.id || null);
       setStep(2);
       return;
     }
 
-    // Step 2: Validate barber
+    // Step 2: Validate services
     if (step === 2) {
-      if (!selectedBarberId) {
-        toast.error("Selecione um profissional");
+      if (selectedServices.length === 0) {
+        toast.error("Selecione pelo menos um serviço");
         return;
       }
       setStep(3);
@@ -1640,35 +1649,35 @@ const ClienteAgendar = () => {
   const canUseRedemption = availableRedemptions.length > 0 && !!getCorteService();
 
   const handleBack = () => {
-    // Step 1 (Serviços) — volta para home
+    // Step 1 (Barbeiro) — volta para home
     if (step === 1) {
       navigate("/cliente");
       return;
     }
 
-    // Step 0 (Unidade) — volta para serviços
+    // Step 0 (Unidade) — volta para barbeiro
     if (step === 0) {
       setStep(1);
       return;
     }
 
-    // Step 2 (Barbeiro)
+    // Step 2 (Serviço)
     if (step === 2) {
-      if (isPlanFlow && activeSubscription?.servico_id) {
-        // Serviço pré-selecionado pelo plano, step 1 foi pulado
-        navigate("/cliente");
-      } else if (hasMultipleUnits && !preferredUnitId) {
+      if (hasMultipleUnits && !preferredUnitId) {
         setStep(0); // Volta para unidade
       } else {
-        setStep(1); // Volta para serviços
+        setStep(1); // Volta para barbeiro
       }
       return;
     }
 
-    // Step 3 (Data) — volta para barbeiro ou home
+    // Step 3 (Data) — volta para serviço ou home
     if (step === 3) {
       if ((isPlanFlow && activeSubscription?.barbeiro && activeSubscription?.servico_id) || isRescheduling) {
         navigate("/cliente"); // Primeira etapa visível
+      } else if (isPlanFlow && activeSubscription?.servico_id) {
+        // Service pre-selected by plan, barber was step 1
+        setStep(1);
       } else {
         setStep(2);
       }
@@ -1684,14 +1693,14 @@ const ClienteAgendar = () => {
 
   // Build visible steps for the current flow
   const visibleSteps = (() => {
-    const skipService = (isPlanFlow && activeSubscription?.servico_id) || isRescheduling;
     const skipBarber = (isPlanFlow && activeSubscription?.barbeiro) || isRescheduling;
+    const skipService = (isPlanFlow && activeSubscription?.servico_id) || isRescheduling;
     const skipUnit = !showsUnitStep || skipBarber;
 
     const steps: number[] = [];
-    if (!skipService) steps.push(1); // Service
+    if (!skipBarber) steps.push(1); // Barber (now step 1)
     if (!skipUnit) steps.push(0); // Unit
-    if (!skipBarber) steps.push(2); // Barber
+    if (!skipService) steps.push(2); // Service (now step 2)
     steps.push(3); // Date
     steps.push(4); // Time
     if (!isPlanFlow && !isRescheduling) steps.push(5); // Payment
@@ -1788,107 +1797,10 @@ const ClienteAgendar = () => {
 
       {/* Content */}
       <AnimatePresence mode="wait">
-        {/* STEP 1: ESCOLHER SERVIÇO */}
+        {/* STEP 1: ESCOLHER BARBEIRO */}
         {step === 1 && (
           <motion.div
-            key="step-1-services"
-            variants={pageVariants}
-            initial="initial"
-            animate="animate"
-            exit="exit"
-            transition={{ duration: 0.25 }}
-            className="min-h-screen pt-16 pb-32 px-4"
-          >
-            <div className="max-w-2xl mx-auto">
-              <div className="mb-6 pt-1">
-                <h2 className="text-xl font-semibold text-foreground">
-                  O que deseja?
-                </h2>
-                <p className="text-[12px] text-muted-foreground/60 mt-1">
-                  Selecione um ou mais serviços
-                </p>
-              </div>
-
-              <div ref={servicesListRef} className="space-y-3">
-                {services.map((service) => (
-                  <ServiceCard
-                    key={service.id}
-                    service={service}
-                    isSelected={selectedServices.some(s => s.id === service.id)}
-                    quantity={serviceQuantities[service.id] || 0}
-                    effectiveDuration={barberCustomDurations[service.id]}
-                    onToggle={() => toggleService(service)}
-                    onIncrement={() => incrementServiceQty(service.id)}
-                    onDecrement={() => decrementServiceQty(service)}
-                  />
-                ))}
-              </div>
-
-              <BookingBottomBar
-                serviceCount={selectedServices.reduce((sum, s) => sum + (serviceQuantities[s.id] || 1), 0)}
-                totalDuration={getTotalDuration()}
-                totalPrice={getTotalPrice()}
-                onContinue={handleNextStep}
-                isVisible={selectedServices.length > 0}
-              />
-            </div>
-          </motion.div>
-        )}
-
-        {/* STEP 0: ESCOLHER UNIDADE (condicional — gateway após serviços) */}
-        {step === 0 && hasMultipleUnits && (
-          <motion.div
-            key="step-0-unit"
-            variants={pageVariants}
-            initial="initial"
-            animate="animate"
-            exit="exit"
-            transition={{ duration: 0.25 }}
-            className="min-h-screen pt-16 pb-32 px-4"
-          >
-            <div className="max-w-2xl mx-auto">
-              <div className="mb-6 pt-1">
-                <h2 className="text-xl font-semibold text-foreground">
-                  Qual unidade?
-                </h2>
-                <p className="text-[12px] text-muted-foreground/60 mt-1">
-                  Escolha onde quer ser atendido
-                </p>
-              </div>
-
-              <UnitSelector
-                units={tenantUnits}
-                selectedUnit={selectedUnit}
-                preferredUnitId={preferredUnitId}
-                userId={userId}
-                onSelect={(unit) => {
-                  setSelectedUnit(unit);
-                }}
-                onPreferredChange={(newId) => {
-                  setPreferredUnitId(newId);
-                }}
-              />
-            </div>
-
-            <FloatingActionBar
-              isVisible={!!selectedUnit}
-              onContinue={async () => {
-                if (selectedUnit) {
-                  await loadBarbers(preferredShop?.id || null, selectedUnit.id);
-                }
-                setStep(2);
-              }}
-              label="Continuar"
-              subtitle={selectedUnit?.nome || ""}
-              icon={<MapPin className="w-4 h-4 text-primary" />}
-            />
-          </motion.div>
-        )}
-
-        {/* STEP 2: ESCOLHER BARBEIRO */}
-        {step === 2 && (
-          <motion.div
-            key="step-2-barber"
+            key="step-1-barber"
             variants={pageVariants}
             initial="initial"
             animate="animate"
@@ -1946,6 +1858,105 @@ const ClienteAgendar = () => {
                 )
               }
             />
+          </motion.div>
+        )}
+
+        {/* STEP 0: ESCOLHER UNIDADE (condicional — gateway após barbeiro) */}
+        {step === 0 && hasMultipleUnits && (
+          <motion.div
+            key="step-0-unit"
+            variants={pageVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            transition={{ duration: 0.25 }}
+            className="min-h-screen pt-16 pb-32 px-4"
+          >
+            <div className="max-w-2xl mx-auto">
+              <div className="mb-6 pt-1">
+                <h2 className="text-xl font-semibold text-foreground">
+                  Qual unidade?
+                </h2>
+                <p className="text-[12px] text-muted-foreground/60 mt-1">
+                  Escolha onde quer ser atendido
+                </p>
+              </div>
+
+              <UnitSelector
+                units={tenantUnits}
+                selectedUnit={selectedUnit}
+                preferredUnitId={preferredUnitId}
+                userId={userId}
+                onSelect={(unit) => {
+                  setSelectedUnit(unit);
+                }}
+                onPreferredChange={(newId) => {
+                  setPreferredUnitId(newId);
+                }}
+              />
+            </div>
+
+            <FloatingActionBar
+              isVisible={!!selectedUnit}
+              onContinue={async () => {
+                if (isPlanFlow && activeSubscription?.servico_id) {
+                  setStep(3); // Plan flow: skip service, go to date
+                } else {
+                  await loadServices(preferredShop?.id || null);
+                  setStep(2); // Go to service selection
+                }
+              }}
+              label="Continuar"
+              subtitle={selectedUnit?.nome || ""}
+              icon={<MapPin className="w-4 h-4 text-primary" />}
+            />
+          </motion.div>
+        )}
+
+        {/* STEP 2: ESCOLHER SERVIÇO */}
+        {step === 2 && (
+          <motion.div
+            key="step-2-services"
+            variants={pageVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            transition={{ duration: 0.25 }}
+            className="min-h-screen pt-16 pb-32 px-4"
+          >
+            <div className="max-w-2xl mx-auto">
+              <div className="mb-6 pt-1">
+                <h2 className="text-xl font-semibold text-foreground">
+                  O que deseja?
+                </h2>
+                <p className="text-[12px] text-muted-foreground/60 mt-1">
+                  Selecione um ou mais serviços{selectedBarber ? ` • com ${selectedBarber.apelido}` : ''}
+                </p>
+              </div>
+
+              <div ref={servicesListRef} className="space-y-3">
+                {services.map((service) => (
+                  <ServiceCard
+                    key={service.id}
+                    service={service}
+                    isSelected={selectedServices.some(s => s.id === service.id)}
+                    quantity={serviceQuantities[service.id] || 0}
+                    effectiveDuration={barberCustomDurations[service.id]}
+                    onToggle={() => toggleService(service)}
+                    onIncrement={() => incrementServiceQty(service.id)}
+                    onDecrement={() => decrementServiceQty(service)}
+                  />
+                ))}
+              </div>
+
+              <BookingBottomBar
+                serviceCount={selectedServices.reduce((sum, s) => sum + (serviceQuantities[s.id] || 1), 0)}
+                totalDuration={getTotalDuration()}
+                totalPrice={getTotalPrice()}
+                onContinue={handleNextStep}
+                isVisible={selectedServices.length > 0}
+              />
+            </div>
           </motion.div>
         )}
 
