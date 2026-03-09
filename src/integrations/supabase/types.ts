@@ -715,6 +715,7 @@ export type Database = {
           id: string
           is_primary: boolean
           role: string
+          role_level: string | null
           unidade_id: string
         }
         Insert: {
@@ -723,6 +724,7 @@ export type Database = {
           id?: string
           is_primary?: boolean
           role?: string
+          role_level?: string | null
           unidade_id: string
         }
         Update: {
@@ -731,6 +733,7 @@ export type Database = {
           id?: string
           is_primary?: boolean
           role?: string
+          role_level?: string | null
           unidade_id?: string
         }
         Relationships: [
