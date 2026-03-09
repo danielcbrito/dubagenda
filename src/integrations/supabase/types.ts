@@ -714,6 +714,7 @@ export type Database = {
           created_at: string
           id: string
           is_primary: boolean
+          role: string
           unidade_id: string
         }
         Insert: {
@@ -721,6 +722,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_primary?: boolean
+          role?: string
           unidade_id: string
         }
         Update: {
@@ -728,6 +730,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_primary?: boolean
+          role?: string
           unidade_id?: string
         }
         Relationships: [
@@ -4583,7 +4586,13 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "admin" | "barber" | "cliente" | "ti" | "tenant_admin"
+      app_role:
+        | "admin"
+        | "barber"
+        | "cliente"
+        | "ti"
+        | "tenant_admin"
+        | "unit_admin"
       appointment_status:
         | "pending"
         | "confirmed"
@@ -4734,7 +4743,14 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "barber", "cliente", "ti", "tenant_admin"],
+      app_role: [
+        "admin",
+        "barber",
+        "cliente",
+        "ti",
+        "tenant_admin",
+        "unit_admin",
+      ],
       appointment_status: [
         "pending",
         "confirmed",
