@@ -2041,7 +2041,7 @@ const ClienteAgendar = () => {
                     {selectedBarber?.apelido} está com agenda cheia neste dia.
                   </p>
                   <button
-                    onClick={() => setStep(planNeedsService ? 3 : (isPlanFlow && activeSubscription?.barbeiro ? 3 : isPlanFlow ? 2 : isRescheduling ? 2 : 3))}
+                    onClick={() => setStep(3)}
                     className="px-6 py-3 border border-border rounded-xl text-foreground hover:bg-secondary transition-all"
                   >
                     Escolher outra data
