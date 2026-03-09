@@ -379,6 +379,12 @@ const ClienteAgendar = () => {
       }
 
       await loadServices(tenantId);
+
+      // Se tem múltiplas unidades e nenhuma preferida, começar no step 0 (seleção de unidade)
+      if (units.length > 1 && !effectiveUnitId) {
+        setStep(0);
+      }
+
       setIsInitializing(false);
     };
 
