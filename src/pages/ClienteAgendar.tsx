@@ -2006,8 +2006,8 @@ const ClienteAgendar = () => {
           </motion.div>
         )}
 
-        {/* Horário: Step 4 (Plano com barbeiro+serviço), Step 3 (Plano sem barbeiro), Step 4 (Plano sem serviço/Normal), Step 3 (Remarcação) */}
-        {(((isPlanFlow && !planNeedsService && !!activeSubscription?.barbeiro) && step === 4) || ((isPlanFlow && !planNeedsService && !activeSubscription?.barbeiro) && step === 3) || (planNeedsService && step === 4) || (isRescheduling && step === 3) || (!isPlanFlow && !isRescheduling && step === 4)) && (
+        {/* STEP 4: ESCOLHER HORÁRIO */}
+        {step === 4 && (
           <motion.div
             key="step-time"
             variants={pageVariants}
