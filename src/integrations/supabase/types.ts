@@ -2507,6 +2507,7 @@ export type Database = {
           preco_mensal: number
           prioridade_agendamento: number | null
           servico_id: string | null
+          stripe_price_id: string | null
           tenant_id: string | null
           updated_at: string | null
         }
@@ -2521,6 +2522,7 @@ export type Database = {
           preco_mensal: number
           prioridade_agendamento?: number | null
           servico_id?: string | null
+          stripe_price_id?: string | null
           tenant_id?: string | null
           updated_at?: string | null
         }
@@ -2535,6 +2537,7 @@ export type Database = {
           preco_mensal?: number
           prioridade_agendamento?: number | null
           servico_id?: string | null
+          stripe_price_id?: string | null
           tenant_id?: string | null
           updated_at?: string | null
         }
