@@ -18,7 +18,7 @@ export function SupportChatBubble() {
 
   return (
     <AnimatePresence>
-      {!isHidden && (
+      {isVisible && (
         <motion.button
           key="support-bubble"
           onClick={() => navigate("/suporte")}
