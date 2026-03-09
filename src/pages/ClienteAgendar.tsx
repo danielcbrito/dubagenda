@@ -1949,8 +1949,8 @@ const ClienteAgendar = () => {
           </motion.div>
         )}
 
-        {/* Data: Step 3 (Plano com barbeiro+serviço), Step 2 (Plano sem barbeiro), Step 3 (Plano sem serviço/Normal), Step 2 (Remarcação) */}
-        {(((isPlanFlow && !planNeedsService && !!activeSubscription?.barbeiro) && step === 3) || ((isPlanFlow && !planNeedsService && !activeSubscription?.barbeiro) && step === 2) || (planNeedsService && step === 3) || (isRescheduling && step === 2) || (!isPlanFlow && !isRescheduling && step === 3)) && (
+        {/* STEP 3: ESCOLHER DATA */}
+        {step === 3 && (
           <motion.div
             key="step-date"
             variants={pageVariants}
