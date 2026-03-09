@@ -1649,35 +1649,35 @@ const ClienteAgendar = () => {
   const canUseRedemption = availableRedemptions.length > 0 && !!getCorteService();
 
   const handleBack = () => {
-    // Step 1 (Serviços) — volta para home
+    // Step 1 (Barbeiro) — volta para home
     if (step === 1) {
       navigate("/cliente");
       return;
     }
 
-    // Step 0 (Unidade) — volta para serviços
+    // Step 0 (Unidade) — volta para barbeiro
     if (step === 0) {
       setStep(1);
       return;
     }
 
-    // Step 2 (Barbeiro)
+    // Step 2 (Serviço)
     if (step === 2) {
-      if (isPlanFlow && activeSubscription?.servico_id) {
-        // Serviço pré-selecionado pelo plano, step 1 foi pulado
-        navigate("/cliente");
-      } else if (hasMultipleUnits && !preferredUnitId) {
+      if (hasMultipleUnits && !preferredUnitId) {
         setStep(0); // Volta para unidade
       } else {
-        setStep(1); // Volta para serviços
+        setStep(1); // Volta para barbeiro
       }
       return;
     }
 
-    // Step 3 (Data) — volta para barbeiro ou home
+    // Step 3 (Data) — volta para serviço ou home
     if (step === 3) {
       if ((isPlanFlow && activeSubscription?.barbeiro && activeSubscription?.servico_id) || isRescheduling) {
         navigate("/cliente"); // Primeira etapa visível
+      } else if (isPlanFlow && activeSubscription?.servico_id) {
+        // Service pre-selected by plan, barber was step 1
+        setStep(1);
       } else {
         setStep(2);
       }
