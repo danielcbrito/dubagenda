@@ -2526,8 +2526,8 @@ const ClienteAgendar = () => {
           </motion.div>
         )}
 
-        {/* Step 4: Confirmação Remarcação */}
-        {step === 4 && isRescheduling && (
+        {/* Step 5: Confirmação Remarcação */}
+        {step === 5 && isRescheduling && (
           <motion.div
             key="step-5-reschedule"
             variants={pageVariants}
