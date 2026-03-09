@@ -832,21 +832,30 @@ const ClienteAgendar = () => {
   };
 
   const handleNextStep = async () => {
-    // FLUXO: Service(1) → Gateway → Unit(0) → Barber(2) → Date(3) → Time(4) → Payment(5) → Confirm(6)
+    // FLUXO: Barber(1) → Gateway → Unit(0) → Service(2) → Date(3) → Time(4) → Payment(5) → Confirm(6)
 
-    // Step 1: Validate services + Gateway (unit check)
+    // Step 1: Validate barber + Gateway (unit check)
     if (step === 1) {
-      if (selectedServices.length === 0) {
-        toast.error("Selecione pelo menos um serviço");
+      if (!selectedBarberId) {
+        toast.error("Selecione um profissional");
+        return;
+      }
+      // Load custom durations for the selected barber
+      if (selectedBarber) {
+        await loadBarberCustomDurations(selectedBarber.id);
+      }
+      // If plan has service pre-selected, skip service step
+      if (isPlanFlow && activeSubscription?.servico_id) {
+        setStep(3); // Skip to date
         return;
       }
       // Gateway: check if tenant has multiple units and no unit selected
       if (hasMultipleUnits && !selectedUnit) {
         setStep(0); // Go to unit selection
       } else {
-        // Load barbers filtered by unit
-        await loadBarbers(preferredShop?.id || null, selectedUnit?.id || null);
-        setStep(2); // Go to barber selection
+        // Load services filtered by tenant
+        await loadServices(preferredShop?.id || null);
+        setStep(2); // Go to service selection
       }
       return;
     }
@@ -857,15 +866,15 @@ const ClienteAgendar = () => {
         toast.error("Selecione uma unidade");
         return;
       }
-      await loadBarbers(preferredShop?.id || null, selectedUnit.id);
+      await loadServices(preferredShop?.id || null);
       setStep(2);
       return;
     }
 
-    // Step 2: Validate barber
+    // Step 2: Validate services
     if (step === 2) {
-      if (!selectedBarberId) {
-        toast.error("Selecione um profissional");
+      if (selectedServices.length === 0) {
+        toast.error("Selecione pelo menos um serviço");
         return;
       }
       setStep(3);
