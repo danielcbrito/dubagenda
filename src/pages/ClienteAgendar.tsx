@@ -1693,14 +1693,14 @@ const ClienteAgendar = () => {
 
   // Build visible steps for the current flow
   const visibleSteps = (() => {
-    const skipService = (isPlanFlow && activeSubscription?.servico_id) || isRescheduling;
     const skipBarber = (isPlanFlow && activeSubscription?.barbeiro) || isRescheduling;
+    const skipService = (isPlanFlow && activeSubscription?.servico_id) || isRescheduling;
     const skipUnit = !showsUnitStep || skipBarber;
 
     const steps: number[] = [];
-    if (!skipService) steps.push(1); // Service
+    if (!skipBarber) steps.push(1); // Barber (now step 1)
     if (!skipUnit) steps.push(0); // Unit
-    if (!skipBarber) steps.push(2); // Barber
+    if (!skipService) steps.push(2); // Service (now step 2)
     steps.push(3); // Date
     steps.push(4); // Time
     if (!isPlanFlow && !isRescheduling) steps.push(5); // Payment
