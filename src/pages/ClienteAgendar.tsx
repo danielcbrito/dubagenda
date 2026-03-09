@@ -1788,7 +1788,54 @@ const ClienteAgendar = () => {
 
       {/* Content */}
       <AnimatePresence mode="wait">
-        {/* STEP 0: ESCOLHER UNIDADE (quando tenant tem múltiplas) */}
+        {/* STEP 1: ESCOLHER SERVIÇO */}
+        {step === 1 && (
+          <motion.div
+            key="step-1-services"
+            variants={pageVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            transition={{ duration: 0.25 }}
+            className="min-h-screen pt-16 pb-32 px-4"
+          >
+            <div className="max-w-2xl mx-auto">
+              <div className="mb-6 pt-1">
+                <h2 className="text-xl font-semibold text-foreground">
+                  O que deseja?
+                </h2>
+                <p className="text-[12px] text-muted-foreground/60 mt-1">
+                  Selecione um ou mais serviços
+                </p>
+              </div>
+
+              <div ref={servicesListRef} className="space-y-3">
+                {services.map((service) => (
+                  <ServiceCard
+                    key={service.id}
+                    service={service}
+                    isSelected={selectedServices.some(s => s.id === service.id)}
+                    quantity={serviceQuantities[service.id] || 0}
+                    effectiveDuration={barberCustomDurations[service.id]}
+                    onToggle={() => toggleService(service)}
+                    onIncrement={() => incrementServiceQty(service.id)}
+                    onDecrement={() => decrementServiceQty(service)}
+                  />
+                ))}
+              </div>
+
+              <BookingBottomBar
+                serviceCount={selectedServices.reduce((sum, s) => sum + (serviceQuantities[s.id] || 1), 0)}
+                totalDuration={getTotalDuration()}
+                totalPrice={getTotalPrice()}
+                onContinue={handleNextStep}
+                isVisible={selectedServices.length > 0}
+              />
+            </div>
+          </motion.div>
+        )}
+
+        {/* STEP 0: ESCOLHER UNIDADE (condicional — gateway após serviços) */}
         {step === 0 && hasMultipleUnits && (
           <motion.div
             key="step-0-unit"
@@ -1826,11 +1873,10 @@ const ClienteAgendar = () => {
             <FloatingActionBar
               isVisible={!!selectedUnit}
               onContinue={async () => {
-                // Recarregar barbeiros filtrados pela unidade selecionada
                 if (selectedUnit) {
                   await loadBarbers(preferredShop?.id || null, selectedUnit.id);
                 }
-                setStep(1);
+                setStep(2);
               }}
               label="Continuar"
               subtitle={selectedUnit?.nome || ""}
@@ -1839,10 +1885,10 @@ const ClienteAgendar = () => {
           </motion.div>
         )}
 
-        {/* STEP 1: ESCOLHER BARBEIRO */}
-        {step === 1 && (
+        {/* STEP 2: ESCOLHER BARBEIRO */}
+        {step === 2 && (
           <motion.div
-            key="step-1-barber"
+            key="step-2-barber"
             variants={pageVariants}
             initial="initial"
             animate="animate"
@@ -1856,7 +1902,7 @@ const ClienteAgendar = () => {
                   Seu Profissional
                 </h2>
                 <p className="text-[12px] text-muted-foreground/60 mt-1">
-                  {showingOtherShops ? "Profissionais de todas as barbearias" : "Quem vai cuidar de você hoje?"}
+                  Quem vai cuidar de você hoje?
                 </p>
               </div>
 
@@ -1883,13 +1929,12 @@ const ClienteAgendar = () => {
                   ))}
                 </div>
               )}
-
             </div>
 
             <FloatingActionBar
               isVisible={!!selectedBarber}
-              onContinue={() => setStep(2)}
-              label={`Continuar`}
+              onContinue={handleNextStep}
+              label="Continuar"
               subtitle={selectedBarber ? selectedBarber.apelido : ""}
               icon={
                 selectedBarber?.foto_url ? (
@@ -1901,55 +1946,6 @@ const ClienteAgendar = () => {
                 )
               }
             />
-          </motion.div>
-        )}
-
-        {/* Step 2: Serviços (usuários SEM plano OU plano SEM serviço vinculado) */}
-        {step === 2 && ((!isPlanFlow && !isRescheduling) || planNeedsService) && (
-          <motion.div
-            key="step-2-services"
-            variants={pageVariants}
-            initial="initial"
-            animate="animate"
-            exit="exit"
-            transition={{ duration: 0.3 }}
-            className="min-h-screen pt-16 pb-32 px-4"
-          >
-            <div className="max-w-2xl mx-auto">
-              {/* Título da Etapa */}
-              <div className="mb-6 pt-1">
-                <h2 className="text-xl font-semibold text-foreground">
-                  O que deseja?
-                </h2>
-                <p className="text-[12px] text-muted-foreground/60 mt-1">
-                  Selecione um ou mais serviços
-                </p>
-              </div>
-
-              <div ref={servicesListRef} className="space-y-3">
-                {services.map((service) => (
-                  <ServiceCard
-                    key={service.id}
-                    service={service}
-                    isSelected={selectedServices.some(s => s.id === service.id)}
-                    quantity={serviceQuantities[service.id] || 0}
-                    effectiveDuration={barberCustomDurations[service.id]}
-                    onToggle={() => toggleService(service)}
-                    onIncrement={() => incrementServiceQty(service.id)}
-                    onDecrement={() => decrementServiceQty(service)}
-                  />
-                ))}
-              </div>
-
-              {/* Premium Bottom Bar */}
-              <BookingBottomBar
-                serviceCount={selectedServices.reduce((sum, s) => sum + (serviceQuantities[s.id] || 1), 0)}
-                totalDuration={getTotalDuration()}
-                totalPrice={getTotalPrice()}
-                onContinue={() => setStep(3)}
-                isVisible={selectedServices.length > 0}
-              />
-            </div>
           </motion.div>
         )}
 
