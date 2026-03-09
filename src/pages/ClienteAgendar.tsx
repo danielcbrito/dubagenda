@@ -367,8 +367,13 @@ const ClienteAgendar = () => {
 
           setIsPlanFlow(true);
           setSelectedServices([includedService]);
-          // Barbeiro + serviço pré-selecionados → pular direto para data (step 3)
-          setStep(subscription.barbeiro ? 3 : 1);
+          if (subscription.barbeiro) {
+            setStep(3); // barber + service pre-selected → date
+          } else if (units.length > 1 && !effectiveUnitId) {
+            setStep(0); // need unit selection first, then barber
+          } else {
+            setStep(2); // go to barber selection
+          }
           setIsInitializing(false);
           return;
         }
@@ -380,11 +385,8 @@ const ClienteAgendar = () => {
 
       await loadServices(tenantId);
 
-      // Se tem múltiplas unidades e nenhuma preferida, começar no step 0 (seleção de unidade)
-      if (units.length > 1 && !effectiveUnitId) {
-        setStep(0);
-      }
-
+      // Normal flow: start at step 1 (services) — default
+      // Gateway (unit check) happens after service selection via handleNextStep
       setIsInitializing(false);
     };
 
@@ -640,7 +642,7 @@ const ClienteAgendar = () => {
         setSelectedBarber(appointment.barbeiro);
         await loadBarberCustomDurations(appointment.barbeiro.id);
       }
-      setStep(2);
+      setStep(3);
       toast.info("Escolha a nova data e horário");
     } catch (error) {
       console.error("Error loading appointment for reschedule:", error);
@@ -830,48 +832,66 @@ const ClienteAgendar = () => {
   };
 
   const handleNextStep = async () => {
-    // NOVO FLUXO (Step 1 = Barbeiro para TODOS):
-    // Plano/Remarcação: 1=Barbeiro, 2=Data, 3=Horário, 4=Confirmação
-    // Normal: 1=Barbeiro, 2=Serviços, 3=Data, 4=Horário, 5=Pagamento, 6=Confirmação
-    
-    // Step 1: Validar barbeiro
-    if (step === 1 && !selectedBarberId) {
-      toast.error("Selecione um profissional");
+    // FLUXO: Service(1) → Gateway → Unit(0) → Barber(2) → Date(3) → Time(4) → Payment(5) → Confirm(6)
+
+    // Step 1: Validate services + Gateway (unit check)
+    if (step === 1) {
+      if (selectedServices.length === 0) {
+        toast.error("Selecione pelo menos um serviço");
+        return;
+      }
+      // Gateway: check if tenant has multiple units and no unit selected
+      if (hasMultipleUnits && !selectedUnit) {
+        setStep(0); // Go to unit selection
+      } else {
+        // Load barbers filtered by unit
+        await loadBarbers(preferredShop?.id || null, selectedUnit?.id || null);
+        setStep(2); // Go to barber selection
+      }
       return;
     }
-    
-    // Plano SEM serviço: step 2 = serviço
-    const _planNeedsService = isPlanFlow && !activeSubscription?.servico_id;
-    // Plano COM barbeiro + serviço: barbeiro (1) e serviço (2) são pulados → começa no 3
-    const _planHasBoth = isPlanFlow && !!activeSubscription?.barbeiro && !!activeSubscription?.servico_id;
-    
-    // Step 2: Serviços (não-plano normal OU plano sem serviço vinculado)
-    const serviceStep = _planNeedsService ? 2 : (!isPlanFlow && !isRescheduling ? 2 : -1);
-    if (step === serviceStep && selectedServices.length === 0) {
-      toast.error("Selecione pelo menos um serviço");
+
+    // Step 0: Validate unit selection
+    if (step === 0) {
+      if (!selectedUnit) {
+        toast.error("Selecione uma unidade");
+        return;
+      }
+      await loadBarbers(preferredShop?.id || null, selectedUnit.id);
+      setStep(2);
       return;
     }
-    
-    // Validação de data
-    const dateStep = _planHasBoth ? 3 : _planNeedsService ? 3 : isPlanFlow ? 2 : isRescheduling ? 2 : 3;
-    if (step === dateStep && !selectedDate) {
-      toast.error("Selecione uma data");
+
+    // Step 2: Validate barber
+    if (step === 2) {
+      if (!selectedBarberId) {
+        toast.error("Selecione um profissional");
+        return;
+      }
+      setStep(3);
       return;
     }
-    
-    // Validação de horário
-    const timeStep = _planHasBoth ? 4 : _planNeedsService ? 4 : isPlanFlow ? 3 : isRescheduling ? 3 : 4;
-    if (step === timeStep && !selectedTime) {
-      toast.error("Selecione um horário");
+
+    // Step 3: Validate date
+    if (step === 3) {
+      if (!selectedDate) {
+        toast.error("Selecione uma data");
+        return;
+      }
+      setStep(4);
       return;
     }
-    
-    // Verificar disponibilidade antes de avançar da etapa de horário
-    if (step === timeStep && selectedDate && selectedTime) {
+
+    // Step 4: Validate time + availability check
+    if (step === 4) {
+      if (!selectedTime) {
+        toast.error("Selecione um horário");
+        return;
+      }
+
       setLoading(true);
       try {
         const result = await verifySlotAvailability(selectedTime);
-        
         if (!result.available) {
           toast.error(result.message || "Este horário acabou de ser reservado. Por favor, escolha outro.");
           refreshSlots();
@@ -879,7 +899,6 @@ const ClienteAgendar = () => {
           setLoading(false);
           return;
         }
-        
         setLoading(false);
       } catch (err) {
         console.error('[handleNextStep] Erro:', err);
@@ -887,43 +906,26 @@ const ClienteAgendar = () => {
         toast.error("Erro ao verificar disponibilidade. Tente novamente.");
         return;
       }
-    }
-    
-    // Remarcação: após horário (step 3), vai para confirmação (step 4)
-    if (isRescheduling && step === 3) {
-      setStep(4);
-      return;
-    }
-    
-    // Fluxo de plano COM barbeiro + serviço: após horário (step 4), vai para confirmação (step 5)
-    if (_planHasBoth && step === 4) {
-      setStep(5);
-      return;
-    }
-    
-    // Fluxo de plano COM serviço (sem barbeiro pré-selecionado): após horário (step 3), vai para confirmação (step 4)
-    if (isPlanFlow && !_planNeedsService && !_planHasBoth && step === 3) {
-      setStep(4);
-      return;
-    }
-    
-    // Fluxo de plano SEM serviço: após horário (step 4), vai para confirmação (step 5)
-    if (isPlanFlow && _planNeedsService && step === 4) {
-      setStep(5);
-      return;
-    }
 
-    // Fluxo normal: após horário (step 4), verifica créditos
-    if (!isPlanFlow && !isRescheduling && step === 4) {
+      // Reschedule or Plan: go to confirmation (step 5)
+      if (isRescheduling || isPlanEligible) {
+        setStep(5);
+        return;
+      }
+
+      // Normal flow: check if credits cover total
       const totalPrice = getTotalPrice();
       if (availableCredits >= totalPrice) {
         setPaymentMethod('cash');
-        setStep(6); // Vai direto para confirmação final
+        setStep(6); // Skip payment, go to confirmation
         return;
       }
-      // Senão vai para pagamento (step 5)
+
+      setStep(5); // Go to payment selection
+      return;
     }
-    
+
+    // Step 5 (normal): payment → confirmation
     setStep(step + 1);
   };
 
@@ -1094,7 +1096,7 @@ const ClienteAgendar = () => {
       
       if (error.message?.includes('TIME_SLOT_UNAVAILABLE') || error.message?.includes('indisponível') || error.message?.includes('Horário')) {
         toast.error(error.message || "Horário indisponível. Escolha outro horário.");
-        setStep(3);
+        setStep(4);
         refreshSlots();
       } else {
         toast.error("Erro ao processar pagamento: " + (error.message || "Erro desconhecido"));
@@ -1128,7 +1130,7 @@ const ClienteAgendar = () => {
 
       if (validationError || !validation?.valid) {
         toast.error(validation?.message || "Horário indisponível. Escolha outro.");
-        setStep(3);
+        setStep(4);
         refreshSlots();
         return;
       }
@@ -1206,7 +1208,7 @@ const ClienteAgendar = () => {
 
       if (!validation?.valid) {
         toast.error(validation?.message || "Horário indisponível. Escolha outro horário.");
-        setStep(3);
+        setStep(4);
         refreshSlots();
         return;
       }
@@ -1326,7 +1328,7 @@ const ClienteAgendar = () => {
 
       if (!validation?.valid) {
         toast.error(validation?.message || "Horário indisponível. Escolha outro horário.");
-        setStep(3);
+        setStep(4);
         refreshSlots();
         return;
       }
@@ -1529,7 +1531,7 @@ const ClienteAgendar = () => {
 
       if (!validation?.valid) {
         toast.error(validation?.message || "Horário indisponível. Escolha outro horário.");
-        setStep(3);
+        setStep(4);
         refreshSlots();
         return;
       }
@@ -1638,64 +1640,67 @@ const ClienteAgendar = () => {
   const canUseRedemption = availableRedemptions.length > 0 && !!getCorteService();
 
   const handleBack = () => {
-    // Step 0 (Unidade) - volta para home
-    if (step === 0) {
+    // Step 1 (Serviços) — volta para home
+    if (step === 1) {
       navigate("/cliente");
       return;
     }
 
-    // Step 1 (Barbeiro) - se tem unidades e veio do step 0, volta para unidade
-    if (step === 1) {
-      if (hasMultipleUnits && !preferredUnitId) {
-        setStep(0);
-      } else {
+    // Step 0 (Unidade) — volta para serviços
+    if (step === 0) {
+      setStep(1);
+      return;
+    }
+
+    // Step 2 (Barbeiro)
+    if (step === 2) {
+      if (isPlanFlow && activeSubscription?.servico_id) {
+        // Serviço pré-selecionado pelo plano, step 1 foi pulado
         navigate("/cliente");
+      } else if (hasMultipleUnits && !preferredUnitId) {
+        setStep(0); // Volta para unidade
+      } else {
+        setStep(1); // Volta para serviços
       }
       return;
     }
-    
-    // Assinante com barbeiro + serviço pré-selecionados: step 3 (data) é a primeira etapa visível
-    if (isPlanFlow && activeSubscription?.barbeiro && activeSubscription?.servico_id && step === 3) {
-      navigate("/cliente");
-      return;
-    }
-    
-    // Assinante com barbeiro pré-selecionado (sem serviço): step 2 = primeira etapa visível
-    if (activeSubscription?.barbeiro && step === 2) {
-      navigate("/cliente");
+
+    // Step 3 (Data) — volta para barbeiro ou home
+    if (step === 3) {
+      if ((isPlanFlow && activeSubscription?.barbeiro && activeSubscription?.servico_id) || isRescheduling) {
+        navigate("/cliente"); // Primeira etapa visível
+      } else {
+        setStep(2);
+      }
       return;
     }
 
-    if (isPlanFlow && activeSubscription?.barbeiro) {
-      setStep(step - 1);
-    } else if (isPlanFlow) {
-      setStep(step - 1);
-    } else if (isRescheduling) {
-      setStep(step - 1);
-    } else {
-      setStep(step - 1);
-    }
+    // Demais steps: voltar um
+    setStep(step - 1);
   };
 
-  // Plano SEM serviço vinculado: precisa de seleção de serviço adicional
   const planNeedsService = isPlanFlow && !activeSubscription?.servico_id;
-  
-  // Unidade extra step: se tem múltiplas unidades e nenhuma preferida, +1 step
   const showsUnitStep = hasMultipleUnits && !preferredUnitId;
-  const unitStepOffset = showsUnitStep ? 1 : 0;
-  
-  // Cálculo de steps por fluxo:
-  const totalSteps = isPlanFlow && activeSubscription?.barbeiro 
-    ? (planNeedsService ? 4 : 3) + unitStepOffset
-    : isPlanFlow ? (planNeedsService ? 5 : 4) + unitStepOffset
-    : isRescheduling ? 4 + unitStepOffset : 6 + unitStepOffset;
-  
-  // Ajustar step visual
-  const currentDisplayStep = isPlanFlow && activeSubscription?.barbeiro && activeSubscription?.servico_id
-    ? Math.min(step - 2 + unitStepOffset, totalSteps) 
-    : isPlanFlow && activeSubscription?.barbeiro
-    ? Math.min(step - 1 + unitStepOffset, totalSteps)
-    : Math.min(step + (showsUnitStep ? 1 : 0), totalSteps);
+
+  // Build visible steps for the current flow
+  const visibleSteps = (() => {
+    const skipService = (isPlanFlow && activeSubscription?.servico_id) || isRescheduling;
+    const skipBarber = (isPlanFlow && activeSubscription?.barbeiro) || isRescheduling;
+    const skipUnit = !showsUnitStep || skipBarber;
+
+    const steps: number[] = [];
+    if (!skipService) steps.push(1); // Service
+    if (!skipUnit) steps.push(0); // Unit
+    if (!skipBarber) steps.push(2); // Barber
+    steps.push(3); // Date
+    steps.push(4); // Time
+    if (!isPlanFlow && !isRescheduling) steps.push(5); // Payment
+    steps.push(isPlanFlow || isRescheduling ? 5 : 6); // Confirm
+    return [...new Set(steps)];
+  })();
+
+  const totalSteps = visibleSteps.length;
+  const currentDisplayStep = Math.max(1, visibleSteps.indexOf(step) + 1);
 
   const pageVariants = {
     initial: { opacity: 0, x: 20 },
@@ -1783,7 +1788,54 @@ const ClienteAgendar = () => {
 
       {/* Content */}
       <AnimatePresence mode="wait">
-        {/* STEP 0: ESCOLHER UNIDADE (quando tenant tem múltiplas) */}
+        {/* STEP 1: ESCOLHER SERVIÇO */}
+        {step === 1 && (
+          <motion.div
+            key="step-1-services"
+            variants={pageVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            transition={{ duration: 0.25 }}
+            className="min-h-screen pt-16 pb-32 px-4"
+          >
+            <div className="max-w-2xl mx-auto">
+              <div className="mb-6 pt-1">
+                <h2 className="text-xl font-semibold text-foreground">
+                  O que deseja?
+                </h2>
+                <p className="text-[12px] text-muted-foreground/60 mt-1">
+                  Selecione um ou mais serviços
+                </p>
+              </div>
+
+              <div ref={servicesListRef} className="space-y-3">
+                {services.map((service) => (
+                  <ServiceCard
+                    key={service.id}
+                    service={service}
+                    isSelected={selectedServices.some(s => s.id === service.id)}
+                    quantity={serviceQuantities[service.id] || 0}
+                    effectiveDuration={barberCustomDurations[service.id]}
+                    onToggle={() => toggleService(service)}
+                    onIncrement={() => incrementServiceQty(service.id)}
+                    onDecrement={() => decrementServiceQty(service)}
+                  />
+                ))}
+              </div>
+
+              <BookingBottomBar
+                serviceCount={selectedServices.reduce((sum, s) => sum + (serviceQuantities[s.id] || 1), 0)}
+                totalDuration={getTotalDuration()}
+                totalPrice={getTotalPrice()}
+                onContinue={handleNextStep}
+                isVisible={selectedServices.length > 0}
+              />
+            </div>
+          </motion.div>
+        )}
+
+        {/* STEP 0: ESCOLHER UNIDADE (condicional — gateway após serviços) */}
         {step === 0 && hasMultipleUnits && (
           <motion.div
             key="step-0-unit"
@@ -1821,11 +1873,10 @@ const ClienteAgendar = () => {
             <FloatingActionBar
               isVisible={!!selectedUnit}
               onContinue={async () => {
-                // Recarregar barbeiros filtrados pela unidade selecionada
                 if (selectedUnit) {
                   await loadBarbers(preferredShop?.id || null, selectedUnit.id);
                 }
-                setStep(1);
+                setStep(2);
               }}
               label="Continuar"
               subtitle={selectedUnit?.nome || ""}
@@ -1834,10 +1885,10 @@ const ClienteAgendar = () => {
           </motion.div>
         )}
 
-        {/* STEP 1: ESCOLHER BARBEIRO */}
-        {step === 1 && (
+        {/* STEP 2: ESCOLHER BARBEIRO */}
+        {step === 2 && (
           <motion.div
-            key="step-1-barber"
+            key="step-2-barber"
             variants={pageVariants}
             initial="initial"
             animate="animate"
@@ -1851,7 +1902,7 @@ const ClienteAgendar = () => {
                   Seu Profissional
                 </h2>
                 <p className="text-[12px] text-muted-foreground/60 mt-1">
-                  {showingOtherShops ? "Profissionais de todas as barbearias" : "Quem vai cuidar de você hoje?"}
+                  Quem vai cuidar de você hoje?
                 </p>
               </div>
 
@@ -1878,13 +1929,12 @@ const ClienteAgendar = () => {
                   ))}
                 </div>
               )}
-
             </div>
 
             <FloatingActionBar
               isVisible={!!selectedBarber}
-              onContinue={() => setStep(2)}
-              label={`Continuar`}
+              onContinue={handleNextStep}
+              label="Continuar"
               subtitle={selectedBarber ? selectedBarber.apelido : ""}
               icon={
                 selectedBarber?.foto_url ? (
@@ -1899,57 +1949,8 @@ const ClienteAgendar = () => {
           </motion.div>
         )}
 
-        {/* Step 2: Serviços (usuários SEM plano OU plano SEM serviço vinculado) */}
-        {step === 2 && ((!isPlanFlow && !isRescheduling) || planNeedsService) && (
-          <motion.div
-            key="step-2-services"
-            variants={pageVariants}
-            initial="initial"
-            animate="animate"
-            exit="exit"
-            transition={{ duration: 0.3 }}
-            className="min-h-screen pt-16 pb-32 px-4"
-          >
-            <div className="max-w-2xl mx-auto">
-              {/* Título da Etapa */}
-              <div className="mb-6 pt-1">
-                <h2 className="text-xl font-semibold text-foreground">
-                  O que deseja?
-                </h2>
-                <p className="text-[12px] text-muted-foreground/60 mt-1">
-                  Selecione um ou mais serviços
-                </p>
-              </div>
-
-              <div ref={servicesListRef} className="space-y-3">
-                {services.map((service) => (
-                  <ServiceCard
-                    key={service.id}
-                    service={service}
-                    isSelected={selectedServices.some(s => s.id === service.id)}
-                    quantity={serviceQuantities[service.id] || 0}
-                    effectiveDuration={barberCustomDurations[service.id]}
-                    onToggle={() => toggleService(service)}
-                    onIncrement={() => incrementServiceQty(service.id)}
-                    onDecrement={() => decrementServiceQty(service)}
-                  />
-                ))}
-              </div>
-
-              {/* Premium Bottom Bar */}
-              <BookingBottomBar
-                serviceCount={selectedServices.reduce((sum, s) => sum + (serviceQuantities[s.id] || 1), 0)}
-                totalDuration={getTotalDuration()}
-                totalPrice={getTotalPrice()}
-                onContinue={() => setStep(3)}
-                isVisible={selectedServices.length > 0}
-              />
-            </div>
-          </motion.div>
-        )}
-
-        {/* Data: Step 3 (Plano com barbeiro+serviço), Step 2 (Plano sem barbeiro), Step 3 (Plano sem serviço/Normal), Step 2 (Remarcação) */}
-        {(((isPlanFlow && !planNeedsService && !!activeSubscription?.barbeiro) && step === 3) || ((isPlanFlow && !planNeedsService && !activeSubscription?.barbeiro) && step === 2) || (planNeedsService && step === 3) || (isRescheduling && step === 2) || (!isPlanFlow && !isRescheduling && step === 3)) && (
+        {/* STEP 3: ESCOLHER DATA */}
+        {step === 3 && (
           <motion.div
             key="step-date"
             variants={pageVariants}
@@ -2005,8 +2006,8 @@ const ClienteAgendar = () => {
           </motion.div>
         )}
 
-        {/* Horário: Step 4 (Plano com barbeiro+serviço), Step 3 (Plano sem barbeiro), Step 4 (Plano sem serviço/Normal), Step 3 (Remarcação) */}
-        {(((isPlanFlow && !planNeedsService && !!activeSubscription?.barbeiro) && step === 4) || ((isPlanFlow && !planNeedsService && !activeSubscription?.barbeiro) && step === 3) || (planNeedsService && step === 4) || (isRescheduling && step === 3) || (!isPlanFlow && !isRescheduling && step === 4)) && (
+        {/* STEP 4: ESCOLHER HORÁRIO */}
+        {step === 4 && (
           <motion.div
             key="step-time"
             variants={pageVariants}
@@ -2040,7 +2041,7 @@ const ClienteAgendar = () => {
                     {selectedBarber?.apelido} está com agenda cheia neste dia.
                   </p>
                   <button
-                    onClick={() => setStep(planNeedsService ? 3 : (isPlanFlow && activeSubscription?.barbeiro ? 3 : isPlanFlow ? 2 : isRescheduling ? 2 : 3))}
+                    onClick={() => setStep(3)}
                     className="px-6 py-3 border border-border rounded-xl text-foreground hover:bg-secondary transition-all"
                   >
                     Escolher outra data
@@ -2341,8 +2342,8 @@ const ClienteAgendar = () => {
           </motion.div>
         )}
 
-        {/* Confirmação Plano: Step 4 (com serviço, sem barbeiro pré), Step 5 (sem serviço OU com barbeiro+serviço pré) */}
-        {isPlanFlow && ((planNeedsService && step === 5) || (!planNeedsService && activeSubscription?.barbeiro && step === 5) || (!planNeedsService && !activeSubscription?.barbeiro && step === 4)) && (
+        {/* Confirmação Plano */}
+        {isPlanFlow && step === 5 && (
           <motion.div
             key="step-plan-confirmation"
             variants={pageVariants}
@@ -2525,8 +2526,8 @@ const ClienteAgendar = () => {
           </motion.div>
         )}
 
-        {/* Step 4: Confirmação Remarcação */}
-        {step === 4 && isRescheduling && (
+        {/* Step 5: Confirmação Remarcação */}
+        {step === 5 && isRescheduling && (
           <motion.div
             key="step-5-reschedule"
             variants={pageVariants}
