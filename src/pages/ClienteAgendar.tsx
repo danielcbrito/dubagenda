@@ -1798,6 +1798,51 @@ const ClienteAgendar = () => {
 
       {/* Content */}
       <AnimatePresence mode="wait">
+        {/* STEP 0: ESCOLHER UNIDADE (primeira etapa — se barbearia tem múltiplas unidades) */}
+        {step === 0 && hasMultipleUnits && (
+          <motion.div
+            key="step-0-unit"
+            variants={pageVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            transition={{ duration: 0.25 }}
+            className="min-h-screen pt-16 pb-32 px-4"
+          >
+            <div className    ="max-w-2xl mx-auto">
+              <div className="mb-6 pt-1">
+                <h2 className="text-xl font-semibold text-foreground">
+                  Qual unidade?
+                </h2>
+                <p className="text-[12px] text-muted-foreground/60 mt-1">
+                  Escolha onde quer ser atendido
+                </p>
+              </div>
+
+              <UnitSelector
+                units={tenantUnits}
+                selectedUnit={selectedUnit}
+                preferredUnitId={preferredUnitId}
+                userId={userId}
+                onSelect={(unit) => {
+                  setSelectedUnit(unit);
+                }}
+                onPreferredChange={(newId) => {
+                  setPreferredUnitId(newId);
+                }}
+              />
+            </div>
+
+            <FloatingActionBar
+              isVisible={!!selectedUnit}
+              onContinue={handleNextStep}
+              label="Continuar"
+              subtitle={selectedUnit?.nome || ""}
+              icon={<MapPin className="w-4 h-4 text-primary" />}
+            />
+          </motion.div>
+        )}
+
         {/* STEP 1: ESCOLHER BARBEIRO */}
         {step === 1 && (
           <motion.div
