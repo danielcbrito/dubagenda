@@ -837,9 +837,21 @@ const ClienteAgendar = () => {
   };
 
   const handleNextStep = async () => {
-    // FLUXO: Barber(1) → Gateway → Unit(0) → Service(2) → Date(3) → Time(4) → Payment(5) → Confirm(6)
+    // FLUXO: Unit(0) → Barber(1) → Service(2) → Date(3) → Time(4) → Payment(5) → Confirm(6)
 
-    // Step 1: Validate barber + Gateway (unit check)
+    // Step 0: Validate unit selection → go to barber
+    if (step === 0) {
+      if (!selectedUnit) {
+        toast.error("Selecione uma unidade");
+        return;
+      }
+      // Reload barbers filtered by unit
+      await loadBarbers(preferredShop?.id || null, selectedUnit.id);
+      setStep(1);
+      return;
+    }
+
+    // Step 1: Validate barber → go to service
     if (step === 1) {
       if (!selectedBarberId) {
         toast.error("Selecione um profissional");
@@ -854,25 +866,9 @@ const ClienteAgendar = () => {
         setStep(3); // Skip to date
         return;
       }
-      // Gateway: check if tenant has multiple units and no unit selected
-      if (hasMultipleUnits && !selectedUnit) {
-        setStep(0); // Go to unit selection
-      } else {
-        // Load services filtered by tenant
-        await loadServices(preferredShop?.id || null);
-        setStep(2); // Go to service selection
-      }
-      return;
-    }
-
-    // Step 0: Validate unit selection
-    if (step === 0) {
-      if (!selectedUnit) {
-        toast.error("Selecione uma unidade");
-        return;
-      }
+      // Load services filtered by tenant
       await loadServices(preferredShop?.id || null);
-      setStep(2);
+      setStep(2); // Go to service selection
       return;
     }
 
