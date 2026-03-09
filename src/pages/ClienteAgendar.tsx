@@ -385,8 +385,13 @@ const ClienteAgendar = () => {
 
       await loadServices(tenantId);
 
-      // Normal flow: start at step 1 (services) — default
-      // Gateway (unit check) happens after service selection via handleNextStep
+      // Normal flow: if multiple units and no preferred, start at unit selection (step 0)
+      // Otherwise start at barber selection (step 1)
+      if (units.length > 1 && !effectiveUnitId) {
+        setStep(0);
+      } else {
+        setStep(1);
+      }
       setIsInitializing(false);
     };
 
@@ -832,9 +837,21 @@ const ClienteAgendar = () => {
   };
 
   const handleNextStep = async () => {
-    // FLUXO: Barber(1) → Gateway → Unit(0) → Service(2) → Date(3) → Time(4) → Payment(5) → Confirm(6)
+    // FLUXO: Unit(0) → Barber(1) → Service(2) → Date(3) → Time(4) → Payment(5) → Confirm(6)
 
-    // Step 1: Validate barber + Gateway (unit check)
+    // Step 0: Validate unit selection → go to barber
+    if (step === 0) {
+      if (!selectedUnit) {
+        toast.error("Selecione uma unidade");
+        return;
+      }
+      // Reload barbers filtered by unit
+      await loadBarbers(preferredShop?.id || null, selectedUnit.id);
+      setStep(1);
+      return;
+    }
+
+    // Step 1: Validate barber → go to service
     if (step === 1) {
       if (!selectedBarberId) {
         toast.error("Selecione um profissional");
@@ -849,25 +866,9 @@ const ClienteAgendar = () => {
         setStep(3); // Skip to date
         return;
       }
-      // Gateway: check if tenant has multiple units and no unit selected
-      if (hasMultipleUnits && !selectedUnit) {
-        setStep(0); // Go to unit selection
-      } else {
-        // Load services filtered by tenant
-        await loadServices(preferredShop?.id || null);
-        setStep(2); // Go to service selection
-      }
-      return;
-    }
-
-    // Step 0: Validate unit selection
-    if (step === 0) {
-      if (!selectedUnit) {
-        toast.error("Selecione uma unidade");
-        return;
-      }
+      // Load services filtered by tenant
       await loadServices(preferredShop?.id || null);
-      setStep(2);
+      setStep(2); // Go to service selection
       return;
     }
 
@@ -1649,25 +1650,25 @@ const ClienteAgendar = () => {
   const canUseRedemption = availableRedemptions.length > 0 && !!getCorteService();
 
   const handleBack = () => {
-    // Step 1 (Barbeiro) — volta para home
-    if (step === 1) {
+    // Step 0 (Unidade) — volta para home
+    if (step === 0) {
       navigate("/cliente");
       return;
     }
 
-    // Step 0 (Unidade) — volta para barbeiro
-    if (step === 0) {
-      setStep(1);
-      return;
-    }
-
-    // Step 2 (Serviço)
-    if (step === 2) {
+    // Step 1 (Barbeiro) — volta para unidade ou home
+    if (step === 1) {
       if (hasMultipleUnits && !preferredUnitId) {
         setStep(0); // Volta para unidade
       } else {
-        setStep(1); // Volta para barbeiro
+        navigate("/cliente");
       }
+      return;
+    }
+
+    // Step 2 (Serviço) — volta para barbeiro
+    if (step === 2) {
+      setStep(1);
       return;
     }
 
@@ -1698,9 +1699,9 @@ const ClienteAgendar = () => {
     const skipUnit = !showsUnitStep || skipBarber;
 
     const steps: number[] = [];
-    if (!skipBarber) steps.push(1); // Barber (now step 1)
-    if (!skipUnit) steps.push(0); // Unit
-    if (!skipService) steps.push(2); // Service (now step 2)
+    if (!skipUnit) steps.push(0); // Unit FIRST
+    if (!skipBarber) steps.push(1); // Barber
+    if (!skipService) steps.push(2); // Service
     steps.push(3); // Date
     steps.push(4); // Time
     if (!isPlanFlow && !isRescheduling) steps.push(5); // Payment
@@ -1797,6 +1798,51 @@ const ClienteAgendar = () => {
 
       {/* Content */}
       <AnimatePresence mode="wait">
+        {/* STEP 0: ESCOLHER UNIDADE (primeira etapa — se barbearia tem múltiplas unidades) */}
+        {step === 0 && hasMultipleUnits && (
+          <motion.div
+            key="step-0-unit"
+            variants={pageVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            transition={{ duration: 0.25 }}
+            className="min-h-screen pt-16 pb-32 px-4"
+          >
+            <div className="max-w-2xl mx-auto">
+              <div className="mb-6 pt-1">
+                <h2 className="text-xl font-semibold text-foreground">
+                  Qual unidade?
+                </h2>
+                <p className="text-[12px] text-muted-foreground/60 mt-1">
+                  Escolha onde quer ser atendido
+                </p>
+              </div>
+
+              <UnitSelector
+                units={tenantUnits}
+                selectedUnit={selectedUnit}
+                preferredUnitId={preferredUnitId}
+                userId={userId}
+                onSelect={(unit) => {
+                  setSelectedUnit(unit);
+                }}
+                onPreferredChange={(newId) => {
+                  setPreferredUnitId(newId);
+                }}
+              />
+            </div>
+
+            <FloatingActionBar
+              isVisible={!!selectedUnit}
+              onContinue={handleNextStep}
+              label="Continuar"
+              subtitle={selectedUnit?.nome || ""}
+              icon={<MapPin className="w-4 h-4 text-primary" />}
+            />
+          </motion.div>
+        )}
+
         {/* STEP 1: ESCOLHER BARBEIRO */}
         {step === 1 && (
           <motion.div
@@ -1857,58 +1903,6 @@ const ClienteAgendar = () => {
                   </div>
                 )
               }
-            />
-          </motion.div>
-        )}
-
-        {/* STEP 0: ESCOLHER UNIDADE (condicional — gateway após barbeiro) */}
-        {step === 0 && hasMultipleUnits && (
-          <motion.div
-            key="step-0-unit"
-            variants={pageVariants}
-            initial="initial"
-            animate="animate"
-            exit="exit"
-            transition={{ duration: 0.25 }}
-            className="min-h-screen pt-16 pb-32 px-4"
-          >
-            <div className="max-w-2xl mx-auto">
-              <div className="mb-6 pt-1">
-                <h2 className="text-xl font-semibold text-foreground">
-                  Qual unidade?
-                </h2>
-                <p className="text-[12px] text-muted-foreground/60 mt-1">
-                  Escolha onde quer ser atendido
-                </p>
-              </div>
-
-              <UnitSelector
-                units={tenantUnits}
-                selectedUnit={selectedUnit}
-                preferredUnitId={preferredUnitId}
-                userId={userId}
-                onSelect={(unit) => {
-                  setSelectedUnit(unit);
-                }}
-                onPreferredChange={(newId) => {
-                  setPreferredUnitId(newId);
-                }}
-              />
-            </div>
-
-            <FloatingActionBar
-              isVisible={!!selectedUnit}
-              onContinue={async () => {
-                if (isPlanFlow && activeSubscription?.servico_id) {
-                  setStep(3); // Plan flow: skip service, go to date
-                } else {
-                  await loadServices(preferredShop?.id || null);
-                  setStep(2); // Go to service selection
-                }
-              }}
-              label="Continuar"
-              subtitle={selectedUnit?.nome || ""}
-              icon={<MapPin className="w-4 h-4 text-primary" />}
             />
           </motion.div>
         )}
@@ -2003,8 +1997,6 @@ const ClienteAgendar = () => {
                 onMonthChange={loadClosedDates}
                 loading={closedDatesLoading}
               />
-
-
 
             <FloatingActionBar
               isVisible={!!selectedDate}
