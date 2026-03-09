@@ -177,12 +177,12 @@ const ClienteAgendar = () => {
     }
   }, []);
 
-  // Carregar barbeiros (filtrado pelo tenant da barbearia preferida)
-  const loadBarbers = async (tenantId?: string | null) => {
+  // Carregar barbeiros (filtrado pelo tenant da barbearia preferida e opcionalmente pela unidade)
+  const loadBarbers = async (tenantId?: string | null, unitId?: string | null) => {
     // Busca filtrada + todos em paralelo
     let query = supabase
       .from("barbeiros")
-      .select("id, apelido, foto_url, tenant_id")
+      .select("id, apelido, foto_url, tenant_id, unidade_id")
       .eq("ativo", true)
       .order("apelido");
 
@@ -192,9 +192,14 @@ const ClienteAgendar = () => {
       query = query.is("tenant_id", null);
     }
 
+    // Filtrar por unidade se selecionada
+    if (unitId) {
+      query = query.or(`unidade_id.eq.${unitId},unidade_id.is.null`);
+    }
+
     const allQuery = supabase
       .from("barbeiros")
-      .select("id, apelido, foto_url, tenant_id")
+      .select("id, apelido, foto_url, tenant_id, unidade_id")
       .eq("ativo", true)
       .order("apelido");
 
@@ -202,6 +207,21 @@ const ClienteAgendar = () => {
     setBarbers(filtered.data || []);
     setAllBarbers(all.data || []);
     return filtered.data || [];
+  };
+
+  // Carregar unidades do tenant
+  const loadTenantUnits = async (tenantId: string) => {
+    const { data } = await supabase
+      .from("tenant_unidades")
+      .select("id, nome, bairro, cidade, estado, is_sede")
+      .eq("tenant_id", tenantId)
+      .eq("ativo", true)
+      .order("is_sede", { ascending: false });
+    
+    const units = (data || []) as TenantUnit[];
+    setTenantUnits(units);
+    setHasMultipleUnits(units.length > 1);
+    return units;
   };
 
   // Initialize booking
