@@ -25,12 +25,23 @@ import { StepDots } from "@/components/booking/StepDots";
 import { BookingBottomBar } from "@/components/booking/BookingBottomBar";
 import { TimeSelectionBar } from "@/components/booking/TimeSelectionBar";
 import { FloatingActionBar } from "@/components/booking/FloatingActionBar";
+import { UnitSelector } from "@/components/booking/UnitSelector";
+
+interface TenantUnit {
+  id: string;
+  nome: string;
+  bairro: string | null;
+  cidade: string | null;
+  estado: string | null;
+  is_sede: boolean | null;
+}
 
 interface Barber {
   id: string;
   apelido: string;
   foto_url: string | null;
   tenant_id?: string | null;
+  unidade_id?: string | null;
 }
 
 interface Service {
