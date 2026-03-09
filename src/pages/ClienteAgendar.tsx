@@ -1861,7 +1861,7 @@ const ClienteAgendar = () => {
           </motion.div>
         )}
 
-        {/* STEP 0: ESCOLHER UNIDADE (condicional — gateway após serviços) */}
+        {/* STEP 0: ESCOLHER UNIDADE (condicional — gateway após barbeiro) */}
         {step === 0 && hasMultipleUnits && (
           <motion.div
             key="step-0-unit"
@@ -1899,10 +1899,12 @@ const ClienteAgendar = () => {
             <FloatingActionBar
               isVisible={!!selectedUnit}
               onContinue={async () => {
-                if (selectedUnit) {
-                  await loadBarbers(preferredShop?.id || null, selectedUnit.id);
+                if (isPlanFlow && activeSubscription?.servico_id) {
+                  setStep(3); // Plan flow: skip service, go to date
+                } else {
+                  await loadServices(preferredShop?.id || null);
+                  setStep(2); // Go to service selection
                 }
-                setStep(2);
               }}
               label="Continuar"
               subtitle={selectedUnit?.nome || ""}
