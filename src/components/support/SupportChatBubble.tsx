@@ -2,8 +2,8 @@ import { Headphones } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 
-/** Rotas onde o botão NÃO aparece */
-const HIDDEN_ROUTES = ["/suporte", "/auth", "/ti"];
+/** Rotas onde o botão APARECE */
+const VISIBLE_ROUTES = ["/cliente", "/cliente/perfil"];
 
 /**
  * Botão flutuante de suporte — visível globalmente
@@ -14,11 +14,11 @@ export function SupportChatBubble() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const isHidden = HIDDEN_ROUTES.some((r) => location.pathname.startsWith(r));
+  const isVisible = VISIBLE_ROUTES.includes(location.pathname);
 
   return (
     <AnimatePresence>
-      {!isHidden && (
+      {isVisible && (
         <motion.button
           key="support-bubble"
           onClick={() => navigate("/suporte")}

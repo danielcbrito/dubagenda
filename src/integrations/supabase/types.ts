@@ -708,6 +708,52 @@ export type Database = {
           },
         ]
       }
+      barbeiro_unidades: {
+        Row: {
+          barbeiro_id: string
+          created_at: string
+          id: string
+          is_primary: boolean
+          unidade_id: string
+        }
+        Insert: {
+          barbeiro_id: string
+          created_at?: string
+          id?: string
+          is_primary?: boolean
+          unidade_id: string
+        }
+        Update: {
+          barbeiro_id?: string
+          created_at?: string
+          id?: string
+          is_primary?: boolean
+          unidade_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "barbeiro_unidades_barbeiro_id_fkey"
+            columns: ["barbeiro_id"]
+            isOneToOne: false
+            referencedRelation: "barbeiros"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "barbeiro_unidades_barbeiro_id_fkey"
+            columns: ["barbeiro_id"]
+            isOneToOne: false
+            referencedRelation: "barbeiros_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "barbeiro_unidades_unidade_id_fkey"
+            columns: ["unidade_id"]
+            isOneToOne: false
+            referencedRelation: "tenant_unidades"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       barbeiros: {
         Row: {
           apelido: string
