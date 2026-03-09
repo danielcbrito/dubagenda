@@ -1328,7 +1328,7 @@ const ClienteAgendar = () => {
 
       if (!validation?.valid) {
         toast.error(validation?.message || "Horário indisponível. Escolha outro horário.");
-        setStep(3);
+        setStep(4);
         refreshSlots();
         return;
       }
