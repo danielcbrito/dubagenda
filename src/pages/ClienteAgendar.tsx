@@ -1242,7 +1242,8 @@ const ClienteAgendar = () => {
           remarcado_de: isRescheduling ? rescheduleAppointmentId : null,
           barbeiro_confirmou: true,
           cliente_confirmou: true,
-        })
+          unidade_id: selectedUnit?.id || null,
+        } as any)
         .select()
         .single();
 
