@@ -372,7 +372,7 @@ const ClienteAgendar = () => {
           } else if (units.length > 1 && !effectiveUnitId) {
             setStep(0); // need unit selection first, then barber
           } else {
-            setStep(2); // go to barber selection
+            setStep(1); // go to barber selection (step 1 = barber)
           }
           setIsInitializing(false);
           return;
