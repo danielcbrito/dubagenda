@@ -1634,9 +1634,19 @@ const ClienteAgendar = () => {
   const canUseRedemption = availableRedemptions.length > 0 && !!getCorteService();
 
   const handleBack = () => {
-    // Step 1 (Barbeiro) - volta para home
-    if (step === 1) {
+    // Step 0 (Unidade) - volta para home
+    if (step === 0) {
       navigate("/cliente");
+      return;
+    }
+
+    // Step 1 (Barbeiro) - se tem unidades e veio do step 0, volta para unidade
+    if (step === 1) {
+      if (hasMultipleUnits && !preferredUnitId) {
+        setStep(0);
+      } else {
+        navigate("/cliente");
+      }
       return;
     }
     
