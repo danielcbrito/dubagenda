@@ -385,8 +385,13 @@ const ClienteAgendar = () => {
 
       await loadServices(tenantId);
 
-      // Normal flow: start at step 1 (services) — default
-      // Gateway (unit check) happens after service selection via handleNextStep
+      // Normal flow: if multiple units and no preferred, start at unit selection (step 0)
+      // Otherwise start at barber selection (step 1)
+      if (units.length > 1 && !effectiveUnitId) {
+        setStep(0);
+      } else {
+        setStep(1);
+      }
       setIsInitializing(false);
     };
 
