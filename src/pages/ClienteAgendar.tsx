@@ -389,6 +389,7 @@ const ClienteAgendar = () => {
 
       // Normal flow: if multiple units and no preferred, start at unit selection (step 0)
       // Otherwise start at barber selection (step 1)
+      console.log("[initializeBooking] Decision:", { unitsCount: units.length, effectiveUnitId, hasMultipleUnits: units.length > 1 });
       if (units.length > 1 && !effectiveUnitId) {
         setStep(0);
       } else {
