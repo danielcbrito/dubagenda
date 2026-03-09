@@ -234,17 +234,20 @@ const ClienteAgendar = () => {
       const uid = session?.user?.id || null;
       if (uid) setUserId(uid);
 
-      // Carregar barbearia preferida do perfil
+      // Carregar barbearia preferida + unidade preferida do perfil
       let tenantId: string | null = null;
+      let userPreferredUnitId: string | null = null;
       if (uid) {
         const { data: profile } = await supabase
           .from("profiles")
-          .select("barbearia_preferida_id")
+          .select("barbearia_preferida_id, unidade_preferida_id")
           .eq("id", uid)
           .single();
 
         if (profile?.barbearia_preferida_id) {
           tenantId = profile.barbearia_preferida_id;
+          userPreferredUnitId = (profile as any).unidade_preferida_id || null;
+          setPreferredUnitId(userPreferredUnitId);
           // Buscar nome da barbearia (non-blocking — will set state async)
           supabase
             .from("tenants")
