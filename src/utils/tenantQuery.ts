@@ -30,25 +30,15 @@ export function buildBarberQuery(tenantId: string | null, unidadeId?: string | n
 }
 
 /**
- * Constrói uma query genérica filtrada por tenant.
+ * Aplica filtro de tenant a uma query existente.
  * Centraliza o tratamento do legado (tenant_id IS NULL = DUB global).
  *
- * @param table - Nome da tabela Supabase.
+ * @param query - Query Supabase existente.
  * @param tenantId - ID do tenant. null = DUB global (legado).
- * @param selectColumns - Colunas para selecionar (padrão: "*").
  */
-export function buildTenantQuery(
-  table: string,
-  tenantId: string | null,
-  selectColumns = "*"
-) {
-  let query = supabase.from(table).select(selectColumns);
-
+export function applyTenantFilter<T>(query: T, tenantId: string | null): T {
   if (tenantId) {
-    query = query.eq("tenant_id", tenantId);
-  } else {
-    query = query.is("tenant_id", null);
+    return (query as any).eq("tenant_id", tenantId);
   }
-
-  return query;
+  return (query as any).is("tenant_id", null);
 }
