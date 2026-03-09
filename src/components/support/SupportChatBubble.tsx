@@ -14,7 +14,7 @@ export function SupportChatBubble() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const isHidden = HIDDEN_ROUTES.some((r) => location.pathname.startsWith(r));
+  const isVisible = VISIBLE_ROUTES.includes(location.pathname);
 
   return (
     <AnimatePresence>
