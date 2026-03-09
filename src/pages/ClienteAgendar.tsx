@@ -2342,8 +2342,8 @@ const ClienteAgendar = () => {
           </motion.div>
         )}
 
-        {/* Confirmação Plano: Step 4 (com serviço, sem barbeiro pré), Step 5 (sem serviço OU com barbeiro+serviço pré) */}
-        {isPlanFlow && ((planNeedsService && step === 5) || (!planNeedsService && activeSubscription?.barbeiro && step === 5) || (!planNeedsService && !activeSubscription?.barbeiro && step === 4)) && (
+        {/* Confirmação Plano */}
+        {isPlanFlow && step === 5 && (
           <motion.div
             key="step-plan-confirmation"
             variants={pageVariants}
