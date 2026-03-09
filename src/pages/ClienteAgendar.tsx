@@ -146,8 +146,7 @@ const ClienteAgendar = () => {
   const { 
     slots: availableSlots, 
     loading: loadingSlots, 
-    refreshSlots,
-    verifySlotAvailability 
+    refreshSlots
   } = useSlotAvailability(
     selectedDate, 
     totalDuration,
