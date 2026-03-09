@@ -1148,7 +1148,8 @@ const ClienteAgendar = () => {
           is_free: true,
           barbeiro_confirmou: true,
           cliente_confirmou: true,
-        })
+          unidade_id: selectedUnit?.id || null,
+        } as any)
         .select()
         .single();
 
