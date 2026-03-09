@@ -1913,10 +1913,10 @@ const ClienteAgendar = () => {
           </motion.div>
         )}
 
-        {/* STEP 2: ESCOLHER BARBEIRO */}
+        {/* STEP 2: ESCOLHER SERVIÇO */}
         {step === 2 && (
           <motion.div
-            key="step-2-barber"
+            key="step-2-services"
             variants={pageVariants}
             initial="initial"
             animate="animate"
@@ -1927,53 +1927,36 @@ const ClienteAgendar = () => {
             <div className="max-w-2xl mx-auto">
               <div className="mb-6 pt-1">
                 <h2 className="text-xl font-semibold text-foreground">
-                  Seu Profissional
+                  O que deseja?
                 </h2>
                 <p className="text-[12px] text-muted-foreground/60 mt-1">
-                  Quem vai cuidar de você hoje?
+                  Selecione um ou mais serviços{selectedBarber ? ` • com ${selectedBarber.apelido}` : ''}
                 </p>
               </div>
 
-              {barbers.length === 0 ? (
-                <div className="rounded-xl border border-border/20 p-6 text-center bg-card/30">
-                  <div className="w-8 h-8 rounded-lg bg-muted/10 mx-auto flex items-center justify-center mb-3">
-                    <Clock className="w-4 h-4 text-muted-foreground/30 animate-spin" />
-                  </div>
-                  <p className="text-[11px] text-muted-foreground/40">Carregando...</p>
-                </div>
-              ) : (
-                <div className="space-y-2.5">
-                  {barbers.map((barber) => (
-                    <BarberCard
-                      key={barber.id}
-                      barber={barber}
-                      isSelected={selectedBarber?.id === barber.id}
-                      onSelect={() => {
-                        setSelectedBarber(barber);
-                        loadBarberCustomDurations(barber.id);
-                      }}
-                      rating={barberRatings[barber.id] || null}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
+              <div ref={servicesListRef} className="space-y-3">
+                {services.map((service) => (
+                  <ServiceCard
+                    key={service.id}
+                    service={service}
+                    isSelected={selectedServices.some(s => s.id === service.id)}
+                    quantity={serviceQuantities[service.id] || 0}
+                    effectiveDuration={barberCustomDurations[service.id]}
+                    onToggle={() => toggleService(service)}
+                    onIncrement={() => incrementServiceQty(service.id)}
+                    onDecrement={() => decrementServiceQty(service)}
+                  />
+                ))}
+              </div>
 
-            <FloatingActionBar
-              isVisible={!!selectedBarber}
-              onContinue={handleNextStep}
-              label="Continuar"
-              subtitle={selectedBarber ? selectedBarber.apelido : ""}
-              icon={
-                selectedBarber?.foto_url ? (
-                  <img src={selectedBarber.foto_url} alt="" className="w-7 h-7 rounded-full object-cover" />
-                ) : (
-                  <div className="w-7 h-7 rounded-full bg-primary/30 flex items-center justify-center text-[11px] font-bold text-primary">
-                    {selectedBarber?.apelido?.charAt(0)}
-                  </div>
-                )
-              }
-            />
+              <BookingBottomBar
+                serviceCount={selectedServices.reduce((sum, s) => sum + (serviceQuantities[s.id] || 1), 0)}
+                totalDuration={getTotalDuration()}
+                totalPrice={getTotalPrice()}
+                onContinue={handleNextStep}
+                isVisible={selectedServices.length > 0}
+              />
+            </div>
           </motion.div>
         )}
 
