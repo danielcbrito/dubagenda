@@ -228,6 +228,7 @@ const ClienteAgendar = () => {
   useEffect(() => {
     const initializeBooking = async () => {
       setIsInitializing(true);
+      try {
 
       // SINGLE session call — reused everywhere
       const { data: { session } } = await supabase.auth.getSession();
