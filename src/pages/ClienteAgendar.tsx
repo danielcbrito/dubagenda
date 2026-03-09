@@ -980,6 +980,7 @@ const ClienteAgendar = () => {
         observacoes: selectedServices.length > 1 
           ? `Serviços: ${serviceNames}` 
           : undefined,
+        unidade_id: selectedUnit?.id || null,
       };
 
       // === Cartão via Asaas Checkout ===
