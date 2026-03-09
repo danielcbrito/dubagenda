@@ -3606,6 +3606,98 @@ export type Database = {
         }
         Relationships: []
       }
+      tenant_unidades: {
+        Row: {
+          ativo: boolean
+          bairro: string | null
+          cep: string | null
+          cidade: string | null
+          cnpj: string | null
+          complemento: string | null
+          cpf: string | null
+          created_at: string
+          email: string | null
+          estado: string | null
+          id: string
+          is_sede: boolean
+          latitude: number | null
+          logo_url: string | null
+          longitude: number | null
+          nome: string
+          numero: string | null
+          rua: string | null
+          site: string | null
+          slogan: string | null
+          slug: string | null
+          telefone: string | null
+          tenant_id: string
+          updated_at: string
+          whatsapp: string | null
+        }
+        Insert: {
+          ativo?: boolean
+          bairro?: string | null
+          cep?: string | null
+          cidade?: string | null
+          cnpj?: string | null
+          complemento?: string | null
+          cpf?: string | null
+          created_at?: string
+          email?: string | null
+          estado?: string | null
+          id?: string
+          is_sede?: boolean
+          latitude?: number | null
+          logo_url?: string | null
+          longitude?: number | null
+          nome: string
+          numero?: string | null
+          rua?: string | null
+          site?: string | null
+          slogan?: string | null
+          slug?: string | null
+          telefone?: string | null
+          tenant_id: string
+          updated_at?: string
+          whatsapp?: string | null
+        }
+        Update: {
+          ativo?: boolean
+          bairro?: string | null
+          cep?: string | null
+          cidade?: string | null
+          cnpj?: string | null
+          complemento?: string | null
+          cpf?: string | null
+          created_at?: string
+          email?: string | null
+          estado?: string | null
+          id?: string
+          is_sede?: boolean
+          latitude?: number | null
+          logo_url?: string | null
+          longitude?: number | null
+          nome?: string
+          numero?: string | null
+          rua?: string | null
+          site?: string | null
+          slogan?: string | null
+          slug?: string | null
+          telefone?: string | null
+          tenant_id?: string
+          updated_at?: string
+          whatsapp?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_unidades_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tenant_webhook_config: {
         Row: {
           ativo: boolean | null
@@ -4309,6 +4401,15 @@ export type Database = {
       get_or_create_wallet_balance: {
         Args: { p_user_id: string }
         Returns: number
+      }
+      get_plan_usage_for_barber_view: {
+        Args: { p_barbeiro_id: string; p_user_id: string }
+        Returns: {
+          assinatura_id: string
+          has_plan: boolean
+          plan_limit: number
+          used_count: number
+        }[]
       }
       get_store_maintenance_config: {
         Args: never
