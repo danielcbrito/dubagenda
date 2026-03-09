@@ -228,6 +228,7 @@ const ClienteAgendar = () => {
   useEffect(() => {
     const initializeBooking = async () => {
       setIsInitializing(true);
+      try {
 
       // SINGLE session call — reused everywhere
       const { data: { session } } = await supabase.auth.getSession();
@@ -279,6 +280,7 @@ const ClienteAgendar = () => {
       
       if (tenantId) {
         units = await loadTenantUnits(tenantId);
+        console.log("[initializeBooking] Units loaded:", units.length, "tenantId:", tenantId);
         
         // Se tem unidade preferida e ela está nas unidades ativas, auto-selecionar
         if (userPreferredUnitId && units.find(u => u.id === userPreferredUnitId)) {
@@ -387,12 +389,23 @@ const ClienteAgendar = () => {
 
       // Normal flow: if multiple units and no preferred, start at unit selection (step 0)
       // Otherwise start at barber selection (step 1)
+      console.log("[initializeBooking] Decision:", { unitsCount: units.length, effectiveUnitId, hasMultipleUnits: units.length > 1 });
       if (units.length > 1 && !effectiveUnitId) {
         setStep(0);
       } else {
         setStep(1);
       }
       setIsInitializing(false);
+      } catch (err) {
+        console.error("[initializeBooking] Fatal error:", err);
+        setIsInitializing(false);
+        // Fallback: try to show unit selection or barber selection
+        if (tenantUnits.length > 1) {
+          setStep(0);
+        } else {
+          setStep(1);
+        }
+      }
     };
 
     initializeBooking();
