@@ -121,6 +121,7 @@ const Cliente = () => {
   const [realtimeConnected, setRealtimeConnected] = useState(true);
   const channelStatusRef = useRef<Record<string, boolean>>({});
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const channelsCreatedAtRef = useRef<number>(Date.now());
 
   // Race-condition guards for each loader
   const profileLoadRef = useRef(false);
