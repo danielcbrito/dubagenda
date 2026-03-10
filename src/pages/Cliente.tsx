@@ -927,7 +927,7 @@ const Cliente = () => {
                     <AppointmentCardPremium
                       key={apt.id}
                       appointment={apt}
-                      onCancel={() => loadUserData(user.id)}
+                      onCancel={() => loadAppointmentsData(user.id)}
                       onConfirm={handleConfirmAppointment}
                       userId={user?.id}
                       payments={payments}
