@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Calendar, Crown, Banknote, Store, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
+import { useDataError } from "@/hooks/useDataError";
 
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
