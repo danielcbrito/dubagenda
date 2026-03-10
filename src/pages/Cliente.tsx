@@ -458,113 +458,117 @@ const Cliente = () => {
 
   // ─── Layer 3: Loyalty, Credits & Subscriptions ───
   const loadLoyaltyData = async (userId: string, tenantId: string | null) => {
+    if (loyaltyLoadRef.current) return;
+    loyaltyLoadRef.current = true;
     setLoyaltyLoading(true);
+    try {
+      const [creditsResult, pontosResult, completedCountResult, activeResgateResult, redemptionsResult] = await Promise.all([
+        supabase.rpc('get_user_available_credits', { p_user_id: userId }),
+        supabase.from("pontos").select("pontos").eq("user_id", userId).maybeSingle(),
+        supabase.from("agendamentos").select("*", { count: 'exact', head: true }).eq("user_id", userId).eq("status", "completed"),
+        supabase.from("agendamentos").select("id").eq("user_id", userId).eq("payment_method", "resgate").in("status", ["pending", "confirmed", "completed"]).limit(1),
+        supabase.from("resgates").select("id, status").eq("user_id", userId).eq("status", "available"),
+      ]);
 
-    const [creditsResult, pontosResult, completedCountResult, activeResgateResult, redemptionsResult] = await Promise.all([
-      supabase.rpc('get_user_available_credits', { p_user_id: userId }),
-      supabase.from("pontos").select("pontos").eq("user_id", userId).maybeSingle(),
-      supabase.from("agendamentos").select("*", { count: 'exact', head: true }).eq("user_id", userId).eq("status", "completed"),
-      supabase.from("agendamentos").select("id").eq("user_id", userId).eq("payment_method", "resgate").in("status", ["pending", "confirmed", "completed"]).limit(1),
-      supabase.from("resgates").select("id, status").eq("user_id", userId).eq("status", "available"),
-    ]);
+      setAvailableCredits(creditsResult.data || 0);
+      setPoints(pontosResult.data?.pontos || 0);
+      setCompletedAppointments(completedCountResult.count || 0);
 
-    setAvailableCredits(creditsResult.data || 0);
-    setPoints(pontosResult.data?.pontos || 0);
-    setCompletedAppointments(completedCountResult.count || 0);
+      let availableRedemptions = 0;
+      if (!activeResgateResult.data || activeResgateResult.data.length === 0) {
+        availableRedemptions = redemptionsResult.data?.length || 0;
+      }
+      setRedemptions(availableRedemptions);
 
-    let availableRedemptions = 0;
-    if (!activeResgateResult.data || activeResgateResult.data.length === 0) {
-      availableRedemptions = redemptionsResult.data?.length || 0;
-    }
-    setRedemptions(availableRedemptions);
-
-    // Buscar assinatura ativa do usuário
-    const { data: activeSub } = await supabase
-      .from("assinaturas")
-      .select("id, status, next_billing_date, plano_id, barbeiro_id, payment_method, cash_payment_confirmed, plano:planos(nome, limite_agendamentos_mes)")
-      .eq("user_id", userId)
-      .eq("status", "active")
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    let finalActiveSubscription: any = null;
-    let finalExpiredSubscription: any = null;
-    let finalPendingSubscription: any = null;
-    let finalPlanUsageCount = 0;
-
-    if (activeSub) {
-      finalActiveSubscription = activeSub;
-      setActiveSubscription(activeSub);
-      setExpiredSubscription(null);
-      setPendingSubscription(null);
-
-      // Contar usos do plano pela assinatura ativa
-      const { count: usageCount } = await supabase
-        .from("plano_agendamentos_usos")
-        .select("id", { count: 'exact', head: true })
-        .eq("assinatura_id", activeSub.id)
-        .is("released_at", null);
-
-      finalPlanUsageCount = usageCount || 0;
-      setPlanUsageCount(finalPlanUsageCount);
-    } else {
-      setActiveSubscription(null);
-
-      // Verificar assinatura pendente (suspended ou pending_cash)
-      const { data: pendingSub } = await supabase
+      // Buscar assinatura ativa do usuário
+      const { data: activeSub } = await supabase
         .from("assinaturas")
-        .select("id, status, plano_id, created_at, payment_method, pix_qr_code, pix_payload, asaas_payment_id, pix_expires_at, plano:planos(nome, preco_mensal)")
+        .select("id, status, next_billing_date, plano_id, barbeiro_id, payment_method, cash_payment_confirmed, plano:planos(nome, limite_agendamentos_mes)")
         .eq("user_id", userId)
-        .in("status", ["suspended", "pending_cash"] as any)
+        .eq("status", "active")
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();
 
-      finalPendingSubscription = pendingSub;
-      setPendingSubscription(pendingSub);
+      let finalActiveSubscription: any = null;
+      let finalExpiredSubscription: any = null;
+      let finalPendingSubscription: any = null;
+      let finalPlanUsageCount = 0;
 
-      // Verificar assinatura cancelada recente (apenas se não há pendente)
-      if (!pendingSub) {
-        const thirtyDaysAgo = new Date();
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-        const thirtyDaysAgoISO = thirtyDaysAgo.toISOString();
+      if (activeSub) {
+        finalActiveSubscription = activeSub;
+        setActiveSubscription(activeSub);
+        setExpiredSubscription(null);
+        setPendingSubscription(null);
 
-        const { data: expiredSub } = await supabase
+        const { count: usageCount } = await supabase
+          .from("plano_agendamentos_usos")
+          .select("id", { count: 'exact', head: true })
+          .eq("assinatura_id", activeSub.id)
+          .is("released_at", null);
+
+        finalPlanUsageCount = usageCount || 0;
+        setPlanUsageCount(finalPlanUsageCount);
+      } else {
+        setActiveSubscription(null);
+
+        const { data: pendingSub } = await supabase
           .from("assinaturas")
-          .select("id, status, plano_id, updated_at, next_billing_date, plano:planos(nome)")
+          .select("id, status, plano_id, created_at, payment_method, pix_qr_code, pix_payload, asaas_payment_id, pix_expires_at, plano:planos(nome, preco_mensal)")
           .eq("user_id", userId)
-          .eq("status", "cancelled")
-          .not("next_billing_date", "is", null)
-          .gte("updated_at", thirtyDaysAgoISO)
-          .order("updated_at", { ascending: false })
+          .in("status", ["suspended", "pending_cash"] as any)
+          .order("created_at", { ascending: false })
           .limit(1)
           .maybeSingle();
 
-        const isRealExpired = expiredSub?.next_billing_date && 
-          new Date(expiredSub.next_billing_date + "T00:00:00") < new Date();
+        finalPendingSubscription = pendingSub;
+        setPendingSubscription(pendingSub);
 
-        finalExpiredSubscription = isRealExpired ? expiredSub : null;
-        setExpiredSubscription(finalExpiredSubscription);
-      } else {
-        setExpiredSubscription(null);
+        if (!pendingSub) {
+          const thirtyDaysAgo = new Date();
+          thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+          const thirtyDaysAgoISO = thirtyDaysAgo.toISOString();
+
+          const { data: expiredSub } = await supabase
+            .from("assinaturas")
+            .select("id, status, plano_id, updated_at, next_billing_date, plano:planos(nome)")
+            .eq("user_id", userId)
+            .eq("status", "cancelled")
+            .not("next_billing_date", "is", null)
+            .gte("updated_at", thirtyDaysAgoISO)
+            .order("updated_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+          const isRealExpired = expiredSub?.next_billing_date &&
+            new Date(expiredSub.next_billing_date + "T00:00:00") < new Date();
+
+          finalExpiredSubscription = isRealExpired ? expiredSub : null;
+          setExpiredSubscription(finalExpiredSubscription);
+        } else {
+          setExpiredSubscription(null);
+        }
+
+        setPlanUsageCount(0);
       }
 
-      setPlanUsageCount(0);
+      setCache(`cache_loyalty_${userId}`, {
+        points: pontosResult.data?.pontos || 0,
+        completedAppointments: completedCountResult.count || 0,
+        availableCredits: creditsResult.data || 0,
+        redemptions: availableRedemptions,
+        activeSubscription: finalActiveSubscription,
+        expiredSubscription: finalExpiredSubscription,
+        pendingSubscription: finalPendingSubscription,
+        planUsageCount: finalPlanUsageCount,
+        pontosNecessarios,
+      }, 5);
+    } catch (err) {
+      console.error('Erro ao carregar fidelidade:', err);
+    } finally {
+      loyaltyLoadRef.current = false;
+      setLoyaltyLoading(false);
     }
-
-    setCache(`cache_loyalty_${userId}`, {
-      points: pontosResult.data?.pontos || 0,
-      completedAppointments: completedCountResult.count || 0,
-      availableCredits: creditsResult.data || 0,
-      redemptions: availableRedemptions,
-      activeSubscription: finalActiveSubscription,
-      expiredSubscription: finalExpiredSubscription,
-      pendingSubscription: finalPendingSubscription,
-      planUsageCount: finalPlanUsageCount,
-      pontosNecessarios,
-    }, 5);
-    setLoyaltyLoading(false);
   };
 
   // ─── Layer 4: Shop Barbers & Ratings ───
