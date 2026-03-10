@@ -109,6 +109,11 @@ const Cliente = () => {
   const [loyaltyLoading, setLoyaltyLoading] = useState(!cachedHome);
   const [shopLoading, setShopLoading] = useState(!cachedHome);
 
+  // Realtime connection status
+  const [realtimeConnected, setRealtimeConnected] = useState(true);
+  const channelStatusRef = useRef<Record<string, boolean>>({});
+  const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   // Derived dataLoaded — true when all layers have loaded at least once
   const dataLoaded = !profileLoading && !appointmentsLoading && !loyaltyLoading && !shopLoading;
 
