@@ -457,7 +457,13 @@ const Cliente = () => {
       .limit(1)
       .maybeSingle();
 
+    let finalActiveSubscription: any = null;
+    let finalExpiredSubscription: any = null;
+    let finalPendingSubscription: any = null;
+    let finalPlanUsageCount = 0;
+
     if (activeSub) {
+      finalActiveSubscription = activeSub;
       setActiveSubscription(activeSub);
       setExpiredSubscription(null);
       setPendingSubscription(null);
@@ -469,7 +475,8 @@ const Cliente = () => {
         .eq("assinatura_id", activeSub.id)
         .is("released_at", null);
 
-      setPlanUsageCount(usageCount || 0);
+      finalPlanUsageCount = usageCount || 0;
+      setPlanUsageCount(finalPlanUsageCount);
     } else {
       setActiveSubscription(null);
 
@@ -483,6 +490,7 @@ const Cliente = () => {
         .limit(1)
         .maybeSingle();
 
+      finalPendingSubscription = pendingSub;
       setPendingSubscription(pendingSub);
 
       // Verificar assinatura cancelada recente (apenas se não há pendente)
@@ -505,7 +513,8 @@ const Cliente = () => {
         const isRealExpired = expiredSub?.next_billing_date && 
           new Date(expiredSub.next_billing_date + "T00:00:00") < new Date();
 
-        setExpiredSubscription(isRealExpired ? expiredSub : null);
+        finalExpiredSubscription = isRealExpired ? expiredSub : null;
+        setExpiredSubscription(finalExpiredSubscription);
       } else {
         setExpiredSubscription(null);
       }
@@ -518,10 +527,10 @@ const Cliente = () => {
       completedAppointments: completedCountResult.count || 0,
       availableCredits: creditsResult.data || 0,
       redemptions: availableRedemptions,
-      activeSubscription: activeSub || null,
-      expiredSubscription: expiredSubscription,
-      pendingSubscription: pendingSubscription,
-      planUsageCount: activeSub ? (planUsageCount) : 0,
+      activeSubscription: finalActiveSubscription,
+      expiredSubscription: finalExpiredSubscription,
+      pendingSubscription: finalPendingSubscription,
+      planUsageCount: finalPlanUsageCount,
       pontosNecessarios,
     }, 5);
     setLoyaltyLoading(false);
