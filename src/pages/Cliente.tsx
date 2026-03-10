@@ -367,14 +367,16 @@ const Cliente = () => {
     const { data: prof } = await supabase.from("profiles").select("*").eq("id", userId).single();
     setProfile(prof);
 
+    let shop: { id: string; nome: string } | null = null;
     const tenantId = prof?.barbearia_preferida_id;
     if (tenantId) {
       const { data: tenant } = await supabase.from("tenants").select("id, nome").eq("id", tenantId).single();
-      if (tenant) setPreferredShop(tenant);
+      if (tenant) { setPreferredShop(tenant); shop = tenant; }
     } else {
       setPreferredShop(null);
     }
 
+    setCache(`cache_profile_${userId}`, { profile: prof, preferredShop: shop }, 60);
     setProfileLoading(false);
     return prof;
   };
