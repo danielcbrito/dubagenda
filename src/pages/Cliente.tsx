@@ -121,6 +121,7 @@ const Cliente = () => {
   const [realtimeConnected, setRealtimeConnected] = useState(true);
   const channelStatusRef = useRef<Record<string, boolean>>({});
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const channelsCreatedAtRef = useRef<number>(Date.now());
 
   // Race-condition guards for each loader
   const profileLoadRef = useRef(false);
@@ -139,15 +140,31 @@ const Cliente = () => {
   const retryAllLayers = useCallback(() => {
     if (!user) return;
     toast.dismiss("data-error-toast");
+
+    // Reset race-condition guards
+    profileLoadRef.current = false;
+    appointmentsLoadRef.current = false;
+    loyaltyLoadRef.current = false;
+    shopLoadRef.current = false;
+
     clearErrors();
     retryCountRef.current += 1;
     const tenantId = profile?.barbearia_preferida_id || null;
-    Promise.all([
+
+    // Use allSettled so one failure doesn't block others
+    Promise.allSettled([
       loadProfileData(user.id),
       loadAppointmentsData(user.id),
       loadLoyaltyData(user.id, tenantId),
       loadShopData(tenantId),
-    ]);
+    ]).then(results => {
+      const camadas = ['profile', 'appointments', 'loyalty', 'shop'] as const;
+      results.forEach((r, i) => {
+        if (r.status === 'rejected') {
+          console.error(`[RETRY] Falha na camada ${camadas[i]}:`, r.reason);
+        }
+      });
+    });
   }, [user, profile?.barbearia_preferida_id]);
 
   useEffect(() => {
@@ -251,6 +268,12 @@ const Cliente = () => {
       updateChannelStatus(channelName, true);
     }
     if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+      // Ignore transient errors during the first 5 seconds after channel creation
+      const channelAge = Date.now() - channelsCreatedAtRef.current;
+      if (channelAge < 5000) {
+        console.log(`[REALTIME] Transient error ignored on ${channelName} (${channelAge}ms after creation)`);
+        return;
+      }
       updateChannelStatus(channelName, false);
       // Schedule reconnection after 30s
       if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
@@ -296,6 +319,7 @@ const Cliente = () => {
       // Cleanup existing channels
       channels.forEach(ch => supabase.removeChannel(ch));
       channels = [];
+      channelsCreatedAtRef.current = Date.now();
 
       // ─── Canal 1: Agendamentos + Pending Bookings ───
       const channelAgendamentos = supabase
