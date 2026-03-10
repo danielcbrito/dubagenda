@@ -76,29 +76,29 @@ const Cliente = () => {
   const hasCachedData = !!(cachedProfile || cachedAppointments || cachedLoyalty);
 
   const [user, setUser] = useState<any>(null);
-  const [profile, setProfile] = useState<any>(cachedHome?.profile || null);
-  const [appointments, setAppointments] = useState<Appointment[]>(cachedHome?.appointments || []);
-  const [pendingBookings, setPendingBookings] = useState<any[]>(cachedHome?.pendingBookings || []);
-  const [points, setPoints] = useState(cachedHome?.points ?? 0);
-  const [redemptions, setRedemptions] = useState(cachedHome?.redemptions ?? 0);
-  const [pontosNecessarios, setPontosNecessarios] = useState(cachedHome?.pontosNecessarios ?? 8);
+  const [profile, setProfile] = useState<any>(cachedProfile?.profile || null);
+  const [appointments, setAppointments] = useState<Appointment[]>(cachedAppointments?.appointments || []);
+  const [pendingBookings, setPendingBookings] = useState<any[]>(cachedAppointments?.pendingBookings || []);
+  const [points, setPoints] = useState(cachedLoyalty?.points ?? 0);
+  const [redemptions, setRedemptions] = useState(cachedLoyalty?.redemptions ?? 0);
+  const [pontosNecessarios, setPontosNecessarios] = useState(cachedLoyalty?.pontosNecessarios ?? 8);
   
   const [pointsModalOpen, setPointsModalOpen] = useState(false);
-  const [completedAppointments, setCompletedAppointments] = useState(cachedHome?.completedAppointments ?? 0);
+  const [completedAppointments, setCompletedAppointments] = useState(cachedLoyalty?.completedAppointments ?? 0);
   const [plansSheetOpen, setPlansSheetOpen] = useState(false);
   const [subscribeSheetOpen, setSubscribeSheetOpen] = useState(false);
   const [profileSheetOpen, setProfileSheetOpen] = useState(false);
   const [walletSheetOpen, setWalletSheetOpen] = useState(false);
   const [historySheetOpen, setHistorySheetOpen] = useState(false);
-  const [availableCredits, setAvailableCredits] = useState(cachedHome?.availableCredits ?? 0);
-  const [payments, setPayments] = useState<any[]>(cachedHome?.payments || []);
+  const [availableCredits, setAvailableCredits] = useState(cachedLoyalty?.availableCredits ?? 0);
+  const [payments, setPayments] = useState<any[]>(cachedAppointments?.payments || []);
   const [recentCancellations, setRecentCancellations] = useState<Appointment[]>([]);
-  const [activeSubscription, setActiveSubscription] = useState<any>(cachedHome?.activeSubscription || null);
-  const [expiredSubscription, setExpiredSubscription] = useState<any>(cachedHome?.expiredSubscription || null);
-  const [pendingSubscription, setPendingSubscription] = useState<any>(cachedHome?.pendingSubscription || null);
-  const [planUsageCount, setPlanUsageCount] = useState(cachedHome?.planUsageCount ?? 0);
-  const [preferredShop, setPreferredShop] = useState<{ id: string; nome: string } | null>(cachedHome?.preferredShop || null);
-  const [shopBarbers, setShopBarbers] = useState<Array<{ id: string; apelido: string; foto_url: string | null; avgRating: number | null; totalReviews: number }>>(cachedHome?.shopBarbers || []);
+  const [activeSubscription, setActiveSubscription] = useState<any>(cachedLoyalty?.activeSubscription || null);
+  const [expiredSubscription, setExpiredSubscription] = useState<any>(cachedLoyalty?.expiredSubscription || null);
+  const [pendingSubscription, setPendingSubscription] = useState<any>(cachedLoyalty?.pendingSubscription || null);
+  const [planUsageCount, setPlanUsageCount] = useState(cachedLoyalty?.planUsageCount ?? 0);
+  const [preferredShop, setPreferredShop] = useState<{ id: string; nome: string } | null>(cachedProfile?.preferredShop || null);
+  const [shopBarbers, setShopBarbers] = useState<Array<{ id: string; apelido: string; foto_url: string | null; avgRating: number | null; totalReviews: number }>>(cachedShop?.shopBarbers || []);
   const [barberProfileOpen, setBarberProfileOpen] = useState<string | null>(null);
   const [reviewModalData, setReviewModalData] = useState<{
     appointmentId: string;
@@ -107,11 +107,11 @@ const Cliente = () => {
     barberPhoto: string | null;
   } | null>(null);
 
-  // Independent loading flags
-  const [profileLoading, setProfileLoading] = useState(!cachedHome);
-  const [appointmentsLoading, setAppointmentsLoading] = useState(!cachedHome);
-  const [loyaltyLoading, setLoyaltyLoading] = useState(!cachedHome);
-  const [shopLoading, setShopLoading] = useState(!cachedHome);
+  // Independent loading flags — skip loading if cached data exists
+  const [profileLoading, setProfileLoading] = useState(!cachedProfile);
+  const [appointmentsLoading, setAppointmentsLoading] = useState(!cachedAppointments);
+  const [loyaltyLoading, setLoyaltyLoading] = useState(!cachedLoyalty);
+  const [shopLoading, setShopLoading] = useState(!cachedShop && !hasCachedData);
 
   // Realtime connection status
   const [realtimeConnected, setRealtimeConnected] = useState(true);
