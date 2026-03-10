@@ -59,17 +59,21 @@ interface Appointment {
   }>;
 }
 
-// Helper to read cached home data from sessionStorage
-const getHomeCache = () => {
-  try {
-    const raw = sessionStorage.getItem("cliente_home_cache");
-    return raw ? JSON.parse(raw) : null;
-  } catch { return null; }
-};
+import { getCache, setCache } from "@/utils/cache";
 
 const Cliente = () => {
   const navigate = useNavigate();
-  const cachedHome = useMemo(() => getHomeCache(), []);
+
+  // Read granular caches (userId unknown yet, try last known)
+  const lastUserId = useMemo(() => {
+    try { return sessionStorage.getItem("cliente_last_user_id") || null; } catch { return null; }
+  }, []);
+  const cachedProfile = useMemo(() => lastUserId ? getCache<any>(`cache_profile_${lastUserId}`) : null, [lastUserId]);
+  const cachedAppointments = useMemo(() => lastUserId ? getCache<any>(`cache_appointments_${lastUserId}`) : null, [lastUserId]);
+  const cachedLoyalty = useMemo(() => lastUserId ? getCache<any>(`cache_loyalty_${lastUserId}`) : null, [lastUserId]);
+  const cachedShopTenantId = cachedProfile?.preferredShop?.id || cachedProfile?.profile?.barbearia_preferida_id || null;
+  const cachedShop = useMemo(() => cachedShopTenantId ? getCache<any>(`cache_shop_${cachedShopTenantId}`) : null, [cachedShopTenantId]);
+  const hasCachedData = !!(cachedProfile || cachedAppointments || cachedLoyalty);
 
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<any>(cachedHome?.profile || null);
