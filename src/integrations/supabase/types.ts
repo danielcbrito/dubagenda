@@ -827,6 +827,13 @@ export type Database = {
             referencedRelation: "tenant_unidades"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "barbeiros_user_id_profiles_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
         ]
       }
       barbeiros_private: {
@@ -4418,6 +4425,7 @@ export type Database = {
           total_saques: number
         }[]
       }
+      check_email_exists: { Args: { p_email: string }; Returns: string }
       clean_expired_pending_bookings: { Args: never; Returns: undefined }
       clean_expired_verification_codes: { Args: never; Returns: undefined }
       create_barber_with_user: {
