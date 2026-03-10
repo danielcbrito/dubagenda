@@ -312,7 +312,6 @@ const Cliente = () => {
                 toast.success("✅ Agendamento confirmado pelo barbeiro!");
               } else if (newData.status === 'completed') {
                 toast.success("🎉 Atendimento concluído!");
-                loadLoyaltyData(userId, tenantId);
               } else if (newData.status === 'cancelled_by_admin') {
                 toast.error("❌ Agendamento cancelado pela barbearia");
               }
