@@ -131,6 +131,9 @@ const Cliente = () => {
   // Derived dataLoaded — true when all layers have loaded at least once
   const dataLoaded = !profileLoading && !appointmentsLoading && !loyaltyLoading && !shopLoading;
 
+  // Centralized data error handling
+  const { hasError, reportError, clearErrors } = useDataError();
+
   // Flag para garantir que o modal só abre UMA VEZ por montagem
   const reviewTriggeredRef = useRef(false);
   // Flag para bloquear qualquer reabertura após fechar
