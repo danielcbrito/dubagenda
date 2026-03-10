@@ -821,7 +821,7 @@ const Cliente = () => {
             </div>
 
             {/* Barbershop Card — minimal inline */}
-            {dataLoaded && (
+            {!profileLoading && (
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
