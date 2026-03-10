@@ -568,7 +568,7 @@ const Cliente = () => {
         pontosNecessarios,
       }, 5);
     } catch (err) {
-      console.error('Erro ao carregar fidelidade:', err);
+      reportError('loyalty', err);
     } finally {
       loyaltyLoadRef.current = false;
       setLoyaltyLoading(false);
