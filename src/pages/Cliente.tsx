@@ -325,14 +325,14 @@ const Cliente = () => {
           () => loadAppointmentsData(userId)
         )
         .subscribe((status) => handleChannelStatus('agendamentos', status, () => {
-          // On reconnect, reload all data
-          loadProfileData(userId).then((prof) => {
-            const tid = prof?.barbearia_preferida_id || null;
-            loadAppointmentsData(userId);
-            loadLoyaltyData(userId, tid);
-            loadShopData(tid);
-          });
+          // On reconnect, reload all data in parallel and reinitialize channels
           initializeChannels();
+          Promise.all([
+            loadProfileData(userId),
+            loadAppointmentsData(userId),
+            loadLoyaltyData(userId, tenantId),
+            loadShopData(tenantId),
+          ]);
         }));
 
       // ─── Canal 2: Fidelidade ───
@@ -363,16 +363,20 @@ const Cliente = () => {
       const channelFidelidade = fidelidadeBuilder
         .subscribe((status) => handleChannelStatus('fidelidade', status, initializeChannels));
 
-      // ─── Canal 3: Barbeiros do tenant ───
-      const channelBarbeiros = supabase
-        .channel('canal-barbeiros')
-        .on('postgres_changes', {
-          event: '*', schema: 'public', table: 'barbeiros',
-          ...(tenantId ? { filter: `tenant_id=eq.${tenantId}` } : {})
-        }, () => loadShopData(tenantId))
-        .subscribe((status) => handleChannelStatus('barbeiros', status, initializeChannels));
+      // ─── Canal 3: Barbeiros do tenant (only when tenantId exists) ───
+      if (tenantId) {
+        const channelBarbeiros = supabase
+          .channel('canal-barbeiros')
+          .on('postgres_changes', {
+            event: '*', schema: 'public', table: 'barbeiros',
+            filter: `tenant_id=eq.${tenantId}`
+          }, () => loadShopData(tenantId))
+          .subscribe((status) => handleChannelStatus('barbeiros', status, initializeChannels));
 
-      channels = [channelAgendamentos, channelFidelidade, channelBarbeiros];
+        channels = [channelAgendamentos, channelFidelidade, channelBarbeiros];
+      } else {
+        channels = [channelAgendamentos, channelFidelidade];
+      }
     };
 
     initializeChannels();
