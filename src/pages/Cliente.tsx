@@ -453,7 +453,7 @@ const Cliente = () => {
         pendingBookings: pendingBookingsResult.data || [],
       }, 5);
     } catch (err) {
-      console.error('Erro ao carregar agendamentos:', err);
+      reportError('appointments', err);
     } finally {
       appointmentsLoadRef.current = false;
       setAppointmentsLoading(false);
