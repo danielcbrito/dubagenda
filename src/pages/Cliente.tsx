@@ -121,6 +121,12 @@ const Cliente = () => {
   const channelStatusRef = useRef<Record<string, boolean>>({});
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Race-condition guards for each loader
+  const profileLoadRef = useRef(false);
+  const appointmentsLoadRef = useRef(false);
+  const loyaltyLoadRef = useRef(false);
+  const shopLoadRef = useRef(false);
+
   // Derived dataLoaded — true when all layers have loaded at least once
   const dataLoaded = !profileLoading && !appointmentsLoading && !loyaltyLoading && !shopLoading;
 
