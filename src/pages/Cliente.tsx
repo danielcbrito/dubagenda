@@ -372,22 +372,33 @@ const Cliente = () => {
 
   // ─── Layer 1: Profile & Tenant ───
   const loadProfileData = async (userId: string) => {
+    if (profileLoadRef.current) return null;
+    profileLoadRef.current = true;
     setProfileLoading(true);
-    const { data: prof } = await supabase.from("profiles").select("*").eq("id", userId).single();
-    setProfile(prof);
+    try {
+      const { data: prof, error } = await supabase.from("profiles").select("*").eq("id", userId).single();
+      if (error) throw error;
+      setProfile(prof);
 
-    let shop: { id: string; nome: string } | null = null;
-    const tenantId = prof?.barbearia_preferida_id;
-    if (tenantId) {
-      const { data: tenant } = await supabase.from("tenants").select("id, nome").eq("id", tenantId).single();
-      if (tenant) { setPreferredShop(tenant); shop = tenant; }
-    } else {
-      setPreferredShop(null);
+      let shop: { id: string; nome: string } | null = null;
+      const tenantId = prof?.barbearia_preferida_id;
+      if (tenantId) {
+        const { data: tenant } = await supabase.from("tenants").select("id, nome").eq("id", tenantId).single();
+        if (tenant) { setPreferredShop(tenant); shop = tenant; }
+      } else {
+        setPreferredShop(null);
+      }
+
+      setCache(`cache_profile_${userId}`, { profile: prof, preferredShop: shop }, 60);
+      setProfileLoading(false);
+      return prof;
+    } catch (err) {
+      console.error('Erro ao carregar perfil:', err);
+      setProfileLoading(false);
+      return null;
+    } finally {
+      profileLoadRef.current = false;
     }
-
-    setCache(`cache_profile_${userId}`, { profile: prof, preferredShop: shop }, 60);
-    setProfileLoading(false);
-    return prof;
   };
 
   // ─── Layer 2: Appointments & Pending Bookings ───
