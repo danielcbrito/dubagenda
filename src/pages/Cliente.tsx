@@ -336,7 +336,7 @@ const Cliente = () => {
         }));
 
       // ─── Canal 2: Fidelidade ───
-      const channelFidelidade = supabase
+      let fidelidadeBuilder = supabase
         .channel('canal-fidelidade')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'assinaturas', filter: `user_id=eq.${userId}` }, () => {
           loadLoyaltyData(userId, tenantId);
@@ -346,14 +346,21 @@ const Cliente = () => {
         })
         .on('postgres_changes', { event: '*', schema: 'public', table: 'resgates', filter: `user_id=eq.${userId}` }, () => {
           loadLoyaltyData(userId, tenantId);
-        })
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'promocoes' }, () => {
-          fetchPontosNecessarios();
-          loadLoyaltyData(userId, tenantId);
-        })
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'planos' }, () => {
-          loadLoyaltyData(userId, tenantId);
-        })
+        });
+
+      // Only listen to promocoes/planos when tenantId is available (with filter)
+      if (tenantId) {
+        fidelidadeBuilder = fidelidadeBuilder
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'promocoes', filter: `tenant_id=eq.${tenantId}` }, () => {
+            fetchPontosNecessarios();
+            loadLoyaltyData(userId, tenantId);
+          })
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'planos', filter: `tenant_id=eq.${tenantId}` }, () => {
+            loadLoyaltyData(userId, tenantId);
+          });
+      }
+
+      const channelFidelidade = fidelidadeBuilder
         .subscribe((status) => handleChannelStatus('fidelidade', status, initializeChannels));
 
       // ─── Canal 3: Barbeiros do tenant ───
