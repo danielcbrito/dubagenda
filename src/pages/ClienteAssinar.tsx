@@ -16,13 +16,17 @@ import {
   MapPin,
   Scissors,
   Shield,
+  Sparkles,
+  Star,
   User,
+  Zap,
 } from "lucide-react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import pixIcon from "@/assets/pix-icon.png";
 import logoDub from "@/assets/logo-dub.png";
+import scissorsDecor from "@/assets/scissors-decorative.png";
 import { BarberCard } from "@/components/booking/BarberCard";
 import { useBarberRatings } from "@/hooks/useBarberRatings";
 
@@ -472,7 +476,7 @@ const ClienteAssinar = () => {
             </motion.div>
           )}
 
-          {/* ═══ Step 2: Planos — Horizontal Swipe Carousel ═══ */}
+          {/* ═══ Step 2: Planos — Premium Barbershop Showcase ═══ */}
           {step === 2 && (
             <motion.div key="step2" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               className="h-full flex flex-col">
@@ -511,92 +515,167 @@ const ClienteAssinar = () => {
                     {plans.map((plan, planIdx) => {
                       const benefits = Array.isArray(plan.beneficios_json) ? plan.beneficios_json : [];
                       const dailyCost = (plan.preco_mensal / 30).toFixed(2).replace('.', ',');
+                      const isPopular = planIdx === 0 || plans.length === 1;
 
                       return (
                         <div
                           key={plan.id}
                           className="w-full flex-shrink-0 snap-center overflow-y-auto overscroll-y-contain"
                         >
-                          <div className="px-5 pt-4 pb-8 max-w-md mx-auto flex flex-col justify-between min-h-full">
+                          <div className="px-5 pt-2 pb-8 max-w-md mx-auto flex flex-col justify-between min-h-full">
                             <div>
-                              {/* Plan name */}
-                              <motion.h2
-                                key={`name-${plan.id}`}
-                                initial={{ opacity: 0, y: 8 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ duration: 0.35, ease: "easeOut" }}
-                                className="text-xl font-bold text-foreground tracking-tight leading-tight"
-                              >
-                                {plan.nome}
-                              </motion.h2>
-                              
-                              {plan.descricao && (
-                                <motion.p
-                                  key={`desc-${plan.id}`}
-                                  initial={{ opacity: 0 }}
-                                  animate={{ opacity: 1 }}
-                                  transition={{ delay: 0.06, duration: 0.3 }}
-                                  className="text-[13px] text-muted-foreground leading-relaxed mt-1"
+                              {/* ── Decorative scissors watermark ── */}
+                              <div className="relative">
+                                <motion.div
+                                  initial={{ opacity: 0, rotate: -15 }}
+                                  animate={{ opacity: 0.04, rotate: 0 }}
+                                  transition={{ duration: 0.8 }}
+                                  className="absolute -top-2 -right-2 w-24 h-24 pointer-events-none"
                                 >
-                                  {plan.descricao}
-                                </motion.p>
-                              )}
+                                  <img src={scissorsDecor} alt="" className="w-full h-full object-contain opacity-50" />
+                                </motion.div>
 
-                              {/* Price block */}
+                                {/* Popular badge */}
+                                {isPopular && (
+                                  <motion.div
+                                    initial={{ opacity: 0, y: -8 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: 0.1 }}
+                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full mb-4"
+                                    style={{
+                                      background: "linear-gradient(135deg, hsl(var(--gold) / 0.15), hsl(var(--gold) / 0.05))",
+                                      border: "1px solid hsl(var(--gold) / 0.25)",
+                                    }}
+                                  >
+                                    <Star className="w-3 h-3 text-gold fill-gold" />
+                                    <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-gold">
+                                      Mais escolhido
+                                    </span>
+                                  </motion.div>
+                                )}
+
+                                {/* Plan name — editorial serif feel */}
+                                <motion.div
+                                  key={`name-${plan.id}`}
+                                  initial={{ opacity: 0, y: 10 }}
+                                  animate={{ opacity: 1, y: 0 }}
+                                  transition={{ duration: 0.4, ease: "easeOut" }}
+                                >
+                                  <h2 className="text-2xl font-bold text-foreground tracking-tight leading-tight font-display">
+                                    {plan.nome}
+                                  </h2>
+                                  {/* Gold accent underline */}
+                                  <div className="mt-2 flex items-center gap-2">
+                                    <div className="h-[2px] w-8 rounded-full bg-gold" />
+                                    <div className="h-[2px] w-3 rounded-full bg-gold/40" />
+                                  </div>
+                                </motion.div>
+
+                                {plan.descricao && (
+                                  <motion.p
+                                    key={`desc-${plan.id}`}
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    transition={{ delay: 0.08, duration: 0.3 }}
+                                    className="text-[13px] text-muted-foreground leading-relaxed mt-3"
+                                  >
+                                    {plan.descricao}
+                                  </motion.p>
+                                )}
+                              </div>
+
+                              {/* ── Price block — hero pricing ── */}
                               <motion.div
                                 key={`price-${plan.id}`}
-                                initial={{ opacity: 0, y: 10 }}
+                                initial={{ opacity: 0, y: 12 }}
                                 animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: 0.1, duration: 0.35 }}
-                                className="mt-6 mb-1"
+                                transition={{ delay: 0.12, duration: 0.4 }}
+                                className="mt-7 relative"
                               >
-                                <div className="flex items-baseline">
-                                  <span className="text-sm text-muted-foreground font-medium mr-1">R$</span>
-                                  <span className="text-[44px] font-extrabold text-foreground tabular-nums tracking-tighter leading-none">
-                                    {Math.floor(plan.preco_mensal)}
-                                  </span>
-                                  <span className="text-[22px] font-bold text-foreground tabular-nums leading-none">
-                                    ,{(plan.preco_mensal % 1).toFixed(2).slice(2)}
-                                  </span>
-                                  <span className="text-xs text-muted-foreground/50 font-medium ml-1.5 self-end mb-0.5">/mês</span>
+                                {/* Subtle glow behind price */}
+                                <div
+                                  className="absolute -inset-4 rounded-2xl pointer-events-none"
+                                  style={{
+                                    background: "radial-gradient(ellipse at center, hsl(var(--gold) / 0.06) 0%, transparent 70%)",
+                                  }}
+                                />
+                                <div className="relative">
+                                  <div className="flex items-baseline">
+                                    <span className="text-sm text-muted-foreground/60 font-medium mr-1.5">R$</span>
+                                    <span className="text-[52px] font-extrabold text-foreground tabular-nums tracking-tighter leading-none">
+                                      {Math.floor(plan.preco_mensal)}
+                                    </span>
+                                    <span className="text-[24px] font-bold text-foreground/70 tabular-nums leading-none ml-0.5">
+                                      ,{(plan.preco_mensal % 1).toFixed(2).slice(2)}
+                                    </span>
+                                    <span className="text-xs text-muted-foreground/40 font-medium ml-2 self-end mb-1.5">/mês</span>
+                                  </div>
+                                  <div className="flex items-center gap-2 mt-1.5">
+                                    <Zap className="w-3 h-3 text-gold/60" />
+                                    <p className="text-[11px] text-muted-foreground/50">
+                                      Apenas R$ {dailyCost}/dia · Cancele quando quiser
+                                    </p>
+                                  </div>
                                 </div>
-                                <p className="text-[11px] text-muted-foreground/40 mt-1">
-                                  R$ {dailyCost}/dia · Cancele quando quiser
-                                </p>
                               </motion.div>
 
-                              {/* Divider */}
-                              <div className="h-px bg-border/20 my-5" />
+                              {/* ── Ornamental divider ── */}
+                              <div className="flex items-center gap-3 my-6">
+                                <div className="flex-1 h-px bg-border/30" />
+                                <Scissors className="w-3.5 h-3.5 text-gold/30 rotate-90" />
+                                <div className="flex-1 h-px bg-border/30" />
+                              </div>
 
-                              {/* What's included */}
+                              {/* ── Benefits list ── */}
                               <motion.div
                                 key={`benefits-${plan.id}`}
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
-                                transition={{ delay: 0.16, duration: 0.3 }}
+                                transition={{ delay: 0.18, duration: 0.3 }}
                               >
-                                <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground/40 mb-3">
-                                  O que está incluso
+                                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-gold/50 mb-4 flex items-center gap-2">
+                                  <Sparkles className="w-3 h-3" />
+                                  Benefícios exclusivos
                                 </p>
 
-                                <div className="space-y-3">
-                                  {/* Agendamentos */}
-                                  <div className="flex items-start gap-3">
-                                    <CheckCircle2 className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" strokeWidth={2} />
-                                    <span className="text-[13px] text-foreground leading-snug">
-                                      <span className="font-semibold">{plan.limite_agendamentos_mes}</span> agendamento{plan.limite_agendamentos_mes > 1 ? 's' : ''} por mês
-                                    </span>
-                                  </div>
+                                <div className="space-y-3.5">
+                                  {/* Agendamentos — highlighted */}
+                                  <motion.div
+                                    initial={{ opacity: 0, x: -6 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    transition={{ delay: 0.22 }}
+                                    className="flex items-start gap-3 p-3 rounded-xl"
+                                    style={{
+                                      background: "linear-gradient(135deg, hsl(var(--gold) / 0.08), hsl(var(--gold) / 0.02))",
+                                      border: "1px solid hsl(var(--gold) / 0.12)",
+                                    }}
+                                  >
+                                    <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5"
+                                      style={{ background: "hsl(var(--gold) / 0.15)" }}>
+                                      <Crown className="w-3.5 h-3.5 text-gold" />
+                                    </div>
+                                    <div>
+                                      <span className="text-[13px] text-foreground leading-snug font-semibold">
+                                        {plan.limite_agendamentos_mes} agendamento{plan.limite_agendamentos_mes > 1 ? 's' : ''} por mês
+                                      </span>
+                                      <p className="text-[11px] text-muted-foreground/50 mt-0.5">
+                                        Escolha seu horário preferido com prioridade
+                                      </p>
+                                    </div>
+                                  </motion.div>
 
                                   {benefits.map((benefit: string, i: number) => (
                                     <motion.div
                                       key={i}
-                                      initial={{ opacity: 0, x: -4 }}
+                                      initial={{ opacity: 0, x: -6 }}
                                       animate={{ opacity: 1, x: 0 }}
-                                      transition={{ delay: 0.2 + i * 0.04 }}
-                                      className="flex items-start gap-3"
+                                      transition={{ delay: 0.26 + i * 0.04 }}
+                                      className="flex items-start gap-3 pl-1"
                                     >
-                                      <CheckCircle2 className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" strokeWidth={2} />
+                                      <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5"
+                                        style={{ background: "hsl(var(--primary) / 0.1)" }}>
+                                        <Check className="w-3 h-3 text-primary" strokeWidth={2.5} />
+                                      </div>
                                       <span className="text-[13px] text-muted-foreground leading-snug">{benefit}</span>
                                     </motion.div>
                                   ))}
@@ -604,20 +683,27 @@ const ClienteAssinar = () => {
                               </motion.div>
                             </div>
 
-                            {/* Shop indicator */}
-                            <div className="mt-8 flex items-center gap-2.5 py-2.5 border-t border-border/15">
-                              <div className="w-6 h-6 rounded-md bg-muted/30 flex items-center justify-center overflow-hidden flex-shrink-0">
+                            {/* ── Shop indicator — bottom ── */}
+                            <motion.div
+                              initial={{ opacity: 0 }}
+                              animate={{ opacity: 1 }}
+                              transition={{ delay: 0.35 }}
+                              className="mt-8 flex items-center gap-2.5 py-3 px-3 rounded-xl border border-border/15 bg-secondary/20"
+                            >
+                              <div className="w-7 h-7 rounded-lg bg-muted/30 flex items-center justify-center overflow-hidden flex-shrink-0">
                                 {selectedTenantId === "dub" ? (
-                                  <img src={logoDub} alt="DUB" className="w-3.5 h-3.5 object-contain" />
+                                  <img src={logoDub} alt="DUB" className="w-4 h-4 object-contain" />
                                 ) : (
-                                  <Scissors className="w-3 h-3 text-muted-foreground/35" />
+                                  <Scissors className="w-3.5 h-3.5 text-muted-foreground/35" />
                                 )}
                               </div>
-                              <span className="text-[11px] text-muted-foreground/40 flex-1">{selectedShopName}</span>
-                              <button onClick={handleChangeShop} className="text-[11px] text-primary/60 font-medium hover:text-primary transition-colors">
+                              <div className="flex-1 min-w-0">
+                                <span className="text-[11px] text-muted-foreground/50 block truncate">{selectedShopName}</span>
+                              </div>
+                              <button onClick={handleChangeShop} className="text-[11px] text-primary/60 font-medium hover:text-primary transition-colors flex-shrink-0">
                                 Trocar
                               </button>
-                            </div>
+                            </motion.div>
                           </div>
                         </div>
                       );
@@ -625,21 +711,41 @@ const ClienteAssinar = () => {
                   </div>
 
                   {/* Fixed bottom area — CTA */}
-                  <div className="flex-shrink-0 px-6 pb-[max(env(safe-area-inset-bottom),1rem)] pt-3 bg-background">
-                    <div className="max-w-md mx-auto">
+                  <div className="flex-shrink-0 px-5 pb-[max(env(safe-area-inset-bottom),1rem)] pt-3">
+                    <div className="max-w-md mx-auto space-y-3">
                       <motion.button
                         whileTap={{ scale: 0.97 }}
                         onClick={() => !hasActiveSubscription && plans[currentPlanIndex] && handleSelectPlan(plans[currentPlanIndex])}
                         disabled={hasActiveSubscription}
                         className={cn(
-                          "w-full h-[50px] rounded-xl text-sm font-semibold flex items-center justify-center gap-2 transition-all",
+                          "w-full h-[52px] rounded-xl text-sm font-semibold flex items-center justify-center gap-2 transition-all relative overflow-hidden",
                           "bg-foreground text-background",
                           hasActiveSubscription && "opacity-50 cursor-not-allowed"
                         )}
                       >
-                        Assinar este plano
-                        <ArrowRight className="w-4 h-4" />
+                        {/* Shine effect */}
+                        <div
+                          className="absolute inset-0 pointer-events-none"
+                          style={{
+                            background: "linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.08) 50%, transparent 60%)",
+                          }}
+                        />
+                        <span className="relative z-10">Assinar este plano</span>
+                        <ArrowRight className="w-4 h-4 relative z-10" />
                       </motion.button>
+
+                      {/* Trust signals */}
+                      <div className="flex items-center justify-center gap-3">
+                        <div className="flex items-center gap-1">
+                          <Shield className="w-3 h-3 text-muted-foreground/30" />
+                          <span className="text-[9px] text-muted-foreground/30 uppercase tracking-wider font-medium">Seguro</span>
+                        </div>
+                        <div className="w-px h-2.5 bg-border/20" />
+                        <div className="flex items-center gap-1">
+                          <Zap className="w-3 h-3 text-muted-foreground/30" />
+                          <span className="text-[9px] text-muted-foreground/30 uppercase tracking-wider font-medium">Cancele a qualquer hora</span>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
