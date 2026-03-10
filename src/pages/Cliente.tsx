@@ -132,13 +132,15 @@ const Cliente = () => {
   const dataLoaded = !profileLoading && !appointmentsLoading && !loyaltyLoading && !shopLoading;
 
   // Centralized data error handling
-  const { hasError, reportError, clearErrors } = useDataError();
+  const { hasError, errors, reportError, clearErrors } = useDataError();
+  const retryCountRef = useRef(0);
 
   // Show non-blocking toast when data errors occur
   const retryAllLayers = useCallback(() => {
     if (!user) return;
     toast.dismiss("data-error-toast");
     clearErrors();
+    retryCountRef.current += 1;
     const tenantId = profile?.barbearia_preferida_id || null;
     Promise.all([
       loadProfileData(user.id),
@@ -150,14 +152,23 @@ const Cliente = () => {
 
   useEffect(() => {
     if (hasError) {
-      toast.error("Alguns dados podem estar desatualizados. Toque para tentar novamente.", {
-        id: "data-error-toast",
-        duration: 8000,
-        action: {
-          label: "Tentar novamente",
-          onClick: retryAllLayers,
-        },
-      });
+      // Log which layers failed for debugging
+      console.warn('[DataError] Camadas com erro:', errors.map(e => `${e.camada}: ${e.mensagem}`));
+      
+      // Only show toast on first occurrence or if user hasn't retried recently
+      if (retryCountRef.current <= 2) {
+        toast.error("Alguns dados podem estar desatualizados. Toque para tentar novamente.", {
+          id: "data-error-toast",
+          duration: 8000,
+          action: {
+            label: "Tentar novamente",
+            onClick: retryAllLayers,
+          },
+        });
+      }
+    } else {
+      // Errors cleared successfully — reset retry counter
+      retryCountRef.current = 0;
     }
   }, [hasError]);
 
