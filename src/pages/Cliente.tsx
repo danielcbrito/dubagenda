@@ -947,7 +947,7 @@ const Cliente = () => {
         open={plansSheetOpen}
         onOpenChange={setPlansSheetOpen}
         userId={user?.id}
-        onSubscriptionChanged={() => user && loadUserData(user.id)}
+        onSubscriptionChanged={() => user && loadLoyaltyData(user.id, profile?.barbearia_preferida_id || null)}
       />
 
       {/* Subscribe Plan Sheet */}
