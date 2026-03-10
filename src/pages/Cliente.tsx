@@ -388,21 +388,32 @@ const Cliente = () => {
   const loadAppointmentsData = async (userId: string) => {
     setAppointmentsLoading(true);
 
-    const [appointmentsResult, paymentsResult, pendingBookingsResult] = await Promise.all([
+    const [appointmentsResult, paymentsResult, pendingBookingsResult, cancellationsResult] = await Promise.all([
       supabase.from("agendamentos").select(`
-        id, data, hora, status, duracao, preco, observacoes, cancelado_em,
-        visivel_para_usuario, cliente_confirmou, barbeiro_confirmou, ponto_liberado,
+        id, data, hora, status, preco, duracao, observacoes,
+        cliente_confirmou, barbeiro_confirmou, ponto_liberado,
         remarcacao_solicitada, motivo_remarcacao, payment_method, tipo_agendamento, is_free,
         servico:servicos(nome),
-        barbeiro:barbeiros(apelido, tenant:tenants(nome)),
+        barbeiro:barbeiros(apelido),
         pagamentos(metodo, status)
-      `).eq("user_id", userId).eq("visivel_para_usuario", true).order("data", { ascending: false }).limit(5),
+      `)
+        .eq("user_id", userId)
+        .eq("visivel_para_usuario", true)
+        .in("status", ["pending", "confirmed"])
+        .order("data", { ascending: true })
+        .limit(3),
       supabase.from("pagamentos").select("id, metodo, status, agendamento_id").eq("user_id", userId),
       supabase.from("pending_bookings").select(`
         id, data, hora, servico_id, preco, payment_method, created_at,
         pix_qr_code, pix_payload, asaas_payment_id, expires_at, barbeiro_id,
         servico:servicos(nome)
       `).eq("user_id", userId).order("created_at", { ascending: false }),
+      // Separate lightweight query for recent mass-cancellations (last 2 days)
+      supabase.from("agendamentos").select("id, data, hora, status, observacoes, cancelado_em, servico:servicos(nome)")
+        .eq("user_id", userId)
+        .eq("status", "cancelled_by_admin")
+        .gte("cancelado_em", new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString())
+        .limit(5),
     ]);
 
     setAppointments(appointmentsResult.data || []);
@@ -410,12 +421,7 @@ const Cliente = () => {
     setPendingBookings(pendingBookingsResult.data || []);
 
     // Cancellations filter
-    const twoDaysAgo = new Date();
-    twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
-    const recentlyCancelled = (appointmentsResult.data || []).filter(apt => 
-      apt.status === 'cancelled_by_admin' && 
-      apt.cancelado_em &&
-      new Date(apt.cancelado_em) > twoDaysAgo &&
+    const recentlyCancelled = (cancellationsResult.data || []).filter(apt =>
       apt.observacoes?.includes("Cancelado em massa:")
     );
     setRecentCancellations(recentlyCancelled);
