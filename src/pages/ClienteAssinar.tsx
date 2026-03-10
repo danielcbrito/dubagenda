@@ -16,13 +16,17 @@ import {
   MapPin,
   Scissors,
   Shield,
+  Sparkles,
+  Star,
   User,
+  Zap,
 } from "lucide-react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import pixIcon from "@/assets/pix-icon.png";
 import logoDub from "@/assets/logo-dub.png";
+import scissorsDecor from "@/assets/scissors-decorative.png";
 import { BarberCard } from "@/components/booking/BarberCard";
 import { useBarberRatings } from "@/hooks/useBarberRatings";
 
