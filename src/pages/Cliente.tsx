@@ -252,6 +252,12 @@ const Cliente = () => {
       updateChannelStatus(channelName, true);
     }
     if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+      // Ignore transient errors during the first 5 seconds after channel creation
+      const channelAge = Date.now() - channelsCreatedAtRef.current;
+      if (channelAge < 5000) {
+        console.log(`[REALTIME] Transient error ignored on ${channelName} (${channelAge}ms after creation)`);
+        return;
+      }
       updateChannelStatus(channelName, false);
       // Schedule reconnection after 30s
       if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
