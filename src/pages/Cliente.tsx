@@ -370,9 +370,6 @@ const Cliente = () => {
           event: '*', schema: 'public', table: 'barbeiros',
           ...(tenantId ? { filter: `tenant_id=eq.${tenantId}` } : {})
         }, () => loadShopData(tenantId))
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'servicos' }, () => {
-          loadShopData(tenantId);
-        })
         .subscribe((status) => handleChannelStatus('barbeiros', status, initializeChannels));
 
       channels = [channelAgendamentos, channelFidelidade, channelBarbeiros];
