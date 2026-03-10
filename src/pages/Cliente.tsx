@@ -93,8 +93,6 @@ const Cliente = () => {
   const [expiredSubscription, setExpiredSubscription] = useState<any>(cachedHome?.expiredSubscription || null);
   const [pendingSubscription, setPendingSubscription] = useState<any>(cachedHome?.pendingSubscription || null);
   const [planUsageCount, setPlanUsageCount] = useState(cachedHome?.planUsageCount ?? 0);
-  // If we have cached data, mark as loaded immediately to avoid skeleton flash
-  const [dataLoaded, setDataLoaded] = useState(!!cachedHome);
   const [preferredShop, setPreferredShop] = useState<{ id: string; nome: string } | null>(cachedHome?.preferredShop || null);
   const [shopBarbers, setShopBarbers] = useState<Array<{ id: string; apelido: string; foto_url: string | null; avgRating: number | null; totalReviews: number }>>(cachedHome?.shopBarbers || []);
   const [barberProfileOpen, setBarberProfileOpen] = useState<string | null>(null);
@@ -104,6 +102,15 @@ const Cliente = () => {
     barberName: string;
     barberPhoto: string | null;
   } | null>(null);
+
+  // Independent loading flags
+  const [profileLoading, setProfileLoading] = useState(!cachedHome);
+  const [appointmentsLoading, setAppointmentsLoading] = useState(!cachedHome);
+  const [loyaltyLoading, setLoyaltyLoading] = useState(!cachedHome);
+  const [shopLoading, setShopLoading] = useState(!cachedHome);
+
+  // Derived dataLoaded — true when all layers have loaded at least once
+  const dataLoaded = !profileLoading && !appointmentsLoading && !loyaltyLoading && !shopLoading;
 
   // Flag para garantir que o modal só abre UMA VEZ por montagem
   const reviewTriggeredRef = useRef(false);
@@ -196,7 +203,7 @@ const Cliente = () => {
           console.log('Appointment change detected:', payload);
           
           if (payload.eventType === 'INSERT') {
-            loadUserData(user.id);
+            loadAppointmentsData(user.id);
             toast.success("Novo agendamento recebido!");
           } else if (payload.eventType === 'DELETE') {
             setAppointments(prev => prev.filter(apt => apt.id !== payload.old.id));
@@ -208,12 +215,14 @@ const Cliente = () => {
               return;
             }
             
-            loadUserData(user.id);
+            loadAppointmentsData(user.id);
             
             if (newData.status === 'confirmed' && payload.old.status !== 'confirmed') {
               toast.success("✅ Agendamento confirmado pelo barbeiro!");
             } else if (newData.status === 'completed') {
               toast.success("🎉 Atendimento concluído!");
+              // Also refresh loyalty since completion affects points
+              loadLoyaltyData(user.id, profile?.barbearia_preferida_id || null);
             } else if (newData.status === 'cancelled_by_admin') {
               toast.error("❌ Agendamento cancelado pela barbearia");
             }
@@ -225,7 +234,7 @@ const Cliente = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user]);
+  }, [user, profile?.barbearia_preferida_id]);
 
   // Buscar pontos_necessarios da promoção ativa + realtime
   useEffect(() => {
@@ -278,38 +287,41 @@ const Cliente = () => {
     };
   }, []);
 
-  // Realtime sync for plans, services, subscriptions changes by barbers
+  // Realtime sync — scoped to the relevant loader
   useEffect(() => {
     if (!user) return;
+
+    const tenantId = profile?.barbearia_preferida_id || null;
 
     const channel = supabase
       .channel('cliente-global-sync')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'planos' }, () => {
-        loadUserData(user.id);
+        loadLoyaltyData(user.id, tenantId);
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'servicos' }, () => {
-        loadUserData(user.id);
+        loadShopData(tenantId);
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'assinaturas', filter: `user_id=eq.${user.id}` }, () => {
-        loadUserData(user.id);
+        loadLoyaltyData(user.id, tenantId);
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'pontos', filter: `user_id=eq.${user.id}` }, () => {
-        loadUserData(user.id);
+        loadLoyaltyData(user.id, tenantId);
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'resgates', filter: `user_id=eq.${user.id}` }, () => {
-        loadUserData(user.id);
+        loadLoyaltyData(user.id, tenantId);
       })
       .subscribe();
 
     const interval = setInterval(() => {
-      loadUserData(user.id);
-    }, 120000); // Fallback polling every 2 min — realtime handles instant updates
+      loadAppointmentsData(user.id);
+      loadLoyaltyData(user.id, tenantId);
+    }, 120000); // Fallback polling every 2 min
 
     return () => {
       supabase.removeChannel(channel);
       clearInterval(interval);
     };
-  }, [user]);
+  }, [user, profile?.barbearia_preferida_id]);
 
   const checkAuth = async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -320,21 +332,38 @@ const Cliente = () => {
     }
 
     setUser(session.user);
-    loadUserData(session.user.id);
+    // Kick off all loaders in parallel — profile first to get tenantId for dependent loaders
+    const profileData = await loadProfileData(session.user.id);
+    const tenantId = profileData?.barbearia_preferida_id || null;
+    // These three are independent of each other
+    loadAppointmentsData(session.user.id);
+    loadLoyaltyData(session.user.id, tenantId);
+    loadShopData(tenantId);
   };
 
-  const loadUserData = async (userId: string) => {
-    // Batch all independent queries in parallel for speed
-    const [
-      creditsResult,
-      profileResult,
-      appointmentsResult,
-      paymentsResult,
-      pontosResult,
-      completedCountResult,
-    ] = await Promise.all([
-      supabase.rpc('get_user_available_credits', { p_user_id: userId }),
-      supabase.from("profiles").select("*").eq("id", userId).single(),
+  // ─── Layer 1: Profile & Tenant ───
+  const loadProfileData = async (userId: string) => {
+    setProfileLoading(true);
+    const { data: prof } = await supabase.from("profiles").select("*").eq("id", userId).single();
+    setProfile(prof);
+
+    const tenantId = prof?.barbearia_preferida_id;
+    if (tenantId) {
+      const { data: tenant } = await supabase.from("tenants").select("id, nome").eq("id", tenantId).single();
+      if (tenant) setPreferredShop(tenant);
+    } else {
+      setPreferredShop(null);
+    }
+
+    setProfileLoading(false);
+    return prof;
+  };
+
+  // ─── Layer 2: Appointments & Pending Bookings ───
+  const loadAppointmentsData = async (userId: string) => {
+    setAppointmentsLoading(true);
+
+    const [appointmentsResult, paymentsResult, pendingBookingsResult] = await Promise.all([
       supabase.from("agendamentos").select(`
         id, data, hora, status, duracao, preco, observacoes, cancelado_em,
         visivel_para_usuario, cliente_confirmou, barbeiro_confirmou, ponto_liberado,
@@ -344,53 +373,16 @@ const Cliente = () => {
         pagamentos(metodo, status)
       `).eq("user_id", userId).eq("visivel_para_usuario", true).order("data", { ascending: false }).limit(5),
       supabase.from("pagamentos").select("id, metodo, status, agendamento_id").eq("user_id", userId),
-      supabase.from("pontos").select("pontos").eq("user_id", userId).maybeSingle(),
-      supabase.from("agendamentos").select("*", { count: 'exact', head: true }).eq("user_id", userId).eq("status", "completed"),
+      supabase.from("pending_bookings").select(`
+        id, data, hora, servico_id, preco, payment_method, created_at,
+        pix_qr_code, pix_payload, asaas_payment_id, expires_at, barbeiro_id,
+        servico:servicos(nome)
+      `).eq("user_id", userId).order("created_at", { ascending: false }),
     ]);
 
-    setAvailableCredits(creditsResult.data || 0);
-    setProfile(profileResult.data);
     setAppointments(appointmentsResult.data || []);
     setPayments(paymentsResult.data || []);
-    setPoints(pontosResult.data?.pontos || 0);
-    setCompletedAppointments(completedCountResult.count || 0);
-
-    // Load preferred barbershop + barbers
-    const tenantId = profileResult.data?.barbearia_preferida_id;
-    if (tenantId) {
-      const [tenantResult, barbersResult] = await Promise.all([
-        supabase.from("tenants").select("id, nome").eq("id", tenantId).single(),
-        supabase.from("barbeiros").select("id, apelido, foto_url").eq("tenant_id", tenantId).eq("ativo", true).is("deleted_at", null),
-      ]);
-      if (tenantResult.data) setPreferredShop(tenantResult.data);
-      if (barbersResult.data) {
-        // Load ratings for each barber
-        const barbersWithRatings = await Promise.all(
-          barbersResult.data.map(async (b: any) => {
-            const { data: reviews } = await supabase.from("barbeiro_avaliacoes").select("rating").eq("barber_id", b.id);
-            const ratings = reviews || [];
-            const avgRating = ratings.length > 0 ? ratings.reduce((sum: number, r: any) => sum + r.rating, 0) / ratings.length : null;
-            return { ...b, avgRating, totalReviews: ratings.length };
-          })
-        );
-        setShopBarbers(barbersWithRatings);
-      }
-    } else {
-      // DUB default - barbers without tenant
-      const { data: defaultBarbers } = await supabase.from("barbeiros").select("id, apelido, foto_url").is("tenant_id", null).eq("ativo", true).is("deleted_at", null);
-      if (defaultBarbers) {
-        const barbersWithRatings = await Promise.all(
-          defaultBarbers.map(async (b: any) => {
-            const { data: reviews } = await supabase.from("barbeiro_avaliacoes").select("rating").eq("barber_id", b.id);
-            const ratings = reviews || [];
-            const avgRating = ratings.length > 0 ? ratings.reduce((sum: number, r: any) => sum + r.rating, 0) / ratings.length : null;
-            return { ...b, avgRating, totalReviews: ratings.length };
-          })
-        );
-        setShopBarbers(barbersWithRatings);
-      }
-      setPreferredShop(null);
-    }
+    setPendingBookings(pendingBookingsResult.data || []);
 
     // Cancellations filter
     const twoDaysAgo = new Date();
@@ -403,11 +395,24 @@ const Cliente = () => {
     );
     setRecentCancellations(recentlyCancelled);
 
-    // Second batch: redemptions + subscriptions (depend on nothing above)
-    const [activeResgateResult, redemptionsResult] = await Promise.all([
+    setAppointmentsLoading(false);
+  };
+
+  // ─── Layer 3: Loyalty, Credits & Subscriptions ───
+  const loadLoyaltyData = async (userId: string, tenantId: string | null) => {
+    setLoyaltyLoading(true);
+
+    const [creditsResult, pontosResult, completedCountResult, activeResgateResult, redemptionsResult] = await Promise.all([
+      supabase.rpc('get_user_available_credits', { p_user_id: userId }),
+      supabase.from("pontos").select("pontos").eq("user_id", userId).maybeSingle(),
+      supabase.from("agendamentos").select("*", { count: 'exact', head: true }).eq("user_id", userId).eq("status", "completed"),
       supabase.from("agendamentos").select("id").eq("user_id", userId).eq("payment_method", "resgate").in("status", ["pending", "confirmed", "completed"]).limit(1),
       supabase.from("resgates").select("id, status").eq("user_id", userId).eq("status", "available"),
     ]);
+
+    setAvailableCredits(creditsResult.data || 0);
+    setPoints(pontosResult.data?.pontos || 0);
+    setCompletedAppointments(completedCountResult.count || 0);
 
     let availableRedemptions = 0;
     if (!activeResgateResult.data || activeResgateResult.data.length === 0) {
@@ -430,7 +435,7 @@ const Cliente = () => {
       setExpiredSubscription(null);
       setPendingSubscription(null);
 
-      // Contar usos do plano pela assinatura ativa (fonte única)
+      // Contar usos do plano pela assinatura ativa
       const { count: usageCount } = await supabase
         .from("plano_agendamentos_usos")
         .select("id", { count: 'exact', head: true })
@@ -470,8 +475,6 @@ const Cliente = () => {
           .limit(1)
           .maybeSingle();
 
-        // Só mostra banner se a assinatura teve uma data de cobrança que já passou
-        // (indicando que era uma assinatura real, não uma tentativa não finalizada)
         const isRealExpired = expiredSub?.next_billing_date && 
           new Date(expiredSub.next_billing_date + "T00:00:00") < new Date();
 
@@ -483,29 +486,56 @@ const Cliente = () => {
       setPlanUsageCount(0);
     }
 
-    const { data: pendingBookingsData } = await supabase
-      .from("pending_bookings")
-      .select(`
-        id,
-        data,
-        hora,
-        servico_id,
-        preco,
-        payment_method,
-        created_at,
-        pix_qr_code,
-        pix_payload,
-        asaas_payment_id,
-        expires_at,
-        barbeiro_id,
-        servico:servicos(nome)
-      `)
-      .eq("user_id", userId)
-      .order("created_at", { ascending: false });
+    setLoyaltyLoading(false);
+  };
 
-    setPendingBookings(pendingBookingsData || []);
-    setDataLoaded(true);
+  // ─── Layer 4: Shop Barbers & Ratings ───
+  const loadShopData = async (tenantId: string | null) => {
+    setShopLoading(true);
 
+    if (tenantId) {
+      const { data: barbers } = await supabase
+        .from("barbeiros")
+        .select("id, apelido, foto_url")
+        .eq("tenant_id", tenantId)
+        .eq("ativo", true)
+        .is("deleted_at", null);
+
+      if (barbers) {
+        const barbersWithRatings = await Promise.all(
+          barbers.map(async (b: any) => {
+            const { data: reviews } = await supabase.from("barbeiro_avaliacoes").select("rating").eq("barber_id", b.id);
+            const ratings = reviews || [];
+            const avgRating = ratings.length > 0 ? ratings.reduce((sum: number, r: any) => sum + r.rating, 0) / ratings.length : null;
+            return { ...b, avgRating, totalReviews: ratings.length };
+          })
+        );
+        setShopBarbers(barbersWithRatings);
+      }
+    } else {
+      // DUB default - barbers without tenant
+      const { data: defaultBarbers } = await supabase
+        .from("barbeiros")
+        .select("id, apelido, foto_url")
+        .is("tenant_id", null)
+        .eq("ativo", true)
+        .is("deleted_at", null);
+
+      if (defaultBarbers) {
+        const barbersWithRatings = await Promise.all(
+          defaultBarbers.map(async (b: any) => {
+            const { data: reviews } = await supabase.from("barbeiro_avaliacoes").select("rating").eq("barber_id", b.id);
+            const ratings = reviews || [];
+            const avgRating = ratings.length > 0 ? ratings.reduce((sum: number, r: any) => sum + r.rating, 0) / ratings.length : null;
+            return { ...b, avgRating, totalReviews: ratings.length };
+          })
+        );
+        setShopBarbers(barbersWithRatings);
+      }
+      setPreferredShop(null);
+    }
+
+    setShopLoading(false);
   };
 
   const handleLogout = async () => {
