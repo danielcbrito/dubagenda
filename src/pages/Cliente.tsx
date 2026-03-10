@@ -513,6 +513,17 @@ const Cliente = () => {
       setPlanUsageCount(0);
     }
 
+    setCache(`cache_loyalty_${userId}`, {
+      points: pontosResult.data?.pontos || 0,
+      completedAppointments: completedCountResult.count || 0,
+      availableCredits: creditsResult.data || 0,
+      redemptions: availableRedemptions,
+      activeSubscription: activeSub || null,
+      expiredSubscription: expiredSubscription,
+      pendingSubscription: pendingSubscription,
+      planUsageCount: activeSub ? (planUsageCount) : 0,
+      pontosNecessarios,
+    }, 5);
     setLoyaltyLoading(false);
   };
 
