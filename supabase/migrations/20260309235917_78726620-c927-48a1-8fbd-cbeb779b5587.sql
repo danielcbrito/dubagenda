@@ -1,2 +1,0 @@
-ALTER TABLE public.planos ADD COLUMN IF NOT EXISTS stripe_price_id text;
-COMMENT ON COLUMN public.planos.stripe_price_id IS 'ID do preço no Stripe (ex: price_xxx). Deve ser preenchido para planos que utilizam checkout via Stripe.';

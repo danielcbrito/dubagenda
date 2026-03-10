@@ -1,0 +1,486 @@
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { toast } from "sonner";
+import { Search, User, Mail, Phone, Award, MoreVertical, Ban, CheckCircle, Eye, Trash2, KeyRound, Loader2, Copy } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
+
+interface Client {
+  id: string;
+  nome: string;
+  cpf: string | null;
+  blocked: boolean;
+  created_at: string;
+  email: string | null;
+  pontos: number;
+  total_agendamentos: number;
+}
+
+export function AdminClientes() {
+  const [clients, setClients] = useState<Client[]>([]);
+  const [search, setSearch] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [clientToDelete, setClientToDelete] = useState<Client | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  // Estado para modal de redefinir senha
+  const [resetPasswordOpen, setResetPasswordOpen] = useState(false);
+  const [resetPasswordClient, setResetPasswordClient] = useState<Client | null>(null);
+  const [newPassword, setNewPassword] = useState("");
+  const [resettingPassword, setResettingPassword] = useState(false);
+
+  useEffect(() => {
+    loadClients();
+
+    const channel = supabase
+      .channel('admin-clients')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => {
+        loadClients();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  const loadClients = async () => {
+    try {
+      const { data: profiles, error: profilesError } = await supabase
+        .from("profiles")
+        .select("id, nome, cpf, blocked, created_at, telefone")
+        .order("created_at", { ascending: false });
+
+      if (profilesError) throw profilesError;
+
+      // Buscar emails via Edge Function (usa service_role)
+      const { data: session } = await supabase.auth.getSession();
+      let usersMap: Record<string, { email?: string }> = {};
+      
+      if (session?.session?.access_token) {
+        try {
+          const response = await supabase.functions.invoke('manage-clients', {
+            body: { action: 'list' }
+          });
+          if (response.data?.users) {
+            usersMap = response.data.users;
+          }
+        } catch (e) {
+          console.log('Could not fetch users from edge function:', e);
+        }
+      }
+      
+      const { data: pontos } = await supabase
+        .from("pontos")
+        .select("user_id, pontos");
+
+      const { data: appointments } = await supabase
+        .from("agendamentos")
+        .select("user_id");
+
+      const clientsData = profiles?.map(profile => {
+        const userData = usersMap[profile.id];
+        const userPoints = pontos?.find(p => p.user_id === profile.id);
+        const userAppointments = appointments?.filter(a => a.user_id === profile.id);
+
+        return {
+          ...profile,
+          email: userData?.email || null,
+          pontos: userPoints?.pontos || 0,
+          total_agendamentos: userAppointments?.length || 0,
+        };
+      }) || [];
+
+      setClients(clientsData);
+      setLoading(false);
+    } catch (error) {
+      console.error("Error loading clients:", error);
+      toast.error("Erro ao carregar clientes");
+      setLoading(false);
+    }
+  };
+
+  const handleBlockClient = async (id: string, currentBlocked: boolean) => {
+    try {
+      const { error } = await supabase
+        .from("profiles")
+        .update({ blocked: !currentBlocked })
+        .eq("id", id);
+
+      if (error) throw error;
+      toast.success(currentBlocked ? "Cliente desbloqueado" : "Cliente bloqueado");
+    } catch (error) {
+      console.error("Error updating client:", error);
+      toast.error("Erro ao atualizar cliente");
+    }
+  };
+
+  const handleDeleteClient = async () => {
+    if (!clientToDelete) return;
+    
+    setDeleting(true);
+    try {
+      // Deletar via Edge Function (usa service_role)
+      const { data, error } = await supabase.functions.invoke('manage-clients', {
+        body: { action: 'delete', userId: clientToDelete.id }
+      });
+      
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      
+      toast.success("Cliente excluído com sucesso");
+      setDeleteDialogOpen(false);
+      setClientToDelete(null);
+      loadClients();
+    } catch (error) {
+      console.error("Error deleting client:", error);
+      toast.error("Erro ao excluir cliente");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const openDeleteDialog = async (client: Client) => {
+    setClientToDelete(client);
+    setDeleteDialogOpen(true);
+    
+    // Buscar e-mail via Edge Function se não tiver
+    if (!client.email) {
+      try {
+        const { data, error } = await supabase.functions.invoke('manage-clients', {
+          body: { action: 'get-email', userId: client.id }
+        });
+        
+        if (!error && data?.email) {
+          setClientToDelete(prev => prev ? { ...prev, email: data.email } : null);
+        }
+      } catch (e) {
+        console.log('Could not fetch email:', e);
+      }
+    }
+  };
+
+  const handleResetPassword = async () => {
+    if (!resetPasswordClient || !newPassword) return;
+    if (newPassword.length < 6) {
+      toast.error("Senha deve ter pelo menos 6 caracteres");
+      return;
+    }
+    setResettingPassword(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('admin-reset-password', {
+        body: {
+          action: 'reset_password',
+          user_id: resetPasswordClient.id,
+          new_password: newPassword,
+        }
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast.success(`Senha de ${resetPasswordClient.nome} redefinida com sucesso!`);
+      setResetPasswordOpen(false);
+      setResetPasswordClient(null);
+      setNewPassword("");
+    } catch (err: any) {
+      console.error("Erro ao redefinir senha:", err);
+      toast.error("Erro ao redefinir senha: " + (err?.message || "Tente novamente"));
+    } finally {
+      setResettingPassword(false);
+    }
+  };
+
+  const filteredClients = clients.filter(client =>
+    client.nome.toLowerCase().includes(search.toLowerCase()) ||
+    client.email?.toLowerCase().includes(search.toLowerCase()) ||
+    client.cpf?.includes(search)
+  );
+
+  return (
+    <div className="space-y-6 animate-fade-in">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight mb-1">Clientes</h1>
+          <p className="text-muted-foreground text-sm">
+            Gerencie seus clientes • {filteredClients.length} registros
+          </p>
+        </div>
+        <div className="relative max-w-sm w-full">
+          <Search className="w-4 h-4 text-muted-foreground absolute left-4 top-1/2 -translate-y-1/2" />
+          <Input
+            placeholder="Buscar por nome, e-mail ou CPF..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="input-glass pl-11 h-11"
+          />
+        </div>
+      </div>
+
+      {loading ? (
+        <Card className="glass-card p-12">
+          <div className="flex flex-col items-center justify-center">
+            <div className="w-12 h-12 rounded-full border-2 border-primary border-t-transparent animate-spin mb-4" />
+            <p className="text-muted-foreground text-sm">Carregando clientes...</p>
+          </div>
+        </Card>
+      ) : filteredClients.length === 0 ? (
+        <Card className="glass-card p-12">
+          <div className="text-center">
+            <User className="w-16 h-16 text-muted-foreground/20 mx-auto mb-4" strokeWidth={1} />
+            <p className="text-muted-foreground">Nenhum cliente encontrado</p>
+          </div>
+        </Card>
+      ) : (
+        <Card className="glass-card overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="table-premium">
+              <thead>
+                <tr>
+                  <th>Cliente</th>
+                  <th className="hidden md:table-cell">Contato</th>
+                  <th>Pontos</th>
+                  <th className="hidden lg:table-cell">Agendamentos</th>
+                  <th>Status</th>
+                  <th className="text-right">Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredClients.map((client, index) => (
+                  <tr 
+                    key={client.id} 
+                    className="animate-fade-in"
+                    style={{ animationDelay: `${index * 30}ms` }}
+                  >
+                    <td>
+                      <div className="flex items-center gap-3">
+                        <div className="avatar-glow w-10 h-10 bg-primary/15 flex items-center justify-center flex-shrink-0">
+                          <span className="text-sm font-bold text-primary">
+                            {client.nome.charAt(0).toUpperCase()}
+                          </span>
+                        </div>
+                        <div className="min-w-0">
+                          <p className="font-semibold text-foreground truncate">{client.nome}</p>
+                          <p className="text-xs text-muted-foreground truncate md:hidden">
+                            {client.email || client.cpf}
+                          </p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="hidden md:table-cell">
+                      <div className="space-y-1">
+                        {client.email && (
+                          <div className="flex items-center gap-2 text-sm">
+                            <Mail className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+                            <span className="text-foreground truncate max-w-[180px]">{client.email}</span>
+                          </div>
+                        )}
+                        {client.cpf && (
+                          <div className="flex items-center gap-2 text-sm">
+                            <Phone className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+                            <span className="text-muted-foreground">{client.cpf}</span>
+                          </div>
+                        )}
+                      </div>
+                    </td>
+                    <td>
+                      <div className="flex items-center gap-2">
+                        <Award className="w-4 h-4 text-gold flex-shrink-0" />
+                        <span className="font-bold price-gold">{client.pontos}</span>
+                      </div>
+                    </td>
+                    <td className="hidden lg:table-cell">
+                      <span className="text-foreground font-medium">{client.total_agendamentos}</span>
+                    </td>
+                    <td>
+                      <span className={cn("status-tag", client.blocked ? "blocked" : "active")}>
+                        {client.blocked ? "Bloqueado" : "Ativo"}
+                      </span>
+                    </td>
+                    <td className="text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-9 w-9 hover:bg-secondary"
+                          >
+                            <MoreVertical className="w-4 h-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-48">
+                          <DropdownMenuItem className="gap-2">
+                            <Eye className="w-4 h-4" />
+                            Ver detalhes
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            className={cn(
+                              "gap-2",
+                              client.blocked ? "text-green-500" : "text-destructive"
+                            )}
+                            onClick={() => handleBlockClient(client.id, client.blocked)}
+                          >
+                            {client.blocked ? (
+                              <>
+                                <CheckCircle className="w-4 h-4" />
+                                Desbloquear
+                              </>
+                            ) : (
+                              <>
+                                <Ban className="w-4 h-4" />
+                                Bloquear
+                              </>
+                            )}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            className="gap-2 text-primary"
+                            onClick={() => {
+                              setResetPasswordClient(client);
+                              setNewPassword("");
+                              setResetPasswordOpen(true);
+                            }}
+                          >
+                            <KeyRound className="w-4 h-4" />
+                            Redefinir senha
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            className="gap-2 text-destructive focus:text-destructive"
+                            onClick={() => openDeleteDialog(client)}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                            Excluir cliente
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      )}
+
+      {/* Modal de confirmação de exclusão */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent className="max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir cliente</AlertDialogTitle>
+            <AlertDialogDescription className="space-y-3">
+              <p>Tem certeza que deseja excluir este cliente? Esta ação é irreversível.</p>
+              {clientToDelete && (
+                <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3 space-y-1">
+                  <p className="text-sm">
+                    <span className="text-muted-foreground">E-mail:</span>{" "}
+                    <span className="text-foreground font-medium">{clientToDelete.email || "Não informado"}</span>
+                  </p>
+                  <p className="text-sm">
+                    <span className="text-muted-foreground">CPF:</span>{" "}
+                    <span className="text-foreground font-medium">{clientToDelete.cpf || "Não informado"}</span>
+                  </p>
+                </div>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteClient}
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting ? "Excluindo..." : "Confirmar exclusão"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Modal de redefinir senha */}
+      <Dialog open={resetPasswordOpen} onOpenChange={setResetPasswordOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <KeyRound className="w-5 h-5 text-primary" />
+              Redefinir senha
+            </DialogTitle>
+            <DialogDescription>
+              Defina uma nova senha para <span className="font-semibold text-foreground">{resetPasswordClient?.nome}</span>
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 pt-2">
+            {resetPasswordClient?.email && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground bg-secondary/30 rounded-lg p-3">
+                <Mail className="w-4 h-4 flex-shrink-0" />
+                <span>{resetPasswordClient.email}</span>
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <Label htmlFor="new-client-password">Nova senha</Label>
+              <Input
+                id="new-client-password"
+                type="text"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="Mínimo 6 caracteres"
+                className="input-premium"
+              />
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => setResetPasswordOpen(false)}
+                disabled={resettingPassword}
+              >
+                Cancelar
+              </Button>
+              <Button
+                className="flex-1 bg-primary hover:bg-primary/90"
+                onClick={handleResetPassword}
+                disabled={resettingPassword || newPassword.length < 6}
+              >
+                {resettingPassword ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Redefinindo...
+                  </>
+                ) : (
+                  "Redefinir senha"
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
