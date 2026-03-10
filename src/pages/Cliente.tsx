@@ -186,19 +186,17 @@ const Cliente = () => {
     checkAuth();
   }, []);
 
+  // ─── Canal 1: Agendamentos + Pending Bookings ───
   useEffect(() => {
     if (!user) return;
 
-    const channel = supabase
-      .channel('appointments-changes')
+    const tenantId = profile?.barbearia_preferida_id || null;
+
+    const channelAgendamentos = supabase
+      .channel('canal-agendamentos')
       .on(
         'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'agendamentos',
-          filter: `user_id=eq.${user.id}`
-        },
+        { event: '*', schema: 'public', table: 'agendamentos', filter: `user_id=eq.${user.id}` },
         (payload) => {
           console.log('Appointment change detected:', payload);
           
@@ -221,36 +219,39 @@ const Cliente = () => {
               toast.success("✅ Agendamento confirmado pelo barbeiro!");
             } else if (newData.status === 'completed') {
               toast.success("🎉 Atendimento concluído!");
-              // Also refresh loyalty since completion affects points
-              loadLoyaltyData(user.id, profile?.barbearia_preferida_id || null);
+              loadLoyaltyData(user.id, tenantId);
             } else if (newData.status === 'cancelled_by_admin') {
               toast.error("❌ Agendamento cancelado pela barbearia");
             }
           }
         }
       )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'pending_bookings', filter: `user_id=eq.${user.id}` },
+        () => loadAppointmentsData(user.id)
+      )
       .subscribe();
 
+    // Fallback polling every 2 min
+    const interval = setInterval(() => {
+      loadAppointmentsData(user.id);
+    }, 120000);
+
     return () => {
-      supabase.removeChannel(channel);
+      supabase.removeChannel(channelAgendamentos);
+      clearInterval(interval);
     };
   }, [user, profile?.barbearia_preferida_id]);
 
-  // Buscar pontos_necessarios da promoção ativa + realtime
+  // ─── Canal 2: Fidelidade (pontos, resgates, assinaturas, promoções) ───
   useEffect(() => {
-    const fetchPontosNecessarios = async () => {
-      // Obter tenant preferido do perfil do usuário
-      let tenantId: string | null = null;
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        const { data: prof } = await supabase
-          .from("profiles")
-          .select("barbearia_preferida_id")
-          .eq("id", session.user.id)
-          .single();
-        tenantId = prof?.barbearia_preferida_id || null;
-      }
+    if (!user) return;
 
+    const tenantId = profile?.barbearia_preferida_id || null;
+
+    // Fetch pontos_necessarios initially
+    const fetchPontosNecessarios = async () => {
       let query = supabase
         .from("promocoes")
         .select("pontos_necessarios")
@@ -263,44 +264,14 @@ const Cliente = () => {
       }
 
       const { data } = await query.limit(1).maybeSingle();
-      
       if (data?.pontos_necessarios && data.pontos_necessarios >= 2) {
         setPontosNecessarios(data.pontos_necessarios);
       }
     };
-
     fetchPontosNecessarios();
 
-    const channel = supabase
-      .channel('promocoes-realtime')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'promocoes' },
-        () => {
-          fetchPontosNecessarios();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
-
-  // Realtime sync — scoped to the relevant loader
-  useEffect(() => {
-    if (!user) return;
-
-    const tenantId = profile?.barbearia_preferida_id || null;
-
-    const channel = supabase
-      .channel('cliente-global-sync')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'planos' }, () => {
-        loadLoyaltyData(user.id, tenantId);
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'servicos' }, () => {
-        loadShopData(tenantId);
-      })
+    const channelFidelidade = supabase
+      .channel('canal-fidelidade')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'assinaturas', filter: `user_id=eq.${user.id}` }, () => {
         loadLoyaltyData(user.id, tenantId);
       })
@@ -310,16 +281,46 @@ const Cliente = () => {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'resgates', filter: `user_id=eq.${user.id}` }, () => {
         loadLoyaltyData(user.id, tenantId);
       })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'promocoes' }, () => {
+        fetchPontosNecessarios();
+        loadLoyaltyData(user.id, tenantId);
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'planos' }, () => {
+        loadLoyaltyData(user.id, tenantId);
+      })
       .subscribe();
 
+    // Fallback polling every 2 min
     const interval = setInterval(() => {
-      loadAppointmentsData(user.id);
       loadLoyaltyData(user.id, tenantId);
-    }, 120000); // Fallback polling every 2 min
+    }, 120000);
 
     return () => {
-      supabase.removeChannel(channel);
+      supabase.removeChannel(channelFidelidade);
       clearInterval(interval);
+    };
+  }, [user, profile?.barbearia_preferida_id]);
+
+  // ─── Canal 3: Barbeiros do tenant ───
+  useEffect(() => {
+    if (!user) return;
+
+    const tenantId = profile?.barbearia_preferida_id || null;
+
+    // Only subscribe if we have a tenantId to filter by
+    const channelBarbeiros = supabase
+      .channel('canal-barbeiros')
+      .on('postgres_changes', {
+        event: '*', schema: 'public', table: 'barbeiros',
+        ...(tenantId ? { filter: `tenant_id=eq.${tenantId}` } : {})
+      }, () => loadShopData(tenantId))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'servicos' }, () => {
+        loadShopData(tenantId);
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channelBarbeiros);
     };
   }, [user, profile?.barbearia_preferida_id]);
 
