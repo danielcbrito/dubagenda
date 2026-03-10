@@ -137,6 +137,7 @@ const Cliente = () => {
   // Show non-blocking toast when data errors occur
   const retryAllLayers = useCallback(() => {
     if (!user) return;
+    toast.dismiss("data-error-toast");
     clearErrors();
     const tenantId = profile?.barbearia_preferida_id || null;
     Promise.all([
@@ -150,6 +151,7 @@ const Cliente = () => {
   useEffect(() => {
     if (hasError) {
       toast.error("Alguns dados podem estar desatualizados. Toque para tentar novamente.", {
+        id: "data-error-toast",
         duration: 8000,
         action: {
           label: "Tentar novamente",
