@@ -134,7 +134,7 @@ export function useSlotAvailability(
   const [error, setError] = useState<string | null>(null);
   const [occupiedSlots, setOccupiedSlots] = useState<OccupiedSlot[]>([]);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
-  const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const isInitialLoadRef = useRef(true);
   const lastSlotsRef = useRef<TimeSlot[]>([]);
