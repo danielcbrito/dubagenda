@@ -248,90 +248,67 @@ export function MyPlansSheet({ open, onOpenChange, userId, onSubscriptionChanged
                   </motion.div>
                 )}
 
-                {/* ── Empty State — Premium Barbershop ── */}
+                {/* ── Empty State — Text-focused Premium ── */}
                 {loadingState === "success" && !subscription && (
                   <motion.div
                     initial={{ opacity: 0, y: 12 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.4 }}
-                    className="pt-2"
+                    className="pt-6"
                   >
-                    {/* Hero section */}
-                    <div className="relative text-center mb-8">
-                      {/* Decorative background glow */}
-                      <div
-                        className="absolute inset-x-0 top-4 h-28 pointer-events-none"
-                        style={{
-                          background: "radial-gradient(ellipse at center, hsl(var(--gold) / 0.08) 0%, transparent 70%)",
-                        }}
-                      />
+                    {/* Hero section — pure typography */}
+                    <div className="text-center mb-10">
+                      <motion.p
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: 0.05 }}
+                        className="text-[10px] font-bold uppercase tracking-[0.2em] text-gold/60 mb-4"
+                      >
+                        Exclusivo para membros
+                      </motion.p>
 
-                      {/* Scissors icon with gold ring */}
-                      <div className="relative inline-flex mb-5">
-                        <div
-                          className="w-20 h-20 rounded-2xl flex items-center justify-center relative"
-                          style={{
-                            background: "linear-gradient(135deg, hsl(var(--gold) / 0.12), hsl(var(--gold) / 0.04))",
-                            border: "1px solid hsl(var(--gold) / 0.2)",
-                          }}
-                        >
-                          <Scissors className="w-8 h-8 text-gold" strokeWidth={1.5} />
-                        </div>
-                        {/* Gold accent dot */}
-                        <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center"
-                          style={{ background: "hsl(var(--gold))" }}>
-                          <Crown className="w-2.5 h-2.5 text-gold-foreground" />
-                        </div>
-                      </div>
-
-                      <h2 className="text-xl font-bold text-foreground tracking-tight mb-2 font-display">
-                        Você ainda não tem um plano
+                      <h2 className="text-2xl font-bold text-foreground tracking-tight mb-3 font-display leading-tight">
+                        Você ainda não tem<br />um plano
                       </h2>
 
                       {/* Gold ornamental line */}
-                      <div className="flex items-center justify-center gap-2 mb-3">
-                        <div className="h-[1.5px] w-6 rounded-full bg-gold/40" />
-                        <div className="w-1.5 h-1.5 rounded-full bg-gold/50" />
-                        <div className="h-[1.5px] w-6 rounded-full bg-gold/40" />
+                      <div className="flex items-center justify-center gap-2 mb-4">
+                        <div className="h-[1.5px] w-8 rounded-full bg-gold/30" />
+                        <div className="w-1 h-1 rounded-full bg-gold/40" />
+                        <div className="h-[1.5px] w-8 rounded-full bg-gold/30" />
                       </div>
 
-                      <p className="text-[13px] text-muted-foreground leading-relaxed max-w-[280px] mx-auto">
+                      <p className="text-[13px] text-muted-foreground leading-relaxed max-w-[260px] mx-auto">
                         Assine e aproveite preços exclusivos, agendamento prioritário e benefícios especiais.
                       </p>
                     </div>
 
-                    {/* Benefit highlights — premium cards */}
-                    <div className="space-y-2 mb-8">
+                    {/* Benefits — text-only, numbered list */}
+                    <div className="space-y-0 mb-10 border-t border-border/20">
                       {[
-                        { text: "Preços especiais em todos os serviços", icon: Sparkles },
-                        { text: "Agendamento com prioridade", icon: Calendar },
-                        { text: "Benefícios exclusivos para assinantes", icon: Crown },
+                        { title: "Preços especiais", desc: "em todos os serviços" },
+                        { title: "Agendamento", desc: "com prioridade garantida" },
+                        { title: "Benefícios exclusivos", desc: "reservados para assinantes" },
                       ].map((item, i) => (
                         <motion.div
                           key={i}
-                          initial={{ opacity: 0, x: -10 }}
-                          animate={{ opacity: 1, x: 0 }}
+                          initial={{ opacity: 0, y: 6 }}
+                          animate={{ opacity: 1, y: 0 }}
                           transition={{ delay: 0.15 + i * 0.08 }}
-                          className="flex items-center gap-3.5 px-4 py-3.5 rounded-xl border border-border/30"
-                          style={{
-                            background: "linear-gradient(135deg, hsl(var(--card)), hsl(var(--card-elevated) / 0.5))",
-                          }}
+                          className="flex items-baseline gap-4 px-2 py-4 border-b border-border/15"
                         >
-                          <div
-                            className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
-                            style={{
-                              background: "linear-gradient(135deg, hsl(var(--gold) / 0.12), hsl(var(--gold) / 0.04))",
-                              border: "1px solid hsl(var(--gold) / 0.1)",
-                            }}
-                          >
-                            <item.icon className="w-4 h-4 text-gold" />
-                          </div>
-                          <span className="text-[13px] text-foreground font-medium">{item.text}</span>
+                          <span className="text-[11px] font-bold tabular-nums text-gold/50 w-5 text-right flex-shrink-0">
+                            0{i + 1}
+                          </span>
+                          <p className="text-[14px] text-foreground leading-snug">
+                            <span className="font-semibold">{item.title}</span>
+                            <span className="text-muted-foreground font-normal"> {item.desc}</span>
+                          </p>
                         </motion.div>
                       ))}
                     </div>
 
-                    {/* CTA — premium button */}
+                    {/* CTA */}
                     <motion.div
                       initial={{ opacity: 0, y: 8 }}
                       animate={{ opacity: 1, y: 0 }}
@@ -347,7 +324,6 @@ export function MyPlansSheet({ open, onOpenChange, userId, onSubscriptionChanged
                           "active:scale-[0.98] transition-all"
                         )}
                       >
-                        {/* Shine effect */}
                         <div
                           className="absolute inset-0 pointer-events-none"
                           style={{
@@ -357,16 +333,9 @@ export function MyPlansSheet({ open, onOpenChange, userId, onSubscriptionChanged
                         <span className="relative z-10">Ver planos disponíveis</span>
                         <ArrowRight className="w-4 h-4 relative z-10" />
                       </button>
-                      <div className="flex items-center justify-center gap-2.5">
-                        <div className="flex items-center gap-1">
-                          <Shield className="w-3 h-3 text-muted-foreground/30" />
-                          <span className="text-[9px] text-muted-foreground/35 uppercase tracking-wider font-medium">Seguro</span>
-                        </div>
-                        <div className="w-px h-2.5 bg-border/20" />
-                        <span className="text-[9px] text-muted-foreground/35 uppercase tracking-wider font-medium">
-                          Cancele quando quiser
-                        </span>
-                      </div>
+                      <p className="text-[9px] text-center text-muted-foreground/35 uppercase tracking-[0.12em] font-medium">
+                        Seguro · Cancele quando quiser
+                      </p>
                     </motion.div>
                   </motion.div>
                 )}
