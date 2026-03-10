@@ -7,9 +7,12 @@ import {
   Calendar,
   CheckCircle2,
   AlertCircle,
+  Crown,
   Loader2,
   CreditCard,
   ChevronRight,
+  Scissors,
+  Shield,
   Sparkles,
   ArrowRight,
   RefreshCw,
@@ -245,65 +248,125 @@ export function MyPlansSheet({ open, onOpenChange, userId, onSubscriptionChanged
                   </motion.div>
                 )}
 
-                {/* ── Empty State ── */}
+                {/* ── Empty State — Premium Barbershop ── */}
                 {loadingState === "success" && !subscription && (
                   <motion.div
                     initial={{ opacity: 0, y: 12 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.4 }}
-                    className="pt-4"
+                    className="pt-2"
                   >
-                    {/* Visual top */}
-                    <div className="text-center mb-8">
-                      <div className="w-16 h-16 rounded-2xl bg-primary/8 dark:bg-primary/10 flex items-center justify-center mx-auto mb-5">
-                        <Sparkles className="w-7 h-7 text-primary" strokeWidth={1.5} />
+                    {/* Hero section */}
+                    <div className="relative text-center mb-8">
+                      {/* Decorative background glow */}
+                      <div
+                        className="absolute inset-x-0 top-4 h-28 pointer-events-none"
+                        style={{
+                          background: "radial-gradient(ellipse at center, hsl(var(--gold) / 0.08) 0%, transparent 70%)",
+                        }}
+                      />
+
+                      {/* Scissors icon with gold ring */}
+                      <div className="relative inline-flex mb-5">
+                        <div
+                          className="w-20 h-20 rounded-2xl flex items-center justify-center relative"
+                          style={{
+                            background: "linear-gradient(135deg, hsl(var(--gold) / 0.12), hsl(var(--gold) / 0.04))",
+                            border: "1px solid hsl(var(--gold) / 0.2)",
+                          }}
+                        >
+                          <Scissors className="w-8 h-8 text-gold" strokeWidth={1.5} />
+                        </div>
+                        {/* Gold accent dot */}
+                        <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center"
+                          style={{ background: "hsl(var(--gold))" }}>
+                          <Crown className="w-2.5 h-2.5 text-gold-foreground" />
+                        </div>
                       </div>
-                      <h2 className="text-lg font-bold text-foreground tracking-tight mb-1.5">
+
+                      <h2 className="text-xl font-bold text-foreground tracking-tight mb-2 font-display">
                         Você ainda não tem um plano
                       </h2>
+
+                      {/* Gold ornamental line */}
+                      <div className="flex items-center justify-center gap-2 mb-3">
+                        <div className="h-[1.5px] w-6 rounded-full bg-gold/40" />
+                        <div className="w-1.5 h-1.5 rounded-full bg-gold/50" />
+                        <div className="h-[1.5px] w-6 rounded-full bg-gold/40" />
+                      </div>
+
                       <p className="text-[13px] text-muted-foreground leading-relaxed max-w-[280px] mx-auto">
                         Assine e aproveite preços exclusivos, agendamento prioritário e benefícios especiais.
                       </p>
                     </div>
 
-                    {/* Benefit highlights */}
-                    <div className="space-y-2.5 mb-8">
+                    {/* Benefit highlights — premium cards */}
+                    <div className="space-y-2 mb-8">
                       {[
-                        "Preços especiais em todos os serviços",
-                        "Agendamento com prioridade",
-                        "Benefícios exclusivos para assinantes",
-                      ].map((text, i) => (
+                        { text: "Preços especiais em todos os serviços", icon: Sparkles },
+                        { text: "Agendamento com prioridade", icon: Calendar },
+                        { text: "Benefícios exclusivos para assinantes", icon: Crown },
+                      ].map((item, i) => (
                         <motion.div
                           key={i}
-                          initial={{ opacity: 0, x: -8 }}
+                          initial={{ opacity: 0, x: -10 }}
                           animate={{ opacity: 1, x: 0 }}
                           transition={{ delay: 0.15 + i * 0.08 }}
-                          className="flex items-center gap-3 px-4 py-3 rounded-xl bg-card border border-border/30"
+                          className="flex items-center gap-3.5 px-4 py-3.5 rounded-xl border border-border/30"
+                          style={{
+                            background: "linear-gradient(135deg, hsl(var(--card)), hsl(var(--card-elevated) / 0.5))",
+                          }}
                         >
-                          <CheckCircle2 className="w-4 h-4 text-primary flex-shrink-0" strokeWidth={2} />
-                          <span className="text-[13px] text-foreground">{text}</span>
+                          <div
+                            className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
+                            style={{
+                              background: "linear-gradient(135deg, hsl(var(--gold) / 0.12), hsl(var(--gold) / 0.04))",
+                              border: "1px solid hsl(var(--gold) / 0.1)",
+                            }}
+                          >
+                            <item.icon className="w-4 h-4 text-gold" />
+                          </div>
+                          <span className="text-[13px] text-foreground font-medium">{item.text}</span>
                         </motion.div>
                       ))}
                     </div>
 
-                    {/* CTA */}
+                    {/* CTA — premium button */}
                     <motion.div
                       initial={{ opacity: 0, y: 8 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: 0.4 }}
+                      className="space-y-3"
                     >
                       <button
                         onClick={handleSubscribeClick}
                         className={cn(
-                          "w-full h-12 rounded-xl font-semibold text-sm",
+                          "w-full h-[52px] rounded-xl font-semibold text-sm relative overflow-hidden",
                           "bg-foreground text-background",
                           "flex items-center justify-center gap-2",
                           "active:scale-[0.98] transition-all"
                         )}
                       >
-                        Ver planos disponíveis
-                        <ArrowRight className="w-4 h-4" />
+                        {/* Shine effect */}
+                        <div
+                          className="absolute inset-0 pointer-events-none"
+                          style={{
+                            background: "linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.06) 50%, transparent 60%)",
+                          }}
+                        />
+                        <span className="relative z-10">Ver planos disponíveis</span>
+                        <ArrowRight className="w-4 h-4 relative z-10" />
                       </button>
+                      <div className="flex items-center justify-center gap-2.5">
+                        <div className="flex items-center gap-1">
+                          <Shield className="w-3 h-3 text-muted-foreground/30" />
+                          <span className="text-[9px] text-muted-foreground/35 uppercase tracking-wider font-medium">Seguro</span>
+                        </div>
+                        <div className="w-px h-2.5 bg-border/20" />
+                        <span className="text-[9px] text-muted-foreground/35 uppercase tracking-wider font-medium">
+                          Cancele quando quiser
+                        </span>
+                      </div>
                     </motion.div>
                   </motion.div>
                 )}
