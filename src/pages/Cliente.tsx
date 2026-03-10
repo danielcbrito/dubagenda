@@ -397,7 +397,7 @@ const Cliente = () => {
       setProfileLoading(false);
       return prof;
     } catch (err) {
-      console.error('Erro ao carregar perfil:', err);
+      reportError('profile', err);
       setProfileLoading(false);
       return null;
     } finally {
