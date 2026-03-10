@@ -964,7 +964,7 @@ const Cliente = () => {
         userId={user?.id}
         profile={profile}
         onProfileUpdate={() => {
-          if (user) loadUserData(user.id);
+          if (user) loadProfileData(user.id);
         }}
         credits={availableCredits}
         points={points}
