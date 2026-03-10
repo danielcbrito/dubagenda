@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Calendar, Crown, Banknote, Store, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
+import { useDataError } from "@/hooks/useDataError";
 
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
@@ -130,7 +131,34 @@ const Cliente = () => {
   // Derived dataLoaded — true when all layers have loaded at least once
   const dataLoaded = !profileLoading && !appointmentsLoading && !loyaltyLoading && !shopLoading;
 
-  // Flag para garantir que o modal só abre UMA VEZ por montagem
+  // Centralized data error handling
+  const { hasError, reportError, clearErrors } = useDataError();
+
+  // Show non-blocking toast when data errors occur
+  const retryAllLayers = useCallback(() => {
+    if (!user) return;
+    clearErrors();
+    const tenantId = profile?.barbearia_preferida_id || null;
+    Promise.all([
+      loadProfileData(user.id),
+      loadAppointmentsData(user.id),
+      loadLoyaltyData(user.id, tenantId),
+      loadShopData(tenantId),
+    ]);
+  }, [user, profile?.barbearia_preferida_id]);
+
+  useEffect(() => {
+    if (hasError) {
+      toast.error("Alguns dados podem estar desatualizados. Toque para tentar novamente.", {
+        duration: 8000,
+        action: {
+          label: "Tentar novamente",
+          onClick: retryAllLayers,
+        },
+      });
+    }
+  }, [hasError]);
+
   const reviewTriggeredRef = useRef(false);
   // Flag para bloquear qualquer reabertura após fechar
   const reviewClosedRef = useRef(false);
@@ -393,7 +421,7 @@ const Cliente = () => {
       setProfileLoading(false);
       return prof;
     } catch (err) {
-      console.error('Erro ao carregar perfil:', err);
+      reportError('profile', err);
       setProfileLoading(false);
       return null;
     } finally {
@@ -449,7 +477,7 @@ const Cliente = () => {
         pendingBookings: pendingBookingsResult.data || [],
       }, 5);
     } catch (err) {
-      console.error('Erro ao carregar agendamentos:', err);
+      reportError('appointments', err);
     } finally {
       appointmentsLoadRef.current = false;
       setAppointmentsLoading(false);
@@ -564,7 +592,7 @@ const Cliente = () => {
         pontosNecessarios,
       }, 5);
     } catch (err) {
-      console.error('Erro ao carregar fidelidade:', err);
+      reportError('loyalty', err);
     } finally {
       loyaltyLoadRef.current = false;
       setLoyaltyLoading(false);
@@ -610,7 +638,7 @@ const Cliente = () => {
         setPreferredShop(null);
       }
     } catch (err) {
-      console.error('Erro ao carregar barbearia:', err);
+      reportError('shop', err);
     } finally {
       shopLoadRef.current = false;
       setShopLoading(false);
