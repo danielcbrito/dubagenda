@@ -821,7 +821,7 @@ const Cliente = () => {
             </div>
 
             {/* Barbershop Card — minimal inline */}
-            {dataLoaded && (
+            {!profileLoading && (
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -843,7 +843,7 @@ const Cliente = () => {
             
             {/* Plan Tracker ou Loyalty Card */}
             <div className="mb-5">
-              {!dataLoaded ? (
+              {loyaltyLoading ? (
                 <div className="rounded-xl h-[140px] bg-muted/10 animate-pulse" />
               ) : activeSubscription ? (
               <>
