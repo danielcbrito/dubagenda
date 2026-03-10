@@ -715,6 +715,7 @@ export type Database = {
           id: string
           is_primary: boolean
           role: string
+          role_level: string | null
           unidade_id: string
         }
         Insert: {
@@ -723,6 +724,7 @@ export type Database = {
           id?: string
           is_primary?: boolean
           role?: string
+          role_level?: string | null
           unidade_id: string
         }
         Update: {
@@ -731,6 +733,7 @@ export type Database = {
           id?: string
           is_primary?: boolean
           role?: string
+          role_level?: string | null
           unidade_id?: string
         }
         Relationships: [
@@ -2504,6 +2507,7 @@ export type Database = {
           preco_mensal: number
           prioridade_agendamento: number | null
           servico_id: string | null
+          stripe_price_id: string | null
           tenant_id: string | null
           updated_at: string | null
         }
@@ -2518,6 +2522,7 @@ export type Database = {
           preco_mensal: number
           prioridade_agendamento?: number | null
           servico_id?: string | null
+          stripe_price_id?: string | null
           tenant_id?: string | null
           updated_at?: string | null
         }
@@ -2532,6 +2537,7 @@ export type Database = {
           preco_mensal?: number
           prioridade_agendamento?: number | null
           servico_id?: string | null
+          stripe_price_id?: string | null
           tenant_id?: string | null
           updated_at?: string | null
         }
