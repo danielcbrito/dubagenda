@@ -634,7 +634,10 @@ const Cliente = () => {
 
       if (!pointError) {
         toast.success("🎉 Atendimento confirmado! 1 ponto adicionado ao seu programa de fidelidade.");
-        if (user) loadUserData(user.id);
+        if (user) {
+          loadAppointmentsData(user.id);
+          loadLoyaltyData(user.id, profile?.barbearia_preferida_id || null);
+        }
       }
     } else {
       toast.success("✅ Aguardando confirmação do barbeiro");
