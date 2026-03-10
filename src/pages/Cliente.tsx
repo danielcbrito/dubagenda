@@ -351,6 +351,7 @@ const Cliente = () => {
     }
 
     setUser(session.user);
+    try { sessionStorage.setItem("cliente_last_user_id", session.user.id); } catch { /* ignore */ }
     // Kick off all loaders in parallel — profile first to get tenantId for dependent loaders
     const profileData = await loadProfileData(session.user.id);
     const tenantId = profileData?.barbearia_preferida_id || null;
