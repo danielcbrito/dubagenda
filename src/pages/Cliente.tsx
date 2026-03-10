@@ -676,6 +676,7 @@ const Cliente = () => {
                 profileName={profile?.nome}
                 email={user?.email}
                 userId={user?.id}
+                realtimeConnected={realtimeConnected}
               />
             </div>
 
