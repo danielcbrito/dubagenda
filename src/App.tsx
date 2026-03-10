@@ -83,9 +83,7 @@ function MaintenanceWrapper({ children }: { children: React.ReactNode }) {
   );
 
   // Also treat /:slug (barbershop public pages) as public
-  const isBarbershopSlug = !location.pathname.startsWith('/admin') && 
-    !location.pathname.startsWith('/cliente') && 
-    !location.pathname.startsWith('/ti') &&
+  const isBarbershopSlug = !location.pathname.startsWith('/cliente') && 
     !location.pathname.startsWith('/suporte') &&
     location.pathname.split('/').filter(Boolean).length === 1;
 

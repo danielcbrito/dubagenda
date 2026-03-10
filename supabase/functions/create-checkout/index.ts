@@ -8,14 +8,9 @@ const corsHeaders = {
 };
 
 /**
- * Mapeamento de planos internos (Supabase) para preços do Stripe
+ * Mapeamento dinâmico: busca stripe_price_id direto do banco de dados.
+ * Para adicionar novos planos, basta preencher a coluna stripe_price_id na tabela planos.
  */
-const PLAN_PRICE_MAP: Record<string, string> = {
-  "b78adffc-da65-4085-8305-0386e1e9d962": "price_1T08CFLN5yQChZnofK09gVvo", // Plano só Barba R$79.99
-  "f37ec929-292e-41e9-b0e4-80476983a946": "price_1T08CTLN5yQChZnoKElcmMyj", // Plano Só Corte R$89.99
-  "77a1da4d-698b-462b-b864-57bc30985f93": "price_1T08CnLN5yQChZnoWC3gISr1", // Corte + Sobrancelha R$99.90
-  "d292ce6c-1d9d-4741-83e2-5ba0540ce805": "price_1T08D9LN5yQChZnoeP4Srz0p", // Plano Corte + Barba R$129.99
-};
 
 /**
  * Converte HH:MM para minutos totais
@@ -166,8 +161,17 @@ serve(async (req) => {
 
     // ========== SUBSCRIPTION CHECKOUT ==========
     if (body.planoId) {
-      const stripePriceId = PLAN_PRICE_MAP[body.planoId];
-      if (!stripePriceId) throw new Error("Plano não encontrado no Stripe");
+      // Buscar stripe_price_id dinamicamente do banco de dados
+      const { data: plano, error: planoError } = await supabaseAdmin
+        .from("planos")
+        .select("stripe_price_id")
+        .eq("id", body.planoId)
+        .single();
+
+      if (planoError || !plano) throw new Error("Plano não encontrado");
+      if (!plano.stripe_price_id) throw new Error("Este plano não possui um stripe_price_id configurado. Preencha na tabela planos.");
+
+      const stripePriceId = plano.stripe_price_id;
 
       const session = await stripe.checkout.sessions.create({
         customer: customerId,

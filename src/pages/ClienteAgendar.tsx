@@ -146,8 +146,7 @@ const ClienteAgendar = () => {
   const { 
     slots: availableSlots, 
     loading: loadingSlots, 
-    refreshSlots,
-    verifySlotAvailability 
+    refreshSlots
   } = useSlotAvailability(
     selectedDate, 
     totalDuration,
@@ -905,28 +904,10 @@ const ClienteAgendar = () => {
       return;
     }
 
-    // Step 4: Validate time + availability check
+    // Step 4: Validate time selection (availability is validated server-side in atomic-booking)
     if (step === 4) {
       if (!selectedTime) {
         toast.error("Selecione um horário");
-        return;
-      }
-
-      setLoading(true);
-      try {
-        const result = await verifySlotAvailability(selectedTime);
-        if (!result.available) {
-          toast.error(result.message || "Este horário acabou de ser reservado. Por favor, escolha outro.");
-          refreshSlots();
-          setSelectedTime("");
-          setLoading(false);
-          return;
-        }
-        setLoading(false);
-      } catch (err) {
-        console.error('[handleNextStep] Erro:', err);
-        setLoading(false);
-        toast.error("Erro ao verificar disponibilidade. Tente novamente.");
         return;
       }
 
