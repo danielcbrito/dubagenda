@@ -403,52 +403,57 @@ const Cliente = () => {
 
   // ─── Layer 2: Appointments & Pending Bookings ───
   const loadAppointmentsData = async (userId: string) => {
+    if (appointmentsLoadRef.current) return;
+    appointmentsLoadRef.current = true;
     setAppointmentsLoading(true);
+    try {
+      const [appointmentsResult, paymentsResult, pendingBookingsResult, cancellationsResult] = await Promise.all([
+        supabase.from("agendamentos").select(`
+          id, data, hora, status, preco, duracao, observacoes,
+          cliente_confirmou, barbeiro_confirmou, ponto_liberado,
+          remarcacao_solicitada, motivo_remarcacao, payment_method, tipo_agendamento, is_free,
+          servico:servicos(nome),
+          barbeiro:barbeiros(apelido),
+          pagamentos(metodo, status)
+        `)
+          .eq("user_id", userId)
+          .eq("visivel_para_usuario", true)
+          .in("status", ["pending", "confirmed"])
+          .order("data", { ascending: true })
+          .limit(3),
+        supabase.from("pagamentos").select("id, metodo, status, agendamento_id").eq("user_id", userId),
+        supabase.from("pending_bookings").select(`
+          id, data, hora, servico_id, preco, payment_method, created_at,
+          pix_qr_code, pix_payload, asaas_payment_id, expires_at, barbeiro_id,
+          servico:servicos(nome)
+        `).eq("user_id", userId).order("created_at", { ascending: false }),
+        supabase.from("agendamentos").select("id, data, hora, status, observacoes, cancelado_em, servico:servicos(nome)")
+          .eq("user_id", userId)
+          .eq("status", "cancelled_by_admin")
+          .gte("cancelado_em", new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString())
+          .limit(5),
+      ]);
 
-    const [appointmentsResult, paymentsResult, pendingBookingsResult, cancellationsResult] = await Promise.all([
-      supabase.from("agendamentos").select(`
-        id, data, hora, status, preco, duracao, observacoes,
-        cliente_confirmou, barbeiro_confirmou, ponto_liberado,
-        remarcacao_solicitada, motivo_remarcacao, payment_method, tipo_agendamento, is_free,
-        servico:servicos(nome),
-        barbeiro:barbeiros(apelido),
-        pagamentos(metodo, status)
-      `)
-        .eq("user_id", userId)
-        .eq("visivel_para_usuario", true)
-        .in("status", ["pending", "confirmed"])
-        .order("data", { ascending: true })
-        .limit(3),
-      supabase.from("pagamentos").select("id, metodo, status, agendamento_id").eq("user_id", userId),
-      supabase.from("pending_bookings").select(`
-        id, data, hora, servico_id, preco, payment_method, created_at,
-        pix_qr_code, pix_payload, asaas_payment_id, expires_at, barbeiro_id,
-        servico:servicos(nome)
-      `).eq("user_id", userId).order("created_at", { ascending: false }),
-      // Separate lightweight query for recent mass-cancellations (last 2 days)
-      supabase.from("agendamentos").select("id, data, hora, status, observacoes, cancelado_em, servico:servicos(nome)")
-        .eq("user_id", userId)
-        .eq("status", "cancelled_by_admin")
-        .gte("cancelado_em", new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString())
-        .limit(5),
-    ]);
+      setAppointments(appointmentsResult.data || []);
+      setPayments(paymentsResult.data || []);
+      setPendingBookings(pendingBookingsResult.data || []);
 
-    setAppointments(appointmentsResult.data || []);
-    setPayments(paymentsResult.data || []);
-    setPendingBookings(pendingBookingsResult.data || []);
+      const recentlyCancelled = (cancellationsResult.data || []).filter(apt =>
+        apt.observacoes?.includes("Cancelado em massa:")
+      );
+      setRecentCancellations(recentlyCancelled);
 
-    // Cancellations filter
-    const recentlyCancelled = (cancellationsResult.data || []).filter(apt =>
-      apt.observacoes?.includes("Cancelado em massa:")
-    );
-    setRecentCancellations(recentlyCancelled);
-
-    setCache(`cache_appointments_${userId}`, {
-      appointments: appointmentsResult.data || [],
-      payments: paymentsResult.data || [],
-      pendingBookings: pendingBookingsResult.data || [],
-    }, 5);
-    setAppointmentsLoading(false);
+      setCache(`cache_appointments_${userId}`, {
+        appointments: appointmentsResult.data || [],
+        payments: paymentsResult.data || [],
+        pendingBookings: pendingBookingsResult.data || [],
+      }, 5);
+    } catch (err) {
+      console.error('Erro ao carregar agendamentos:', err);
+    } finally {
+      appointmentsLoadRef.current = false;
+      setAppointmentsLoading(false);
+    }
   };
 
   // ─── Layer 3: Loyalty, Credits & Subscriptions ───
