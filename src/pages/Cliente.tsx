@@ -59,42 +59,49 @@ interface Appointment {
   }>;
 }
 
-// Helper to read cached home data from sessionStorage
-const getHomeCache = () => {
-  try {
-    const raw = sessionStorage.getItem("cliente_home_cache");
-    return raw ? JSON.parse(raw) : null;
-  } catch { return null; }
-};
+import { getCache, setCache } from "@/utils/cache";
 
 const Cliente = () => {
   const navigate = useNavigate();
-  const cachedHome = useMemo(() => getHomeCache(), []);
+
+  // Read granular caches (userId unknown yet, try last known)
+  const lastUserId = useMemo(() => {
+    try { return sessionStorage.getItem("cliente_last_user_id") || null; } catch { return null; }
+  }, []);
+  const cachedProfile = useMemo(() => lastUserId ? getCache<any>(`cache_profile_${lastUserId}`) : null, [lastUserId]);
+  const cachedAppointments = useMemo(() => lastUserId ? getCache<any>(`cache_appointments_${lastUserId}`) : null, [lastUserId]);
+  const cachedLoyalty = useMemo(() => lastUserId ? getCache<any>(`cache_loyalty_${lastUserId}`) : null, [lastUserId]);
+  const cachedShopTenantId = cachedProfile?.preferredShop?.id || cachedProfile?.profile?.barbearia_preferida_id || null;
+  const cachedShop = useMemo(() => {
+    const key = cachedShopTenantId ? `cache_shop_${cachedShopTenantId}` : `cache_shop_dub`;
+    return getCache<any>(key);
+  }, [cachedShopTenantId]);
+  const hasCachedData = !!(cachedProfile || cachedAppointments || cachedLoyalty);
 
   const [user, setUser] = useState<any>(null);
-  const [profile, setProfile] = useState<any>(cachedHome?.profile || null);
-  const [appointments, setAppointments] = useState<Appointment[]>(cachedHome?.appointments || []);
-  const [pendingBookings, setPendingBookings] = useState<any[]>(cachedHome?.pendingBookings || []);
-  const [points, setPoints] = useState(cachedHome?.points ?? 0);
-  const [redemptions, setRedemptions] = useState(cachedHome?.redemptions ?? 0);
-  const [pontosNecessarios, setPontosNecessarios] = useState(cachedHome?.pontosNecessarios ?? 8);
+  const [profile, setProfile] = useState<any>(cachedProfile?.profile || null);
+  const [appointments, setAppointments] = useState<Appointment[]>(cachedAppointments?.appointments || []);
+  const [pendingBookings, setPendingBookings] = useState<any[]>(cachedAppointments?.pendingBookings || []);
+  const [points, setPoints] = useState(cachedLoyalty?.points ?? 0);
+  const [redemptions, setRedemptions] = useState(cachedLoyalty?.redemptions ?? 0);
+  const [pontosNecessarios, setPontosNecessarios] = useState(cachedLoyalty?.pontosNecessarios ?? 8);
   
   const [pointsModalOpen, setPointsModalOpen] = useState(false);
-  const [completedAppointments, setCompletedAppointments] = useState(cachedHome?.completedAppointments ?? 0);
+  const [completedAppointments, setCompletedAppointments] = useState(cachedLoyalty?.completedAppointments ?? 0);
   const [plansSheetOpen, setPlansSheetOpen] = useState(false);
   const [subscribeSheetOpen, setSubscribeSheetOpen] = useState(false);
   const [profileSheetOpen, setProfileSheetOpen] = useState(false);
   const [walletSheetOpen, setWalletSheetOpen] = useState(false);
   const [historySheetOpen, setHistorySheetOpen] = useState(false);
-  const [availableCredits, setAvailableCredits] = useState(cachedHome?.availableCredits ?? 0);
-  const [payments, setPayments] = useState<any[]>(cachedHome?.payments || []);
+  const [availableCredits, setAvailableCredits] = useState(cachedLoyalty?.availableCredits ?? 0);
+  const [payments, setPayments] = useState<any[]>(cachedAppointments?.payments || []);
   const [recentCancellations, setRecentCancellations] = useState<Appointment[]>([]);
-  const [activeSubscription, setActiveSubscription] = useState<any>(cachedHome?.activeSubscription || null);
-  const [expiredSubscription, setExpiredSubscription] = useState<any>(cachedHome?.expiredSubscription || null);
-  const [pendingSubscription, setPendingSubscription] = useState<any>(cachedHome?.pendingSubscription || null);
-  const [planUsageCount, setPlanUsageCount] = useState(cachedHome?.planUsageCount ?? 0);
-  const [preferredShop, setPreferredShop] = useState<{ id: string; nome: string } | null>(cachedHome?.preferredShop || null);
-  const [shopBarbers, setShopBarbers] = useState<Array<{ id: string; apelido: string; foto_url: string | null; avgRating: number | null; totalReviews: number }>>(cachedHome?.shopBarbers || []);
+  const [activeSubscription, setActiveSubscription] = useState<any>(cachedLoyalty?.activeSubscription || null);
+  const [expiredSubscription, setExpiredSubscription] = useState<any>(cachedLoyalty?.expiredSubscription || null);
+  const [pendingSubscription, setPendingSubscription] = useState<any>(cachedLoyalty?.pendingSubscription || null);
+  const [planUsageCount, setPlanUsageCount] = useState(cachedLoyalty?.planUsageCount ?? 0);
+  const [preferredShop, setPreferredShop] = useState<{ id: string; nome: string } | null>(cachedProfile?.preferredShop || null);
+  const [shopBarbers, setShopBarbers] = useState<Array<{ id: string; apelido: string; foto_url: string | null; avgRating: number | null; totalReviews: number }>>(cachedShop?.shopBarbers || []);
   const [barberProfileOpen, setBarberProfileOpen] = useState<string | null>(null);
   const [reviewModalData, setReviewModalData] = useState<{
     appointmentId: string;
@@ -103,11 +110,11 @@ const Cliente = () => {
     barberPhoto: string | null;
   } | null>(null);
 
-  // Independent loading flags
-  const [profileLoading, setProfileLoading] = useState(!cachedHome);
-  const [appointmentsLoading, setAppointmentsLoading] = useState(!cachedHome);
-  const [loyaltyLoading, setLoyaltyLoading] = useState(!cachedHome);
-  const [shopLoading, setShopLoading] = useState(!cachedHome);
+  // Independent loading flags — skip loading if cached data exists
+  const [profileLoading, setProfileLoading] = useState(!cachedProfile);
+  const [appointmentsLoading, setAppointmentsLoading] = useState(!cachedAppointments);
+  const [loyaltyLoading, setLoyaltyLoading] = useState(!cachedLoyalty);
+  const [shopLoading, setShopLoading] = useState(!cachedShop && !hasCachedData);
 
   // Realtime connection status
   const [realtimeConnected, setRealtimeConnected] = useState(true);
@@ -174,18 +181,7 @@ const Cliente = () => {
     }
   }, [eligibleReviews, dataLoaded]);
 
-  // Persist home data to sessionStorage when loaded, so remount shows content instantly
-  useEffect(() => {
-    if (!dataLoaded) return;
-    try {
-      sessionStorage.setItem("cliente_home_cache", JSON.stringify({
-        profile, appointments, pendingBookings, points,
-        completedAppointments, availableCredits, payments,
-        activeSubscription, expiredSubscription, pendingSubscription,
-        planUsageCount, redemptions, preferredShop, shopBarbers, pontosNecessarios,
-      }));
-    } catch { /* ignore */ }
-  }, [dataLoaded, points, redemptions, activeSubscription, pendingSubscription, expiredSubscription, planUsageCount, preferredShop, appointments, profile]);
+  // Cache persistence is now handled inside each loader function — no monolithic cache effect needed.
 
   useEffect(() => {
     checkAuth();
@@ -358,6 +354,7 @@ const Cliente = () => {
     }
 
     setUser(session.user);
+    try { sessionStorage.setItem("cliente_last_user_id", session.user.id); } catch { /* ignore */ }
     // Kick off all loaders in parallel — profile first to get tenantId for dependent loaders
     const profileData = await loadProfileData(session.user.id);
     const tenantId = profileData?.barbearia_preferida_id || null;
@@ -373,14 +370,16 @@ const Cliente = () => {
     const { data: prof } = await supabase.from("profiles").select("*").eq("id", userId).single();
     setProfile(prof);
 
+    let shop: { id: string; nome: string } | null = null;
     const tenantId = prof?.barbearia_preferida_id;
     if (tenantId) {
       const { data: tenant } = await supabase.from("tenants").select("id, nome").eq("id", tenantId).single();
-      if (tenant) setPreferredShop(tenant);
+      if (tenant) { setPreferredShop(tenant); shop = tenant; }
     } else {
       setPreferredShop(null);
     }
 
+    setCache(`cache_profile_${userId}`, { profile: prof, preferredShop: shop }, 60);
     setProfileLoading(false);
     return prof;
   };
@@ -421,6 +420,11 @@ const Cliente = () => {
     );
     setRecentCancellations(recentlyCancelled);
 
+    setCache(`cache_appointments_${userId}`, {
+      appointments: appointmentsResult.data || [],
+      payments: paymentsResult.data || [],
+      pendingBookings: pendingBookingsResult.data || [],
+    }, 5);
     setAppointmentsLoading(false);
   };
 
@@ -456,7 +460,13 @@ const Cliente = () => {
       .limit(1)
       .maybeSingle();
 
+    let finalActiveSubscription: any = null;
+    let finalExpiredSubscription: any = null;
+    let finalPendingSubscription: any = null;
+    let finalPlanUsageCount = 0;
+
     if (activeSub) {
+      finalActiveSubscription = activeSub;
       setActiveSubscription(activeSub);
       setExpiredSubscription(null);
       setPendingSubscription(null);
@@ -468,7 +478,8 @@ const Cliente = () => {
         .eq("assinatura_id", activeSub.id)
         .is("released_at", null);
 
-      setPlanUsageCount(usageCount || 0);
+      finalPlanUsageCount = usageCount || 0;
+      setPlanUsageCount(finalPlanUsageCount);
     } else {
       setActiveSubscription(null);
 
@@ -482,6 +493,7 @@ const Cliente = () => {
         .limit(1)
         .maybeSingle();
 
+      finalPendingSubscription = pendingSub;
       setPendingSubscription(pendingSub);
 
       // Verificar assinatura cancelada recente (apenas se não há pendente)
@@ -504,7 +516,8 @@ const Cliente = () => {
         const isRealExpired = expiredSub?.next_billing_date && 
           new Date(expiredSub.next_billing_date + "T00:00:00") < new Date();
 
-        setExpiredSubscription(isRealExpired ? expiredSub : null);
+        finalExpiredSubscription = isRealExpired ? expiredSub : null;
+        setExpiredSubscription(finalExpiredSubscription);
       } else {
         setExpiredSubscription(null);
       }
@@ -512,6 +525,17 @@ const Cliente = () => {
       setPlanUsageCount(0);
     }
 
+    setCache(`cache_loyalty_${userId}`, {
+      points: pontosResult.data?.pontos || 0,
+      completedAppointments: completedCountResult.count || 0,
+      availableCredits: creditsResult.data || 0,
+      redemptions: availableRedemptions,
+      activeSubscription: finalActiveSubscription,
+      expiredSubscription: finalExpiredSubscription,
+      pendingSubscription: finalPendingSubscription,
+      planUsageCount: finalPlanUsageCount,
+      pontosNecessarios,
+    }, 5);
     setLoyaltyLoading(false);
   };
 
@@ -542,6 +566,9 @@ const Cliente = () => {
         return { id: b.id, apelido: b.apelido, foto_url: b.foto_url, avgRating, totalReviews: ratings.length };
       });
       setShopBarbers(barbersWithRatings);
+
+      const cacheKey = tenantId ? `cache_shop_${tenantId}` : `cache_shop_dub`;
+      setCache(cacheKey, { shopBarbers: barbersWithRatings }, 30);
     }
 
     if (!tenantId) {
