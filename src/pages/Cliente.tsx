@@ -843,7 +843,7 @@ const Cliente = () => {
             
             {/* Plan Tracker ou Loyalty Card */}
             <div className="mb-5">
-              {!dataLoaded ? (
+              {loyaltyLoading ? (
                 <div className="rounded-xl h-[140px] bg-muted/10 animate-pulse" />
               ) : activeSubscription ? (
               <>
