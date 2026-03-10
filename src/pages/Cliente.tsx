@@ -134,7 +134,31 @@ const Cliente = () => {
   // Centralized data error handling
   const { hasError, reportError, clearErrors } = useDataError();
 
-  // Flag para garantir que o modal só abre UMA VEZ por montagem
+  // Show non-blocking toast when data errors occur
+  const retryAllLayers = useCallback(() => {
+    if (!user) return;
+    clearErrors();
+    const tenantId = profile?.barbearia_preferida_id || null;
+    Promise.all([
+      loadProfileData(user.id),
+      loadAppointmentsData(user.id),
+      loadLoyaltyData(user.id, tenantId),
+      loadShopData(tenantId),
+    ]);
+  }, [user, profile?.barbearia_preferida_id]);
+
+  useEffect(() => {
+    if (hasError) {
+      toast.error("Alguns dados podem estar desatualizados. Toque para tentar novamente.", {
+        duration: 8000,
+        action: {
+          label: "Tentar novamente",
+          onClick: retryAllLayers,
+        },
+      });
+    }
+  }, [hasError]);
+
   const reviewTriggeredRef = useRef(false);
   // Flag para bloquear qualquer reabertura após fechar
   const reviewClosedRef = useRef(false);
