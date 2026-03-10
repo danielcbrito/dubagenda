@@ -417,6 +417,11 @@ const Cliente = () => {
     );
     setRecentCancellations(recentlyCancelled);
 
+    setCache(`cache_appointments_${userId}`, {
+      appointments: appointmentsResult.data || [],
+      payments: paymentsResult.data || [],
+      pendingBookings: pendingBookingsResult.data || [],
+    }, 5);
     setAppointmentsLoading(false);
   };
 
