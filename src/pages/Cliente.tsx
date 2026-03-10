@@ -563,6 +563,9 @@ const Cliente = () => {
         return { id: b.id, apelido: b.apelido, foto_url: b.foto_url, avgRating, totalReviews: ratings.length };
       });
       setShopBarbers(barbersWithRatings);
+
+      const cacheKey = tenantId ? `cache_shop_${tenantId}` : `cache_shop_dub`;
+      setCache(cacheKey, { shopBarbers: barbersWithRatings }, 30);
     }
 
     if (!tenantId) {
