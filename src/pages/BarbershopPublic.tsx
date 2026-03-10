@@ -422,7 +422,9 @@ const BarbershopPublic = () => {
       : null;
 
   const isCurrent = isLoggedIn && tenant && (
-    isDubTenant ? !currentPreferred : currentPreferred === tenant.id
+    isDubTenant
+      ? (!currentPreferred || currentPreferred === tenant.id)
+      : currentPreferred === tenant.id
   );
 
   const distance = userLocation && tenant?.latitude != null && tenant?.longitude != null
