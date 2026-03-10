@@ -72,7 +72,10 @@ const Cliente = () => {
   const cachedAppointments = useMemo(() => lastUserId ? getCache<any>(`cache_appointments_${lastUserId}`) : null, [lastUserId]);
   const cachedLoyalty = useMemo(() => lastUserId ? getCache<any>(`cache_loyalty_${lastUserId}`) : null, [lastUserId]);
   const cachedShopTenantId = cachedProfile?.preferredShop?.id || cachedProfile?.profile?.barbearia_preferida_id || null;
-  const cachedShop = useMemo(() => cachedShopTenantId ? getCache<any>(`cache_shop_${cachedShopTenantId}`) : null, [cachedShopTenantId]);
+  const cachedShop = useMemo(() => {
+    const key = cachedShopTenantId ? `cache_shop_${cachedShopTenantId}` : `cache_shop_dub`;
+    return getCache<any>(key);
+  }, [cachedShopTenantId]);
   const hasCachedData = !!(cachedProfile || cachedAppointments || cachedLoyalty);
 
   const [user, setUser] = useState<any>(null);
