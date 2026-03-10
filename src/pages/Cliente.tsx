@@ -389,13 +389,15 @@ const Cliente = () => {
 
     setUser(session.user);
     try { sessionStorage.setItem("cliente_last_user_id", session.user.id); } catch { /* ignore */ }
-    // Kick off all loaders in parallel — profile first to get tenantId for dependent loaders
+    // Profile first to get tenantId, then remaining three in parallel
     const profileData = await loadProfileData(session.user.id);
-    const tenantId = profileData?.barbearia_preferida_id || null;
-    // These three are independent of each other
-    loadAppointmentsData(session.user.id);
-    loadLoyaltyData(session.user.id, tenantId);
-    loadShopData(tenantId);
+    const tenantId = profileData?.barbearia_preferida_id ?? null;
+
+    await Promise.all([
+      loadAppointmentsData(session.user.id),
+      loadLoyaltyData(session.user.id, tenantId),
+      loadShopData(tenantId),
+    ]);
   };
 
   // ─── Layer 1: Profile & Tenant ───
