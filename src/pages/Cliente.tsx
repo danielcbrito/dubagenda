@@ -493,45 +493,32 @@ const Cliente = () => {
   const loadShopData = async (tenantId: string | null) => {
     setShopLoading(true);
 
+    let query = supabase
+      .from("barbeiros")
+      .select("id, apelido, foto_url, barbeiro_avaliacoes(rating)")
+      .eq("ativo", true)
+      .is("deleted_at", null);
+
     if (tenantId) {
-      const { data: barbers } = await supabase
-        .from("barbeiros")
-        .select("id, apelido, foto_url")
-        .eq("tenant_id", tenantId)
-        .eq("ativo", true)
-        .is("deleted_at", null);
-
-      if (barbers) {
-        const barbersWithRatings = await Promise.all(
-          barbers.map(async (b: any) => {
-            const { data: reviews } = await supabase.from("barbeiro_avaliacoes").select("rating").eq("barber_id", b.id);
-            const ratings = reviews || [];
-            const avgRating = ratings.length > 0 ? ratings.reduce((sum: number, r: any) => sum + r.rating, 0) / ratings.length : null;
-            return { ...b, avgRating, totalReviews: ratings.length };
-          })
-        );
-        setShopBarbers(barbersWithRatings);
-      }
+      query = query.eq("tenant_id", tenantId);
     } else {
-      // DUB default - barbers without tenant
-      const { data: defaultBarbers } = await supabase
-        .from("barbeiros")
-        .select("id, apelido, foto_url")
-        .is("tenant_id", null)
-        .eq("ativo", true)
-        .is("deleted_at", null);
+      query = query.is("tenant_id", null);
+    }
 
-      if (defaultBarbers) {
-        const barbersWithRatings = await Promise.all(
-          defaultBarbers.map(async (b: any) => {
-            const { data: reviews } = await supabase.from("barbeiro_avaliacoes").select("rating").eq("barber_id", b.id);
-            const ratings = reviews || [];
-            const avgRating = ratings.length > 0 ? ratings.reduce((sum: number, r: any) => sum + r.rating, 0) / ratings.length : null;
-            return { ...b, avgRating, totalReviews: ratings.length };
-          })
-        );
-        setShopBarbers(barbersWithRatings);
-      }
+    const { data: barbers } = await query;
+
+    if (barbers) {
+      const barbersWithRatings = barbers.map((b: any) => {
+        const ratings: number[] = (b.barbeiro_avaliacoes || []).map((r: any) => r.rating);
+        const avgRating = ratings.length > 0
+          ? ratings.reduce((sum, r) => sum + r, 0) / ratings.length
+          : null;
+        return { id: b.id, apelido: b.apelido, foto_url: b.foto_url, avgRating, totalReviews: ratings.length };
+      });
+      setShopBarbers(barbersWithRatings);
+    }
+
+    if (!tenantId) {
       setPreferredShop(null);
     }
 
