@@ -614,7 +614,7 @@ const Cliente = () => {
         setPreferredShop(null);
       }
     } catch (err) {
-      console.error('Erro ao carregar barbearia:', err);
+      reportError('shop', err);
     } finally {
       shopLoadRef.current = false;
       setShopLoading(false);
