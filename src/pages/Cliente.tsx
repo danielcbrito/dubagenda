@@ -319,6 +319,7 @@ const Cliente = () => {
       // Cleanup existing channels
       channels.forEach(ch => supabase.removeChannel(ch));
       channels = [];
+      channelsCreatedAtRef.current = Date.now();
 
       // ─── Canal 1: Agendamentos + Pending Bookings ───
       const channelAgendamentos = supabase
