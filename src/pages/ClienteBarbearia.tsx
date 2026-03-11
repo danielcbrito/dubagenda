@@ -10,6 +10,7 @@ import logoDub from "@/assets/logo-dub.png";
 interface BarbershopInfo {
   id: string;
   nome: string;
+  slug: string | null;
   slogan: string | null;
   logo_url: string | null;
   telefone: string | null;
