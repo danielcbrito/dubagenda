@@ -123,6 +123,7 @@ const BarbershopPublic = () => {
   const [searchParams] = useSearchParams();
 
   const fromContext = searchParams.get("from"); // "discover" | "change" | null
+  const unidadeIdParam = searchParams.get("unidade"); // specific unit ID
   const isFromDiscover = fromContext === "discover" || fromContext === "change";
   const isChangeMode = fromContext === "change";
 
