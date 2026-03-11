@@ -365,6 +365,36 @@ const BarbershopPublic = () => {
     }
   };
 
+  // Load the correct unit's address (sede or specific unit via ?unidade=ID)
+  const { data: unidadeAtual, isLoading: loadingUnidade } = useQuery({
+    queryKey: ["unidade-atual", tenant?.id, unidadeIdParam],
+    queryFn: async () => {
+      const baseQuery = supabase
+        .from("tenant_unidades")
+        .select("id, nome, rua, numero, bairro, cidade, estado, telefone, whatsapp, latitude, longitude, is_sede, slug")
+        .eq("tenant_id", tenant!.id);
+
+      if (unidadeIdParam) {
+        const { data, error } = await baseQuery.eq("id", unidadeIdParam).maybeSingle();
+        if (error) throw error;
+        if (data) return data;
+        // Fallback to sede if specific unit not found
+      }
+
+      const { data, error } = await supabase
+        .from("tenant_unidades")
+        .select("id, nome, rua, numero, bairro, cidade, estado, telefone, whatsapp, latitude, longitude, is_sede, slug")
+        .eq("tenant_id", tenant!.id)
+        .eq("is_sede", true)
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!tenant?.id,
+    staleTime: 5 * 60 * 1000,
+  });
+
   // Units count query for "Ver todas as unidades" row
   const { data: unidadesCount } = useQuery({
     queryKey: ["unidades-count", tenant?.id],
