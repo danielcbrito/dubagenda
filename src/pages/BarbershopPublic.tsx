@@ -476,21 +476,24 @@ const BarbershopPublic = () => {
       : currentPreferred === tenant.id
   );
 
-  const distance = userLocation && tenant?.latitude != null && tenant?.longitude != null
-    ? haversineDistance(userLocation.lat, userLocation.lng, tenant.latitude, tenant.longitude)
+  // Use unit coordinates for distance, falling back to tenant-level
+  const effectiveLat = unidadeAtual?.latitude ?? tenant?.latitude;
+  const effectiveLng = unidadeAtual?.longitude ?? tenant?.longitude;
+
+  const distance = userLocation && effectiveLat != null && effectiveLng != null
+    ? haversineDistance(userLocation.lat, userLocation.lng, effectiveLat, effectiveLng)
     : null;
 
-  const streetLine = tenant
-    ? [tenant.rua, tenant.numero].filter(Boolean).join(", ")
-    : "";
+  // Address from unit data (not brand-level)
+  const unitStreetLine = unidadeAtual
+    ? [unidadeAtual.rua, unidadeAtual.numero].filter(Boolean).join(", ")
+    : tenant ? [tenant.rua, tenant.numero].filter(Boolean).join(", ") : "";
 
-  const location = tenant
-    ? [tenant.bairro, tenant.cidade, tenant.estado].filter(Boolean).join(", ")
-    : "";
+  const location = unidadeAtual
+    ? [unidadeAtual.bairro, unidadeAtual.cidade, unidadeAtual.estado].filter(Boolean).join(", ")
+    : tenant ? [tenant.bairro, tenant.cidade, tenant.estado].filter(Boolean).join(", ") : "";
 
-  const fullAddress = tenant
-    ? (tenant.endereco_completo?.trim() || [streetLine, location].filter(Boolean).join(" • "))
-    : "";
+  const fullAddress = [unitStreetLine, location].filter(Boolean).join(" • ");
 
   // ── Loading ──
   if (loading) {
