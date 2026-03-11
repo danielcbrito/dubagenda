@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { ArrowLeft, MapPin, Phone, Mail, Globe, Scissors, Star, Crown, ExternalLink } from "lucide-react";
+import { ArrowLeft, MapPin, Phone, Mail, Globe, Scissors, Star, Crown, ExternalLink, Building2, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import logoDub from "@/assets/logo-dub.png";
-import { UnidadesSection } from "@/components/cliente/UnidadesSection";
 
 interface BarbershopInfo {
   id: string;
