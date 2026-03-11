@@ -1395,9 +1395,17 @@ const ClienteAgendar = () => {
 
       toast.success(`Agendamento criado! Usando seu ${activeSubscription.plano_nome}.`);
       navigate("/cliente");
-    } catch (error: any) {
+      } catch (error: any) {
       console.error('Error creating appointment with plan:', error);
-      toast.error("Erro ao criar agendamento: " + (error.message || "Erro desconhecido"));
+
+      if (error.message?.includes('PLAN_LIMIT_REACHED')) {
+        setSubscriptionLimitReached(true);
+        toast.error('Seu plano já atingiu o limite deste ciclo.');
+      } else if (error.message?.includes('PLAN_BOOKING_OUT_OF_PERIOD')) {
+        toast.error('Esse agendamento está fora do período válido do seu plano.');
+      } else {
+        toast.error("Erro ao criar agendamento: " + (error.message || "Erro desconhecido"));
+      }
     } finally {
       setProcessingPayment(false);
     }
