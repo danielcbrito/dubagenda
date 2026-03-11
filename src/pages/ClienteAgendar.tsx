@@ -1582,11 +1582,12 @@ const ClienteAgendar = () => {
 
       const totalDuration = selectedServices.reduce((sum, s) => sum + getEffectiveDuration(s) * (serviceQuantities[s.id] || 1), 0);
       const dateStr = format(selectedDate, 'yyyy-MM-dd');
+      const bookingTime = normalizeTimeValue(selectedTime);
       
       const { data: validation, error: validationError } = await supabase.functions.invoke('validate-appointment', {
         body: {
           data: dateStr,
-          hora: selectedTime,
+          hora: bookingTime,
           duracao: totalDuration,
           userId: session.user.id,
           barberId: selectedBarberId,
@@ -1599,8 +1600,10 @@ const ClienteAgendar = () => {
         return;
       }
 
-      if (!validation?.valid) {
-        toast.error(validation?.message || "Horário indisponível. Escolha outro horário.");
+      const resolvedValidation = normalizeAppointmentValidation(validation);
+
+      if (!resolvedValidation.valid) {
+        toast.error(resolvedValidation.message || "Horário indisponível. Escolha outro horário.");
         setStep(4);
         refreshSlots();
         return;
@@ -1610,7 +1613,7 @@ const ClienteAgendar = () => {
         .from("agendamentos")
         .update({
           data: dateStr,
-          hora: selectedTime,
+          hora: bookingTime,
           duracao: totalDuration,
           status: 'confirmed',
           barbeiro_confirmou: true,
