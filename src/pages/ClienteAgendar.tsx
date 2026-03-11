@@ -864,6 +864,46 @@ const ClienteAgendar = () => {
     refreshSlots,
   ]);
 
+  // ─── Canal Realtime: Assinatura do usuário (ativação em tempo real) ───
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const channel = supabase
+      .channel(`assinatura-agendar-${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'assinaturas',
+          filter: `user_id=eq.${user.id}`,
+        },
+        async (payload) => {
+          const updated = payload.new as any;
+          console.log('[ClienteAgendar] Assinatura atualizada:', updated.status);
+
+          if (updated.status === 'active') {
+            toast.success('🎉 Seu plano foi ativado! A opção de pagamento via plano já está disponível.');
+            // Recarregar dados de assinatura
+            const sub = await loadActiveSubscriptionOptimized(user.id);
+            if (sub) {
+              setSubscriptionBlocked(false);
+              setSubscriptionLimitReached(false);
+            }
+          }
+        }
+      )
+      .subscribe((status) => {
+        if (status === 'CHANNEL_ERROR') {
+          console.error('[ClienteAgendar] Erro no canal de assinatura');
+        }
+      });
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id]);
+
   const incrementServiceQty = (serviceId: string) => {
     if (isPlanFlow && !!activeSubscription?.servico_id) return;
 
