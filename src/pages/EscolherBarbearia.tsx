@@ -549,7 +549,8 @@ const EscolherBarbearia = () => {
                   onClick={() => {
                     const tenantSlug = tenant.slug || tenant.id;
                     const fromParam = isChangeMode ? "change" : "discover";
-                    navigate(`/${tenantSlug}?from=${fromParam}`);
+                    const unidadeParam = tenant.is_sede ? "" : `&unidade=${tenant.id}`;
+                    navigate(`/${tenantSlug}?from=${fromParam}${unidadeParam}`);
                   }}
                 />
               ))}
