@@ -83,7 +83,7 @@ export default function ClienteBarbearia() {
       // Mesmo sem barbearia preferida, busca o tenant DUB para pegar logo dinâmica
       const { data: dubTenant } = await supabase
         .from("tenants")
-        .select("id, nome, slogan, logo_url, telefone, whatsapp, email, site, rua, numero, bairro, cidade, estado, endereco_completo")
+        .select("id, nome, slug, slogan, logo_url, telefone, whatsapp, email, site, rua, numero, bairro, cidade, estado, endereco_completo")
         .ilike("nome", "%DUB%")
         .limit(1)
         .maybeSingle();
