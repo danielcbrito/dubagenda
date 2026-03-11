@@ -652,7 +652,7 @@ const BarbershopPublic = () => {
           >
             <button
               onClick={handleOpenMaps}
-              disabled={tenant.latitude == null || tenant.longitude == null}
+              disabled={effectiveLat == null || effectiveLng == null}
               className={cn(
                 "w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl",
                 "bg-card border border-border/30",
@@ -665,7 +665,7 @@ const BarbershopPublic = () => {
               <p className="flex-1 text-[12px] text-foreground text-left truncate">
                 {fullAddress || location || "Ver localização"}
               </p>
-              {tenant.latitude != null && tenant.longitude != null && (
+              {effectiveLat != null && effectiveLng != null && (
                 <ExternalLink className="w-3.5 h-3.5 text-muted-foreground/40 shrink-0" />
               )}
             </button>
