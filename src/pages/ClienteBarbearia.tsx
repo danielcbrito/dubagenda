@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { ArrowLeft, MapPin, Phone, Mail, Globe, Scissors, Star, Crown, ExternalLink, Building2, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+import { Skeleton } from "@/components/ui/skeleton";
 import logoDub from "@/assets/logo-dub.png";
 
 interface BarbershopInfo {
@@ -93,16 +94,37 @@ export default function ClienteBarbearia() {
     setLoading(false);
   };
 
+  // Load the correct unit's address (sede by default)
+  const { data: unidadeAtual, isLoading: loadingUnidade } = useQuery({
+    queryKey: ["unidade-atual-cliente", barbershop?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("tenant_unidades")
+        .select("id, nome, rua, numero, bairro, cidade, estado, telefone, whatsapp, latitude, longitude, is_sede")
+        .eq("tenant_id", barbershop!.id)
+        .eq("is_sede", true)
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!barbershop?.id,
+    staleTime: 5 * 60 * 1000,
+  });
+
   const name = isDub ? (barbershop?.nome || "Barbearia DUB") : barbershop?.nome || "";
   const slogan = isDub ? (barbershop?.slogan || "Referência em corte masculino premium") : barbershop?.slogan;
   const logoUrl = barbershop?.logo_url || logoDub;
 
-  const address = barbershop?.endereco_completo ||
-    [barbershop?.rua, barbershop?.numero, barbershop?.bairro, barbershop?.cidade, barbershop?.estado]
-      .filter(Boolean)
-      .join(", ");
+  // Address from unit data, falling back to brand-level
+  const address = unidadeAtual
+    ? [unidadeAtual.rua, unidadeAtual.numero, unidadeAtual.bairro, unidadeAtual.cidade, unidadeAtual.estado]
+        .filter(Boolean).join(", ")
+    : (barbershop?.endereco_completo ||
+       [barbershop?.rua, barbershop?.numero, barbershop?.bairro, barbershop?.cidade, barbershop?.estado]
+         .filter(Boolean).join(", "));
 
-  const phone = barbershop?.whatsapp || barbershop?.telefone;
+  const phone = unidadeAtual?.whatsapp || unidadeAtual?.telefone || barbershop?.whatsapp || barbershop?.telefone;
 
   // Units count query for "Ver todas as unidades" row
   const { data: unidadesCount } = useQuery({

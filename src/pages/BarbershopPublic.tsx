@@ -123,6 +123,7 @@ const BarbershopPublic = () => {
   const [searchParams] = useSearchParams();
 
   const fromContext = searchParams.get("from"); // "discover" | "change" | null
+  const unidadeIdParam = searchParams.get("unidade"); // specific unit ID
   const isFromDiscover = fromContext === "discover" || fromContext === "change";
   const isChangeMode = fromContext === "change";
 
@@ -359,10 +360,42 @@ const BarbershopPublic = () => {
   };
 
   const handleOpenMaps = () => {
-    if (tenant?.latitude != null && tenant?.longitude != null) {
-      window.open(`https://www.google.com/maps/dir/?api=1&destination=${tenant.latitude},${tenant.longitude}`, "_blank");
+    const lat = unidadeAtual?.latitude ?? tenant?.latitude;
+    const lng = unidadeAtual?.longitude ?? tenant?.longitude;
+    if (lat != null && lng != null) {
+      window.open(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`, "_blank");
     }
   };
+
+  // Load the correct unit's address (sede or specific unit via ?unidade=ID)
+  const { data: unidadeAtual, isLoading: loadingUnidade } = useQuery({
+    queryKey: ["unidade-atual", tenant?.id, unidadeIdParam],
+    queryFn: async () => {
+      const baseQuery = supabase
+        .from("tenant_unidades")
+        .select("id, nome, rua, numero, bairro, cidade, estado, telefone, whatsapp, latitude, longitude, is_sede, slug")
+        .eq("tenant_id", tenant!.id);
+
+      if (unidadeIdParam) {
+        const { data, error } = await baseQuery.eq("id", unidadeIdParam).maybeSingle();
+        if (error) throw error;
+        if (data) return data;
+        // Fallback to sede if specific unit not found
+      }
+
+      const { data, error } = await supabase
+        .from("tenant_unidades")
+        .select("id, nome, rua, numero, bairro, cidade, estado, telefone, whatsapp, latitude, longitude, is_sede, slug")
+        .eq("tenant_id", tenant!.id)
+        .eq("is_sede", true)
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!tenant?.id,
+    staleTime: 5 * 60 * 1000,
+  });
 
   // Units count query for "Ver todas as unidades" row
   const { data: unidadesCount } = useQuery({
@@ -443,21 +476,24 @@ const BarbershopPublic = () => {
       : currentPreferred === tenant.id
   );
 
-  const distance = userLocation && tenant?.latitude != null && tenant?.longitude != null
-    ? haversineDistance(userLocation.lat, userLocation.lng, tenant.latitude, tenant.longitude)
+  // Use unit coordinates for distance, falling back to tenant-level
+  const effectiveLat = unidadeAtual?.latitude ?? tenant?.latitude;
+  const effectiveLng = unidadeAtual?.longitude ?? tenant?.longitude;
+
+  const distance = userLocation && effectiveLat != null && effectiveLng != null
+    ? haversineDistance(userLocation.lat, userLocation.lng, effectiveLat, effectiveLng)
     : null;
 
-  const streetLine = tenant
-    ? [tenant.rua, tenant.numero].filter(Boolean).join(", ")
-    : "";
+  // Address from unit data (not brand-level)
+  const unitStreetLine = unidadeAtual
+    ? [unidadeAtual.rua, unidadeAtual.numero].filter(Boolean).join(", ")
+    : tenant ? [tenant.rua, tenant.numero].filter(Boolean).join(", ") : "";
 
-  const location = tenant
-    ? [tenant.bairro, tenant.cidade, tenant.estado].filter(Boolean).join(", ")
-    : "";
+  const location = unidadeAtual
+    ? [unidadeAtual.bairro, unidadeAtual.cidade, unidadeAtual.estado].filter(Boolean).join(", ")
+    : tenant ? [tenant.bairro, tenant.cidade, tenant.estado].filter(Boolean).join(", ") : "";
 
-  const fullAddress = tenant
-    ? (tenant.endereco_completo?.trim() || [streetLine, location].filter(Boolean).join(" • "))
-    : "";
+  const fullAddress = [unitStreetLine, location].filter(Boolean).join(" • ");
 
   // ── Loading ──
   if (loading) {
@@ -616,7 +652,7 @@ const BarbershopPublic = () => {
           >
             <button
               onClick={handleOpenMaps}
-              disabled={tenant.latitude == null || tenant.longitude == null}
+              disabled={effectiveLat == null || effectiveLng == null}
               className={cn(
                 "w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl",
                 "bg-card border border-border/30",
@@ -629,7 +665,7 @@ const BarbershopPublic = () => {
               <p className="flex-1 text-[12px] text-foreground text-left truncate">
                 {fullAddress || location || "Ver localização"}
               </p>
-              {tenant.latitude != null && tenant.longitude != null && (
+              {effectiveLat != null && effectiveLng != null && (
                 <ExternalLink className="w-3.5 h-3.5 text-muted-foreground/40 shrink-0" />
               )}
             </button>
