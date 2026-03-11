@@ -155,6 +155,20 @@ const ClienteAgendar = () => {
     availabilityTenantId
   );
 
+  // Evita horário "stale": se o slot selecionado sumir da lista atual, limpa seleção
+  useEffect(() => {
+    if (step !== 4 || !selectedTime || loadingSlots) return;
+
+    const selectedStillAvailable = availableSlots.some(
+      (slot) => slot.available && slot.time === selectedTime
+    );
+
+    if (!selectedStillAvailable) {
+      setSelectedTime("");
+      setUnavailableMessage("Esse horário acabou de ficar indisponível. Escolha outro.");
+    }
+  }, [step, selectedTime, availableSlots, loadingSlots]);
+
   // Carregar durações personalizadas do barbeiro
   const loadBarberCustomDurations = useCallback(async (barberId: string) => {
     try {
@@ -898,6 +912,17 @@ const ClienteAgendar = () => {
     if (step === 4) {
       if (!selectedTime) {
         toast.error("Selecione um horário");
+        return;
+      }
+
+      const selectedStillAvailable = availableSlots.some(
+        (slot) => slot.available && slot.time === selectedTime
+      );
+
+      if (!selectedStillAvailable) {
+        setSelectedTime("");
+        toast.error("Esse horário ficou indisponível. Escolha outro horário.");
+        refreshSlots();
         return;
       }
 
