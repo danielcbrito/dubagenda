@@ -1666,16 +1666,13 @@ const ClienteAgendar = () => {
   };
 
   const planNeedsService = isPlanFlow && !activeSubscription?.servico_id;
-  const showsUnitStep = hasMultipleUnits && !preferredUnitId;
 
-  // Build visible steps for the current flow
+  // Build visible steps for the current flow (unit step removed — always skip)
   const visibleSteps = (() => {
     const skipBarber = (isPlanFlow && activeSubscription?.barbeiro) || isRescheduling;
     const skipService = (isPlanFlow && activeSubscription?.servico_id) || isRescheduling;
-    const skipUnit = !showsUnitStep || skipBarber;
 
     const steps: number[] = [];
-    if (!skipUnit) steps.push(0); // Unit FIRST
     if (!skipBarber) steps.push(1); // Barber
     if (!skipService) steps.push(2); // Service
     steps.push(3); // Date
