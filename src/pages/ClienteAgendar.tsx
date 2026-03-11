@@ -1022,12 +1022,13 @@ const ClienteAgendar = () => {
         return qty > 1 ? `${s.nome} x${qty}` : s.nome;
       }).join(", ");
 
+      const bookingTime = normalizeTimeValue(selectedTime);
       const mainService = selectedServices[0];
       const bookingData = {
         servico_id: mainService.id,
         barbeiro_id: selectedBarberId || null,
         data: format(selectedDate, 'yyyy-MM-dd'),
-        hora: selectedTime,
+        hora: bookingTime,
         duracao: totalDuration,
         preco: finalPrice,
         serviceName: serviceNames,
