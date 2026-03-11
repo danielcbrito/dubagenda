@@ -40,7 +40,7 @@ function useUnidades(tenantId: string | null | undefined) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("tenant_unidades")
-        .select("id, nome, bairro, cidade, estado, is_sede, endereco, telefone, foto_url")
+        .select("id, nome, bairro, cidade, estado, is_sede")
         .eq("tenant_id", tenantId!)
         .order("is_sede", { ascending: false })
         .order("nome", { ascending: true });
