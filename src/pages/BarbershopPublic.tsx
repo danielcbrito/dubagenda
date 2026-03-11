@@ -364,6 +364,21 @@ const BarbershopPublic = () => {
     }
   };
 
+  // Units count query for "Ver todas as unidades" row
+  const { data: unidadesCount } = useQuery({
+    queryKey: ["unidades-count", tenant?.id],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("tenant_unidades")
+        .select("id", { count: "exact", head: true })
+        .eq("tenant_id", tenant!.id);
+      if (error) throw error;
+      return count ?? 0;
+    },
+    enabled: !!tenant?.id,
+    staleTime: 10 * 60 * 1000,
+  });
+
   const [saving, setSaving] = useState(false);
   const [selectedBarber, setSelectedBarber] = useState<Barber | null>(null);
 
