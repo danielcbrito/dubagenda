@@ -138,6 +138,11 @@ const BarbershopCard = ({
             <span className="text-[14px] font-semibold text-foreground truncate leading-tight">
               {tenant.nome}
             </span>
+            {tenant.is_sede && (
+              <span className="text-[9px] font-bold uppercase tracking-widest bg-primary/10 text-primary border border-primary/20 rounded-full px-1.5 py-0.5 shrink-0 font-mono">
+                Sede
+              </span>
+            )}
             {hasRating && (
               <span className="flex items-center gap-0.5 shrink-0">
                 <Star className="w-[10px] h-[10px] fill-amber-400 text-amber-400" />
