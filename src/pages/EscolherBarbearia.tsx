@@ -1,35 +1,45 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Search, Scissors, Star, ChevronRight } from "lucide-react";
+import { Search, ChevronRight, MapPin, ArrowLeft, SearchX, Star } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import logoDub from "@/assets/logo-dub.png";
-
+import { Skeleton } from "@/components/ui/skeleton";
 
 // ── Types ──
-interface Tenant {
+interface TenantJoin {
   id: string;
   nome: string;
-  slug?: string | null;
+  slug: string | null;
   slogan: string | null;
   logo_url: string | null;
-  cidade: string | null;
+  ativo: boolean;
+  onboarding_completed: boolean;
+}
+
+interface UnitData {
+  id: string;
+  nome: string;
   bairro: string | null;
+  cidade: string | null;
   estado: string | null;
+  is_sede: boolean;
   latitude: number | null;
   longitude: number | null;
-  distance?: number | null;
-  avgRating?: number | null;
-  totalReviews?: number;
-  isDub?: boolean;
-  is_sede?: boolean;
-  tenant_id?: string;
+  logo_url: string | null;
+  slogan: string | null;
+  tenant_id: string;
+  brandName: string;
+  brandSlug: string | null;
+  brandLogo: string | null;
+  distance: number | null;
+  avgRating: number | null;
+  totalReviews: number;
 }
 
 // ── Utils ──
-function haversineDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 6371;
   const dLat = ((lat2 - lat1) * Math.PI) / 180;
   const dLon = ((lon2 - lon1) * Math.PI) / 180;
@@ -39,8 +49,6 @@ function haversineDistance(lat1: number, lon1: number, lat2: number, lon2: numbe
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-// formatDistance removed — using inline natural language in cards
-
 function normalizeText(value: string): string {
   return value
     .normalize("NFD")
@@ -49,97 +57,89 @@ function normalizeText(value: string): string {
     .toLowerCase();
 }
 
-const DUB_COORDS = { lat: -23.7219695, lng: -46.7615913 };
-
-/** Skeleton card for loading state */
-const SkeletonCard = ({ delay = 0 }: { delay?: number }) => (
+// ── Skeleton Card ──
+const SkeletonCard = ({ index }: { index: number }) => (
   <motion.div
-    initial={{ opacity: 0 }}
-    animate={{ opacity: 1 }}
-    transition={{ delay }}
-    className="py-5 border-b border-border/10"
+    initial={{ opacity: 0, y: 12 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ delay: index * 0.06, duration: 0.3 }}
+    className="bg-card border border-border rounded-3xl p-4"
   >
-    <div className="flex items-center gap-4">
-      <div className="w-[52px] h-[52px] rounded-[14px] bg-muted/30 animate-pulse" />
+    <div className="flex items-center gap-3.5">
+      <Skeleton className="w-14 h-14 rounded-2xl shrink-0" />
       <div className="flex-1 space-y-2">
-        <div className="h-[14px] w-28 bg-muted/30 rounded animate-pulse" />
-        <div className="h-[11px] w-40 bg-muted/20 rounded animate-pulse" />
+        <Skeleton className="h-4 w-36 rounded-lg" />
+        <Skeleton className="h-3 w-24 rounded-lg" />
+        <Skeleton className="h-3 w-16 rounded-full mt-1" />
       </div>
-      <div className="w-8 h-8 rounded-full bg-muted/20 animate-pulse" />
     </div>
   </motion.div>
 );
 
-/** Individual barbershop card — editorial minimal */
-const BarbershopCard = ({
-  tenant,
+// ── Unit Card ──
+const UnitCard = ({
+  unit,
   index,
-  isCurrent,
-  locationGranted,
   onClick,
 }: {
-  tenant: Tenant;
+  unit: UnitData;
   index: number;
-  isCurrent: boolean;
-  locationGranted: boolean;
   onClick: () => void;
 }) => {
-  const hasRating = tenant.avgRating != null && (tenant.totalReviews ?? 0) > 0;
+  const logoUrl = unit.brandLogo;
+  const brandInitial = unit.brandName?.[0]?.toUpperCase() ?? "?";
+  const hasRating = unit.avgRating != null && unit.totalReviews > 0;
 
-  // Clean distance text
-  const distanceText = locationGranted && tenant.distance != null
-    ? tenant.distance < 1
-      ? `a ${Math.round(tenant.distance * 1000)}m de você`
-      : tenant.distance < 10
-        ? `a ${tenant.distance.toFixed(1)}km de você`
-        : `a ${Math.round(tenant.distance)}km de você`
+  const subtitle = [unit.bairro, unit.cidade].filter(Boolean).join(", ");
+
+  const showUnitName = unit.nome !== unit.brandName;
+
+  const distanceText = unit.distance != null
+    ? unit.distance < 1
+      ? `● ${Math.round(unit.distance * 1000)}m de você`
+      : `● ${unit.distance.toFixed(1)}km de você`
     : null;
 
   return (
     <motion.button
-      initial={{ opacity: 0, y: 8 }}
+      initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{
-        delay: 0.04 + index * 0.04,
-        duration: 0.35,
-        ease: [0.25, 0.46, 0.45, 0.94],
+        delay: index * 0.06,
+        duration: 0.3,
+        ease: [0.22, 1, 0.36, 1],
       }}
-      whileTap={{ scale: 0.98 }}
       onClick={onClick}
       className={cn(
-        "w-full py-4 text-left group",
-        "transition-all duration-200",
-        index > 0 && "border-t border-border/8"
+        "w-full text-left bg-card border border-border rounded-3xl p-4",
+        "active:scale-[0.97] active:border-primary/20",
+        "transition-all duration-150"
       )}
+      style={{ WebkitTapHighlightColor: "transparent" }}
     >
       <div className="flex items-center gap-3.5">
-        {/* Logo — clean rounded square */}
-        <div className={cn(
-          "relative w-[52px] h-[52px] rounded-[14px] flex items-center justify-center shrink-0 overflow-hidden",
-          "bg-card border border-border/15",
-          "transition-transform duration-300 group-active:scale-95"
-        )}>
-          {tenant.logo_url ? (
-            <img src={tenant.logo_url} alt={tenant.nome} className="w-full h-full object-cover" />
-          ) : tenant.isDub ? (
-            <img src={logoDub} alt="DUB" className="w-7 h-7 object-contain" />
+        {/* Logo */}
+        <div className="w-14 h-14 rounded-2xl shrink-0 overflow-hidden border border-border/60">
+          {logoUrl ? (
+            <img src={logoUrl} alt={unit.brandName} className="w-full h-full object-cover" />
           ) : (
-            <div className="w-full h-full flex items-center justify-center bg-muted/20">
-              <span className="text-[17px] font-bold text-muted-foreground/30">
-                {tenant.nome.charAt(0).toUpperCase()}
+            <div className="w-full h-full flex items-center justify-center bg-secondary border border-border">
+              <span className="text-[20px] font-bold text-muted-foreground font-mono">
+                {brandInitial}
               </span>
             </div>
           )}
         </div>
 
-        {/* Info — minimal, clean */}
+        {/* Text */}
         <div className="flex-1 min-w-0">
+          {/* Brand name + badges */}
           <div className="flex items-center gap-2">
-            <span className="text-[14px] font-semibold text-foreground truncate leading-tight">
-              {tenant.nome}
+            <span className="text-[15px] font-semibold text-foreground leading-tight line-clamp-1">
+              {unit.brandName}
             </span>
-            {tenant.is_sede && (
-              <span className="text-[9px] font-bold uppercase tracking-widest bg-primary/10 text-primary border border-primary/20 rounded-full px-1.5 py-0.5 shrink-0 font-mono">
+            {unit.is_sede && (
+              <span className="text-[9px] font-bold uppercase tracking-[0.15em] bg-primary/10 text-primary border border-primary/20 rounded-full px-1.5 py-0.5 shrink-0 font-mono">
                 Sede
               </span>
             )}
@@ -147,29 +147,39 @@ const BarbershopCard = ({
               <span className="flex items-center gap-0.5 shrink-0">
                 <Star className="w-[10px] h-[10px] fill-amber-400 text-amber-400" />
                 <span className="text-[11px] font-medium tabular-nums text-foreground/60">
-                  {tenant.avgRating!.toFixed(1)}
+                  {unit.avgRating!.toFixed(1)}
                 </span>
               </span>
             )}
           </div>
 
-          {/* Subtitle: slogan or location — only ONE line */}
-          <p className="text-[11px] text-muted-foreground/50 mt-0.5 truncate leading-tight">
-            {tenant.slogan || [tenant.bairro, tenant.cidade].filter(Boolean).join(", ") || "Barbearia"}
-          </p>
-
-          {/* Distance — natural language, subtle */}
-          {distanceText && (
-            <p className="text-[10px] text-primary/50 mt-1 font-medium">
-              {distanceText}
+          {/* Unit name (if different from brand) */}
+          {showUnitName && (
+            <p className="text-[12px] text-muted-foreground/70 leading-tight line-clamp-1 mt-0.5">
+              {unit.nome}
             </p>
+          )}
+
+          {/* Location */}
+          {subtitle && (
+            <div className="flex items-center gap-1 mt-0.5">
+              <MapPin className="w-[11px] h-[11px] text-muted-foreground/50 shrink-0" />
+              <span className="text-[12px] text-muted-foreground/70 line-clamp-1">
+                {subtitle}
+              </span>
+            </div>
+          )}
+
+          {/* Distance badge */}
+          {distanceText && (
+            <span className="inline-block mt-1.5 text-[10px] font-mono text-primary/80 bg-primary/8 border border-primary/15 rounded-full px-2 py-0.5">
+              {distanceText}
+            </span>
           )}
         </div>
 
-        {/* Minimal arrow */}
-        <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 bg-muted/15 transition-colors group-hover:bg-muted/30">
-          <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/30" />
-        </div>
+        {/* Arrow */}
+        <ChevronRight className="w-4 h-4 text-muted-foreground/30 shrink-0" />
       </div>
     </motion.button>
   );
@@ -179,7 +189,7 @@ const BarbershopCard = ({
 const EscolherBarbearia = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const [allTenants, setAllTenants] = useState<Tenant[]>([]);
+  const [allUnits, setAllUnits] = useState<UnitData[]>([]);
   const [search, setSearch] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
@@ -211,7 +221,7 @@ const EscolherBarbearia = () => {
         navigate("/auth?mode=login");
         return;
       }
-      await loadTenants();
+      await loadUnits();
     };
     init();
   }, []);
@@ -220,15 +230,14 @@ const EscolherBarbearia = () => {
   useEffect(() => {
     if (!shouldOpenCurrent || isLoading || hasAutoOpened) return;
     setHasAutoOpened(true);
-    // currentPreferred is a tenant_id — find any unit of that tenant
     const target = currentPreferred
-      ? allTenants.find(t => t.tenant_id === currentPreferred)
-      : allTenants.find(t => t.isDub);
+      ? allUnits.find(u => u.tenant_id === currentPreferred)
+      : allUnits.find(u => normalizeText(u.brandName) === "barbeariadub");
     if (target) {
-      const targetSlug = target.slug || target.id;
-      navigate(`/${targetSlug}?from=${isChangeMode ? "change" : "discover"}`, { replace: true });
+      const slug = target.brandSlug || target.id;
+      navigate(`/${slug}?from=${isChangeMode ? "change" : "discover"}`, { replace: true });
     }
-  }, [shouldOpenCurrent, isLoading, hasAutoOpened, currentPreferred, allTenants]);
+  }, [shouldOpenCurrent, isLoading, hasAutoOpened, currentPreferred, allUnits]);
 
   // ── Geolocation ──
   useEffect(() => {
@@ -244,11 +253,10 @@ const EscolherBarbearia = () => {
     );
   }, []);
 
-  // ── Load units (one row per physical location) ──
-  const loadTenants = async () => {
+  // ── Load units ──
+  const loadUnits = async () => {
     setIsLoading(true);
 
-    // Fetch all active units with their parent tenant data
     const { data: units, error } = await supabase
       .from("tenant_unidades")
       .select(`
@@ -262,64 +270,42 @@ const EscolherBarbearia = () => {
     if (error) {
       console.error("Erro ao carregar unidades:", error);
       toast.error("Erro ao carregar barbearias");
-      setAllTenants([]);
+      setAllUnits([]);
       setIsLoading(false);
       return;
     }
 
-    // Filter: only units whose parent tenant is active and onboarded
-    // Map to Tenant shape
-    interface TenantJoin {
-      id: string;
-      nome: string;
-      slug: string | null;
-      slogan: string | null;
-      logo_url: string | null;
-      ativo: boolean;
-      onboarding_completed: boolean;
-    }
-
-    let tenantList: Tenant[] = (units ?? [])
+    // Filter active+onboarded tenants, map to UnitData
+    let unitList: UnitData[] = (units ?? [])
       .filter(u => {
         const t = u.tenant as unknown as TenantJoin | null;
         return t?.ativo && t?.onboarding_completed;
       })
       .map(u => {
         const t = u.tenant as unknown as TenantJoin;
-        const isDub = normalizeText(t?.slug ?? "") === "barbeariadub" || normalizeText(t?.nome ?? "") === "barbeariadub";
         return {
           id: u.id,
           nome: u.nome,
-          slug: t?.slug || t?.id || null,
-          slogan: u.slogan || t?.slogan || null,
-          logo_url: u.logo_url || t?.logo_url || null,
-          cidade: u.cidade,
           bairro: u.bairro,
+          cidade: u.cidade,
           estado: u.estado,
+          is_sede: u.is_sede ?? false,
           latitude: u.latitude,
           longitude: u.longitude,
-          is_sede: u.is_sede,
+          logo_url: u.logo_url,
+          slogan: u.slogan,
           tenant_id: u.tenant_id,
-          isDub,
+          // BUG 1 FIX: logo comes from brand (tenant), NEVER from another brand
+          brandName: t?.nome ?? u.nome,
+          brandSlug: t?.slug ?? null,
+          brandLogo: t?.logo_url ?? null,
+          distance: null,
+          avgRating: null,
+          totalReviews: 0,
         };
       });
 
-    // Apply DUB fallbacks
-    tenantList = tenantList.map(t => {
-      if (!t.isDub) return t;
-      return {
-        ...t,
-        slogan: t.slogan || "Corte premium",
-        logo_url: t.logo_url || logoDub,
-        bairro: t.bairro || "Cidade Ipava",
-        cidade: t.cidade || "São Paulo",
-        estado: t.estado || "SP",
-        latitude: t.latitude ?? DUB_COORDS.lat,
-        longitude: t.longitude ?? DUB_COORDS.lng,
-      };
-    });
-
-    // Filter only units whose tenant has active barbers
+    // Filter units whose tenant has active barbers
     const { data: barbers } = await supabase
       .from("barbeiros")
       .select("id, tenant_id")
@@ -331,12 +317,13 @@ const EscolherBarbearia = () => {
     );
     const hasGlobalBarbers = (barbers ?? []).some(b => !b.tenant_id);
 
-    tenantList = tenantList.filter(t => {
-      if (t.isDub && hasGlobalBarbers) return true;
-      return t.tenant_id ? activeTenantIds.has(t.tenant_id) : false;
+    unitList = unitList.filter(u => {
+      const isDub = normalizeText(u.brandSlug ?? "") === "barbeariadub" || normalizeText(u.brandName) === "barbeariadub";
+      if (isDub && hasGlobalBarbers) return true;
+      return u.tenant_id ? activeTenantIds.has(u.tenant_id) : false;
     });
 
-    // Load ratings (aggregate per tenant_id, apply to all units of that tenant)
+    // Load ratings per tenant
     if (barbers && barbers.length > 0) {
       const barberIds = barbers.map(b => b.id);
       const { data: reviews } = await supabase
@@ -347,79 +334,66 @@ const EscolherBarbearia = () => {
       if (reviews && reviews.length > 0) {
         const barberToTenant = new Map(barbers.map(b => [b.id, b.tenant_id]));
         const tenantRatings = new Map<string, { sum: number; count: number }>();
-        const dubTenantId = tenantList.find(t => t.isDub)?.tenant_id;
 
         for (const r of reviews) {
           const tid = barberToTenant.get(r.barber_id);
-          const effectiveTid = tid || dubTenantId;
-          if (!effectiveTid) continue;
-          const cur = tenantRatings.get(effectiveTid) || { sum: 0, count: 0 };
+          if (!tid) continue;
+          const cur = tenantRatings.get(tid) || { sum: 0, count: 0 };
           cur.sum += r.rating;
           cur.count += 1;
-          tenantRatings.set(effectiveTid, cur);
+          tenantRatings.set(tid, cur);
         }
 
-        for (const t of tenantList) {
-          if (!t.tenant_id) continue;
-          const stats = tenantRatings.get(t.tenant_id);
+        for (const u of unitList) {
+          const stats = tenantRatings.get(u.tenant_id);
           if (stats) {
-            t.avgRating = stats.sum / stats.count;
-            t.totalReviews = stats.count;
+            u.avgRating = stats.sum / stats.count;
+            u.totalReviews = stats.count;
           }
         }
       }
     }
 
-    setAllTenants(tenantList);
+    setAllUnits(unitList);
     setIsLoading(false);
   };
 
-  // ── Sort: proximity first, then rating. DUB gets subtle 0.3km boost ──
-  const sortedTenants = useMemo(() => {
-    const mapped = allTenants.map(t => ({
-      ...t,
-      distance: userLocation && t.latitude && t.longitude
-        ? haversineDistance(userLocation.lat, userLocation.lng, t.latitude, t.longitude)
+  // ── Sort by distance (BUG 2 FIX: per-unit coordinates) ──
+  const sortedUnits = useMemo(() => {
+    const withDist = allUnits.map(u => ({
+      ...u,
+      distance: userLocation && u.latitude && u.longitude
+        ? haversineKm(userLocation.lat, userLocation.lng, u.latitude, u.longitude)
         : null,
     }));
 
-    return mapped.sort((a, b) => {
-      // Subtle DUB boost: reduce its distance by 0.3km in comparison
-      const distA = a.distance != null ? a.distance - (a.isDub ? 0.3 : 0) : null;
-      const distB = b.distance != null ? b.distance - (b.isDub ? 0.3 : 0) : null;
-
-      if (distA != null && distB != null) {
-        const diff = distA - distB;
-        if (Math.abs(diff) > 0.3) return diff;
-      }
-      if (distA != null && distB == null) return -1;
-      if (distA == null && distB != null) return 1;
-
-      // Same distance tier → higher rating wins
+    return withDist.sort((a, b) => {
+      const dA = a.distance ?? Infinity;
+      const dB = b.distance ?? Infinity;
+      if (dA !== dB) return dA - dB;
       const rA = a.avgRating ?? 0;
       const rB = b.avgRating ?? 0;
       if (rA !== rB) return rB - rA;
-
-      // Tie-break: more reviews = more trust
       return (b.totalReviews ?? 0) - (a.totalReviews ?? 0);
     });
-  }, [allTenants, userLocation]);
+  }, [allUnits, userLocation]);
 
   // ── Filtered ──
   const filtered = useMemo(() => {
-    if (!search.trim()) return sortedTenants;
+    if (!search.trim()) return sortedUnits;
     const q = search.toLowerCase();
-    return sortedTenants.filter(t =>
-      t.nome.toLowerCase().includes(q) ||
-      (t.bairro && t.bairro.toLowerCase().includes(q)) ||
-      (t.cidade && t.cidade.toLowerCase().includes(q))
+    return sortedUnits.filter(u =>
+      u.nome.toLowerCase().includes(q) ||
+      u.brandName.toLowerCase().includes(q) ||
+      (u.bairro && u.bairro.toLowerCase().includes(q)) ||
+      (u.cidade && u.cidade.toLowerCase().includes(q))
     );
-  }, [sortedTenants, search]);
+  }, [sortedUnits, search]);
 
   // ── Handlers ──
   const handleSelect = async (unitId: string) => {
     if (saving) return;
-    const unit = allTenants.find(t => t.id === unitId);
+    const unit = allUnits.find(u => u.id === unitId);
     const tenantId = unit?.tenant_id || unitId;
     if (!isAuthenticated) {
       navigate(`/auth?mode=signup&origin=discover&tenant=${tenantId}`);
@@ -427,17 +401,14 @@ const EscolherBarbearia = () => {
     }
     setSaving(unitId);
     try {
-      const updateData = {
-        barbearia_preferida_id: tenantId,
-        signup_origin: unit?.isDub ? "dub_exclusive" : "discover",
-      };
-
       const { error } = await supabase
         .from("profiles")
-        .update(updateData)
+        .update({
+          barbearia_preferida_id: tenantId,
+          signup_origin: "discover",
+        })
         .eq("id", userId);
       if (error) throw error;
-
       toast.success(isChangeMode ? "Barbearia atualizada!" : "Barbearia selecionada!");
       navigate(isChangeMode ? "/cliente/perfil" : "/cliente");
     } catch (err) {
@@ -450,55 +421,48 @@ const EscolherBarbearia = () => {
 
   const handleBack = () => navigate(isChangeMode ? "/cliente/perfil" : "/");
 
-  const isTenantCurrent = (unitId: string) => {
-    const unit = allTenants.find(t => t.id === unitId);
-    return currentPreferred === (unit?.tenant_id || unitId);
-  };
-
-  // ── Stats bar ──
-  const totalShops = allTenants.length;
-  const avgGlobal = allTenants.reduce((s, t) => s + (t.avgRating ?? 0), 0) / Math.max(allTenants.filter(t => t.avgRating).length, 1);
+  const totalCount = filtered.length;
 
   return (
     <div className="flex flex-col bg-background" style={{ height: "100dvh" }}>
       {/* ══════ Header ══════ */}
-      <div className="flex-shrink-0 px-5 pt-[calc(env(safe-area-inset-top)+0.75rem)] pb-4">
-        <div className="flex items-center gap-2 mb-4">
+      <div className="flex-shrink-0 px-5 pt-[calc(env(safe-area-inset-top)+1.25rem)] pb-4">
+        <div className="flex items-center gap-3 mb-5">
           <button
             onClick={handleBack}
-            className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-muted/30 active:scale-90 transition-all text-foreground"
+            className="w-10 h-10 flex items-center justify-center rounded-xl bg-secondary/60 border border-border/50 backdrop-blur-sm active:scale-90 transition-transform text-foreground"
           >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M9 14L4 9l5-5" />
-              <path d="M4 9h10a4 4 0 0 1 4 4v1" />
-            </svg>
+            <ArrowLeft className="w-[18px] h-[18px]" />
           </button>
           <div>
-            <h1 className="text-[18px] font-bold text-foreground leading-none tracking-tight">
-              {isChangeMode ? "Trocar barbearia" : "Encontre seu estilo"}
-            </h1>
-            {totalShops > 0 && !isLoading && (
-              <p className="text-[10px] text-muted-foreground/35 mt-0.5 font-medium">
-                {totalShops} {totalShops === 1 ? "unidade" : "unidades"} perto de você
-              </p>
+            <p className="text-[10px] font-mono text-primary/80 tracking-[0.2em] uppercase mb-0.5">
+              {isChangeMode ? "TROCAR BARBEARIA" : "ENCONTRE SEU ESTILO"}
+            </p>
+            {!isLoading && (
+              <div className="flex items-center gap-1.5">
+                <span className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="text-[13px] text-muted-foreground">
+                  {totalCount} {totalCount === 1 ? "unidade" : "unidades"} perto de você
+                </span>
+              </div>
             )}
           </div>
         </div>
 
-        {/* Search — clean pill */}
+        {/* Search */}
         <div className="relative">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-[15px] h-[15px] text-muted-foreground/20" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <input
             type="text"
-            placeholder="Buscar barbearia..."
+            placeholder="Buscar barbearia ou bairro..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className={cn(
-              "w-full h-10 pl-10 pr-4 rounded-full text-[13px]",
-              "bg-muted/15 border-0 text-foreground",
-              "placeholder:text-muted-foreground/30",
-              "focus:outline-none focus:ring-1 focus:ring-border/30",
-              "transition-all duration-200"
+              "w-full h-12 pl-10 pr-4 rounded-2xl text-[14px]",
+              "bg-secondary/40 border border-border text-foreground",
+              "placeholder:text-muted-foreground/40",
+              "focus:outline-none focus:border-primary/40",
+              "transition-colors duration-150"
             )}
           />
         </div>
@@ -511,46 +475,47 @@ const EscolherBarbearia = () => {
           style={{ background: "linear-gradient(to bottom, hsl(var(--background)), transparent)" }}
         />
 
-        <div className="h-full overflow-y-auto overscroll-contain px-5 pb-24">
+        <div className="h-full overflow-y-auto overscroll-contain px-5 pb-8">
           {isLoading ? (
-            <div className="pt-2">
-              {[0, 1, 2, 3, 4].map(i => (
-                <SkeletonCard key={i} delay={i * 0.06} />
+            <div className="flex flex-col gap-3 pt-1">
+              {[0, 1, 2, 3].map(i => (
+                <SkeletonCard key={i} index={i} />
               ))}
             </div>
           ) : filtered.length === 0 ? (
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="flex flex-col items-center py-20"
+              className="flex flex-col items-center py-16"
             >
-              <Scissors className="w-6 h-6 text-muted-foreground/15 mb-3" />
-              <p className="text-[13px] text-muted-foreground/40">
-                {search ? "Nenhum resultado" : "Sem barbearias disponíveis"}
+              <SearchX className="w-8 h-8 text-muted-foreground/20 mb-3" />
+              <p className="text-[15px] font-medium text-muted-foreground">
+                Nenhuma unidade encontrada
+              </p>
+              <p className="text-[13px] text-muted-foreground/50 mt-1">
+                Tente buscar por outro nome ou bairro
               </p>
               {search && (
                 <button
                   onClick={() => setSearch("")}
-                  className="mt-2 text-[11px] text-primary/50 hover:text-primary transition-colors"
+                  className="mt-3 text-[12px] text-primary/60 hover:text-primary transition-colors"
                 >
                   Limpar busca
                 </button>
               )}
             </motion.div>
           ) : (
-            <div className="pt-1">
-              {filtered.map((tenant, index) => (
-                <BarbershopCard
-                  key={tenant.id}
-                  tenant={tenant}
+            <div className="flex flex-col gap-3 pt-1">
+              {filtered.map((unit, index) => (
+                <UnitCard
+                  key={unit.id}
+                  unit={unit}
                   index={index}
-                  isCurrent={isTenantCurrent(tenant.id)}
-                  locationGranted={locationStatus === "granted"}
                   onClick={() => {
-                    const tenantSlug = tenant.slug || tenant.id;
+                    const slug = unit.brandSlug || unit.id;
                     const fromParam = isChangeMode ? "change" : "discover";
-                    const unidadeParam = tenant.is_sede ? "" : `&unidade=${tenant.id}`;
-                    navigate(`/${tenantSlug}?from=${fromParam}${unidadeParam}`);
+                    const unidadeParam = unit.is_sede ? "" : `&unidade=${unit.id}`;
+                    navigate(`/${slug}?from=${fromParam}${unidadeParam}`);
                   }}
                 />
               ))}
@@ -558,7 +523,6 @@ const EscolherBarbearia = () => {
           )}
         </div>
       </div>
-
     </div>
   );
 };
