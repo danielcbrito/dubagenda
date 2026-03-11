@@ -417,18 +417,19 @@ const EscolherBarbearia = () => {
   }, [sortedTenants, search]);
 
   // ── Handlers ──
-  const handleSelect = async (tenantId: string) => {
+  const handleSelect = async (unitId: string) => {
     if (saving) return;
-    const tenant = allTenants.find(t => t.id === tenantId);
+    const unit = allTenants.find(t => t.id === unitId);
+    const tenantId = unit?.tenant_id || unitId;
     if (!isAuthenticated) {
       navigate(`/auth?mode=signup&origin=discover&tenant=${tenantId}`);
       return;
     }
-    setSaving(tenantId);
+    setSaving(unitId);
     try {
       const updateData = {
         barbearia_preferida_id: tenantId,
-        signup_origin: tenant?.isDub ? "dub_exclusive" : "discover",
+        signup_origin: unit?.isDub ? "dub_exclusive" : "discover",
       };
 
       const { error } = await supabase
@@ -449,9 +450,9 @@ const EscolherBarbearia = () => {
 
   const handleBack = () => navigate(isChangeMode ? "/cliente/perfil" : "/");
 
-
-  const isTenantCurrent = (tenantId: string) => {
-    return currentPreferred === tenantId;
+  const isTenantCurrent = (unitId: string) => {
+    const unit = allTenants.find(t => t.id === unitId);
+    return currentPreferred === (unit?.tenant_id || unitId);
   };
 
   // ── Stats bar ──
