@@ -866,17 +866,17 @@ const ClienteAgendar = () => {
 
   // ─── Canal Realtime: Assinatura do usuário (ativação em tempo real) ───
   useEffect(() => {
-    if (!user?.id) return;
+    if (!userId) return;
 
     const channel = supabase
-      .channel(`assinatura-agendar-${user.id}`)
+      .channel(`assinatura-agendar-${userId}`)
       .on(
         'postgres_changes',
         {
           event: 'UPDATE',
           schema: 'public',
           table: 'assinaturas',
-          filter: `user_id=eq.${user.id}`,
+          filter: `user_id=eq.${userId}`,
         },
         async (payload) => {
           const updated = payload.new as any;
@@ -884,8 +884,7 @@ const ClienteAgendar = () => {
 
           if (updated.status === 'active') {
             toast.success('🎉 Seu plano foi ativado! A opção de pagamento via plano já está disponível.');
-            // Recarregar dados de assinatura
-            const sub = await loadActiveSubscriptionOptimized(user.id);
+            const sub = await loadActiveSubscriptionOptimized(userId);
             if (sub) {
               setSubscriptionBlocked(false);
               setSubscriptionLimitReached(false);
@@ -902,7 +901,7 @@ const ClienteAgendar = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user?.id]);
+  }, [userId]);
 
   const incrementServiceQty = (serviceId: string) => {
     if (isPlanFlow && !!activeSubscription?.servico_id) return;
