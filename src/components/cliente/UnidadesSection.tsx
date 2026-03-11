@@ -262,8 +262,10 @@ function UnidadeDetailSheet({
 }
 
 export function UnidadesSection({ tenantId, tenantNome, onAgendar, className }: UnidadesSectionProps) {
-  const { data: unidades = [], isLoading } = useUnidades(tenantId);
+  const { data: unidades = [], isLoading, error } = useUnidades(tenantId);
   const [selectedUnidade, setSelectedUnidade] = useState<Unidade | null>(null);
+
+  console.log('[UnidadesSection] tenantId:', tenantId, '| unidades:', unidades.length, '| loading:', isLoading, '| error:', error);
 
   if (!tenantId) return null;
   if (!isLoading && unidades.length <= 1) return null;
