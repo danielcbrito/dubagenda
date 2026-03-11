@@ -484,14 +484,14 @@ const BarbershopPublic = () => {
     ? haversineDistance(userLocation.lat, userLocation.lng, effectiveLat, effectiveLng)
     : null;
 
-  // Address from unit data (not brand-level)
+  // Address from unit data only (never from brand-level tenant)
   const unitStreetLine = unidadeAtual
     ? [unidadeAtual.rua, unidadeAtual.numero].filter(Boolean).join(", ")
-    : tenant ? [tenant.rua, tenant.numero].filter(Boolean).join(", ") : "";
+    : "";
 
   const location = unidadeAtual
     ? [unidadeAtual.bairro, unidadeAtual.cidade, unidadeAtual.estado].filter(Boolean).join(", ")
-    : tenant ? [tenant.bairro, tenant.cidade, tenant.estado].filter(Boolean).join(", ") : "";
+    : "";
 
   const fullAddress = [unitStreetLine, location].filter(Boolean).join(" • ");
 
