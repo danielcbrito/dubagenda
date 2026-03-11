@@ -1,15 +1,16 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { ArrowLeft, MapPin, Phone, Mail, Globe, Scissors, Star, Crown, ExternalLink } from "lucide-react";
+import { ArrowLeft, MapPin, Phone, Mail, Globe, Scissors, Star, Crown, ExternalLink, Building2, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import logoDub from "@/assets/logo-dub.png";
-import { UnidadesSection } from "@/components/cliente/UnidadesSection";
 
 interface BarbershopInfo {
   id: string;
   nome: string;
+  slug: string | null;
   slogan: string | null;
   logo_url: string | null;
   telefone: string | null;
@@ -73,7 +74,7 @@ export default function ClienteBarbearia() {
     if (prof?.barbearia_preferida_id) {
       const { data: tenant } = await supabase
         .from("tenants")
-        .select("id, nome, slogan, logo_url, telefone, whatsapp, email, site, rua, numero, bairro, cidade, estado, endereco_completo")
+        .select("id, nome, slug, slogan, logo_url, telefone, whatsapp, email, site, rua, numero, bairro, cidade, estado, endereco_completo")
         .eq("id", prof.barbearia_preferida_id)
         .single();
       if (tenant) setBarbershop(tenant);
@@ -82,7 +83,7 @@ export default function ClienteBarbearia() {
       // Mesmo sem barbearia preferida, busca o tenant DUB para pegar logo dinâmica
       const { data: dubTenant } = await supabase
         .from("tenants")
-        .select("id, nome, slogan, logo_url, telefone, whatsapp, email, site, rua, numero, bairro, cidade, estado, endereco_completo")
+        .select("id, nome, slug, slogan, logo_url, telefone, whatsapp, email, site, rua, numero, bairro, cidade, estado, endereco_completo")
         .ilike("nome", "%DUB%")
         .limit(1)
         .maybeSingle();
@@ -102,6 +103,21 @@ export default function ClienteBarbearia() {
       .join(", ");
 
   const phone = barbershop?.whatsapp || barbershop?.telefone;
+
+  // Units count query for "Ver todas as unidades" row
+  const { data: unidadesCount } = useQuery({
+    queryKey: ["unidades-count", barbershop?.id],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("tenant_unidades")
+        .select("id", { count: "exact", head: true })
+        .eq("tenant_id", barbershop!.id);
+      if (error) throw error;
+      return count ?? 0;
+    },
+    enabled: !!barbershop?.id,
+    staleTime: 10 * 60 * 1000,
+  });
 
   if (loading) {
     return (
@@ -223,15 +239,33 @@ export default function ClienteBarbearia() {
           </div>
         </motion.div>
 
-        {/* Unidades */}
-        <UnidadesSection
-          tenantId={barbershop?.id ?? null}
-          tenantNome={name}
-          onAgendar={(unidadeId) => {
-            navigate(`/cliente/agendar?unidade=${unidadeId}`);
-          }}
-          className="mb-6"
-        />
+        {/* Ver Unidades Row */}
+        {unidadesCount != null && unidadesCount >= 2 && barbershop?.slug && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2, duration: 0.35 }}
+          >
+            <button
+              onClick={() => navigate(`/b/${barbershop.slug}/unidades`)}
+              className={cn(
+                "w-full flex items-center gap-3 px-4 h-14 rounded-2xl",
+                "bg-card border border-border",
+                "active:scale-[0.98] transition-all duration-150"
+              )}
+              style={{ WebkitTapHighlightColor: "transparent" }}
+            >
+              <Building2 className="w-[18px] h-[18px] text-muted-foreground shrink-0" />
+              <span className="flex-1 text-sm font-medium text-foreground text-left">
+                Ver todas as unidades
+              </span>
+              <span className="text-[11px] font-mono tabular-nums bg-secondary border border-border rounded-full px-2 py-0.5 text-muted-foreground">
+                {unidadesCount}
+              </span>
+              <ChevronRight className="w-4 h-4 text-muted-foreground/40 shrink-0" />
+            </button>
+          </motion.div>
+        )}
       </div>
     </div>
   );

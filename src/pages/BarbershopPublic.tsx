@@ -1,12 +1,12 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Star, MapPin, Navigation, Scissors, Users, Loader2, ExternalLink, ChevronRight, ArrowRight } from "lucide-react";
+import { Star, MapPin, Navigation, Scissors, Users, Loader2, ExternalLink, ChevronRight, ArrowRight, Building2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import logoDub from "@/assets/logo-dub.png";
+import { useQuery } from "@tanstack/react-query";
 import { BarberProfileSheet } from "@/components/discover/BarberProfileSheet";
-import { UnidadesSection } from "@/components/cliente/UnidadesSection";
 import { PortfolioGallery } from "@/components/portfolio/PortfolioGallery";
 import googleMapsIcon from "@/assets/google-maps-icon.png";
 
@@ -364,6 +364,21 @@ const BarbershopPublic = () => {
     }
   };
 
+  // Units count query for "Ver todas as unidades" row
+  const { data: unidadesCount } = useQuery({
+    queryKey: ["unidades-count", tenant?.id],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("tenant_unidades")
+        .select("id", { count: "exact", head: true })
+        .eq("tenant_id", tenant!.id);
+      if (error) throw error;
+      return count ?? 0;
+    },
+    enabled: !!tenant?.id,
+    staleTime: 10 * 60 * 1000,
+  });
+
   const [saving, setSaving] = useState(false);
   const [selectedBarber, setSelectedBarber] = useState<Barber | null>(null);
 
@@ -621,12 +636,34 @@ const BarbershopPublic = () => {
           </motion.div>
         )}
 
-        {/* ── Unidades Section ── */}
-        <UnidadesSection
-          tenantId={tenant?.id ?? null}
-          tenantNome={tenant?.nome}
-          className="px-5 mb-6"
-        />
+        {/* ── Ver Unidades Row ── */}
+        {unidadesCount != null && unidadesCount >= 2 && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.28 }}
+            className="px-5 mb-6"
+          >
+            <button
+              onClick={() => navigate(`/b/${slug}/unidades`)}
+              className={cn(
+                "w-full flex items-center gap-3 px-4 h-14 rounded-2xl",
+                "bg-card border border-border",
+                "active:scale-[0.98] transition-all duration-150"
+              )}
+              style={{ WebkitTapHighlightColor: "transparent" }}
+            >
+              <Building2 className="w-[18px] h-[18px] text-muted-foreground shrink-0" />
+              <span className="flex-1 text-sm font-medium text-foreground text-left">
+                Ver todas as unidades
+              </span>
+              <span className="text-[11px] font-mono tabular-nums bg-secondary border border-border rounded-full px-2 py-0.5 text-muted-foreground">
+                {unidadesCount}
+              </span>
+              <ChevronRight className="w-4 h-4 text-muted-foreground/40 shrink-0" />
+            </button>
+          </motion.div>
+        )}
 
         {/* ── Barbers Section (ALWAYS on top) ── */}
         <motion.div
