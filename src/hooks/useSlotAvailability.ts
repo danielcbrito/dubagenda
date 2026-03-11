@@ -38,6 +38,40 @@ interface AvailabilityResponse {
   message?: string;
 }
 
+interface AvailabilityResponseEnvelope {
+  success?: boolean;
+  date?: string;
+  slots?: TimeSlot[];
+  occupiedSlots?: OccupiedSlot[];
+  message?: string;
+  data?: {
+    success?: boolean;
+    date?: string;
+    slots?: TimeSlot[];
+    occupiedSlots?: OccupiedSlot[];
+    message?: string;
+  };
+}
+
+function normalizeAvailabilityResponse(payload: AvailabilityResponseEnvelope): AvailabilityResponse {
+  const hasNestedData = !!payload.data && (
+    Array.isArray(payload.data.slots) ||
+    Array.isArray(payload.data.occupiedSlots) ||
+    typeof payload.data.message === 'string' ||
+    typeof payload.data.success === 'boolean'
+  );
+
+  const normalized = hasNestedData ? payload.data! : payload;
+
+  return {
+    success: normalized.success ?? true,
+    date: normalized.date ?? '',
+    slots: normalized.slots ?? [],
+    occupiedSlots: normalized.occupiedSlots ?? [],
+    message: normalized.message,
+  };
+}
+
 const SUPABASE_URL = 'https://djtpzvujzmrrslirzwun.supabase.co';
 
 // Constantes de configuração padrão
