@@ -66,6 +66,32 @@ interface ActiveSubscription {
   barbeiro: Barber | null;
 }
 
+interface AppointmentValidationPayload {
+  valid?: boolean;
+  message?: string;
+  data?: {
+    valid?: boolean;
+    message?: string;
+  };
+}
+
+function normalizeTimeValue(time?: string | null) {
+  if (!time) return "";
+  const [hours = "00", minutes = "00"] = time.split(":");
+  return `${hours.padStart(2, "0")}:${minutes.padStart(2, "0")}`;
+}
+
+function normalizeAppointmentValidation(
+  payload: AppointmentValidationPayload | null | undefined,
+) {
+  const resolved = payload?.data ?? payload;
+
+  return {
+    valid: Boolean(resolved?.valid),
+    message: resolved?.message,
+  };
+}
+
 const ClienteAgendar = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -159,8 +185,9 @@ const ClienteAgendar = () => {
   useEffect(() => {
     if (step !== 4 || !selectedTime || loadingSlots) return;
 
+    const normalizedSelectedTime = normalizeTimeValue(selectedTime);
     const selectedStillAvailable = availableSlots.some(
-      (slot) => slot.available && slot.time === selectedTime
+      (slot) => slot.available && normalizeTimeValue(slot.time) === normalizedSelectedTime
     );
 
     if (!selectedStillAvailable) {
@@ -341,7 +368,7 @@ const ClienteAgendar = () => {
           }
           if (resumeServiceResult?.data) setSelectedServices([resumeServiceResult.data]);
           if (resumeData.date) setSelectedDate(new Date(`${resumeData.date}T12:00:00`));
-          if (resumeData.time) setSelectedTime(resumeData.time);
+          if (resumeData.time) setSelectedTime(normalizeTimeValue(resumeData.time));
 
           setStep(5);
           setIsInitializing(false);
@@ -920,8 +947,9 @@ const ClienteAgendar = () => {
         return;
       }
 
+      const normalizedSelectedTime = normalizeTimeValue(selectedTime);
       const selectedStillAvailable = availableSlots.some(
-        (slot) => slot.available && slot.time === selectedTime
+        (slot) => slot.available && normalizeTimeValue(slot.time) === normalizedSelectedTime
       );
 
       if (!selectedStillAvailable) {
@@ -994,12 +1022,13 @@ const ClienteAgendar = () => {
         return qty > 1 ? `${s.nome} x${qty}` : s.nome;
       }).join(", ");
 
+      const bookingTime = normalizeTimeValue(selectedTime);
       const mainService = selectedServices[0];
       const bookingData = {
         servico_id: mainService.id,
         barbeiro_id: selectedBarberId || null,
         data: format(selectedDate, 'yyyy-MM-dd'),
-        hora: selectedTime,
+        hora: bookingTime,
         duracao: totalDuration,
         preco: finalPrice,
         serviceName: serviceNames,
@@ -1147,13 +1176,16 @@ const ClienteAgendar = () => {
       }).join(", ");
       const mainService = selectedServices[0];
       const dateStr = format(selectedDate!, 'yyyy-MM-dd');
+      const bookingTime = normalizeTimeValue(selectedTime);
 
       const { data: validation, error: validationError } = await supabase.functions.invoke('validate-appointment', {
-        body: { data: dateStr, hora: selectedTime, duracao: totalDuration, userId: session.user.id, barberId: selectedBarberId }
+        body: { data: dateStr, hora: bookingTime, duracao: totalDuration, userId: session.user.id, barberId: selectedBarberId }
       });
 
-      if (validationError || !validation?.valid) {
-        toast.error(validation?.message || "Horário indisponível. Escolha outro.");
+      const resolvedValidation = normalizeAppointmentValidation(validation);
+
+      if (validationError || !resolvedValidation.valid) {
+        toast.error(resolvedValidation.message || "Horário indisponível. Escolha outro.");
         setStep(4);
         refreshSlots();
         return;
@@ -1166,7 +1198,7 @@ const ClienteAgendar = () => {
           servico_id: mainService.id,
           barbeiro_id: selectedBarberId || null,
           data: dateStr,
-          hora: selectedTime,
+          hora: bookingTime,
           duracao: totalDuration,
           preco: 0,
           status: "confirmed",
@@ -1213,11 +1245,12 @@ const ClienteAgendar = () => {
       }).join(", ");
       const mainService = selectedServices[0];
       const dateStr = format(selectedDate!, 'yyyy-MM-dd');
+      const bookingTime = normalizeTimeValue(selectedTime);
 
       const { data: validation, error: validationError } = await supabase.functions.invoke('validate-appointment', {
         body: {
           data: dateStr,
-          hora: selectedTime,
+          hora: bookingTime,
           duracao: totalDuration,
           userId: session.user.id,
           barberId: selectedBarberId,
@@ -1230,8 +1263,10 @@ const ClienteAgendar = () => {
         return;
       }
 
-      if (!validation?.valid) {
-        toast.error(validation?.message || "Horário indisponível. Escolha outro horário.");
+      const resolvedValidation = normalizeAppointmentValidation(validation);
+
+      if (!resolvedValidation.valid) {
+        toast.error(resolvedValidation.message || "Horário indisponível. Escolha outro horário.");
         setStep(4);
         refreshSlots();
         return;
@@ -1259,7 +1294,7 @@ const ClienteAgendar = () => {
           servico_id: mainService.id,
           barbeiro_id: selectedBarberId || null,
           data: dateStr,
-          hora: selectedTime,
+          hora: bookingTime,
           duracao: totalDuration,
           preco: 0,
           status: "confirmed",
@@ -1334,11 +1369,12 @@ const ClienteAgendar = () => {
       }).join(", ");
       const mainService = selectedServices[0];
       const dateStr = format(selectedDate!, 'yyyy-MM-dd');
+      const bookingTime = normalizeTimeValue(selectedTime);
 
       const { data: validation, error: validationError } = await supabase.functions.invoke('validate-appointment', {
         body: {
           data: dateStr,
-          hora: selectedTime,
+          hora: bookingTime,
           duracao: totalDuration,
           userId: session.user.id,
           barberId: selectedBarberId
@@ -1350,8 +1386,10 @@ const ClienteAgendar = () => {
         return;
       }
 
-      if (!validation?.valid) {
-        toast.error(validation?.message || "Horário indisponível. Escolha outro horário.");
+      const resolvedValidation = normalizeAppointmentValidation(validation);
+
+      if (!resolvedValidation.valid) {
+        toast.error(resolvedValidation.message || "Horário indisponível. Escolha outro horário.");
         setStep(4);
         refreshSlots();
         return;
@@ -1364,7 +1402,7 @@ const ClienteAgendar = () => {
           servico_id: mainService.id,
           barbeiro_id: selectedBarberId || null,
           data: dateStr,
-          hora: selectedTime,
+          hora: bookingTime,
           duracao: totalDuration,
           preco: 0,
           status: "confirmed",
@@ -1544,11 +1582,12 @@ const ClienteAgendar = () => {
 
       const totalDuration = selectedServices.reduce((sum, s) => sum + getEffectiveDuration(s) * (serviceQuantities[s.id] || 1), 0);
       const dateStr = format(selectedDate, 'yyyy-MM-dd');
+      const bookingTime = normalizeTimeValue(selectedTime);
       
       const { data: validation, error: validationError } = await supabase.functions.invoke('validate-appointment', {
         body: {
           data: dateStr,
-          hora: selectedTime,
+          hora: bookingTime,
           duracao: totalDuration,
           userId: session.user.id,
           barberId: selectedBarberId,
@@ -1561,8 +1600,10 @@ const ClienteAgendar = () => {
         return;
       }
 
-      if (!validation?.valid) {
-        toast.error(validation?.message || "Horário indisponível. Escolha outro horário.");
+      const resolvedValidation = normalizeAppointmentValidation(validation);
+
+      if (!resolvedValidation.valid) {
+        toast.error(resolvedValidation.message || "Horário indisponível. Escolha outro horário.");
         setStep(4);
         refreshSlots();
         return;
@@ -1572,7 +1613,7 @@ const ClienteAgendar = () => {
         .from("agendamentos")
         .update({
           data: dateStr,
-          hora: selectedTime,
+          hora: bookingTime,
           duracao: totalDuration,
           status: 'confirmed',
           barbeiro_confirmou: true,
