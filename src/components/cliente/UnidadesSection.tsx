@@ -155,20 +155,6 @@ function UnidadeDetailSheet({
                 </div>
               )}
 
-              {unidade.endereco && (
-                <p className="text-xs text-muted-foreground mt-1 pl-[calc(1.75rem+0.625rem)]">
-                  {unidade.endereco}
-                </p>
-              )}
-
-              {unidade.telefone && (
-                <div className="flex items-center gap-2.5 mt-2">
-                  <div className="w-7 h-7 rounded-lg bg-secondary flex items-center justify-center flex-shrink-0">
-                    <Phone className="w-3.5 h-3.5 text-muted-foreground" />
-                  </div>
-                  <p className="text-[13px] text-foreground">{unidade.telefone}</p>
-                </div>
-              )}
             </div>
 
             {/* Barbeiros */}
