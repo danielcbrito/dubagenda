@@ -255,7 +255,7 @@ body {
 
   /* TIPOGRAFIA — Hierarquia com font-display */
   h1, h2, h3 {
-    font-family: 'Space Grotesk', 'DM Sans', sans-serif;
+    font-family: 'Inter', -apple-system, sans-serif;
     @apply font-semibold;
     letter-spacing: -0.01em;
   }
