@@ -427,7 +427,7 @@ const EscolherBarbearia = () => {
             onClick={handleBack}
             className="w-9 h-9 flex items-center justify-center rounded-xl bg-secondary/50 border border-border/60 active:scale-[0.92] transition-transform duration-100 text-foreground shrink-0"
           >
-            <ArrowLeft className="w-[18px] h-[18px]" />
+            <BackArrow size={20} />
           </button>
           <div>
             <p className="text-[10px] font-mono text-primary/70 tracking-[0.2em] uppercase mb-0.5">
