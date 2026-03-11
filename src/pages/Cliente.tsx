@@ -275,7 +275,13 @@ const Cliente = () => {
         return;
       }
       updateChannelStatus(channelName, false);
-      // Schedule reconnection after 30s
+      // Refetch data immediately (don't wait for channel reconnect)
+      console.log(`[REALTIME] Refetching data immediately after ${channelName} error`);
+      if (user?.id) {
+        loadAppointmentsData(user.id);
+        loadLoyaltyData(user.id, profile?.barbearia_preferida_id || null);
+      }
+      // Schedule channel reconnection after 30s
       if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
       reconnectTimerRef.current = setTimeout(() => {
         reconnectFn();
@@ -422,6 +428,34 @@ const Cliente = () => {
       if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
     };
   }, [user, profile?.barbearia_preferida_id, handleChannelStatus]);
+
+  // ─── Melhoria A: Refetch ao retornar ao app (visibilitychange) ───
+  useEffect(() => {
+    if (!user) return;
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState !== 'visible') return;
+
+      const userId = user.id;
+      const tenantId = profile?.barbearia_preferida_id || null;
+
+      // Check if short-TTL caches expired while app was in background
+      const cachedAppts = getCache<any>(`cache_appointments_${userId}`);
+      const cachedLoy = getCache<any>(`cache_loyalty_${userId}`);
+
+      if (!cachedAppts) {
+        console.log('[VISIBILITY] Appointments cache expired, refetching...');
+        loadAppointmentsData(userId);
+      }
+      if (!cachedLoy) {
+        console.log('[VISIBILITY] Loyalty cache expired, refetching...');
+        loadLoyaltyData(userId, tenantId);
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [user, profile?.barbearia_preferida_id]);
 
   const checkAuth = async () => {
     const { data: { session } } = await supabase.auth.getSession();
