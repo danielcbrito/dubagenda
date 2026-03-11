@@ -39,6 +39,7 @@ const NotFound = lazy(() => import("./pages/NotFound"));
 const BarberReviews = lazy(() => import("./pages/BarberReviews"));
 const EscolherBarbearia = lazy(() => import("./pages/EscolherBarbearia"));
 const BarbershopPublic = lazy(() => import("./pages/BarbershopPublic"));
+const BarbershopUnidades = lazy(() => import("./pages/BarbershopUnidades"));
 
 /** Minimal loading fallback */
 function PageLoader() {
