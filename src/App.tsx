@@ -64,6 +64,7 @@ const PUBLIC_ROUTES = [
   '/esqueci-senha',
   '/resetar-senha',
   '/escolher-barbearia',
+  '/flowchart',
 ];
 
 function MaintenanceWrapper({ children }: { children: React.ReactNode }) {
