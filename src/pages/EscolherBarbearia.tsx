@@ -24,6 +24,8 @@ interface Tenant {
   avgRating?: number | null;
   totalReviews?: number;
   isDub?: boolean;
+  is_sede?: boolean;
+  tenant_id?: string;
 }
 
 // ── Utils ──
