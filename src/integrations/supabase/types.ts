@@ -4428,6 +4428,14 @@ export type Database = {
       check_email_exists: { Args: { p_email: string }; Returns: string }
       clean_expired_pending_bookings: { Args: never; Returns: undefined }
       clean_expired_verification_codes: { Args: never; Returns: undefined }
+      count_subscription_uses_in_cycle: {
+        Args: {
+          p_assinatura_id: string
+          p_cycle_end: string
+          p_cycle_start: string
+        }
+        Returns: number
+      }
       create_barber_with_user: {
         Args: {
           p_apelido: string

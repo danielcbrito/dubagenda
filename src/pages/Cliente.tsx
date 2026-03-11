@@ -576,18 +576,17 @@ const Cliente = () => {
         setPendingSubscription(null);
 
         // Calcular início do ciclo atual (next_billing_date - 1 mês)
-        const cycleStart = new Date(activeSub.next_billing_date + 'T00:00:00');
+        const cycleStart = new Date(`${activeSub.next_billing_date}T12:00:00`);
         cycleStart.setMonth(cycleStart.getMonth() - 1);
-        const cycleStartISO = cycleStart.toISOString();
+        const cycleStartDate = cycleStart.toISOString().split('T')[0];
 
-        const { count: usageCount } = await supabase
-          .from("plano_agendamentos_usos")
-          .select("id", { count: 'exact', head: true })
-          .eq("assinatura_id", activeSub.id)
-          .is("released_at", null)
-          .gte("created_at", cycleStartISO);
+        const { data: usageCount, error: usageError } = await supabase.rpc('count_subscription_uses_in_cycle', {
+          p_assinatura_id: activeSub.id,
+          p_cycle_start: cycleStartDate,
+          p_cycle_end: activeSub.next_billing_date,
+        });
 
-        finalPlanUsageCount = usageCount || 0;
+        finalPlanUsageCount = usageError ? 0 : Number(usageCount || 0);
         setPlanUsageCount(finalPlanUsageCount);
       } else {
         setActiveSubscription(null);
