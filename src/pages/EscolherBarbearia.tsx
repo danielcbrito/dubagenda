@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Search, MapPin, SearchX, Star, Navigation2, X } from "lucide-react";
+import { Search, MapPin, SearchX, Navigation2, X, Car } from "lucide-react";
 import { BackArrow } from "@/components/ui/back-arrow";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -33,8 +33,8 @@ interface UnitData {
   brandSlug: string | null;
   brandLogo: string | null;
   distance: number | null;
-  avgRating: number | null;
-  totalReviews: number;
+  travelTime: string | null;
+  travelMinutes: number | null;
 }
 
 // ── Utils ──
@@ -48,6 +48,19 @@ function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): nu
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
+function kmToMinutes(km: number): number {
+  const speedKmH = 25;
+  return Math.max(1, Math.round((km / speedKmH) * 60 * 1.2));
+}
+
+function formatTravelTime(minutes: number): { value: string; unit: string } {
+  if (minutes < 60) return { value: String(minutes), unit: "min" };
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  if (m === 0) return { value: `${h}h`, unit: "" };
+  return { value: `${h}h`, unit: `${m}min` };
+}
+
 function normalizeText(value: string): string {
   return value
     .normalize("NFD")
@@ -59,45 +72,45 @@ function normalizeText(value: string): string {
 // ── Skeleton Card ──
 const SkeletonCard = ({ index }: { index: number }) => (
   <motion.div
-    initial={{ opacity: 0, y: 14 }}
+    initial={{ opacity: 0, y: 10 }}
     animate={{ opacity: 1, y: 0 }}
-    transition={{ delay: index * 0.055, duration: 0.32 }}
-    className="bg-card border border-border rounded-3xl py-3.5 px-4"
+    transition={{ delay: index * 0.05, duration: 0.28 }}
+    className="bg-card border border-border rounded-3xl py-3 px-3.5"
   >
-    <div className="flex items-center gap-3.5">
-      <Skeleton className="w-[52px] h-[52px] rounded-2xl shrink-0" />
+    <div className="flex items-center gap-3">
+      <Skeleton className="w-12 h-12 rounded-xl shrink-0" />
       <div className="flex-1 space-y-2">
-        <Skeleton className="h-4 w-36 rounded-lg" />
-        <Skeleton className="h-3 w-24 rounded-lg" />
+        <Skeleton className="h-4 w-32 rounded-lg" />
+        <Skeleton className="h-3 w-20 rounded-lg" />
       </div>
-      <Skeleton className="w-[52px] h-[56px] rounded-2xl shrink-0" />
+      <Skeleton className="w-12 h-8 rounded-2xl shrink-0" />
     </div>
   </motion.div>
 );
 
-// ── Distance Badge ──
-const DistanceBadge = ({ distance }: { distance: number | null }) => {
-  if (distance == null) {
+// ── Travel Time Badge ──
+const TravelTimeBadge = ({ travelTime, travelMinutes }: { travelTime: string | null; travelMinutes: number | null }) => {
+  if (travelTime == null || travelMinutes == null) {
     return (
-      <div className="flex flex-col items-center justify-center bg-secondary/50 border border-border rounded-2xl px-3 py-2.5 min-w-[52px] shrink-0">
-        <Navigation2 className="w-3.5 h-3.5 text-muted-foreground/30" />
+      <div className="flex flex-col items-center justify-center bg-secondary/40 border border-border/50 rounded-2xl px-2.5 py-2 min-w-[48px] shrink-0">
+        <Navigation2 className="w-3.5 h-3.5 text-muted-foreground/25" />
       </div>
     );
   }
 
-  const isMeters = distance < 1;
-  const value = isMeters ? String(Math.round(distance * 1000)) : distance.toFixed(1);
-  const unit = isMeters ? "m" : "km";
+  const formatted = formatTravelTime(travelMinutes);
 
   return (
-    <div className="flex flex-col items-center justify-center bg-primary/8 border border-primary/20 rounded-2xl px-3 py-2.5 min-w-[52px] shrink-0 gap-0.5">
-      <Navigation2 className="w-3 h-3 text-primary mb-0.5" />
-      <span className="text-[15px] font-bold text-foreground leading-none font-mono tabular-nums">
-        {value}
+    <div className="flex flex-col items-center justify-center bg-primary/8 border border-primary/15 rounded-2xl px-2.5 py-2 min-w-[48px] shrink-0 gap-0.5">
+      <Car className="w-[11px] h-[11px] text-primary" />
+      <span className="text-[17px] font-bold text-foreground leading-none font-mono tabular-nums">
+        {formatted.value}
       </span>
-      <span className="text-[9px] text-muted-foreground/70 uppercase font-mono">
-        {unit}
-      </span>
+      {formatted.unit && (
+        <span className="text-[8px] text-muted-foreground/60 uppercase font-mono">
+          {formatted.unit}
+        </span>
+      )}
     </div>
   );
 };
@@ -114,35 +127,34 @@ const UnitCard = ({
 }) => {
   const logoUrl = unit.brandLogo;
   const brandInitial = unit.brandName?.[0]?.toUpperCase() ?? "?";
-  const hasRating = unit.avgRating != null && unit.totalReviews > 0;
   const subtitle = [unit.bairro, unit.cidade].filter(Boolean).join(", ");
   const showUnitName = unit.nome !== unit.brandName;
 
   return (
     <motion.button
-      initial={{ opacity: 0, y: 14 }}
+      initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{
-        delay: index * 0.055,
-        duration: 0.32,
+        delay: index * 0.05,
+        duration: 0.28,
         ease: [0.22, 1, 0.36, 1],
       }}
       onClick={onClick}
       className={cn(
-        "w-full text-left bg-card border border-border rounded-3xl py-3.5 px-4",
-        "active:scale-[0.97] active:border-primary/25",
-        "transition-all duration-[120ms]"
+        "w-full text-left bg-card border border-border rounded-3xl py-3 px-3.5",
+        "active:scale-[0.975] active:border-primary/20",
+        "transition-all duration-[130ms] ease-out"
       )}
       style={{ WebkitTapHighlightColor: "transparent" }}
     >
-      <div className="flex items-center gap-3.5">
+      <div className="flex items-center gap-3">
         {/* Logo */}
-        <div className="w-[52px] h-[52px] rounded-2xl shrink-0 overflow-hidden border border-border/60">
+        <div className="w-12 h-12 rounded-xl shrink-0 overflow-hidden border border-border/60">
           {logoUrl ? (
             <img src={logoUrl} alt={unit.brandName} className="w-full h-full object-cover" />
           ) : (
             <div className="w-full h-full flex items-center justify-center bg-secondary border border-border">
-              <span className="text-[20px] font-bold text-muted-foreground/60">
+              <span className="text-[18px] font-bold text-muted-foreground/50">
                 {brandInitial}
               </span>
             </div>
@@ -151,24 +163,9 @@ const UnitCard = ({
 
         {/* Text */}
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <span className="text-[15px] font-semibold text-foreground leading-tight line-clamp-1">
-              {unit.brandName}
-            </span>
-            {unit.is_sede && (
-              <span className="text-[8px] font-bold uppercase tracking-[0.15em] bg-primary/10 text-primary/90 border border-primary/20 rounded-full px-1.5 py-0.5 shrink-0 font-mono">
-                Sede
-              </span>
-            )}
-            {hasRating && (
-              <span className="flex items-center gap-0.5 shrink-0">
-                <Star className="w-[10px] h-[10px] fill-amber-400 text-amber-400" />
-                <span className="text-[11px] font-medium tabular-nums text-foreground/60">
-                  {unit.avgRating!.toFixed(1)}
-                </span>
-              </span>
-            )}
-          </div>
+          <span className="text-[14px] font-semibold text-foreground leading-tight line-clamp-1 block">
+            {unit.brandName}
+          </span>
 
           {showUnitName && (
             <p className="text-[12px] text-muted-foreground/60 leading-tight line-clamp-1 mt-0.5">
@@ -178,16 +175,16 @@ const UnitCard = ({
 
           {subtitle && (
             <div className="flex items-center gap-1 mt-0.5">
-              <MapPin className="w-[10px] h-[10px] text-muted-foreground/40 shrink-0" />
-              <span className="text-[12px] text-muted-foreground/50 line-clamp-1">
+              <MapPin className="w-[10px] h-[10px] text-muted-foreground/35 shrink-0" />
+              <span className="text-[11px] text-muted-foreground/50 line-clamp-1">
                 {subtitle}
               </span>
             </div>
           )}
         </div>
 
-        {/* Distance Badge */}
-        <DistanceBadge distance={unit.distance} />
+        {/* Travel Time Badge */}
+        <TravelTimeBadge travelTime={unit.travelTime} travelMinutes={unit.travelMinutes} />
       </div>
     </motion.button>
   );
@@ -299,8 +296,8 @@ const EscolherBarbearia = () => {
           brandSlug: t?.slug ?? null,
           brandLogo: t?.logo_url ?? null,
           distance: null,
-          avgRating: null,
-          totalReviews: 0,
+          travelTime: null,
+          travelMinutes: null,
         };
       });
 
@@ -322,58 +319,30 @@ const EscolherBarbearia = () => {
       return u.tenant_id ? activeTenantIds.has(u.tenant_id) : false;
     });
 
-    // Load ratings per tenant
-    if (barbers && barbers.length > 0) {
-      const barberIds = barbers.map(b => b.id);
-      const { data: reviews } = await supabase
-        .from("barbeiro_avaliacoes")
-        .select("barber_id, rating")
-        .in("barber_id", barberIds);
-
-      if (reviews && reviews.length > 0) {
-        const barberToTenant = new Map(barbers.map(b => [b.id, b.tenant_id]));
-        const tenantRatings = new Map<string, { sum: number; count: number }>();
-
-        for (const r of reviews) {
-          const tid = barberToTenant.get(r.barber_id);
-          if (!tid) continue;
-          const cur = tenantRatings.get(tid) || { sum: 0, count: 0 };
-          cur.sum += r.rating;
-          cur.count += 1;
-          tenantRatings.set(tid, cur);
-        }
-
-        for (const u of unitList) {
-          const stats = tenantRatings.get(u.tenant_id);
-          if (stats) {
-            u.avgRating = stats.sum / stats.count;
-            u.totalReviews = stats.count;
-          }
-        }
-      }
-    }
-
     setAllUnits(unitList);
     setIsLoading(false);
   };
 
-  // ── Sort by distance ──
+  // ── Sort by distance + compute travel time ──
   const sortedUnits = useMemo(() => {
-    const withDist = allUnits.map(u => ({
-      ...u,
-      distance: userLocation && u.latitude && u.longitude
+    const withDist = allUnits.map(u => {
+      const dist = userLocation && u.latitude && u.longitude
         ? haversineKm(userLocation.lat, userLocation.lng, u.latitude, u.longitude)
-        : null,
-    }));
+        : null;
+      const minutes = dist !== null ? kmToMinutes(dist) : null;
+      const time = minutes !== null ? `${formatTravelTime(minutes).value} ${formatTravelTime(minutes).unit}`.trim() : null;
+      return {
+        ...u,
+        distance: dist,
+        travelMinutes: minutes,
+        travelTime: time,
+      };
+    });
 
     return withDist.sort((a, b) => {
       const dA = a.distance ?? Infinity;
       const dB = b.distance ?? Infinity;
-      if (dA !== dB) return dA - dB;
-      const rA = a.avgRating ?? 0;
-      const rB = b.avgRating ?? 0;
-      if (rA !== rB) return rB - rA;
-      return (b.totalReviews ?? 0) - (a.totalReviews ?? 0);
+      return dA - dB;
     });
   }, [allUnits, userLocation]);
 
@@ -416,7 +385,6 @@ const EscolherBarbearia = () => {
   };
 
   const handleBack = () => navigate(isChangeMode ? "/cliente/perfil" : "/");
-  const totalCount = filtered.length;
 
   return (
     <div className="flex flex-col bg-background" style={{ height: "100dvh" }}>
@@ -429,25 +397,12 @@ const EscolherBarbearia = () => {
           >
             <BackArrow size={22} />
           </button>
-          <div>
-            <p className="text-[10px] font-mono text-primary/70 tracking-[0.2em] uppercase mb-0.5">
-              {isChangeMode ? "TROCAR BARBEARIA" : "ENCONTRE SEU ESTILO"}
-            </p>
-            <h1 className="text-[26px] font-bold text-foreground leading-tight">Barbearias</h1>
-            {!isLoading && (
-              <div className="flex items-center gap-1.5 mt-0.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                <span className="text-[12px] text-muted-foreground">
-                  {totalCount} {totalCount === 1 ? "unidade" : "unidades"} perto de você
-                </span>
-              </div>
-            )}
-          </div>
+          <h1 className="text-[26px] font-bold text-foreground leading-tight">Barbearias</h1>
         </div>
 
         {/* Search */}
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/60" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-[15px] h-[15px] text-muted-foreground/50" />
           <input
             type="text"
             placeholder="Buscar por nome ou bairro..."
@@ -456,7 +411,7 @@ const EscolherBarbearia = () => {
             className={cn(
               "w-full h-12 pl-10 pr-10 rounded-2xl text-[14px]",
               "bg-secondary/30 border border-border text-foreground",
-              "placeholder:text-muted-foreground/40",
+              "placeholder:text-muted-foreground/35",
               "focus:outline-none focus:border-primary/30",
               "transition-colors duration-150"
             )}
@@ -464,7 +419,7 @@ const EscolherBarbearia = () => {
           {search && (
             <button
               onClick={() => setSearch("")}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground/50 active:scale-90 transition-transform"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground/40 active:scale-90 transition-transform"
             >
               <X className="w-4 h-4" />
             </button>
@@ -481,7 +436,7 @@ const EscolherBarbearia = () => {
 
         <div className="h-full overflow-y-auto overscroll-contain px-5 pb-8">
           {isLoading ? (
-            <div className="flex flex-col gap-3 pt-1">
+            <div className="flex flex-col gap-2.5 pt-1">
               {[0, 1, 2, 3].map(i => (
                 <SkeletonCard key={i} index={i} />
               ))}
@@ -490,14 +445,14 @@ const EscolherBarbearia = () => {
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="flex flex-col items-center py-20"
+              className="flex flex-col items-center py-16"
             >
-              <SearchX className="w-9 h-9 text-muted-foreground/20 mb-4" />
-              <p className="text-[16px] font-medium text-muted-foreground/60">
-                Nenhuma unidade encontrada
+              <SearchX className="w-8 h-8 text-muted-foreground/20 mb-3" />
+              <p className="text-[15px] font-medium text-muted-foreground/50">
+                Nenhuma barbearia encontrada
               </p>
-              <p className="text-[13px] text-muted-foreground/40 mt-1">
-                Tente buscar por outro nome ou bairro
+              <p className="text-[13px] text-muted-foreground/35 mt-1">
+                Tente outro nome ou bairro
               </p>
               {search && (
                 <button
@@ -509,7 +464,7 @@ const EscolherBarbearia = () => {
               )}
             </motion.div>
           ) : (
-            <div className="flex flex-col gap-3 pt-1">
+            <div className="flex flex-col gap-2.5 pt-1">
               {filtered.map((unit, index) => (
                 <UnitCard
                   key={unit.id}
