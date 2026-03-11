@@ -222,6 +222,16 @@ export default function ClienteBarbearia() {
             )}
           </div>
         </motion.div>
+
+        {/* Unidades */}
+        <UnidadesSection
+          tenantId={barbershop?.id ?? null}
+          tenantNome={name}
+          onAgendar={(unidadeId) => {
+            navigate(`/cliente/agendar?unidade=${unidadeId}`);
+          }}
+          className="mb-6"
+        />
       </div>
     </div>
   );
