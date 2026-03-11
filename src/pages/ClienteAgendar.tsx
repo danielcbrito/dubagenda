@@ -66,6 +66,32 @@ interface ActiveSubscription {
   barbeiro: Barber | null;
 }
 
+interface AppointmentValidationPayload {
+  valid?: boolean;
+  message?: string;
+  data?: {
+    valid?: boolean;
+    message?: string;
+  };
+}
+
+function normalizeTimeValue(time?: string | null) {
+  if (!time) return "";
+  const [hours = "00", minutes = "00"] = time.split(":");
+  return `${hours.padStart(2, "0")}:${minutes.padStart(2, "0")}`;
+}
+
+function normalizeAppointmentValidation(
+  payload: AppointmentValidationPayload | null | undefined,
+) {
+  const resolved = payload?.data ?? payload;
+
+  return {
+    valid: Boolean(resolved?.valid),
+    message: resolved?.message,
+  };
+}
+
 const ClienteAgendar = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
