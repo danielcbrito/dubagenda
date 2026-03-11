@@ -239,15 +239,33 @@ export default function ClienteBarbearia() {
           </div>
         </motion.div>
 
-        {/* Unidades */}
-        <UnidadesSection
-          tenantId={barbershop?.id ?? null}
-          tenantNome={name}
-          onAgendar={(unidadeId) => {
-            navigate(`/cliente/agendar?unidade=${unidadeId}`);
-          }}
-          className="mb-6"
-        />
+        {/* Ver Unidades Row */}
+        {unidadesCount != null && unidadesCount >= 2 && barbershop?.slug && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2, duration: 0.35 }}
+          >
+            <button
+              onClick={() => navigate(`/b/${barbershop.slug}/unidades`)}
+              className={cn(
+                "w-full flex items-center gap-3 px-4 h-14 rounded-2xl",
+                "bg-card border border-border",
+                "active:scale-[0.98] transition-all duration-150"
+              )}
+              style={{ WebkitTapHighlightColor: "transparent" }}
+            >
+              <Building2 className="w-[18px] h-[18px] text-muted-foreground shrink-0" />
+              <span className="flex-1 text-sm font-medium text-foreground text-left">
+                Ver todas as unidades
+              </span>
+              <span className="text-[11px] font-mono tabular-nums bg-secondary border border-border rounded-full px-2 py-0.5 text-muted-foreground">
+                {unidadesCount}
+              </span>
+              <ChevronRight className="w-4 h-4 text-muted-foreground/40 shrink-0" />
+            </button>
+          </motion.div>
+        )}
       </div>
     </div>
   );
