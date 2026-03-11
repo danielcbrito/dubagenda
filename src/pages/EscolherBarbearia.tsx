@@ -220,13 +220,13 @@ const EscolherBarbearia = () => {
   useEffect(() => {
     if (!shouldOpenCurrent || isLoading || hasAutoOpened) return;
     setHasAutoOpened(true);
-    const targetId = currentPreferred || allTenants.find(t => t.isDub)?.id;
-    if (targetId) {
-      const target = allTenants.find(t => t.id === targetId);
-      if (target) {
-        const slug = target.slug || target.id;
-        navigate(`/${slug}?from=${isChangeMode ? "change" : "discover"}`, { replace: true });
-      }
+    // currentPreferred is a tenant_id — find any unit of that tenant
+    const target = currentPreferred
+      ? allTenants.find(t => t.tenant_id === currentPreferred)
+      : allTenants.find(t => t.isDub);
+    if (target) {
+      const targetSlug = target.slug || target.id;
+      navigate(`/${targetSlug}?from=${isChangeMode ? "change" : "discover"}`, { replace: true });
     }
   }, [shouldOpenCurrent, isLoading, hasAutoOpened, currentPreferred, allTenants]);
 
