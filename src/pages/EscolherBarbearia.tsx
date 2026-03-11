@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Search, ChevronRight, MapPin, ArrowLeft, SearchX, Star } from "lucide-react";
+import { Search, MapPin, ArrowLeft, SearchX, Star, Navigation2, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -27,8 +27,6 @@ interface UnitData {
   is_sede: boolean;
   latitude: number | null;
   longitude: number | null;
-  logo_url: string | null;
-  slogan: string | null;
   tenant_id: string;
   brandName: string;
   brandSlug: string | null;
@@ -60,21 +58,48 @@ function normalizeText(value: string): string {
 // ── Skeleton Card ──
 const SkeletonCard = ({ index }: { index: number }) => (
   <motion.div
-    initial={{ opacity: 0, y: 12 }}
+    initial={{ opacity: 0, y: 14 }}
     animate={{ opacity: 1, y: 0 }}
-    transition={{ delay: index * 0.06, duration: 0.3 }}
-    className="bg-card border border-border rounded-3xl p-4"
+    transition={{ delay: index * 0.055, duration: 0.32 }}
+    className="bg-card border border-border rounded-3xl py-3.5 px-4"
   >
     <div className="flex items-center gap-3.5">
-      <Skeleton className="w-14 h-14 rounded-2xl shrink-0" />
+      <Skeleton className="w-[52px] h-[52px] rounded-2xl shrink-0" />
       <div className="flex-1 space-y-2">
         <Skeleton className="h-4 w-36 rounded-lg" />
         <Skeleton className="h-3 w-24 rounded-lg" />
-        <Skeleton className="h-3 w-16 rounded-full mt-1" />
       </div>
+      <Skeleton className="w-[52px] h-[56px] rounded-2xl shrink-0" />
     </div>
   </motion.div>
 );
+
+// ── Distance Badge ──
+const DistanceBadge = ({ distance }: { distance: number | null }) => {
+  if (distance == null) {
+    return (
+      <div className="flex flex-col items-center justify-center bg-secondary/50 border border-border rounded-2xl px-3 py-2.5 min-w-[52px] shrink-0">
+        <Navigation2 className="w-3.5 h-3.5 text-muted-foreground/30" />
+      </div>
+    );
+  }
+
+  const isMeters = distance < 1;
+  const value = isMeters ? String(Math.round(distance * 1000)) : distance.toFixed(1);
+  const unit = isMeters ? "m" : "km";
+
+  return (
+    <div className="flex flex-col items-center justify-center bg-primary/8 border border-primary/20 rounded-2xl px-3 py-2.5 min-w-[52px] shrink-0 gap-0.5">
+      <Navigation2 className="w-3 h-3 text-primary mb-0.5" />
+      <span className="text-[15px] font-bold text-foreground leading-none font-mono tabular-nums">
+        {value}
+      </span>
+      <span className="text-[9px] text-muted-foreground/70 uppercase font-mono">
+        {unit}
+      </span>
+    </div>
+  );
+};
 
 // ── Unit Card ──
 const UnitCard = ({
@@ -89,42 +114,34 @@ const UnitCard = ({
   const logoUrl = unit.brandLogo;
   const brandInitial = unit.brandName?.[0]?.toUpperCase() ?? "?";
   const hasRating = unit.avgRating != null && unit.totalReviews > 0;
-
   const subtitle = [unit.bairro, unit.cidade].filter(Boolean).join(", ");
-
   const showUnitName = unit.nome !== unit.brandName;
-
-  const distanceText = unit.distance != null
-    ? unit.distance < 1
-      ? `● ${Math.round(unit.distance * 1000)}m de você`
-      : `● ${unit.distance.toFixed(1)}km de você`
-    : null;
 
   return (
     <motion.button
-      initial={{ opacity: 0, y: 12 }}
+      initial={{ opacity: 0, y: 14 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{
-        delay: index * 0.06,
-        duration: 0.3,
+        delay: index * 0.055,
+        duration: 0.32,
         ease: [0.22, 1, 0.36, 1],
       }}
       onClick={onClick}
       className={cn(
-        "w-full text-left bg-card border border-border rounded-3xl p-4",
-        "active:scale-[0.97] active:border-primary/20",
-        "transition-all duration-150"
+        "w-full text-left bg-card border border-border rounded-3xl py-3.5 px-4",
+        "active:scale-[0.97] active:border-primary/25",
+        "transition-all duration-[120ms]"
       )}
       style={{ WebkitTapHighlightColor: "transparent" }}
     >
       <div className="flex items-center gap-3.5">
         {/* Logo */}
-        <div className="w-14 h-14 rounded-2xl shrink-0 overflow-hidden border border-border/60">
+        <div className="w-[52px] h-[52px] rounded-2xl shrink-0 overflow-hidden border border-border/60">
           {logoUrl ? (
             <img src={logoUrl} alt={unit.brandName} className="w-full h-full object-cover" />
           ) : (
             <div className="w-full h-full flex items-center justify-center bg-secondary border border-border">
-              <span className="text-[20px] font-bold text-muted-foreground font-mono">
+              <span className="text-[20px] font-bold text-muted-foreground/60">
                 {brandInitial}
               </span>
             </div>
@@ -133,13 +150,12 @@ const UnitCard = ({
 
         {/* Text */}
         <div className="flex-1 min-w-0">
-          {/* Brand name + badges */}
           <div className="flex items-center gap-2">
             <span className="text-[15px] font-semibold text-foreground leading-tight line-clamp-1">
               {unit.brandName}
             </span>
             {unit.is_sede && (
-              <span className="text-[9px] font-bold uppercase tracking-[0.15em] bg-primary/10 text-primary border border-primary/20 rounded-full px-1.5 py-0.5 shrink-0 font-mono">
+              <span className="text-[8px] font-bold uppercase tracking-[0.15em] bg-primary/10 text-primary/90 border border-primary/20 rounded-full px-1.5 py-0.5 shrink-0 font-mono">
                 Sede
               </span>
             )}
@@ -153,33 +169,24 @@ const UnitCard = ({
             )}
           </div>
 
-          {/* Unit name (if different from brand) */}
           {showUnitName && (
-            <p className="text-[12px] text-muted-foreground/70 leading-tight line-clamp-1 mt-0.5">
+            <p className="text-[12px] text-muted-foreground/60 leading-tight line-clamp-1 mt-0.5">
               {unit.nome}
             </p>
           )}
 
-          {/* Location */}
           {subtitle && (
             <div className="flex items-center gap-1 mt-0.5">
-              <MapPin className="w-[11px] h-[11px] text-muted-foreground/50 shrink-0" />
-              <span className="text-[12px] text-muted-foreground/70 line-clamp-1">
+              <MapPin className="w-[10px] h-[10px] text-muted-foreground/40 shrink-0" />
+              <span className="text-[12px] text-muted-foreground/50 line-clamp-1">
                 {subtitle}
               </span>
             </div>
           )}
-
-          {/* Distance badge */}
-          {distanceText && (
-            <span className="inline-block mt-1.5 text-[10px] font-mono text-primary/80 bg-primary/8 border border-primary/15 rounded-full px-2 py-0.5">
-              {distanceText}
-            </span>
-          )}
         </div>
 
-        {/* Arrow */}
-        <ChevronRight className="w-4 h-4 text-muted-foreground/30 shrink-0" />
+        {/* Distance Badge */}
+        <DistanceBadge distance={unit.distance} />
       </div>
     </motion.button>
   );
@@ -196,7 +203,6 @@ const EscolherBarbearia = () => {
   const [userId, setUserId] = useState<string | null>(null);
   const [currentPreferred, setCurrentPreferred] = useState<string | null>(null);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
-  const [locationStatus, setLocationStatus] = useState<"idle" | "requesting" | "granted" | "denied">("idle");
   const [hasAutoOpened, setHasAutoOpened] = useState(false);
 
   const isChangeMode = searchParams.get("mode") === "change";
@@ -241,14 +247,10 @@ const EscolherBarbearia = () => {
 
   // ── Geolocation ──
   useEffect(() => {
-    if (!navigator.geolocation) { setLocationStatus("denied"); return; }
-    setLocationStatus("requesting");
+    if (!navigator.geolocation) return;
     navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
-        setLocationStatus("granted");
-      },
-      () => setLocationStatus("denied"),
+      (pos) => setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      () => {},
       { enableHighAccuracy: true, timeout: 8000 }
     );
   }, []);
@@ -260,7 +262,7 @@ const EscolherBarbearia = () => {
     const { data: units, error } = await supabase
       .from("tenant_unidades")
       .select(`
-        id, nome, bairro, cidade, estado, is_sede, latitude, longitude, logo_url, slogan, tenant_id,
+        id, nome, bairro, cidade, estado, is_sede, latitude, longitude, tenant_id,
         tenant:tenants!tenant_id (
           id, nome, slug, slogan, logo_url, ativo, onboarding_completed
         )
@@ -275,7 +277,6 @@ const EscolherBarbearia = () => {
       return;
     }
 
-    // Filter active+onboarded tenants, map to UnitData
     let unitList: UnitData[] = (units ?? [])
       .filter(u => {
         const t = u.tenant as unknown as TenantJoin | null;
@@ -292,10 +293,7 @@ const EscolherBarbearia = () => {
           is_sede: u.is_sede ?? false,
           latitude: u.latitude,
           longitude: u.longitude,
-          logo_url: u.logo_url,
-          slogan: u.slogan,
           tenant_id: u.tenant_id,
-          // BUG 1 FIX: logo comes from brand (tenant), NEVER from another brand
           brandName: t?.nome ?? u.nome,
           brandSlug: t?.slug ?? null,
           brandLogo: t?.logo_url ?? null,
@@ -358,7 +356,7 @@ const EscolherBarbearia = () => {
     setIsLoading(false);
   };
 
-  // ── Sort by distance (BUG 2 FIX: per-unit coordinates) ──
+  // ── Sort by distance ──
   const sortedUnits = useMemo(() => {
     const withDist = allUnits.map(u => ({
       ...u,
@@ -403,10 +401,7 @@ const EscolherBarbearia = () => {
     try {
       const { error } = await supabase
         .from("profiles")
-        .update({
-          barbearia_preferida_id: tenantId,
-          signup_origin: "discover",
-        })
+        .update({ barbearia_preferida_id: tenantId, signup_origin: "discover" })
         .eq("id", userId);
       if (error) throw error;
       toast.success(isChangeMode ? "Barbearia atualizada!" : "Barbearia selecionada!");
@@ -420,7 +415,6 @@ const EscolherBarbearia = () => {
   };
 
   const handleBack = () => navigate(isChangeMode ? "/cliente/perfil" : "/");
-
   const totalCount = filtered.length;
 
   return (
@@ -430,18 +424,19 @@ const EscolherBarbearia = () => {
         <div className="flex items-center gap-3 mb-5">
           <button
             onClick={handleBack}
-            className="w-10 h-10 flex items-center justify-center rounded-xl bg-secondary/60 border border-border/50 backdrop-blur-sm active:scale-90 transition-transform text-foreground"
+            className="w-9 h-9 flex items-center justify-center rounded-xl bg-secondary/50 border border-border/60 active:scale-[0.92] transition-transform duration-100 text-foreground shrink-0"
           >
             <ArrowLeft className="w-[18px] h-[18px]" />
           </button>
           <div>
-            <p className="text-[10px] font-mono text-primary/80 tracking-[0.2em] uppercase mb-0.5">
+            <p className="text-[10px] font-mono text-primary/70 tracking-[0.2em] uppercase mb-0.5">
               {isChangeMode ? "TROCAR BARBEARIA" : "ENCONTRE SEU ESTILO"}
             </p>
+            <h1 className="text-[26px] font-bold text-foreground leading-tight">Barbearias</h1>
             {!isLoading && (
-              <div className="flex items-center gap-1.5">
-                <span className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse" />
-                <span className="text-[13px] text-muted-foreground">
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="text-[12px] text-muted-foreground">
                   {totalCount} {totalCount === 1 ? "unidade" : "unidades"} perto de você
                 </span>
               </div>
@@ -451,20 +446,28 @@ const EscolherBarbearia = () => {
 
         {/* Search */}
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/60" />
           <input
             type="text"
-            placeholder="Buscar barbearia ou bairro..."
+            placeholder="Buscar por nome ou bairro..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className={cn(
-              "w-full h-12 pl-10 pr-4 rounded-2xl text-[14px]",
-              "bg-secondary/40 border border-border text-foreground",
+              "w-full h-12 pl-10 pr-10 rounded-2xl text-[14px]",
+              "bg-secondary/30 border border-border text-foreground",
               "placeholder:text-muted-foreground/40",
-              "focus:outline-none focus:border-primary/40",
+              "focus:outline-none focus:border-primary/30",
               "transition-colors duration-150"
             )}
           />
+          {search && (
+            <button
+              onClick={() => setSearch("")}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground/50 active:scale-90 transition-transform"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
         </div>
       </div>
 
@@ -486,19 +489,19 @@ const EscolherBarbearia = () => {
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="flex flex-col items-center py-16"
+              className="flex flex-col items-center py-20"
             >
-              <SearchX className="w-8 h-8 text-muted-foreground/20 mb-3" />
-              <p className="text-[15px] font-medium text-muted-foreground">
+              <SearchX className="w-9 h-9 text-muted-foreground/20 mb-4" />
+              <p className="text-[16px] font-medium text-muted-foreground/60">
                 Nenhuma unidade encontrada
               </p>
-              <p className="text-[13px] text-muted-foreground/50 mt-1">
+              <p className="text-[13px] text-muted-foreground/40 mt-1">
                 Tente buscar por outro nome ou bairro
               </p>
               {search && (
                 <button
                   onClick={() => setSearch("")}
-                  className="mt-3 text-[12px] text-primary/60 hover:text-primary transition-colors"
+                  className="mt-4 text-[12px] text-primary/60 hover:text-primary transition-colors"
                 >
                   Limpar busca
                 </button>
