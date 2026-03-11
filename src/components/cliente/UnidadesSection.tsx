@@ -122,16 +122,12 @@ function UnidadeDetailSheet({
                       : "bg-secondary border-border"
                   )}
                 >
-                  {unidade.foto_url ? (
-                    <img src={unidade.foto_url} alt={unidade.nome} className="w-full h-full object-cover" />
-                  ) : (
-                    <Building2
-                      className={cn(
-                        "w-6 h-6",
-                        unidade.is_sede ? "text-primary" : "text-muted-foreground"
-                      )}
-                    />
-                  )}
+                  <Building2
+                    className={cn(
+                      "w-6 h-6",
+                      unidade.is_sede ? "text-primary" : "text-muted-foreground"
+                    )}
+                  />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
