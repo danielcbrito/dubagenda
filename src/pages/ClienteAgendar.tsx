@@ -915,6 +915,17 @@ const ClienteAgendar = () => {
         return;
       }
 
+      const selectedStillAvailable = availableSlots.some(
+        (slot) => slot.available && slot.time === selectedTime
+      );
+
+      if (!selectedStillAvailable) {
+        setSelectedTime("");
+        toast.error("Esse horário ficou indisponível. Escolha outro horário.");
+        refreshSlots();
+        return;
+      }
+
       // Reschedule or Plan: go to confirmation (step 5)
       if (isRescheduling || isPlanEligible) {
         setStep(5);
