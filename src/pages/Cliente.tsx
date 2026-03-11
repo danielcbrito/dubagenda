@@ -361,7 +361,30 @@ const Cliente = () => {
               if (newData.status === 'confirmed' && payload.old.status !== 'confirmed') {
                 toast.success("✅ Agendamento confirmado pelo barbeiro!");
               } else if (newData.status === 'completed') {
-                toast.success("🎉 Atendimento concluído!");
+                // Find service name from local state for enriched toast
+                const completedApt = appointments.find(apt => apt.id === newData.id);
+                const serviceName = completedApt?.servico?.nome;
+                const currentPoints = points;
+                
+                // Optimistic points increment
+                setPoints(prev => prev + 1);
+                
+                // Enriched toast with service name
+                toast.success(
+                  serviceName 
+                    ? `🎉 ${serviceName} concluído! +1 ponto adicionado.`
+                    : "🎉 Atendimento concluído! +1 ponto adicionado."
+                );
+                
+                // Check if this point completes a free cut reward
+                if (currentPoints + 1 >= pontosNecessarios) {
+                  setTimeout(() => {
+                    toast.success("🎁 Você ganhou um corte grátis! Resgate no programa de fidelidade.");
+                  }, 1000);
+                }
+                
+                // Reload loyalty data to sync with server
+                loadLoyaltyData(userId, tenantId);
               } else if (newData.status === 'cancelled_by_admin') {
                 toast.error("❌ Agendamento cancelado pela barbearia");
               }
