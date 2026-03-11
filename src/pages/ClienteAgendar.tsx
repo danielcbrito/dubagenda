@@ -587,18 +587,17 @@ const ClienteAgendar = () => {
       const planoData = subscription.plano as any;
 
       // Calcular início do ciclo atual (next_billing_date - 1 mês)
-      const cycleStart = new Date(subscription.next_billing_date + 'T00:00:00');
+      const cycleStart = new Date(`${subscription.next_billing_date}T12:00:00`);
       cycleStart.setMonth(cycleStart.getMonth() - 1);
-      const cycleStartISO = cycleStart.toISOString();
+      const cycleStartDate = cycleStart.toISOString().split('T')[0];
 
-      // Fonte de verdade do consumo: usos vinculados à assinatura ativa NO CICLO ATUAL
+      // Fonte de verdade do consumo: mesma regra do banco/trigger
       const [usageRes, servicoRes, barbeiroRes] = await Promise.all([
-        supabase
-          .from("plano_agendamentos_usos")
-          .select("id", { count: "exact", head: true })
-          .eq("assinatura_id", subscription.id)
-          .is("released_at", null)
-          .gte("created_at", cycleStartISO),
+        supabase.rpc('count_subscription_uses_in_cycle', {
+          p_assinatura_id: subscription.id,
+          p_cycle_start: cycleStartDate,
+          p_cycle_end: subscription.next_billing_date,
+        }),
         planoData.servico_id
           ? supabase.from("servicos").select("id, nome, descricao, duracao_minutos, preco").eq("id", planoData.servico_id).single()
           : Promise.resolve({ data: null }),
@@ -607,7 +606,7 @@ const ClienteAgendar = () => {
           : Promise.resolve({ data: null }),
       ]);
 
-      const usedCount = usageRes.error ? 0 : (usageRes.count || 0);
+      const usedCount = usageRes.error ? 0 : Number(usageRes.data || 0);
 
       const activeSubscriptionData: ActiveSubscription = {
         id: subscription.id,
