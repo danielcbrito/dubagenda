@@ -16,13 +16,9 @@ import avatarElderly from "@/assets/avatar-elderly.png";
 import avatarHijab from "@/assets/avatar-hijab.png";
 import avatarBraids from "@/assets/avatar-braids.png";
 
-// DUB Logo
-import logoDub from "@/assets/logo-dub.png";
-
-/* ── Orbit config ── */
 interface OrbitItem {
   src: string;
-  angle: number;       // degrees, 0 = top
+  angle: number;
   ring: "outer" | "inner";
   size: number;
   isAvatar?: boolean;
@@ -31,24 +27,15 @@ interface OrbitItem {
 }
 
 const orbitItems: OrbitItem[] = [
-  // 12 o'clock — location pin
-  { src: orbitPin, angle: 0, ring: "outer", size: 52, bobDelay: 0 },
-  // 1:30 — girl with glasses (yellow bg)
-  { src: avatarGlassesGirl, angle: 50, ring: "outer", size: 46, isAvatar: true, avatarBg: "#FBBF24", bobDelay: 0.3 },
-  // 3 o'clock — party megaphone
-  { src: orbitParty, angle: 100, ring: "outer", size: 48, bobDelay: 0.6 },
-  // 5 o'clock — girl with braids (purple bg)
-  { src: avatarBraids, angle: 150, ring: "outer", size: 48, isAvatar: true, avatarBg: "#C084FC", bobDelay: 0.9 },
-  // 7 o'clock — purple globe
-  { src: orbitGlobe, angle: 205, ring: "outer", size: 50, bobDelay: 1.2 },
-  // 8:30 — hijab girl (light blue bg)
-  { src: avatarHijab, angle: 250, ring: "outer", size: 46, isAvatar: true, avatarBg: "#93C5FD", bobDelay: 1.5 },
-  // 10 o'clock — calendar
-  { src: orbitCalendar, angle: 295, ring: "outer", size: 48, bobDelay: 1.8 },
-  // 11 o'clock — beanie guy (orange bg)
-  { src: avatarBeanie, angle: 330, ring: "outer", size: 44, isAvatar: true, avatarBg: "#FB923C", bobDelay: 2.1 },
-  // Inner ring — elderly man (green bg)
-  { src: avatarElderly, angle: 25, ring: "inner", size: 40, isAvatar: true, avatarBg: "#86EFAC", bobDelay: 0.4 },
+  { src: orbitPin, angle: 0, ring: "outer", size: 48, bobDelay: 0 },
+  { src: avatarGlassesGirl, angle: 50, ring: "outer", size: 42, isAvatar: true, avatarBg: "#FBBF24", bobDelay: 0.3 },
+  { src: orbitParty, angle: 100, ring: "outer", size: 44, bobDelay: 0.6 },
+  { src: avatarBraids, angle: 150, ring: "outer", size: 44, isAvatar: true, avatarBg: "#C084FC", bobDelay: 0.9 },
+  { src: orbitGlobe, angle: 205, ring: "outer", size: 46, bobDelay: 1.2 },
+  { src: avatarHijab, angle: 250, ring: "outer", size: 42, isAvatar: true, avatarBg: "#93C5FD", bobDelay: 1.5 },
+  { src: orbitCalendar, angle: 295, ring: "outer", size: 44, bobDelay: 1.8 },
+  { src: avatarBeanie, angle: 330, ring: "outer", size: 40, isAvatar: true, avatarBg: "#FB923C", bobDelay: 2.1 },
+  { src: avatarElderly, angle: 25, ring: "inner", size: 36, isAvatar: true, avatarBg: "#86EFAC", bobDelay: 0.4 },
 ];
 
 const OUTER_R = 152;
@@ -56,38 +43,25 @@ const INNER_R = 95;
 
 const OrbitSystem = () => (
   <div className="relative w-[340px] h-[340px] mx-auto">
-    {/* Orbit ring lines — static, thin white/gray */}
+    {/* Orbit rings */}
     <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
       <div
         className="absolute rounded-full"
-        style={{
-          width: OUTER_R * 2,
-          height: OUTER_R * 2,
-          border: "1.5px solid rgba(180,180,180,0.25)",
-        }}
+        style={{ width: OUTER_R * 2, height: OUTER_R * 2, border: "1.5px solid rgba(180,180,180,0.25)" }}
       />
       <div
         className="absolute rounded-full"
-        style={{
-          width: INNER_R * 2,
-          height: INNER_R * 2,
-          border: "1.5px solid rgba(180,180,180,0.2)",
-        }}
+        style={{ width: INNER_R * 2, height: INNER_R * 2, border: "1.5px solid rgba(180,180,180,0.2)" }}
       />
     </div>
 
-    {/* Center sparkle */}
+    {/* Center — sparkle (the "star") larger, prominent */}
     <div className="absolute inset-0 flex items-center justify-center z-10">
       <motion.div
         animate={{ scale: [1, 1.06, 1] }}
         transition={{ duration: 3.5, repeat: Infinity, ease: "easeInOut" }}
-        className="w-[80px] h-[80px] rounded-full flex items-center justify-center"
-        style={{
-          background: "white",
-          boxShadow: "0 8px 32px rgba(0,0,0,0.08)",
-        }}
       >
-        <img src={orbitSparkle} alt="" className="w-[48px] h-[48px] object-contain" />
+        <img src={orbitSparkle} alt="" className="w-[72px] h-[72px] object-contain drop-shadow-lg" />
       </motion.div>
     </div>
 
@@ -109,33 +83,17 @@ const OrbitSystem = () => (
             height: item.size,
           }}
           animate={{ y: [0, -4, 0, 4, 0] }}
-          transition={{
-            duration: 2.8,
-            repeat: Infinity,
-            ease: "easeInOut",
-            delay: item.bobDelay || 0,
-          }}
+          transition={{ duration: 2.8, repeat: Infinity, ease: "easeInOut", delay: item.bobDelay || 0 }}
         >
           {item.isAvatar ? (
             <div
               className="w-full h-full rounded-full overflow-hidden flex items-center justify-center"
-              style={{
-                background: item.avatarBg,
-                boxShadow: "0 4px 16px rgba(0,0,0,0.1)",
-              }}
+              style={{ background: item.avatarBg, boxShadow: "0 4px 16px rgba(0,0,0,0.1)" }}
             >
-              <img
-                src={item.src}
-                alt=""
-                className="w-[85%] h-[85%] object-cover rounded-full"
-              />
+              <img src={item.src} alt="" className="w-[85%] h-[85%] object-cover rounded-full" />
             </div>
           ) : (
-            <img
-              src={item.src}
-              alt=""
-              className="w-full h-full object-contain drop-shadow-md"
-            />
+            <img src={item.src} alt="" className="w-full h-full object-contain drop-shadow-md" />
           )}
         </motion.div>
       );
@@ -167,8 +125,18 @@ const Index = () => {
           className="absolute left-[-22px] top-[42%] w-[56px] opacity-60 -rotate-[15deg] pointer-events-none"
         />
 
-        {/* Content */}
-        <div className="flex-1 flex flex-col px-6 pt-[calc(env(safe-area-inset-top,0px)+3rem)] pb-[calc(env(safe-area-inset-bottom,0px)+1rem)]">
+        <div className="flex-1 flex flex-col px-6 pt-[calc(env(safe-area-inset-top,0px)+1.5rem)] pb-[calc(env(safe-area-inset-bottom,0px)+1rem)]">
+          {/* Top — App name */}
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5, delay: 0.1 }}
+            className="text-center text-[13px] font-medium tracking-[0.1em] mb-4"
+            style={{ color: "#999", fontFamily: "'Nunito', 'Inter', sans-serif" }}
+          >
+            DUB Agenda
+          </motion.p>
+
           {/* Orbital system */}
           <motion.div
             initial={{ opacity: 0, scale: 0.92 }}
@@ -184,28 +152,23 @@ const Index = () => {
             initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, delay: 0.35, ease: [0.22, 1, 0.36, 1] }}
-            className="text-center mt-4 mb-2"
+            className="text-center mt-5 mb-2"
           >
-            {/* Brand name */}
-            <div className="flex items-center justify-center gap-1.5 mb-3">
-              <img src={logoDub} alt="DUB" className="w-6 h-6 object-contain" />
-              <span
-                className="text-[16px] font-medium tracking-[0.08em]"
-                style={{ color: "#999", fontFamily: "'Nunito', 'Inter', sans-serif" }}
-              >
-                DUB Agenda
-              </span>
-            </div>
+            <p
+              className="text-[15px] font-medium tracking-[0.12em] mb-3"
+              style={{ color: "#999", fontFamily: "'Nunito', 'Inter', sans-serif" }}
+            >
+              Agenda
+            </p>
 
-            {/* Headline */}
             <h1
-              className="text-[38px] font-extrabold leading-[1.05] tracking-tight"
+              className="text-[36px] font-light leading-[1.08] tracking-tight"
               style={{ color: "#1A1A1A", fontFamily: "'Nunito', 'Inter', sans-serif" }}
             >
               Seu Estilo
             </h1>
             <h1
-              className="text-[38px] font-extrabold leading-[1.05] tracking-tight"
+              className="text-[36px] font-light leading-[1.08] tracking-tight"
               style={{ fontFamily: "'Nunito', 'Inter', sans-serif" }}
             >
               <span
@@ -223,23 +186,17 @@ const Index = () => {
           {/* Spacer */}
           <div className="flex-1 min-h-6" />
 
-          {/* Single CTA button */}
+          {/* Single CTA */}
           <motion.div
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.6, ease: [0.22, 1, 0.36, 1] }}
-            className="w-full mb-6"
+            className="w-full mb-8"
           >
             <button
               onClick={() => navigate("/escolher-barbearia")}
               className="w-full active:scale-[0.97] transition-transform duration-150"
-              style={{
-                height: 56,
-                borderRadius: 50,
-                background: "#1C1C1E",
-                border: "none",
-                cursor: "pointer",
-              }}
+              style={{ height: 56, borderRadius: 50, background: "#1C1C1E", border: "none", cursor: "pointer" }}
             >
               <span
                 className="text-[17px] font-bold tracking-tight"
@@ -248,24 +205,6 @@ const Index = () => {
                 Encontrar Barbearias
               </span>
             </button>
-          </motion.div>
-
-          {/* Footer */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.5, delay: 0.8 }}
-            className="flex items-center justify-between pb-2"
-          >
-            <div className="flex items-center gap-1.5">
-              <img src={logoDub} alt="DUB" className="w-4 h-4 object-contain opacity-60" />
-              <span className="text-[11px] font-semibold" style={{ color: "#1A1A1A" }}>
-                DUB Agenda
-              </span>
-            </div>
-            <span className="text-[10px]" style={{ color: "#999" }}>
-              © {new Date().getFullYear()}
-            </span>
           </motion.div>
         </div>
       </div>
