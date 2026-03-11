@@ -185,8 +185,9 @@ const ClienteAgendar = () => {
   useEffect(() => {
     if (step !== 4 || !selectedTime || loadingSlots) return;
 
+    const normalizedSelectedTime = normalizeTimeValue(selectedTime);
     const selectedStillAvailable = availableSlots.some(
-      (slot) => slot.available && slot.time === selectedTime
+      (slot) => slot.available && normalizeTimeValue(slot.time) === normalizedSelectedTime
     );
 
     if (!selectedStillAvailable) {
