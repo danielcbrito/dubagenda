@@ -259,6 +259,7 @@ function AppRoutes() {
             <Route path="/b/:slug/unidades" element={<BarbershopUnidades />} />
             <Route path="/b/:slug" element={<BarbershopPublic />} />
             <Route path="/:slug" element={<BarbershopPublic />} />
+            <Route path="/flowchart" element={<Flowchart />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Suspense>
