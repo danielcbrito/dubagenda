@@ -360,8 +360,10 @@ const BarbershopPublic = () => {
   };
 
   const handleOpenMaps = () => {
-    if (tenant?.latitude != null && tenant?.longitude != null) {
-      window.open(`https://www.google.com/maps/dir/?api=1&destination=${tenant.latitude},${tenant.longitude}`, "_blank");
+    const lat = unidadeAtual?.latitude ?? tenant?.latitude;
+    const lng = unidadeAtual?.longitude ?? tenant?.longitude;
+    if (lat != null && lng != null) {
+      window.open(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`, "_blank");
     }
   };
 
