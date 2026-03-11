@@ -240,7 +240,8 @@ export function useSlotAvailability(
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
-      const data: AvailabilityResponse = await response.json();
+      const rawData: AvailabilityResponseEnvelope = await response.json();
+      const data = normalizeAvailabilityResponse(rawData);
 
       if (!data.success) {
         throw new Error(data.message || 'Erro ao verificar disponibilidade');
@@ -249,8 +250,8 @@ export function useSlotAvailability(
       // ============================================
       // PARTIAL UPDATE: Atualizar apenas slots que mudaram
       // ============================================
-      const responseSlots = data.slots ?? [];
-      const responseOccupied = data.occupiedSlots ?? [];
+      const responseSlots = data.slots;
+      const responseOccupied = data.occupiedSlots;
 
       if (isInitialLoadRef.current || forceFullUpdate || lastSlotsRef.current.length === 0) {
         // Primeiro load ou força update: substituir tudo
