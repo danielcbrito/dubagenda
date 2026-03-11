@@ -215,15 +215,18 @@ export function useSlotAvailability(
       // ============================================
       // PARTIAL UPDATE: Atualizar apenas slots que mudaram
       // ============================================
+      const responseSlots = data.slots ?? [];
+      const responseOccupied = data.occupiedSlots ?? [];
+
       if (isInitialLoadRef.current || forceFullUpdate || lastSlotsRef.current.length === 0) {
         // Primeiro load ou força update: substituir tudo
-        console.log('[useSlotAvailability] Load completo:', data.slots.length, 'slots');
-        setSlots(data.slots);
-        lastSlotsRef.current = data.slots;
+        console.log('[useSlotAvailability] Load completo:', responseSlots.length, 'slots');
+        setSlots(responseSlots);
+        lastSlotsRef.current = responseSlots;
         isInitialLoadRef.current = false;
       } else {
         // Update parcial: atualizar apenas o que mudou
-        const updatedSlots = applyPartialUpdate(lastSlotsRef.current, data.slots);
+        const updatedSlots = applyPartialUpdate(lastSlotsRef.current, responseSlots);
         
         if (updatedSlots) {
           // Contar quantos slots mudaram
@@ -242,7 +245,7 @@ export function useSlotAvailability(
         }
       }
 
-      setOccupiedSlots(data.occupiedSlots);
+      setOccupiedSlots(responseOccupied);
 
     } catch (err) {
       if (err instanceof Error && err.name === 'AbortError') {
