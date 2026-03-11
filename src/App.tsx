@@ -255,6 +255,7 @@ function AppRoutes() {
             <Route path="/cliente/barbeiro/:barberId/avaliacoes" element={<BarberReviews />} />
             <Route path="/suporte" element={<SupportChat />} />
             <Route path="/escolher-barbearia" element={<EscolherBarbearia />} />
+            <Route path="/b/:slug/unidades" element={<BarbershopUnidades />} />
             <Route path="/b/:slug" element={<BarbershopPublic />} />
             <Route path="/:slug" element={<BarbershopPublic />} />
             <Route path="*" element={<NotFound />} />

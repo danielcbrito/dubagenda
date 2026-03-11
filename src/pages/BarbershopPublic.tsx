@@ -621,12 +621,34 @@ const BarbershopPublic = () => {
           </motion.div>
         )}
 
-        {/* ── Unidades Section ── */}
-        <UnidadesSection
-          tenantId={tenant?.id ?? null}
-          tenantNome={tenant?.nome}
-          className="px-5 mb-6"
-        />
+        {/* ── Ver Unidades Row ── */}
+        {unidadesCount != null && unidadesCount >= 2 && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.28 }}
+            className="px-5 mb-6"
+          >
+            <button
+              onClick={() => navigate(`/b/${slug}/unidades`)}
+              className={cn(
+                "w-full flex items-center gap-3 px-4 h-14 rounded-2xl",
+                "bg-card border border-border",
+                "active:scale-[0.98] transition-all duration-150"
+              )}
+              style={{ WebkitTapHighlightColor: "transparent" }}
+            >
+              <Building2 className="w-[18px] h-[18px] text-muted-foreground shrink-0" />
+              <span className="flex-1 text-sm font-medium text-foreground text-left">
+                Ver todas as unidades
+              </span>
+              <span className="text-[11px] font-mono tabular-nums bg-secondary border border-border rounded-full px-2 py-0.5 text-muted-foreground">
+                {unidadesCount}
+              </span>
+              <ChevronRight className="w-4 h-4 text-muted-foreground/40 shrink-0" />
+            </button>
+          </motion.div>
+        )}
 
         {/* ── Barbers Section (ALWAYS on top) ── */}
         <motion.div
