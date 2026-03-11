@@ -479,7 +479,7 @@ const EscolherBarbearia = () => {
             </h1>
             {totalShops > 0 && !isLoading && (
               <p className="text-[10px] text-muted-foreground/35 mt-0.5 font-medium">
-                {totalShops} {totalShops === 1 ? "barbearia" : "barbearias"} perto de você
+                {totalShops} {totalShops === 1 ? "unidade" : "unidades"} perto de você
               </p>
             )}
           </div>
