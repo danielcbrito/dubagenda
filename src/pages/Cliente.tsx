@@ -348,6 +348,13 @@ const Cliente = () => {
                 setAppointments(prev => prev.filter(apt => apt.id !== newData.id));
                 return;
               }
+
+              // Optimistic local update — instant visual feedback before refetch
+              setAppointments(prev => prev.map(apt =>
+                apt.id === newData.id
+                  ? { ...apt, status: newData.status, barbeiro_confirmou: newData.barbeiro_confirmou, cliente_confirmou: newData.cliente_confirmou }
+                  : apt
+              ));
               
               loadAppointmentsData(userId);
               
