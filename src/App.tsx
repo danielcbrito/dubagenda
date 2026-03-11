@@ -40,6 +40,7 @@ const BarberReviews = lazy(() => import("./pages/BarberReviews"));
 const EscolherBarbearia = lazy(() => import("./pages/EscolherBarbearia"));
 const BarbershopPublic = lazy(() => import("./pages/BarbershopPublic"));
 const BarbershopUnidades = lazy(() => import("./pages/BarbershopUnidades"));
+const Flowchart = lazy(() => import("./pages/Flowchart"));
 
 /** Minimal loading fallback */
 function PageLoader() {
@@ -63,6 +64,7 @@ const PUBLIC_ROUTES = [
   '/esqueci-senha',
   '/resetar-senha',
   '/escolher-barbearia',
+  '/flowchart',
 ];
 
 function MaintenanceWrapper({ children }: { children: React.ReactNode }) {
@@ -258,6 +260,7 @@ function AppRoutes() {
             <Route path="/b/:slug/unidades" element={<BarbershopUnidades />} />
             <Route path="/b/:slug" element={<BarbershopPublic />} />
             <Route path="/:slug" element={<BarbershopPublic />} />
+            <Route path="/flowchart" element={<Flowchart />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Suspense>
