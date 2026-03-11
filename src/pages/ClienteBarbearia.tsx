@@ -5,6 +5,7 @@ import { ArrowLeft, MapPin, Phone, Mail, Globe, Scissors, Star, Crown, ExternalL
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import logoDub from "@/assets/logo-dub.png";
+import { UnidadesSection } from "@/components/cliente/UnidadesSection";
 
 interface BarbershopInfo {
   id: string;
