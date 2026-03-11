@@ -5,6 +5,7 @@ import { ArrowLeft, MapPin, Phone, Mail, Globe, Scissors, Star, Crown, ExternalL
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import logoDub from "@/assets/logo-dub.png";
+import { UnidadesSection } from "@/components/cliente/UnidadesSection";
 
 interface BarbershopInfo {
   id: string;
@@ -221,6 +222,16 @@ export default function ClienteBarbearia() {
             )}
           </div>
         </motion.div>
+
+        {/* Unidades */}
+        <UnidadesSection
+          tenantId={barbershop?.id ?? null}
+          tenantNome={name}
+          onAgendar={(unidadeId) => {
+            navigate(`/cliente/agendar?unidade=${unidadeId}`);
+          }}
+          className="mb-6"
+        />
       </div>
     </div>
   );

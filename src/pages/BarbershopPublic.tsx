@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import logoDub from "@/assets/logo-dub.png";
 import { BarberProfileSheet } from "@/components/discover/BarberProfileSheet";
+import { UnidadesSection } from "@/components/cliente/UnidadesSection";
 import { PortfolioGallery } from "@/components/portfolio/PortfolioGallery";
 import googleMapsIcon from "@/assets/google-maps-icon.png";
 
@@ -619,6 +620,13 @@ const BarbershopPublic = () => {
             </button>
           </motion.div>
         )}
+
+        {/* ── Unidades Section ── */}
+        <UnidadesSection
+          tenantId={tenant?.id ?? null}
+          tenantNome={tenant?.nome}
+          className="px-5 mb-6"
+        />
 
         {/* ── Barbers Section (ALWAYS on top) ── */}
         <motion.div
