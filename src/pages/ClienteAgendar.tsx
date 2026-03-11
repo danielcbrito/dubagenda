@@ -370,10 +370,8 @@ const ClienteAgendar = () => {
           setSelectedServices([includedService]);
           if (subscription.barbeiro) {
             setStep(3); // barber + service pre-selected → date
-          } else if (units.length > 1 && !effectiveUnitId) {
-            setStep(0); // need unit selection first, then barber
           } else {
-            setStep(1); // go to barber selection (step 1 = barber)
+            setStep(1); // go to barber selection
           }
           setIsInitializing(false);
           return;
@@ -389,21 +387,13 @@ const ClienteAgendar = () => {
       // Normal flow: if multiple units and no preferred, start at unit selection (step 0)
       // Otherwise start at barber selection (step 1)
       console.log("[initializeBooking] Decision:", { unitsCount: units.length, effectiveUnitId, hasMultipleUnits: units.length > 1 });
-      if (units.length > 1 && !effectiveUnitId) {
-        setStep(0);
-      } else {
-        setStep(1);
-      }
+      setStep(1);
       setIsInitializing(false);
       } catch (err) {
         console.error("[initializeBooking] Fatal error:", err);
         setIsInitializing(false);
         // Fallback: try to show unit selection or barber selection
-        if (tenantUnits.length > 1) {
-          setStep(0);
-        } else {
-          setStep(1);
-        }
+        setStep(1);
       }
     };
 
@@ -1644,19 +1634,9 @@ const ClienteAgendar = () => {
   const canUseRedemption = availableRedemptions.length > 0 && !!getCorteService();
 
   const handleBack = () => {
-    // Step 0 (Unidade) — volta para home
-    if (step === 0) {
+    // Step 1 (Barbeiro) — volta para home
+    if (step <= 1) {
       navigate("/cliente");
-      return;
-    }
-
-    // Step 1 (Barbeiro) — volta para unidade ou home
-    if (step === 1) {
-      if (hasMultipleUnits && !preferredUnitId) {
-        setStep(0); // Volta para unidade
-      } else {
-        navigate("/cliente");
-      }
       return;
     }
 
@@ -1684,16 +1664,13 @@ const ClienteAgendar = () => {
   };
 
   const planNeedsService = isPlanFlow && !activeSubscription?.servico_id;
-  const showsUnitStep = hasMultipleUnits && !preferredUnitId;
 
-  // Build visible steps for the current flow
+  // Build visible steps for the current flow (unit step removed — always skip)
   const visibleSteps = (() => {
     const skipBarber = (isPlanFlow && activeSubscription?.barbeiro) || isRescheduling;
     const skipService = (isPlanFlow && activeSubscription?.servico_id) || isRescheduling;
-    const skipUnit = !showsUnitStep || skipBarber;
 
     const steps: number[] = [];
-    if (!skipUnit) steps.push(0); // Unit FIRST
     if (!skipBarber) steps.push(1); // Barber
     if (!skipService) steps.push(2); // Service
     steps.push(3); // Date
@@ -1792,51 +1769,6 @@ const ClienteAgendar = () => {
 
       {/* Content */}
       <AnimatePresence mode="wait">
-        {/* STEP 0: ESCOLHER UNIDADE (primeira etapa — se barbearia tem múltiplas unidades) */}
-        {step === 0 && hasMultipleUnits && (
-          <motion.div
-            key="step-0-unit"
-            variants={pageVariants}
-            initial="initial"
-            animate="animate"
-            exit="exit"
-            transition={{ duration: 0.25 }}
-            className="min-h-screen pt-16 pb-32 px-4"
-          >
-            <div className="max-w-2xl mx-auto">
-              <div className="mb-6 pt-1">
-                <h2 className="text-xl font-semibold text-foreground">
-                  Qual unidade?
-                </h2>
-                <p className="text-[12px] text-muted-foreground/60 mt-1">
-                  Escolha onde quer ser atendido
-                </p>
-              </div>
-
-              <UnitSelector
-                units={tenantUnits}
-                selectedUnit={selectedUnit}
-                preferredUnitId={preferredUnitId}
-                userId={userId}
-                onSelect={(unit) => {
-                  setSelectedUnit(unit);
-                }}
-                onPreferredChange={(newId) => {
-                  setPreferredUnitId(newId);
-                }}
-              />
-            </div>
-
-            <FloatingActionBar
-              isVisible={!!selectedUnit}
-              onContinue={handleNextStep}
-              label="Continuar"
-              subtitle={selectedUnit?.nome || ""}
-              icon={<MapPin className="w-4 h-4 text-primary" />}
-            />
-          </motion.div>
-        )}
-
         {/* STEP 1: ESCOLHER BARBEIRO */}
         {step === 1 && (
           <motion.div
