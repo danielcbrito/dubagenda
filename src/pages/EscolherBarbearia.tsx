@@ -24,6 +24,8 @@ interface Tenant {
   avgRating?: number | null;
   totalReviews?: number;
   isDub?: boolean;
+  is_sede?: boolean;
+  tenant_id?: string;
 }
 
 // ── Utils ──
@@ -136,6 +138,11 @@ const BarbershopCard = ({
             <span className="text-[14px] font-semibold text-foreground truncate leading-tight">
               {tenant.nome}
             </span>
+            {tenant.is_sede && (
+              <span className="text-[9px] font-bold uppercase tracking-widest bg-primary/10 text-primary border border-primary/20 rounded-full px-1.5 py-0.5 shrink-0 font-mono">
+                Sede
+              </span>
+            )}
             {hasRating && (
               <span className="flex items-center gap-0.5 shrink-0">
                 <Star className="w-[10px] h-[10px] fill-amber-400 text-amber-400" />
@@ -213,13 +220,13 @@ const EscolherBarbearia = () => {
   useEffect(() => {
     if (!shouldOpenCurrent || isLoading || hasAutoOpened) return;
     setHasAutoOpened(true);
-    const targetId = currentPreferred || allTenants.find(t => t.isDub)?.id;
-    if (targetId) {
-      const target = allTenants.find(t => t.id === targetId);
-      if (target) {
-        const slug = target.slug || target.id;
-        navigate(`/${slug}?from=${isChangeMode ? "change" : "discover"}`, { replace: true });
-      }
+    // currentPreferred is a tenant_id — find any unit of that tenant
+    const target = currentPreferred
+      ? allTenants.find(t => t.tenant_id === currentPreferred)
+      : allTenants.find(t => t.isDub);
+    if (target) {
+      const targetSlug = target.slug || target.id;
+      navigate(`/${targetSlug}?from=${isChangeMode ? "change" : "discover"}`, { replace: true });
     }
   }, [shouldOpenCurrent, isLoading, hasAutoOpened, currentPreferred, allTenants]);
 
@@ -237,31 +244,65 @@ const EscolherBarbearia = () => {
     );
   }, []);
 
-  // ── Load tenants (unified list) ──
+  // ── Load units (one row per physical location) ──
   const loadTenants = async () => {
     setIsLoading(true);
-    const { data, error } = await supabase
-      .from("tenants")
-      .select("id, nome, slug, slogan, logo_url, cidade, bairro, estado, latitude, longitude")
-      .eq("ativo", true)
-      .eq("onboarding_completed", true)
-      .order("nome");
+
+    // Fetch all active units with their parent tenant data
+    const { data: units, error } = await supabase
+      .from("tenant_unidades")
+      .select(`
+        id, nome, bairro, cidade, estado, is_sede, latitude, longitude, logo_url, slogan, tenant_id,
+        tenant:tenants!tenant_id (
+          id, nome, slug, slogan, logo_url, ativo, onboarding_completed
+        )
+      `)
+      .eq("ativo", true);
 
     if (error) {
-      console.error("Erro ao carregar barbearias:", error);
+      console.error("Erro ao carregar unidades:", error);
       toast.error("Erro ao carregar barbearias");
       setAllTenants([]);
       setIsLoading(false);
       return;
     }
 
-    let tenantList = (data as Tenant[]) || [];
+    // Filter: only units whose parent tenant is active and onboarded
+    // Map to Tenant shape
+    interface TenantJoin {
+      id: string;
+      nome: string;
+      slug: string | null;
+      slogan: string | null;
+      logo_url: string | null;
+      ativo: boolean;
+      onboarding_completed: boolean;
+    }
 
-    // Mark DUB tenant
-    tenantList = tenantList.map(t => ({
-      ...t,
-      isDub: normalizeText(t.slug ?? "") === "barbeariadub" || normalizeText(t.nome) === "barbeariadub",
-    }));
+    let tenantList: Tenant[] = (units ?? [])
+      .filter(u => {
+        const t = u.tenant as unknown as TenantJoin | null;
+        return t?.ativo && t?.onboarding_completed;
+      })
+      .map(u => {
+        const t = u.tenant as unknown as TenantJoin;
+        const isDub = normalizeText(t?.slug ?? "") === "barbeariadub" || normalizeText(t?.nome ?? "") === "barbeariadub";
+        return {
+          id: u.id,
+          nome: u.nome,
+          slug: t?.slug || t?.id || null,
+          slogan: u.slogan || t?.slogan || null,
+          logo_url: u.logo_url || t?.logo_url || null,
+          cidade: u.cidade,
+          bairro: u.bairro,
+          estado: u.estado,
+          latitude: u.latitude,
+          longitude: u.longitude,
+          is_sede: u.is_sede,
+          tenant_id: u.tenant_id,
+          isDub,
+        };
+      });
 
     // Apply DUB fallbacks
     tenantList = tenantList.map(t => {
@@ -278,8 +319,7 @@ const EscolherBarbearia = () => {
       };
     });
 
-    // Filter only tenants with active barbers (DUB also includes global barbers)
-    const tenantIds = tenantList.map(t => t.id);
+    // Filter only units whose tenant has active barbers
     const { data: barbers } = await supabase
       .from("barbeiros")
       .select("id, tenant_id")
@@ -289,15 +329,14 @@ const EscolherBarbearia = () => {
     const activeTenantIds = new Set(
       (barbers ?? []).map(b => b.tenant_id).filter((tid): tid is string => !!tid)
     );
-    // DUB also counts global barbers (tenant_id IS NULL)
     const hasGlobalBarbers = (barbers ?? []).some(b => !b.tenant_id);
-    
+
     tenantList = tenantList.filter(t => {
       if (t.isDub && hasGlobalBarbers) return true;
-      return activeTenantIds.has(t.id);
+      return t.tenant_id ? activeTenantIds.has(t.tenant_id) : false;
     });
 
-    // Load ratings
+    // Load ratings (aggregate per tenant_id, apply to all units of that tenant)
     if (barbers && barbers.length > 0) {
       const barberIds = barbers.map(b => b.id);
       const { data: reviews } = await supabase
@@ -308,11 +347,10 @@ const EscolherBarbearia = () => {
       if (reviews && reviews.length > 0) {
         const barberToTenant = new Map(barbers.map(b => [b.id, b.tenant_id]));
         const tenantRatings = new Map<string, { sum: number; count: number }>();
-        const dubTenantId = tenantList.find(t => t.isDub)?.id;
+        const dubTenantId = tenantList.find(t => t.isDub)?.tenant_id;
 
         for (const r of reviews) {
           const tid = barberToTenant.get(r.barber_id);
-          // Global barbers (null tenant_id) count for DUB
           const effectiveTid = tid || dubTenantId;
           if (!effectiveTid) continue;
           const cur = tenantRatings.get(effectiveTid) || { sum: 0, count: 0 };
@@ -322,7 +360,8 @@ const EscolherBarbearia = () => {
         }
 
         for (const t of tenantList) {
-          const stats = tenantRatings.get(t.id);
+          if (!t.tenant_id) continue;
+          const stats = tenantRatings.get(t.tenant_id);
           if (stats) {
             t.avgRating = stats.sum / stats.count;
             t.totalReviews = stats.count;
@@ -378,18 +417,19 @@ const EscolherBarbearia = () => {
   }, [sortedTenants, search]);
 
   // ── Handlers ──
-  const handleSelect = async (tenantId: string) => {
+  const handleSelect = async (unitId: string) => {
     if (saving) return;
-    const tenant = allTenants.find(t => t.id === tenantId);
+    const unit = allTenants.find(t => t.id === unitId);
+    const tenantId = unit?.tenant_id || unitId;
     if (!isAuthenticated) {
       navigate(`/auth?mode=signup&origin=discover&tenant=${tenantId}`);
       return;
     }
-    setSaving(tenantId);
+    setSaving(unitId);
     try {
       const updateData = {
         barbearia_preferida_id: tenantId,
-        signup_origin: tenant?.isDub ? "dub_exclusive" : "discover",
+        signup_origin: unit?.isDub ? "dub_exclusive" : "discover",
       };
 
       const { error } = await supabase
@@ -410,9 +450,9 @@ const EscolherBarbearia = () => {
 
   const handleBack = () => navigate(isChangeMode ? "/cliente/perfil" : "/");
 
-
-  const isTenantCurrent = (tenantId: string) => {
-    return currentPreferred === tenantId;
+  const isTenantCurrent = (unitId: string) => {
+    const unit = allTenants.find(t => t.id === unitId);
+    return currentPreferred === (unit?.tenant_id || unitId);
   };
 
   // ── Stats bar ──
@@ -439,7 +479,7 @@ const EscolherBarbearia = () => {
             </h1>
             {totalShops > 0 && !isLoading && (
               <p className="text-[10px] text-muted-foreground/35 mt-0.5 font-medium">
-                {totalShops} {totalShops === 1 ? "barbearia" : "barbearias"} perto de você
+                {totalShops} {totalShops === 1 ? "unidade" : "unidades"} perto de você
               </p>
             )}
           </div>
