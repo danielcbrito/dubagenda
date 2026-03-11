@@ -17,10 +17,7 @@ interface Unidade {
   bairro: string | null;
   cidade: string | null;
   estado: string | null;
-  endereco: string | null;
-  telefone: string | null;
   is_sede: boolean;
-  foto_url: string | null;
 }
 
 interface Barbeiro {
