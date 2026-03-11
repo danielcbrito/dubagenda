@@ -575,11 +575,17 @@ const Cliente = () => {
         setExpiredSubscription(null);
         setPendingSubscription(null);
 
+        // Calcular início do ciclo atual (next_billing_date - 1 mês)
+        const cycleStart = new Date(activeSub.next_billing_date + 'T00:00:00');
+        cycleStart.setMonth(cycleStart.getMonth() - 1);
+        const cycleStartISO = cycleStart.toISOString();
+
         const { count: usageCount } = await supabase
           .from("plano_agendamentos_usos")
           .select("id", { count: 'exact', head: true })
           .eq("assinatura_id", activeSub.id)
-          .is("released_at", null);
+          .is("released_at", null)
+          .gte("created_at", cycleStartISO);
 
         finalPlanUsageCount = usageCount || 0;
         setPlanUsageCount(finalPlanUsageCount);
