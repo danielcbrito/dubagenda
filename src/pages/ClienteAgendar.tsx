@@ -586,13 +586,19 @@ const ClienteAgendar = () => {
 
       const planoData = subscription.plano as any;
 
-      // Fonte de verdade do consumo: usos vinculados à assinatura ativa
+      // Calcular início do ciclo atual (next_billing_date - 1 mês)
+      const cycleStart = new Date(subscription.next_billing_date + 'T00:00:00');
+      cycleStart.setMonth(cycleStart.getMonth() - 1);
+      const cycleStartISO = cycleStart.toISOString();
+
+      // Fonte de verdade do consumo: usos vinculados à assinatura ativa NO CICLO ATUAL
       const [usageRes, servicoRes, barbeiroRes] = await Promise.all([
         supabase
           .from("plano_agendamentos_usos")
           .select("id", { count: "exact", head: true })
           .eq("assinatura_id", subscription.id)
-          .is("released_at", null),
+          .is("released_at", null)
+          .gte("created_at", cycleStartISO),
         planoData.servico_id
           ? supabase.from("servicos").select("id, nome, descricao, duracao_minutos, preco").eq("id", planoData.servico_id).single()
           : Promise.resolve({ data: null }),
