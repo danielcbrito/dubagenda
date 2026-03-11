@@ -531,6 +531,9 @@ const ClienteAgendar = () => {
   const loadUserCreditsOptimized = async (uid: string | null) => {
     if (!uid) return;
     try {
+      // Ensure session is fresh before calling edge functions
+      await supabase.auth.refreshSession();
+
       // Parallel: credits RPC + wallet edge function
       const [creditsResult, walletResult] = await Promise.all([
         supabase.rpc("get_user_available_credits", { p_user_id: uid }),
