@@ -372,8 +372,6 @@ const ClienteAgendar = () => {
             setStep(3); // barber + service pre-selected → date
           } else {
             setStep(1); // go to barber selection
-          } else {
-            setStep(1); // go to barber selection (step 1 = barber)
           }
           setIsInitializing(false);
           return;
