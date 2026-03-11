@@ -370,8 +370,8 @@ const ClienteAgendar = () => {
           setSelectedServices([includedService]);
           if (subscription.barbeiro) {
             setStep(3); // barber + service pre-selected → date
-          } else if (units.length > 1 && !effectiveUnitId) {
-            setStep(0); // need unit selection first, then barber
+          } else {
+            setStep(1); // go to barber selection
           } else {
             setStep(1); // go to barber selection (step 1 = barber)
           }
