@@ -244,31 +244,65 @@ const EscolherBarbearia = () => {
     );
   }, []);
 
-  // ── Load tenants (unified list) ──
+  // ── Load units (one row per physical location) ──
   const loadTenants = async () => {
     setIsLoading(true);
-    const { data, error } = await supabase
-      .from("tenants")
-      .select("id, nome, slug, slogan, logo_url, cidade, bairro, estado, latitude, longitude")
-      .eq("ativo", true)
-      .eq("onboarding_completed", true)
-      .order("nome");
+
+    // Fetch all active units with their parent tenant data
+    const { data: units, error } = await supabase
+      .from("tenant_unidades")
+      .select(`
+        id, nome, bairro, cidade, estado, is_sede, latitude, longitude, logo_url, slogan, tenant_id,
+        tenant:tenants!tenant_id (
+          id, nome, slug, slogan, logo_url, ativo, onboarding_completed
+        )
+      `)
+      .eq("ativo", true);
 
     if (error) {
-      console.error("Erro ao carregar barbearias:", error);
+      console.error("Erro ao carregar unidades:", error);
       toast.error("Erro ao carregar barbearias");
       setAllTenants([]);
       setIsLoading(false);
       return;
     }
 
-    let tenantList = (data as Tenant[]) || [];
+    // Filter: only units whose parent tenant is active and onboarded
+    // Map to Tenant shape
+    interface TenantJoin {
+      id: string;
+      nome: string;
+      slug: string | null;
+      slogan: string | null;
+      logo_url: string | null;
+      ativo: boolean;
+      onboarding_completed: boolean;
+    }
 
-    // Mark DUB tenant
-    tenantList = tenantList.map(t => ({
-      ...t,
-      isDub: normalizeText(t.slug ?? "") === "barbeariadub" || normalizeText(t.nome) === "barbeariadub",
-    }));
+    let tenantList: Tenant[] = (units ?? [])
+      .filter(u => {
+        const t = u.tenant as unknown as TenantJoin | null;
+        return t?.ativo && t?.onboarding_completed;
+      })
+      .map(u => {
+        const t = u.tenant as unknown as TenantJoin;
+        const isDub = normalizeText(t?.slug ?? "") === "barbeariadub" || normalizeText(t?.nome ?? "") === "barbeariadub";
+        return {
+          id: u.id,
+          nome: u.nome,
+          slug: t?.slug || t?.id || null,
+          slogan: u.slogan || t?.slogan || null,
+          logo_url: u.logo_url || t?.logo_url || null,
+          cidade: u.cidade,
+          bairro: u.bairro,
+          estado: u.estado,
+          latitude: u.latitude,
+          longitude: u.longitude,
+          is_sede: u.is_sede,
+          tenant_id: u.tenant_id,
+          isDub,
+        };
+      });
 
     // Apply DUB fallbacks
     tenantList = tenantList.map(t => {
@@ -285,8 +319,7 @@ const EscolherBarbearia = () => {
       };
     });
 
-    // Filter only tenants with active barbers (DUB also includes global barbers)
-    const tenantIds = tenantList.map(t => t.id);
+    // Filter only units whose tenant has active barbers
     const { data: barbers } = await supabase
       .from("barbeiros")
       .select("id, tenant_id")
@@ -296,15 +329,14 @@ const EscolherBarbearia = () => {
     const activeTenantIds = new Set(
       (barbers ?? []).map(b => b.tenant_id).filter((tid): tid is string => !!tid)
     );
-    // DUB also counts global barbers (tenant_id IS NULL)
     const hasGlobalBarbers = (barbers ?? []).some(b => !b.tenant_id);
-    
+
     tenantList = tenantList.filter(t => {
       if (t.isDub && hasGlobalBarbers) return true;
-      return activeTenantIds.has(t.id);
+      return t.tenant_id ? activeTenantIds.has(t.tenant_id) : false;
     });
 
-    // Load ratings
+    // Load ratings (aggregate per tenant_id, apply to all units of that tenant)
     if (barbers && barbers.length > 0) {
       const barberIds = barbers.map(b => b.id);
       const { data: reviews } = await supabase
@@ -315,11 +347,10 @@ const EscolherBarbearia = () => {
       if (reviews && reviews.length > 0) {
         const barberToTenant = new Map(barbers.map(b => [b.id, b.tenant_id]));
         const tenantRatings = new Map<string, { sum: number; count: number }>();
-        const dubTenantId = tenantList.find(t => t.isDub)?.id;
+        const dubTenantId = tenantList.find(t => t.isDub)?.tenant_id;
 
         for (const r of reviews) {
           const tid = barberToTenant.get(r.barber_id);
-          // Global barbers (null tenant_id) count for DUB
           const effectiveTid = tid || dubTenantId;
           if (!effectiveTid) continue;
           const cur = tenantRatings.get(effectiveTid) || { sum: 0, count: 0 };
@@ -329,7 +360,8 @@ const EscolherBarbearia = () => {
         }
 
         for (const t of tenantList) {
-          const stats = tenantRatings.get(t.id);
+          if (!t.tenant_id) continue;
+          const stats = tenantRatings.get(t.tenant_id);
           if (stats) {
             t.avgRating = stats.sum / stats.count;
             t.totalReviews = stats.count;
