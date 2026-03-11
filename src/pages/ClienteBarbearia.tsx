@@ -74,7 +74,7 @@ export default function ClienteBarbearia() {
     if (prof?.barbearia_preferida_id) {
       const { data: tenant } = await supabase
         .from("tenants")
-        .select("id, nome, slogan, logo_url, telefone, whatsapp, email, site, rua, numero, bairro, cidade, estado, endereco_completo")
+        .select("id, nome, slug, slogan, logo_url, telefone, whatsapp, email, site, rua, numero, bairro, cidade, estado, endereco_completo")
         .eq("id", prof.barbearia_preferida_id)
         .single();
       if (tenant) setBarbershop(tenant);
