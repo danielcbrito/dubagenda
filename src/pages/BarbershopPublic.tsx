@@ -5,8 +5,8 @@ import { Star, MapPin, Navigation, Scissors, Users, Loader2, ExternalLink, Chevr
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import logoDub from "@/assets/logo-dub.png";
+import { useQuery } from "@tanstack/react-query";
 import { BarberProfileSheet } from "@/components/discover/BarberProfileSheet";
-import { UnidadesSection } from "@/components/cliente/UnidadesSection";
 import { PortfolioGallery } from "@/components/portfolio/PortfolioGallery";
 import googleMapsIcon from "@/assets/google-maps-icon.png";
 
