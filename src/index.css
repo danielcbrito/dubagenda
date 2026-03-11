@@ -20,64 +20,64 @@ All colors MUST be HSL. */
 
 @layer base {
   :root {
-    /* 🎨 PURE BLACK PREMIUM THEME (default = dark) */
+    /* 🎨 TWEAKCN DARK PREMIUM THEME (default = dark) */
     
-    /* Backgrounds - Preto puro #000000 para máximo contraste */
-    --background: 0 0% 0%;      /* #000000 */
-    --background-elevated: 0 0% 4%;
-    --foreground: 0 0% 100%;    /* #FFFFFF */
+    /* Backgrounds */
+    --background: 0 0% 5%;
+    --background-elevated: 0 0% 8%;
+    --foreground: 0 0% 96%;
 
-    /* Cards — sutilmente elevados */
-    --card: 0 0% 7%;            /* #111111 */
-    --card-elevated: 0 0% 10%;
-    --card-foreground: 0 0% 100%;
+    /* Cards */
+    --card: 0 0% 5%;
+    --card-elevated: 0 0% 9%;
+    --card-foreground: 0 0% 96%;
 
-    --popover: 0 0% 7%;
-    --popover-foreground: 0 0% 100%;
+    --popover: 0 0% 5%;
+    --popover-foreground: 0 0% 96%;
 
-    /* Vermelho Premium */
-    --primary: 0 78% 57%;
-    --primary-glow: 0 78% 67%;
-    --primary-foreground: 0 0% 100%;
+    /* Primary — Vermelho Premium */
+    --primary: 0 78% 45%;
+    --primary-glow: 0 78% 55%;
+    --primary-foreground: 0 0% 96%;
 
     /* Secondary */
     --secondary: 0 0% 14%;
-    --secondary-foreground: 0 0% 94%;
+    --secondary-foreground: 0 0% 96%;
 
-    --muted: 0 0% 16%;
-    --muted-foreground: 0 0% 70%;  /* #B3B3B3 — WCAG AA em #000 */
+    --muted: 0 0% 14%;
+    --muted-foreground: 0 0% 64%;
 
-    --accent: 0 78% 57%;
-    --accent-foreground: 0 0% 100%;
+    --accent: 0 30% 12%;
+    --accent-foreground: 0 25% 85%;
 
     /* Dourado */
     --gold: 40 65% 55%;
     --gold-glow: 40 65% 65%;
     --gold-foreground: 0 0% 10%;
 
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 100%;
+    --destructive: 0 50% 30%;
+    --destructive-foreground: 0 0% 96%;
 
     --success: 142 76% 45%;
     --success-foreground: 0 0% 100%;
 
-    /* Bordas — mais visíveis no preto puro */
-    --border: 0 0% 15%;         /* #262626 */
-    --border-glow: 0 78% 57% / 0.3;
-    --input: 0 0% 14%;
-    --ring: 0 78% 55%;
+    /* Bordas */
+    --border: 0 0% 18%;
+    --border-glow: 0 78% 45% / 0.3;
+    --input: 0 0% 18%;
+    --ring: 0 78% 45%;
 
-    --radius: 0.875rem;
+    --radius: 0.5rem;
 
     /* GRADIENTES */
-    --gradient-primary: linear-gradient(135deg, hsl(0 78% 55%), hsl(0 78% 45%));
-    --gradient-primary-glow: linear-gradient(135deg, hsl(0 78% 65%), hsl(0 78% 55%));
+    --gradient-primary: linear-gradient(135deg, hsl(0 78% 45%), hsl(0 78% 38%));
+    --gradient-primary-glow: linear-gradient(135deg, hsl(0 78% 55%), hsl(0 78% 45%));
     --gradient-gold: linear-gradient(135deg, hsl(40 65% 55%), hsl(40 65% 45%));
     --gradient-titanium: linear-gradient(180deg, hsl(0 0% 10%), hsl(0 0% 6%));
     --gradient-metallic: linear-gradient(135deg, hsl(0 0% 12%), hsl(0 0% 7%));
     --gradient-glass: linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.01));
     --gradient-glass-dark: linear-gradient(135deg, rgba(18,18,18,0.95), rgba(8,8,8,0.98));
-    --gradient-red-neon: linear-gradient(90deg, transparent, hsl(0 78% 55% / 0.3), transparent);
+    --gradient-red-neon: linear-gradient(90deg, transparent, hsl(0 78% 45% / 0.3), transparent);
     --gradient-shine: linear-gradient(135deg, transparent 30%, rgba(255,255,255,0.08) 50%, transparent 70%);
     
     /* GLASSMORPHISM */
@@ -88,16 +88,16 @@ All colors MUST be HSL. */
     --glass-blur: blur(14px);
 
     /* SHADOWS */
-    --shadow-premium: 0 10px 40px -10px rgba(0, 0, 0, 0.6), 0 4px 20px rgba(0, 0, 0, 0.3);
-    --shadow-premium-hover: 0 20px 60px -10px rgba(0, 0, 0, 0.7), 0 8px 30px rgba(0, 0, 0, 0.4);
-    --shadow-glow-red: 0 0 40px rgba(219, 59, 59, 0.2), 0 0 80px rgba(219, 59, 59, 0.08);
-    --shadow-glow-red-intense: 0 0 50px rgba(219, 59, 59, 0.3), 0 0 100px rgba(219, 59, 59, 0.12);
+    --shadow-premium: 0 4px 15px 0px rgba(0, 0, 0, 0.50), 0 1px 2px -1px rgba(0, 0, 0, 0.50);
+    --shadow-premium-hover: 0 8px 20px -1px rgba(0, 0, 0, 0.50), 0 4px 6px -1px rgba(0, 0, 0, 0.50);
+    --shadow-glow-red: 0 0 40px rgba(180, 50, 50, 0.2), 0 0 80px rgba(180, 50, 50, 0.08);
+    --shadow-glow-red-intense: 0 0 50px rgba(180, 50, 50, 0.3), 0 0 100px rgba(180, 50, 50, 0.12);
     --shadow-glow-gold: 0 0 30px rgba(209, 168, 84, 0.2), 0 0 60px rgba(209, 168, 84, 0.1);
     --shadow-inset-glass: inset 0 1px 0 rgba(255, 255, 255, 0.05), inset 0 -1px 0 rgba(0, 0, 0, 0.2);
-    --shadow-soft: 0 4px 24px rgba(0, 0, 0, 0.5);
-    --shadow-card: 0 8px 32px rgba(0, 0, 0, 0.4);
-    --shadow-elegant: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
-    --shadow-glow: 0 0 50px rgba(219, 59, 59, 0.25);
+    --shadow-soft: 0 4px 15px rgba(0, 0, 0, 0.50);
+    --shadow-card: 0 4px 15px rgba(0, 0, 0, 0.25);
+    --shadow-elegant: 0 4px 15px -1px rgba(0, 0, 0, 0.50);
+    --shadow-glow: 0 0 50px rgba(180, 50, 50, 0.25);
     --shadow-inset-titanium: inset 0 1px 0 rgba(255,255,255,0.04);
 
     /* EFEITOS */
@@ -111,57 +111,57 @@ All colors MUST be HSL. */
     --transition-bounce: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
   }
 
-  /* ☀️ LIGHT THEME — Premium Branco com Alto Contraste WCAG AAA */
+  /* ☀️ LIGHT THEME — tweakcn Premium */
   .light {
-    --background: 0 0% 100%;      /* #FFFFFF */
+    --background: 0 0% 100%;
     --background-elevated: 0 0% 98%;
-    --foreground: 0 0% 0%;        /* #000000 — máximo contraste */
+    --foreground: 0 0% 9%;
 
     --card: 0 0% 100%;
     --card-elevated: 0 0% 100%;
-    --card-foreground: 0 0% 0%;
+    --card-foreground: 0 0% 9%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 0%;
+    --popover-foreground: 0 0% 9%;
 
-    /* Vermelho Premium — forte e acessível */
-    --primary: 0 85% 42%;
-    --primary-glow: 0 85% 52%;
-    --primary-foreground: 0 0% 100%;
+    /* Primary — Vermelho Premium */
+    --primary: 0 78% 45%;
+    --primary-glow: 0 78% 55%;
+    --primary-foreground: 0 0% 96%;
 
-    /* Secondary — definido */
-    --secondary: 0 0% 96%;
-    --secondary-foreground: 0 0% 6%;
+    /* Secondary */
+    --secondary: 0 0% 95%;
+    --secondary-foreground: 0 0% 8%;
 
-    --muted: 0 0% 96%;
-    --muted-foreground: 0 0% 29%;  /* #4A4A4A — WCAG AA em branco */
+    --muted: 0 0% 95%;
+    --muted-foreground: 0 0% 45%;
 
-    --accent: 0 85% 42%;
-    --accent-foreground: 0 0% 100%;
+    --accent: 0 15% 95%;
+    --accent-foreground: 0 78% 45%;
 
     /* Dourado */
     --gold: 40 75% 38%;
     --gold-glow: 40 75% 48%;
     --gold-foreground: 0 0% 100%;
 
-    --destructive: 0 84% 45%;
-    --destructive-foreground: 0 0% 100%;
+    --destructive: 0 70% 50%;
+    --destructive-foreground: 0 0% 96%;
 
     --success: 142 76% 30%;
     --success-foreground: 0 0% 100%;
 
-    /* Bordas — mais visíveis */
-    --border: 0 0% 83%;           /* #D4D4D4 */
-    --border-glow: 0 85% 42% / 0.2;
-    --input: 0 0% 89%;
-    --ring: 0 85% 42%;
+    /* Bordas */
+    --border: 0 0% 87%;
+    --border-glow: 0 78% 45% / 0.2;
+    --input: 0 0% 87%;
+    --ring: 0 78% 45%;
 
     /* GRADIENTES LIGHT */
     --gradient-titanium: linear-gradient(180deg, hsl(0 0% 100%), hsl(0 0% 97%));
     --gradient-metallic: linear-gradient(135deg, hsl(0 0% 98%), hsl(0 0% 94%));
     --gradient-glass: linear-gradient(135deg, rgba(255,255,255,0.9), rgba(255,255,255,0.7));
     --gradient-glass-dark: linear-gradient(135deg, rgba(255,255,255,0.95), rgba(245,245,245,0.98));
-    --gradient-red-neon: linear-gradient(90deg, transparent, hsl(0 80% 48% / 0.08), transparent);
+    --gradient-red-neon: linear-gradient(90deg, transparent, hsl(0 78% 45% / 0.08), transparent);
     --gradient-shine: linear-gradient(135deg, transparent 30%, rgba(255,255,255,0.7) 50%, transparent 70%);
 
     /* GLASSMORPHISM LIGHT */
@@ -170,16 +170,16 @@ All colors MUST be HSL. */
     --glass-border: rgba(0, 0, 0, 0.06);
     --glass-border-bright: rgba(0, 0, 0, 0.10);
 
-    /* SHADOWS LIGHT — Sombras definidas para profundidade */
-    --shadow-premium: 0 4px 24px -4px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04);
-    --shadow-premium-hover: 0 8px 32px -4px rgba(0, 0, 0, 0.12), 0 4px 12px rgba(0, 0, 0, 0.06);
+    /* SHADOWS LIGHT */
+    --shadow-premium: 0 2px 10px 0px rgba(0, 0, 0, 0.10), 0 1px 2px -1px rgba(0, 0, 0, 0.10);
+    --shadow-premium-hover: 0 4px 15px -1px rgba(0, 0, 0, 0.10), 0 2px 4px -1px rgba(0, 0, 0, 0.10);
     --shadow-glow-red: 0 0 20px rgba(200, 40, 40, 0.08), 0 0 40px rgba(200, 40, 40, 0.04);
     --shadow-glow-red-intense: 0 0 30px rgba(200, 40, 40, 0.12), 0 0 60px rgba(200, 40, 40, 0.06);
     --shadow-glow-gold: 0 0 20px rgba(180, 140, 50, 0.10), 0 0 40px rgba(180, 140, 50, 0.05);
     --shadow-inset-glass: inset 0 1px 0 rgba(255, 255, 255, 1), inset 0 -1px 0 rgba(0, 0, 0, 0.03);
-    --shadow-soft: 0 2px 12px rgba(0, 0, 0, 0.06);
-    --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.03);
-    --shadow-elegant: 0 12px 40px -12px rgba(0, 0, 0, 0.10);
+    --shadow-soft: 0 2px 10px rgba(0, 0, 0, 0.05);
+    --shadow-card: 0 2px 10px rgba(0, 0, 0, 0.10);
+    --shadow-elegant: 0 2px 10px -1px rgba(0, 0, 0, 0.10);
     --shadow-glow: 0 0 30px rgba(200, 40, 40, 0.08);
     --shadow-inset-titanium: inset 0 1px 0 rgba(255,255,255,0.95);
   }
