@@ -104,6 +104,21 @@ export default function ClienteBarbearia() {
 
   const phone = barbershop?.whatsapp || barbershop?.telefone;
 
+  // Units count query for "Ver todas as unidades" row
+  const { data: unidadesCount } = useQuery({
+    queryKey: ["unidades-count", barbershop?.id],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("tenant_unidades")
+        .select("id", { count: "exact", head: true })
+        .eq("tenant_id", barbershop!.id);
+      if (error) throw error;
+      return count ?? 0;
+    },
+    enabled: !!barbershop?.id,
+    staleTime: 10 * 60 * 1000,
+  });
+
   if (loading) {
     return (
       <div className="min-h-dvh bg-background flex items-center justify-center">
