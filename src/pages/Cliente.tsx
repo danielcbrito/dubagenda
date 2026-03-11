@@ -275,7 +275,13 @@ const Cliente = () => {
         return;
       }
       updateChannelStatus(channelName, false);
-      // Schedule reconnection after 30s
+      // Refetch data immediately (don't wait for channel reconnect)
+      console.log(`[REALTIME] Refetching data immediately after ${channelName} error`);
+      if (user?.id) {
+        loadAppointmentsData(user.id);
+        loadLoyaltyData(user.id, profile?.barbearia_preferida_id || null);
+      }
+      // Schedule channel reconnection after 30s
       if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
       reconnectTimerRef.current = setTimeout(() => {
         reconnectFn();
