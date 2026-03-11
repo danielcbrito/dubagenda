@@ -368,7 +368,7 @@ const ClienteAgendar = () => {
           }
           if (resumeServiceResult?.data) setSelectedServices([resumeServiceResult.data]);
           if (resumeData.date) setSelectedDate(new Date(`${resumeData.date}T12:00:00`));
-          if (resumeData.time) setSelectedTime(resumeData.time);
+          if (resumeData.time) setSelectedTime(normalizeTimeValue(resumeData.time));
 
           setStep(5);
           setIsInitializing(false);
