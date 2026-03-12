@@ -773,7 +773,7 @@ export type Database = {
           google_calendar_connected: boolean | null
           id: string
           setup_completed: boolean | null
-          tenant_id: string | null
+          tenant_id: string
           unidade_id: string | null
           updated_at: string | null
           user_id: string | null
@@ -790,7 +790,7 @@ export type Database = {
           google_calendar_connected?: boolean | null
           id?: string
           setup_completed?: boolean | null
-          tenant_id?: string | null
+          tenant_id: string
           unidade_id?: string | null
           updated_at?: string | null
           user_id?: string | null
@@ -807,7 +807,7 @@ export type Database = {
           google_calendar_connected?: boolean | null
           id?: string
           setup_completed?: boolean | null
-          tenant_id?: string | null
+          tenant_id?: string
           unidade_id?: string | null
           updated_at?: string | null
           user_id?: string | null
@@ -3132,7 +3132,7 @@ export type Database = {
           id: string
           nome: string
           preco: number
-          tenant_id: string | null
+          tenant_id: string
           updated_at: string | null
         }
         Insert: {
@@ -3145,7 +3145,7 @@ export type Database = {
           id?: string
           nome: string
           preco: number
-          tenant_id?: string | null
+          tenant_id: string
           updated_at?: string | null
         }
         Update: {
@@ -3158,7 +3158,7 @@ export type Database = {
           id?: string
           nome?: string
           preco?: number
-          tenant_id?: string | null
+          tenant_id?: string
           updated_at?: string | null
         }
         Relationships: [
