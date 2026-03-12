@@ -174,21 +174,6 @@ const Index = () => {
       <div className="relative flex-1 flex flex-col max-w-[430px] mx-auto w-full">
         <div className="flex-1 flex flex-col px-7 pt-[calc(env(safe-area-inset-top,0px)+1.5rem)] pb-[calc(env(safe-area-inset-bottom,0px)+1.5rem)]">
 
-          {/* Brand mark */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.8, delay: 0.1 }}
-            className="flex-shrink-0 flex items-center gap-2"
-          >
-            <div className="w-[5px] h-[5px] rounded-full" style={{ background: "hsl(0 72% 50%)" }} />
-            <span
-              className="text-[11px] font-medium tracking-[0.3em] uppercase"
-              style={{ color: "hsl(0 0% 42%)" }}
-            >
-              DUB Agenda
-            </span>
-          </motion.div>
 
           {/* Illustration area — fills most of the screen */}
           <div className="relative flex-1 min-h-0">
@@ -224,32 +209,28 @@ const Index = () => {
             })}
           </div>
 
-          {/* Bottom section: text + description + button */}
+          {/* Bottom section — brand + title + CTA */}
           <motion.div
-            initial={{ opacity: 0, y: 24 }}
+            initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.35, ease: [0.22, 1, 0.36, 1] }}
-            className="flex-shrink-0 text-center"
+            transition={{ duration: 0.7, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
+            className="flex-shrink-0 flex flex-col items-center gap-5 mb-4"
           >
-            {/* Thin decorative line */}
-            <motion.div
-              initial={{ scaleX: 0 }}
-              animate={{ scaleX: 1 }}
-              transition={{ duration: 0.6, delay: 0.5 }}
-              className="mx-auto mb-5 origin-center"
-            >
-              <div className="h-[1px] w-12 mx-auto" style={{ background: "hsl(0 0% 78%)" }} />
-            </motion.div>
+            {/* Brand label */}
+            <div className="flex items-center gap-2">
+              <div className="w-[5px] h-[5px] rounded-full bg-primary" />
+              <span className="text-[11px] font-medium tracking-[0.3em] uppercase text-muted-foreground">
+                DUB Agenda
+              </span>
+            </div>
 
+            {/* Title */}
             <h1
-              className="text-[36px] leading-[1] tracking-[-0.02em] font-extralight"
-              style={{ color: "hsl(0 0% 12%)" }}
+              className="text-[28px] leading-[1.15] tracking-[-0.01em] font-medium text-center text-foreground"
             >
-              Encontre seu
-            </h1>
-            <h1 className="text-[42px] leading-[1] tracking-[-0.02em] mt-0.5">
+              Encontre seu{" "}
               <span
-                className="font-semibold italic"
+                className="font-bold italic"
                 style={{
                   fontFamily: "'Nunito', sans-serif",
                   background: "linear-gradient(135deg, hsl(0 72% 48%) 0%, hsl(18 55% 38%) 100%)",
@@ -261,22 +242,7 @@ const Index = () => {
               </span>
             </h1>
 
-            <p
-              className="text-[13px] leading-[1.5] font-normal mt-4 mx-auto max-w-[260px]"
-              style={{ color: "hsl(0 0% 48%)" }}
-            >
-              Barbearias perto de você, agendamento
-              em segundos e o visual que você merece.
-            </p>
-          </motion.div>
-
-          {/* CTA */}
-          <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.7, ease: [0.22, 1, 0.36, 1] }}
-            className="flex-shrink-0 w-full flex justify-center mt-6 mb-4"
-          >
+            {/* CTA */}
             <SlimPillButton
               label="Encontrar Barbearias"
               onClick={() => navigate("/escolher-barbearia")}
