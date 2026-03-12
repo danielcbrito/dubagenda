@@ -41,7 +41,7 @@ interface OrbitItem {
 
 const orbitItems: OrbitItem[] = [
   // Outer orbit — tools & avatars alternating
-  { src: orbitPin,          orbit: 0, angle: 30,   size: 56, bobDelay: 0 },
+  { src: orbitTicket,         orbit: 0, angle: 30,   size: 56, bobDelay: 0 },
   { src: avatarBeanie,      orbit: 0, angle: 80,   size: 50, isAvatar: true, avatarBg: "hsl(20 80% 60%)", bobDelay: 0.4 },
   { src: orbitScissors,     orbit: 0, angle: 140,  size: 58, bobDelay: 1.0 },
   { src: avatarGlassesGirl, orbit: 0, angle: 195,  size: 52, isAvatar: true, avatarBg: "hsl(45 70% 55%)", bobDelay: 0.8 },
