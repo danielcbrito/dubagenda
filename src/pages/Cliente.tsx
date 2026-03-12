@@ -61,20 +61,13 @@ interface Appointment {
 }
 
 // ─── Shop query function (extracted for reuse) ───
-const fetchShopData = async (tenantId: string | null) => {
-  let query = supabase
+const fetchShopData = async (tenantId: string) => {
+  const { data: barbers, error } = await supabase
     .from("barbeiros")
     .select("id, apelido, foto_url, barbeiro_avaliacoes(rating)")
     .eq("ativo", true)
-    .is("deleted_at", null);
-
-  if (tenantId) {
-    query = query.eq("tenant_id", tenantId);
-  } else {
-    query = query.is("tenant_id", null);
-  }
-
-  const { data: barbers, error } = await query;
+    .is("deleted_at", null)
+    .eq("tenant_id", tenantId);
   if (error) throw error;
 
   const shopBarbers = (barbers || []).map((b: any) => {
