@@ -793,76 +793,73 @@ const ClienteAgendar = () => {
     }
   }, [selectedBarberId]);
 
+  // ─── syncBookingData: recarrega serviços, barbeiros e dias fechados ───
+  // Chamado on-demand (ao entrar no passo 3 e ao selecionar data), não mais via Realtime
+  const syncBookingData = useCallback(async () => {
+    const tenantId = selectedBarber?.tenant_id ?? (preferredShop?.id ?? null);
+    try {
+      let servicesQuery = supabase.from("servicos").select("*").eq("ativo", true).order("preco");
+      let barbersQuery = supabase.from("barbeiros").select("id, apelido, foto_url, tenant_id, unidade_id").eq("ativo", true).order("apelido");
+
+      if (tenantId) {
+        servicesQuery = servicesQuery.eq("tenant_id", tenantId);
+        barbersQuery = barbersQuery.eq("tenant_id", tenantId);
+      } else {
+        servicesQuery = servicesQuery.is("tenant_id", null);
+        barbersQuery = barbersQuery.is("tenant_id", null);
+      }
+
+      const [{ data: nextServices }, { data: nextBarbers }] = await Promise.all([
+        servicesQuery,
+        barbersQuery,
+      ]);
+
+      const safeServices = nextServices || [];
+      const safeBarbers = nextBarbers || [];
+
+      setServices(safeServices);
+      setBarbers(safeBarbers);
+      // Para fluxo de plano, NÃO remover o serviço pré-selecionado do plano
+      if (!isPlanFlow) {
+        setSelectedServices((prev) => prev.filter((service) => safeServices.some((item) => item.id === service.id)));
+      }
+
+      if (selectedBarberId) {
+        const refreshedBarber = safeBarbers.find((barber) => barber.id === selectedBarberId) || null;
+        setSelectedBarber(refreshedBarber);
+      }
+
+      const baseDate = selectedDate || new Date();
+      const monthStart = new Date(baseDate.getFullYear(), baseDate.getMonth(), 1);
+      const monthEnd = new Date(baseDate.getFullYear(), baseDate.getMonth() + 1, 0);
+      await loadClosedDates(monthStart, monthEnd);
+      refreshSlots();
+    } catch (error) {
+      console.error("[syncBookingData] Erro ao sincronizar dados:", error);
+    }
+  }, [selectedBarber?.tenant_id, preferredShop?.id, selectedBarberId, selectedDate, isPlanFlow, loadClosedDates, refreshSlots]);
+
+  // ─── Canal Realtime: apenas agendamentos (conflitos de slot em tempo real) ───
   useEffect(() => {
     if (isInitializing) return;
 
-    const tenantId = selectedBarber?.tenant_id ?? (preferredShop?.id ?? null);
-
-    const syncBookingData = async () => {
-      try {
-        let servicesQuery = supabase.from("servicos").select("*").eq("ativo", true).order("preco");
-        let barbersQuery = supabase.from("barbeiros").select("id, apelido, foto_url, tenant_id, unidade_id").eq("ativo", true).order("apelido");
-
-        if (tenantId) {
-          servicesQuery = servicesQuery.eq("tenant_id", tenantId);
-          barbersQuery = barbersQuery.eq("tenant_id", tenantId);
-        } else {
-          servicesQuery = servicesQuery.is("tenant_id", null);
-          barbersQuery = barbersQuery.is("tenant_id", null);
-        }
-
-        const [{ data: nextServices }, { data: nextBarbers }] = await Promise.all([
-          servicesQuery,
-          barbersQuery,
-        ]);
-
-        const safeServices = nextServices || [];
-        const safeBarbers = nextBarbers || [];
-
-        setServices(safeServices);
-        setBarbers(safeBarbers);
-        // Para fluxo de plano, NÃO remover o serviço pré-selecionado do plano
-        if (!isPlanFlow) {
-          setSelectedServices((prev) => prev.filter((service) => safeServices.some((item) => item.id === service.id)));
-        }
-
-        if (selectedBarberId) {
-          const refreshedBarber = safeBarbers.find((barber) => barber.id === selectedBarberId) || null;
-          setSelectedBarber(refreshedBarber);
-        }
-
-        const baseDate = selectedDate || new Date();
-        const monthStart = new Date(baseDate.getFullYear(), baseDate.getMonth(), 1);
-        const monthEnd = new Date(baseDate.getFullYear(), baseDate.getMonth() + 1, 0);
-        await loadClosedDates(monthStart, monthEnd);
-        refreshSlots();
-      } catch (error) {
-        console.error("[syncBookingData] Erro ao sincronizar dados:", error);
-      }
-    };
-
     const channel = supabase
-      .channel(`cliente-agendar-sync-${tenantId ?? 'dub'}-${selectedBarberId ?? 'none'}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'servicos' }, syncBookingData)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'barbeiros' }, syncBookingData)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'configuracoes_horario' }, syncBookingData)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'configuracoes_horario_barbeiro' }, syncBookingData)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'horarios_excepcionais' }, syncBookingData)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'horarios_excepcionais_barbeiro' }, syncBookingData)
+      .channel(`cliente-agendar-slots-${selectedBarberId ?? 'none'}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'agendamentos',
+        ...(selectedBarberId ? { filter: `barbeiro_id=eq.${selectedBarberId}` } : {}),
+      }, () => {
+        // Outro cliente reservou/cancelou um slot → atualizar disponibilidade
+        refreshSlots();
+      })
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [
-    isInitializing,
-    selectedBarber?.tenant_id,
-    preferredShop?.id,
-    selectedDate,
-    selectedBarberId,
-    loadClosedDates,
-    refreshSlots,
-  ]);
+  }, [isInitializing, selectedBarberId, refreshSlots]);
 
   // ─── Canal Realtime: Assinatura do usuário (ativação em tempo real) ───
   useEffect(() => {
@@ -953,6 +950,7 @@ const ClienteAgendar = () => {
       }
       // If plan has service pre-selected, skip service step
       if (isPlanFlow && activeSubscription?.servico_id) {
+        syncBookingData(); // Refresh data entering date step
         setStep(3); // Skip to date
         return;
       }
@@ -968,6 +966,7 @@ const ClienteAgendar = () => {
         toast.error("Selecione pelo menos um serviço");
         return;
       }
+      syncBookingData(); // Refresh data entering date step
       setStep(3);
       return;
     }
@@ -2041,7 +2040,7 @@ const ClienteAgendar = () => {
 
               <PremiumCalendar
                 selectedDate={selectedDate}
-                onSelectDate={setSelectedDate}
+                onSelectDate={(date) => { setSelectedDate(date); syncBookingData(); }}
                 closedDates={closedDates}
                 onMonthChange={loadClosedDates}
                 loading={closedDatesLoading}
