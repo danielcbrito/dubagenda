@@ -7,8 +7,6 @@ import { toast } from "sonner";
 import { useDataError } from "@/hooks/useDataError";
 
 import { supabase } from "@/integrations/supabase/client";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 
 import { PointsDetailModal } from "@/components/PointsDetailModal";
 import { PendingPaymentCard } from "@/components/PendingPaymentCard";
@@ -62,7 +60,33 @@ interface Appointment {
   }>;
 }
 
-import { getCache, setCache } from "@/utils/cache";
+// ─── Shop query function (extracted for reuse) ───
+const fetchShopData = async (tenantId: string | null) => {
+  let query = supabase
+    .from("barbeiros")
+    .select("id, apelido, foto_url, barbeiro_avaliacoes(rating)")
+    .eq("ativo", true)
+    .is("deleted_at", null);
+
+  if (tenantId) {
+    query = query.eq("tenant_id", tenantId);
+  } else {
+    query = query.is("tenant_id", null);
+  }
+
+  const { data: barbers, error } = await query;
+  if (error) throw error;
+
+  const shopBarbers = (barbers || []).map((b: any) => {
+    const ratings: number[] = (b.barbeiro_avaliacoes || []).map((r: any) => r.rating);
+    const avgRating = ratings.length > 0
+      ? ratings.reduce((sum, r) => sum + r, 0) / ratings.length
+      : null;
+    return { id: b.id, apelido: b.apelido, foto_url: b.foto_url, avgRating, totalReviews: ratings.length };
+  });
+
+  return { shopBarbers };
+};
 
 // ─── Profile query function (extracted for reuse) ───
 const fetchProfileData = async (userId: string) => {
@@ -291,6 +315,19 @@ const Cliente = () => {
   const redemptions = loyaltyQueryData?.redemptions ?? 0;
   const pontosNecessarios = loyaltyQueryData?.pontosNecessarios ?? 8;
 
+  // ─── Shop via useQuery (Layer 4) ───
+  const {
+    data: shopQueryData,
+    isLoading: shopLoading,
+  } = useQuery({
+    queryKey: ['cliente', 'shop', tenantId],
+    queryFn: () => fetchShopData(tenantId),
+    enabled: !!tenantId,
+    staleTime: 30 * 60 * 1000, // 30 min
+  });
+
+  const shopBarbers = shopQueryData?.shopBarbers ?? [];
+
   // ─── Remaining manual state ───
   const [pointsModalOpen, setPointsModalOpen] = useState(false);
   const [plansSheetOpen, setPlansSheetOpen] = useState(false);
@@ -298,7 +335,6 @@ const Cliente = () => {
   const [profileSheetOpen, setProfileSheetOpen] = useState(false);
   const [walletSheetOpen, setWalletSheetOpen] = useState(false);
   const [historySheetOpen, setHistorySheetOpen] = useState(false);
-  const [shopBarbers, setShopBarbers] = useState<Array<{ id: string; apelido: string; foto_url: string | null; avgRating: number | null; totalReviews: number }>>([]);
   const [barberProfileOpen, setBarberProfileOpen] = useState<string | null>(null);
   const [reviewModalData, setReviewModalData] = useState<{
     appointmentId: string;
@@ -306,10 +342,6 @@ const Cliente = () => {
     barberName: string;
     barberPhoto: string | null;
   } | null>(null);
-
-  // Shop loader (still manual — migrated in next step)
-  const [shopLoading, setShopLoading] = useState(true);
-  const shopLoadRef = useRef(false);
 
   // Realtime connection status
   const [realtimeConnected, setRealtimeConnected] = useState(true);
@@ -321,7 +353,7 @@ const Cliente = () => {
   const dataLoaded = !profileLoading && !appointmentsLoading && !loyaltyLoading && !shopLoading;
 
   // Centralized data error handling
-  const { hasError, errors, reportError, clearErrors } = useDataError();
+  const { hasError, errors, clearErrors } = useDataError();
   const retryCountRef = useRef(0);
 
   // ─── Invalidation helpers ───
@@ -333,19 +365,22 @@ const Cliente = () => {
     if (user?.id) queryClient.invalidateQueries({ queryKey: ['cliente', 'loyalty', user.id, tenantId] });
   }, [user?.id, tenantId, queryClient]);
 
+  const invalidateShop = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ['cliente', 'shop', tenantId] });
+  }, [tenantId, queryClient]);
+
   // Show non-blocking toast when data errors occur
   const retryAllLayers = useCallback(() => {
     if (!user) return;
     toast.dismiss("data-error-toast");
 
-    shopLoadRef.current = false;
     clearErrors();
     retryCountRef.current += 1;
 
     queryClient.invalidateQueries({ queryKey: ['cliente', 'profile', user.id] });
     queryClient.invalidateQueries({ queryKey: ['cliente', 'appointments', user.id] });
     queryClient.invalidateQueries({ queryKey: ['cliente', 'loyalty', user.id, tenantId] });
-    loadShopData(tenantId);
+    queryClient.invalidateQueries({ queryKey: ['cliente', 'shop', tenantId] });
   }, [user, tenantId, queryClient]);
 
   useEffect(() => {
@@ -552,7 +587,7 @@ const Cliente = () => {
           queryClient.invalidateQueries({ queryKey: ['cliente', 'profile', userId] });
           invalidateAppointments();
           invalidateLoyalty();
-          loadShopData(tenantId);
+          invalidateShop();
         }));
 
       // ─── Canal 2: Fidelidade ───
@@ -593,8 +628,6 @@ const Cliente = () => {
   }, [user, profile?.barbearia_preferida_id, handleChannelStatus, invalidateAppointments, invalidateLoyalty]);
 
   // ─── Refetch ao retornar ao app (visibilitychange) ───
-  const shopDataLastLoadRef = useRef<number>(Date.now());
-
   useEffect(() => {
     if (!user) return;
 
@@ -604,19 +637,12 @@ const Cliente = () => {
       // Invalidate stale queries — TanStack Query handles staleness automatically
       invalidateAppointments();
       invalidateLoyalty();
-
-      // Refresh shop/barber data if stale (>30 min)
-      const SHOP_STALE_MS = 30 * 60 * 1000;
-      if (tenantId && Date.now() - shopDataLastLoadRef.current > SHOP_STALE_MS) {
-        console.log('[VISIBILITY] Shop data stale (>30min), refetching...');
-        loadShopData(tenantId);
-        shopDataLastLoadRef.current = Date.now();
-      }
+      invalidateShop();
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, [user, tenantId, invalidateAppointments, invalidateLoyalty]);
+  }, [user, invalidateAppointments, invalidateLoyalty, invalidateShop]);
 
   const checkAuth = async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -627,59 +653,8 @@ const Cliente = () => {
     }
 
     setUser(session.user);
-    try { sessionStorage.setItem("cliente_last_user_id", session.user.id); } catch { /* ignore */ }
   };
 
-  // ─── Trigger shop loader once profile is available ───
-  const initialLoadDoneRef = useRef(false);
-  useEffect(() => {
-    if (!user?.id || profileLoading || initialLoadDoneRef.current) return;
-    initialLoadDoneRef.current = true;
-
-    loadShopData(tenantId);
-  }, [user?.id, profileLoading]);
-
-  // ─── Layer 4: Shop Barbers & Ratings (still manual) ───
-  const loadShopData = async (tenantId: string | null) => {
-    if (shopLoadRef.current) return;
-    shopLoadRef.current = true;
-    setShopLoading(true);
-    try {
-      let query = supabase
-        .from("barbeiros")
-        .select("id, apelido, foto_url, barbeiro_avaliacoes(rating)")
-        .eq("ativo", true)
-        .is("deleted_at", null);
-
-      if (tenantId) {
-        query = query.eq("tenant_id", tenantId);
-      } else {
-        query = query.is("tenant_id", null);
-      }
-
-      const { data: barbers, error } = await query;
-      if (error) throw error;
-
-      if (barbers) {
-        const barbersWithRatings = barbers.map((b: any) => {
-          const ratings: number[] = (b.barbeiro_avaliacoes || []).map((r: any) => r.rating);
-          const avgRating = ratings.length > 0
-            ? ratings.reduce((sum, r) => sum + r, 0) / ratings.length
-            : null;
-          return { id: b.id, apelido: b.apelido, foto_url: b.foto_url, avgRating, totalReviews: ratings.length };
-        });
-        setShopBarbers(barbersWithRatings);
-
-        const cacheKey = tenantId ? `cache_shop_${tenantId}` : `cache_shop_dub`;
-        setCache(cacheKey, { shopBarbers: barbersWithRatings }, 30);
-      }
-    } catch (err) {
-      reportError('shop', err);
-    } finally {
-      shopLoadRef.current = false;
-      setShopLoading(false);
-    }
-  };
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
