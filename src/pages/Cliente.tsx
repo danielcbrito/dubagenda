@@ -747,9 +747,7 @@ const Cliente = () => {
         setCache(cacheKey, { shopBarbers: barbersWithRatings }, 30);
       }
 
-      if (!tenantId) {
-        setPreferredShop(null);
-      }
+      // preferredShop is now derived from useQuery — no manual setter needed
     } catch (err) {
       reportError('shop', err);
     } finally {
