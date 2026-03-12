@@ -1174,7 +1174,7 @@ const Cliente = () => {
         userId={user?.id}
         profile={profile}
         onProfileUpdate={() => {
-          if (user) loadProfileData(user.id);
+          if (user) queryClient.invalidateQueries({ queryKey: ['cliente', 'profile', user.id] });
         }}
         credits={availableCredits}
         points={points}
