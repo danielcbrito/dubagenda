@@ -2040,7 +2040,7 @@ const ClienteAgendar = () => {
 
               <PremiumCalendar
                 selectedDate={selectedDate}
-                onSelectDate={setSelectedDate}
+                onSelectDate={(date) => { setSelectedDate(date); syncBookingData(); }}
                 closedDates={closedDates}
                 onMonthChange={loadClosedDates}
                 loading={closedDatesLoading}
