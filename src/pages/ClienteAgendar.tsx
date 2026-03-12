@@ -26,6 +26,7 @@ import { BookingBottomBar } from "@/components/booking/BookingBottomBar";
 import { TimeSelectionBar } from "@/components/booking/TimeSelectionBar";
 import { FloatingActionBar } from "@/components/booking/FloatingActionBar";
 import { UnitSelector } from "@/components/booking/UnitSelector";
+import { NextAvailableDateButton } from "@/components/booking/NextAvailableDateButton";
 
 interface TenantUnit {
   id: string;
@@ -2123,44 +2124,14 @@ const ClienteAgendar = () => {
                     >
                       Escolher outra data
                     </button>
-                    {(() => {
-                      // Encontrar próximo dia disponível (não em closedDates, dentro de 45 dias)
-                      if (!selectedDate) return null;
-                      const today = new Date();
-                      today.setHours(0, 0, 0, 0);
-                      const maxDate = new Date(today);
-                      maxDate.setDate(maxDate.getDate() + 45);
-                      const closedSet = new Set(closedDates.map(d => format(d, 'yyyy-MM-dd')));
-                      
-                      let nextAvailable: Date | null = null;
-                      const searchStart = new Date(selectedDate);
-                      searchStart.setDate(searchStart.getDate() + 1);
-                      
-                      for (let d = new Date(searchStart); d <= maxDate; d.setDate(d.getDate() + 1)) {
-                        if (d < today) continue;
-                        const dStr = format(d, 'yyyy-MM-dd');
-                        if (!closedSet.has(dStr)) {
-                          nextAvailable = new Date(d);
-                          break;
-                        }
-                      }
-                      
-                      if (!nextAvailable) return null;
-                      
-                      const nextDate = nextAvailable;
-                      return (
-                        <button
-                          onClick={() => {
-                            setSelectedDate(nextDate);
-                            setSelectedTime("");
-                          }}
-                          className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
-                        >
-                          Ver próximo dia disponível
-                          <ArrowRight className="w-3.5 h-3.5" />
-                        </button>
-                      );
-                    })()}
+                    <NextAvailableDateButton
+                      selectedDate={selectedDate}
+                      barberId={selectedBarber?.id}
+                      onSelectDate={(d) => {
+                        setSelectedDate(d);
+                        setSelectedTime("");
+                      }}
+                    />
                   </div>
                 </div>
               ) : (

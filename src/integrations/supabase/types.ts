@@ -4499,6 +4499,14 @@ export type Database = {
           manutencao_mensagem: string
         }[]
       }
+      get_next_available_date: {
+        Args: {
+          p_barbeiro_id: string
+          p_data_inicio: string
+          p_dias_limite?: number
+        }
+        Returns: string
+      }
       get_or_create_wallet_balance: {
         Args: { p_user_id: string }
         Returns: number
