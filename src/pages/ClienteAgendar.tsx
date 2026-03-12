@@ -950,6 +950,7 @@ const ClienteAgendar = () => {
       }
       // If plan has service pre-selected, skip service step
       if (isPlanFlow && activeSubscription?.servico_id) {
+        syncBookingData(); // Refresh data entering date step
         setStep(3); // Skip to date
         return;
       }
