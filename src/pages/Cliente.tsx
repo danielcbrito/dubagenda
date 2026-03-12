@@ -7,8 +7,6 @@ import { toast } from "sonner";
 import { useDataError } from "@/hooks/useDataError";
 
 import { supabase } from "@/integrations/supabase/client";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 
 import { PointsDetailModal } from "@/components/PointsDetailModal";
 import { PendingPaymentCard } from "@/components/PendingPaymentCard";
