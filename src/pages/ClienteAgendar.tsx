@@ -966,6 +966,7 @@ const ClienteAgendar = () => {
         toast.error("Selecione pelo menos um serviço");
         return;
       }
+      syncBookingData(); // Refresh data entering date step
       setStep(3);
       return;
     }
