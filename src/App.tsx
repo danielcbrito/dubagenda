@@ -58,7 +58,7 @@ const queryClient = new QueryClient({
       refetchOnMount: true,
       retry: 1,
       retryDelay: (n) => Math.min(1000 * 2 ** n, 10000),
-      staleTime: 0,
+      staleTime: 2 * 60 * 1000, // 2 min default
     },
     mutations: { retry: 0 },
   },
