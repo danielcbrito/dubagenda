@@ -2123,63 +2123,14 @@ const ClienteAgendar = () => {
                     >
                       Escolher outra data
                     </button>
-                    {(() => {
-                      if (!selectedDate || !selectedBarber) return null;
-                      
-                      const [searchingNext, setSearchingNext] = useState(false);
-                      const [nextAvailableDate, setNextAvailableDate] = useState<Date | null | undefined>(undefined);
-                      
-                      useEffect(() => {
-                        let cancelled = false;
-                        setSearchingNext(true);
-                        setNextAvailableDate(undefined);
-                        
-                        supabase
-                          .rpc('get_next_available_date', {
-                            p_barbeiro_id: selectedBarber.id,
-                            p_data_inicio: format(selectedDate, 'yyyy-MM-dd'),
-                            p_dias_limite: 45,
-                          })
-                          .then(({ data }) => {
-                            if (!cancelled) {
-                              setNextAvailableDate(data ? new Date(data + 'T00:00:00') : null);
-                              setSearchingNext(false);
-                            }
-                          })
-                          .catch(() => {
-                            if (!cancelled) {
-                              setNextAvailableDate(null);
-                              setSearchingNext(false);
-                            }
-                          });
-                        
-                        return () => { cancelled = true; };
-                      }, [selectedDate, selectedBarber.id]);
-                      
-                      if (searchingNext) {
-                        return (
-                          <span className="text-sm text-muted-foreground flex items-center gap-1.5">
-                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                            Buscando próxima data...
-                          </span>
-                        );
-                      }
-                      
-                      if (!nextAvailableDate) return null;
-                      
-                      return (
-                        <button
-                          onClick={() => {
-                            setSelectedDate(nextAvailableDate);
-                            setSelectedTime("");
-                          }}
-                          className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
-                        >
-                          Próxima data com horário livre ({format(nextAvailableDate, "dd/MM")})
-                          <ArrowRight className="w-3.5 h-3.5" />
-                        </button>
-                      );
-                    })()}
+                    <NextAvailableDateButton
+                      selectedDate={selectedDate}
+                      barberId={selectedBarber?.id}
+                      onSelectDate={(d) => {
+                        setSelectedDate(d);
+                        setSelectedTime("");
+                      }}
+                    />
                   </div>
                 </div>
               ) : (
