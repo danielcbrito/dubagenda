@@ -1930,6 +1930,7 @@ const ClienteAgendar = () => {
                         loadBarberCustomDurations(barber.id);
                       }}
                       rating={barberRatings[barber.id] || null}
+                      isPlanBarber={activeSubscription?.barbeiro_id === barber.id}
                     />
                   ))}
                 </div>
@@ -1986,6 +1987,7 @@ const ClienteAgendar = () => {
                     onToggle={() => toggleService(service)}
                     onIncrement={() => incrementServiceQty(service.id)}
                     onDecrement={() => decrementServiceQty(service)}
+                    isPlanService={!!activeSubscription?.servico_id && activeSubscription.servico_id === service.id}
                   />
                 ))}
               </div>
