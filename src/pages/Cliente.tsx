@@ -563,7 +563,7 @@ const Cliente = () => {
           id, data, hora, servico_id, preco, payment_method, created_at,
           pix_qr_code, pix_payload, asaas_payment_id, expires_at, barbeiro_id,
           servico:servicos(nome)
-        `).eq("user_id", userId).order("created_at", { ascending: false }),
+        `).eq("user_id", userId).gt("expires_at", new Date().toISOString()).order("created_at", { ascending: false }),
         supabase.from("agendamentos").select("id, data, hora, status, observacoes, cancelado_em, servico:servicos(nome)")
           .eq("user_id", userId)
           .eq("status", "cancelled_by_admin")
