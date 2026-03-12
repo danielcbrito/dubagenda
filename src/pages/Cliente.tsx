@@ -546,11 +546,11 @@ const Cliente = () => {
     try {
       const [appointmentsResult, paymentsResult, pendingBookingsResult, cancellationsResult] = await Promise.all([
         supabase.from("agendamentos").select(`
-          id, data, hora, status, preco, duracao, observacoes,
-          cliente_confirmou, barbeiro_confirmou, ponto_liberado,
+          id, data, hora, status, preco, observacoes,
+          cliente_confirmou, barbeiro_confirmou,
           remarcacao_solicitada, motivo_remarcacao, payment_method, tipo_agendamento, is_free,
           servico:servicos(nome),
-          barbeiro:barbeiros(apelido),
+          barbeiro:barbeiros(apelido, tenant:tenants(nome)),
           pagamentos(metodo, status)
         `)
           .eq("user_id", userId)
