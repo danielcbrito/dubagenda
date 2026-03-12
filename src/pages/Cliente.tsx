@@ -198,6 +198,7 @@ const Cliente = () => {
 
   // Gerenciador de notificações push + som
   useNotificationManager(user?.id || null);
+  const { cancelarReserva } = useCancelarReservaPendente();
 
   /**
    * Lógica de exibição do modal de avaliação:
