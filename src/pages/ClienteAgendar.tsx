@@ -2089,15 +2089,80 @@ const ClienteAgendar = () => {
                 </div>
               ) : availableSlots.filter(slot => slot.available).length === 0 ? (
                 <div className="bg-card border border-border rounded-2xl p-8 text-center">
-                  <p className="text-muted-foreground font-medium mb-4">
-                    {selectedBarber?.apelido} está com agenda cheia neste dia.
-                  </p>
-                  <button
-                    onClick={() => setStep(3)}
-                    className="px-6 py-3 border border-border rounded-xl text-foreground hover:bg-secondary transition-all"
-                  >
-                    Escolher outra data
-                  </button>
+                  {(() => {
+                    // Detectar motivo: dia fechado (closedDates ou sem slots gerados) vs agenda cheia
+                    const isClosedDay = selectedDate && closedDates.some(
+                      d => format(d, 'yyyy-MM-dd') === format(selectedDate, 'yyyy-MM-dd')
+                    );
+                    const noSlotsGenerated = availableSlots.length === 0;
+                    const allOccupied = availableSlots.length > 0 && availableSlots.every(s => !s.available);
+
+                    if (isClosedDay || noSlotsGenerated) {
+                      return (
+                        <p className="text-muted-foreground font-medium mb-4">
+                          {selectedBarber?.apelido} não atende neste dia.
+                        </p>
+                      );
+                    }
+                    if (allOccupied) {
+                      return (
+                        <p className="text-muted-foreground font-medium mb-4">
+                          Agenda cheia neste dia. Tente outro horário ou profissional.
+                        </p>
+                      );
+                    }
+                    return (
+                      <p className="text-muted-foreground font-medium mb-4">
+                        {selectedBarber?.apelido} está com agenda cheia neste dia.
+                      </p>
+                    );
+                  })()}
+                  <div className="flex flex-col items-center gap-3">
+                    <button
+                      onClick={() => setStep(3)}
+                      className="px-6 py-3 border border-border rounded-xl text-foreground hover:bg-secondary transition-all"
+                    >
+                      Escolher outra data
+                    </button>
+                    {(() => {
+                      // Encontrar próximo dia disponível (não em closedDates, dentro de 45 dias)
+                      if (!selectedDate) return null;
+                      const today = new Date();
+                      today.setHours(0, 0, 0, 0);
+                      const maxDate = new Date(today);
+                      maxDate.setDate(maxDate.getDate() + 45);
+                      const closedSet = new Set(closedDates.map(d => format(d, 'yyyy-MM-dd')));
+                      
+                      let nextAvailable: Date | null = null;
+                      const searchStart = new Date(selectedDate);
+                      searchStart.setDate(searchStart.getDate() + 1);
+                      
+                      for (let d = new Date(searchStart); d <= maxDate; d.setDate(d.getDate() + 1)) {
+                        if (d < today) continue;
+                        const dStr = format(d, 'yyyy-MM-dd');
+                        if (!closedSet.has(dStr)) {
+                          nextAvailable = new Date(d);
+                          break;
+                        }
+                      }
+                      
+                      if (!nextAvailable) return null;
+                      
+                      const nextDate = nextAvailable;
+                      return (
+                        <button
+                          onClick={() => {
+                            setSelectedDate(nextDate);
+                            setSelectedTime("");
+                          }}
+                          className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
+                        >
+                          Ver próximo dia disponível
+                          <ArrowRight className="w-3.5 h-3.5" />
+                        </button>
+                      );
+                    })()}
+                  </div>
                 </div>
               ) : (
                 <>
