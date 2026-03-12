@@ -589,7 +589,7 @@ const Cliente = () => {
           queryClient.invalidateQueries({ queryKey: ['cliente', 'profile', userId] });
           invalidateAppointments();
           invalidateLoyalty();
-          loadShopData(tenantId);
+          invalidateShop();
         }));
 
       // ─── Canal 2: Fidelidade ───
