@@ -304,53 +304,6 @@ export async function sendAgendamentoConfirmadoEvent(data: {
   });
 }
 
-/**
- * Evento: Agendamento cancelado
- */
-export async function sendAgendamentoCanceladoEvent(data: {
-  agendamento_id: string;
-  cliente_id: string;
-  cliente_nome?: string;
-  servico?: string;
-  data?: string;
-  hora?: string;
-  preco?: number;
-  mensagem_barbeiro?: string;
-  motivo?: string;
-  cancelado_por?: 'cliente' | 'barbeiro' | 'admin';
-  credito_gerado?: number;
-}): Promise<void> {
-  const cliente = await getClienteCompleto(data.cliente_id);
-  const saldoCreditos = await getSaldoCreditos(data.cliente_id);
-
-  await sendWebhookEvent({
-    evento: 'agendamento_cancelado',
-    descricao: `Agendamento cancelado ${data.cancelado_por === 'cliente' ? 'pelo cliente' : data.cancelado_por === 'barbeiro' ? 'pelo barbeiro' : 'pelo administrador'}`,
-    status: 'cancelado',
-    
-    agendamento_id: data.agendamento_id,
-    data: data.data,
-    hora: data.hora,
-    
-    servico: data.servico,
-    valor_total: data.preco,
-    
-    cliente_id: data.cliente_id,
-    cliente_nome: cliente.nome,
-    cliente_telefone: cliente.telefone,
-    cliente_telefone_whatsapp: cliente.telefone_whatsapp,
-    cliente_email: cliente.email,
-    
-    mensagem_barbeiro: data.mensagem_barbeiro,
-    motivo: data.motivo,
-    
-    saldo_creditos_restante: saldoCreditos,
-    detalhes: {
-      cancelado_por: data.cancelado_por,
-      credito_gerado: data.credito_gerado,
-    },
-  });
-}
 
 /**
  * Evento: Barbeiro solicitou remarcação
