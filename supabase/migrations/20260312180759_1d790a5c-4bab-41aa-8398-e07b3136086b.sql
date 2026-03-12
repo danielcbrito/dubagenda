@@ -1,0 +1,1 @@
+UPDATE pontos SET pontos = 4, updated_at = now(), last_awarded_at = now() WHERE user_id = '64611820-7ce2-4829-9732-748a71e1ee1e';
