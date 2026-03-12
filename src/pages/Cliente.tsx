@@ -449,6 +449,8 @@ const Cliente = () => {
   }, [user, profile?.barbearia_preferida_id, handleChannelStatus]);
 
   // ─── Melhoria A: Refetch ao retornar ao app (visibilitychange) ───
+  const shopDataLastLoadRef = useRef<number>(Date.now());
+
   useEffect(() => {
     if (!user) return;
 
@@ -469,6 +471,14 @@ const Cliente = () => {
       if (!cachedLoy) {
         console.log('[VISIBILITY] Loyalty cache expired, refetching...');
         loadLoyaltyData(userId, tenantId);
+      }
+
+      // Refresh shop/barber data if stale (>30 min)
+      const SHOP_STALE_MS = 30 * 60 * 1000;
+      if (tenantId && Date.now() - shopDataLastLoadRef.current > SHOP_STALE_MS) {
+        console.log('[VISIBILITY] Shop data stale (>30min), refetching...');
+        loadShopData(tenantId);
+        shopDataLastLoadRef.current = Date.now();
       }
     };
 
