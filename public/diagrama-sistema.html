@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DUB Agenda — Diagrama Completo do Sistema</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #0a0a0a; color: #e5e5e5; font-family: system-ui, -apple-system, sans-serif; }
+  .header { padding: 20px 24px 12px; border-bottom: 1px solid #222; }
+  .header h1 { font-size: 1.3rem; font-weight: 700; letter-spacing: 0.04em; }
+  .header p { color: #666; font-size: 0.8rem; margin-top: 4px; }
+  .section { padding: 16px 24px; }
+  .section h2 { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.12em; color: #888; margin-bottom: 12px; border-bottom: 1px solid #1a1a1a; padding-bottom: 8px; }
+  .mermaid { overflow-x: auto; padding: 8px 0; }
+  .mermaid svg { max-width: 100%; height: auto; }
+  .legend { display: flex; flex-wrap: wrap; gap: 12px; padding: 12px 24px; border-top: 1px solid #1a1a1a; margin-top: 8px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 0.72rem; color: #888; }
+  .legend-dot { width: 8px; height: 8px; border-radius: 50%; }
+  .download-btn { position: fixed; bottom: 20px; right: 20px; background: #e5e5e5; color: #0a0a0a; border: none; padding: 10px 18px; border-radius: 8px; font-size: 0.8rem; font-weight: 600; cursor: pointer; z-index: 50; }
+  .download-btn:hover { background: #fff; }
+  @media print { .download-btn { display: none; } }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>DUB Agenda — Arquitetura Completa</h1>
+  <p>Estado atual do sistema - Atualizado em marco 2026</p>
+</div>
+
+<!-- ═══════════════ 1. VISAO GERAL DA ARQUITETURA ═══════════════ -->
+<div class="section">
+  <h2>1. Visao Geral - Camadas do Sistema</h2>
+  <div class="mermaid">
+graph TD
+    subgraph CLIENT["FRONTEND - React 18 + Vite + TypeScript"]
+        SPLASH["SplashScreen (2s)"]
+        AUTH_GUARD["AuthSessionGuard"]
+        MAINT["MaintenanceWrapper"]
+        ROUTER["React Router v6 - Lazy Loading"]
+        QUERY["TanStack Query - Cache Global"]
+        THEME["next-themes - Dark/Light"]
+
+        SPLASH --> AUTH_GUARD --> MAINT --> ROUTER
+        ROUTER --> QUERY
+    end
+
+    subgraph SUPABASE_LAYER["SUPABASE - Backend as a Service"]
+        AUTH["Auth - JWT + Email + OAuth"]
+        DB["PostgreSQL + RLS por tenant"]
+        REALTIME["Realtime WebSockets"]
+        STORAGE["Storage - Fotos/Avatars"]
+        EDGE["Edge Functions - Deno Runtime"]
+    end
+
+    subgraph EXTERNAL["INTEGRACOES EXTERNAS"]
+        ASAAS["Asaas - PIX + Cartao"]
+        STRIPE["Stripe - Checkout + Subscriptions"]
+        WHATSAPP["WhatsApp via n8n Webhook"]
+        GCAL["Google Calendar Sync"]
+        OPENAI["OpenAI GPT - Suporte IA"]
+    end
+
+    CLIENT -->|supabase-js SDK| AUTH
+    CLIENT -->|useQuery + RPC| DB
+    CLIENT -->|subscribe channels| REALTIME
+    EDGE --> ASAAS
+    EDGE --> STRIPE
+    EDGE --> WHATSAPP
+    EDGE --> GCAL
+    EDGE --> OPENAI
+  </div>
+</div>
+
+<!-- ═══════════════ 2. ROTAS E PAGINAS ═══════════════ -->
+<div class="section">
+  <h2>2. Rotas e Paginas - React Router</h2>
+  <div class="mermaid">
+graph LR
+    subgraph PUBLIC_ROUTES["ROTAS PUBLICAS (sem auth)"]
+        R1["/ Landing Page"]
+        R2["/auth Login/Signup"]
+        R3["/auth/callback OAuth"]
+        R4["/verificar-email"]
+        R5["/verificar-whatsapp"]
+        R6["/esqueci-senha"]
+        R7["/resetar-senha"]
+        R8["/escolher-barbearia"]
+        R9["/:slug Barbearia Publica"]
+        R10["/:slug/unidades"]
+        R11["/flowchart"]
+    end
+
+    subgraph PROTECTED_ROUTES["ROTAS PROTEGIDAS (auth required)"]
+        C1["/cliente Dashboard"]
+        C2["/cliente/agendar Booking"]
+        C3["/cliente/assinar Planos"]
+        C4["/cliente/pagamento"]
+        C5["/cliente/pix-checkout"]
+        C6["/cliente/carteira Wallet"]
+        C7["/cliente/perfil"]
+        C8["/cliente/dados-pessoais"]
+        C9["/cliente/seguranca"]
+        C10["/cliente/barbearia"]
+        C11["/suporte Chat IA"]
+        C12["/barbeiro/:id/avaliacoes"]
+    end
+
+    R2 -->|login success| C1
+    R8 -->|seleciona tenant| C1
+  </div>
+</div>
+
+<!-- ═══════════════ 3. DASHBOARD DO CLIENTE ═══════════════ -->
+<div class="section">
+  <h2>3. Dashboard do Cliente - 4 Camadas de Dados (TanStack Query)</h2>
+  <div class="mermaid">
+graph TD
+    subgraph LAYER1["CAMADA 1: Perfil + Tenant (staleTime: 60min)"]
+        Q1["useQuery: cliente/profile/userId"]
+        Q1 --> PROFILES["profiles table"]
+        PROFILES -->|barbearia_preferida_id| TENANT_ID["tenantId resolvido"]
+    end
+
+    subgraph LAYER2["CAMADA 2: Agendamentos (staleTime: 5min)"]
+        Q2["useQuery: cliente/appointments/userId"]
+        Q2 --> AGEND["agendamentos + servicos + barbeiros"]
+        Q2 -->|enabled: !!tenantId| TENANT_ID
+    end
+
+    subgraph LAYER3["CAMADA 3: Fidelidade + Assinaturas (staleTime: 5min)"]
+        Q3["useQuery: cliente/loyalty/userId"]
+        Q3 --> PONTOS["pontos + promocoes + resgates + assinaturas + planos"]
+        Q3 -->|enabled: !!tenantId| TENANT_ID
+    end
+
+    subgraph LAYER4["CAMADA 4: Barbeiros da Barbearia (staleTime: 30min)"]
+        Q4["useQuery: cliente/shop/tenantId"]
+        Q4 --> BARBERS["barbeiros + barbeiro_avaliacoes"]
+        Q4 -->|enabled: !!tenantId| TENANT_ID
+    end
+
+    subgraph PENDING_REVIEWS["REVIEWS PENDENTES (staleTime: 5min)"]
+        Q5["useQuery: cliente/pending-reviews/userId"]
+        Q5 --> REVIEW_DATA["agendamentos completed + barbeiro_avaliacoes + barbeiros"]
+        Q5 -->|invalidateQueries on submit| Q5
+    end
+
+    LAYER1 -->|resolve tenantId| LAYER2
+    LAYER1 -->|resolve tenantId| LAYER3
+    LAYER1 -->|resolve tenantId| LAYER4
+
+    subgraph REALTIME_SUB["REALTIME - WebSocket Subscriptions"]
+        RT1["channel: agendamentos changes"]
+        RT2["channel: assinaturas changes"]
+        RT3["channel: barbeiros changes"]
+    end
+
+    RT1 -->|invalidateQueries| Q2
+    RT2 -->|invalidateQueries| Q3
+    RT3 -->|invalidateQueries| Q4
+  </div>
+</div>
+
+<!-- ═══════════════ 4. FLUXO DE AGENDAMENTO ═══════════════ -->
+<div class="section">
+  <h2>4. Fluxo de Agendamento - 6 Passos</h2>
+  <div class="mermaid">
+graph TD
+    B1["Passo 1: Selecionar Profissional"] --> B2["Passo 2: Selecionar Servico"]
+    B2 --> B3["Passo 3: Selecionar Data (PremiumCalendar)"]
+    B3 --> B4["Passo 4: Selecionar Horario"]
+    B4 --> B5["Passo 5: Forma de Pagamento"]
+    B5 --> PAY_DECISION{Metodo?}
+
+    PAY_DECISION -->|Na barbearia| ATOMIC["atomic-booking Edge Fn"]
+    PAY_DECISION -->|PIX Asaas| PIX_ASAAS["create-asaas-pix Edge Fn"]
+    PAY_DECISION -->|Cartao Asaas| CARD_ASAAS["create-asaas-card Edge Fn"]
+    PAY_DECISION -->|Stripe Card| STRIPE_CARD["create-checkout Edge Fn"]
+    PAY_DECISION -->|Stripe PIX| STRIPE_PIX["create-checkout Edge Fn"]
+    PAY_DECISION -->|Carteira| WALLET["wallet-operations Edge Fn"]
+    PAY_DECISION -->|Creditos| CREDITS["use_credits_atomic DB Fn"]
+    PAY_DECISION -->|Resgate Fidelidade| RESGATE["atomic-booking (payment_method: resgate)"]
+    PAY_DECISION -->|Plano| PLANO["atomic-booking (tipo_agendamento: plano)"]
+
+    ATOMIC --> CONFIRM["Agendamento Confirmado"]
+    PIX_ASAAS --> PENDING_PIX["QR Code PIX"] --> WEBHOOK_ASAAS["asaas-webhook"] --> CONFIRM
+    CARD_ASAAS --> CONFIRM
+    STRIPE_CARD --> STRIPE_CHECKOUT["Stripe Checkout"] --> VERIFY["verify-stripe-session"] --> CONFIRM
+    STRIPE_PIX --> STRIPE_CHECKOUT
+    WALLET --> CONFIRM
+    CREDITS --> CONFIRM
+    RESGATE --> CONFIRM
+    PLANO --> CONFIRM
+
+    CONFIRM --> TRIGGER_MSG["DB Trigger: WhatsApp Confirmacao"]
+    CONFIRM --> TRIGGER_AUDIT["DB Trigger: Audit Log"]
+
+    B4 -->|POST| CHECK_AVAIL["check-availability Edge Fn"]
+    CHECK_AVAIL -->|valida horario| B4
+  </div>
+</div>
+
+<!-- ═══════════════ 5. EDGE FUNCTIONS ═══════════════ -->
+<div class="section">
+  <h2>5. Edge Functions - Supabase Deno Runtime</h2>
+  <div class="mermaid">
+graph LR
+    subgraph BOOKING_FNS["Agendamento"]
+        EF1["atomic-booking"]
+        EF2["check-availability"]
+        EF3["validate-appointment"]
+        EF4["cancel-appointment-client"]
+    end
+
+    subgraph PAYMENT_FNS["Pagamento"]
+        EF5["create-asaas-pix"]
+        EF6["create-asaas-card"]
+        EF7["create-asaas-customer"]
+        EF8["asaas-webhook"]
+        EF9["create-checkout (Stripe)"]
+        EF10["verify-stripe-session"]
+        EF11["create-payment"]
+        EF12["refund-payment"]
+        EF13["create-subscription-pix"]
+        EF14["create-subscription-card"]
+        EF15["check-subscription-pix"]
+        EF16["check-subscription"]
+        EF17["cancel-subscription"]
+        EF18["customer-portal"]
+        EF19["cleanup-pending-payments"]
+    end
+
+    subgraph WALLET_FNS["Carteira"]
+        EF20["wallet-operations"]
+        EF21["wallet-pin"]
+    end
+
+    subgraph COMM_FNS["Comunicacao"]
+        EF22["send-webhook-event (WhatsApp)"]
+        EF23["appointment-reminders"]
+        EF24["send-confirmation-email"]
+        EF25["whatsapp-verification"]
+        EF26["execute-scheduled-dispatches"]
+    end
+
+    subgraph AI_FNS["Inteligencia Artificial"]
+        EF27["ai-support-chat"]
+        EF28["speech-to-text"]
+        EF29["generate-promotion-ai"]
+    end
+
+    subgraph ADMIN_FNS["Admin/Util"]
+        EF30["admin-reset-password"]
+        EF31["manage-clients"]
+        EF32["health-check"]
+        EF33["generate-monthly-report"]
+        EF34["google-calendar-sync"]
+        EF35["check-duplicate-signup"]
+    end
+  </div>
+</div>
+
+<!-- ═══════════════ 6. BANCO DE DADOS ═══════════════ -->
+<div class="section">
+  <h2>6. Banco de Dados - Tabelas Principais</h2>
+  <div class="mermaid">
+erDiagram
+    profiles ||--o{ agendamentos : "user_id"
+    profiles ||--o{ assinaturas : "user_id"
+    profiles ||--o{ pontos : "user_id"
+    profiles ||--o{ creditos : "user_id"
+    profiles ||--o{ resgates : "user_id"
+    profiles }o--|| tenants : "barbearia_preferida_id"
+
+    tenants ||--o{ barbeiros : "tenant_id"
+    tenants ||--o{ servicos : "tenant_id"
+    tenants ||--o{ planos : "tenant_id"
+    tenants ||--o{ tenant_unidades : "tenant_id"
+    tenants ||--o{ promocoes : "tenant_id"
+    tenants ||--o{ discount_coupons : "tenant_id"
+
+    barbeiros ||--o{ agendamentos : "barbeiro_id"
+    barbeiros ||--o{ comissoes : "barbeiro_id"
+    barbeiros ||--o{ barbeiro_avaliacoes : "barber_id"
+    barbeiros ||--o{ barbeiro_portfolio : "barbeiro_id"
+    barbeiros ||--o{ configuracoes_horario_barbeiro : "barbeiro_id"
+    barbeiros ||--o{ horarios_excepcionais_barbeiro : "barbeiro_id"
+    barbeiros ||--o{ barbeiro_unidades : "barbeiro_id"
+
+    servicos ||--o{ agendamentos : "servico_id"
+
+    agendamentos ||--o{ pagamentos : "agendamento_id"
+    agendamentos ||--o{ barbeiro_avaliacoes : "appointment_id"
+    agendamentos ||--o{ audit_logs : "entity_id"
+
+    planos ||--o{ assinaturas : "plano_id"
+
+    profiles {
+        uuid id PK
+        text nome
+        text telefone
+        uuid barbearia_preferida_id FK
+    }
+
+    tenants {
+        uuid id PK
+        text nome
+        text slug
+        uuid owner_user_id
+    }
+
+    agendamentos {
+        uuid id PK
+        date data
+        time hora
+        int duracao
+        numeric preco
+        text status
+        text payment_method
+    }
+
+    barbeiros {
+        uuid id PK
+        text apelido
+        uuid tenant_id FK
+        boolean ativo
+    }
+  </div>
+</div>
+
+<!-- ═══════════════ 7. FLUXO DE AUTENTICACAO ═══════════════ -->
+<div class="section">
+  <h2>7. Fluxo de Autenticacao</h2>
+  <div class="mermaid">
+graph TD
+    START["Usuario abre app"] --> SPLASH["SplashScreen 2s"]
+    SPLASH --> SESSION_CHECK{"getSession()"}
+
+    SESSION_CHECK -->|Sessao valida| GUARD["AuthSessionGuard"]
+    SESSION_CHECK -->|Sem sessao| LANDING["Landing Page"]
+    SESSION_CHECK -->|Sessao invalida| CLEAR["signOut() + redirect /auth"]
+
+    LANDING --> AUTH_PAGE["Tela de Login"]
+    AUTH_PAGE --> METHOD{Metodo?}
+
+    METHOD -->|Email + Senha| SIGNUP["Cadastro"]
+    METHOD -->|Google OAuth| GOOGLE["OAuth Google"]
+
+    SIGNUP --> VERIFY_CHOICE{"Verificacao"}
+    VERIFY_CHOICE -->|Email| EMAIL_VERIFY["Verificar Email"]
+    VERIFY_CHOICE -->|WhatsApp| WA_VERIFY["Verificar WhatsApp"]
+
+    EMAIL_VERIFY --> CHOOSE_BARBER["Escolher Barbearia"]
+    WA_VERIFY --> CHOOSE_BARBER
+    GOOGLE --> CHOOSE_BARBER
+
+    CHOOSE_BARBER --> DASHBOARD["Dashboard /cliente"]
+
+    GUARD --> MAINT_CHECK{"Manutencao ativa?"}
+    MAINT_CHECK -->|Sim + allowed| DASHBOARD_WARN["Dashboard + Banner aviso"]
+    MAINT_CHECK -->|Sim + not allowed| MAINT_SCREEN["Tela Manutencao"]
+    MAINT_CHECK -->|Nao| DASHBOARD
+  </div>
+</div>
+
+<!-- ═══════════════ 8. SISTEMA DE PAGAMENTOS ═══════════════ -->
+<div class="section">
+  <h2>8. Sistema de Pagamentos - Gateways</h2>
+  <div class="mermaid">
+graph TD
+    subgraph ASAAS_FLOW["ASAAS Gateway"]
+        A1["create-asaas-customer"] --> A2["create-asaas-pix"]
+        A1 --> A3["create-asaas-card"]
+        A2 --> A4["QR Code gerado"]
+        A3 --> A5["Cobranca cartao"]
+        A4 --> A6["asaas-webhook (PAYMENT_RECEIVED)"]
+        A5 --> A6
+        A6 --> A7["Atualiza pagamentos + agendamentos"]
+    end
+
+    subgraph STRIPE_FLOW["STRIPE Gateway"]
+        S1["create-checkout"] --> S2["Stripe Checkout Session"]
+        S2 --> S3["Redirect para Stripe"]
+        S3 --> S4["success_url com session_id"]
+        S4 --> S5["verify-stripe-session"]
+        S5 --> S6["Confirma booking via atomic-booking"]
+    end
+
+    subgraph WALLET_FLOW["CARTEIRA DIGITAL"]
+        W1["wallet-pin (validar PIN)"]
+        W1 --> W2["wallet-operations (debit)"]
+        W2 --> W3["wallet_balances atualizado"]
+        W3 --> W4["wallet_transactions registrado"]
+    end
+
+    subgraph SUB_FLOW["ASSINATURAS"]
+        SUB1["create-subscription-pix / card"] --> SUB2["Assinatura criada"]
+        SUB2 --> SUB3["check-subscription-pix (polling)"]
+        SUB3 --> SUB4["assinaturas table updated"]
+        SUB1B["create-checkout (Stripe subscription)"] --> SUB5["Stripe Subscription"]
+        SUB5 --> SUB6["verify-stripe-session"] --> SUB4
+    end
+  </div>
+</div>
+
+<!-- ═══════════════ 9. COMUNICACAO WHATSAPP ═══════════════ -->
+<div class="section">
+  <h2>9. Comunicacao WhatsApp - Triggers e Webhooks</h2>
+  <div class="mermaid">
+graph TD
+    subgraph TRIGGERS["DB TRIGGERS AUTOMATICOS"]
+        T1["barbeiro_confirmou = true"]
+        T1 --> T2["trg_send_confirm_message_on_barber_confirm()"]
+        T2 --> T3{"WhatsApp Instance conectada?"}
+        T3 -->|Sim| T4["net.http_post para webhook n8n"]
+        T3 -->|Nao| T5["Notificacao in-app para barbeiro"]
+        T4 --> T6["n8n envia mensagem WhatsApp"]
+    end
+
+    subgraph SCHEDULED["DISPAROS PROGRAMADOS"]
+        S1["disparos_programados table"]
+        S1 --> S2["execute-scheduled-dispatches Edge Fn"]
+        S2 --> S3["send-webhook-event Edge Fn"]
+        S3 --> S4["n8n Webhook"]
+    end
+
+    subgraph REMINDERS["LEMBRETES AUTOMATICOS"]
+        R1["appointment-reminders Edge Fn"]
+        R1 --> R2["Lembrete 24h antes"]
+        R1 --> R3["Lembrete 2h antes"]
+        R2 --> R4["send-webhook-event"]
+        R3 --> R4
+    end
+
+    subgraph TEMPLATES["TEMPLATES DE MENSAGEM"]
+        TM1["mensagem_templates table"]
+        TM1 --> TM2["slug: confirmacao_agendamento"]
+        TM1 --> TM3["Variaveis: nome, hora, data, servico, barbeiro, preco"]
+    end
+  </div>
+</div>
+
+<!-- ═══════════════ 10. FIDELIDADE E RESGATES ═══════════════ -->
+<div class="section">
+  <h2>10. Programa de Fidelidade</h2>
+  <div class="mermaid">
+graph TD
+    A1["Agendamento completed + pago"] --> A2["ponto_liberado = true"]
+    A2 --> A3["INSERT pontos (user_id, tenant_id)"]
+    A3 --> A4{"Atingiu pontos_necessarios?"}
+    A4 -->|Sim| A5["Resgate disponivel"]
+    A5 --> A6["Usuario clica Resgatar"]
+    A6 --> A7["INSERT resgates (status: available)"]
+    A7 --> A8["Agendar corte gratis"]
+    A8 --> A9["atomic-booking (payment_method: resgate)"]
+    A9 --> A10["consume_redemption_on_appointment_insert() trigger"]
+    A10 --> A11["Resgate marcado como used"]
+
+    A4 -->|Nao| A12["Progresso visual no LoyaltyCard"]
+
+    CANCEL["Cancelamento do agendamento"] --> RELEASE["release_redemption_on_appointment_cancel() trigger"]
+    RELEASE --> A7
+  </div>
+</div>
+
+<!-- ═══════════════ 11. SEGURANCA E ROLES ═══════════════ -->
+<div class="section">
+  <h2>11. Seguranca - RLS e Roles</h2>
+  <div class="mermaid">
+graph TD
+    subgraph ROLES["USER ROLES (tabela separada)"]
+        R1["admin"]
+        R2["tenant_admin"]
+        R3["barbeiro"]
+        R4["cliente"]
+    end
+
+    subgraph RLS["ROW LEVEL SECURITY"]
+        RLS1["Todas tabelas com RLS ativo"]
+        RLS2["tenant_id obrigatorio (NOT NULL)"]
+        RLS3["is_admin() - SECURITY DEFINER"]
+        RLS4["has_role() - SECURITY DEFINER"]
+        RLS5["Isolamento rigoroso por tenant"]
+    end
+
+    subgraph SECURITY["CAMADAS DE SEGURANCA"]
+        SEC1["JWT via Supabase Auth"]
+        SEC2["AuthSessionGuard no frontend"]
+        SEC3["MaintenanceWrapper com bypass por email/IP"]
+        SEC4["Device fingerprinting"]
+        SEC5["Audit logs em agendamentos"]
+        SEC6["Wallet PIN para operacoes financeiras"]
+    end
+
+    ROLES --> RLS
+    RLS --> SECURITY
+  </div>
+</div>
+
+<!-- ═══════════════ 12. TENANT MULTI-BARBEARIA ═══════════════ -->
+<div class="section">
+  <h2>12. Multi-Tenant - Isolamento de Barbearias</h2>
+  <div class="mermaid">
+graph TD
+    TENANT["tenants table"] --> SLUG["slug unico por barbearia"]
+    TENANT --> OWNER["owner_user_id"]
+    TENANT --> UNIDADES["tenant_unidades (filiais)"]
+
+    SLUG --> PUBLIC_PAGE["/:slug - Pagina publica"]
+    PUBLIC_PAGE --> BARBERS_PUB["barbeiros_public (view)"]
+    PUBLIC_PAGE --> SERVICES_PUB["servicos do tenant"]
+
+    OWNER --> ADMIN_ROLE["assign_tenant_admin_role()"]
+    OWNER --> BARBER_AUTO["ensure_tenant_barber()"]
+
+    UNIDADES --> BARBER_UNIT["barbeiro_unidades (N:N)"]
+
+    subgraph ISOLATION["ISOLAMENTO DE DADOS"]
+        ISO1["barbeiros.tenant_id NOT NULL"]
+        ISO2["servicos.tenant_id NOT NULL"]
+        ISO3["Queries sempre com .eq tenant_id"]
+        ISO4["Zero fallback para tenant IS NULL"]
+    end
+  </div>
+</div>
+
+<div class="legend">
+  <div class="legend-item"><div class="legend-dot" style="background:#3b82f6"></div> Frontend React</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#22c55e"></div> Supabase Backend</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#f59e0b"></div> Edge Functions</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#ef4444"></div> Gateways Externos</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#8b5cf6"></div> Realtime/WebSockets</div>
+</div>
+
+<button class="download-btn" onclick="window.print()">Imprimir / Salvar PDF</button>
+
+<script>
+  mermaid.initialize({
+    theme: 'dark',
+    startOnLoad: true,
+    securityLevel: 'loose',
+    flowchart: { curve: 'basis', padding: 12 },
+    er: { fontSize: 12 }
+  });
+</script>
+</body>
+</html>
