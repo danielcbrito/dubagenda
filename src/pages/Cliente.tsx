@@ -437,20 +437,7 @@ const Cliente = () => {
       const channelFidelidade = fidelidadeBuilder
         .subscribe((status) => handleChannelStatus('fidelidade', status, initializeChannels));
 
-      // ─── Canal 3: Barbeiros do tenant (only when tenantId exists) ───
-      if (tenantId) {
-        const channelBarbeiros = supabase
-          .channel('canal-barbeiros')
-          .on('postgres_changes', {
-            event: '*', schema: 'public', table: 'barbeiros',
-            filter: `tenant_id=eq.${tenantId}`
-          }, () => loadShopData(tenantId))
-          .subscribe((status) => handleChannelStatus('barbeiros', status, initializeChannels));
-
-        channels = [channelAgendamentos, channelFidelidade, channelBarbeiros];
-      } else {
-        channels = [channelAgendamentos, channelFidelidade];
-      }
+      channels = [channelAgendamentos, channelFidelidade];
     };
 
     initializeChannels();
