@@ -61,20 +61,13 @@ interface Appointment {
 }
 
 // ─── Shop query function (extracted for reuse) ───
-const fetchShopData = async (tenantId: string | null) => {
-  let query = supabase
+const fetchShopData = async (tenantId: string) => {
+  const { data: barbers, error } = await supabase
     .from("barbeiros")
     .select("id, apelido, foto_url, barbeiro_avaliacoes(rating)")
     .eq("ativo", true)
-    .is("deleted_at", null);
-
-  if (tenantId) {
-    query = query.eq("tenant_id", tenantId);
-  } else {
-    query = query.is("tenant_id", null);
-  }
-
-  const { data: barbers, error } = await query;
+    .is("deleted_at", null)
+    .eq("tenant_id", tenantId);
   if (error) throw error;
 
   const shopBarbers = (barbers || []).map((b: any) => {
@@ -152,18 +145,15 @@ const fetchLoyaltyData = async (userId: string, tenantId: string | null) => {
     supabase.from("agendamentos").select("*", { count: 'exact', head: true }).eq("user_id", userId).eq("status", "completed"),
     supabase.from("agendamentos").select("id").eq("user_id", userId).eq("payment_method", "resgate").in("status", ["pending", "confirmed", "completed"]).limit(1),
     supabase.from("resgates").select("id, status").eq("user_id", userId).eq("status", "available"),
-    (() => {
-      let query = supabase
-        .from("promocoes")
-        .select("pontos_necessarios")
-        .eq("ativo", true);
-      if (tenantId) {
-        query = query.eq("tenant_id", tenantId);
-      } else {
-        query = query.is("tenant_id", null);
-      }
-      return query.limit(1).maybeSingle();
-    })(),
+    tenantId
+      ? supabase
+          .from("promocoes")
+          .select("pontos_necessarios")
+          .eq("ativo", true)
+          .eq("tenant_id", tenantId)
+          .limit(1)
+          .maybeSingle()
+      : Promise.resolve({ data: null, error: null }),
   ]);
 
   const points = pontosResult.data?.pontos || 0;
