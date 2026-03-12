@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
 
 interface BarberRating {
   barberId: string;
@@ -9,8 +8,8 @@ interface BarberRating {
 }
 
 /**
- * Hook para buscar médias de avaliação de barbeiros
- * com canal Realtime para atualizações instantâneas.
+ * Hook para buscar médias de avaliação de barbeiros.
+ * Carrega ratings quando os barberIds mudam — sem Realtime.
  */
 export function useBarberRatings(barberIds: string[]) {
   const [ratings, setRatings] = useState<Record<string, BarberRating>>({});
@@ -57,50 +56,10 @@ export function useBarberRatings(barberIds: string[]) {
     }
   }, [barberIdsKey]);
 
-  // Carga inicial
+  // Carga quando barberIds mudam
   useEffect(() => {
     loadRatings();
   }, [loadRatings]);
-
-  // Canal Realtime — escuta INSERT em barbeiro_avaliacoes para os barberIds
-  useEffect(() => {
-    if (barberIds.length === 0) return;
-
-    const channelName = `avaliacoes-${barberIds[0]}${barberIds.length > 1 ? `-plus${barberIds.length - 1}` : ""}`;
-
-    const channel = supabase
-      .channel(channelName)
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "barbeiro_avaliacoes",
-        },
-        (payload) => {
-          const newRow = payload.new as { barber_id: string; rating: number };
-
-          // Só processar se for de um dos barbeiros observados
-          if (!barberIds.includes(newRow.barber_id)) return;
-
-          console.log("[useBarberRatings] Nova avaliação recebida:", newRow.barber_id, newRow.rating);
-
-          toast.success(`⭐ Nova avaliação recebida! ${newRow.rating}/5`);
-
-          // Recarregar todas as avaliações para recalcular médias
-          loadRatings();
-        }
-      )
-      .subscribe((status) => {
-        if (status === "CHANNEL_ERROR") {
-          console.error("[useBarberRatings] Erro no canal Realtime:", channelName);
-        }
-      });
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [barberIdsKey, loadRatings]);
 
   return { ratings, loading };
 }
