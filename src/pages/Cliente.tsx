@@ -64,6 +64,21 @@ interface Appointment {
 
 import { getCache, setCache } from "@/utils/cache";
 
+// ─── Profile query function (extracted for reuse) ───
+const fetchProfileData = async (userId: string) => {
+  const { data: prof, error } = await supabase.from("profiles").select("*").eq("id", userId).single();
+  if (error) throw error;
+
+  let preferredShop: { id: string; nome: string } | null = null;
+  const tenantId = prof?.barbearia_preferida_id;
+  if (tenantId) {
+    const { data: tenant } = await supabase.from("tenants").select("id, nome").eq("id", tenantId).single();
+    if (tenant) preferredShop = tenant;
+  }
+
+  return { profile: prof, preferredShop };
+};
+
 const Cliente = () => {
   const navigate = useNavigate();
 
