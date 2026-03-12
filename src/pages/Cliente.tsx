@@ -317,6 +317,19 @@ const Cliente = () => {
   const redemptions = loyaltyQueryData?.redemptions ?? 0;
   const pontosNecessarios = loyaltyQueryData?.pontosNecessarios ?? 8;
 
+  // ─── Shop via useQuery (Layer 4) ───
+  const {
+    data: shopQueryData,
+    isLoading: shopLoading,
+  } = useQuery({
+    queryKey: ['cliente', 'shop', tenantId],
+    queryFn: () => fetchShopData(tenantId),
+    enabled: !!tenantId,
+    staleTime: 30 * 60 * 1000, // 30 min
+  });
+
+  const shopBarbers = shopQueryData?.shopBarbers ?? [];
+
   // ─── Remaining manual state ───
   const [pointsModalOpen, setPointsModalOpen] = useState(false);
   const [plansSheetOpen, setPlansSheetOpen] = useState(false);
@@ -324,7 +337,6 @@ const Cliente = () => {
   const [profileSheetOpen, setProfileSheetOpen] = useState(false);
   const [walletSheetOpen, setWalletSheetOpen] = useState(false);
   const [historySheetOpen, setHistorySheetOpen] = useState(false);
-  const [shopBarbers, setShopBarbers] = useState<Array<{ id: string; apelido: string; foto_url: string | null; avgRating: number | null; totalReviews: number }>>([]);
   const [barberProfileOpen, setBarberProfileOpen] = useState<string | null>(null);
   const [reviewModalData, setReviewModalData] = useState<{
     appointmentId: string;
@@ -332,10 +344,6 @@ const Cliente = () => {
     barberName: string;
     barberPhoto: string | null;
   } | null>(null);
-
-  // Shop loader (still manual — migrated in next step)
-  const [shopLoading, setShopLoading] = useState(true);
-  const shopLoadRef = useRef(false);
 
   // Realtime connection status
   const [realtimeConnected, setRealtimeConnected] = useState(true);
