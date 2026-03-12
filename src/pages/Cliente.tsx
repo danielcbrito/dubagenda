@@ -81,23 +81,34 @@ const fetchProfileData = async (userId: string) => {
 
 const Cliente = () => {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   // Read granular caches (userId unknown yet, try last known)
   const lastUserId = useMemo(() => {
     try { return sessionStorage.getItem("cliente_last_user_id") || null; } catch { return null; }
   }, []);
-  const cachedProfile = useMemo(() => lastUserId ? getCache<any>(`cache_profile_${lastUserId}`) : null, [lastUserId]);
   const cachedAppointments = useMemo(() => lastUserId ? getCache<any>(`cache_appointments_${lastUserId}`) : null, [lastUserId]);
   const cachedLoyalty = useMemo(() => lastUserId ? getCache<any>(`cache_loyalty_${lastUserId}`) : null, [lastUserId]);
-  const cachedShopTenantId = cachedProfile?.preferredShop?.id || cachedProfile?.profile?.barbearia_preferida_id || null;
-  const cachedShop = useMemo(() => {
-    const key = cachedShopTenantId ? `cache_shop_${cachedShopTenantId}` : `cache_shop_dub`;
-    return getCache<any>(key);
-  }, [cachedShopTenantId]);
-  const hasCachedData = !!(cachedProfile || cachedAppointments || cachedLoyalty);
+  const hasCachedData = !!(cachedAppointments || cachedLoyalty);
 
   const [user, setUser] = useState<any>(null);
-  const [profile, setProfile] = useState<any>(cachedProfile?.profile || null);
+
+  // ─── Profile via useQuery (Layer 1) ───
+  const {
+    data: profileQueryData,
+    isLoading: profileLoading,
+  } = useQuery({
+    queryKey: ['cliente', 'profile', user?.id],
+    queryFn: () => fetchProfileData(user!.id),
+    enabled: !!user?.id,
+    staleTime: 60 * 60 * 1000, // 60 min — profile changes rarely
+  });
+
+  // Aliases to maintain compatibility with existing prop interfaces
+  const profile = profileQueryData?.profile ?? null;
+  const preferredShop = profileQueryData?.preferredShop ?? null;
+  const tenantId = profile?.barbearia_preferida_id ?? null;
+
   const [appointments, setAppointments] = useState<Appointment[]>(cachedAppointments?.appointments || []);
   const [pendingBookings, setPendingBookings] = useState<any[]>(cachedAppointments?.pendingBookings || []);
   const [points, setPoints] = useState(cachedLoyalty?.points ?? 0);
@@ -118,8 +129,7 @@ const Cliente = () => {
   const [expiredSubscription, setExpiredSubscription] = useState<any>(cachedLoyalty?.expiredSubscription || null);
   const [pendingSubscription, setPendingSubscription] = useState<any>(cachedLoyalty?.pendingSubscription || null);
   const [planUsageCount, setPlanUsageCount] = useState(cachedLoyalty?.planUsageCount ?? 0);
-  const [preferredShop, setPreferredShop] = useState<{ id: string; nome: string } | null>(cachedProfile?.preferredShop || null);
-  const [shopBarbers, setShopBarbers] = useState<Array<{ id: string; apelido: string; foto_url: string | null; avgRating: number | null; totalReviews: number }>>(cachedShop?.shopBarbers || []);
+  const [shopBarbers, setShopBarbers] = useState<Array<{ id: string; apelido: string; foto_url: string | null; avgRating: number | null; totalReviews: number }>>([]);
   const [barberProfileOpen, setBarberProfileOpen] = useState<string | null>(null);
   const [reviewModalData, setReviewModalData] = useState<{
     appointmentId: string;
@@ -129,10 +139,9 @@ const Cliente = () => {
   } | null>(null);
 
   // Independent loading flags — skip loading if cached data exists
-  const [profileLoading, setProfileLoading] = useState(!cachedProfile);
   const [appointmentsLoading, setAppointmentsLoading] = useState(!cachedAppointments);
   const [loyaltyLoading, setLoyaltyLoading] = useState(!cachedLoyalty);
-  const [shopLoading, setShopLoading] = useState(!cachedShop && !hasCachedData);
+  const [shopLoading, setShopLoading] = useState(!hasCachedData);
 
   // Realtime connection status
   const [realtimeConnected, setRealtimeConnected] = useState(true);
@@ -140,8 +149,7 @@ const Cliente = () => {
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const channelsCreatedAtRef = useRef<number>(Date.now());
 
-  // Race-condition guards for each loader
-  const profileLoadRef = useRef(false);
+  // Race-condition guards for remaining loaders
   const appointmentsLoadRef = useRef(false);
   const loyaltyLoadRef = useRef(false);
   const shopLoadRef = useRef(false);
