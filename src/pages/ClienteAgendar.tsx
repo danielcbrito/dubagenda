@@ -1989,7 +1989,6 @@ const ClienteAgendar = () => {
                     onDecrement={() => decrementServiceQty(service)}
                     isPlanService={!!activeSubscription?.servico_id && activeSubscription.servico_id === service.id}
                   />
-                  />
                 ))}
               </div>
 
