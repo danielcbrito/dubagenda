@@ -51,6 +51,20 @@ function getNotifIcon(tipo: string, titulo: string) {
   return <Bell className="w-4 h-4 text-muted-foreground" />;
 }
 
+function renderMessage(mensagem: string, isCancelamento: boolean) {
+  if (!isCancelamento) return mensagem;
+  const creditMatch = mensagem.match(/(R\$\s*[\d.,]+)/);
+  if (!creditMatch) return mensagem;
+  const parts = mensagem.split(creditMatch[1]);
+  return (
+    <>
+      {parts[0]}
+      <span className="text-green-400 font-medium">{creditMatch[1]}</span>
+      {parts[1]}
+    </>
+  );
+}
+
 function NotificationCard({
   notification,
   onMarkAsRead,
@@ -62,7 +76,8 @@ function NotificationCard({
   onReschedule: (id: string) => void;
   index: number;
 }) {
-  const needsAction = notification.tipo === "remarcacao" || notification.tipo === "cancelamento_massa";
+  const isCancelamento = notification.tipo === "cancelamento" || notification.tipo === "cancelamento_massa";
+  const needsAction = notification.tipo === "remarcacao" || isCancelamento;
 
   return (
     <motion.div
@@ -71,6 +86,7 @@ function NotificationCard({
       transition={{ delay: index * 0.03 }}
       className={cn(
         "rounded-xl border p-3.5 active:scale-[0.99] transition-all",
+        isCancelamento && "border-l-2 border-l-destructive/50",
         notification.lida
           ? "border-border/20 bg-card/40"
           : "border-border/40 bg-card shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-none"
@@ -103,7 +119,7 @@ function NotificationCard({
             "text-[11px] leading-relaxed line-clamp-2 mb-2",
             notification.lida ? "text-muted-foreground/50" : "text-muted-foreground"
           )}>
-            {notification.mensagem}
+            {renderMessage(notification.mensagem, isCancelamento)}
           </p>
 
           <div className="flex items-center justify-between">
@@ -120,7 +136,7 @@ function NotificationCard({
                   onClick={(e) => { e.stopPropagation(); onReschedule(notification.id); }}
                   className="text-[10px] bg-primary/10 text-primary px-2.5 py-1 rounded-lg font-semibold active:opacity-70 transition-opacity"
                 >
-                  Remarcar
+                  Reagendar
                 </button>
               )}
               {!notification.lida && (
