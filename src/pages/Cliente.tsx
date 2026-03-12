@@ -353,7 +353,7 @@ const Cliente = () => {
   const dataLoaded = !profileLoading && !appointmentsLoading && !loyaltyLoading && !shopLoading;
 
   // Centralized data error handling
-  const { hasError, errors, reportError, clearErrors } = useDataError();
+  const { hasError, errors, clearErrors } = useDataError();
   const retryCountRef = useRef(0);
 
   // ─── Invalidation helpers ───
