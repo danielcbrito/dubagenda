@@ -1067,3 +1067,10 @@ div:has(> a[href*="lovable.dev"]) {
 .compact-btn {
   @apply text-xs md:text-sm px-3 md:px-4 py-1.5 md:py-2;
 }
+
+/* Ripple animation for SlimPillButton */
+@keyframes rippleAnim {
+  0% { transform: scale(0); opacity: 0.32; }
+  60% { transform: scale(1.6); opacity: 0.18; }
+  100% { transform: scale(2.4); opacity: 0; }
+}
