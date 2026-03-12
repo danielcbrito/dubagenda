@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { cn } from "@/lib/utils";
-import { User, Star, ChevronRight } from "lucide-react";
+import { User, Star, ChevronRight, Crown } from "lucide-react";
 import { motion } from "framer-motion";
 import { BarberProfileSheet } from "@/components/discover/BarberProfileSheet";
 
@@ -20,9 +20,10 @@ interface BarberCardProps {
   isSelected: boolean;
   onSelect: () => void;
   rating?: BarberRating | null;
+  isPlanBarber?: boolean;
 }
 
-export function BarberCard({ barber, isSelected, onSelect, rating }: BarberCardProps) {
+export function BarberCard({ barber, isSelected, onSelect, rating, isPlanBarber }: BarberCardProps) {
   const [showProfile, setShowProfile] = useState(false);
 
   const handleViewReviews = (e: React.MouseEvent) => {
@@ -36,13 +37,21 @@ export function BarberCard({ barber, isSelected, onSelect, rating }: BarberCardP
         onClick={onSelect}
         whileTap={{ scale: 0.98 }}
         className={cn(
-          "w-full text-left rounded-lg p-3 transition-all duration-200 border",
+          "w-full text-left rounded-lg p-3 transition-all duration-200 border relative",
           "bg-card/60 active:scale-[0.99]",
           isSelected
             ? "border-primary/40 bg-primary/5"
             : "border-border/50 hover:border-border"
         )}
       >
+        {/* Plan badge */}
+        {isPlanBarber && (
+          <div className="absolute top-1.5 right-1.5 flex items-center gap-1 bg-secondary/15 text-secondary px-2 py-0.5 rounded-full border border-secondary/20">
+            <Crown className="w-2.5 h-2.5" />
+            <span className="text-[9px] font-semibold uppercase tracking-wider">Seu Plano</span>
+          </div>
+        )}
+
         <div className="flex items-center gap-2.5">
           {/* Avatar */}
           <div className={cn(
@@ -110,7 +119,8 @@ export function BarberCard({ barber, isSelected, onSelect, rating }: BarberCardP
             "flex-shrink-0 w-5 h-5 rounded-full border-[1.5px] transition-all duration-200 flex items-center justify-center",
             isSelected 
               ? "bg-primary border-primary"
-              : "border-muted-foreground/40"
+              : "border-muted-foreground/40",
+            isPlanBarber ? "mt-4" : ""
           )}>
             {isSelected && (
               <motion.div
@@ -123,7 +133,7 @@ export function BarberCard({ barber, isSelected, onSelect, rating }: BarberCardP
         </div>
       </motion.button>
 
-      {/* Profile Sheet (mesma tela da segunda imagem) */}
+      {/* Profile Sheet */}
       <BarberProfileSheet
         open={showProfile}
         onClose={() => setShowProfile(false)}

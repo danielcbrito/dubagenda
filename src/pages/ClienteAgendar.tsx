@@ -1987,6 +1987,8 @@ const ClienteAgendar = () => {
                     onToggle={() => toggleService(service)}
                     onIncrement={() => incrementServiceQty(service.id)}
                     onDecrement={() => decrementServiceQty(service)}
+                    isPlanService={!!activeSubscription?.servico_id && activeSubscription.servico_id === service.id}
+                  />
                   />
                 ))}
               </div>

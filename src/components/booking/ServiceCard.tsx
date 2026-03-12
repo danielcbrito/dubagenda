@@ -1,4 +1,4 @@
-import { Check, Plus, Minus, Clock } from "lucide-react";
+import { Check, Plus, Minus, Clock, Crown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -18,6 +18,7 @@ interface ServiceCardProps {
   onToggle: () => void;
   onIncrement: () => void;
   onDecrement: () => void;
+  isPlanService?: boolean;
 }
 
 export function ServiceCard({ 
@@ -27,7 +28,8 @@ export function ServiceCard({
   effectiveDuration,
   onToggle, 
   onIncrement, 
-  onDecrement 
+  onDecrement,
+  isPlanService,
 }: ServiceCardProps) {
   const duration = effectiveDuration ?? service.duracao_minutos;
   const isCustom = effectiveDuration !== undefined && effectiveDuration !== service.duracao_minutos;
@@ -50,6 +52,15 @@ export function ServiceCard({
           <h3 className="text-[14px] font-semibold text-foreground mb-0.5">
             {service.nome}
           </h3>
+
+          {/* Plan service badge */}
+          {isPlanService && (
+            <div className="inline-flex items-center gap-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-full mb-1.5">
+              <Crown className="w-2.5 h-2.5" />
+              <span className="text-[9px] font-semibold uppercase tracking-wider">Coberto pelo plano</span>
+            </div>
+          )}
+
           {service.descricao && (
             <p className="text-[11px] text-muted-foreground mb-2 line-clamp-1">
               {service.descricao}
@@ -61,11 +72,22 @@ export function ServiceCard({
               <Clock className="w-3 h-3" />
               <span>{duration * (quantity || 1)} min</span>
             </div>
-            <div className="flex items-baseline gap-0.5">
-              <span className="text-[10px] text-muted-foreground">R$</span>
-              <span className="text-[13px] font-semibold text-foreground tabular-nums">
-                {(service.preco * (quantity || 1)).toFixed(2).replace('.', ',')}
-              </span>
+            <div className="flex items-baseline gap-1">
+              {isPlanService ? (
+                <>
+                  <span className="text-[11px] text-muted-foreground/50 line-through tabular-nums">
+                    R$ {(service.preco * (quantity || 1)).toFixed(2).replace('.', ',')}
+                  </span>
+                  <span className="text-[12px] font-bold text-emerald-400">Grátis</span>
+                </>
+              ) : (
+                <>
+                  <span className="text-[10px] text-muted-foreground">R$</span>
+                  <span className="text-[13px] font-semibold text-foreground tabular-nums">
+                    {(service.preco * (quantity || 1)).toFixed(2).replace('.', ',')}
+                  </span>
+                </>
+              )}
             </div>
           </div>
         </button>
