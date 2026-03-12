@@ -520,47 +520,22 @@ const Cliente = () => {
 
     setUser(session.user);
     try { sessionStorage.setItem("cliente_last_user_id", session.user.id); } catch { /* ignore */ }
-    // Profile first to get tenantId, then remaining three in parallel
-    const profileData = await loadProfileData(session.user.id);
-    const tenantId = profileData?.barbearia_preferida_id ?? null;
+    // Profile loads automatically via useQuery when user is set.
+    // Other loaders still need tenantId — they react via useEffect below.
+  };
 
-    await Promise.all([
-      loadAppointmentsData(session.user.id),
-      loadLoyaltyData(session.user.id, tenantId),
+  // ─── Trigger remaining loaders once profile is available ───
+  const initialLoadDoneRef = useRef(false);
+  useEffect(() => {
+    if (!user?.id || profileLoading || initialLoadDoneRef.current) return;
+    initialLoadDoneRef.current = true;
+
+    Promise.all([
+      loadAppointmentsData(user.id),
+      loadLoyaltyData(user.id, tenantId),
       loadShopData(tenantId),
     ]);
-  };
-
-  // ─── Layer 1: Profile & Tenant ───
-  const loadProfileData = async (userId: string) => {
-    if (profileLoadRef.current) return null;
-    profileLoadRef.current = true;
-    setProfileLoading(true);
-    try {
-      const { data: prof, error } = await supabase.from("profiles").select("*").eq("id", userId).single();
-      if (error) throw error;
-      setProfile(prof);
-
-      let shop: { id: string; nome: string } | null = null;
-      const tenantId = prof?.barbearia_preferida_id;
-      if (tenantId) {
-        const { data: tenant } = await supabase.from("tenants").select("id, nome").eq("id", tenantId).single();
-        if (tenant) { setPreferredShop(tenant); shop = tenant; }
-      } else {
-        setPreferredShop(null);
-      }
-
-      setCache(`cache_profile_${userId}`, { profile: prof, preferredShop: shop }, 60);
-      setProfileLoading(false);
-      return prof;
-    } catch (err) {
-      reportError('profile', err);
-      setProfileLoading(false);
-      return null;
-    } finally {
-      profileLoadRef.current = false;
-    }
-  };
+  }, [user?.id, profileLoading]);
 
   // ─── Layer 2: Appointments & Pending Bookings ───
   const loadAppointmentsData = async (userId: string) => {
