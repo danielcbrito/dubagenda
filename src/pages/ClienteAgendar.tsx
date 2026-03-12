@@ -26,6 +26,7 @@ import { BookingBottomBar } from "@/components/booking/BookingBottomBar";
 import { TimeSelectionBar } from "@/components/booking/TimeSelectionBar";
 import { FloatingActionBar } from "@/components/booking/FloatingActionBar";
 import { UnitSelector } from "@/components/booking/UnitSelector";
+import { NextAvailableDateButton } from "@/components/booking/NextAvailableDateButton";
 
 interface TenantUnit {
   id: string;
