@@ -1,7 +1,6 @@
 import { useCallback, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { sendAgendamentoCanceladoEvent } from "@/lib/webhookService";
 
 interface CancelAppointmentParams {
   appointmentId: string;
@@ -46,21 +45,6 @@ export function useCancelAppointment() {
       }
 
       onSuccess?.();
-
-      // Fire-and-forget: send webhook event
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        sendAgendamentoCanceladoEvent({
-          agendamento_id: appointmentId,
-          cliente_id: user.id,
-          cliente_nome: user.user_metadata?.nome || user.email || "Cliente",
-          servico: appointmentMeta?.servico,
-          data: appointmentMeta?.data,
-          hora: appointmentMeta?.hora,
-          preco: appointmentMeta?.preco,
-          cancelado_por: "cliente",
-        }).catch(() => {/* silent */});
-      }
     } catch (err: any) {
       console.error("Cancel appointment error:", err);
       toast.error("Erro ao cancelar agendamento. Tente novamente.");
