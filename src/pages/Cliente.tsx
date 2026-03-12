@@ -167,30 +167,30 @@ const Cliente = () => {
     toast.dismiss("data-error-toast");
 
     // Reset race-condition guards
-    profileLoadRef.current = false;
     appointmentsLoadRef.current = false;
     loyaltyLoadRef.current = false;
     shopLoadRef.current = false;
 
     clearErrors();
     retryCountRef.current += 1;
-    const tenantId = profile?.barbearia_preferida_id || null;
+
+    // Invalidate profile query
+    queryClient.invalidateQueries({ queryKey: ['cliente', 'profile', user.id] });
 
     // Use allSettled so one failure doesn't block others
     Promise.allSettled([
-      loadProfileData(user.id),
       loadAppointmentsData(user.id),
       loadLoyaltyData(user.id, tenantId),
       loadShopData(tenantId),
     ]).then(results => {
-      const camadas = ['profile', 'appointments', 'loyalty', 'shop'] as const;
+      const camadas = ['appointments', 'loyalty', 'shop'] as const;
       results.forEach((r, i) => {
         if (r.status === 'rejected') {
           console.error(`[RETRY] Falha na camada ${camadas[i]}:`, r.reason);
         }
       });
     });
-  }, [user, profile?.barbearia_preferida_id]);
+  }, [user, tenantId, queryClient]);
 
   useEffect(() => {
     if (hasError) {
