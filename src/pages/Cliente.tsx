@@ -367,19 +367,22 @@ const Cliente = () => {
     if (user?.id) queryClient.invalidateQueries({ queryKey: ['cliente', 'loyalty', user.id, tenantId] });
   }, [user?.id, tenantId, queryClient]);
 
+  const invalidateShop = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ['cliente', 'shop', tenantId] });
+  }, [tenantId, queryClient]);
+
   // Show non-blocking toast when data errors occur
   const retryAllLayers = useCallback(() => {
     if (!user) return;
     toast.dismiss("data-error-toast");
 
-    shopLoadRef.current = false;
     clearErrors();
     retryCountRef.current += 1;
 
     queryClient.invalidateQueries({ queryKey: ['cliente', 'profile', user.id] });
     queryClient.invalidateQueries({ queryKey: ['cliente', 'appointments', user.id] });
     queryClient.invalidateQueries({ queryKey: ['cliente', 'loyalty', user.id, tenantId] });
-    loadShopData(tenantId);
+    queryClient.invalidateQueries({ queryKey: ['cliente', 'shop', tenantId] });
   }, [user, tenantId, queryClient]);
 
   useEffect(() => {
