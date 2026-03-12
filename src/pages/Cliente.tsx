@@ -808,21 +808,12 @@ const Cliente = () => {
     navigate("/cliente/agendar");
   };
 
-  const handleCancelPendingBooking = async (bookingId: string) => {
-    try {
-      const { error } = await supabase
-        .from("pending_bookings")
-        .delete()
-        .eq("id", bookingId);
-
-      if (error) throw error;
-
-      setPendingBookings(prev => prev.filter(b => b.id !== bookingId));
-      toast.success("Reserva cancelada");
-    } catch (error) {
-      console.error("Error canceling pending booking:", error);
-      toast.error("Erro ao cancelar reserva");
-    }
+  const handleCancelPendingBooking = (bookingId: string) => {
+    const booking = pendingBookings.find(b => b.id === bookingId);
+    cancelarReserva({
+      bookingId,
+      asaasPaymentId: booking?.asaas_payment_id || null,
+    });
   };
 
   const handleConfirmAppointment = async (appointmentId: string) => {
