@@ -33,6 +33,7 @@ import { BarberReviewModal } from "@/components/client/BarberReviewModal";
 import { PendingReviewBanner } from "@/components/client/PendingReviewBanner";
 import { usePendingReviews } from "@/hooks/usePendingReviews";
 import { useNotificationManager } from "@/hooks/useNotificationManager";
+import { useCancelarReservaPendente } from "@/hooks/useClientMutations";
 
 interface Appointment {
   id: string;
