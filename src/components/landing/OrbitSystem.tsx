@@ -6,8 +6,6 @@ import orbitClipper from "@/assets/orbit-clipper.png";
 import orbitScissors from "@/assets/orbit-scissors.png";
 import orbitBarberPole from "@/assets/orbit-barberpole.png";
 import orbitTicket from "@/assets/orbit-ticket.png";
-import orbitPin from "@/assets/orbit-pin.png";
-import orbitParty from "@/assets/orbit-party.png";
 
 import avatarBeanie from "@/assets/avatar-beanie.png";
 import avatarGlassesGirl from "@/assets/avatar-glasses-girl.png";
