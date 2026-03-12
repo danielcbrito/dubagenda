@@ -152,18 +152,15 @@ const fetchLoyaltyData = async (userId: string, tenantId: string | null) => {
     supabase.from("agendamentos").select("*", { count: 'exact', head: true }).eq("user_id", userId).eq("status", "completed"),
     supabase.from("agendamentos").select("id").eq("user_id", userId).eq("payment_method", "resgate").in("status", ["pending", "confirmed", "completed"]).limit(1),
     supabase.from("resgates").select("id, status").eq("user_id", userId).eq("status", "available"),
-    (() => {
-      let query = supabase
-        .from("promocoes")
-        .select("pontos_necessarios")
-        .eq("ativo", true);
-      if (tenantId) {
-        query = query.eq("tenant_id", tenantId);
-      } else {
-        query = query.is("tenant_id", null);
-      }
-      return query.limit(1).maybeSingle();
-    })(),
+    tenantId
+      ? supabase
+          .from("promocoes")
+          .select("pontos_necessarios")
+          .eq("ativo", true)
+          .eq("tenant_id", tenantId)
+          .limit(1)
+          .maybeSingle()
+      : Promise.resolve({ data: null, error: null }),
   ]);
 
   const points = pontosResult.data?.pontos || 0;
