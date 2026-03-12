@@ -437,20 +437,7 @@ const Cliente = () => {
       const channelFidelidade = fidelidadeBuilder
         .subscribe((status) => handleChannelStatus('fidelidade', status, initializeChannels));
 
-      // ─── Canal 3: Barbeiros do tenant (only when tenantId exists) ───
-      if (tenantId) {
-        const channelBarbeiros = supabase
-          .channel('canal-barbeiros')
-          .on('postgres_changes', {
-            event: '*', schema: 'public', table: 'barbeiros',
-            filter: `tenant_id=eq.${tenantId}`
-          }, () => loadShopData(tenantId))
-          .subscribe((status) => handleChannelStatus('barbeiros', status, initializeChannels));
-
-        channels = [channelAgendamentos, channelFidelidade, channelBarbeiros];
-      } else {
-        channels = [channelAgendamentos, channelFidelidade];
-      }
+      channels = [channelAgendamentos, channelFidelidade];
     };
 
     initializeChannels();
@@ -462,6 +449,8 @@ const Cliente = () => {
   }, [user, profile?.barbearia_preferida_id, handleChannelStatus]);
 
   // ─── Melhoria A: Refetch ao retornar ao app (visibilitychange) ───
+  const shopDataLastLoadRef = useRef<number>(Date.now());
+
   useEffect(() => {
     if (!user) return;
 
@@ -482,6 +471,14 @@ const Cliente = () => {
       if (!cachedLoy) {
         console.log('[VISIBILITY] Loyalty cache expired, refetching...');
         loadLoyaltyData(userId, tenantId);
+      }
+
+      // Refresh shop/barber data if stale (>30 min)
+      const SHOP_STALE_MS = 30 * 60 * 1000;
+      if (tenantId && Date.now() - shopDataLastLoadRef.current > SHOP_STALE_MS) {
+        console.log('[VISIBILITY] Shop data stale (>30min), refetching...');
+        loadShopData(tenantId);
+        shopDataLastLoadRef.current = Date.now();
       }
     };
 
