@@ -1930,6 +1930,7 @@ const ClienteAgendar = () => {
                         loadBarberCustomDurations(barber.id);
                       }}
                       rating={barberRatings[barber.id] || null}
+                      isPlanBarber={activeSubscription?.barbeiro_id === barber.id}
                     />
                   ))}
                 </div>
