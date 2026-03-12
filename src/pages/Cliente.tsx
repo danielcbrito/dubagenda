@@ -425,8 +425,8 @@ const Cliente = () => {
         .subscribe((status) => handleChannelStatus('agendamentos', status, () => {
           // On reconnect, reload all data in parallel and reinitialize channels
           initializeChannels();
+          queryClient.invalidateQueries({ queryKey: ['cliente', 'profile', userId] });
           Promise.all([
-            loadProfileData(userId),
             loadAppointmentsData(userId),
             loadLoyaltyData(userId, tenantId),
             loadShopData(tenantId),
