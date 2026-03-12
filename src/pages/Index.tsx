@@ -4,9 +4,8 @@ import { SlimPillButton } from "@/components/landing/SlimPillButton";
 
 /* ─── Minimal line-art SVG illustrations ──────────────────── */
 
-/** Scissors — thin elegant line drawing */
 const ScissorsArt = ({ className }: { className?: string }) => (
-  <svg className={className} viewBox="0 0 64 64" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+  <svg className={className} viewBox="0 0 64 64" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
     <circle cx="18" cy="48" r="7" />
     <circle cx="46" cy="48" r="7" />
     <path d="M24 44 L38 20" />
@@ -16,30 +15,27 @@ const ScissorsArt = ({ className }: { className?: string }) => (
   </svg>
 );
 
-/** Face silhouette with fresh fade haircut */
 const FreshCutArt = ({ className }: { className?: string }) => (
-  <svg className={className} viewBox="0 0 64 64" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+  <svg className={className} viewBox="0 0 64 64" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
     <path d="M20 38 Q20 18 32 14 Q44 18 44 38" />
     <path d="M22 38 Q22 46 32 50 Q42 46 42 38" />
     <path d="M18 26 Q18 12 32 8 Q46 12 46 26" strokeDasharray="2 3" opacity="0.5" />
-    <line x1="28" y1="34" x2="28" y2="34.5" strokeWidth="2" />
-    <line x1="36" y1="34" x2="36" y2="34.5" strokeWidth="2" />
+    <line x1="28" y1="34" x2="28" y2="34.5" strokeWidth="2.5" />
+    <line x1="36" y1="34" x2="36" y2="34.5" strokeWidth="2.5" />
     <path d="M29 40 Q32 42 35 40" />
   </svg>
 );
 
-/** Beard outline — style symbol */
 const BeardArt = ({ className }: { className?: string }) => (
-  <svg className={className} viewBox="0 0 64 64" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+  <svg className={className} viewBox="0 0 64 64" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
     <path d="M16 24 Q16 14 32 10 Q48 14 48 24" />
     <path d="M16 24 L16 34 Q16 52 32 56 Q48 52 48 34 L48 24" />
     <path d="M24 32 Q28 36 32 32 Q36 36 40 32" opacity="0.4" />
   </svg>
 );
 
-/** Comb — classic barber tool, thin lines */
 const CombArt = ({ className }: { className?: string }) => (
-  <svg className={className} viewBox="0 0 64 64" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round">
+  <svg className={className} viewBox="0 0 64 64" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round">
     <rect x="10" y="24" width="44" height="16" rx="3" />
     <line x1="16" y1="28" x2="16" y2="36" />
     <line x1="20" y1="28" x2="20" y2="36" />
@@ -53,9 +49,8 @@ const CombArt = ({ className }: { className?: string }) => (
   </svg>
 );
 
-/** Barber pole — iconic symbol, line art */
 const BarberPoleArt = ({ className }: { className?: string }) => (
-  <svg className={className} viewBox="0 0 64 64" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+  <svg className={className} viewBox="0 0 64 64" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
     <rect x="24" y="8" width="16" height="48" rx="8" />
     <path d="M24 16 L40 28" opacity="0.35" />
     <path d="M24 24 L40 36" opacity="0.35" />
@@ -65,33 +60,86 @@ const BarberPoleArt = ({ className }: { className?: string }) => (
   </svg>
 );
 
-/** Star / sparkle — feeling fresh */
-const SparkleArt = ({ className }: { className?: string }) => (
-  <svg className={className} viewBox="0 0 32 32" fill="currentColor" stroke="none">
-    <path d="M16 2 L18 13 L29 16 L18 19 L16 30 L14 19 L3 16 L14 13 Z" opacity="0.6" />
+const RazorArt = ({ className }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 64 64" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M18 46 L32 14" />
+    <path d="M32 14 L38 12 L40 18 L32 14" />
+    <path d="M18 46 L14 50 L20 52 L18 46" />
+    <line x1="24" y1="32" x2="36" y2="28" opacity="0.3" />
   </svg>
 );
 
-/* ─── Floating element config ─────────────────────────────── */
+const MapPinArt = ({ className }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 64 64" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M32 56 C32 56 48 38 48 26 C48 17 41 10 32 10 C23 10 16 17 16 26 C16 38 32 56 32 56Z" />
+    <circle cx="32" cy="26" r="6" />
+  </svg>
+);
+
+const CalendarArt = ({ className }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 64 64" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="12" y="16" width="40" height="38" rx="4" />
+    <line x1="12" y1="26" x2="52" y2="26" />
+    <line x1="22" y1="10" x2="22" y2="20" />
+    <line x1="42" y1="10" x2="42" y2="20" />
+    <circle cx="26" cy="36" r="2" fill="currentColor" opacity="0.3" />
+    <circle cx="32" cy="36" r="2" fill="currentColor" opacity="0.6" />
+    <circle cx="38" cy="36" r="2" fill="currentColor" opacity="0.3" />
+    <circle cx="26" cy="44" r="2" fill="currentColor" opacity="0.3" />
+    <circle cx="32" cy="44" r="2" fill="currentColor" opacity="0.3" />
+  </svg>
+);
+
+const SparkleArt = ({ className }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 32 32" fill="currentColor" stroke="none">
+    <path d="M16 2 L18 13 L29 16 L18 19 L16 30 L14 19 L3 16 L14 13 Z" opacity="0.55" />
+  </svg>
+);
+
+const StarArt = ({ className }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 64 64" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M32 10 L36 24 L50 24 L38 32 L42 46 L32 38 L22 46 L26 32 L14 24 L28 24 Z" />
+  </svg>
+);
+
+/* ─── Floating items layout ───────────────────────────────── */
 interface FloatingItem {
   Component: React.FC<{ className?: string }>;
-  x: string; // CSS left
-  y: string; // CSS top
+  x: string;
+  y: string;
   size: number;
   rotate?: number;
   delay: number;
-  opacity?: number;
+  opacity: number;
 }
 
 const floatingItems: FloatingItem[] = [
-  { Component: ScissorsArt,   x: "8%",  y: "12%", size: 52, rotate: -15, delay: 0, opacity: 0.18 },
-  { Component: FreshCutArt,   x: "68%", y: "8%",  size: 60, rotate: 5,   delay: 0.3, opacity: 0.16 },
-  { Component: CombArt,       x: "75%", y: "32%", size: 44, rotate: 35,  delay: 0.8, opacity: 0.14 },
-  { Component: BeardArt,      x: "12%", y: "38%", size: 48, rotate: -8,  delay: 0.5, opacity: 0.15 },
-  { Component: BarberPoleArt, x: "55%", y: "48%", size: 40, rotate: 10,  delay: 1.0, opacity: 0.13 },
-  { Component: SparkleArt,    x: "42%", y: "6%",  size: 18, delay: 0.2, opacity: 0.22 },
-  { Component: SparkleArt,    x: "88%", y: "22%", size: 14, delay: 1.2, opacity: 0.18 },
-  { Component: SparkleArt,    x: "22%", y: "52%", size: 16, delay: 0.7, opacity: 0.20 },
+  // Top row — scattered across top
+  { Component: ScissorsArt,   x: "6%",   y: "4%",   size: 48, rotate: -20, delay: 0,    opacity: 0.22 },
+  { Component: MapPinArt,     x: "40%",  y: "2%",   size: 42, rotate: 8,   delay: 0.3,  opacity: 0.20 },
+  { Component: FreshCutArt,   x: "72%",  y: "5%",   size: 54, rotate: 5,   delay: 0.15, opacity: 0.20 },
+  
+  // Second row
+  { Component: SparkleArt,    x: "28%",  y: "14%",  size: 16, delay: 0.5,  opacity: 0.28 },
+  { Component: CalendarArt,   x: "80%",  y: "18%",  size: 40, rotate: -5,  delay: 0.6,  opacity: 0.18 },
+  { Component: SparkleArt,    x: "10%",  y: "20%",  size: 12, delay: 0.8,  opacity: 0.24 },
+  
+  // Middle area
+  { Component: BarberPoleArt, x: "2%",   y: "28%",  size: 44, rotate: 12,  delay: 0.4,  opacity: 0.19 },
+  { Component: CombArt,       x: "60%",  y: "26%",  size: 46, rotate: -30, delay: 0.7,  opacity: 0.17 },
+  { Component: SparkleArt,    x: "48%",  y: "32%",  size: 14, delay: 1.0,  opacity: 0.26 },
+  
+  // Lower middle
+  { Component: BeardArt,      x: "18%",  y: "38%",  size: 44, rotate: -8,  delay: 0.5,  opacity: 0.18 },
+  { Component: RazorArt,      x: "72%",  y: "36%",  size: 38, rotate: 25,  delay: 0.9,  opacity: 0.16 },
+  { Component: StarArt,       x: "42%",  y: "42%",  size: 32, rotate: 15,  delay: 0.35, opacity: 0.20 },
+  { Component: SparkleArt,    x: "88%",  y: "42%",  size: 13, delay: 1.2,  opacity: 0.22 },
+  
+  // Bottom scatter
+  { Component: FreshCutArt,   x: "4%",   y: "50%",  size: 40, rotate: 10,  delay: 0.65, opacity: 0.15 },
+  { Component: MapPinArt,     x: "55%",  y: "52%",  size: 36, rotate: -12, delay: 0.45, opacity: 0.16 },
+  { Component: SparkleArt,    x: "30%",  y: "55%",  size: 11, delay: 0.2,  opacity: 0.22 },
+  { Component: ScissorsArt,   x: "82%",  y: "54%",  size: 36, rotate: 30,  delay: 1.1,  opacity: 0.14 },
 ];
 
 /* ─── Page ─────────────────────────────────────────────────── */
@@ -103,7 +151,7 @@ const Index = () => {
       className="fixed inset-0 flex flex-col overflow-hidden"
       style={{ background: "hsl(0 0% 97%)" }}
     >
-      {/* Noise texture */}
+      {/* Noise */}
       <div
         className="absolute inset-0 pointer-events-none opacity-[0.025]"
         style={{
@@ -112,21 +160,21 @@ const Index = () => {
         }}
       />
 
-      {/* Soft color wash */}
+      {/* Color washes */}
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
           background: `
-            radial-gradient(ellipse 50% 40% at 25% 15%, hsl(0 55% 50% / 0.06) 0%, transparent 100%),
-            radial-gradient(ellipse 40% 35% at 75% 70%, hsl(25 50% 45% / 0.04) 0%, transparent 100%)
+            radial-gradient(ellipse 50% 40% at 20% 12%, hsl(0 55% 50% / 0.06) 0%, transparent 100%),
+            radial-gradient(ellipse 40% 35% at 80% 60%, hsl(25 50% 45% / 0.04) 0%, transparent 100%)
           `,
         }}
       />
 
       <div className="relative flex-1 flex flex-col max-w-[430px] mx-auto w-full">
-        <div className="flex-1 flex flex-col px-7 pt-[calc(env(safe-area-inset-top,0px)+2rem)] pb-[calc(env(safe-area-inset-bottom,0px)+1.5rem)]">
+        <div className="flex-1 flex flex-col px-7 pt-[calc(env(safe-area-inset-top,0px)+1.5rem)] pb-[calc(env(safe-area-inset-bottom,0px)+1.5rem)]">
 
-          {/* Top brand */}
+          {/* Brand mark */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -142,7 +190,7 @@ const Index = () => {
             </span>
           </motion.div>
 
-          {/* Floating illustrations area */}
+          {/* Illustration area — fills most of the screen */}
           <div className="relative flex-1 min-h-0">
             {floatingItems.map((item, i) => {
               const { Component } = item;
@@ -155,79 +203,79 @@ const Index = () => {
                     top: item.y,
                     width: item.size,
                     height: item.size,
-                    color: "hsl(0 0% 15%)",
-                    opacity: item.opacity ?? 0.15,
+                    color: "hsl(0 0% 18%)",
                     transform: `rotate(${item.rotate ?? 0}deg)`,
                   }}
-                  initial={{ opacity: 0, scale: 0.7 }}
+                  initial={{ opacity: 0, scale: 0.6 }}
                   animate={{
-                    opacity: item.opacity ?? 0.15,
+                    opacity: item.opacity,
                     scale: 1,
-                    y: [0, -4, 0, 4, 0],
+                    y: [0, -3, 0, 3, 0],
                   }}
                   transition={{
-                    opacity: { duration: 0.6, delay: item.delay },
-                    scale: { duration: 0.6, delay: item.delay },
-                    y: { duration: 4, repeat: Infinity, ease: "easeInOut", delay: item.delay },
+                    opacity: { duration: 0.5, delay: item.delay },
+                    scale: { duration: 0.5, delay: item.delay },
+                    y: { duration: 4.5, repeat: Infinity, ease: "easeInOut", delay: item.delay },
                   }}
                 >
                   <Component className="w-full h-full" />
                 </motion.div>
               );
             })}
-
-            {/* Central headline — positioned in the visual center */}
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.9, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
-              className="absolute inset-0 flex flex-col items-center justify-center"
-            >
-              <h1
-                className="text-[48px] leading-[0.95] tracking-[-0.03em] font-extralight text-center"
-                style={{ color: "hsl(0 0% 10%)" }}
-              >
-                Seu
-              </h1>
-              <h1 className="text-[56px] leading-[0.95] tracking-[-0.03em] text-center mt-1">
-                <span
-                  className="font-semibold italic"
-                  style={{
-                    fontFamily: "'Nunito', sans-serif",
-                    background: "linear-gradient(135deg, hsl(0 72% 48%) 0%, hsl(20 55% 38%) 100%)",
-                    WebkitBackgroundClip: "text",
-                    WebkitTextFillColor: "transparent",
-                  }}
-                >
-                  Estilo
-                </span>
-              </h1>
-              <h1
-                className="text-[48px] leading-[0.95] tracking-[-0.03em] font-medium text-center mt-1"
-                style={{ color: "hsl(0 0% 10%)" }}
-              >
-                Começa Aqui<span style={{ color: "hsl(0 72% 48%)" }}>.</span>
-              </h1>
-
-              <motion.p
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.6, delay: 0.7 }}
-                className="text-[13px] leading-[1.5] font-normal mt-6 text-center max-w-[260px]"
-                style={{ color: "hsl(0 0% 48%)" }}
-              >
-                Agende, cuide do visual e saia
-                com a confiança que você merece.
-              </motion.p>
-            </motion.div>
           </div>
+
+          {/* Bottom section: text + description + button */}
+          <motion.div
+            initial={{ opacity: 0, y: 24 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.35, ease: [0.22, 1, 0.36, 1] }}
+            className="flex-shrink-0 text-center"
+          >
+            {/* Thin decorative line */}
+            <motion.div
+              initial={{ scaleX: 0 }}
+              animate={{ scaleX: 1 }}
+              transition={{ duration: 0.6, delay: 0.5 }}
+              className="mx-auto mb-5 origin-center"
+            >
+              <div className="h-[1px] w-12 mx-auto" style={{ background: "hsl(0 0% 78%)" }} />
+            </motion.div>
+
+            <h1
+              className="text-[36px] leading-[1] tracking-[-0.02em] font-extralight"
+              style={{ color: "hsl(0 0% 12%)" }}
+            >
+              Encontre seu
+            </h1>
+            <h1 className="text-[42px] leading-[1] tracking-[-0.02em] mt-0.5">
+              <span
+                className="font-semibold italic"
+                style={{
+                  fontFamily: "'Nunito', sans-serif",
+                  background: "linear-gradient(135deg, hsl(0 72% 48%) 0%, hsl(18 55% 38%) 100%)",
+                  WebkitBackgroundClip: "text",
+                  WebkitTextFillColor: "transparent",
+                }}
+              >
+                Barbeiro Ideal
+              </span>
+            </h1>
+
+            <p
+              className="text-[13px] leading-[1.5] font-normal mt-4 mx-auto max-w-[260px]"
+              style={{ color: "hsl(0 0% 48%)" }}
+            >
+              Barbearias perto de você, agendamento
+              em segundos e o visual que você merece.
+            </p>
+          </motion.div>
 
           {/* CTA */}
           <motion.div
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.8, ease: [0.22, 1, 0.36, 1] }}
-            className="flex-shrink-0 w-full flex justify-center mb-4"
+            transition={{ duration: 0.6, delay: 0.7, ease: [0.22, 1, 0.36, 1] }}
+            className="flex-shrink-0 w-full flex justify-center mt-6 mb-4"
           >
             <SlimPillButton
               label="Encontrar Barbearias"
