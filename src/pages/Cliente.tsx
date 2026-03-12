@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef, useMemo, useCallback } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Calendar, Crown, Banknote, Store, ChevronRight } from "lucide-react";
@@ -63,25 +64,51 @@ interface Appointment {
 
 import { getCache, setCache } from "@/utils/cache";
 
+// ─── Profile query function (extracted for reuse) ───
+const fetchProfileData = async (userId: string) => {
+  const { data: prof, error } = await supabase.from("profiles").select("*").eq("id", userId).single();
+  if (error) throw error;
+
+  let preferredShop: { id: string; nome: string } | null = null;
+  const tenantId = prof?.barbearia_preferida_id;
+  if (tenantId) {
+    const { data: tenant } = await supabase.from("tenants").select("id, nome").eq("id", tenantId).single();
+    if (tenant) preferredShop = tenant;
+  }
+
+  return { profile: prof, preferredShop };
+};
+
 const Cliente = () => {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   // Read granular caches (userId unknown yet, try last known)
   const lastUserId = useMemo(() => {
     try { return sessionStorage.getItem("cliente_last_user_id") || null; } catch { return null; }
   }, []);
-  const cachedProfile = useMemo(() => lastUserId ? getCache<any>(`cache_profile_${lastUserId}`) : null, [lastUserId]);
   const cachedAppointments = useMemo(() => lastUserId ? getCache<any>(`cache_appointments_${lastUserId}`) : null, [lastUserId]);
   const cachedLoyalty = useMemo(() => lastUserId ? getCache<any>(`cache_loyalty_${lastUserId}`) : null, [lastUserId]);
-  const cachedShopTenantId = cachedProfile?.preferredShop?.id || cachedProfile?.profile?.barbearia_preferida_id || null;
-  const cachedShop = useMemo(() => {
-    const key = cachedShopTenantId ? `cache_shop_${cachedShopTenantId}` : `cache_shop_dub`;
-    return getCache<any>(key);
-  }, [cachedShopTenantId]);
-  const hasCachedData = !!(cachedProfile || cachedAppointments || cachedLoyalty);
+  const hasCachedData = !!(cachedAppointments || cachedLoyalty);
 
   const [user, setUser] = useState<any>(null);
-  const [profile, setProfile] = useState<any>(cachedProfile?.profile || null);
+
+  // ─── Profile via useQuery (Layer 1) ───
+  const {
+    data: profileQueryData,
+    isLoading: profileLoading,
+  } = useQuery({
+    queryKey: ['cliente', 'profile', user?.id],
+    queryFn: () => fetchProfileData(user!.id),
+    enabled: !!user?.id,
+    staleTime: 60 * 60 * 1000, // 60 min — profile changes rarely
+  });
+
+  // Aliases to maintain compatibility with existing prop interfaces
+  const profile = profileQueryData?.profile ?? null;
+  const preferredShop = profileQueryData?.preferredShop ?? null;
+  const tenantId = profile?.barbearia_preferida_id ?? null;
+
   const [appointments, setAppointments] = useState<Appointment[]>(cachedAppointments?.appointments || []);
   const [pendingBookings, setPendingBookings] = useState<any[]>(cachedAppointments?.pendingBookings || []);
   const [points, setPoints] = useState(cachedLoyalty?.points ?? 0);
@@ -102,8 +129,7 @@ const Cliente = () => {
   const [expiredSubscription, setExpiredSubscription] = useState<any>(cachedLoyalty?.expiredSubscription || null);
   const [pendingSubscription, setPendingSubscription] = useState<any>(cachedLoyalty?.pendingSubscription || null);
   const [planUsageCount, setPlanUsageCount] = useState(cachedLoyalty?.planUsageCount ?? 0);
-  const [preferredShop, setPreferredShop] = useState<{ id: string; nome: string } | null>(cachedProfile?.preferredShop || null);
-  const [shopBarbers, setShopBarbers] = useState<Array<{ id: string; apelido: string; foto_url: string | null; avgRating: number | null; totalReviews: number }>>(cachedShop?.shopBarbers || []);
+  const [shopBarbers, setShopBarbers] = useState<Array<{ id: string; apelido: string; foto_url: string | null; avgRating: number | null; totalReviews: number }>>([]);
   const [barberProfileOpen, setBarberProfileOpen] = useState<string | null>(null);
   const [reviewModalData, setReviewModalData] = useState<{
     appointmentId: string;
@@ -113,10 +139,9 @@ const Cliente = () => {
   } | null>(null);
 
   // Independent loading flags — skip loading if cached data exists
-  const [profileLoading, setProfileLoading] = useState(!cachedProfile);
   const [appointmentsLoading, setAppointmentsLoading] = useState(!cachedAppointments);
   const [loyaltyLoading, setLoyaltyLoading] = useState(!cachedLoyalty);
-  const [shopLoading, setShopLoading] = useState(!cachedShop && !hasCachedData);
+  const [shopLoading, setShopLoading] = useState(!hasCachedData);
 
   // Realtime connection status
   const [realtimeConnected, setRealtimeConnected] = useState(true);
@@ -124,8 +149,7 @@ const Cliente = () => {
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const channelsCreatedAtRef = useRef<number>(Date.now());
 
-  // Race-condition guards for each loader
-  const profileLoadRef = useRef(false);
+  // Race-condition guards for remaining loaders
   const appointmentsLoadRef = useRef(false);
   const loyaltyLoadRef = useRef(false);
   const shopLoadRef = useRef(false);
@@ -143,30 +167,30 @@ const Cliente = () => {
     toast.dismiss("data-error-toast");
 
     // Reset race-condition guards
-    profileLoadRef.current = false;
     appointmentsLoadRef.current = false;
     loyaltyLoadRef.current = false;
     shopLoadRef.current = false;
 
     clearErrors();
     retryCountRef.current += 1;
-    const tenantId = profile?.barbearia_preferida_id || null;
+
+    // Invalidate profile query
+    queryClient.invalidateQueries({ queryKey: ['cliente', 'profile', user.id] });
 
     // Use allSettled so one failure doesn't block others
     Promise.allSettled([
-      loadProfileData(user.id),
       loadAppointmentsData(user.id),
       loadLoyaltyData(user.id, tenantId),
       loadShopData(tenantId),
     ]).then(results => {
-      const camadas = ['profile', 'appointments', 'loyalty', 'shop'] as const;
+      const camadas = ['appointments', 'loyalty', 'shop'] as const;
       results.forEach((r, i) => {
         if (r.status === 'rejected') {
           console.error(`[RETRY] Falha na camada ${camadas[i]}:`, r.reason);
         }
       });
     });
-  }, [user, profile?.barbearia_preferida_id]);
+  }, [user, tenantId, queryClient]);
 
   useEffect(() => {
     if (hasError) {
@@ -401,8 +425,8 @@ const Cliente = () => {
         .subscribe((status) => handleChannelStatus('agendamentos', status, () => {
           // On reconnect, reload all data in parallel and reinitialize channels
           initializeChannels();
+          queryClient.invalidateQueries({ queryKey: ['cliente', 'profile', userId] });
           Promise.all([
-            loadProfileData(userId),
             loadAppointmentsData(userId),
             loadLoyaltyData(userId, tenantId),
             loadShopData(tenantId),
@@ -496,47 +520,22 @@ const Cliente = () => {
 
     setUser(session.user);
     try { sessionStorage.setItem("cliente_last_user_id", session.user.id); } catch { /* ignore */ }
-    // Profile first to get tenantId, then remaining three in parallel
-    const profileData = await loadProfileData(session.user.id);
-    const tenantId = profileData?.barbearia_preferida_id ?? null;
+    // Profile loads automatically via useQuery when user is set.
+    // Other loaders still need tenantId — they react via useEffect below.
+  };
 
-    await Promise.all([
-      loadAppointmentsData(session.user.id),
-      loadLoyaltyData(session.user.id, tenantId),
+  // ─── Trigger remaining loaders once profile is available ───
+  const initialLoadDoneRef = useRef(false);
+  useEffect(() => {
+    if (!user?.id || profileLoading || initialLoadDoneRef.current) return;
+    initialLoadDoneRef.current = true;
+
+    Promise.all([
+      loadAppointmentsData(user.id),
+      loadLoyaltyData(user.id, tenantId),
       loadShopData(tenantId),
     ]);
-  };
-
-  // ─── Layer 1: Profile & Tenant ───
-  const loadProfileData = async (userId: string) => {
-    if (profileLoadRef.current) return null;
-    profileLoadRef.current = true;
-    setProfileLoading(true);
-    try {
-      const { data: prof, error } = await supabase.from("profiles").select("*").eq("id", userId).single();
-      if (error) throw error;
-      setProfile(prof);
-
-      let shop: { id: string; nome: string } | null = null;
-      const tenantId = prof?.barbearia_preferida_id;
-      if (tenantId) {
-        const { data: tenant } = await supabase.from("tenants").select("id, nome").eq("id", tenantId).single();
-        if (tenant) { setPreferredShop(tenant); shop = tenant; }
-      } else {
-        setPreferredShop(null);
-      }
-
-      setCache(`cache_profile_${userId}`, { profile: prof, preferredShop: shop }, 60);
-      setProfileLoading(false);
-      return prof;
-    } catch (err) {
-      reportError('profile', err);
-      setProfileLoading(false);
-      return null;
-    } finally {
-      profileLoadRef.current = false;
-    }
-  };
+  }, [user?.id, profileLoading]);
 
   // ─── Layer 2: Appointments & Pending Bookings ───
   const loadAppointmentsData = async (userId: string) => {
@@ -748,9 +747,7 @@ const Cliente = () => {
         setCache(cacheKey, { shopBarbers: barbersWithRatings }, 30);
       }
 
-      if (!tenantId) {
-        setPreferredShop(null);
-      }
+      // preferredShop is now derived from useQuery — no manual setter needed
     } catch (err) {
       reportError('shop', err);
     } finally {
@@ -1177,7 +1174,7 @@ const Cliente = () => {
         userId={user?.id}
         profile={profile}
         onProfileUpdate={() => {
-          if (user) loadProfileData(user.id);
+          if (user) queryClient.invalidateQueries({ queryKey: ['cliente', 'profile', user.id] });
         }}
         credits={availableCredits}
         points={points}
