@@ -2124,39 +2124,58 @@ const ClienteAgendar = () => {
                       Escolher outra data
                     </button>
                     {(() => {
-                      // Encontrar próximo dia disponível (não em closedDates, dentro de 45 dias)
-                      if (!selectedDate) return null;
-                      const today = new Date();
-                      today.setHours(0, 0, 0, 0);
-                      const maxDate = new Date(today);
-                      maxDate.setDate(maxDate.getDate() + 45);
-                      const closedSet = new Set(closedDates.map(d => format(d, 'yyyy-MM-dd')));
+                      if (!selectedDate || !selectedBarber) return null;
                       
-                      let nextAvailable: Date | null = null;
-                      const searchStart = new Date(selectedDate);
-                      searchStart.setDate(searchStart.getDate() + 1);
+                      const [searchingNext, setSearchingNext] = useState(false);
+                      const [nextAvailableDate, setNextAvailableDate] = useState<Date | null | undefined>(undefined);
                       
-                      for (let d = new Date(searchStart); d <= maxDate; d.setDate(d.getDate() + 1)) {
-                        if (d < today) continue;
-                        const dStr = format(d, 'yyyy-MM-dd');
-                        if (!closedSet.has(dStr)) {
-                          nextAvailable = new Date(d);
-                          break;
-                        }
+                      useEffect(() => {
+                        let cancelled = false;
+                        setSearchingNext(true);
+                        setNextAvailableDate(undefined);
+                        
+                        supabase
+                          .rpc('get_next_available_date', {
+                            p_barbeiro_id: selectedBarber.id,
+                            p_data_inicio: format(selectedDate, 'yyyy-MM-dd'),
+                            p_dias_limite: 45,
+                          })
+                          .then(({ data }) => {
+                            if (!cancelled) {
+                              setNextAvailableDate(data ? new Date(data + 'T00:00:00') : null);
+                              setSearchingNext(false);
+                            }
+                          })
+                          .catch(() => {
+                            if (!cancelled) {
+                              setNextAvailableDate(null);
+                              setSearchingNext(false);
+                            }
+                          });
+                        
+                        return () => { cancelled = true; };
+                      }, [selectedDate, selectedBarber.id]);
+                      
+                      if (searchingNext) {
+                        return (
+                          <span className="text-sm text-muted-foreground flex items-center gap-1.5">
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            Buscando próxima data...
+                          </span>
+                        );
                       }
                       
-                      if (!nextAvailable) return null;
+                      if (!nextAvailableDate) return null;
                       
-                      const nextDate = nextAvailable;
                       return (
                         <button
                           onClick={() => {
-                            setSelectedDate(nextDate);
+                            setSelectedDate(nextAvailableDate);
                             setSelectedTime("");
                           }}
                           className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
                         >
-                          Ver próximo dia disponível
+                          Próxima data com horário livre ({format(nextAvailableDate, "dd/MM")})
                           <ArrowRight className="w-3.5 h-3.5" />
                         </button>
                       );
