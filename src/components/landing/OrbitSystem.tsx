@@ -1,11 +1,13 @@
 import { motion } from "framer-motion";
 
-import orbitCalendar from "@/assets/orbit-calendar.png";
+import orbitCrown from "@/assets/orbit-crown.png";
 import orbitSparkle from "@/assets/orbit-sparkle.png";
-import orbitClipper from "@/assets/orbit-clipper.png";
-import orbitScissors from "@/assets/orbit-scissors.png";
-import orbitBarberPole from "@/assets/orbit-barberpole.png";
-import orbitTicket from "@/assets/orbit-ticket.png";
+import orbitFire from "@/assets/orbit-fire.png";
+import orbitDiamond from "@/assets/orbit-diamond.png";
+import orbitSunglasses from "@/assets/orbit-sunglasses.png";
+import orbitStar from "@/assets/orbit-star.png";
+import orbitPeace from "@/assets/orbit-peace.png";
+import orbitCalendar from "@/assets/orbit-calendar.png";
 
 import avatarBeanie from "@/assets/avatar-beanie.png";
 import avatarGlassesGirl from "@/assets/avatar-glasses-girl.png";
@@ -24,34 +26,40 @@ const orbits = [
   { rx: 120, ry: 120, opacity: 0.10, strokeWidth: 1 },
 ];
 
-/** Items placed at fixed angles on orbits */
 interface OrbitItem {
   src: string;
-  /** Orbit index (0 = outer, 1 = inner) */
   orbit: number;
-  /** Angle in degrees */
   angle: number;
   size: number;
   isAvatar?: boolean;
   avatarBg?: string;
   bobDelay?: number;
-  /** Extra offset beyond orbit radius */
   radiusOffset?: number;
 }
 
+/*
+  Client-focused icons — each represents the CLIENT experience:
+  👑 Crown → "saia se sentindo rei"
+  🔥 Fire → "visual que tá pegando fogo"
+  💎 Diamond → "experiência premium"
+  🕶️ Sunglasses → "estilo e atitude"
+  ⭐ Star → "brilho e destaque"
+  ✌️ Peace → "confiança e boa vibe"
+  📅 Calendar → "praticidade de agendar"
+*/
 const orbitItems: OrbitItem[] = [
-  // Outer orbit — tools & avatars alternating
-  { src: orbitTicket,         orbit: 0, angle: 30,   size: 56, bobDelay: 0 },
+  // Outer orbit — lifestyle icons & avatars alternating
+  { src: orbitCrown,        orbit: 0, angle: 25,   size: 56, bobDelay: 0 },
   { src: avatarBeanie,      orbit: 0, angle: 80,   size: 50, isAvatar: true, avatarBg: "hsl(20 80% 60%)", bobDelay: 0.4 },
-  { src: orbitScissors,     orbit: 0, angle: 140,  size: 58, bobDelay: 1.0 },
+  { src: orbitFire,         orbit: 0, angle: 140,  size: 52, bobDelay: 1.0 },
   { src: avatarGlassesGirl, orbit: 0, angle: 195,  size: 52, isAvatar: true, avatarBg: "hsl(45 70% 55%)", bobDelay: 0.8 },
-  { src: orbitClipper,      orbit: 0, angle: 250,  size: 54, bobDelay: 1.6, radiusOffset: 10 },
+  { src: orbitSunglasses,   orbit: 0, angle: 250,  size: 54, bobDelay: 1.6, radiusOffset: 10 },
   { src: avatarBraids,      orbit: 0, angle: 320,  size: 48, isAvatar: true, avatarBg: "hsl(280 40% 60%)", bobDelay: 1.2 },
 
-  // Inner orbit
+  // Inner orbit — more personal, intimate icons
   { src: orbitCalendar,     orbit: 1, angle: 10,   size: 54, bobDelay: 0.2 },
   { src: avatarElderly,     orbit: 1, angle: 100,  size: 44, isAvatar: true, avatarBg: "hsl(140 40% 50%)", bobDelay: 0.6 },
-  { src: orbitBarberPole,   orbit: 1, angle: 180,  size: 48, bobDelay: 1.4 },
+  { src: orbitDiamond,      orbit: 1, angle: 180,  size: 48, bobDelay: 1.4 },
   { src: avatarHijab,       orbit: 1, angle: 260,  size: 46, isAvatar: true, avatarBg: "hsl(200 50% 60%)", bobDelay: 1.0 },
 ];
 
@@ -66,7 +74,7 @@ function getPosition(item: OrbitItem): { x: number; y: number } {
   };
 }
 
-/** Clean orbital system inspired by Luma's concentric circles */
+/** Clean orbital system — client-experience focused */
 export function OrbitSystem() {
   return (
     <div
@@ -92,7 +100,7 @@ export function OrbitSystem() {
         ))}
       </svg>
 
-      {/* Center sparkle */}
+      {/* Center sparkle — the "you" star */}
       <div
         className="absolute z-10"
         style={{
