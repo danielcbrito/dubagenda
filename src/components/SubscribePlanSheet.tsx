@@ -270,22 +270,6 @@ export function SubscribePlanSheet({ open, onOpenChange, userId }: SubscribePlan
     }
   }, [open]);
 
-  useEffect(() => {
-    const channel = supabase
-      .channel('plans-changes')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'planos' },
-        (payload) => {
-          if (open) {
-            loadPlans();
-            if (payload.eventType === 'INSERT') toast.success("Novo plano disponível!");
-          }
-        }
-      )
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, [open]);
 
   const loadPlans = async () => {
     setLoadingState("loading");
