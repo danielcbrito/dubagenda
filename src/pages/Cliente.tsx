@@ -657,47 +657,6 @@ const Cliente = () => {
     setUser(session.user);
   };
 
-  // ─── Layer 4: Shop Barbers & Ratings (still manual) ───
-  const loadShopData = async (tenantId: string | null) => {
-    if (shopLoadRef.current) return;
-    shopLoadRef.current = true;
-    setShopLoading(true);
-    try {
-      let query = supabase
-        .from("barbeiros")
-        .select("id, apelido, foto_url, barbeiro_avaliacoes(rating)")
-        .eq("ativo", true)
-        .is("deleted_at", null);
-
-      if (tenantId) {
-        query = query.eq("tenant_id", tenantId);
-      } else {
-        query = query.is("tenant_id", null);
-      }
-
-      const { data: barbers, error } = await query;
-      if (error) throw error;
-
-      if (barbers) {
-        const barbersWithRatings = barbers.map((b: any) => {
-          const ratings: number[] = (b.barbeiro_avaliacoes || []).map((r: any) => r.rating);
-          const avgRating = ratings.length > 0
-            ? ratings.reduce((sum, r) => sum + r, 0) / ratings.length
-            : null;
-          return { id: b.id, apelido: b.apelido, foto_url: b.foto_url, avgRating, totalReviews: ratings.length };
-        });
-        setShopBarbers(barbersWithRatings);
-
-        const cacheKey = tenantId ? `cache_shop_${tenantId}` : `cache_shop_dub`;
-        setCache(cacheKey, { shopBarbers: barbersWithRatings }, 30);
-      }
-    } catch (err) {
-      reportError('shop', err);
-    } finally {
-      shopLoadRef.current = false;
-      setShopLoading(false);
-    }
-  };
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
