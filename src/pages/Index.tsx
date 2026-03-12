@@ -174,21 +174,6 @@ const Index = () => {
       <div className="relative flex-1 flex flex-col max-w-[430px] mx-auto w-full">
         <div className="flex-1 flex flex-col px-7 pt-[calc(env(safe-area-inset-top,0px)+1.5rem)] pb-[calc(env(safe-area-inset-bottom,0px)+1.5rem)]">
 
-          {/* Brand mark */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.8, delay: 0.1 }}
-            className="flex-shrink-0 flex items-center gap-2"
-          >
-            <div className="w-[5px] h-[5px] rounded-full" style={{ background: "hsl(0 72% 50%)" }} />
-            <span
-              className="text-[11px] font-medium tracking-[0.3em] uppercase"
-              style={{ color: "hsl(0 0% 42%)" }}
-            >
-              DUB Agenda
-            </span>
-          </motion.div>
 
           {/* Illustration area — fills most of the screen */}
           <div className="relative flex-1 min-h-0">
