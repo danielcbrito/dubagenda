@@ -630,8 +630,6 @@ const Cliente = () => {
   }, [user, profile?.barbearia_preferida_id, handleChannelStatus, invalidateAppointments, invalidateLoyalty]);
 
   // ─── Refetch ao retornar ao app (visibilitychange) ───
-  const shopDataLastLoadRef = useRef<number>(Date.now());
-
   useEffect(() => {
     if (!user) return;
 
@@ -641,19 +639,12 @@ const Cliente = () => {
       // Invalidate stale queries — TanStack Query handles staleness automatically
       invalidateAppointments();
       invalidateLoyalty();
-
-      // Refresh shop/barber data if stale (>30 min)
-      const SHOP_STALE_MS = 30 * 60 * 1000;
-      if (tenantId && Date.now() - shopDataLastLoadRef.current > SHOP_STALE_MS) {
-        console.log('[VISIBILITY] Shop data stale (>30min), refetching...');
-        loadShopData(tenantId);
-        shopDataLastLoadRef.current = Date.now();
-      }
+      invalidateShop();
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, [user, tenantId, invalidateAppointments, invalidateLoyalty]);
+  }, [user, invalidateAppointments, invalidateLoyalty, invalidateShop]);
 
   const checkAuth = async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -664,17 +655,7 @@ const Cliente = () => {
     }
 
     setUser(session.user);
-    try { sessionStorage.setItem("cliente_last_user_id", session.user.id); } catch { /* ignore */ }
   };
-
-  // ─── Trigger shop loader once profile is available ───
-  const initialLoadDoneRef = useRef(false);
-  useEffect(() => {
-    if (!user?.id || profileLoading || initialLoadDoneRef.current) return;
-    initialLoadDoneRef.current = true;
-
-    loadShopData(tenantId);
-  }, [user?.id, profileLoading]);
 
   // ─── Layer 4: Shop Barbers & Ratings (still manual) ───
   const loadShopData = async (tenantId: string | null) => {
