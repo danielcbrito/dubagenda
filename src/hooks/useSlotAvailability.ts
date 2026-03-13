@@ -396,6 +396,8 @@ export function useSlotAvailability(
       const CLOSE_MINUTES = timeToMinutes(config.hora_fechamento);
       const LUNCH_START = config.hora_almoco_inicio ? timeToMinutes(config.hora_almoco_inicio) : null;
       const LUNCH_END = config.hora_almoco_fim ? timeToMinutes(config.hora_almoco_fim) : null;
+      const LUNCH_BUFFER_MINUTES = 10;
+      const LUNCH_END_WITH_BUFFER = LUNCH_END !== null ? LUNCH_END + LUNCH_BUFFER_MINUTES : null;
       const DELAY_MINUTES = config.delay_entre_servicos || DEFAULT_DELAY_MINUTES;
 
       // Buscar agendamentos com status bloqueante (filtrado por barbeiro/tenant)
@@ -494,8 +496,8 @@ export function useSlotAvailability(
         if (slotEndMinutes > CLOSE_MINUTES) continue;
 
         // 2. Verificar almoço - sobreposição: slotStart < LUNCH_END E slotEnd > LUNCH_START
-        if (LUNCH_START !== null && LUNCH_END !== null) {
-          if (slotStartMinutes < LUNCH_END && slotEndMinutes > LUNCH_START) continue;
+        if (LUNCH_START !== null && LUNCH_END_WITH_BUFFER !== null) {
+          if (slotStartMinutes < LUNCH_END_WITH_BUFFER && slotEndMinutes > LUNCH_START) continue;
         }
 
         // 3. Verificar antecedência mínima

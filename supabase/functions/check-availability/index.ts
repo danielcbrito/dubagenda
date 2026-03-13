@@ -295,6 +295,8 @@ Deno.serve(async (req) => {
     const CLOSE_MINUTES = timeToMinutes(config.hora_fechamento);
     const LUNCH_START = config.hora_almoco_inicio ? timeToMinutes(config.hora_almoco_inicio) : null;
     const LUNCH_END = config.hora_almoco_fim ? timeToMinutes(config.hora_almoco_fim) : null;
+    const LUNCH_BUFFER_MINUTES = 10;
+    const LUNCH_END_WITH_BUFFER = LUNCH_END !== null ? LUNCH_END + LUNCH_BUFFER_MINUTES : null;
     const DELAY_MINUTES = config.delay_entre_servicos || 10;
 
     console.log(`[check-availability] Horário: ${minutesToTime(OPEN_MINUTES)}-${minutesToTime(CLOSE_MINUTES)} | Almoço: ${LUNCH_START ? minutesToTime(LUNCH_START) : 'N/A'}-${LUNCH_END ? minutesToTime(LUNCH_END) : 'N/A'} | Delay: ${DELAY_MINUTES}min`);
@@ -421,9 +423,13 @@ Deno.serve(async (req) => {
 
       // 2. Verificar almoço - qualquer sobreposição entre [slotStart, slotEnd] e [LUNCH_START, LUNCH_END] bloqueia
       // Regra: sobreposição existe quando slotStart < LUNCH_END E slotEnd > LUNCH_START
-      if (LUNCH_START !== null && LUNCH_END !== null) {
-        if (slotStartMinutes < LUNCH_END && slotEndMinutes > LUNCH_START) {
-          slots.push({ time: timeStr, available: false, blockedReason: 'lunch' });
+      if (LUNCH_START !== null && LUNCH_END_WITH_BUFFER !== null) {
+        if (slotStartMinutes < LUNCH_END_WITH_BUFFER && slotEndMinutes > LUNCH_START) {
+          slots.push({ 
+            time: timeStr, 
+            available: false, 
+            blockedReason: slotStartMinutes < LUNCH_END ? 'lunch' : 'lunch_buffer'
+          });
           continue;
         }
       }
