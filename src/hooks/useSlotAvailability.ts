@@ -396,6 +396,8 @@ export function useSlotAvailability(
       const CLOSE_MINUTES = timeToMinutes(config.hora_fechamento);
       const LUNCH_START = config.hora_almoco_inicio ? timeToMinutes(config.hora_almoco_inicio) : null;
       const LUNCH_END = config.hora_almoco_fim ? timeToMinutes(config.hora_almoco_fim) : null;
+      const LUNCH_BUFFER_MINUTES = 10;
+      const LUNCH_END_WITH_BUFFER = LUNCH_END !== null ? LUNCH_END + LUNCH_BUFFER_MINUTES : null;
       const DELAY_MINUTES = config.delay_entre_servicos || DEFAULT_DELAY_MINUTES;
 
       // Buscar agendamentos com status bloqueante (filtrado por barbeiro/tenant)
