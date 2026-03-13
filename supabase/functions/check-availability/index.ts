@@ -423,9 +423,13 @@ Deno.serve(async (req) => {
 
       // 2. Verificar almoço - qualquer sobreposição entre [slotStart, slotEnd] e [LUNCH_START, LUNCH_END] bloqueia
       // Regra: sobreposição existe quando slotStart < LUNCH_END E slotEnd > LUNCH_START
-      if (LUNCH_START !== null && LUNCH_END !== null) {
-        if (slotStartMinutes < LUNCH_END && slotEndMinutes > LUNCH_START) {
-          slots.push({ time: timeStr, available: false, blockedReason: 'lunch' });
+      if (LUNCH_START !== null && LUNCH_END_WITH_BUFFER !== null) {
+        if (slotStartMinutes < LUNCH_END_WITH_BUFFER && slotEndMinutes > LUNCH_START) {
+          slots.push({ 
+            time: timeStr, 
+            available: false, 
+            blockedReason: slotStartMinutes < LUNCH_END ? 'lunch' : 'lunch_buffer'
+          });
           continue;
         }
       }

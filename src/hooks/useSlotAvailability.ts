@@ -496,8 +496,8 @@ export function useSlotAvailability(
         if (slotEndMinutes > CLOSE_MINUTES) continue;
 
         // 2. Verificar almoço - sobreposição: slotStart < LUNCH_END E slotEnd > LUNCH_START
-        if (LUNCH_START !== null && LUNCH_END !== null) {
-          if (slotStartMinutes < LUNCH_END && slotEndMinutes > LUNCH_START) continue;
+        if (LUNCH_START !== null && LUNCH_END_WITH_BUFFER !== null) {
+          if (slotStartMinutes < LUNCH_END_WITH_BUFFER && slotEndMinutes > LUNCH_START) continue;
         }
 
         // 3. Verificar antecedência mínima
