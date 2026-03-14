@@ -8,7 +8,7 @@ const Index = () => {
   const navigate = useNavigate();
 
   return (
-    <div className="fixed inset-0 flex flex-col overflow-hidden bg-white">
+    <div className="fixed inset-0 flex flex-col overflow-hidden bg-background">
 
       {/* ── Top area: Scene 1 (sad client) — top left ── */}
       <div className="flex-shrink-0 px-5 pt-[calc(env(safe-area-inset-top,0px)+8px)]">
