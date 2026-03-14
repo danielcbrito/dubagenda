@@ -47,36 +47,41 @@ const Index = () => {
           />
         </motion.div>
 
-        {/* Layer 2 (front): White text block that covers lower body */}
+        {/* "DUB AGENDA" label — outside white container, directly on screen */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 1.0 }}
           className="absolute bottom-0 left-0 right-0 px-6 pb-[calc(env(safe-area-inset-bottom,0px)+20px)]"
-          style={{
-            zIndex: 2,
-            background: "white",
-            borderRadius: "24px 24px 0 0",
-            paddingTop: 28,
-            boxShadow: "0 -20px 40px rgba(255,255,255,0.95)",
-          }}
+          style={{ zIndex: 2 }}
         >
-          {/* Text */}
-          <div className="flex flex-col items-start gap-1 mb-4">
-            <span
-              style={{
-                fontFamily: "Inter, sans-serif",
-                fontWeight: 600,
-                fontSize: 10,
-                color: "#ccc",
-                letterSpacing: "2.5px",
-                textTransform: "uppercase" as const,
-              }}
-            >
-              DUB AGENDA
-            </span>
+          <span
+            style={{
+              fontFamily: "Inter, sans-serif",
+              fontWeight: 600,
+              fontSize: 10,
+              color: "#ccc",
+              letterSpacing: "2.5px",
+              textTransform: "uppercase" as const,
+              display: "block",
+              marginBottom: 6,
+            }}
+          >
+            DUB AGENDA
+          </span>
 
-            <h1
+          {/* White container starts at h1 */}
+          <div
+            style={{
+              background: "white",
+              borderRadius: "24px 24px 0 0",
+              paddingTop: 8,
+              boxShadow: "0 -20px 40px rgba(255,255,255,0.95)",
+            }}
+            className="px-6 pb-[calc(env(safe-area-inset-bottom,0px)+20px)] -mx-6"
+          >
+            <div className="flex flex-col items-start gap-1 mb-4">
+              <h1
               style={{
                 fontFamily: "'Plus Jakarta Sans', Inter, sans-serif",
                 fontWeight: 900,
