@@ -16,7 +16,7 @@ const Index = () => {
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.5, delay: 0.2 }}
-          style={{ width: "50%" }}
+          style={{ width: "58%" }}
         >
           <img
             src={sceneClientSad}
@@ -36,7 +36,7 @@ const Index = () => {
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.5, delay: 0.7 }}
           className="absolute right-4"
-          style={{ top: "-25%", width: "58%", zIndex: 1 }}
+          style={{ top: "-8%", width: "55%", zIndex: 1 }}
         >
           <img
             src={sceneFriendApp}
