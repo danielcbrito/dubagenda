@@ -32,6 +32,7 @@ const Index = () => {
               style={{
                 width: "92%",
                 height: "auto",
+                marginLeft: "-6%",
               }}
               draggable={false}
             />
