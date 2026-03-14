@@ -1,166 +1,99 @@
 import { motion } from "framer-motion";
 
-/** Pencil-sketch barber — confident pro in lab coat, goatee, phone showing DUB */
+/** Clean cartoon barber — confident, lab coat, goatee, phone in hand */
 export function SketchBarber() {
   return (
     <motion.svg
-      width="145"
-      height="310"
-      viewBox="0 0 145 310"
+      width="135"
+      height="290"
+      viewBox="0 0 135 290"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       animate={{ y: [0, -5, 0] }}
       transition={{ duration: 4, ease: "easeInOut", repeat: Infinity, delay: 0.4 }}
     >
-      {/* ═══ HAIR — sharp fade, clean top ═══ */}
-      <path d="M42 50 Q38 20 56 12 Q68 6 80 10 Q100 14 102 46"
-        stroke="#111" strokeWidth="2.4" fill="none" />
-      {/* Top volume */}
-      <path d="M48 36 Q56 18 70 16" stroke="#111" strokeWidth="1.4" fill="none" />
-      <path d="M74 12 Q88 12 98 28" stroke="#111" strokeWidth="1.4" fill="none" />
-      <path d="M54 26 Q62 16 72 18" stroke="#111" strokeWidth="0.9" fill="none" />
-      {/* Fade lines on sides — barber signature */}
-      <path d="M42 46 Q40 38 42 30" stroke="#111" strokeWidth="0.7" strokeDasharray="1.5 2" fill="none" />
-      <path d="M44 44 Q42 36 44 28" stroke="#111" strokeWidth="0.5" strokeDasharray="1.5 2" fill="none" />
-      <path d="M102 44 Q104 36 102 28" stroke="#111" strokeWidth="0.7" strokeDasharray="1.5 2" fill="none" />
-      <path d="M100 42 Q102 34 100 26" stroke="#111" strokeWidth="0.5" strokeDasharray="1.5 2" fill="none" />
-      {/* Hair part line */}
-      <path d="M56 16 Q60 14 64 16" stroke="#111" strokeWidth="1" fill="none" />
-
       {/* ═══ HEAD ═══ */}
-      <ellipse cx="72" cy="58" rx="30" ry="32" stroke="#111" strokeWidth="2.4" fill="none" />
-      
-      {/* Strong jawline */}
-      <path d="M46 68 Q52 86 72 90 Q92 86 98 68" stroke="#111" strokeWidth="0.7" fill="none" opacity="0.3" />
+      <ellipse cx="68" cy="52" rx="26" ry="29" stroke="#111" strokeWidth="2.2" fill="none" />
+
+      {/* ═══ HAIR — clean fade ═══ */}
+      <path d="M42 44 Q40 18 56 10 Q66 4 76 8 Q94 8 96 32 Q96 38 94 44"
+        stroke="#111" strokeWidth="2.2" fill="none" />
+      <path d="M48 30 Q56 16 66 14" stroke="#111" strokeWidth="1" fill="none" />
+      <path d="M70 10 Q82 10 92 24" stroke="#111" strokeWidth="1" fill="none" />
+      {/* Fade lines */}
+      <line x1="42" y1="40" x2="42" y2="30" stroke="#111" strokeWidth="0.5" strokeDasharray="1.5 2" />
+      <line x1="94" y1="38" x2="94" y2="28" stroke="#111" strokeWidth="0.5" strokeDasharray="1.5 2" />
 
       {/* ═══ EYEBROWS — confident arch ═══ */}
-      <path d="M52 46 Q60 40 68 46" stroke="#111" strokeWidth="2.5" strokeLinecap="round" fill="none" />
-      <path d="M78 46 Q86 40 94 46" stroke="#111" strokeWidth="2.5" strokeLinecap="round" fill="none" />
+      <path d="M50 42 Q58 37 64 42" stroke="#111" strokeWidth="2.2" strokeLinecap="round" fill="none" />
+      <path d="M72 42 Q78 37 86 42" stroke="#111" strokeWidth="2.2" strokeLinecap="round" fill="none" />
 
-      {/* ═══ EYES — cool, slightly narrowed, confident ═══ */}
-      <ellipse cx="60" cy="55" rx="5.5" ry="5" stroke="#111" strokeWidth="1.8" fill="none" />
-      <ellipse cx="86" cy="55" rx="5.5" ry="5" stroke="#111" strokeWidth="1.8" fill="none" />
-      {/* Eyelids — cool half-closed */}
-      <path d="M54.5 53 Q60 50 65.5 53" stroke="#111" strokeWidth="1.2" fill="none" />
-      <path d="M80.5 53 Q86 50 91.5 53" stroke="#111" strokeWidth="1.2" fill="none" />
-      {/* Pupils */}
-      <circle cx="61" cy="56" r="2.8" fill="#111" />
-      <circle cx="87" cy="56" r="2.8" fill="#111" />
-      {/* Highlights */}
-      <circle cx="63" cy="54" r="1.3" fill="white" />
-      <circle cx="89" cy="54" r="1.3" fill="white" />
+      {/* ═══ EYES — cool, slightly narrowed ═══ */}
+      <ellipse cx="57" cy="50" rx="5" ry="4.5" stroke="#111" strokeWidth="1.6" fill="none" />
+      <ellipse cx="79" cy="50" rx="5" ry="4.5" stroke="#111" strokeWidth="1.6" fill="none" />
+      <circle cx="58" cy="50.5" r="2.5" fill="#111" />
+      <circle cx="80" cy="50.5" r="2.5" fill="#111" />
+      <circle cx="59.5" cy="49" r="1.2" fill="white" />
+      <circle cx="81.5" cy="49" r="1.2" fill="white" />
 
       {/* ═══ NOSE ═══ */}
-      <path d="M70 64 Q72 70 74 64" stroke="#111" strokeWidth="1.3" strokeLinecap="round" fill="none" />
-      <path d="M68 68 Q72 72 76 68" stroke="#111" strokeWidth="0.7" fill="none" opacity="0.4" />
+      <path d="M66 58 Q68 63 70 58" stroke="#111" strokeWidth="1.2" strokeLinecap="round" fill="none" />
 
-      {/* ═══ MOUTH — confident smirk ═══ */}
-      <path d="M62 74 Q72 82 82 74" stroke="#111" strokeWidth="2" strokeLinecap="round" fill="none" />
-      {/* Tooth hint */}
-      <path d="M66 76 L68 76" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
+      {/* ═══ SMILE — confident ═══ */}
+      <path d="M58 66 Q68 74 78 66" stroke="#111" strokeWidth="1.8" strokeLinecap="round" fill="none" />
 
-      {/* ═══ GOATEE — detailed beard ═══ */}
-      <path d="M64 78 Q68 86 72 88 Q76 86 80 78" stroke="#111" strokeWidth="1.8" fill="none" />
-      <path d="M66 80 Q72 90 78 80" stroke="#111" strokeWidth="1" fill="none" />
-      <line x1="72" y1="76" x2="72" y2="84" stroke="#111" strokeWidth="0.8" />
-      {/* Stubble dots */}
-      <circle cx="60" cy="78" r="0.4" fill="#111" />
-      <circle cx="62" cy="80" r="0.4" fill="#111" />
-      <circle cx="82" cy="78" r="0.4" fill="#111" />
-      <circle cx="84" cy="80" r="0.4" fill="#111" />
+      {/* ═══ GOATEE ═══ */}
+      <path d="M60 70 Q64 78 68 80 Q72 78 76 70" stroke="#111" strokeWidth="1.6" fill="none" />
+      <line x1="68" y1="70" x2="68" y2="76" stroke="#111" strokeWidth="0.7" />
 
-      {/* ═══ EARS ═══ */}
-      <path d="M102 52 Q108 56 106 66 Q104 70 101 68" stroke="#111" strokeWidth="1.5" fill="none" />
-      <path d="M104 60 Q105 62 104 64" stroke="#111" strokeWidth="0.6" fill="none" />
+      {/* ═══ EAR ═══ */}
+      <path d="M94 46 Q100 50 98 58 Q96 62 93 60" stroke="#111" strokeWidth="1.4" fill="none" />
 
       {/* ═══ NECK ═══ */}
-      <line x1="64" y1="88" x2="64" y2="108" stroke="#111" strokeWidth="2" />
-      <line x1="80" y1="88" x2="80" y2="108" stroke="#111" strokeWidth="2" />
+      <line x1="60" y1="78" x2="60" y2="94" stroke="#111" strokeWidth="1.8" />
+      <line x1="76" y1="78" x2="76" y2="94" stroke="#111" strokeWidth="1.8" />
 
-      {/* ═══ LAB COAT / JALECO — professional ═══ */}
-      <path d="M22 110 Q22 104 48 102 L64 102 L80 102 Q98 104 98 110 L102 206 Q102 214 72 214 Q42 214 42 206 Z"
-        stroke="#111" strokeWidth="2.2" fill="none" />
-      {/* Lapels — sharp V */}
-      <path d="M56 102 L64 126 L72 104" stroke="#111" strokeWidth="1.8" fill="none" />
-      <path d="M88 102 L80 126 L72 104" stroke="#111" strokeWidth="1.8" fill="none" />
+      {/* ═══ LAB COAT ═══ */}
+      <path d="M22 96 Q22 92 46 90 L60 90 L76 90 Q90 92 90 96 L94 184 Q94 190 68 190 Q42 190 42 184 Z"
+        stroke="#111" strokeWidth="2" fill="none" />
+      {/* Lapels */}
+      <path d="M52 90 L60 110 L68 92" stroke="#111" strokeWidth="1.6" fill="none" />
+      <path d="M84 90 L76 110 L68 92" stroke="#111" strokeWidth="1.6" fill="none" />
       {/* Center seam */}
-      <line x1="72" y1="126" x2="72" y2="206" stroke="#111" strokeWidth="0.8" strokeDasharray="4 3" />
-      
-      {/* Chest pocket with pen */}
-      <rect x="48" y="132" width="18" height="14" rx="2" stroke="#111" strokeWidth="1.2" fill="none" />
-      <line x1="54" y1="132" x2="53" y2="124" stroke="#111" strokeWidth="1.2" strokeLinecap="round" />
-      {/* Badge / crachá */}
-      <rect x="50" y="134" width="14" height="6" rx="1.5" stroke="#111" strokeWidth="0.8" fill="none" />
-      <text x="52" y="139.5" fontFamily="sans-serif" fontSize="4" fontWeight="800" fill="#111">PRO</text>
-      
+      <line x1="68" y1="110" x2="68" y2="184" stroke="#111" strokeWidth="0.7" strokeDasharray="3 3" />
+      {/* Pocket */}
+      <rect x="46" y="122" width="16" height="12" rx="2" stroke="#111" strokeWidth="1" fill="none" />
+      {/* Badge */}
+      <rect x="48" y="124" width="12" height="5" rx="1" stroke="#111" strokeWidth="0.7" fill="none" />
+      <text x="49.5" y="128.5" fontFamily="sans-serif" fontSize="3.5" fontWeight="800" fill="#111">PRO</text>
       {/* Buttons */}
-      <circle cx="72" cy="148" r="2.2" stroke="#111" strokeWidth="1" fill="none" />
-      <circle cx="72" cy="165" r="2.2" stroke="#111" strokeWidth="1" fill="none" />
-      <circle cx="72" cy="182" r="2.2" stroke="#111" strokeWidth="1" fill="none" />
-      
-      {/* Coat wrinkles */}
-      <path d="M52 155 Q56 164 54 176" stroke="#111" strokeWidth="0.6" fill="none" />
-      <path d="M90 152 Q86 162 90 174" stroke="#111" strokeWidth="0.6" fill="none" />
-      <path d="M62 170 Q64 178 62 186" stroke="#111" strokeWidth="0.5" fill="none" />
+      <circle cx="68" cy="132" r="2" stroke="#111" strokeWidth="0.9" fill="none" />
+      <circle cx="68" cy="148" r="2" stroke="#111" strokeWidth="0.9" fill="none" />
+      <circle cx="68" cy="164" r="2" stroke="#111" strokeWidth="0.9" fill="none" />
 
-      {/* ═══ LEFT ARM — relaxed at side, slightly back ═══ */}
-      <path d="M22 114 Q8 124 10 168"
-        stroke="#111" strokeWidth="2.2" fill="none" strokeLinecap="round" />
-      {/* Left hand — thumbs up gesture */}
-      <path d="M8 168 Q6 172 8 178 Q12 182 14 178 Q16 174 14 170"
-        stroke="#111" strokeWidth="1.5" fill="none" />
-      <path d="M10 170 Q6 166 8 162" stroke="#111" strokeWidth="1.3" fill="none" strokeLinecap="round" />
-      {/* Fingers */}
-      <line x1="10" y1="172" x2="8" y2="168" stroke="#111" strokeWidth="0.8" strokeLinecap="round" />
-      <line x1="12" y1="174" x2="11" y2="170" stroke="#111" strokeWidth="0.8" strokeLinecap="round" />
+      {/* ═══ LEFT ARM — at side ═══ */}
+      <path d="M22 100 Q10 110 12 148" stroke="#111" strokeWidth="2" fill="none" strokeLinecap="round" />
+      <path d="M10 148 Q8 154 12 158 Q16 156 14 152" stroke="#111" strokeWidth="1.4" fill="none" />
 
-      {/* ═══ RIGHT ARM — holding phone up, presenting ═══ */}
-      <path d="M98 114 Q118 118 122 148"
-        stroke="#111" strokeWidth="2.2" fill="none" strokeLinecap="round" />
-      {/* Elbow crease */}
-      <path d="M114 130 Q116 134 114 138" stroke="#111" strokeWidth="0.5" fill="none" />
+      {/* ═══ RIGHT ARM — holding phone up ═══ */}
+      <path d="M90 100 Q108 106 110 134" stroke="#111" strokeWidth="2" fill="none" strokeLinecap="round" />
 
-      {/* ═══ PHONE — detailed ═══ */}
-      <rect x="112" y="140" width="22" height="40" rx="4" stroke="#111" strokeWidth="2" fill="none" />
-      {/* Screen bezel */}
-      <rect x="115" y="146" width="16" height="27" rx="1.5" stroke="#111" strokeWidth="0.8" fill="none" />
-      {/* "DUB" on screen */}
-      <text x="117" y="163" fontFamily="sans-serif" fontSize="9" fontWeight="900" fill="#111">DUB</text>
-      {/* Notch */}
-      <rect x="120" y="142" width="6" height="2" rx="1" fill="#111" opacity="0.3" />
-      {/* Home indicator */}
-      <rect x="119" y="176" width="8" height="1.5" rx="0.75" fill="#111" opacity="0.3" />
-      {/* Hand gripping phone */}
-      <path d="M114 154 Q110 150 112 142" stroke="#111" strokeWidth="1.4" fill="none" strokeLinecap="round" />
-      <path d="M134 154 Q138 150 136 142" stroke="#111" strokeWidth="1.4" fill="none" strokeLinecap="round" />
-      <path d="M112 158 Q110 155 112 150" stroke="#111" strokeWidth="1" fill="none" strokeLinecap="round" />
+      {/* ═══ PHONE ═══ */}
+      <rect x="102" y="128" width="20" height="36" rx="3.5" stroke="#111" strokeWidth="1.8" fill="none" />
+      <rect x="105" y="133" width="14" height="24" rx="1" stroke="#111" strokeWidth="0.7" fill="none" />
+      <text x="106.5" y="148" fontFamily="sans-serif" fontSize="8" fontWeight="900" fill="#111">DUB</text>
+      <circle cx="112" cy="160" r="1.5" stroke="#111" strokeWidth="0.6" fill="none" />
+      {/* Hand on phone */}
+      <path d="M104 140 Q100 136 102 130" stroke="#111" strokeWidth="1.2" fill="none" strokeLinecap="round" />
+      <path d="M122 140 Q126 136 124 130" stroke="#111" strokeWidth="1.2" fill="none" strokeLinecap="round" />
 
-      {/* Phone glow effect */}
-      <motion.rect
-        x="115" y="146" width="16" height="27" rx="1.5"
-        fill="#111" opacity={0}
-        animate={{ opacity: [0, 0.06, 0] }}
-        transition={{ duration: 2, repeat: Infinity }}
-      />
-
-      {/* ═══ PANTS — dark/filled ═══ */}
-      <path d="M46 210 L42 268 L60 268 L66 216 L78 216 L84 268 L102 268 L98 210 Z"
-        stroke="#111" strokeWidth="2" fill="#111" />
-
-      {/* ═══ SHOES — solid, professional ═══ */}
-      <path d="M34 268 Q42 263 60 267 Q64 271 62 276 Q48 278 34 274 Z"
-        stroke="#111" strokeWidth="1.8" fill="#111" />
-      <path d="M84 267 Q96 263 112 267 Q116 271 114 276 Q100 278 84 274 Z"
+      {/* ═══ PANTS — filled dark ═══ */}
+      <path d="M44 186 L40 244 L56 244 L60 192 L76 192 L80 244 L96 244 L92 186 Z"
         stroke="#111" strokeWidth="1.8" fill="#111" />
 
-      {/* ═══ Confidence sparkle ═══ */}
-      <motion.g
-        animate={{ opacity: [0.2, 0.7, 0.2], scale: [0.9, 1.1, 0.9] }}
-        transition={{ duration: 2.5, repeat: Infinity, delay: 0.8 }}
-      >
-        <path d="M126 130 L128 126 L130 130 L134 132 L130 134 L128 138 L126 134 L122 132 Z"
-          fill="#111" opacity="0.4" />
-      </motion.g>
+      {/* ═══ SHOES ═══ */}
+      <path d="M34 244 Q42 240 56 243 Q60 247 34 250 Z" stroke="#111" strokeWidth="1.6" fill="#111" />
+      <path d="M80 243 Q90 240 106 243 Q110 247 80 250 Z" stroke="#111" strokeWidth="1.6" fill="#111" />
     </motion.svg>
   );
 }
