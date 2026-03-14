@@ -25,27 +25,16 @@ export class GlobalErrorBoundary extends Component<Props, State> {
 
   static getDerivedStateFromError(error: Error): State {
     const msg = (error?.message || "").toLowerCase();
-    const stack = (error?.stack || "").toLowerCase();
-    const combined = msg + " " + stack;
 
+    // Only treat very specific database/supabase errors as DB errors
     const isDbError =
-      combined.includes("supabase") ||
-      combined.includes("postgres") ||
-      combined.includes("database") ||
-      combined.includes("rls") ||
-      combined.includes("row level security") ||
-      combined.includes("pgrst") ||
-      combined.includes("42") || // postgres error codes
-      combined.includes("relation") ||
-      combined.includes("violates") ||
-      combined.includes("duplicate key") ||
-      combined.includes("foreign key") ||
-      combined.includes("timeout") ||
-      combined.includes("network") ||
-      combined.includes("fetch") ||
-      combined.includes("failed to fetch") ||
-      combined.includes("networkerror") ||
-      combined.includes("connection");
+      msg.includes("supabase") ||
+      msg.includes("postgres") ||
+      msg.includes("pgrst") ||
+      msg.includes("row level security") ||
+      msg.includes("duplicate key") ||
+      msg.includes("foreign key") ||
+      msg.includes("failed to fetch");
 
     return {
       hasError: true,
