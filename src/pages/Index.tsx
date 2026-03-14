@@ -10,86 +10,90 @@ const Index = () => {
   return (
     <div className="fixed inset-0 flex flex-col overflow-hidden bg-white">
       <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
-        <div className="flex flex-col px-6 pt-[calc(env(safe-area-inset-top,0px)+14px)] pb-36">
+        <div className="flex flex-col px-5 pt-[calc(env(safe-area-inset-top,0px)+10px)] pb-32">
 
-          {/* ── Speech Bubbles ── */}
-          <div className="flex flex-col gap-4 mb-1">
-            {/* Bubble 1 — Client (blue tint) */}
+          {/* ── Comic Panel: Speech Bubbles + Characters ── */}
+          <div className="relative">
+
+            {/* Bubble 1 — Client (top-left, blue tint) */}
             <motion.div
-              initial={{ opacity: 0, scale: 0.95, x: -12 }}
+              initial={{ opacity: 0, scale: 0.9, x: -16 }}
               animate={{ opacity: 1, scale: 1, x: 0 }}
-              transition={{ duration: 0.5, delay: 0.5, ease: "easeOut" }}
-              className="self-start max-w-[72%] relative"
+              transition={{ duration: 0.5, delay: 0.6, ease: "easeOut" }}
+              className="relative z-10 self-start max-w-[66%] mb-2"
             >
               <div
-                className="rounded-2xl rounded-bl-md px-4 py-3 shadow-sm"
-                style={{ background: "#EDF2FA", border: "1.5px solid #D6E2F0" }}
+                className="rounded-2xl rounded-bl-md px-3.5 py-2.5"
+                style={{
+                  background: "#EDF2FA",
+                  border: "1.5px solid #D6E2F0",
+                  boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
+                }}
               >
                 <p style={{
                   fontFamily: "Caveat, cursive", fontWeight: 700,
-                  fontSize: 13, color: "#2D3748", lineHeight: 1.4,
+                  fontSize: 13, color: "#2D3748", lineHeight: 1.4, margin: 0,
                 }}>
                   Quero encontrar uma barbearia perto de mim!
                 </p>
               </div>
-              {/* Tail */}
-              <svg className="absolute -bottom-2 left-4" width="16" height="10" viewBox="0 0 16 10" fill="none">
-                <path d="M0 0 L8 10 L16 0" fill="#EDF2FA" stroke="#D6E2F0" strokeWidth="1.5"
-                  strokeLinejoin="round" />
-                <line x1="0" y1="0" x2="16" y2="0" stroke="#EDF2FA" strokeWidth="2" />
+              <svg className="absolute -bottom-[7px] left-5" width="14" height="8" viewBox="0 0 14 8" fill="none">
+                <path d="M0 0 L7 8 L14 0" fill="#EDF2FA" stroke="#D6E2F0" strokeWidth="1.5" strokeLinejoin="round" />
+                <line x1="0" y1="0" x2="14" y2="0" stroke="#EDF2FA" strokeWidth="2" />
               </svg>
             </motion.div>
 
-            {/* Bubble 2 — Barber (green tint) */}
+            {/* Bubble 2 — Barber (right side, green tint) */}
             <motion.div
-              initial={{ opacity: 0, scale: 0.95, x: 12 }}
+              initial={{ opacity: 0, scale: 0.9, x: 16 }}
               animate={{ opacity: 1, scale: 1, x: 0 }}
-              transition={{ duration: 0.5, delay: 0.9, ease: "easeOut" }}
-              className="self-end max-w-[72%] relative"
+              transition={{ duration: 0.5, delay: 1.0, ease: "easeOut" }}
+              className="relative z-10 self-end ml-auto max-w-[66%] mb-1"
             >
               <div
-                className="rounded-2xl rounded-br-md px-4 py-3 shadow-sm"
-                style={{ background: "#E8F5E9", border: "1.5px solid #C8E6C9" }}
+                className="rounded-2xl rounded-br-md px-3.5 py-2.5"
+                style={{
+                  background: "#E8F5E9",
+                  border: "1.5px solid #C8E6C9",
+                  boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
+                }}
               >
                 <p style={{
                   fontFamily: "Caveat, cursive", fontWeight: 700,
-                  fontSize: 13, color: "#2D3748", lineHeight: 1.4,
+                  fontSize: 13, color: "#2D3748", lineHeight: 1.4, margin: 0,
                 }}>
                   Usa o DUB! Agende na hora pelo app ✓
                 </p>
               </div>
-              {/* Tail */}
-              <svg className="absolute -bottom-2 right-4" width="16" height="10" viewBox="0 0 16 10" fill="none">
-                <path d="M0 0 L8 10 L16 0" fill="#E8F5E9" stroke="#C8E6C9" strokeWidth="1.5"
-                  strokeLinejoin="round" />
-                <line x1="0" y1="0" x2="16" y2="0" stroke="#E8F5E9" strokeWidth="2" />
+              <svg className="absolute -bottom-[7px] right-5" width="14" height="8" viewBox="0 0 14 8" fill="none">
+                <path d="M0 0 L7 8 L14 0" fill="#E8F5E9" stroke="#C8E6C9" strokeWidth="1.5" strokeLinejoin="round" />
+                <line x1="0" y1="0" x2="14" y2="0" stroke="#E8F5E9" strokeWidth="2" />
               </svg>
+            </motion.div>
+
+            {/* Characters — side by side, overlapping slightly */}
+            <motion.div
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.2 }}
+              className="flex items-end justify-center -mt-1"
+            >
+              <div className="relative">
+                <SketchClient />
+              </div>
+              <div className="-ml-6 relative">
+                <SketchBarber />
+              </div>
             </motion.div>
           </div>
 
-          {/* ── Characters — larger, centered ── */}
+          {/* ── Text Section — left aligned, tight to characters ── */}
           <motion.div
-            initial={{ opacity: 0, y: 10 }}
+            initial={{ opacity: 0, y: 14 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, delay: 0.15 }}
-            className="flex items-end justify-center relative my-1"
+            transition={{ duration: 0.5, delay: 0.55 }}
+            className="flex flex-col items-start mt-2 gap-1.5"
           >
-            <div className="relative">
-              <SketchClient />
-            </div>
-            <div className="-ml-8 relative">
-              <SketchBarber />
-            </div>
-          </motion.div>
-
-          {/* ── Text Section — left aligned, pushed down ── */}
-          <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.5 }}
-            className="flex flex-col items-start mt-6 gap-2"
-          >
-            {/* Label */}
             <span
               style={{
                 fontFamily: "Inter, sans-serif",
@@ -103,14 +107,13 @@ const Index = () => {
               DUB AGENDA
             </span>
 
-            {/* Title */}
             <h1
               style={{
                 fontFamily: "'Plus Jakarta Sans', Inter, sans-serif",
                 fontWeight: 900,
                 fontSize: 27,
                 color: "#111",
-                lineHeight: 1.2,
+                lineHeight: 1.18,
                 margin: 0,
               }}
             >
@@ -121,7 +124,6 @@ const Index = () => {
               <span style={{ color: "#E53E3E" }}>de você.</span>
             </h1>
 
-            {/* Subtitle */}
             <p
               style={{
                 fontFamily: "Inter, sans-serif",
@@ -138,9 +140,9 @@ const Index = () => {
         </div>
       </div>
 
-      {/* ── CTA Button — fixed, pushed up ── */}
+      {/* ── CTA Button — fixed bottom, slimmer ── */}
       <div
-        className="fixed bottom-0 left-0 right-0 z-50 px-6 pb-[calc(env(safe-area-inset-bottom,0px)+28px)] pt-4"
+        className="fixed bottom-0 left-0 right-0 z-50 px-6 pb-[calc(env(safe-area-inset-bottom,0px)+24px)] pt-5"
         style={{ background: "linear-gradient(to top, white 60%, transparent)" }}
       >
         <button
@@ -149,12 +151,12 @@ const Index = () => {
           style={{
             fontFamily: "'Plus Jakarta Sans', Inter, sans-serif",
             fontWeight: 700,
-            fontSize: 14,
+            fontSize: 13,
             color: "#111",
             background: "transparent",
-            borderRadius: 14,
-            padding: "14px 18px",
-            border: "1.8px solid #111",
+            borderRadius: 12,
+            padding: "11px 14px",
+            border: "1.6px solid #111",
             cursor: "pointer",
           }}
         >
@@ -162,13 +164,13 @@ const Index = () => {
           <span
             className="flex items-center justify-center"
             style={{
-              width: 28,
-              height: 28,
-              borderRadius: 8,
+              width: 24,
+              height: 24,
+              borderRadius: 7,
               background: "#111",
             }}
           >
-            <ArrowRight className="w-3.5 h-3.5 text-white" />
+            <ArrowRight className="w-3 h-3 text-white" />
           </span>
         </button>
       </div>
