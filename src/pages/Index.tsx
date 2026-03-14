@@ -16,7 +16,7 @@ const Index = () => {
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.5, delay: 0.2 }}
-          style={{ width: "62%" }}
+          style={{ width: "50%" }}
         >
           <img
             src={sceneClientSad}
