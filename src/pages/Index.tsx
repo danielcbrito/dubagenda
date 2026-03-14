@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 import sceneClientSad from "@/assets/scene-client-sad.png";
 import sceneFriendApp from "@/assets/scene-friend-app.png";
+import { AmbientEffects } from "@/components/landing/AmbientEffects";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -18,64 +19,10 @@ const Index = () => {
           className="flex-1 min-h-0 relative overflow-hidden"
           style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}
         >
-          {/* Ambient blobs */}
-          <div
-            className="absolute pointer-events-none"
-            style={{
-              top: "-10%", left: "-20%", width: "80%", height: "60%",
-              borderRadius: "50%",
-              background: "radial-gradient(circle, hsl(var(--primary) / 0.05) 0%, transparent 60%)",
-              filter: "blur(60px)",
-            }}
-          />
-          <div
-            className="absolute pointer-events-none"
-            style={{
-              bottom: "-10%", right: "-20%", width: "85%", height: "65%",
-              borderRadius: "50%",
-              background: "radial-gradient(circle, hsl(210 50% 60% / 0.04) 0%, transparent 60%)",
-              filter: "blur(60px)",
-            }}
-          />
+          {/* Ambient light system */}
+          <AmbientEffects />
 
-          {/* Ground */}
-          <div
-            className="absolute left-0 right-0 bottom-0 pointer-events-none"
-            style={{
-              height: "20%",
-              background: "linear-gradient(to bottom, transparent, hsl(var(--foreground) / 0.025))",
-            }}
-          />
-          <div
-            className="absolute left-[8%] right-[8%] bottom-0 pointer-events-none"
-            style={{
-              height: 1,
-              background: "linear-gradient(90deg, transparent, hsl(var(--foreground) / 0.08) 50%, transparent)",
-            }}
-          />
-
-          {/* Bokeh circles */}
-          {[
-            { top: "8%", left: "75%", s: 8 },
-            { top: "45%", left: "5%", s: 10 },
-            { top: "70%", left: "82%", s: 6 },
-            { top: "25%", left: "90%", s: 5 },
-          ].map((c, i) => (
-            <motion.div
-              key={i}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 0.04 }}
-              transition={{ delay: 0.6 + i * 0.3, duration: 0.8 }}
-              className="absolute rounded-full pointer-events-none"
-              style={{
-                top: c.top, left: c.left,
-                width: c.s, height: c.s,
-                border: "1px solid hsl(var(--foreground) / 0.08)",
-              }}
-            />
-          ))}
-
-          {/* ── Menino triste — ESQUERDA, grande porém controlado ── */}
+          {/* ── Menino triste — ESQUERDA ── */}
           <motion.div
             initial={{ opacity: 0, x: -40 }}
             animate={{ opacity: 1, x: 0 }}
@@ -98,9 +45,17 @@ const Index = () => {
               className="w-full h-full block"
               style={{ objectFit: "contain", objectPosition: "left top" }}
             />
+            {/* Subtle glow behind character */}
+            <div
+              className="absolute inset-0 pointer-events-none"
+              style={{
+                background: "radial-gradient(ellipse at 35% 40%, hsl(var(--primary) / 0.04) 0%, transparent 60%)",
+                filter: "blur(40px)",
+              }}
+            />
           </motion.div>
 
-          {/* ── Menina com celular — DIREITA, grande porém controlado ── */}
+          {/* ── Menina com celular — DIREITA ── */}
           <motion.div
             initial={{ opacity: 0, x: 40 }}
             animate={{ opacity: 1, x: 0 }}
@@ -123,20 +78,28 @@ const Index = () => {
               className="w-full h-full block"
               style={{ objectFit: "contain", objectPosition: "right bottom" }}
             />
+            {/* Subtle glow behind character */}
+            <div
+              className="absolute inset-0 pointer-events-none"
+              style={{
+                background: "radial-gradient(ellipse at 65% 60%, hsl(var(--gold) / 0.03) 0%, transparent 60%)",
+                filter: "blur(40px)",
+              }}
+            />
           </motion.div>
         </div>
 
-        {/* Gradient fade */}
+        {/* Gradient fade into footer */}
         <div
           className="flex-shrink-0 pointer-events-none"
           style={{
-            height: 40, marginTop: -40,
+            height: 60, marginTop: -60,
             background: "linear-gradient(to bottom, transparent, hsl(var(--background)))",
             position: "relative", zIndex: 2,
           }}
         />
 
-        {/* ═══ FOOTER ═══ */}
+        {/* ═══ FOOTER — title & CTA (untouched) ═══ */}
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
