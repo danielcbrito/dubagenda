@@ -92,59 +92,76 @@ serve(async (req) => {
 
     if (updateError) throw updateError;
 
-    // 4. Handle refund → wallet balance (replicates modal logic)
+    // 4. Handle refund — ONLY for methods where payment was actually collected
     let refundedAmount = 0;
+
+    const paymentMethod = appointment.payment_method || "";
+
     const isPaidWithCredit =
-      appointment.payment_method === "credit" ||
+      paymentMethod === "credit" ||
+      paymentMethod === "wallet" ||
       appointment.observacoes?.toLowerCase().includes("crédito do app") ||
       appointment.observacoes?.toLowerCase().includes("credito do app");
 
     const isPaidViaGateway =
-      !isPaidWithCredit &&
-      (appointment.payment_method === "pix" ||
-        appointment.payment_method === "card" ||
-        appointment.payment_method === "credit_card");
+      paymentMethod === "pix" ||
+      paymentMethod === "card" ||
+      paymentMethod === "credit_card";
+
+    const isNeverRefundable =
+      paymentMethod === "cash" ||
+      paymentMethod === "na_hora" ||
+      paymentMethod === "resgate" ||
+      paymentMethod === "plano" ||
+      paymentMethod === "" ||
+      appointment.tipo_agendamento === "encaixe_manual";
 
     const amount = appointment.preco || 0;
 
-    // Determine refund amount
-    if (isPaidWithCredit && amount > 0) {
+    if (isNeverRefundable || appointment.is_free || amount <= 0) {
+      // Cash/na_hora: cliente não pagou ainda
+      // Resgate: corte grátis por pontos
+      // Plano: uso de assinatura, não há pagamento avulso
+      // Encaixe manual: walk-in criado pelo barbeiro
+      refundedAmount = 0;
+    } else if (isPaidWithCredit && amount > 0) {
+      // Crédito/wallet: cliente usou saldo que já estava na carteira
       refundedAmount = amount;
-    } else if (amount > 0 && !appointment.is_free) {
-      refundedAmount = amount;
+    } else if (isPaidViaGateway && amount > 0) {
+      // PIX/Cartão: só reembolsa se pagamento CONFIRMADO na tabela pagamentos
+      const { data: payment } = await supabase
+        .from("pagamentos")
+        .select("id, status, valor")
+        .eq("agendamento_id", appointmentId)
+        .eq("status", "paid")
+        .maybeSingle();
+
+      if (payment) {
+        refundedAmount = payment.valor || amount;
+      } else {
+        // Pagamento pendente ou não encontrado — nada a reembolsar
+        refundedAmount = 0;
+      }
     }
 
+    // Credit wallet atomically via RPC (prevents race conditions)
     if (refundedAmount > 0) {
-      // Get or create wallet balance
-      const { data: currentBalance } = await supabase.rpc("get_or_create_wallet_balance", {
-        p_user_id: callerUserId,
-      });
-
-      const newBalance = (currentBalance || 0) + refundedAmount;
-      const { error: walletError } = await supabase
-        .from("wallet_balances")
-        .update({ balance: newBalance })
-        .eq("user_id", callerUserId);
-
-      if (walletError) {
-        console.error("Wallet update error:", walletError);
-        // Don't fail the entire operation — appointment is already cancelled
-      }
-
-      // Record transaction
       const description = isPaidWithCredit
         ? `Estorno de cancelamento - R$ ${refundedAmount.toFixed(2)}`
         : isPaidViaGateway
-          ? `Estorno de cancelamento (${appointment.payment_method === "pix" ? "PIX" : "Cartão"}) - R$ ${refundedAmount.toFixed(2)}`
+          ? `Estorno de cancelamento (${paymentMethod === "pix" ? "PIX" : "Cartão"}) - R$ ${refundedAmount.toFixed(2)}`
           : `Estorno de cancelamento - R$ ${refundedAmount.toFixed(2)}`;
 
-      await supabase.from("wallet_transactions").insert({
-        user_id: callerUserId,
-        type: "refund",
-        amount: refundedAmount,
-        status: "completed",
-        description,
+      const { error: walletError } = await supabase.rpc("add_wallet_credits", {
+        p_user_id: callerUserId,
+        p_amount: refundedAmount,
+        p_description: description,
       });
+
+      if (walletError) {
+        console.error("Wallet RPC error:", walletError);
+        // Don't fail — appointment is already cancelled
+      }
     }
 
     // 5. Create notification
