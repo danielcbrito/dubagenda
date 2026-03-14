@@ -278,7 +278,7 @@ const UnitCard = ({
         </div>
 
         {/* Travel Time Badge */}
-        <TravelTimeBadge travelTime={unit.travelTime} travelMinutes={unit.travelMinutes} />
+        <TravelTimeBadge travelTime={unit.travelTime} travelMinutes={unit.travelMinutes} travelMode={unit.travelMode} />
       </div>
     </motion.button>
   );
