@@ -45,7 +45,7 @@ const Index = () => {
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.5, delay: 0.7 }}
             className="absolute right-0 w-full flex justify-end"
-            style={{ bottom: "0%" }}
+            style={{ bottom: "16%" }}
           >
             <img
               src={sceneFriendApp}
