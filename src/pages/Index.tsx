@@ -141,6 +141,7 @@ const Index = () => {
               <ArrowRight className="w-3 h-3 text-white" />
             </span>
           </button>
+          </div>
         </motion.div>
       </div>
     </div>
