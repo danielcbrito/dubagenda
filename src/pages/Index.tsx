@@ -10,14 +10,20 @@ const Index = () => {
   return (
     <div className="fixed inset-0 flex flex-col overflow-hidden bg-white">
 
-      {/* ── Top area: Scene 1 (sad client) — top left ── */}
-      <div className="flex-shrink-0 px-5 pt-[calc(env(safe-area-inset-top,0px)+8px)]">
+      {/* ── Illustrations area — fills available space above the bottom UI ── */}
+      <div className="flex-1 min-h-0 relative">
+
+        {/* Scene 1: Sad client — top left */}
         <motion.div
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.5, delay: 0.2 }}
-          className="self-start"
-          style={{ width: "58%" }}
+          className="absolute left-5"
+          style={{
+            top: "calc(env(safe-area-inset-top, 0px) + 2%)",
+            width: "min(58%, 280px)",
+            zIndex: 1,
+          }}
         >
           <img
             src={sceneClientSad}
@@ -26,18 +32,18 @@ const Index = () => {
             draggable={false}
           />
         </motion.div>
-      </div>
 
-      {/* ── Middle: relative container for depth effect ── */}
-      <div className="flex-1 min-h-0 relative">
-
-        {/* Layer 1 (behind): Friend illustration — absolute, right-aligned */}
+        {/* Scene 2: Friend with app — right side, overlaps with white wall */}
         <motion.div
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.5, delay: 0.7 }}
           className="absolute right-4"
-          style={{ top: "-10%", width: "55%", zIndex: 1 }}
+          style={{
+            top: "25%",
+            width: "min(55%, 260px)",
+            zIndex: 1,
+          }}
         >
           <img
             src={sceneFriendApp}
@@ -46,46 +52,50 @@ const Index = () => {
             draggable={false}
           />
         </motion.div>
+      </div>
 
-        {/* "DUB AGENDA" label — outside white container, directly on screen */}
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 1.0 }}
-          className="absolute bottom-0 left-0 right-0 px-6 pb-[calc(env(safe-area-inset-bottom,0px)+20px)]"
-          style={{ zIndex: 2 }}
+      {/* ── Bottom UI: label + white wall + title + button ── */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 1.0 }}
+        className="flex-shrink-0 px-6 relative"
+        style={{ zIndex: 2 }}
+      >
+        {/* "DUB AGENDA" label — sits on the transparent bg, above the white wall */}
+        <span
+          style={{
+            fontFamily: "Inter, sans-serif",
+            fontWeight: 600,
+            fontSize: 10,
+            color: "#ccc",
+            letterSpacing: "2.5px",
+            textTransform: "uppercase" as const,
+            display: "block",
+            marginBottom: 6,
+          }}
         >
-          <span
-            style={{
-              fontFamily: "Inter, sans-serif",
-              fontWeight: 600,
-              fontSize: 10,
-              color: "#ccc",
-              letterSpacing: "2.5px",
-              textTransform: "uppercase" as const,
-              display: "block",
-              marginBottom: 6,
-            }}
-          >
-            DUB AGENDA
-          </span>
+          DUB AGENDA
+        </span>
 
-          {/* White container starts at h1 */}
-          <div
-            style={{
-              background: "white",
-              borderRadius: "24px 24px 0 0",
-              paddingTop: 8,
-              boxShadow: "0 -20px 40px rgba(255,255,255,0.95)",
-            }}
-            className="px-6 pb-[calc(env(safe-area-inset-bottom,0px)+20px)] -mx-6"
-          >
-            <div className="flex flex-col items-start gap-1 mb-4">
-              <h1
+        {/* White wall — extends DOWN well past the content via extra padding-bottom
+             and starts a bit higher via negative margin-top + padding-top.
+             The title/button stay in place; only the white bg extends further down. */}
+        <div
+          style={{
+            background: "white",
+            borderRadius: "24px 24px 0 0",
+            paddingTop: 12,
+            boxShadow: "0 -30px 50px rgba(255,255,255,0.97)",
+          }}
+          className="-mx-6 px-6 pb-[calc(env(safe-area-inset-bottom,0px)+28px)]"
+        >
+          <div className="flex flex-col items-start gap-1 mb-4">
+            <h1
               style={{
                 fontFamily: "'Plus Jakarta Sans', Inter, sans-serif",
                 fontWeight: 900,
-                fontSize: 27,
+                fontSize: "clamp(20px, 5.5vw, 27px)",
                 color: "#111",
                 lineHeight: 1.18,
                 margin: 0,
@@ -102,7 +112,7 @@ const Index = () => {
               style={{
                 fontFamily: "Inter, sans-serif",
                 fontWeight: 400,
-                fontSize: 12,
+                fontSize: "clamp(10px, 2.8vw, 12px)",
                 color: "#aaa",
                 lineHeight: 1.5,
                 margin: 0,
@@ -119,7 +129,7 @@ const Index = () => {
             style={{
               fontFamily: "'Plus Jakarta Sans', Inter, sans-serif",
               fontWeight: 700,
-              fontSize: 13,
+              fontSize: "clamp(11px, 3vw, 13px)",
               color: "#111",
               background: "transparent",
               borderRadius: 12,
@@ -141,9 +151,8 @@ const Index = () => {
               <ArrowRight className="w-3 h-3 text-white" />
             </span>
           </button>
-          </div>
-        </motion.div>
-      </div>
+        </div>
+      </motion.div>
     </div>
   );
 };
