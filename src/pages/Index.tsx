@@ -28,7 +28,7 @@ const Index = () => {
             <img
               src={sceneClientSad}
               alt="Cliente triste sem lugar pra agendar"
-              className="object-contain max-w-none w-[96%] [@media(min-height:760px)]:w-[112%] [@media(min-height:860px)]:w-[126%]"
+              className="object-contain max-w-none w-[96%] [@media(max-height:620px)]:w-[90%] [@media(min-height:760px)]:w-[112%] [@media(min-height:860px)]:w-[126%]"
               style={{
                 height: "auto",
                 marginTop: "clamp(10px, 2.6dvh, 22px)",
