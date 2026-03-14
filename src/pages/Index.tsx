@@ -16,9 +16,9 @@ const Index = () => {
         {/* Illustrations area — fills all space above footer */}
         <div
           className="flex-1 min-h-0 overflow-hidden px-1 flex flex-col justify-center"
-          style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 4px)" }}
+          style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 10px)" }}
         >
-          {/* Scene 1: Sad client — responsive by viewport height */}
+          {/* Scene 1: Sad client — scales up on taller screens */}
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
@@ -28,34 +28,31 @@ const Index = () => {
             <img
               src={sceneClientSad}
               alt="Cliente triste sem lugar pra agendar"
-              className="object-contain"
+              className="object-contain max-w-none w-[96%] [@media(min-height:760px)]:w-[102%] [@media(min-height:840px)]:w-[108%]"
               style={{
-                height: "clamp(170px, 31dvh, 320px)",
-                width: "auto",
-                maxWidth: "108%",
-                marginLeft: "-6%",
+                height: "auto",
+                marginTop: "2%",
+                marginLeft: "-7%",
               }}
               draggable={false}
             />
           </motion.div>
 
-          {/* Scene 2: Friend with app — responsive by viewport height */}
+          {/* Scene 2: Friend with app — scales up on taller screens */}
           <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.5, delay: 0.7 }}
             className="w-full flex justify-end"
-            style={{ marginTop: "-2%" }}
+            style={{ marginTop: "-3%" }}
           >
             <img
               src={sceneFriendApp}
               alt="Amiga mostrando o app DubAgenda"
-              className="object-contain"
+              className="object-contain max-w-none w-[110%] [@media(min-height:760px)]:w-[116%] [@media(min-height:840px)]:w-[122%]"
               style={{
-                height: "clamp(165px, 30dvh, 300px)",
-                width: "auto",
-                maxWidth: "112%",
-                marginRight: "-14%",
+                height: "auto",
+                marginRight: "-16%",
               }}
               draggable={false}
             />
@@ -66,8 +63,8 @@ const Index = () => {
         <div
           className="flex-shrink-0 pointer-events-none"
           style={{
-            height: 40,
-            marginTop: -40,
+            height: 28,
+            marginTop: -28,
             background: "linear-gradient(to bottom, transparent, white)",
             position: "relative",
             zIndex: 2,
