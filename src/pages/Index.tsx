@@ -4,43 +4,65 @@ import { ArrowRight } from "lucide-react";
 import sceneClientSad from "@/assets/scene-client-sad.png";
 import sceneFriendApp from "@/assets/scene-friend-app.png";
 
-/** Decorative floating dots / ambient lights */
+/** Ambient background effects — floor, glows, dots */
 const AmbientEffects = () => (
   <>
-    {/* Soft glow top-left */}
+    {/* Floor line — subtle ground plane */}
     <div
-      className="absolute pointer-events-none"
+      className="absolute left-0 right-0 pointer-events-none"
       style={{
-        top: "12%",
-        left: "-8%",
-        width: 180,
-        height: 180,
-        borderRadius: "50%",
-        background: "radial-gradient(circle, hsl(var(--primary) / 0.06) 0%, transparent 70%)",
-        filter: "blur(40px)",
+        bottom: 0,
+        height: 1,
+        background: "linear-gradient(90deg, transparent 5%, hsl(var(--foreground) / 0.06) 30%, hsl(var(--foreground) / 0.08) 50%, hsl(var(--foreground) / 0.06) 70%, transparent 95%)",
       }}
     />
-    {/* Soft glow right */}
+    {/* Floor shadow / reflection */}
+    <div
+      className="absolute left-[5%] right-[5%] pointer-events-none"
+      style={{
+        bottom: 0,
+        height: 40,
+        background: "radial-gradient(ellipse 90% 100% at 50% 100%, hsl(var(--foreground) / 0.03) 0%, transparent 100%)",
+      }}
+    />
+
+    {/* Warm glow behind sad boy (top-left) */}
     <div
       className="absolute pointer-events-none"
       style={{
-        top: "35%",
-        right: "-10%",
-        width: 200,
-        height: 200,
+        top: "8%",
+        left: "-5%",
+        width: 260,
+        height: 260,
         borderRadius: "50%",
         background: "radial-gradient(circle, hsl(var(--primary) / 0.05) 0%, transparent 70%)",
         filter: "blur(50px)",
       }}
     />
-    {/* Small decorative dots */}
+    {/* Cool glow behind friend (bottom-right) */}
+    <div
+      className="absolute pointer-events-none"
+      style={{
+        bottom: "5%",
+        right: "-8%",
+        width: 280,
+        height: 280,
+        borderRadius: "50%",
+        background: "radial-gradient(circle, hsl(210 60% 60% / 0.04) 0%, transparent 70%)",
+        filter: "blur(50px)",
+      }}
+    />
+
+    {/* Scattered ambient dots */}
     {[
-      { top: "18%", left: "12%", size: 4, opacity: 0.12, delay: 0.5 },
-      { top: "25%", right: "18%", size: 3, opacity: 0.1, delay: 0.8 },
-      { top: "40%", left: "8%", size: 5, opacity: 0.08, delay: 1.1 },
-      { top: "52%", right: "10%", size: 3, opacity: 0.1, delay: 0.6 },
-      { top: "15%", right: "30%", size: 3, opacity: 0.07, delay: 1.3 },
-      { top: "60%", left: "20%", size: 4, opacity: 0.06, delay: 0.9 },
+      { top: "10%", left: "15%", size: 4, opacity: 0.08, delay: 0.4 },
+      { top: "22%", right: "12%", size: 3, opacity: 0.06, delay: 0.7 },
+      { top: "38%", left: "6%", size: 5, opacity: 0.05, delay: 1.0 },
+      { top: "50%", right: "8%", size: 3, opacity: 0.07, delay: 0.6 },
+      { top: "14%", right: "28%", size: 3, opacity: 0.05, delay: 1.2 },
+      { top: "65%", left: "22%", size: 4, opacity: 0.04, delay: 0.9 },
+      { top: "44%", left: "50%", size: 2, opacity: 0.06, delay: 1.4 },
+      { top: "72%", right: "25%", size: 3, opacity: 0.05, delay: 1.1 },
     ].map((dot, i) => (
       <motion.div
         key={i}
@@ -57,14 +79,13 @@ const AmbientEffects = () => (
         }}
       />
     ))}
-    {/* Floor / ground shadow — subtle horizontal line */}
+
+    {/* Subtle diagonal texture lines */}
     <div
-      className="absolute left-[10%] right-[10%] pointer-events-none"
+      className="absolute inset-0 pointer-events-none opacity-[0.015]"
       style={{
-        bottom: "0%",
-        height: 24,
-        background: "radial-gradient(ellipse 80% 100% at 50% 100%, hsl(var(--foreground) / 0.04) 0%, transparent 100%)",
-        filter: "blur(6px)",
+        backgroundImage:
+          "repeating-linear-gradient(135deg, transparent, transparent 40px, hsl(var(--foreground)) 40px, hsl(var(--foreground)) 41px)",
       }}
     />
   </>
@@ -79,16 +100,16 @@ const Index = () => {
         className="relative w-full h-full overflow-hidden bg-background flex flex-col"
         style={{ maxWidth: 480 }}
       >
-        {/* Illustrations area — fills space above footer */}
+        {/* Illustrations area */}
         <div
           className="flex-1 min-h-0 relative overflow-hidden"
           style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}
         >
           <AmbientEffects />
 
-          {/* Scene 1: Sad client — top-left */}
+          {/* Scene 1: Sad client — large, top-left */}
           <motion.img
-            initial={{ opacity: 0, x: -24 }}
+            initial={{ opacity: 0, x: -30 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.5, delay: 0.2 }}
             src={sceneClientSad}
@@ -96,16 +117,16 @@ const Index = () => {
             draggable={false}
             className="absolute block object-contain"
             style={{
-              top: "2%",
-              left: "-4%",
-              width: "78%",
-              maxHeight: "54%",
+              top: "-2%",
+              left: "-10%",
+              width: "100%",
+              maxHeight: "62%",
             }}
           />
 
-          {/* Scene 2: Friend with app — bottom-right */}
+          {/* Scene 2: Friend with app — large, bottom-right */}
           <motion.img
-            initial={{ opacity: 0, x: 24 }}
+            initial={{ opacity: 0, x: 30 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.5, delay: 0.7 }}
             src={sceneFriendApp}
@@ -113,10 +134,10 @@ const Index = () => {
             draggable={false}
             className="absolute block object-contain"
             style={{
-              bottom: "0%",
-              right: "-6%",
-              width: "82%",
-              maxHeight: "56%",
+              bottom: "-4%",
+              right: "-14%",
+              width: "105%",
+              maxHeight: "64%",
             }}
           />
         </div>
@@ -133,7 +154,7 @@ const Index = () => {
           }}
         />
 
-        {/* Footer: Label + Title + CTA — anchored at bottom */}
+        {/* Footer */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
