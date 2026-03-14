@@ -4425,6 +4425,10 @@ export type Database = {
           total_saques: number
         }[]
       }
+      check_barbeiro_email_exists: {
+        Args: { p_email: string }
+        Returns: boolean
+      }
       check_email_exists: { Args: { p_email: string }; Returns: string }
       clean_expired_pending_bookings: { Args: never; Returns: undefined }
       clean_expired_verification_codes: { Args: never; Returns: undefined }

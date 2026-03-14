@@ -22,6 +22,9 @@ interface TenantJoin {
 interface UnitData {
   id: string;
   nome: string;
+  rua: string | null;
+  numero: string | null;
+  cep: string | null;
   bairro: string | null;
   cidade: string | null;
   estado: string | null;
@@ -49,8 +52,13 @@ function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): nu
 }
 
 function kmToMinutes(km: number): number {
-  const speedKmH = 25;
-  return Math.max(1, Math.round((km / speedKmH) * 60 * 1.2));
+  if (km <= 0.2) return 2;
+
+  const averageSpeedKmH = 32;
+  const trafficFactor = km < 2 ? 1.1 : km < 6 ? 1.2 : 1.3;
+  const estimated = (km / averageSpeedKmH) * 60 * trafficFactor;
+
+  return Math.max(2, Math.round(estimated));
 }
 
 function formatTravelTime(minutes: number): { value: string; unit: string } {
@@ -67,6 +75,85 @@ function normalizeText(value: string): string {
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/[^a-zA-Z0-9]/g, "")
     .toLowerCase();
+}
+
+const GEOCODE_CACHE_PREFIX = "unit-geocode-v1:";
+const GEOCODE_CACHE_TTL_MS = 1000 * 60 * 60 * 24 * 30;
+
+function buildAddressQuery(unit: UnitData): string | null {
+  const parts = [unit.rua, unit.numero, unit.bairro, unit.cidade, unit.estado, unit.cep]
+    .map((part) => part?.trim())
+    .filter((part): part is string => !!part && part.length > 0);
+
+  if (parts.length < 3) return null;
+  return parts.join(", ");
+}
+
+function readCachedGeocode(addressKey: string): { lat: number; lng: number } | null {
+  try {
+    const raw = localStorage.getItem(`${GEOCODE_CACHE_PREFIX}${addressKey}`);
+    if (!raw) return null;
+
+    const parsed = JSON.parse(raw) as { lat?: number; lng?: number; savedAt?: number };
+    const isExpired = !parsed.savedAt || Date.now() - parsed.savedAt > GEOCODE_CACHE_TTL_MS;
+
+    if (isExpired || typeof parsed.lat !== "number" || typeof parsed.lng !== "number") {
+      localStorage.removeItem(`${GEOCODE_CACHE_PREFIX}${addressKey}`);
+      return null;
+    }
+
+    return { lat: parsed.lat, lng: parsed.lng };
+  } catch {
+    return null;
+  }
+}
+
+function saveCachedGeocode(addressKey: string, lat: number, lng: number) {
+  try {
+    localStorage.setItem(
+      `${GEOCODE_CACHE_PREFIX}${addressKey}`,
+      JSON.stringify({ lat, lng, savedAt: Date.now() })
+    );
+  } catch {
+    // ignore cache write failures
+  }
+}
+
+async function geocodeAddress(addressQuery: string): Promise<{ lat: number; lng: number } | null> {
+  const params = new URLSearchParams({
+    q: addressQuery,
+    format: "jsonv2",
+    limit: "1",
+    countrycodes: "br",
+  });
+
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), 7000);
+
+  try {
+    const response = await fetch(`https://nominatim.openstreetmap.org/search?${params.toString()}`, {
+      signal: controller.signal,
+      headers: {
+        Accept: "application/json",
+      },
+    });
+
+    if (!response.ok) return null;
+
+    const data = (await response.json()) as Array<{ lat: string; lon: string }>;
+    const hit = data[0];
+    if (!hit) return null;
+
+    const lat = Number(hit.lat);
+    const lng = Number(hit.lon);
+
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+    return { lat, lng };
+  } catch {
+    return null;
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
 }
 
 // ── Skeleton Card ──
@@ -101,9 +188,9 @@ const TravelTimeBadge = ({ travelTime, travelMinutes }: { travelTime: string | n
   const formatted = formatTravelTime(travelMinutes);
 
   return (
-    <div className="flex flex-col items-center justify-center bg-primary/8 border border-primary/15 rounded-2xl px-2.5 py-2 min-w-[48px] shrink-0 gap-0.5">
-      <Car className="w-[11px] h-[11px] text-primary" />
-      <span className="text-[17px] font-bold text-foreground leading-none font-mono tabular-nums">
+    <div className="flex flex-col items-center justify-center bg-success/10 border border-success/20 rounded-2xl px-2.5 py-2 min-w-[48px] shrink-0 gap-0.5">
+      <Car className="w-[11px] h-[11px] text-success" />
+      <span className="text-[17px] font-bold text-success leading-none font-mono tabular-nums">
         {formatted.value}
       </span>
       {formatted.unit && (
@@ -201,6 +288,7 @@ const EscolherBarbearia = () => {
   const [userId, setUserId] = useState<string | null>(null);
   const [currentPreferred, setCurrentPreferred] = useState<string | null>(null);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [locationStatus, setLocationStatus] = useState<"loading" | "ready" | "unavailable">("loading");
   const [hasAutoOpened, setHasAutoOpened] = useState(false);
 
   const isChangeMode = searchParams.get("mode") === "change";
@@ -245,12 +333,51 @@ const EscolherBarbearia = () => {
 
   // ── Geolocation ──
   useEffect(() => {
-    if (!navigator.geolocation) return;
-    navigator.geolocation.getCurrentPosition(
-      (pos) => setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-      () => {},
-      { enableHighAccuracy: true, timeout: 8000 }
-    );
+    if (!navigator.geolocation) {
+      setLocationStatus("unavailable");
+      return;
+    }
+
+    const getPosition = (options: PositionOptions) =>
+      new Promise<GeolocationPosition>((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, options);
+      });
+
+    const requestLocation = async () => {
+      setLocationStatus("loading");
+
+      try {
+        const highAccuracy = await getPosition({
+          enableHighAccuracy: true,
+          timeout: 15000,
+          maximumAge: 0,
+        });
+
+        setUserLocation({
+          lat: highAccuracy.coords.latitude,
+          lng: highAccuracy.coords.longitude,
+        });
+        setLocationStatus("ready");
+        return;
+      } catch {
+        // tenta fallback mais rápido com cache recente
+      }
+
+      try {
+        const fallback = await getPosition({
+          enableHighAccuracy: false,
+          timeout: 7000,
+          maximumAge: 5 * 60 * 1000,
+        });
+
+        setUserLocation({ lat: fallback.coords.latitude, lng: fallback.coords.longitude });
+        setLocationStatus("ready");
+      } catch {
+        setLocationStatus("unavailable");
+      }
+    };
+
+    requestLocation();
   }, []);
 
   // ── Load units ──
@@ -260,7 +387,7 @@ const EscolherBarbearia = () => {
     const { data: units, error } = await supabase
       .from("tenant_unidades")
       .select(`
-        id, nome, bairro, cidade, estado, is_sede, latitude, longitude, tenant_id,
+        id, nome, rua, numero, cep, bairro, cidade, estado, is_sede, latitude, longitude, tenant_id,
         tenant:tenants!tenant_id (
           id, nome, slug, slogan, logo_url, ativo, onboarding_completed
         )
@@ -276,15 +403,18 @@ const EscolherBarbearia = () => {
     }
 
     let unitList: UnitData[] = (units ?? [])
-      .filter(u => {
+      .filter((u) => {
         const t = u.tenant as unknown as TenantJoin | null;
         return t?.ativo && t?.onboarding_completed;
       })
-      .map(u => {
+      .map((u) => {
         const t = u.tenant as unknown as TenantJoin;
         return {
           id: u.id,
           nome: u.nome,
+          rua: u.rua,
+          numero: u.numero,
+          cep: u.cep,
           bairro: u.bairro,
           cidade: u.cidade,
           estado: u.estado,
@@ -309,15 +439,45 @@ const EscolherBarbearia = () => {
       .is("deleted_at", null);
 
     const activeTenantIds = new Set(
-      (barbers ?? []).map(b => b.tenant_id).filter((tid): tid is string => !!tid)
+      (barbers ?? []).map((b) => b.tenant_id).filter((tid): tid is string => !!tid)
     );
-    const hasGlobalBarbers = (barbers ?? []).some(b => !b.tenant_id);
+    const hasGlobalBarbers = (barbers ?? []).some((b) => !b.tenant_id);
 
-    unitList = unitList.filter(u => {
-      const isDub = normalizeText(u.brandSlug ?? "") === "barbeariadub" || normalizeText(u.brandName) === "barbeariadub";
+    unitList = unitList.filter((u) => {
+      const isDub =
+        normalizeText(u.brandSlug ?? "") === "barbeariadub" ||
+        normalizeText(u.brandName) === "barbeariadub";
+
       if (isDub && hasGlobalBarbers) return true;
       return u.tenant_id ? activeTenantIds.has(u.tenant_id) : false;
     });
+
+    const geocodeInFlight = new Map<string, Promise<{ lat: number; lng: number } | null>>();
+
+    unitList = await Promise.all(
+      unitList.map(async (unit) => {
+        const addressQuery = buildAddressQuery(unit);
+        if (!addressQuery) return unit;
+
+        const addressKey = normalizeText(addressQuery);
+        const cached = readCachedGeocode(addressKey);
+        if (cached) {
+          return { ...unit, latitude: cached.lat, longitude: cached.lng };
+        }
+
+        let geocodePromise = geocodeInFlight.get(addressKey);
+        if (!geocodePromise) {
+          geocodePromise = geocodeAddress(addressQuery);
+          geocodeInFlight.set(addressKey, geocodePromise);
+        }
+
+        const geocoded = await geocodePromise;
+        if (!geocoded) return unit;
+
+        saveCachedGeocode(addressKey, geocoded.lat, geocoded.lng);
+        return { ...unit, latitude: geocoded.lat, longitude: geocoded.lng };
+      })
+    );
 
     setAllUnits(unitList);
     setIsLoading(false);
@@ -325,12 +485,15 @@ const EscolherBarbearia = () => {
 
   // ── Sort by distance + compute travel time ──
   const sortedUnits = useMemo(() => {
-    const withDist = allUnits.map(u => {
-      const dist = userLocation && u.latitude && u.longitude
+    const withDist = allUnits.map((u) => {
+      const hasCoordinates = u.latitude !== null && u.longitude !== null;
+      const dist = userLocation && hasCoordinates
         ? haversineKm(userLocation.lat, userLocation.lng, u.latitude, u.longitude)
         : null;
       const minutes = dist !== null ? kmToMinutes(dist) : null;
-      const time = minutes !== null ? `${formatTravelTime(minutes).value} ${formatTravelTime(minutes).unit}`.trim() : null;
+      const formatted = minutes !== null ? formatTravelTime(minutes) : null;
+      const time = formatted ? `${formatted.value} ${formatted.unit}`.trim() : null;
+
       return {
         ...u,
         distance: dist,
@@ -425,6 +588,12 @@ const EscolherBarbearia = () => {
             </button>
           )}
         </div>
+
+        {locationStatus === "unavailable" && (
+          <p className="text-[11px] text-muted-foreground/70 mt-2 px-1">
+            Ative sua localização para calcular o tempo exato até cada barbearia.
+          </p>
+        )}
       </div>
 
       {/* ══════ Scrollable list ══════ */}
