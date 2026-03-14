@@ -51,14 +51,26 @@ const Index = () => {
               alt="Amiga mostrando o app DubAgenda"
               className="object-contain max-w-none"
               style={{
-                width: "90%",
+                width: "105%",
                 height: "auto",
-                marginRight: "-12%",
+                marginRight: "-14%",
               }}
               draggable={false}
             />
           </motion.div>
         </div>
+
+        {/* Gradient fade to hide the cut between illustrations and footer */}
+        <div
+          className="flex-shrink-0 pointer-events-none"
+          style={{
+            height: 40,
+            marginTop: -40,
+            background: "linear-gradient(to bottom, transparent, white)",
+            position: "relative",
+            zIndex: 2,
+          }}
+        />
 
         {/* Footer: Label + Title + CTA — fixed at bottom, never changes */}
         <motion.div
