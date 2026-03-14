@@ -28,16 +28,20 @@ const Index = () => {
         </motion.div>
       </div>
 
-      {/* ── Middle: relative container for depth effect ── */}
+      {/* ── Middle + Bottom: layered depth container ── */}
       <div className="flex-1 min-h-0 relative">
 
-        {/* Layer 1 (behind): Friend illustration — absolute, right-aligned */}
+        {/* Layer 1 (behind): Friend — full body, positioned so legs go behind white block */}
         <motion.div
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.5, delay: 0.7 }}
-          className="absolute right-4"
-          style={{ top: "-10%", width: "55%", zIndex: 1 }}
+          className="absolute right-2"
+          style={{
+            bottom: 100,
+            width: "65%",
+            zIndex: 1,
+          }}
         >
           <img
             src={sceneFriendApp}
@@ -45,9 +49,18 @@ const Index = () => {
             className="w-full h-auto object-contain"
             draggable={false}
           />
+          {/* Gradient fade at bottom of illustration for smooth transition */}
+          <div
+            className="absolute bottom-0 left-0 right-0 pointer-events-none"
+            style={{
+              height: 80,
+              background: "linear-gradient(to bottom, transparent, #ffffff)",
+              zIndex: 1,
+            }}
+          />
         </motion.div>
 
-        {/* Layer 2 (front): White text block that covers lower body */}
+        {/* Layer 2 (front): White text block — covers lower body like a wall */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -55,10 +68,8 @@ const Index = () => {
           className="absolute bottom-0 left-0 right-0 px-6 pb-[calc(env(safe-area-inset-bottom,0px)+20px)]"
           style={{
             zIndex: 2,
-            background: "white",
-            borderRadius: "24px 24px 0 0",
-            paddingTop: 28,
-            boxShadow: "0 -20px 40px rgba(255,255,255,0.95)",
+            background: "#ffffff",
+            paddingTop: 20,
           }}
         >
           {/* Text */}
