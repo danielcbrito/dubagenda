@@ -1,5 +1,4 @@
 import { useEffect, useRef, useMemo } from "react";
-import { MapContainer, TileLayer, Marker, useMap, CircleMarker } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
@@ -18,7 +17,6 @@ interface DiscoverMapProps {
   onRecenter: () => void;
 }
 
-// Custom icon builder
 function buildIcon(label: string, selected: boolean) {
   const bg = selected ? "#0a0a0a" : "#ffffff";
   const color = selected ? "#ffffff" : "#0a0a0a";
@@ -41,15 +39,6 @@ function buildIcon(label: string, selected: boolean) {
   });
 }
 
-// Sub-component to fly the map
-function FlyTo({ center, zoom }: { center: [number, number]; zoom: number }) {
-  const map = useMap();
-  useEffect(() => {
-    map.flyTo(center, zoom, { duration: 0.8 });
-  }, [center[0], center[1], zoom]);
-  return null;
-}
-
 export function DiscoverMap({
   units,
   userLocation,
@@ -57,66 +46,115 @@ export function DiscoverMap({
   onSelectUnit,
   onRecenter,
 }: DiscoverMapProps) {
-  const defaultCenter: [number, number] = userLocation
-    ? [userLocation.lat, userLocation.lng]
-    : [-23.55, -46.63]; // São Paulo fallback
+  const containerRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<L.Map | null>(null);
+  const markersRef = useRef<Map<string, L.Marker>>(new Map());
+  const userMarkerRef = useRef<L.CircleMarker | null>(null);
 
-  const flyTarget = useMemo(() => {
+  const defaultCenter: L.LatLngExpression = userLocation
+    ? [userLocation.lat, userLocation.lng]
+    : [-23.55, -46.63];
+
+  // Initialize map
+  useEffect(() => {
+    if (!containerRef.current || mapRef.current) return;
+    const map = L.map(containerRef.current, {
+      center: defaultCenter,
+      zoom: 14,
+      zoomControl: false,
+      attributionControl: false,
+    });
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
+    mapRef.current = map;
+
+    return () => {
+      map.remove();
+      mapRef.current = null;
+    };
+  }, []);
+
+  // Update user location marker
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    if (userMarkerRef.current) {
+      userMarkerRef.current.remove();
+      userMarkerRef.current = null;
+    }
+    if (userLocation) {
+      userMarkerRef.current = L.circleMarker([userLocation.lat, userLocation.lng], {
+        radius: 8,
+        fillColor: "#4285F4",
+        fillOpacity: 1,
+        color: "#ffffff",
+        weight: 3,
+      }).addTo(map);
+    }
+  }, [userLocation]);
+
+  // Update unit markers
+  const mappableUnits = useMemo(
+    () => units.filter((u) => u.latitude !== null && u.longitude !== null),
+    [units]
+  );
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    // Remove old markers
+    markersRef.current.forEach((m) => m.remove());
+    markersRef.current.clear();
+
+    // Add new markers
+    mappableUnits.forEach((unit) => {
+      const marker = L.marker([unit.latitude!, unit.longitude!], {
+        icon: buildIcon(unit.brandName, unit.id === selectedId),
+      })
+        .on("click", () => onSelectUnit(unit.id))
+        .addTo(map);
+      markersRef.current.set(unit.id, marker);
+    });
+  }, [mappableUnits, selectedId, onSelectUnit]);
+
+  // Fly to selected
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
     if (selectedId) {
       const unit = units.find((u) => u.id === selectedId);
       if (unit?.latitude && unit?.longitude) {
-        return { center: [unit.latitude, unit.longitude] as [number, number], zoom: 16 };
+        map.flyTo([unit.latitude, unit.longitude], 16, { duration: 0.8 });
       }
+    } else if (userLocation) {
+      map.flyTo([userLocation.lat, userLocation.lng], 14, { duration: 0.8 });
     }
-    return { center: defaultCenter, zoom: 14 };
-  }, [selectedId, units, defaultCenter]);
+  }, [selectedId]);
 
-  const mappableUnits = units.filter(
-    (u) => u.latitude !== null && u.longitude !== null
-  );
+  // Handle recenter
+  const handleRecenter = () => {
+    const map = mapRef.current;
+    if (map && userLocation) {
+      map.flyTo([userLocation.lat, userLocation.lng], 14, { duration: 0.8 });
+    }
+    onRecenter();
+  };
+
+  // Invalidate size when container resizes
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    const timer = setTimeout(() => map.invalidateSize(), 400);
+    return () => clearTimeout(timer);
+  });
 
   return (
     <div className="relative w-full h-full">
-      <MapContainer
-        center={defaultCenter}
-        zoom={14}
-        zoomControl={false}
-        attributionControl={false}
-        style={{ height: "100%", width: "100%" }}
-        className="z-0"
-      >
-        <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-        <FlyTo center={flyTarget.center} zoom={flyTarget.zoom} />
+      <div ref={containerRef} className="w-full h-full z-0" />
 
-        {/* User location */}
-        {userLocation && (
-          <CircleMarker
-            center={[userLocation.lat, userLocation.lng]}
-            radius={8}
-            pathOptions={{
-              fillColor: "#4285F4",
-              fillOpacity: 1,
-              color: "#ffffff",
-              weight: 3,
-            }}
-          />
-        )}
-
-        {/* Unit markers */}
-        {mappableUnits.map((unit) => (
-          <Marker
-            key={unit.id}
-            position={[unit.latitude!, unit.longitude!]}
-            icon={buildIcon(unit.brandName, unit.id === selectedId)}
-            eventHandlers={{ click: () => onSelectUnit(unit.id) }}
-          />
-        ))}
-      </MapContainer>
-
-      {/* Recenter button */}
       {userLocation && (
         <button
-          onClick={onRecenter}
+          onClick={handleRecenter}
           className="absolute bottom-4 right-4 z-[500] w-10 h-10 rounded-full bg-card border border-border shadow-lg flex items-center justify-center active:scale-90 transition-transform"
         >
           <svg
