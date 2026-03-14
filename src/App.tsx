@@ -9,7 +9,6 @@ import { BrowserRouter, Routes, Route, useNavigate, useLocation } from "react-ro
 import { useMaintenanceMode } from "@/hooks/useMaintenanceMode";
 import { MaintenanceScreen } from "@/components/MaintenanceScreen";
 import { MaintenanceWarningBanner } from "@/components/MaintenanceWarningBanner";
-import { GlobalErrorBoundary } from "@/components/GlobalErrorBoundary";
 import { supabase } from "@/integrations/supabase/client";
 import { lazy, Suspense } from "react";
 import { SupportChatBubble } from "@/components/support/SupportChatBubble";
