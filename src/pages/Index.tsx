@@ -18,41 +18,41 @@ const Index = () => {
           className="flex-1 min-h-0 overflow-hidden px-1 flex flex-col justify-center"
           style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 10px)" }}
         >
-          {/* Scene 1: Sad client — scales up on taller screens */}
+          {/* Scene 1: Sad client — grows more on taller screens */}
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.5, delay: 0.2 }}
-            className="w-full flex justify-start"
+            className="w-full flex justify-start origin-top-left [@media(min-height:760px)]:scale-[1.10] [@media(min-height:860px)]:scale-[1.20]"
           >
             <img
               src={sceneClientSad}
               alt="Cliente triste sem lugar pra agendar"
-              className="object-contain max-w-none w-[96%] [@media(min-height:760px)]:w-[106%] [@media(min-height:840px)]:w-[120%]"
+              className="object-contain max-w-none w-[98%] [@media(min-width:390px)]:w-[106%]"
               style={{
                 height: "auto",
                 marginTop: "2%",
-                marginLeft: "-7%",
+                marginLeft: "-8%",
               }}
               draggable={false}
             />
           </motion.div>
 
-          {/* Scene 2: Friend with app — scales up on taller screens */}
+          {/* Scene 2: Friend with app — grows more on taller screens */}
           <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.5, delay: 0.7 }}
-            className="w-full flex justify-end"
-            style={{ marginTop: "-3%" }}
+            className="w-full flex justify-end origin-bottom-right [@media(min-height:760px)]:scale-[1.12] [@media(min-height:860px)]:scale-[1.24]"
+            style={{ marginTop: "-4%" }}
           >
             <img
               src={sceneFriendApp}
               alt="Amiga mostrando o app DubAgenda"
-              className="object-contain max-w-none w-[110%] [@media(min-height:760px)]:w-[122%] [@media(min-height:840px)]:w-[136%]"
+              className="object-contain max-w-none w-[112%] [@media(min-width:390px)]:w-[120%]"
               style={{
                 height: "auto",
-                marginRight: "-16%",
+                marginRight: "-18%",
               }}
               draggable={false}
             />
