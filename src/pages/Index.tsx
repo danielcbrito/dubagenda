@@ -14,42 +14,37 @@ const Index = () => {
         style={{ maxWidth: 480 }}
       >
         {/* Illustrations area — fills all space above footer */}
-        <div className="flex-1 min-h-0 relative">
-          {/* Scene 1: Sad client — top left, BIG */}
+        <div className="flex-1 min-h-0 flex flex-col justify-center items-center px-2 gap-0">
+          {/* Scene 1: Sad client — centered top */}
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.5, delay: 0.2 }}
-            className="absolute left-0"
-            style={{
-              top: "calc(env(safe-area-inset-top, 0px) + 2%)",
-              width: "88%",
-              zIndex: 1,
-            }}
+            className="w-full flex justify-start"
+            style={{ maxWidth: "100%" }}
           >
             <img
               src={sceneClientSad}
               alt="Cliente triste sem lugar pra agendar"
-              className="w-full h-auto object-contain"
+              className="object-contain"
+              style={{ width: "92%", height: "auto" }}
               draggable={false}
             />
           </motion.div>
 
-          {/* Scene 2: Friend with app — bottom right, BIG */}
+          {/* Scene 2: Friend with app — right aligned below */}
           <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.5, delay: 0.7 }}
-            className="absolute right-0 bottom-0"
-            style={{
-              width: "80%",
-              zIndex: 2,
-            }}
+            className="w-full flex justify-end"
+            style={{ maxWidth: "100%", marginTop: "-8%" }}
           >
             <img
               src={sceneFriendApp}
               alt="Amiga mostrando o app DubAgenda"
-              className="w-full h-auto object-contain"
+              className="object-contain"
+              style={{ width: "85%", height: "auto" }}
               draggable={false}
             />
           </motion.div>
