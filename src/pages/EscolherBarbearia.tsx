@@ -333,11 +333,43 @@ const EscolherBarbearia = () => {
   // ── Geolocation ──
   useEffect(() => {
     if (!navigator.geolocation) return;
-    navigator.geolocation.getCurrentPosition(
-      (pos) => setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-      () => {},
-      { enableHighAccuracy: true, timeout: 8000 }
-    );
+
+    const getPosition = (options: PositionOptions) =>
+      new Promise<GeolocationPosition>((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, options);
+      });
+
+    const requestLocation = async () => {
+      try {
+        const highAccuracy = await getPosition({
+          enableHighAccuracy: true,
+          timeout: 15000,
+          maximumAge: 0,
+        });
+
+        setUserLocation({
+          lat: highAccuracy.coords.latitude,
+          lng: highAccuracy.coords.longitude,
+        });
+        return;
+      } catch {
+        // tenta fallback mais rápido com cache recente
+      }
+
+      try {
+        const fallback = await getPosition({
+          enableHighAccuracy: false,
+          timeout: 7000,
+          maximumAge: 5 * 60 * 1000,
+        });
+
+        setUserLocation({ lat: fallback.coords.latitude, lng: fallback.coords.longitude });
+      } catch {
+        // mantém sem localização, badge fica em estado neutro
+      }
+    };
+
+    requestLocation();
   }, []);
 
   // ── Load units ──
