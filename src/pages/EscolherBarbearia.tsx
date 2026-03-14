@@ -498,7 +498,8 @@ const EscolherBarbearia = () => {
       const dist = userLocation && hasCoordinates
         ? haversineKm(userLocation.lat, userLocation.lng, u.latitude, u.longitude)
         : null;
-      const minutes = dist !== null ? kmToMinutes(dist) : null;
+      const mode = dist !== null ? getSmartTravelMode(dist) : null;
+      const minutes = dist !== null && mode !== null ? kmToMinutes(dist, mode) : null;
       const formatted = minutes !== null ? formatTravelTime(minutes) : null;
       const time = formatted ? `${formatted.value} ${formatted.unit}`.trim() : null;
 
@@ -507,6 +508,7 @@ const EscolherBarbearia = () => {
         distance: dist,
         travelMinutes: minutes,
         travelTime: time,
+        travelMode: mode,
       };
     });
 
