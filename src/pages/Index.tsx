@@ -15,20 +15,21 @@ const Index = () => {
       >
         {/* Illustrations area — fills all space above footer */}
         <div
-          className="flex-1 min-h-0 overflow-hidden px-1 flex flex-col justify-center"
+          className="flex-1 min-h-0 overflow-hidden px-1 relative"
           style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 10px)" }}
         >
-          {/* Scene 1: Sad client — grows more on taller screens */}
+          {/* Scene 1: Sad client — anchored at top, scales up on taller screens */}
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.5, delay: 0.2 }}
-            className="w-full flex justify-start origin-top-left [@media(min-height:760px)]:scale-[1.10] [@media(min-height:860px)]:scale-[1.20]"
+            className="absolute left-0 top-0 w-full flex justify-start origin-top-left"
+            style={{ transform: "scale(clamp(1, calc(1 + (100dvh - 640px) / 700), 1.24))" }}
           >
             <img
               src={sceneClientSad}
               alt="Cliente triste sem lugar pra agendar"
-              className="object-contain max-w-none w-[98%] [@media(min-width:390px)]:w-[106%]"
+              className="object-contain max-w-none w-[96%]"
               style={{
                 height: "auto",
                 marginTop: "2%",
@@ -38,18 +39,18 @@ const Index = () => {
             />
           </motion.div>
 
-          {/* Scene 2: Friend with app — grows more on taller screens */}
+          {/* Scene 2: Friend with app — anchored at bottom, scales up on taller screens */}
           <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.5, delay: 0.7 }}
-            className="w-full flex justify-end origin-bottom-right [@media(min-height:760px)]:scale-[1.12] [@media(min-height:860px)]:scale-[1.24]"
-            style={{ marginTop: "-4%" }}
+            className="absolute right-0 bottom-[2%] w-full flex justify-end origin-bottom-right"
+            style={{ transform: "scale(clamp(1, calc(1 + (100dvh - 640px) / 640), 1.30))" }}
           >
             <img
               src={sceneFriendApp}
               alt="Amiga mostrando o app DubAgenda"
-              className="object-contain max-w-none w-[112%] [@media(min-width:390px)]:w-[120%]"
+              className="object-contain max-w-none w-[112%]"
               style={{
                 height: "auto",
                 marginRight: "-18%",
