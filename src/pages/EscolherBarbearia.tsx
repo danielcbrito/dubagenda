@@ -72,6 +72,85 @@ function normalizeText(value: string): string {
     .toLowerCase();
 }
 
+const GEOCODE_CACHE_PREFIX = "unit-geocode-v1:";
+const GEOCODE_CACHE_TTL_MS = 1000 * 60 * 60 * 24 * 30;
+
+function buildAddressQuery(unit: UnitData): string | null {
+  const parts = [unit.rua, unit.numero, unit.bairro, unit.cidade, unit.estado, unit.cep]
+    .map((part) => part?.trim())
+    .filter((part): part is string => !!part && part.length > 0);
+
+  if (parts.length < 3) return null;
+  return parts.join(", ");
+}
+
+function readCachedGeocode(addressKey: string): { lat: number; lng: number } | null {
+  try {
+    const raw = localStorage.getItem(`${GEOCODE_CACHE_PREFIX}${addressKey}`);
+    if (!raw) return null;
+
+    const parsed = JSON.parse(raw) as { lat?: number; lng?: number; savedAt?: number };
+    const isExpired = !parsed.savedAt || Date.now() - parsed.savedAt > GEOCODE_CACHE_TTL_MS;
+
+    if (isExpired || typeof parsed.lat !== "number" || typeof parsed.lng !== "number") {
+      localStorage.removeItem(`${GEOCODE_CACHE_PREFIX}${addressKey}`);
+      return null;
+    }
+
+    return { lat: parsed.lat, lng: parsed.lng };
+  } catch {
+    return null;
+  }
+}
+
+function saveCachedGeocode(addressKey: string, lat: number, lng: number) {
+  try {
+    localStorage.setItem(
+      `${GEOCODE_CACHE_PREFIX}${addressKey}`,
+      JSON.stringify({ lat, lng, savedAt: Date.now() })
+    );
+  } catch {
+    // ignore cache write failures
+  }
+}
+
+async function geocodeAddress(addressQuery: string): Promise<{ lat: number; lng: number } | null> {
+  const params = new URLSearchParams({
+    q: addressQuery,
+    format: "jsonv2",
+    limit: "1",
+    countrycodes: "br",
+  });
+
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), 7000);
+
+  try {
+    const response = await fetch(`https://nominatim.openstreetmap.org/search?${params.toString()}`, {
+      signal: controller.signal,
+      headers: {
+        Accept: "application/json",
+      },
+    });
+
+    if (!response.ok) return null;
+
+    const data = (await response.json()) as Array<{ lat: string; lon: string }>;
+    const hit = data[0];
+    if (!hit) return null;
+
+    const lat = Number(hit.lat);
+    const lng = Number(hit.lon);
+
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+    return { lat, lng };
+  } catch {
+    return null;
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
+}
+
 // ── Skeleton Card ──
 const SkeletonCard = ({ index }: { index: number }) => (
   <motion.div
