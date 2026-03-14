@@ -52,13 +52,11 @@ function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): nu
 }
 
 function kmToMinutes(km: number): number {
-  if (km <= 0.2) return 2;
+  const walkingSpeedKmH = 4.8;
+  const walkingBaseMinutes = (km / walkingSpeedKmH) * 60;
 
-  const averageSpeedKmH = 32;
-  const trafficFactor = km < 2 ? 1.1 : km < 6 ? 1.2 : 1.3;
-  const estimated = (km / averageSpeedKmH) * 60 * trafficFactor;
-
-  return Math.max(2, Math.round(estimated));
+  // Ajuste solicitado: sempre somar +2 minutos fixos
+  return Math.max(2, Math.round(walkingBaseMinutes) + 2);
 }
 
 function formatTravelTime(minutes: number): { value: string; unit: string } {
