@@ -324,18 +324,16 @@ function AppWithSplash() {
 }
 
 const App = () => (
-  <GlobalErrorBoundary>
-    <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
-      <ThemeColorSync />
-      <QueryClientProvider client={queryClient}>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <AppWithSplash />
-        </TooltipProvider>
-      </QueryClientProvider>
-    </ThemeProvider>
-  </GlobalErrorBoundary>
+  <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
+    <ThemeColorSync />
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <AppWithSplash />
+      </TooltipProvider>
+    </QueryClientProvider>
+  </ThemeProvider>
 );
 
 export default App;
