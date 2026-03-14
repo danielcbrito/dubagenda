@@ -469,12 +469,15 @@ const EscolherBarbearia = () => {
 
   // ── Sort by distance + compute travel time ──
   const sortedUnits = useMemo(() => {
-    const withDist = allUnits.map(u => {
-      const dist = userLocation && u.latitude && u.longitude
+    const withDist = allUnits.map((u) => {
+      const hasCoordinates = u.latitude !== null && u.longitude !== null;
+      const dist = userLocation && hasCoordinates
         ? haversineKm(userLocation.lat, userLocation.lng, u.latitude, u.longitude)
         : null;
       const minutes = dist !== null ? kmToMinutes(dist) : null;
-      const time = minutes !== null ? `${formatTravelTime(minutes).value} ${formatTravelTime(minutes).unit}`.trim() : null;
+      const formatted = minutes !== null ? formatTravelTime(minutes) : null;
+      const time = formatted ? `${formatted.value} ${formatted.unit}`.trim() : null;
+
       return {
         ...u,
         distance: dist,
