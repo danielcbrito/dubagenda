@@ -5,6 +5,8 @@ import orbitSparkle from "@/assets/orbit-sparkle.png";
 import orbitFire from "@/assets/orbit-fire.png";
 import orbitDiamond from "@/assets/orbit-diamond.png";
 import orbitSunglasses from "@/assets/orbit-sunglasses.png";
+import orbitStar from "@/assets/orbit-star.png";
+import orbitPeace from "@/assets/orbit-peace.png";
 import orbitCalendar from "@/assets/orbit-calendar.png";
 
 import avatarBeanie from "@/assets/avatar-beanie.png";
@@ -14,17 +16,14 @@ import avatarHijab from "@/assets/avatar-hijab.png";
 import avatarBraids from "@/assets/avatar-braids.png";
 
 /* ─── Configuration ──────────────────────────────────────── */
-const CX = 170;
-const CY = 170;
-const VIEW = 340;
+const CX = 200;
+const CY = 200;
+const VIEW = 400;
 
-/**
- * Three concentric orbits — outer is aspirational, middle is social,
- * inner is intimate. Opacity decreases inward for depth.
- */
+/** Concentric elliptical orbits — clean circles like Luma */
 const orbits = [
-  { rx: 150, ry: 150, opacity: 0.08, strokeWidth: 1, dashArray: "3 6" },
-  { rx: 105, ry: 105, opacity: 0.06, strokeWidth: 1, dashArray: "2 8" },
+  { rx: 170, ry: 170, opacity: 0.14, strokeWidth: 1 },
+  { rx: 120, ry: 120, opacity: 0.10, strokeWidth: 1 },
 ];
 
 interface OrbitItem {
@@ -34,36 +33,34 @@ interface OrbitItem {
   size: number;
   isAvatar?: boolean;
   avatarBg?: string;
-  avatarRing?: string;
   bobDelay?: number;
   radiusOffset?: number;
 }
 
 /*
-  STRATEGIC ICON PLACEMENT — Psychological triggers:
-  
-  👑 Crown (top-right)    → Status & aspiration — "you deserve the best"
-  🔥 Fire (left)          → Urgency & desire — "your style is fire"  
-  🕶️ Sunglasses (bottom)  → Confidence & cool — "own your look"
-  💎 Diamond (inner)      → Premium quality — "luxury experience"
-  📅 Calendar (inner-top) → Convenience — "effortless scheduling"
-  
-  Avatars placed between icons = social proof ("people like you use this")
+  Client-focused icons — each represents the CLIENT experience:
+  👑 Crown → "saia se sentindo rei"
+  🔥 Fire → "visual que tá pegando fogo"
+  💎 Diamond → "experiência premium"
+  🕶️ Sunglasses → "estilo e atitude"
+  ⭐ Star → "brilho e destaque"
+  ✌️ Peace → "confiança e boa vibe"
+  📅 Calendar → "praticidade de agendar"
 */
 const orbitItems: OrbitItem[] = [
-  // Outer orbit — aspiration + social proof alternating
-  { src: orbitCrown,        orbit: 0, angle: 30,   size: 46, bobDelay: 0 },
-  { src: avatarBeanie,      orbit: 0, angle: 95,   size: 42, isAvatar: true, avatarBg: "hsl(15 70% 65%)", avatarRing: "hsl(15 70% 80%)", bobDelay: 0.5 },
-  { src: orbitFire,         orbit: 0, angle: 155,  size: 42, bobDelay: 1.2 },
-  { src: avatarGlassesGirl, orbit: 0, angle: 215,  size: 42, isAvatar: true, avatarBg: "hsl(40 60% 60%)", avatarRing: "hsl(40 60% 78%)", bobDelay: 0.9 },
-  { src: orbitSunglasses,   orbit: 0, angle: 275,  size: 44, bobDelay: 1.8 },
-  { src: avatarBraids,      orbit: 0, angle: 335,  size: 40, isAvatar: true, avatarBg: "hsl(270 35% 62%)", avatarRing: "hsl(270 35% 78%)", bobDelay: 1.4 },
+  // Outer orbit — lifestyle icons & avatars alternating
+  { src: orbitCrown,        orbit: 0, angle: 25,   size: 56, bobDelay: 0 },
+  { src: avatarBeanie,      orbit: 0, angle: 80,   size: 50, isAvatar: true, avatarBg: "hsl(20 80% 60%)", bobDelay: 0.4 },
+  { src: orbitFire,         orbit: 0, angle: 140,  size: 52, bobDelay: 1.0 },
+  { src: avatarGlassesGirl, orbit: 0, angle: 195,  size: 52, isAvatar: true, avatarBg: "hsl(45 70% 55%)", bobDelay: 0.8 },
+  { src: orbitSunglasses,   orbit: 0, angle: 250,  size: 54, bobDelay: 1.6, radiusOffset: 10 },
+  { src: avatarBraids,      orbit: 0, angle: 320,  size: 48, isAvatar: true, avatarBg: "hsl(280 40% 60%)", bobDelay: 1.2 },
 
-  // Inner orbit — intimacy + trust
-  { src: orbitCalendar,     orbit: 1, angle: 0,    size: 44, bobDelay: 0.3 },
-  { src: avatarElderly,     orbit: 1, angle: 120,  size: 38, isAvatar: true, avatarBg: "hsl(145 35% 55%)", avatarRing: "hsl(145 35% 72%)", bobDelay: 0.7 },
-  { src: orbitDiamond,      orbit: 1, angle: 240,  size: 40, bobDelay: 1.6 },
-  { src: avatarHijab,       orbit: 1, angle: 180,  size: 36, isAvatar: true, avatarBg: "hsl(200 45% 58%)", avatarRing: "hsl(200 45% 75%)", bobDelay: 1.1 },
+  // Inner orbit — more personal, intimate icons
+  { src: orbitCalendar,     orbit: 1, angle: 10,   size: 54, bobDelay: 0.2 },
+  { src: avatarElderly,     orbit: 1, angle: 100,  size: 44, isAvatar: true, avatarBg: "hsl(140 40% 50%)", bobDelay: 0.6 },
+  { src: orbitDiamond,      orbit: 1, angle: 180,  size: 48, bobDelay: 1.4 },
+  { src: avatarHijab,       orbit: 1, angle: 260,  size: 46, isAvatar: true, avatarBg: "hsl(200 50% 60%)", bobDelay: 1.0 },
 ];
 
 function getPosition(item: OrbitItem): { x: number; y: number } {
@@ -77,14 +74,14 @@ function getPosition(item: OrbitItem): { x: number; y: number } {
   };
 }
 
-/** Premium orbital system — psychologically strategic placement */
+/** Clean orbital system — client-experience focused */
 export function OrbitSystem() {
   return (
     <div
       className="relative mx-auto"
-      style={{ width: VIEW, height: VIEW }}
+      style={{ width: VIEW, height: VIEW, marginLeft: `calc(50% - ${VIEW / 2}px)` }}
     >
-      {/* SVG orbit rings — dashed for elegance */}
+      {/* SVG orbit rings */}
       <svg
         className="absolute inset-0 w-full h-full pointer-events-none"
         viewBox={`0 0 ${VIEW} ${VIEW}`}
@@ -97,40 +94,32 @@ export function OrbitSystem() {
             cy={CY}
             rx={o.rx}
             ry={o.ry}
-            stroke={`hsl(0 0% 45% / ${o.opacity})`}
+            stroke={`hsl(0 0% 55% / ${o.opacity})`}
             strokeWidth={o.strokeWidth}
-            strokeDasharray={o.dashArray}
           />
         ))}
       </svg>
 
-      {/* Center sparkle — "YOU are the center of everything" */}
+      {/* Center sparkle — the "you" star */}
       <div
         className="absolute z-10"
         style={{
-          left: CX - 36,
-          top: CY - 36,
-          width: 72,
-          height: 72,
+          left: CX - 44,
+          top: CY - 44,
+          width: 88,
+          height: 88,
         }}
       >
-        {/* Soft glow behind center */}
-        <div
-          className="absolute inset-[-20px] rounded-full"
-          style={{
-            background: "radial-gradient(circle, hsl(0 78% 45% / 0.06) 0%, transparent 70%)",
-          }}
-        />
         <motion.div
-          animate={{ scale: [1, 1.06, 1], rotate: [0, 3, -3, 0] }}
-          transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
-          className="w-full h-full relative"
+          animate={{ scale: [1, 1.08, 1], rotate: [0, 4, -4, 0] }}
+          transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
+          className="w-full h-full"
         >
           <img
             src={orbitSparkle}
             alt=""
             className="w-full h-full object-contain"
-            style={{ filter: "drop-shadow(0 2px 12px rgba(0,0,0,0.08))" }}
+            style={{ filter: "drop-shadow(0 4px 16px rgba(0,0,0,0.10))" }}
           />
         </motion.div>
       </div>
@@ -148,21 +137,12 @@ export function OrbitSystem() {
               width: item.size,
               height: item.size,
             }}
-            initial={{ opacity: 0, scale: 0.6 }}
-            animate={{
-              opacity: 1,
-              scale: 1,
-              y: [0, -4, 0, 4, 0],
-            }}
+            animate={{ y: [0, -5, 0, 5, 0] }}
             transition={{
-              opacity: { duration: 0.5, delay: 0.3 + i * 0.08 },
-              scale: { duration: 0.5, delay: 0.3 + i * 0.08 },
-              y: {
-                duration: 4 + (i % 3) * 0.5,
-                repeat: Infinity,
-                ease: "easeInOut",
-                delay: item.bobDelay || 0,
-              },
+              duration: 3.5,
+              repeat: Infinity,
+              ease: "easeInOut",
+              delay: item.bobDelay || 0,
             }}
           >
             {item.isAvatar ? (
@@ -170,13 +150,13 @@ export function OrbitSystem() {
                 className="w-full h-full rounded-full overflow-hidden flex items-center justify-center"
                 style={{
                   background: item.avatarBg,
-                  boxShadow: `0 4px 16px rgba(0,0,0,0.10), 0 0 0 2px ${item.avatarRing || "transparent"}`,
+                  boxShadow: "0 6px 20px rgba(0,0,0,0.12)",
                 }}
               >
                 <img
                   src={item.src}
                   alt=""
-                  className="w-[82%] h-[82%] object-cover rounded-full"
+                  className="w-[85%] h-[85%] object-cover rounded-full"
                 />
               </div>
             ) : (
@@ -184,7 +164,7 @@ export function OrbitSystem() {
                 src={item.src}
                 alt=""
                 className="w-full h-full object-contain"
-                style={{ filter: "drop-shadow(0 3px 10px rgba(0,0,0,0.08))" }}
+                style={{ filter: "drop-shadow(0 4px 14px rgba(0,0,0,0.10))" }}
               />
             )}
           </motion.div>
