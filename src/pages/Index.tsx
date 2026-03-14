@@ -70,35 +70,34 @@ const Index = () => {
             DUB AGENDA
           </span>
 
-          {/* White container starts at h1 */}
+          <h1
+            style={{
+              fontFamily: "'Plus Jakarta Sans', Inter, sans-serif",
+              fontWeight: 900,
+              fontSize: 27,
+              color: "#111",
+              lineHeight: 1.18,
+              margin: 0,
+              marginBottom: 4,
+            }}
+          >
+            Encontre o barbeiro{" "}
+            <em style={{ fontStyle: "italic" }}>certo</em>
+            <br />
+            perto{" "}
+            <span style={{ color: "#E53E3E" }}>de você.</span>
+          </h1>
+
+          {/* White wall — starts here, below the title */}
           <div
             style={{
               background: "white",
-              borderRadius: "24px 24px 0 0",
-              paddingTop: 40,
-              boxShadow: "0 -20px 40px rgba(255,255,255,0.95)",
-              marginTop: -32,
+              borderRadius: "16px 16px 0 0",
+              paddingTop: 12,
+              boxShadow: "0 -12px 30px rgba(255,255,255,0.95)",
             }}
             className="px-6 pb-[calc(env(safe-area-inset-bottom,0px)+20px)] -mx-6"
           >
-            <div className="flex flex-col items-start gap-1 mb-4">
-              <h1
-              style={{
-                fontFamily: "'Plus Jakarta Sans', Inter, sans-serif",
-                fontWeight: 900,
-                fontSize: 27,
-                color: "#111",
-                lineHeight: 1.18,
-                margin: 0,
-              }}
-            >
-              Encontre o barbeiro{" "}
-              <em style={{ fontStyle: "italic" }}>certo</em>
-              <br />
-              perto{" "}
-              <span style={{ color: "#E53E3E" }}>de você.</span>
-            </h1>
-
             <p
               style={{
                 fontFamily: "Inter, sans-serif",
@@ -107,41 +106,41 @@ const Index = () => {
                 color: "#aaa",
                 lineHeight: 1.5,
                 margin: 0,
+                marginBottom: 16,
               }}
             >
               Agendamento sem ligação, sem espera.
             </p>
-          </div>
 
-          {/* Button */}
-          <button
-            onClick={() => navigate("/escolher-barbearia")}
-            className="w-full flex items-center justify-between active:scale-[0.98] transition-transform"
-            style={{
-              fontFamily: "'Plus Jakarta Sans', Inter, sans-serif",
-              fontWeight: 700,
-              fontSize: 13,
-              color: "#111",
-              background: "transparent",
-              borderRadius: 12,
-              padding: "11px 14px",
-              border: "1.6px solid #111",
-              cursor: "pointer",
-            }}
-          >
-            <span>Encontrar Barbearias</span>
-            <span
-              className="flex items-center justify-center"
+            {/* Button */}
+            <button
+              onClick={() => navigate("/escolher-barbearia")}
+              className="w-full flex items-center justify-between active:scale-[0.98] transition-transform"
               style={{
-                width: 24,
-                height: 24,
-                borderRadius: 7,
-                background: "#111",
+                fontFamily: "'Plus Jakarta Sans', Inter, sans-serif",
+                fontWeight: 700,
+                fontSize: 13,
+                color: "#111",
+                background: "transparent",
+                borderRadius: 12,
+                padding: "11px 14px",
+                border: "1.6px solid #111",
+                cursor: "pointer",
               }}
             >
-              <ArrowRight className="w-3 h-3 text-white" />
-            </span>
-          </button>
+              <span>Encontrar Barbearias</span>
+              <span
+                className="flex items-center justify-center"
+                style={{
+                  width: 24,
+                  height: 24,
+                  borderRadius: 7,
+                  background: "#111",
+                }}
+              >
+                <ArrowRight className="w-3 h-3 text-white" />
+              </span>
+            </button>
           </div>
         </motion.div>
       </div>
