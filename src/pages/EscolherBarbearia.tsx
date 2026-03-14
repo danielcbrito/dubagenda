@@ -1,7 +1,7 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Search, MapPin, SearchX, Navigation2, X, Footprints } from "lucide-react";
+import { Search, MapPin, SearchX, Navigation2, X, Footprints, Car } from "lucide-react";
 import { BackArrow } from "@/components/ui/back-arrow";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
