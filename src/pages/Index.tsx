@@ -28,11 +28,10 @@ const Index = () => {
             <img
               src={sceneClientSad}
               alt="Cliente triste sem lugar pra agendar"
-              className="object-contain max-w-none"
+              className="object-contain"
               style={{
-                width: "104%",
+                width: "92%",
                 height: "auto",
-                marginLeft: "-10%",
               }}
               draggable={false}
             />
