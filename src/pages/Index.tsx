@@ -15,46 +15,42 @@ const Index = () => {
       >
         {/* Illustrations area — fills all space above footer */}
         <div
-          className="flex-1 min-h-0 overflow-hidden px-1 flex flex-col"
+          className="flex-1 min-h-0 overflow-hidden px-1 flex flex-col justify-center"
           style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 4px)" }}
         >
-          {/* Scene 1: Sad client — scales with available area */}
+          {/* Scene 1: Sad client — scales up on taller screens */}
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.5, delay: 0.2 }}
-            className="flex-[1.08] min-h-0 w-full flex items-start justify-start"
+            className="w-full flex justify-start"
           >
             <img
               src={sceneClientSad}
               alt="Cliente triste sem lugar pra agendar"
-              className="object-contain"
+              className="object-contain max-w-none w-[92%] [@media(min-height:760px)]:w-[98%] [@media(min-height:840px)]:w-[104%]"
               style={{
-                height: "100%",
-                width: "auto",
-                maxWidth: "104%",
+                height: "auto",
                 marginLeft: "-6%",
               }}
               draggable={false}
             />
           </motion.div>
 
-          {/* Scene 2: Friend with app — scales with available area */}
+          {/* Scene 2: Friend with app — scales up on taller screens */}
           <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.5, delay: 0.7 }}
-            className="flex-[0.92] min-h-0 w-full flex items-end justify-end"
-            style={{ marginTop: "-1%" }}
+            className="w-full flex justify-end"
+            style={{ marginTop: "-3%" }}
           >
             <img
               src={sceneFriendApp}
               alt="Amiga mostrando o app DubAgenda"
-              className="object-contain"
+              className="object-contain max-w-none w-[105%] [@media(min-height:760px)]:w-[112%] [@media(min-height:840px)]:w-[118%]"
               style={{
-                height: "108%",
-                width: "auto",
-                maxWidth: "112%",
+                height: "auto",
                 marginRight: "-14%",
               }}
               draggable={false}
