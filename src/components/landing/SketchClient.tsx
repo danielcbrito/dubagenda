@@ -1,78 +1,83 @@
 import { motion } from "framer-motion";
 
-/** Pencil-sketch style client character — confused expression, hand on head */
+/** Pencil-sketch client — serious confused expression, hand on chin thinking */
 export function SketchClient() {
   return (
     <motion.svg
-      width="120"
-      height="220"
-      viewBox="0 0 120 220"
+      width="150"
+      height="280"
+      viewBox="0 0 150 280"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       animate={{ y: [0, -6, 0] }}
       transition={{ duration: 3.5, ease: "easeInOut", repeat: Infinity }}
     >
       {/* Head */}
-      <ellipse cx="60" cy="52" rx="28" ry="30" stroke="#111" strokeWidth="2.2" fill="none" />
+      <ellipse cx="75" cy="62" rx="32" ry="34" stroke="#111" strokeWidth="2.4" fill="none" />
 
-      {/* Hair — messy/casual */}
-      <path d="M32 45 Q30 25 45 18 Q55 12 65 16 Q78 12 88 22 Q92 30 88 42"
-        stroke="#111" strokeWidth="2" fill="none" />
-      <path d="M36 38 Q40 30 48 28" stroke="#111" strokeWidth="1" fill="none" />
-      <path d="M70 20 Q76 16 84 24" stroke="#111" strokeWidth="1" fill="none" />
+      {/* Hair — short sides, volume on top */}
+      <path d="M43 54 Q40 28 55 18 Q65 10 78 14 Q92 10 102 24 Q106 34 103 50"
+        stroke="#111" strokeWidth="2.2" fill="none" />
+      {/* Hair texture */}
+      <path d="M50 35 Q58 22 68 24" stroke="#111" strokeWidth="1.2" fill="none" />
+      <path d="M72 18 Q82 14 96 26" stroke="#111" strokeWidth="1.2" fill="none" />
+      <path d="M55 28 Q62 20 70 22" stroke="#111" strokeWidth="0.8" fill="none" />
 
-      {/* Eyebrows — furrowed/worried */}
-      <path d="M42 42 Q48 37 56 42" stroke="#111" strokeWidth="2.2" strokeLinecap="round" fill="none" />
-      <path d="M64 42 Q72 37 78 42" stroke="#111" strokeWidth="2.2" strokeLinecap="round" fill="none" />
+      {/* Eyebrows — furrowed, serious */}
+      <path d="M54 50 Q62 44 70 50" stroke="#111" strokeWidth="2.5" strokeLinecap="round" fill="none" />
+      <path d="M80 50 Q88 44 96 50" stroke="#111" strokeWidth="2.5" strokeLinecap="round" fill="none" />
 
-      {/* Eyes — worried/wide */}
-      <ellipse cx="50" cy="50" rx="4.5" ry="5" stroke="#111" strokeWidth="1.5" fill="none" />
-      <ellipse cx="72" cy="50" rx="4.5" ry="5" stroke="#111" strokeWidth="1.5" fill="none" />
-      <circle cx="50" cy="50" r="2" fill="#111" />
-      <circle cx="72" cy="50" r="2" fill="#111" />
-
-      {/* Mouth — worried/unsure */}
-      <path d="M50 68 Q55 64 60 66 Q65 64 70 68" stroke="#111" strokeWidth="1.5" strokeLinecap="round" fill="none" />
+      {/* Eyes — focused/thinking */}
+      <ellipse cx="62" cy="60" rx="5.5" ry="6" stroke="#111" strokeWidth="1.8" fill="none" />
+      <ellipse cx="88" cy="60" rx="5.5" ry="6" stroke="#111" strokeWidth="1.8" fill="none" />
+      <circle cx="63" cy="60" r="2.8" fill="#111" />
+      <circle cx="89" cy="60" r="2.8" fill="#111" />
+      {/* Eye highlights */}
+      <circle cx="65" cy="58" r="1.2" fill="white" />
+      <circle cx="91" cy="58" r="1.2" fill="white" />
 
       {/* Nose */}
-      <path d="M59 58 Q60 62 62 58" stroke="#111" strokeWidth="1" strokeLinecap="round" fill="none" />
+      <path d="M73 70 Q75 75 77 70" stroke="#111" strokeWidth="1.2" strokeLinecap="round" fill="none" />
+
+      {/* Mouth — slight frown, unsure */}
+      <path d="M64 82 Q70 78 75 80 Q80 78 86 82" stroke="#111" strokeWidth="1.8" strokeLinecap="round" fill="none" />
+
+      {/* Ear left */}
+      <path d="M43 55 Q38 58 40 68 Q42 72 44 70" stroke="#111" strokeWidth="1.5" fill="none" />
 
       {/* Neck */}
-      <line x1="54" y1="80" x2="54" y2="95" stroke="#111" strokeWidth="1.8" />
-      <line x1="66" y1="80" x2="66" y2="95" stroke="#111" strokeWidth="1.8" />
+      <line x1="68" y1="94" x2="68" y2="112" stroke="#111" strokeWidth="2" />
+      <line x1="82" y1="94" x2="82" y2="112" stroke="#111" strokeWidth="2" />
 
-      {/* T-shirt body */}
-      <path d="M28 95 Q28 92 40 90 L54 90 L66 90 Q80 92 80 95 L82 155 Q82 162 60 162 Q38 162 38 155 Z"
+      {/* T-shirt */}
+      <path d="M32 112 Q32 108 52 106 L68 106 L82 106 Q98 108 98 112 L100 185 Q100 192 75 192 Q50 192 50 185 Z"
+        stroke="#111" strokeWidth="2.2" fill="none" />
+      {/* V-neck */}
+      <path d="M62 106 Q75 118 88 106" stroke="#111" strokeWidth="1.5" fill="none" />
+      {/* Shirt wrinkles */}
+      <path d="M60 130 Q65 138 62 150" stroke="#111" strokeWidth="0.7" fill="none" />
+      <path d="M85 128 Q82 140 87 152" stroke="#111" strokeWidth="0.7" fill="none" />
+      <path d="M70 145 Q74 150 72 160" stroke="#111" strokeWidth="0.6" fill="none" />
+
+      {/* Left arm — hand on chin (thinking) */}
+      <path d="M32 115 Q18 120 16 145 Q15 155 25 158 Q30 155 38 148"
+        stroke="#111" strokeWidth="2.2" fill="none" strokeLinecap="round" />
+      {/* Hand under chin */}
+      <path d="M55 88 Q48 92 42 90 Q38 88 36 85"
+        stroke="#111" strokeWidth="1.8" fill="none" strokeLinecap="round" />
+
+      {/* Right arm — pocket or side */}
+      <path d="M98 115 Q115 125 112 160" stroke="#111" strokeWidth="2.2" fill="none" strokeLinecap="round" />
+      {/* Right hand */}
+      <path d="M110 160 Q114 162 112 168 Q108 170 106 166" stroke="#111" strokeWidth="1.5" fill="none" />
+
+      {/* Pants */}
+      <path d="M54 188 L50 245 L66 245 L70 195 L80 195 L84 245 L100 245 L96 188 Z"
         stroke="#111" strokeWidth="2" fill="none" />
-      {/* Collar */}
-      <path d="M48 90 Q60 100 72 90" stroke="#111" strokeWidth="1.5" fill="none" />
-      {/* Shirt wrinkle */}
-      <path d="M50 110 Q55 115 52 125" stroke="#111" strokeWidth="0.7" fill="none" />
-      <path d="M68 108 Q65 118 70 128" stroke="#111" strokeWidth="0.7" fill="none" />
-
-      {/* Left arm — hand on head (confused) */}
-      <path d="M28 98 Q12 100 15 80 Q16 70 30 55" stroke="#111" strokeWidth="2" fill="none" strokeLinecap="round" />
-      {/* Hand on head */}
-      <path d="M30 55 Q35 50 40 52" stroke="#111" strokeWidth="1.8" fill="none" strokeLinecap="round" />
-      <line x1="32" y1="53" x2="30" y2="48" stroke="#111" strokeWidth="1" strokeLinecap="round" />
-      <line x1="35" y1="51" x2="34" y2="46" stroke="#111" strokeWidth="1" strokeLinecap="round" />
-
-      {/* Right arm — hanging */}
-      <path d="M80 98 Q95 105 92 135" stroke="#111" strokeWidth="2" fill="none" strokeLinecap="round" />
-      {/* Hand */}
-      <ellipse cx="92" cy="138" rx="5" ry="6" stroke="#111" strokeWidth="1.5" fill="none" />
-
-      {/* Legs */}
-      <line x1="48" y1="162" x2="45" y2="198" stroke="#111" strokeWidth="2" />
-      <line x1="70" y1="162" x2="73" y2="198" stroke="#111" strokeWidth="2" />
 
       {/* Shoes */}
-      <path d="M35 198 Q40 195 48 198 Q50 202 35 203 Z" stroke="#111" strokeWidth="1.5" fill="none" />
-      <path d="M70 198 Q78 195 83 198 Q85 202 70 203 Z" stroke="#111" strokeWidth="1.5" fill="none" />
-
-      {/* Question marks floating */}
-      <text x="90" y="30" fontFamily="Caveat, cursive" fontSize="16" fill="#111" opacity="0.5">?</text>
-      <text x="98" y="22" fontFamily="Caveat, cursive" fontSize="12" fill="#111" opacity="0.3">?</text>
+      <path d="M42 245 Q48 241 66 244 Q70 249 42 251 Z" stroke="#111" strokeWidth="1.8" fill="#111" />
+      <path d="M84 244 Q96 241 108 244 Q112 249 84 251 Z" stroke="#111" strokeWidth="1.8" fill="#111" />
     </motion.svg>
   );
 }
