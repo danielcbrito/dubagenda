@@ -54,7 +54,7 @@ serve(async (req) => {
     // 1. Fetch appointment and verify ownership
     const { data: appointment, error: fetchError } = await supabase
       .from("agendamentos")
-      .select("id, user_id, status, preco, servico_id, data, hora, barbeiro_id, payment_method, observacoes, is_free")
+      .select("id, user_id, status, preco, servico_id, data, hora, barbeiro_id, payment_method, observacoes, is_free, tipo_agendamento")
       .eq("id", appointmentId)
       .single();
 
