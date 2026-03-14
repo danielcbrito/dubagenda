@@ -182,8 +182,8 @@ const SkeletonCard = ({ index }: { index: number }) => (
 );
 
 // ── Travel Time Badge ──
-const TravelTimeBadge = ({ travelTime, travelMinutes }: { travelTime: string | null; travelMinutes: number | null }) => {
-  if (travelTime == null || travelMinutes == null) {
+const TravelTimeBadge = ({ travelTime, travelMinutes, travelMode }: { travelTime: string | null; travelMinutes: number | null; travelMode: "walking" | "driving" | null }) => {
+  if (travelTime == null || travelMinutes == null || travelMode == null) {
     return (
       <div className="flex flex-col items-center justify-center bg-secondary/40 border border-border/50 rounded-2xl px-2.5 py-2 min-w-[48px] shrink-0">
         <Navigation2 className="w-3.5 h-3.5 text-muted-foreground/25" />
@@ -192,15 +192,18 @@ const TravelTimeBadge = ({ travelTime, travelMinutes }: { travelTime: string | n
   }
 
   const formatted = formatTravelTime(travelMinutes);
+  const isWalking = travelMode === "walking";
+  const Icon = isWalking ? Footprints : Car;
+  const modeLabel = isWalking ? "a pé" : "de carro";
 
   return (
     <div className="flex flex-col items-center justify-center bg-success/10 border border-success/20 rounded-2xl px-2.5 py-2 min-w-[48px] shrink-0 gap-0.5">
-      <Footprints className="w-[11px] h-[11px] text-success" />
+      <Icon className="w-[11px] h-[11px] text-success" />
       <span className="text-[17px] font-bold text-success leading-none font-mono tabular-nums">
         {formatted.value}
       </span>
       <span className="text-[8px] text-muted-foreground/70 uppercase font-mono leading-none">
-        {formatted.unit ? `${formatted.unit} a pé` : "a pé"}
+        {formatted.unit ? `${formatted.unit} ${modeLabel}` : modeLabel}
       </span>
     </div>
   );
