@@ -55,49 +55,49 @@ const Index = () => {
           className="absolute bottom-0 left-0 right-0 px-6 pb-[calc(env(safe-area-inset-bottom,0px)+20px)]"
           style={{ zIndex: 2 }}
         >
-          <span
-            style={{
-              fontFamily: "Inter, sans-serif",
-              fontWeight: 600,
-              fontSize: 10,
-              color: "#ccc",
-              letterSpacing: "2.5px",
-              textTransform: "uppercase" as const,
-              display: "block",
-              marginBottom: 6,
-            }}
-          >
-            DUB AGENDA
-          </span>
-
-          <h1
-            style={{
-              fontFamily: "'Plus Jakarta Sans', Inter, sans-serif",
-              fontWeight: 900,
-              fontSize: 27,
-              color: "#111",
-              lineHeight: 1.18,
-              margin: 0,
-              marginBottom: 4,
-            }}
-          >
-            Encontre o barbeiro{" "}
-            <em style={{ fontStyle: "italic" }}>certo</em>
-            <br />
-            perto{" "}
-            <span style={{ color: "#E53E3E" }}>de você.</span>
-          </h1>
-
-          {/* White wall — starts here, below the title */}
+          {/* White wall — covers all text, positioned very low */}
           <div
             style={{
               background: "white",
-              borderRadius: "16px 16px 0 0",
-              paddingTop: 12,
-              boxShadow: "0 -12px 30px rgba(255,255,255,0.95)",
+              borderRadius: "24px 24px 0 0",
+              paddingTop: 20,
+              boxShadow: "0 -20px 40px rgba(255,255,255,0.95)",
             }}
             className="px-6 pb-[calc(env(safe-area-inset-bottom,0px)+20px)] -mx-6"
           >
+            <span
+              style={{
+                fontFamily: "Inter, sans-serif",
+                fontWeight: 600,
+                fontSize: 10,
+                color: "#ccc",
+                letterSpacing: "2.5px",
+                textTransform: "uppercase" as const,
+                display: "block",
+                marginBottom: 6,
+              }}
+            >
+              DUB AGENDA
+            </span>
+
+            <h1
+              style={{
+                fontFamily: "'Plus Jakarta Sans', Inter, sans-serif",
+                fontWeight: 900,
+                fontSize: 27,
+                color: "#111",
+                lineHeight: 1.18,
+                margin: 0,
+                marginBottom: 4,
+              }}
+            >
+              Encontre o barbeiro{" "}
+              <em style={{ fontStyle: "italic" }}>certo</em>
+              <br />
+              perto{" "}
+              <span style={{ color: "#E53E3E" }}>de você.</span>
+            </h1>
+
             <p
               style={{
                 fontFamily: "Inter, sans-serif",
