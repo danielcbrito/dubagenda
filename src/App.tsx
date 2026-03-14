@@ -41,6 +41,7 @@ const EscolherBarbearia = lazy(() => import("./pages/EscolherBarbearia"));
 const BarbershopPublic = lazy(() => import("./pages/BarbershopPublic"));
 const BarbershopUnidades = lazy(() => import("./pages/BarbershopUnidades"));
 const Flowchart = lazy(() => import("./pages/Flowchart"));
+const ResponsivePreview = lazy(() => import("./pages/ResponsivePreview"));
 
 /** Minimal loading fallback */
 function PageLoader() {
@@ -272,6 +273,7 @@ function AppRoutes() {
             <Route path="/b/:slug" element={<BarbershopPublic />} />
             <Route path="/:slug" element={<BarbershopPublic />} />
             <Route path="/flowchart" element={<Flowchart />} />
+            <Route path="/responsive-preview" element={<ResponsivePreview />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Suspense>
