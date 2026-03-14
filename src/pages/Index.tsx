@@ -31,7 +31,7 @@ const Index = () => {
               className="object-contain max-w-none w-[96%] [@media(min-height:760px)]:w-[112%] [@media(min-height:860px)]:w-[126%]"
               style={{
                 height: "auto",
-                marginTop: "2%",
+                marginTop: "clamp(10px, 2.6dvh, 22px)",
                 marginLeft: "-7%",
               }}
               draggable={false}
