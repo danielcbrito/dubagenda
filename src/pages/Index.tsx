@@ -99,19 +99,15 @@ const Index = () => {
             }}
             className="pb-2"
           >
-            <div className="flex flex-col items-start gap-1 mb-5">
+            <div className="flex flex-col items-start gap-1 mb-4">
               <h1
                 style={{
                   fontFamily: "'Plus Jakarta Sans', Inter, sans-serif",
                   fontWeight: 900,
-                  fontSize: 54,
+                  fontSize: 27,
                   color: "#111",
-                  lineHeight: 1.03,
+                  lineHeight: 1.18,
                   margin: 0,
-                  letterSpacing: "-1.2px",
-                  transform: "scale(0.5)",
-                  transformOrigin: "top left",
-                  width: "200%",
                 }}
               >
                 Encontre o barbeiro{" "}
@@ -129,7 +125,6 @@ const Index = () => {
                   color: "#aaa",
                   lineHeight: 1.5,
                   margin: 0,
-                  marginTop: -14,
                 }}
               >
                 Agendamento sem ligação, sem espera.
@@ -142,29 +137,26 @@ const Index = () => {
               style={{
                 fontFamily: "'Plus Jakarta Sans', Inter, sans-serif",
                 fontWeight: 700,
-                fontSize: 32,
+                fontSize: 13,
                 color: "#111",
                 background: "transparent",
                 borderRadius: 12,
-                padding: "22px 28px",
+                padding: "11px 14px",
                 border: "1.6px solid #111",
                 cursor: "pointer",
-                transform: "scale(0.5)",
-                transformOrigin: "top left",
-                width: "200%",
               }}
             >
               <span>Encontrar Barbearias</span>
               <span
                 className="flex items-center justify-center"
                 style={{
-                  width: 48,
-                  height: 48,
-                  borderRadius: 12,
+                  width: 24,
+                  height: 24,
+                  borderRadius: 7,
                   background: "#111",
                 }}
               >
-                <ArrowRight className="w-6 h-6 text-white" />
+                <ArrowRight className="w-3 h-3 text-white" />
               </span>
             </button>
           </div>
