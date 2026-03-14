@@ -14,14 +14,41 @@ export function AmbientEffects() {
   return (
     <div className="absolute inset-0 pointer-events-none overflow-hidden" aria-hidden>
 
-      {/* ── Red accent gradient at top ── */}
+      {/* ── Red accent gradient at top — softer ── */}
       <div
         className="absolute left-0 right-0 top-0"
         style={{
           height: "40%",
-          background: "linear-gradient(to bottom, hsl(var(--primary) / 0.12) 0%, hsl(var(--primary) / 0.05) 40%, transparent 100%)",
+          background: "linear-gradient(to bottom, hsl(var(--primary) / 0.07) 0%, hsl(var(--primary) / 0.02) 40%, transparent 100%)",
         }}
       />
+
+      {/* ── Tiny red dots scattered down the sides ── */}
+      {[
+        { top: "12%", left: "8%" },
+        { top: "20%", right: "10%" },
+        { top: "32%", left: "5%" },
+        { top: "38%", right: "7%" },
+        { top: "50%", left: "10%" },
+        { top: "55%", right: "5%" },
+        { top: "65%", left: "7%" },
+        { top: "72%", right: "9%" },
+        { top: "80%", left: "12%" },
+        { top: "85%", right: "6%" },
+      ].map((pos, i) => (
+        <motion.div
+          key={`dot-${i}`}
+          initial={{ opacity: 0, scale: 0 }}
+          animate={{ opacity: 0.35, scale: 1 }}
+          transition={{ delay: 0.6 + i * 0.12, duration: 0.6, ease: "easeOut" }}
+          className="absolute rounded-full bg-primary"
+          style={{
+            ...pos,
+            width: i % 3 === 0 ? 4 : 3,
+            height: i % 3 === 0 ? 4 : 3,
+          }}
+        />
+      ))}
 
       {/* ── Scenery: rolling hills ── */}
       <svg
