@@ -10,129 +10,133 @@ const Index = () => {
   return (
     <div className="fixed inset-0 flex flex-col overflow-hidden bg-white">
 
-      {/* Scrollable content area */}
-      <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
-        <div className="flex flex-col px-5 pt-[calc(env(safe-area-inset-top,0px)+8px)]">
-
-          {/* ── Scene 1: Client sad — top left, bigger ── */}
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-            className="self-start -mb-4"
-            style={{ width: "62%" }}
-          >
-            <img
-              src={sceneClientSad}
-              alt="Cliente triste sem lugar pra agendar"
-              className="w-full h-auto object-contain"
-              draggable={false}
-            />
-          </motion.div>
-
-          {/* ── Scene 2: Friend — right side, shifted down ── */}
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.5, delay: 0.7 }}
-            className="self-end"
-            style={{ width: "58%" }}
-          >
-            <img
-              src={sceneFriendApp}
-              alt="Amiga mostrando o app DubAgenda"
-              className="w-full h-auto object-contain"
-              draggable={false}
-            />
-          </motion.div>
-        </div>
+      {/* ── Top area: Scene 1 (sad client) — top left ── */}
+      <div className="flex-shrink-0 px-5 pt-[calc(env(safe-area-inset-top,0px)+8px)]">
+        <motion.div
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.5, delay: 0.2 }}
+          className="self-start"
+          style={{ width: "58%" }}
+        >
+          <img
+            src={sceneClientSad}
+            alt="Cliente triste sem lugar pra agendar"
+            className="w-full h-auto object-contain"
+            draggable={false}
+          />
+        </motion.div>
       </div>
 
-      {/* ── Fixed bottom: Text + Button ── */}
-      <div
-        className="flex-shrink-0 px-6 pb-[calc(env(safe-area-inset-bottom,0px)+20px)] pt-3"
-        style={{ background: "linear-gradient(to top, white 80%, transparent)" }}
-      >
-        {/* Text */}
+      {/* ── Middle: relative container for depth effect ── */}
+      <div className="flex-1 min-h-0 relative">
+
+        {/* Layer 1 (behind): Friend illustration — absolute, right-aligned */}
+        <motion.div
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.5, delay: 0.7 }}
+          className="absolute right-4"
+          style={{ top: "-10%", width: "55%", zIndex: 1 }}
+        >
+          <img
+            src={sceneFriendApp}
+            alt="Amiga mostrando o app DubAgenda"
+            className="w-full h-auto object-contain"
+            draggable={false}
+          />
+        </motion.div>
+
+        {/* Layer 2 (front): White text block that covers lower body */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 1.0 }}
-          className="flex flex-col items-start gap-1 mb-4"
-        >
-          <span
-            style={{
-              fontFamily: "Inter, sans-serif",
-              fontWeight: 600,
-              fontSize: 10,
-              color: "#ccc",
-              letterSpacing: "2.5px",
-              textTransform: "uppercase" as const,
-            }}
-          >
-            DUB AGENDA
-          </span>
-
-          <h1
-            style={{
-              fontFamily: "'Plus Jakarta Sans', Inter, sans-serif",
-              fontWeight: 900,
-              fontSize: 27,
-              color: "#111",
-              lineHeight: 1.18,
-              margin: 0,
-            }}
-          >
-            Encontre o barbeiro{" "}
-            <em style={{ fontStyle: "italic" }}>certo</em>
-            <br />
-            perto{" "}
-            <span style={{ color: "#E53E3E" }}>de você.</span>
-          </h1>
-
-          <p
-            style={{
-              fontFamily: "Inter, sans-serif",
-              fontWeight: 400,
-              fontSize: 12,
-              color: "#aaa",
-              lineHeight: 1.5,
-              margin: 0,
-            }}
-          >
-            Agendamento sem ligação, sem espera.
-          </p>
-        </motion.div>
-
-        {/* Button */}
-        <button
-          onClick={() => navigate("/escolher-barbearia")}
-          className="w-full flex items-center justify-between active:scale-[0.98] transition-transform"
+          className="absolute bottom-0 left-0 right-0 px-6 pb-[calc(env(safe-area-inset-bottom,0px)+20px)]"
           style={{
-            fontFamily: "'Plus Jakarta Sans', Inter, sans-serif",
-            fontWeight: 700,
-            fontSize: 13,
-            color: "#111",
-            background: "transparent",
-            borderRadius: 12,
-            padding: "11px 14px",
-            border: "1.6px solid #111",
-            cursor: "pointer",
+            zIndex: 2,
+            background: "white",
+            borderRadius: "24px 24px 0 0",
+            paddingTop: 28,
+            boxShadow: "0 -20px 40px rgba(255,255,255,0.95)",
           }}
         >
-          <span>Encontrar Barbearias</span>
-          <span
-            className="flex items-center justify-center"
+          {/* Text */}
+          <div className="flex flex-col items-start gap-1 mb-4">
+            <span
+              style={{
+                fontFamily: "Inter, sans-serif",
+                fontWeight: 600,
+                fontSize: 10,
+                color: "#ccc",
+                letterSpacing: "2.5px",
+                textTransform: "uppercase" as const,
+              }}
+            >
+              DUB AGENDA
+            </span>
+
+            <h1
+              style={{
+                fontFamily: "'Plus Jakarta Sans', Inter, sans-serif",
+                fontWeight: 900,
+                fontSize: 27,
+                color: "#111",
+                lineHeight: 1.18,
+                margin: 0,
+              }}
+            >
+              Encontre o barbeiro{" "}
+              <em style={{ fontStyle: "italic" }}>certo</em>
+              <br />
+              perto{" "}
+              <span style={{ color: "#E53E3E" }}>de você.</span>
+            </h1>
+
+            <p
+              style={{
+                fontFamily: "Inter, sans-serif",
+                fontWeight: 400,
+                fontSize: 12,
+                color: "#aaa",
+                lineHeight: 1.5,
+                margin: 0,
+              }}
+            >
+              Agendamento sem ligação, sem espera.
+            </p>
+          </div>
+
+          {/* Button */}
+          <button
+            onClick={() => navigate("/escolher-barbearia")}
+            className="w-full flex items-center justify-between active:scale-[0.98] transition-transform"
             style={{
-              width: 24,
-              height: 24,
-              borderRadius: 7,
-              background: "#111",
+              fontFamily: "'Plus Jakarta Sans', Inter, sans-serif",
+              fontWeight: 700,
+              fontSize: 13,
+              color: "#111",
+              background: "transparent",
+              borderRadius: 12,
+              padding: "11px 14px",
+              border: "1.6px solid #111",
+              cursor: "pointer",
             }}
           >
-            <ArrowRight className="w-3 h-3 text-white" />
-          </span>
-        </button>
+            <span>Encontrar Barbearias</span>
+            <span
+              className="flex items-center justify-center"
+              style={{
+                width: 24,
+                height: 24,
+                borderRadius: 7,
+                background: "#111",
+              }}
+            >
+              <ArrowRight className="w-3 h-3 text-white" />
+            </span>
+          </button>
+        </motion.div>
       </div>
     </div>
   );
