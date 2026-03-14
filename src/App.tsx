@@ -41,6 +41,7 @@ const EscolherBarbearia = lazy(() => import("./pages/EscolherBarbearia"));
 const BarbershopPublic = lazy(() => import("./pages/BarbershopPublic"));
 const BarbershopUnidades = lazy(() => import("./pages/BarbershopUnidades"));
 const Flowchart = lazy(() => import("./pages/Flowchart"));
+const ResponsivePreview = lazy(() => import("./pages/ResponsivePreview"));
 
 /** Minimal loading fallback */
 function PageLoader() {
