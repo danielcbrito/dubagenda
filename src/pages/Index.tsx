@@ -4,125 +4,21 @@ import { ArrowRight } from "lucide-react";
 import sceneClientSad from "@/assets/scene-client-sad.png";
 import sceneFriendApp from "@/assets/scene-friend-app.png";
 
-/** Full ambient background — floor, glows, dots, texture */
-const AmbientEffects = () => (
-  <>
-    {/* Floor gradient — warm surface feel */}
-    <div
-      className="absolute left-0 right-0 bottom-0 pointer-events-none"
-      style={{
-        height: "35%",
-        background: "linear-gradient(to bottom, transparent 0%, hsl(var(--foreground) / 0.015) 40%, hsl(var(--foreground) / 0.035) 100%)",
-      }}
-    />
-    {/* Floor line */}
-    <div
-      className="absolute left-[8%] right-[8%] pointer-events-none"
-      style={{
-        bottom: 0,
-        height: 1,
-        background: "linear-gradient(90deg, transparent, hsl(var(--foreground) / 0.08) 30%, hsl(var(--foreground) / 0.1) 50%, hsl(var(--foreground) / 0.08) 70%, transparent)",
-      }}
-    />
-    {/* Floor shadow ellipse */}
-    <div
-      className="absolute left-[5%] right-[5%] pointer-events-none"
-      style={{
-        bottom: -4,
-        height: 50,
-        background: "radial-gradient(ellipse 100% 100% at 50% 0%, hsl(var(--foreground) / 0.04) 0%, transparent 80%)",
-      }}
-    />
-
-    {/* Large warm glow — top-left behind sad boy */}
-    <div
-      className="absolute pointer-events-none"
-      style={{
-        top: "5%",
-        left: "-12%",
-        width: 320,
-        height: 320,
-        borderRadius: "50%",
-        background: "radial-gradient(circle, hsl(var(--primary) / 0.06) 0%, transparent 65%)",
-        filter: "blur(60px)",
-      }}
-    />
-    {/* Large cool glow — bottom-right behind friend */}
-    <div
-      className="absolute pointer-events-none"
-      style={{
-        bottom: "2%",
-        right: "-10%",
-        width: 340,
-        height: 340,
-        borderRadius: "50%",
-        background: "radial-gradient(circle, hsl(210 50% 60% / 0.05) 0%, transparent 65%)",
-        filter: "blur(60px)",
-      }}
-    />
-    {/* Center ambient glow */}
-    <div
-      className="absolute pointer-events-none"
-      style={{
-        top: "40%",
-        left: "20%",
-        width: 200,
-        height: 200,
-        borderRadius: "50%",
-        background: "radial-gradient(circle, hsl(var(--primary) / 0.03) 0%, transparent 70%)",
-        filter: "blur(40px)",
-      }}
-    />
-
-    {/* Decorative dots */}
-    {[
-      { top: "8%", left: "18%", size: 5, op: 0.09, d: 0.4 },
-      { top: "20%", right: "14%", size: 4, op: 0.07, d: 0.7 },
-      { top: "35%", left: "5%", size: 6, op: 0.06, d: 1.0 },
-      { top: "48%", right: "6%", size: 4, op: 0.08, d: 0.6 },
-      { top: "12%", right: "32%", size: 3, op: 0.06, d: 1.2 },
-      { top: "62%", left: "25%", size: 5, op: 0.05, d: 0.9 },
-      { top: "42%", left: "52%", size: 3, op: 0.07, d: 1.4 },
-      { top: "70%", right: "20%", size: 4, op: 0.05, d: 1.1 },
-      { top: "28%", left: "40%", size: 3, op: 0.04, d: 1.6 },
-      { top: "55%", left: "10%", size: 4, op: 0.05, d: 0.8 },
-    ].map((dot, i) => (
-      <motion.div
-        key={i}
-        initial={{ opacity: 0, scale: 0 }}
-        animate={{ opacity: dot.op, scale: 1 }}
-        transition={{ delay: dot.d, duration: 0.6, ease: "easeOut" }}
-        className="absolute rounded-full bg-foreground pointer-events-none"
-        style={{
-          top: dot.top,
-          left: (dot as any).left,
-          right: (dot as any).right,
-          width: dot.size,
-          height: dot.size,
-        }}
-      />
-    ))}
-
-    {/* Subtle diagonal hatching texture */}
-    <div
-      className="absolute inset-0 pointer-events-none opacity-[0.018]"
-      style={{
-        backgroundImage:
-          "repeating-linear-gradient(135deg, transparent, transparent 32px, hsl(var(--foreground)) 32px, hsl(var(--foreground)) 33px)",
-      }}
-    />
-
-    {/* Horizontal subtle line — mid section */}
-    <div
-      className="absolute left-[15%] right-[15%] pointer-events-none"
-      style={{
-        top: "50%",
-        height: 1,
-        background: "linear-gradient(90deg, transparent, hsl(var(--foreground) / 0.03) 40%, hsl(var(--foreground) / 0.03) 60%, transparent)",
-      }}
-    />
-  </>
-);
+/**
+ * ESTRATÉGIA DE LEITURA VISUAL (F-pattern + storytelling):
+ * 
+ * 1. Olho entra pelo menino triste (topo-esquerda, grande, contraste forte)
+ *    → Gera empatia: "eu já passei por isso"
+ * 
+ * 2. Olho desce naturalmente para a menina com celular (centro-direita, maior ainda)
+ *    → Apresenta a solução: "tem um jeito fácil"
+ * 
+ * 3. Olho chega no texto/CTA (base, ancorado)
+ *    → Converte: "encontre o barbeiro certo perto de você"
+ * 
+ * Efeitos ambientais criam "cena" sem distrair do fluxo.
+ * Responsividade por altura: telas curtas comprimem, telas altas expandem.
+ */
 
 const Index = () => {
   const navigate = useNavigate();
@@ -133,69 +29,186 @@ const Index = () => {
         className="relative w-full h-full overflow-hidden bg-background flex flex-col"
         style={{ maxWidth: 480 }}
       >
-        {/* Illustrations area */}
+        {/* ═══ ILLUSTRATIONS AREA ═══ */}
         <div
           className="flex-1 min-h-0 relative overflow-hidden"
           style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}
         >
-          <AmbientEffects />
+          {/* ── AMBIENT BACKGROUND ── */}
 
-          {/* Scene 1: Sad client — BIG, top-left, fully visible */}
+          {/* Soft warm blob top-left (behind sad boy) */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 1.2, delay: 0.1 }}
+            className="absolute pointer-events-none"
+            style={{
+              top: "-5%",
+              left: "-15%",
+              width: "70%",
+              height: "50%",
+              borderRadius: "50%",
+              background: "radial-gradient(circle, hsl(var(--primary) / 0.06) 0%, transparent 60%)",
+              filter: "blur(60px)",
+            }}
+          />
+
+          {/* Cool blob bottom-right (behind friend) */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 1.2, delay: 0.5 }}
+            className="absolute pointer-events-none"
+            style={{
+              bottom: "-5%",
+              right: "-15%",
+              width: "75%",
+              height: "55%",
+              borderRadius: "50%",
+              background: "radial-gradient(circle, hsl(210 50% 60% / 0.045) 0%, transparent 60%)",
+              filter: "blur(60px)",
+            }}
+          />
+
+          {/* Soft center glow — connects the two scenes */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 1.5, delay: 0.8 }}
+            className="absolute pointer-events-none"
+            style={{
+              top: "35%",
+              left: "15%",
+              width: "60%",
+              height: "30%",
+              borderRadius: "50%",
+              background: "radial-gradient(circle, hsl(var(--primary) / 0.025) 0%, transparent 70%)",
+              filter: "blur(50px)",
+            }}
+          />
+
+          {/* Ground plane — subtle gradient at bottom */}
+          <div
+            className="absolute left-0 right-0 bottom-0 pointer-events-none"
+            style={{
+              height: "25%",
+              background: "linear-gradient(to bottom, transparent 0%, hsl(var(--foreground) / 0.012) 50%, hsl(var(--foreground) / 0.03) 100%)",
+            }}
+          />
+
+          {/* Ground line */}
+          <div
+            className="absolute left-[10%] right-[10%] bottom-0 pointer-events-none"
+            style={{
+              height: 1,
+              background: "linear-gradient(90deg, transparent, hsl(var(--foreground) / 0.07) 30%, hsl(var(--foreground) / 0.09) 50%, hsl(var(--foreground) / 0.07) 70%, transparent)",
+            }}
+          />
+
+          {/* Small floating circles — like bokeh / ambient particles */}
+          {[
+            { top: "6%", left: "70%", size: 8, op: 0.04, d: 0.6 },
+            { top: "18%", left: "85%", size: 6, op: 0.035, d: 0.9 },
+            { top: "45%", left: "3%", size: 10, op: 0.03, d: 1.2 },
+            { top: "65%", left: "80%", size: 7, op: 0.035, d: 0.7 },
+            { top: "30%", left: "92%", size: 5, op: 0.04, d: 1.0 },
+            { top: "75%", left: "15%", size: 6, op: 0.03, d: 1.4 },
+          ].map((c, i) => (
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, scale: 0.3 }}
+              animate={{ opacity: c.op, scale: 1 }}
+              transition={{ delay: c.d, duration: 0.8, ease: "easeOut" }}
+              className="absolute rounded-full pointer-events-none"
+              style={{
+                top: c.top,
+                left: c.left,
+                width: c.size,
+                height: c.size,
+                border: `1px solid hsl(var(--foreground) / 0.06)`,
+              }}
+            />
+          ))}
+
+          {/* ── SCENE 1: Menino triste — GRANDE, topo-esquerda ── */}
+          {/* Primeiro ponto de atenção. Olho entra aqui. */}
           <motion.img
-            initial={{ opacity: 0, x: -30 }}
+            initial={{ opacity: 0, x: -40 }}
             animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
+            transition={{ duration: 0.6, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
             src={sceneClientSad}
             alt="Cliente triste sem lugar pra agendar"
             draggable={false}
             className="absolute block"
             style={{
               top: "0%",
-              left: "-6%",
-              width: "110%",
-              height: "55%",
+              left: "-8%",
+              width: "120%",
+              height: "58%",
               objectFit: "contain",
               objectPosition: "left top",
             }}
           />
 
-          {/* Scene 2: Friend with app — BIG, bottom-right */}
+          {/* ── SCENE 2: Menina com celular — MAIOR, direita-baixo ── */}
+          {/* Segundo ponto de atenção. Apresenta a solução. */}
           <motion.img
-            initial={{ opacity: 0, x: 30 }}
+            initial={{ opacity: 0, x: 40 }}
             animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.5, delay: 0.7 }}
+            transition={{ duration: 0.6, delay: 0.65, ease: [0.22, 1, 0.36, 1] }}
             src={sceneFriendApp}
             alt="Amiga mostrando o app DubAgenda"
             draggable={false}
             className="absolute block"
             style={{
-              bottom: "-2%",
-              right: "-10%",
-              width: "115%",
-              height: "58%",
+              bottom: "-3%",
+              right: "-12%",
+              width: "125%",
+              height: "62%",
               objectFit: "contain",
               objectPosition: "right bottom",
             }}
           />
+
+          {/* Visual guide arrow — subtle curved path connecting scenes */}
+          <motion.svg
+            initial={{ opacity: 0, pathLength: 0 }}
+            animate={{ opacity: 0.06, pathLength: 1 }}
+            transition={{ duration: 1.5, delay: 1.2, ease: "easeInOut" }}
+            viewBox="0 0 200 400"
+            className="absolute inset-0 w-full h-full pointer-events-none"
+            preserveAspectRatio="none"
+          >
+            <motion.path
+              d="M 60 120 Q 120 200 140 300"
+              fill="none"
+              stroke="hsl(var(--foreground))"
+              strokeWidth="0.8"
+              strokeDasharray="4 6"
+              initial={{ pathLength: 0 }}
+              animate={{ pathLength: 1 }}
+              transition={{ duration: 2, delay: 1.3, ease: "easeInOut" }}
+            />
+          </motion.svg>
         </div>
 
-        {/* Gradient fade */}
+        {/* Gradient fade into footer */}
         <div
           className="flex-shrink-0 pointer-events-none"
           style={{
-            height: 32,
-            marginTop: -32,
+            height: 40,
+            marginTop: -40,
             background: "linear-gradient(to bottom, transparent, hsl(var(--background)))",
             position: "relative",
             zIndex: 2,
           }}
         />
 
-        {/* Footer */}
+        {/* ═══ FOOTER — Terceiro ponto: CONVERSÃO ═══ */}
         <motion.div
-          initial={{ opacity: 0, y: 10 }}
+          initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 1.0 }}
+          transition={{ duration: 0.5, delay: 1.0, ease: [0.22, 1, 0.36, 1] }}
           className="flex-shrink-0 px-6 bg-background"
           style={{ zIndex: 3 }}
         >
