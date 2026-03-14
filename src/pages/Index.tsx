@@ -16,7 +16,7 @@ const Index = () => {
         {/* Illustrations area — fills all space above footer */}
         <div
           className="flex-1 min-h-0 overflow-hidden px-1 flex flex-col justify-center"
-          style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 4px)" }}
+          style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 10px)" }}
         >
           {/* Scene 1: Sad client — scales up on taller screens */}
           <motion.div
@@ -28,10 +28,10 @@ const Index = () => {
             <img
               src={sceneClientSad}
               alt="Cliente triste sem lugar pra agendar"
-              className="object-contain max-w-none w-[92%] [@media(min-height:760px)]:w-[98%] [@media(min-height:840px)]:w-[104%]"
+              className="object-contain max-w-none w-[96%] [@media(min-height:760px)]:w-[102%] [@media(min-height:840px)]:w-[108%]"
               style={{
                 height: "auto",
-                marginLeft: "-6%",
+                marginLeft: "-7%",
               }}
               draggable={false}
             />
@@ -48,10 +48,10 @@ const Index = () => {
             <img
               src={sceneFriendApp}
               alt="Amiga mostrando o app DubAgenda"
-              className="object-contain max-w-none w-[105%] [@media(min-height:760px)]:w-[112%] [@media(min-height:840px)]:w-[118%]"
+              className="object-contain max-w-none w-[110%] [@media(min-height:760px)]:w-[116%] [@media(min-height:840px)]:w-[122%]"
               style={{
                 height: "auto",
-                marginRight: "-14%",
+                marginRight: "-16%",
               }}
               draggable={false}
             />
