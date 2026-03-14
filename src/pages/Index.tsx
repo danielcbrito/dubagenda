@@ -15,44 +15,44 @@ const Index = () => {
       >
         {/* Illustrations area — fills all space above footer */}
         <div
-          className="flex-1 min-h-0 overflow-hidden px-1 flex flex-col justify-center"
+          className="flex-1 min-h-0 overflow-hidden px-1 flex flex-col"
           style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 4px)" }}
         >
-          {/* Scene 1: Sad client — responsive by viewport height */}
+          {/* Scene 1: Sad client — scales with available area */}
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.5, delay: 0.2 }}
-            className="w-full flex justify-start"
+            className="flex-[1.08] min-h-0 w-full flex items-start justify-start"
           >
             <img
               src={sceneClientSad}
               alt="Cliente triste sem lugar pra agendar"
               className="object-contain"
               style={{
-                height: "clamp(170px, 31dvh, 320px)",
+                height: "100%",
                 width: "auto",
-                maxWidth: "108%",
+                maxWidth: "104%",
                 marginLeft: "-6%",
               }}
               draggable={false}
             />
           </motion.div>
 
-          {/* Scene 2: Friend with app — responsive by viewport height */}
+          {/* Scene 2: Friend with app — scales with available area */}
           <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.5, delay: 0.7 }}
-            className="w-full flex justify-end"
-            style={{ marginTop: "-2%" }}
+            className="flex-[0.92] min-h-0 w-full flex items-end justify-end"
+            style={{ marginTop: "-1%" }}
           >
             <img
               src={sceneFriendApp}
               alt="Amiga mostrando o app DubAgenda"
               className="object-contain"
               style={{
-                height: "clamp(165px, 30dvh, 300px)",
+                height: "108%",
                 width: "auto",
                 maxWidth: "112%",
                 marginRight: "-14%",
@@ -66,8 +66,8 @@ const Index = () => {
         <div
           className="flex-shrink-0 pointer-events-none"
           style={{
-            height: 40,
-            marginTop: -40,
+            height: 28,
+            marginTop: -28,
             background: "linear-gradient(to bottom, transparent, white)",
             position: "relative",
             zIndex: 2,
