@@ -38,6 +38,7 @@ interface UnitData {
   distance: number | null;
   travelTime: string | null;
   travelMinutes: number | null;
+  travelMode: "walking" | "driving" | null;
 }
 
 // ── Utils ──
