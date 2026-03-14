@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Search, MapPin, SearchX, Navigation2, X, Car } from "lucide-react";
+import { Search, MapPin, SearchX, Navigation2, X, Footprints } from "lucide-react";
 import { BackArrow } from "@/components/ui/back-arrow";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -52,13 +52,11 @@ function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): nu
 }
 
 function kmToMinutes(km: number): number {
-  if (km <= 0.2) return 2;
+  const walkingSpeedKmH = 4.8;
+  const walkingBaseMinutes = (km / walkingSpeedKmH) * 60;
 
-  const averageSpeedKmH = 32;
-  const trafficFactor = km < 2 ? 1.1 : km < 6 ? 1.2 : 1.3;
-  const estimated = (km / averageSpeedKmH) * 60 * trafficFactor;
-
-  return Math.max(2, Math.round(estimated));
+  // Ajuste solicitado: sempre somar +2 minutos fixos
+  return Math.max(2, Math.round(walkingBaseMinutes) + 2);
 }
 
 function formatTravelTime(minutes: number): { value: string; unit: string } {
@@ -189,15 +187,13 @@ const TravelTimeBadge = ({ travelTime, travelMinutes }: { travelTime: string | n
 
   return (
     <div className="flex flex-col items-center justify-center bg-success/10 border border-success/20 rounded-2xl px-2.5 py-2 min-w-[48px] shrink-0 gap-0.5">
-      <Car className="w-[11px] h-[11px] text-success" />
+      <Footprints className="w-[11px] h-[11px] text-success" />
       <span className="text-[17px] font-bold text-success leading-none font-mono tabular-nums">
         {formatted.value}
       </span>
-      {formatted.unit && (
-        <span className="text-[8px] text-muted-foreground/60 uppercase font-mono">
-          {formatted.unit}
-        </span>
-      )}
+      <span className="text-[8px] text-muted-foreground/70 uppercase font-mono leading-none">
+        {formatted.unit ? `${formatted.unit} a pé` : "a pé"}
+      </span>
     </div>
   );
 };
