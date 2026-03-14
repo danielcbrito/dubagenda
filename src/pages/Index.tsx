@@ -4,71 +4,94 @@ import { ArrowRight } from "lucide-react";
 import sceneClientSad from "@/assets/scene-client-sad.png";
 import sceneFriendApp from "@/assets/scene-friend-app.png";
 
-/** Ambient background effects — floor, glows, dots */
+/** Full ambient background — floor, glows, dots, texture */
 const AmbientEffects = () => (
   <>
-    {/* Floor line — subtle ground plane */}
+    {/* Floor gradient — warm surface feel */}
     <div
-      className="absolute left-0 right-0 pointer-events-none"
+      className="absolute left-0 right-0 bottom-0 pointer-events-none"
+      style={{
+        height: "35%",
+        background: "linear-gradient(to bottom, transparent 0%, hsl(var(--foreground) / 0.015) 40%, hsl(var(--foreground) / 0.035) 100%)",
+      }}
+    />
+    {/* Floor line */}
+    <div
+      className="absolute left-[8%] right-[8%] pointer-events-none"
       style={{
         bottom: 0,
         height: 1,
-        background: "linear-gradient(90deg, transparent 5%, hsl(var(--foreground) / 0.06) 30%, hsl(var(--foreground) / 0.08) 50%, hsl(var(--foreground) / 0.06) 70%, transparent 95%)",
+        background: "linear-gradient(90deg, transparent, hsl(var(--foreground) / 0.08) 30%, hsl(var(--foreground) / 0.1) 50%, hsl(var(--foreground) / 0.08) 70%, transparent)",
       }}
     />
-    {/* Floor shadow / reflection */}
+    {/* Floor shadow ellipse */}
     <div
       className="absolute left-[5%] right-[5%] pointer-events-none"
       style={{
-        bottom: 0,
-        height: 40,
-        background: "radial-gradient(ellipse 90% 100% at 50% 100%, hsl(var(--foreground) / 0.03) 0%, transparent 100%)",
+        bottom: -4,
+        height: 50,
+        background: "radial-gradient(ellipse 100% 100% at 50% 0%, hsl(var(--foreground) / 0.04) 0%, transparent 80%)",
       }}
     />
 
-    {/* Warm glow behind sad boy (top-left) */}
+    {/* Large warm glow — top-left behind sad boy */}
     <div
       className="absolute pointer-events-none"
       style={{
-        top: "8%",
-        left: "-5%",
-        width: 260,
-        height: 260,
+        top: "5%",
+        left: "-12%",
+        width: 320,
+        height: 320,
         borderRadius: "50%",
-        background: "radial-gradient(circle, hsl(var(--primary) / 0.05) 0%, transparent 70%)",
-        filter: "blur(50px)",
+        background: "radial-gradient(circle, hsl(var(--primary) / 0.06) 0%, transparent 65%)",
+        filter: "blur(60px)",
       }}
     />
-    {/* Cool glow behind friend (bottom-right) */}
+    {/* Large cool glow — bottom-right behind friend */}
     <div
       className="absolute pointer-events-none"
       style={{
-        bottom: "5%",
-        right: "-8%",
-        width: 280,
-        height: 280,
+        bottom: "2%",
+        right: "-10%",
+        width: 340,
+        height: 340,
         borderRadius: "50%",
-        background: "radial-gradient(circle, hsl(210 60% 60% / 0.04) 0%, transparent 70%)",
-        filter: "blur(50px)",
+        background: "radial-gradient(circle, hsl(210 50% 60% / 0.05) 0%, transparent 65%)",
+        filter: "blur(60px)",
+      }}
+    />
+    {/* Center ambient glow */}
+    <div
+      className="absolute pointer-events-none"
+      style={{
+        top: "40%",
+        left: "20%",
+        width: 200,
+        height: 200,
+        borderRadius: "50%",
+        background: "radial-gradient(circle, hsl(var(--primary) / 0.03) 0%, transparent 70%)",
+        filter: "blur(40px)",
       }}
     />
 
-    {/* Scattered ambient dots */}
+    {/* Decorative dots */}
     {[
-      { top: "10%", left: "15%", size: 4, opacity: 0.08, delay: 0.4 },
-      { top: "22%", right: "12%", size: 3, opacity: 0.06, delay: 0.7 },
-      { top: "38%", left: "6%", size: 5, opacity: 0.05, delay: 1.0 },
-      { top: "50%", right: "8%", size: 3, opacity: 0.07, delay: 0.6 },
-      { top: "14%", right: "28%", size: 3, opacity: 0.05, delay: 1.2 },
-      { top: "65%", left: "22%", size: 4, opacity: 0.04, delay: 0.9 },
-      { top: "44%", left: "50%", size: 2, opacity: 0.06, delay: 1.4 },
-      { top: "72%", right: "25%", size: 3, opacity: 0.05, delay: 1.1 },
+      { top: "8%", left: "18%", size: 5, op: 0.09, d: 0.4 },
+      { top: "20%", right: "14%", size: 4, op: 0.07, d: 0.7 },
+      { top: "35%", left: "5%", size: 6, op: 0.06, d: 1.0 },
+      { top: "48%", right: "6%", size: 4, op: 0.08, d: 0.6 },
+      { top: "12%", right: "32%", size: 3, op: 0.06, d: 1.2 },
+      { top: "62%", left: "25%", size: 5, op: 0.05, d: 0.9 },
+      { top: "42%", left: "52%", size: 3, op: 0.07, d: 1.4 },
+      { top: "70%", right: "20%", size: 4, op: 0.05, d: 1.1 },
+      { top: "28%", left: "40%", size: 3, op: 0.04, d: 1.6 },
+      { top: "55%", left: "10%", size: 4, op: 0.05, d: 0.8 },
     ].map((dot, i) => (
       <motion.div
         key={i}
         initial={{ opacity: 0, scale: 0 }}
-        animate={{ opacity: dot.opacity, scale: 1 }}
-        transition={{ delay: dot.delay, duration: 0.6, ease: "easeOut" }}
+        animate={{ opacity: dot.op, scale: 1 }}
+        transition={{ delay: dot.d, duration: 0.6, ease: "easeOut" }}
         className="absolute rounded-full bg-foreground pointer-events-none"
         style={{
           top: dot.top,
@@ -80,12 +103,22 @@ const AmbientEffects = () => (
       />
     ))}
 
-    {/* Subtle diagonal texture lines */}
+    {/* Subtle diagonal hatching texture */}
     <div
-      className="absolute inset-0 pointer-events-none opacity-[0.015]"
+      className="absolute inset-0 pointer-events-none opacity-[0.018]"
       style={{
         backgroundImage:
-          "repeating-linear-gradient(135deg, transparent, transparent 40px, hsl(var(--foreground)) 40px, hsl(var(--foreground)) 41px)",
+          "repeating-linear-gradient(135deg, transparent, transparent 32px, hsl(var(--foreground)) 32px, hsl(var(--foreground)) 33px)",
+      }}
+    />
+
+    {/* Horizontal subtle line — mid section */}
+    <div
+      className="absolute left-[15%] right-[15%] pointer-events-none"
+      style={{
+        top: "50%",
+        height: 1,
+        background: "linear-gradient(90deg, transparent, hsl(var(--foreground) / 0.03) 40%, hsl(var(--foreground) / 0.03) 60%, transparent)",
       }}
     />
   </>
@@ -107,7 +140,7 @@ const Index = () => {
         >
           <AmbientEffects />
 
-          {/* Scene 1: Sad client — large, top-left */}
+          {/* Scene 1: Sad client — BIG, top-left, fully visible */}
           <motion.img
             initial={{ opacity: 0, x: -30 }}
             animate={{ opacity: 1, x: 0 }}
@@ -115,16 +148,18 @@ const Index = () => {
             src={sceneClientSad}
             alt="Cliente triste sem lugar pra agendar"
             draggable={false}
-            className="absolute block object-contain"
+            className="absolute block"
             style={{
-              top: "-2%",
-              left: "-10%",
-              width: "100%",
-              maxHeight: "62%",
+              top: "0%",
+              left: "-6%",
+              width: "110%",
+              height: "55%",
+              objectFit: "contain",
+              objectPosition: "left top",
             }}
           />
 
-          {/* Scene 2: Friend with app — large, bottom-right */}
+          {/* Scene 2: Friend with app — BIG, bottom-right */}
           <motion.img
             initial={{ opacity: 0, x: 30 }}
             animate={{ opacity: 1, x: 0 }}
@@ -132,12 +167,14 @@ const Index = () => {
             src={sceneFriendApp}
             alt="Amiga mostrando o app DubAgenda"
             draggable={false}
-            className="absolute block object-contain"
+            className="absolute block"
             style={{
-              bottom: "-4%",
-              right: "-14%",
-              width: "105%",
-              maxHeight: "64%",
+              bottom: "-2%",
+              right: "-10%",
+              width: "115%",
+              height: "58%",
+              objectFit: "contain",
+              objectPosition: "right bottom",
             }}
           />
         </div>
@@ -146,8 +183,8 @@ const Index = () => {
         <div
           className="flex-shrink-0 pointer-events-none"
           style={{
-            height: 28,
-            marginTop: -28,
+            height: 32,
+            marginTop: -32,
             background: "linear-gradient(to bottom, transparent, hsl(var(--background)))",
             position: "relative",
             zIndex: 2,
