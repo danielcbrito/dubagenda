@@ -15,15 +15,15 @@ const Index = () => {
       >
         {/* Illustrations area — fills all space above footer */}
         <div className="flex-1 min-h-0 relative">
-          {/* Scene 1: Sad client — top left */}
+          {/* Scene 1: Sad client — top left, BIG */}
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.5, delay: 0.2 }}
-            className="absolute left-2"
+            className="absolute left-0"
             style={{
-              top: "calc(env(safe-area-inset-top, 0px) + 4%)",
-              width: "65%",
+              top: "calc(env(safe-area-inset-top, 0px) + 2%)",
+              width: "88%",
               zIndex: 1,
             }}
           >
@@ -35,14 +35,14 @@ const Index = () => {
             />
           </motion.div>
 
-          {/* Scene 2: Friend with app — bottom right */}
+          {/* Scene 2: Friend with app — bottom right, BIG */}
           <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.5, delay: 0.7 }}
             className="absolute right-0 bottom-0"
             style={{
-              width: "62%",
+              width: "80%",
               zIndex: 2,
             }}
           >
