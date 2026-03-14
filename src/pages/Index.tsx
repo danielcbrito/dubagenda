@@ -14,37 +14,48 @@ const Index = () => {
         style={{ maxWidth: 480 }}
       >
         {/* Illustrations area — fills all space above footer */}
-        <div className="flex-1 min-h-0 flex flex-col justify-center items-center px-2 gap-0">
-          {/* Scene 1: Sad client — centered top */}
+        <div className="flex-1 min-h-0 relative overflow-hidden">
+          {/* Scene 1: Sad client — top left, large */}
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.5, delay: 0.2 }}
-            className="w-full flex justify-start"
-            style={{ maxWidth: "100%" }}
+            className="absolute left-0 top-0 w-full flex justify-start"
+            style={{
+              paddingTop: "calc(env(safe-area-inset-top, 0px) + 2px)",
+            }}
           >
             <img
               src={sceneClientSad}
               alt="Cliente triste sem lugar pra agendar"
-              className="object-contain"
-              style={{ width: "92%", height: "auto" }}
+              className="object-contain max-w-none"
+              style={{
+                width: "118%",
+                height: "auto",
+                marginLeft: "-16%",
+                clipPath: "inset(0 0 16% 0)",
+              }}
               draggable={false}
             />
           </motion.div>
 
-          {/* Scene 2: Friend with app — right aligned below */}
+          {/* Scene 2: Friend with app — bottom right, large */}
           <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.5, delay: 0.7 }}
-            className="w-full flex justify-end"
-            style={{ maxWidth: "100%", marginTop: "-8%" }}
+            className="absolute right-0 w-full flex justify-end"
+            style={{ bottom: "16%" }}
           >
             <img
               src={sceneFriendApp}
               alt="Amiga mostrando o app DubAgenda"
-              className="object-contain"
-              style={{ width: "85%", height: "auto" }}
+              className="object-contain max-w-none"
+              style={{
+                width: "112%",
+                height: "auto",
+                marginRight: "-20%",
+              }}
               draggable={false}
             />
           </motion.div>
