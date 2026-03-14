@@ -75,8 +75,9 @@ const Index = () => {
             style={{
               background: "white",
               borderRadius: "24px 24px 0 0",
-              paddingTop: 8,
+              paddingTop: 40,
               boxShadow: "0 -20px 40px rgba(255,255,255,0.95)",
+              marginTop: -32,
             }}
             className="px-6 pb-[calc(env(safe-area-inset-bottom,0px)+20px)] -mx-6"
           >
