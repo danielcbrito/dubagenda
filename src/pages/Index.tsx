@@ -11,13 +11,12 @@ const Index = () => {
     <div className="fixed inset-0 flex flex-col overflow-hidden bg-white">
 
       {/* ── Top area: Scene 1 (sad client) — top left ── */}
-      <div className="flex-shrink-0 px-5 pt-[calc(env(safe-area-inset-top,0px)+8px)]">
+      <div className="flex-shrink-0 px-4 pt-[calc(env(safe-area-inset-top,0px)+12px)]">
         <motion.div
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.5, delay: 0.2 }}
-          className="self-start"
-          style={{ width: "58%" }}
+          style={{ width: "62%" }}
         >
           <img
             src={sceneClientSad}
