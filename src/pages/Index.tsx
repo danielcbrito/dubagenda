@@ -75,17 +75,17 @@ const Index = () => {
             />
           ))}
 
-          {/* ── Menino triste — ESQUERDA, enorme ── */}
+          {/* ── Menino triste — ESQUERDA, MUITO maior ── */}
           <motion.div
             initial={{ opacity: 0, x: -40 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.6, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
             className="absolute"
             style={{
-              top: "1%",
-              left: 0,
-              width: "65%",
-              height: "52%",
+              top: "0%",
+              left: "clamp(-30%, -22vw, -14%)",
+              width: "clamp(130%, 145vw, 172%)",
+              height: "clamp(62%, 68vh, 74%)",
               display: "flex",
               alignItems: "flex-start",
               justifyContent: "flex-start",
@@ -100,17 +100,17 @@ const Index = () => {
             />
           </motion.div>
 
-          {/* ── Menina com celular — DIREITA, enorme ── */}
+          {/* ── Menina com celular — DIREITA, MUITO maior ── */}
           <motion.div
             initial={{ opacity: 0, x: 40 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.6, delay: 0.65, ease: [0.22, 1, 0.36, 1] }}
             className="absolute"
             style={{
-              bottom: "0%",
-              right: 0,
-              width: "68%",
-              height: "55%",
+              bottom: "-3%",
+              right: "clamp(-34%, -24vw, -16%)",
+              width: "clamp(136%, 152vw, 178%)",
+              height: "clamp(64%, 70vh, 78%)",
               display: "flex",
               alignItems: "flex-end",
               justifyContent: "flex-end",
