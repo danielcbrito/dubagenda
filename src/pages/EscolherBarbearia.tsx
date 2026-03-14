@@ -435,6 +435,7 @@ const EscolherBarbearia = () => {
           distance: null,
           travelTime: null,
           travelMinutes: null,
+          travelMode: null,
         };
       });
 
