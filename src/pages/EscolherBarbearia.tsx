@@ -452,6 +452,8 @@ const EscolherBarbearia = () => {
       return u.tenant_id ? activeTenantIds.has(u.tenant_id) : false;
     });
 
+    const geocodeInFlight = new Map<string, Promise<{ lat: number; lng: number } | null>>();
+
     unitList = await Promise.all(
       unitList.map(async (unit) => {
         const addressQuery = buildAddressQuery(unit);
@@ -463,7 +465,13 @@ const EscolherBarbearia = () => {
           return { ...unit, latitude: cached.lat, longitude: cached.lng };
         }
 
-        const geocoded = await geocodeAddress(addressQuery);
+        let geocodePromise = geocodeInFlight.get(addressKey);
+        if (!geocodePromise) {
+          geocodePromise = geocodeAddress(addressQuery);
+          geocodeInFlight.set(addressKey, geocodePromise);
+        }
+
+        const geocoded = await geocodePromise;
         if (!geocoded) return unit;
 
         saveCachedGeocode(addressKey, geocoded.lat, geocoded.lng);
