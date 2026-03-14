@@ -55,10 +55,8 @@ const Index = () => {
           className="absolute bottom-0 left-0 right-0 px-6 pb-[calc(env(safe-area-inset-bottom,0px)+20px)]"
           style={{
             zIndex: 2,
-            background: "white",
-            borderRadius: "24px 24px 0 0",
+            background: "transparent",
             paddingTop: 28,
-            boxShadow: "0 -20px 40px rgba(255,255,255,0.95)",
           }}
         >
           {/* Text */}
