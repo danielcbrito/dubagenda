@@ -133,7 +133,7 @@ serve(async (req) => {
         .from("pagamentos")
         .select("id, status, valor")
         .eq("agendamento_id", appointmentId)
-        .eq("status", "paid")
+        .eq("status", "pago")
         .maybeSingle();
 
       if (payment) {
