@@ -588,6 +588,12 @@ const EscolherBarbearia = () => {
             </button>
           )}
         </div>
+
+        {locationStatus === "unavailable" && (
+          <p className="text-[11px] text-muted-foreground/70 mt-2 px-1">
+            Ative sua localização para calcular o tempo exato até cada barbearia.
+          </p>
+        )}
       </div>
 
       {/* ══════ Scrollable list ══════ */}
