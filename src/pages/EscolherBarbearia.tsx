@@ -22,6 +22,9 @@ interface TenantJoin {
 interface UnitData {
   id: string;
   nome: string;
+  rua: string | null;
+  numero: string | null;
+  cep: string | null;
   bairro: string | null;
   cidade: string | null;
   estado: string | null;
