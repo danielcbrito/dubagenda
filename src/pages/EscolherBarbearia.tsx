@@ -52,12 +52,19 @@ function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): nu
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-function kmToMinutes(km: number): number {
-  const walkingSpeedKmH = 4.8;
-  const walkingBaseMinutes = (km / walkingSpeedKmH) * 60;
+const WALKING_THRESHOLD_KM = 1.5;
+const WALKING_SPEED_KMH = 4.8;
+const DRIVING_SPEED_KMH = 25;
 
-  // Ajuste solicitado: sempre somar +2 minutos fixos
-  return Math.max(2, Math.round(walkingBaseMinutes) + 2);
+function kmToMinutes(km: number, mode: "walking" | "driving"): number {
+  const speed = mode === "walking" ? WALKING_SPEED_KMH : DRIVING_SPEED_KMH;
+  const baseMinutes = (km / speed) * 60;
+  const buffer = mode === "walking" ? 2 : 1;
+  return Math.max(2, Math.round(baseMinutes) + buffer);
+}
+
+function getSmartTravelMode(km: number): "walking" | "driving" {
+  return km <= WALKING_THRESHOLD_KM ? "walking" : "driving";
 }
 
 function formatTravelTime(minutes: number): { value: string; unit: string } {
