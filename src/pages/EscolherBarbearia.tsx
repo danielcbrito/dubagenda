@@ -288,6 +288,7 @@ const EscolherBarbearia = () => {
   const [userId, setUserId] = useState<string | null>(null);
   const [currentPreferred, setCurrentPreferred] = useState<string | null>(null);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [locationStatus, setLocationStatus] = useState<"loading" | "ready" | "unavailable">("loading");
   const [hasAutoOpened, setHasAutoOpened] = useState(false);
 
   const isChangeMode = searchParams.get("mode") === "change";
