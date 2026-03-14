@@ -4406,6 +4406,10 @@ export type Database = {
       }
     }
     Functions: {
+      add_wallet_credits: {
+        Args: { p_amount: number; p_description?: string; p_user_id: string }
+        Returns: number
+      }
       assign_tenant_admin_role: {
         Args: { p_user_id: string }
         Returns: undefined
