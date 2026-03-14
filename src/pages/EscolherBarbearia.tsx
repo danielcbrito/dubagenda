@@ -188,9 +188,9 @@ const TravelTimeBadge = ({ travelTime, travelMinutes }: { travelTime: string | n
   const formatted = formatTravelTime(travelMinutes);
 
   return (
-    <div className="flex flex-col items-center justify-center bg-primary/8 border border-primary/15 rounded-2xl px-2.5 py-2 min-w-[48px] shrink-0 gap-0.5">
-      <Car className="w-[11px] h-[11px] text-primary" />
-      <span className="text-[17px] font-bold text-foreground leading-none font-mono tabular-nums">
+    <div className="flex flex-col items-center justify-center bg-success/10 border border-success/20 rounded-2xl px-2.5 py-2 min-w-[48px] shrink-0 gap-0.5">
+      <Car className="w-[11px] h-[11px] text-success" />
+      <span className="text-[17px] font-bold text-success leading-none font-mono tabular-nums">
         {formatted.value}
       </span>
       {formatted.unit && (
