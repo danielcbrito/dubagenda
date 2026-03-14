@@ -49,7 +49,7 @@ const Index = () => {
             <img
               src={sceneFriendApp}
               alt="Amiga mostrando o app DubAgenda"
-              className="object-contain max-w-none w-[110%] [@media(min-height:760px)]:w-[116%] [@media(min-height:840px)]:w-[122%]"
+              className="object-contain max-w-none w-[110%] [@media(min-height:760px)]:w-[122%] [@media(min-height:840px)]:w-[136%]"
               style={{
                 height: "auto",
                 marginRight: "-16%",
