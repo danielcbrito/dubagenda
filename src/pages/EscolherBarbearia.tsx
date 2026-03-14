@@ -1,7 +1,7 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Search, MapPin, SearchX, Navigation2, X, Footprints } from "lucide-react";
+import { Search, MapPin, SearchX, Navigation2, X, Footprints, Car } from "lucide-react";
 import { BackArrow } from "@/components/ui/back-arrow";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -38,6 +38,7 @@ interface UnitData {
   distance: number | null;
   travelTime: string | null;
   travelMinutes: number | null;
+  travelMode: "walking" | "driving" | null;
 }
 
 // ── Utils ──
@@ -51,12 +52,19 @@ function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): nu
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-function kmToMinutes(km: number): number {
-  const walkingSpeedKmH = 4.8;
-  const walkingBaseMinutes = (km / walkingSpeedKmH) * 60;
+const WALKING_THRESHOLD_KM = 1.5;
+const WALKING_SPEED_KMH = 4.8;
+const DRIVING_SPEED_KMH = 25;
 
-  // Ajuste solicitado: sempre somar +2 minutos fixos
-  return Math.max(2, Math.round(walkingBaseMinutes) + 2);
+function kmToMinutes(km: number, mode: "walking" | "driving"): number {
+  const speed = mode === "walking" ? WALKING_SPEED_KMH : DRIVING_SPEED_KMH;
+  const baseMinutes = (km / speed) * 60;
+  const buffer = mode === "walking" ? 2 : 1;
+  return Math.max(2, Math.round(baseMinutes) + buffer);
+}
+
+function getSmartTravelMode(km: number): "walking" | "driving" {
+  return km <= WALKING_THRESHOLD_KM ? "walking" : "driving";
 }
 
 function formatTravelTime(minutes: number): { value: string; unit: string } {
@@ -174,8 +182,8 @@ const SkeletonCard = ({ index }: { index: number }) => (
 );
 
 // ── Travel Time Badge ──
-const TravelTimeBadge = ({ travelTime, travelMinutes }: { travelTime: string | null; travelMinutes: number | null }) => {
-  if (travelTime == null || travelMinutes == null) {
+const TravelTimeBadge = ({ travelTime, travelMinutes, travelMode }: { travelTime: string | null; travelMinutes: number | null; travelMode: "walking" | "driving" | null }) => {
+  if (travelTime == null || travelMinutes == null || travelMode == null) {
     return (
       <div className="flex flex-col items-center justify-center bg-secondary/40 border border-border/50 rounded-2xl px-2.5 py-2 min-w-[48px] shrink-0">
         <Navigation2 className="w-3.5 h-3.5 text-muted-foreground/25" />
@@ -184,15 +192,18 @@ const TravelTimeBadge = ({ travelTime, travelMinutes }: { travelTime: string | n
   }
 
   const formatted = formatTravelTime(travelMinutes);
+  const isWalking = travelMode === "walking";
+  const Icon = isWalking ? Footprints : Car;
+  const modeLabel = isWalking ? "a pé" : "de carro";
 
   return (
     <div className="flex flex-col items-center justify-center bg-success/10 border border-success/20 rounded-2xl px-2.5 py-2 min-w-[48px] shrink-0 gap-0.5">
-      <Footprints className="w-[11px] h-[11px] text-success" />
+      <Icon className="w-[11px] h-[11px] text-success" />
       <span className="text-[17px] font-bold text-success leading-none font-mono tabular-nums">
         {formatted.value}
       </span>
       <span className="text-[8px] text-muted-foreground/70 uppercase font-mono leading-none">
-        {formatted.unit ? `${formatted.unit} a pé` : "a pé"}
+        {formatted.unit ? `${formatted.unit} ${modeLabel}` : modeLabel}
       </span>
     </div>
   );
@@ -267,7 +278,7 @@ const UnitCard = ({
         </div>
 
         {/* Travel Time Badge */}
-        <TravelTimeBadge travelTime={unit.travelTime} travelMinutes={unit.travelMinutes} />
+        <TravelTimeBadge travelTime={unit.travelTime} travelMinutes={unit.travelMinutes} travelMode={unit.travelMode} />
       </div>
     </motion.button>
   );
@@ -286,6 +297,8 @@ const EscolherBarbearia = () => {
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [locationStatus, setLocationStatus] = useState<"loading" | "ready" | "unavailable">("loading");
   const [hasAutoOpened, setHasAutoOpened] = useState(false);
+  const lastLocationRef = useRef<{ lat: number; lng: number } | null>(null);
+  const watchIdRef = useRef<number | null>(null);
 
   const isChangeMode = searchParams.get("mode") === "change";
   const shouldOpenCurrent = searchParams.get("open") === "current";
@@ -376,6 +389,34 @@ const EscolherBarbearia = () => {
     requestLocation();
   }, []);
 
+  // ── Watch position for movement >500m ──
+  useEffect(() => {
+    if (locationStatus !== "ready" || !userLocation || !navigator.geolocation) return;
+
+    lastLocationRef.current = userLocation;
+
+    watchIdRef.current = navigator.geolocation.watchPosition(
+      (pos) => {
+        const prev = lastLocationRef.current;
+        if (!prev) return;
+        const moved = haversineKm(prev.lat, prev.lng, pos.coords.latitude, pos.coords.longitude);
+        if (moved > 0.5) {
+          const newLoc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+          lastLocationRef.current = newLoc;
+          setUserLocation(newLoc);
+        }
+      },
+      undefined,
+      { enableHighAccuracy: true, maximumAge: 60000 }
+    );
+
+    return () => {
+      if (watchIdRef.current !== null) {
+        navigator.geolocation.clearWatch(watchIdRef.current);
+      }
+    };
+  }, [locationStatus]);
+
   // ── Load units ──
   const loadUnits = async () => {
     setIsLoading(true);
@@ -424,6 +465,7 @@ const EscolherBarbearia = () => {
           distance: null,
           travelTime: null,
           travelMinutes: null,
+          travelMode: null,
         };
       });
 
@@ -486,7 +528,8 @@ const EscolherBarbearia = () => {
       const dist = userLocation && hasCoordinates
         ? haversineKm(userLocation.lat, userLocation.lng, u.latitude, u.longitude)
         : null;
-      const minutes = dist !== null ? kmToMinutes(dist) : null;
+      const mode = dist !== null ? getSmartTravelMode(dist) : null;
+      const minutes = dist !== null && mode !== null ? kmToMinutes(dist, mode) : null;
       const formatted = minutes !== null ? formatTravelTime(minutes) : null;
       const time = formatted ? `${formatted.value} ${formatted.unit}`.trim() : null;
 
@@ -495,6 +538,7 @@ const EscolherBarbearia = () => {
         distance: dist,
         travelMinutes: minutes,
         travelTime: time,
+        travelMode: mode,
       };
     });
 
