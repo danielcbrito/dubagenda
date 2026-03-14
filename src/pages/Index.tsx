@@ -15,7 +15,7 @@ const Index = () => {
       >
         {/* Illustrations area — fills all space above footer */}
         <div className="flex-1 min-h-0 relative overflow-hidden">
-          {/* Scene 1: Sad client — top left, ultra large */}
+          {/* Scene 1: Sad client — top left, large */}
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
@@ -30,32 +30,31 @@ const Index = () => {
               alt="Cliente triste sem lugar pra agendar"
               className="object-contain max-w-none"
               style={{
-                width: "126%",
+                width: "118%",
                 height: "auto",
-                marginLeft: "-30%",
-                clipPath: "inset(0 0 22% 0)",
+                marginLeft: "-16%",
+                clipPath: "inset(0 0 16% 0)",
               }}
               draggable={false}
             />
           </motion.div>
 
-          {/* Scene 2: Friend with app — bottom right, ultra large */}
+          {/* Scene 2: Friend with app — bottom right, large */}
           <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.5, delay: 0.7 }}
             className="absolute right-0 w-full flex justify-end"
-            style={{ bottom: "-2%" }}
+            style={{ bottom: "0%" }}
           >
             <img
               src={sceneFriendApp}
               alt="Amiga mostrando o app DubAgenda"
               className="object-contain max-w-none"
               style={{
-                width: "112%",
+                width: "108%",
                 height: "auto",
-                marginRight: "-16%",
-                clipPath: "inset(10% 0 0 0)",
+                marginRight: "-12%",
               }}
               draggable={false}
             />
