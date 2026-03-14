@@ -1,12 +1,13 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Search, MapPin, SearchX, Navigation2, X, Footprints, Car } from "lucide-react";
-import { BackArrow } from "@/components/ui/back-arrow";
+import { Search, SearchX, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
+import { DiscoverMap } from "@/components/discover/DiscoverMap";
+import { DiscoverUnitCard } from "@/components/discover/DiscoverUnitCard";
 
 // ── Types ──
 interface TenantJoin {
@@ -67,14 +68,6 @@ function getSmartTravelMode(km: number): "walking" | "driving" {
   return km <= WALKING_THRESHOLD_KM ? "walking" : "driving";
 }
 
-function formatTravelTime(minutes: number): { value: string; unit: string } {
-  if (minutes < 60) return { value: String(minutes), unit: "min" };
-  const h = Math.floor(minutes / 60);
-  const m = minutes % 60;
-  if (m === 0) return { value: `${h}h`, unit: "" };
-  return { value: `${h}h`, unit: `${m}min` };
-}
-
 function normalizeText(value: string): string {
   return value
     .normalize("NFD")
@@ -90,7 +83,6 @@ function buildAddressQuery(unit: UnitData): string | null {
   const parts = [unit.rua, unit.numero, unit.bairro, unit.cidade, unit.estado, unit.cep]
     .map((part) => part?.trim())
     .filter((part): part is string => !!part && part.length > 0);
-
   if (parts.length < 3) return null;
   return parts.join(", ");
 }
@@ -99,15 +91,12 @@ function readCachedGeocode(addressKey: string): { lat: number; lng: number } | n
   try {
     const raw = localStorage.getItem(`${GEOCODE_CACHE_PREFIX}${addressKey}`);
     if (!raw) return null;
-
     const parsed = JSON.parse(raw) as { lat?: number; lng?: number; savedAt?: number };
     const isExpired = !parsed.savedAt || Date.now() - parsed.savedAt > GEOCODE_CACHE_TTL_MS;
-
     if (isExpired || typeof parsed.lat !== "number" || typeof parsed.lng !== "number") {
       localStorage.removeItem(`${GEOCODE_CACHE_PREFIX}${addressKey}`);
       return null;
     }
-
     return { lat: parsed.lat, lng: parsed.lng };
   } catch {
     return null;
@@ -120,169 +109,34 @@ function saveCachedGeocode(addressKey: string, lat: number, lng: number) {
       `${GEOCODE_CACHE_PREFIX}${addressKey}`,
       JSON.stringify({ lat, lng, savedAt: Date.now() })
     );
-  } catch {
-    // ignore cache write failures
-  }
+  } catch { /* ignore */ }
 }
 
 async function geocodeAddress(addressQuery: string): Promise<{ lat: number; lng: number } | null> {
   const params = new URLSearchParams({
-    q: addressQuery,
-    format: "jsonv2",
-    limit: "1",
-    countrycodes: "br",
+    q: addressQuery, format: "jsonv2", limit: "1", countrycodes: "br",
   });
-
   const controller = new AbortController();
   const timeoutId = window.setTimeout(() => controller.abort(), 7000);
-
   try {
     const response = await fetch(`https://nominatim.openstreetmap.org/search?${params.toString()}`, {
-      signal: controller.signal,
-      headers: {
-        Accept: "application/json",
-      },
+      signal: controller.signal, headers: { Accept: "application/json" },
     });
-
     if (!response.ok) return null;
-
     const data = (await response.json()) as Array<{ lat: string; lon: string }>;
     const hit = data[0];
     if (!hit) return null;
-
     const lat = Number(hit.lat);
     const lng = Number(hit.lon);
-
     if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
     return { lat, lng };
-  } catch {
-    return null;
-  } finally {
-    window.clearTimeout(timeoutId);
-  }
+  } catch { return null; } finally { window.clearTimeout(timeoutId); }
 }
 
-// ── Skeleton Card ──
-const SkeletonCard = ({ index }: { index: number }) => (
-  <motion.div
-    initial={{ opacity: 0, y: 10 }}
-    animate={{ opacity: 1, y: 0 }}
-    transition={{ delay: index * 0.05, duration: 0.28 }}
-    className="bg-card border border-border rounded-3xl py-3 px-3.5"
-  >
-    <div className="flex items-center gap-3">
-      <Skeleton className="w-12 h-12 rounded-xl shrink-0" />
-      <div className="flex-1 space-y-2">
-        <Skeleton className="h-4 w-32 rounded-lg" />
-        <Skeleton className="h-3 w-20 rounded-lg" />
-      </div>
-      <Skeleton className="w-12 h-8 rounded-2xl shrink-0" />
-    </div>
-  </motion.div>
-);
-
-// ── Travel Time Badge ──
-const TravelTimeBadge = ({ travelTime, travelMinutes, travelMode }: { travelTime: string | null; travelMinutes: number | null; travelMode: "walking" | "driving" | null }) => {
-  if (travelTime == null || travelMinutes == null || travelMode == null) {
-    return (
-      <div className="flex flex-col items-center justify-center bg-secondary/40 border border-border/50 rounded-2xl px-2.5 py-2 min-w-[48px] shrink-0">
-        <Navigation2 className="w-3.5 h-3.5 text-muted-foreground/25" />
-      </div>
-    );
-  }
-
-  const formatted = formatTravelTime(travelMinutes);
-  const isWalking = travelMode === "walking";
-  const Icon = isWalking ? Footprints : Car;
-  const modeLabel = isWalking ? "a pé" : "de carro";
-
-  return (
-    <div className="flex flex-col items-center justify-center bg-success/10 border border-success/20 rounded-2xl px-2.5 py-2 min-w-[48px] shrink-0 gap-0.5">
-      <Icon className="w-[11px] h-[11px] text-success" />
-      <span className="text-[17px] font-bold text-success leading-none font-mono tabular-nums">
-        {formatted.value}
-      </span>
-      <span className="text-[8px] text-muted-foreground/70 uppercase font-mono leading-none">
-        {formatted.unit ? `${formatted.unit} ${modeLabel}` : modeLabel}
-      </span>
-    </div>
-  );
-};
-
-// ── Unit Card ──
-const UnitCard = ({
-  unit,
-  index,
-  onClick,
-}: {
-  unit: UnitData;
-  index: number;
-  onClick: () => void;
-}) => {
-  const logoUrl = unit.brandLogo;
-  const brandInitial = unit.brandName?.[0]?.toUpperCase() ?? "?";
-  const subtitle = [unit.bairro, unit.cidade].filter(Boolean).join(", ");
-  const showUnitName = unit.nome !== unit.brandName;
-
-  return (
-    <motion.button
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{
-        delay: index * 0.05,
-        duration: 0.28,
-        ease: [0.22, 1, 0.36, 1],
-      }}
-      onClick={onClick}
-      className={cn(
-        "w-full text-left bg-card border border-border rounded-3xl py-3 px-3.5",
-        "active:scale-[0.975] active:border-primary/20",
-        "transition-all duration-[130ms] ease-out"
-      )}
-      style={{ WebkitTapHighlightColor: "transparent" }}
-    >
-      <div className="flex items-center gap-3">
-        {/* Logo */}
-        <div className="w-12 h-12 rounded-xl shrink-0 overflow-hidden border border-border/60">
-          {logoUrl ? (
-            <img src={logoUrl} alt={unit.brandName} className="w-full h-full object-cover" />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center bg-secondary border border-border">
-              <span className="text-[18px] font-bold text-muted-foreground/50">
-                {brandInitial}
-              </span>
-            </div>
-          )}
-        </div>
-
-        {/* Text */}
-        <div className="flex-1 min-w-0">
-          <span className="text-[14px] font-semibold text-foreground leading-tight line-clamp-1 block">
-            {unit.brandName}
-          </span>
-
-          {showUnitName && (
-            <p className="text-[12px] text-muted-foreground/60 leading-tight line-clamp-1 mt-0.5">
-              {unit.nome}
-            </p>
-          )}
-
-          {subtitle && (
-            <div className="flex items-center gap-1 mt-0.5">
-              <MapPin className="w-[10px] h-[10px] text-muted-foreground/35 shrink-0" />
-              <span className="text-[11px] text-muted-foreground/50 line-clamp-1">
-                {subtitle}
-              </span>
-            </div>
-          )}
-        </div>
-
-        {/* Travel Time Badge */}
-        <TravelTimeBadge travelTime={unit.travelTime} travelMinutes={unit.travelMinutes} travelMode={unit.travelMode} />
-      </div>
-    </motion.button>
-  );
-};
+// ── Draggable sheet constants ──
+const SHEET_SNAP_TOP = 0.3; // 30% from top = 70% sheet
+const SHEET_SNAP_MID = 0.55; // 55% from top = 45% sheet
+const SHEET_SNAP_BOTTOM = 0.85; // 85% from top = 15% sheet (collapsed)
 
 // ── Main Page ──
 const EscolherBarbearia = () => {
@@ -291,14 +145,22 @@ const EscolherBarbearia = () => {
   const [allUnits, setAllUnits] = useState<UnitData[]>([]);
   const [search, setSearch] = useState("");
   const [isLoading, setIsLoading] = useState(true);
-  const [saving, setSaving] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [currentPreferred, setCurrentPreferred] = useState<string | null>(null);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [locationStatus, setLocationStatus] = useState<"loading" | "ready" | "unavailable">("loading");
   const [hasAutoOpened, setHasAutoOpened] = useState(false);
+  const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null);
   const lastLocationRef = useRef<{ lat: number; lng: number } | null>(null);
   const watchIdRef = useRef<number | null>(null);
+  const listRef = useRef<HTMLDivElement>(null);
+  const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+
+  // Sheet drag state
+  const [sheetTop, setSheetTop] = useState(SHEET_SNAP_MID);
+  const isDragging = useRef(false);
+  const dragStartY = useRef(0);
+  const dragStartTop = useRef(0);
 
   const isChangeMode = searchParams.get("mode") === "change";
   const shouldOpenCurrent = searchParams.get("open") === "current";
@@ -342,10 +204,7 @@ const EscolherBarbearia = () => {
 
   // ── Geolocation ──
   useEffect(() => {
-    if (!navigator.geolocation) {
-      setLocationStatus("unavailable");
-      return;
-    }
+    if (!navigator.geolocation) { setLocationStatus("unavailable"); return; }
 
     const getPosition = (options: PositionOptions) =>
       new Promise<GeolocationPosition>((resolve, reject) => {
@@ -354,47 +213,25 @@ const EscolherBarbearia = () => {
 
     const requestLocation = async () => {
       setLocationStatus("loading");
-
       try {
-        const highAccuracy = await getPosition({
-          enableHighAccuracy: true,
-          timeout: 15000,
-          maximumAge: 0,
-        });
-
-        setUserLocation({
-          lat: highAccuracy.coords.latitude,
-          lng: highAccuracy.coords.longitude,
-        });
+        const pos = await getPosition({ enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
+        setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
         setLocationStatus("ready");
         return;
-      } catch {
-        // tenta fallback mais rápido com cache recente
-      }
-
+      } catch { /* fallback */ }
       try {
-        const fallback = await getPosition({
-          enableHighAccuracy: false,
-          timeout: 7000,
-          maximumAge: 5 * 60 * 1000,
-        });
-
+        const fallback = await getPosition({ enableHighAccuracy: false, timeout: 7000, maximumAge: 5 * 60 * 1000 });
         setUserLocation({ lat: fallback.coords.latitude, lng: fallback.coords.longitude });
         setLocationStatus("ready");
-      } catch {
-        setLocationStatus("unavailable");
-      }
+      } catch { setLocationStatus("unavailable"); }
     };
-
     requestLocation();
   }, []);
 
-  // ── Watch position for movement >500m ──
+  // ── Watch position ──
   useEffect(() => {
     if (locationStatus !== "ready" || !userLocation || !navigator.geolocation) return;
-
     lastLocationRef.current = userLocation;
-
     watchIdRef.current = navigator.geolocation.watchPosition(
       (pos) => {
         const prev = lastLocationRef.current;
@@ -409,109 +246,63 @@ const EscolherBarbearia = () => {
       undefined,
       { enableHighAccuracy: true, maximumAge: 60000 }
     );
-
-    return () => {
-      if (watchIdRef.current !== null) {
-        navigator.geolocation.clearWatch(watchIdRef.current);
-      }
-    };
+    return () => { if (watchIdRef.current !== null) navigator.geolocation.clearWatch(watchIdRef.current); };
   }, [locationStatus]);
 
   // ── Load units ──
   const loadUnits = async () => {
     setIsLoading(true);
-
     const { data: units, error } = await supabase
       .from("tenant_unidades")
-      .select(`
-        id, nome, rua, numero, cep, bairro, cidade, estado, is_sede, latitude, longitude, tenant_id,
-        tenant:tenants!tenant_id (
-          id, nome, slug, slogan, logo_url, ativo, onboarding_completed
-        )
-      `)
+      .select(`id, nome, rua, numero, cep, bairro, cidade, estado, is_sede, latitude, longitude, tenant_id,
+        tenant:tenants!tenant_id (id, nome, slug, slogan, logo_url, ativo, onboarding_completed)`)
       .eq("ativo", true);
 
     if (error) {
       console.error("Erro ao carregar unidades:", error);
       toast.error("Erro ao carregar barbearias");
-      setAllUnits([]);
-      setIsLoading(false);
-      return;
+      setAllUnits([]); setIsLoading(false); return;
     }
 
     let unitList: UnitData[] = (units ?? [])
-      .filter((u) => {
-        const t = u.tenant as unknown as TenantJoin | null;
-        return t?.ativo && t?.onboarding_completed;
-      })
+      .filter((u) => { const t = u.tenant as unknown as TenantJoin | null; return t?.ativo && t?.onboarding_completed; })
       .map((u) => {
         const t = u.tenant as unknown as TenantJoin;
         return {
-          id: u.id,
-          nome: u.nome,
-          rua: u.rua,
-          numero: u.numero,
-          cep: u.cep,
-          bairro: u.bairro,
-          cidade: u.cidade,
-          estado: u.estado,
-          is_sede: u.is_sede ?? false,
-          latitude: u.latitude,
-          longitude: u.longitude,
-          tenant_id: u.tenant_id,
-          brandName: t?.nome ?? u.nome,
-          brandSlug: t?.slug ?? null,
-          brandLogo: t?.logo_url ?? null,
-          distance: null,
-          travelTime: null,
-          travelMinutes: null,
-          travelMode: null,
+          id: u.id, nome: u.nome, rua: u.rua, numero: u.numero, cep: u.cep,
+          bairro: u.bairro, cidade: u.cidade, estado: u.estado,
+          is_sede: u.is_sede ?? false, latitude: u.latitude, longitude: u.longitude,
+          tenant_id: u.tenant_id, brandName: t?.nome ?? u.nome,
+          brandSlug: t?.slug ?? null, brandLogo: t?.logo_url ?? null,
+          distance: null, travelTime: null, travelMinutes: null, travelMode: null,
         };
       });
 
-    // Filter units whose tenant has active barbers
+    // Filter by active barbers
     const { data: barbers } = await supabase
-      .from("barbeiros")
-      .select("id, tenant_id")
-      .eq("ativo", true)
-      .is("deleted_at", null);
-
-    const activeTenantIds = new Set(
-      (barbers ?? []).map((b) => b.tenant_id).filter((tid): tid is string => !!tid)
-    );
+      .from("barbeiros").select("id, tenant_id").eq("ativo", true).is("deleted_at", null);
+    const activeTenantIds = new Set((barbers ?? []).map((b) => b.tenant_id).filter((tid): tid is string => !!tid));
     const hasGlobalBarbers = (barbers ?? []).some((b) => !b.tenant_id);
-
     unitList = unitList.filter((u) => {
-      const isDub =
-        normalizeText(u.brandSlug ?? "") === "barbeariadub" ||
-        normalizeText(u.brandName) === "barbeariadub";
-
+      const isDub = normalizeText(u.brandSlug ?? "") === "barbeariadub" || normalizeText(u.brandName) === "barbeariadub";
       if (isDub && hasGlobalBarbers) return true;
       return u.tenant_id ? activeTenantIds.has(u.tenant_id) : false;
     });
 
+    // Geocode missing coordinates
     const geocodeInFlight = new Map<string, Promise<{ lat: number; lng: number } | null>>();
-
     unitList = await Promise.all(
       unitList.map(async (unit) => {
+        if (unit.latitude && unit.longitude) return unit;
         const addressQuery = buildAddressQuery(unit);
         if (!addressQuery) return unit;
-
         const addressKey = normalizeText(addressQuery);
         const cached = readCachedGeocode(addressKey);
-        if (cached) {
-          return { ...unit, latitude: cached.lat, longitude: cached.lng };
-        }
-
+        if (cached) return { ...unit, latitude: cached.lat, longitude: cached.lng };
         let geocodePromise = geocodeInFlight.get(addressKey);
-        if (!geocodePromise) {
-          geocodePromise = geocodeAddress(addressQuery);
-          geocodeInFlight.set(addressKey, geocodePromise);
-        }
-
+        if (!geocodePromise) { geocodePromise = geocodeAddress(addressQuery); geocodeInFlight.set(addressKey, geocodePromise); }
         const geocoded = await geocodePromise;
         if (!geocoded) return unit;
-
         saveCachedGeocode(addressKey, geocoded.lat, geocoded.lng);
         return { ...unit, latitude: geocoded.lat, longitude: geocoded.lng };
       })
@@ -521,32 +312,17 @@ const EscolherBarbearia = () => {
     setIsLoading(false);
   };
 
-  // ── Sort by distance + compute travel time ──
+  // ── Sort by distance ──
   const sortedUnits = useMemo(() => {
-    const withDist = allUnits.map((u) => {
-      const hasCoordinates = u.latitude !== null && u.longitude !== null;
-      const dist = userLocation && hasCoordinates
-        ? haversineKm(userLocation.lat, userLocation.lng, u.latitude, u.longitude)
-        : null;
-      const mode = dist !== null ? getSmartTravelMode(dist) : null;
-      const minutes = dist !== null && mode !== null ? kmToMinutes(dist, mode) : null;
-      const formatted = minutes !== null ? formatTravelTime(minutes) : null;
-      const time = formatted ? `${formatted.value} ${formatted.unit}`.trim() : null;
-
-      return {
-        ...u,
-        distance: dist,
-        travelMinutes: minutes,
-        travelTime: time,
-        travelMode: mode,
-      };
-    });
-
-    return withDist.sort((a, b) => {
-      const dA = a.distance ?? Infinity;
-      const dB = b.distance ?? Infinity;
-      return dA - dB;
-    });
+    return allUnits
+      .map((u) => {
+        const hasCoords = u.latitude !== null && u.longitude !== null;
+        const dist = userLocation && hasCoords ? haversineKm(userLocation.lat, userLocation.lng, u.latitude!, u.longitude!) : null;
+        const mode = dist !== null ? getSmartTravelMode(dist) : null;
+        const minutes = dist !== null && mode !== null ? kmToMinutes(dist, mode) : null;
+        return { ...u, distance: dist, travelMinutes: minutes, travelMode: mode, travelTime: minutes ? `${minutes}` : null };
+      })
+      .sort((a, b) => (a.distance ?? Infinity) - (b.distance ?? Infinity));
   }, [allUnits, userLocation]);
 
   // ── Filtered ──
@@ -561,93 +337,142 @@ const EscolherBarbearia = () => {
     );
   }, [sortedUnits, search]);
 
-  // ── Handlers ──
-  const handleSelect = async (unitId: string) => {
-    if (saving) return;
-    const unit = allUnits.find(u => u.id === unitId);
-    const tenantId = unit?.tenant_id || unitId;
-    if (!isAuthenticated) {
-      navigate(`/auth?mode=signup&origin=discover&tenant=${tenantId}`);
-      return;
-    }
-    setSaving(unitId);
-    try {
-      const { error } = await supabase
-        .from("profiles")
-        .update({ barbearia_preferida_id: tenantId, signup_origin: "discover" })
-        .eq("id", userId);
-      if (error) throw error;
-      toast.success(isChangeMode ? "Barbearia atualizada!" : "Barbearia selecionada!");
-      navigate(isChangeMode ? "/cliente/perfil" : "/cliente");
-    } catch (err) {
-      console.error("Erro ao salvar barbearia:", err);
-      toast.error("Erro ao salvar. Tente novamente.");
-    } finally {
-      setSaving(null);
-    }
-  };
+  // ── Select unit syncs map ↔ list ──
+  const handleSelectUnit = useCallback((id: string) => {
+    setSelectedUnitId((prev) => (prev === id ? null : id));
+    // Scroll card into view
+    setTimeout(() => {
+      const el = cardRefs.current.get(id);
+      if (el) el.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }, 100);
+    // Expand sheet if collapsed
+    if (sheetTop > SHEET_SNAP_MID) setSheetTop(SHEET_SNAP_MID);
+  }, [sheetTop]);
 
-  const handleBack = () => navigate(isChangeMode ? "/cliente/perfil" : "/");
+  const handleCardClick = useCallback((unit: UnitData) => {
+    const slug = unit.brandSlug || unit.id;
+    const fromParam = isChangeMode ? "change" : "discover";
+    const unidadeParam = unit.is_sede ? "" : `&unidade=${unit.id}`;
+    navigate(`/${slug}?from=${fromParam}${unidadeParam}`);
+  }, [isChangeMode, navigate]);
+
+  const handleRecenter = useCallback(() => {
+    setSelectedUnitId(null);
+  }, []);
+
+  // ── Sheet drag handlers ──
+  const handleDragStart = useCallback((clientY: number) => {
+    isDragging.current = true;
+    dragStartY.current = clientY;
+    dragStartTop.current = sheetTop;
+  }, [sheetTop]);
+
+  const handleDragMove = useCallback((clientY: number) => {
+    if (!isDragging.current) return;
+    const vh = window.innerHeight;
+    const deltaRatio = (clientY - dragStartY.current) / vh;
+    const newTop = Math.max(SHEET_SNAP_TOP, Math.min(SHEET_SNAP_BOTTOM, dragStartTop.current + deltaRatio));
+    setSheetTop(newTop);
+  }, []);
+
+  const handleDragEnd = useCallback(() => {
+    isDragging.current = false;
+    // Snap to closest
+    const snaps = [SHEET_SNAP_TOP, SHEET_SNAP_MID, SHEET_SNAP_BOTTOM];
+    const closest = snaps.reduce((prev, curr) =>
+      Math.abs(curr - sheetTop) < Math.abs(prev - sheetTop) ? curr : prev
+    );
+    setSheetTop(closest);
+  }, [sheetTop]);
 
   return (
-    <div className="flex flex-col bg-background" style={{ height: "100dvh" }}>
-      {/* ══════ Header ══════ */}
-      <div className="flex-shrink-0 px-5 pt-[calc(env(safe-area-inset-top)+1.25rem)] pb-4">
-        <div className="flex items-center gap-3 mb-5">
-          <button
-            onClick={handleBack}
-            className="active:scale-[0.92] transition-transform duration-100 text-foreground shrink-0"
-          >
-            <BackArrow size={22} />
-          </button>
-          <h1 className="text-[26px] font-bold text-foreground leading-tight">Barbearias</h1>
-        </div>
-
-        {/* Search */}
+    <div className="relative bg-background" style={{ height: "100dvh", overflow: "hidden" }}>
+      {/* ═══ Search bar ═══ */}
+      <div className="absolute top-0 left-0 right-0 z-[600] px-4 pt-[calc(env(safe-area-inset-top)+0.75rem)] pb-2">
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-[15px] h-[15px] text-muted-foreground/50" />
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/50" />
           <input
             type="text"
-            placeholder="Buscar por nome ou bairro..."
+            placeholder="Buscar barbearias..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className={cn(
-              "w-full h-12 pl-10 pr-10 rounded-2xl text-[14px]",
-              "bg-secondary/30 border border-border text-foreground",
-              "placeholder:text-muted-foreground/35",
-              "focus:outline-none focus:border-primary/30",
-              "transition-colors duration-150"
+              "w-full h-12 pl-11 pr-10 rounded-full text-[14px]",
+              "bg-card border border-border text-foreground",
+              "placeholder:text-muted-foreground/40",
+              "focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30",
+              "shadow-lg transition-all duration-150"
             )}
           />
           {search && (
             <button
               onClick={() => setSearch("")}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground/40 active:scale-90 transition-transform"
+              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground/40 active:scale-90 transition-transform"
             >
               <X className="w-4 h-4" />
             </button>
           )}
         </div>
+      </div>
 
-        {locationStatus === "unavailable" && (
-          <p className="text-[11px] text-muted-foreground/70 mt-2 px-1">
-            Ative sua localização para calcular o tempo exato até cada barbearia.
-          </p>
+      {/* ═══ Map ═══ */}
+      <div className="absolute inset-0" style={{ height: `${sheetTop * 100}%` }}>
+        {!isLoading && (
+          <DiscoverMap
+            units={filtered}
+            userLocation={userLocation}
+            selectedId={selectedUnitId}
+            onSelectUnit={handleSelectUnit}
+            onRecenter={handleRecenter}
+          />
         )}
       </div>
 
-      {/* ══════ Scrollable list ══════ */}
-      <div className="flex-1 min-h-0 relative">
+      {/* ═══ Draggable sheet ═══ */}
+      <div
+        className="absolute left-0 right-0 bottom-0 z-[500] bg-background rounded-t-[20px] border-t border-border/50 shadow-[0_-4px_30px_rgba(0,0,0,0.15)] flex flex-col"
+        style={{
+          top: `${sheetTop * 100}%`,
+          transition: isDragging.current ? "none" : "top 0.35s cubic-bezier(0.32, 0.72, 0, 1)",
+        }}
+      >
+        {/* Handle */}
         <div
-          className="absolute top-0 left-0 right-0 h-4 z-10 pointer-events-none"
-          style={{ background: "linear-gradient(to bottom, hsl(var(--background)), transparent)" }}
-        />
+          className="flex-shrink-0 flex items-center justify-center pt-2.5 pb-1 cursor-grab active:cursor-grabbing"
+          onTouchStart={(e) => handleDragStart(e.touches[0].clientY)}
+          onTouchMove={(e) => handleDragMove(e.touches[0].clientY)}
+          onTouchEnd={handleDragEnd}
+          onMouseDown={(e) => {
+            handleDragStart(e.clientY);
+            const moveHandler = (ev: MouseEvent) => handleDragMove(ev.clientY);
+            const upHandler = () => { handleDragEnd(); window.removeEventListener("mousemove", moveHandler); window.removeEventListener("mouseup", upHandler); };
+            window.addEventListener("mousemove", moveHandler);
+            window.addEventListener("mouseup", upHandler);
+          }}
+        >
+          <div className="w-10 h-1 rounded-full bg-muted-foreground/25" />
+        </div>
 
-        <div className="h-full overflow-y-auto overscroll-contain px-5 pb-8">
+        {/* Count */}
+        <div className="flex-shrink-0 px-5 pb-3 pt-1">
+          <p className="text-[14px] font-semibold text-foreground text-center">
+            {isLoading ? "Carregando..." : `${filtered.length} barbearia${filtered.length !== 1 ? "s" : ""}`}
+          </p>
+        </div>
+
+        {/* List */}
+        <div ref={listRef} className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 pb-8">
           {isLoading ? (
-            <div className="flex flex-col gap-2.5 pt-1">
-              {[0, 1, 2, 3].map(i => (
-                <SkeletonCard key={i} index={i} />
+            <div className="space-y-4">
+              {[0, 1, 2].map(i => (
+                <div key={i} className="rounded-2xl overflow-hidden border border-border/40">
+                  <Skeleton className="h-28 w-full rounded-none" />
+                  <div className="p-3.5 space-y-2">
+                    <Skeleton className="h-4 w-36 rounded-lg" />
+                    <Skeleton className="h-3 w-48 rounded-lg" />
+                    <Skeleton className="h-9 w-full rounded-xl" />
+                  </div>
+                </div>
               ))}
             </div>
           ) : filtered.length === 0 ? (
@@ -660,32 +485,23 @@ const EscolherBarbearia = () => {
               <p className="text-[15px] font-medium text-muted-foreground/50">
                 Nenhuma barbearia encontrada
               </p>
-              <p className="text-[13px] text-muted-foreground/35 mt-1">
-                Tente outro nome ou bairro
-              </p>
               {search && (
-                <button
-                  onClick={() => setSearch("")}
-                  className="mt-4 text-[12px] text-primary/60 hover:text-primary transition-colors"
-                >
+                <button onClick={() => setSearch("")} className="mt-4 text-[12px] text-primary/60 hover:text-primary transition-colors">
                   Limpar busca
                 </button>
               )}
             </motion.div>
           ) : (
-            <div className="flex flex-col gap-2.5 pt-1">
+            <div className="space-y-4">
               {filtered.map((unit, index) => (
-                <UnitCard
-                  key={unit.id}
-                  unit={unit}
-                  index={index}
-                  onClick={() => {
-                    const slug = unit.brandSlug || unit.id;
-                    const fromParam = isChangeMode ? "change" : "discover";
-                    const unidadeParam = unit.is_sede ? "" : `&unidade=${unit.id}`;
-                    navigate(`/${slug}?from=${fromParam}${unidadeParam}`);
-                  }}
-                />
+                <div key={unit.id} ref={(el) => { if (el) cardRefs.current.set(unit.id, el); }}>
+                  <DiscoverUnitCard
+                    unit={unit}
+                    index={index}
+                    isSelected={unit.id === selectedUnitId}
+                    onClick={() => handleCardClick(unit)}
+                  />
+                </div>
               ))}
             </div>
           )}
