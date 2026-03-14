@@ -1,107 +1,108 @@
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowRight } from "lucide-react";
-import sceneClientSad from "@/assets/scene-client-sad-transparent.png";
-import sceneFriendApp from "@/assets/scene-friend-app-transparent-clean.png";
+import sceneClientSad from "@/assets/scene-client-sad.png";
+import sceneFriendApp from "@/assets/scene-friend-app.png";
 
 const Index = () => {
   const navigate = useNavigate();
 
   return (
     <div className="fixed inset-0 flex flex-col overflow-hidden bg-white">
-      {/* Scrollable content area */}
       <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
-        <div className="flex flex-col px-3 pt-[calc(env(safe-area-inset-top,0px)+6px)] pb-2">
-          {/* ── Scene 1: Client sad — top right, bigger ── */}
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-            className="self-end -mb-10"
-            style={{ width: "82%" }}
-          >
-            <img
-              src={sceneClientSad}
-              alt="Cliente triste sem lugar pra agendar"
-              className="w-full h-auto object-contain"
-              draggable={false}
-            />
-          </motion.div>
+        <div className="flex flex-col px-5 pt-[calc(env(safe-area-inset-top,0px)+16px)] pb-32">
 
-          {/* ── Scene 2: Friend — bottom left, bigger ── */}
+          {/* ── Comic strip: two characters side by side ── */}
+          <div className="flex items-start justify-center gap-2 mb-4">
+            {/* Left — Client sad */}
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+              className="flex-1 max-w-[48%]"
+            >
+              <img
+                src={sceneClientSad}
+                alt="Cliente triste sem lugar pra agendar"
+                className="w-full h-auto object-contain"
+                draggable={false}
+              />
+            </motion.div>
+
+            {/* Right — Friend showing app */}
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.5, delay: 0.7 }}
+              className="flex-1 max-w-[48%]"
+            >
+              <img
+                src={sceneFriendApp}
+                alt="Amiga mostrando o app DubAgenda"
+                className="w-full h-auto object-contain"
+                draggable={false}
+              />
+            </motion.div>
+          </div>
+
+          {/* ── Text Section ── */}
           <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.5, delay: 0.7 }}
-            className="self-start -mt-2"
-            style={{ width: "80%" }}
+            initial={{ opacity: 0, y: 14 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 1.0 }}
+            className="flex flex-col items-start gap-1.5"
           >
-            <img
-              src={sceneFriendApp}
-              alt="Amiga mostrando o app DubAgenda"
-              className="w-full h-auto object-contain"
-              draggable={false}
-            />
+            <span
+              style={{
+                fontFamily: "Inter, sans-serif",
+                fontWeight: 600,
+                fontSize: 10,
+                color: "#ccc",
+                letterSpacing: "2.5px",
+                textTransform: "uppercase" as const,
+              }}
+            >
+              DUB AGENDA
+            </span>
+
+            <h1
+              style={{
+                fontFamily: "'Plus Jakarta Sans', Inter, sans-serif",
+                fontWeight: 900,
+                fontSize: 27,
+                color: "#111",
+                lineHeight: 1.18,
+                margin: 0,
+              }}
+            >
+              Encontre o barbeiro{" "}
+              <em style={{ fontStyle: "italic" }}>certo</em>
+              <br />
+              perto{" "}
+              <span style={{ color: "#E53E3E" }}>de você.</span>
+            </h1>
+
+            <p
+              style={{
+                fontFamily: "Inter, sans-serif",
+                fontWeight: 400,
+                fontSize: 12,
+                color: "#aaa",
+                lineHeight: 1.5,
+                margin: 0,
+              }}
+            >
+              Agendamento sem ligação, sem espera.
+            </p>
           </motion.div>
         </div>
       </div>
 
-      {/* ── Fixed bottom: Text + Button ── */}
+      {/* ── CTA Button ── */}
       <div
-        className="flex-shrink-0 px-6 pb-[calc(env(safe-area-inset-bottom,0px)+20px)] pt-4 relative z-20"
-        style={{ background: "white" }}
+        className="fixed bottom-0 left-0 right-0 z-50 px-6 pb-[calc(env(safe-area-inset-bottom,0px)+24px)] pt-5"
+        style={{ background: "linear-gradient(to top, white 60%, transparent)" }}
       >
-        {/* Text */}
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 1.0 }}
-          className="flex flex-col items-start gap-1 mb-4"
-        >
-          <span
-            style={{
-              fontFamily: "Inter, sans-serif",
-              fontWeight: 600,
-              fontSize: 10,
-              color: "#ccc",
-              letterSpacing: "2.5px",
-              textTransform: "uppercase" as const,
-            }}
-          >
-            DUB AGENDA
-          </span>
-
-          <h1
-            style={{
-              fontFamily: "'Plus Jakarta Sans', Inter, sans-serif",
-              fontWeight: 900,
-              fontSize: 27,
-              color: "#111",
-              lineHeight: 1.18,
-              margin: 0,
-            }}
-          >
-            Encontre o barbeiro{" "}
-            <em style={{ fontStyle: "italic" }}>certo</em>
-            <br />
-            perto <span style={{ color: "#E53E3E" }}>de você.</span>
-          </h1>
-
-          <p
-            style={{
-              fontFamily: "Inter, sans-serif",
-              fontWeight: 400,
-              fontSize: 12,
-              color: "#aaa",
-              lineHeight: 1.5,
-              margin: 0,
-            }}
-          >
-            Agendamento sem ligação, sem espera.
-          </p>
-        </motion.div>
-
-        {/* Button */}
         <button
           onClick={() => navigate("/escolher-barbearia")}
           className="w-full flex items-center justify-between active:scale-[0.98] transition-transform"
