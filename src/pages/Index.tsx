@@ -1,8 +1,8 @@
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowRight } from "lucide-react";
-import { SketchClient } from "@/components/landing/SketchClient";
-import { SketchBarber } from "@/components/landing/SketchBarber";
+import sceneClientSad from "@/assets/scene-client-sad.png";
+import sceneFriendApp from "@/assets/scene-friend-app.png";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -12,87 +12,35 @@ const Index = () => {
       <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
         <div className="flex flex-col px-5 pt-[calc(env(safe-area-inset-top,0px)+12px)] pb-32">
 
-          {/* ── Scene 1: Client sad on bench ── */}
-          <div className="relative mb-4">
-            {/* Speech bubble */}
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9, y: -8 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.5, ease: "easeOut" }}
-              className="relative z-10 self-start max-w-[72%] mb-1"
-            >
-              <div
-                className="rounded-2xl rounded-bl-md px-3.5 py-2"
-                style={{
-                  background: "#F5F5F5",
-                  border: "2px solid #111",
-                  boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
-                }}
-              >
-                <p style={{
-                  fontFamily: "Caveat, cursive", fontWeight: 700,
-                  fontSize: 14, color: "#111", lineHeight: 1.35, margin: 0,
-                }}>
-                  Sem lugar pra agendar... Que chato 😔
-                </p>
-              </div>
-              <svg className="absolute -bottom-[7px] left-8" width="14" height="8" viewBox="0 0 14 8" fill="none">
-                <path d="M0 0 L7 8 L14 0" fill="#F5F5F5" stroke="#111" strokeWidth="2" strokeLinejoin="round" />
-                <line x1="0" y1="0" x2="14" y2="0" stroke="#F5F5F5" strokeWidth="3" />
-              </svg>
-            </motion.div>
-
-            {/* Client character */}
-            <motion.div
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.2 }}
-              className="flex justify-start pl-4"
-            >
-              <SketchClient />
-            </motion.div>
-          </div>
+          {/* ── Scene 1: Client sad ── */}
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+            className="flex justify-center mb-2"
+          >
+            <img
+              src={sceneClientSad}
+              alt="Cliente triste sem lugar pra agendar"
+              className="w-[220px] h-auto object-contain"
+              draggable={false}
+            />
+          </motion.div>
 
           {/* ── Scene 2: Friend showing app ── */}
-          <div className="relative mb-3">
-            {/* Speech bubble */}
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9, y: -8 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 1.2, ease: "easeOut" }}
-              className="relative z-10 self-end ml-auto max-w-[78%] mb-1"
-            >
-              <div
-                className="rounded-2xl rounded-br-md px-3.5 py-2"
-                style={{
-                  background: "#E8F5E9",
-                  border: "2px solid #111",
-                  boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
-                }}
-              >
-                <p style={{
-                  fontFamily: "Caveat, cursive", fontWeight: 700,
-                  fontSize: 14, color: "#111", lineHeight: 1.35, margin: 0,
-                }}>
-                  Procurando lugar pra agendar? Usa o app DubAgenda! ✨
-                </p>
-              </div>
-              <svg className="absolute -bottom-[7px] right-8" width="14" height="8" viewBox="0 0 14 8" fill="none">
-                <path d="M0 0 L7 8 L14 0" fill="#E8F5E9" stroke="#111" strokeWidth="2" strokeLinejoin="round" />
-                <line x1="0" y1="0" x2="14" y2="0" stroke="#E8F5E9" strokeWidth="3" />
-              </svg>
-            </motion.div>
-
-            {/* Friend character */}
-            <motion.div
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.8 }}
-              className="flex justify-end pr-4"
-            >
-              <SketchBarber />
-            </motion.div>
-          </div>
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.7 }}
+            className="flex justify-center mb-4"
+          >
+            <img
+              src={sceneFriendApp}
+              alt="Amiga mostrando o app DubAgenda"
+              className="w-[200px] h-auto object-contain"
+              draggable={false}
+            />
+          </motion.div>
 
           {/* ── Text Section ── */}
           <motion.div
