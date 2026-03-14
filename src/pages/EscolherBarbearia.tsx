@@ -333,7 +333,10 @@ const EscolherBarbearia = () => {
 
   // ── Geolocation ──
   useEffect(() => {
-    if (!navigator.geolocation) return;
+    if (!navigator.geolocation) {
+      setLocationStatus("unavailable");
+      return;
+    }
 
     const getPosition = (options: PositionOptions) =>
       new Promise<GeolocationPosition>((resolve, reject) => {
@@ -341,6 +344,8 @@ const EscolherBarbearia = () => {
       });
 
     const requestLocation = async () => {
+      setLocationStatus("loading");
+
       try {
         const highAccuracy = await getPosition({
           enableHighAccuracy: true,
@@ -352,6 +357,7 @@ const EscolherBarbearia = () => {
           lat: highAccuracy.coords.latitude,
           lng: highAccuracy.coords.longitude,
         });
+        setLocationStatus("ready");
         return;
       } catch {
         // tenta fallback mais rápido com cache recente
@@ -365,8 +371,9 @@ const EscolherBarbearia = () => {
         });
 
         setUserLocation({ lat: fallback.coords.latitude, lng: fallback.coords.longitude });
+        setLocationStatus("ready");
       } catch {
-        // mantém sem localização, badge fica em estado neutro
+        setLocationStatus("unavailable");
       }
     };
 
