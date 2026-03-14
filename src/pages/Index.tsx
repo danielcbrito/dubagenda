@@ -16,7 +16,7 @@ const Index = () => {
         {/* Illustrations area — fills all space above footer */}
         <div
           className="flex-1 min-h-0 overflow-hidden px-1 flex flex-col justify-center"
-          style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 8px)" }}
+          style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 4px)" }}
         >
           {/* Scene 1: Sad client — stable on small, larger on tall screens */}
           <motion.div
