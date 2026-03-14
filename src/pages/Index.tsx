@@ -52,9 +52,9 @@ const Index = () => {
               alt="Amiga mostrando o app DubAgenda"
               className="object-contain max-w-none"
               style={{
-                width: "108%",
+                width: "112%",
                 height: "auto",
-                marginRight: "-12%",
+                marginRight: "-20%",
               }}
               draggable={false}
             />
