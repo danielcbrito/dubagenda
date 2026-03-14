@@ -14,47 +14,46 @@ const Index = () => {
         style={{ maxWidth: 480 }}
       >
         {/* Illustrations area — fills all space above footer */}
-        <div className="flex-1 min-h-0 relative overflow-hidden">
-          {/* Scene 1: Sad client — top left, large */}
+        <div
+          className="flex-1 min-h-0 overflow-hidden px-1 flex flex-col justify-center"
+          style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 4px)" }}
+        >
+          {/* Scene 1: Sad client — top left, large without overlap */}
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.5, delay: 0.2 }}
-            className="absolute left-0 top-0 w-full flex justify-start"
-            style={{
-              paddingTop: "calc(env(safe-area-inset-top, 0px) + 2px)",
-            }}
+            className="w-full flex justify-start"
           >
             <img
               src={sceneClientSad}
               alt="Cliente triste sem lugar pra agendar"
               className="object-contain max-w-none"
               style={{
-                width: "118%",
+                width: "104%",
                 height: "auto",
-                marginLeft: "-16%",
-                clipPath: "inset(0 0 16% 0)",
+                marginLeft: "-10%",
               }}
               draggable={false}
             />
           </motion.div>
 
-          {/* Scene 2: Friend with app — bottom right, large */}
+          {/* Scene 2: Friend with app — bottom right, large without overlap */}
           <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.5, delay: 0.7 }}
-            className="absolute right-0 w-full flex justify-end"
-            style={{ bottom: "16%" }}
+            className="w-full flex justify-end"
+            style={{ marginTop: "-3%" }}
           >
             <img
               src={sceneFriendApp}
               alt="Amiga mostrando o app DubAgenda"
               className="object-contain max-w-none"
               style={{
-                width: "112%",
+                width: "90%",
                 height: "auto",
-                marginRight: "-20%",
+                marginRight: "-12%",
               }}
               draggable={false}
             />
