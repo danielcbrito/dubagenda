@@ -67,7 +67,7 @@ const Index = () => {
               src={sceneFriendApp}
               alt="Amiga mostrando o app"
               draggable={false}
-              className="w-full h-full block"
+              className="w-full h-full block dark:invert dark:brightness-90"
               style={{ objectFit: "contain", objectPosition: "right bottom" }}
             />
           </motion.div>
