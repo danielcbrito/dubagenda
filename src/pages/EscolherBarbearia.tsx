@@ -252,64 +252,75 @@ const EscolherBarbearia = () => {
   // ── Load units ──
   const loadUnits = async () => {
     setIsLoading(true);
-    const { data: units, error } = await supabase
-      .from("tenant_unidades")
-      .select(`id, nome, rua, numero, cep, bairro, cidade, estado, is_sede, latitude, longitude, tenant_id,
-        tenant:tenants!tenant_id (id, nome, slug, slogan, logo_url, ativo, onboarding_completed)`)
-      .eq("ativo", true);
+    try {
+      const { data: units, error } = await supabase
+        .from("tenant_unidades")
+        .select(`id, nome, rua, numero, cep, bairro, cidade, estado, is_sede, latitude, longitude, tenant_id,
+          tenant:tenants!tenant_id (id, nome, slug, slogan, logo_url, ativo, onboarding_completed)`)
+        .eq("ativo", true);
 
-    if (error) {
-      console.error("Erro ao carregar unidades:", error);
-      toast.error("Erro ao carregar barbearias");
-      setAllUnits([]); setIsLoading(false); return;
-    }
+      if (error) {
+        console.error("Erro ao carregar unidades:", error);
+        toast.error("Erro ao carregar barbearias");
+        setAllUnits([]); setIsLoading(false); return;
+      }
 
-    let unitList: UnitData[] = (units ?? [])
-      .filter((u) => { const t = u.tenant as unknown as TenantJoin | null; return t?.ativo && t?.onboarding_completed; })
-      .map((u) => {
-        const t = u.tenant as unknown as TenantJoin;
-        return {
-          id: u.id, nome: u.nome, rua: u.rua, numero: u.numero, cep: u.cep,
-          bairro: u.bairro, cidade: u.cidade, estado: u.estado,
-          is_sede: u.is_sede ?? false, latitude: u.latitude, longitude: u.longitude,
-          tenant_id: u.tenant_id, brandName: t?.nome ?? u.nome,
-          brandSlug: t?.slug ?? null, brandLogo: t?.logo_url ?? null,
-          distance: null, travelTime: null, travelMinutes: null, travelMode: null,
-        };
+      let unitList: UnitData[] = (units ?? [])
+        .filter((u) => { const t = u.tenant as unknown as TenantJoin | null; return t?.ativo && t?.onboarding_completed; })
+        .map((u) => {
+          const t = u.tenant as unknown as TenantJoin;
+          return {
+            id: u.id, nome: u.nome, rua: u.rua, numero: u.numero, cep: u.cep,
+            bairro: u.bairro, cidade: u.cidade, estado: u.estado,
+            is_sede: u.is_sede ?? false, latitude: u.latitude, longitude: u.longitude,
+            tenant_id: u.tenant_id, brandName: t?.nome ?? u.nome,
+            brandSlug: t?.slug ?? null, brandLogo: t?.logo_url ?? null,
+            distance: null, travelTime: null, travelMinutes: null, travelMode: null,
+          };
+        });
+
+      // Filter by active barbers
+      const { data: barbers } = await supabase
+        .from("barbeiros").select("id, tenant_id").eq("ativo", true).is("deleted_at", null);
+      const activeTenantIds = new Set((barbers ?? []).map((b) => b.tenant_id).filter((tid): tid is string => !!tid));
+      const hasGlobalBarbers = (barbers ?? []).some((b) => !b.tenant_id);
+      unitList = unitList.filter((u) => {
+        const isDub = normalizeText(u.brandSlug ?? "") === "barbeariadub" || normalizeText(u.brandName) === "barbeariadub";
+        if (isDub && hasGlobalBarbers) return true;
+        return u.tenant_id ? activeTenantIds.has(u.tenant_id) : false;
       });
 
-    // Filter by active barbers
-    const { data: barbers } = await supabase
-      .from("barbeiros").select("id, tenant_id").eq("ativo", true).is("deleted_at", null);
-    const activeTenantIds = new Set((barbers ?? []).map((b) => b.tenant_id).filter((tid): tid is string => !!tid));
-    const hasGlobalBarbers = (barbers ?? []).some((b) => !b.tenant_id);
-    unitList = unitList.filter((u) => {
-      const isDub = normalizeText(u.brandSlug ?? "") === "barbeariadub" || normalizeText(u.brandName) === "barbeariadub";
-      if (isDub && hasGlobalBarbers) return true;
-      return u.tenant_id ? activeTenantIds.has(u.tenant_id) : false;
-    });
+      // Geocode missing coordinates
+      const geocodeInFlight = new Map<string, Promise<{ lat: number; lng: number } | null>>();
+      unitList = await Promise.all(
+        unitList.map(async (unit) => {
+          try {
+            if (unit.latitude && unit.longitude) return unit;
+            const addressQuery = buildAddressQuery(unit);
+            if (!addressQuery) return unit;
+            const addressKey = normalizeText(addressQuery);
+            const cached = readCachedGeocode(addressKey);
+            if (cached) return { ...unit, latitude: cached.lat, longitude: cached.lng };
+            let geocodePromise = geocodeInFlight.get(addressKey);
+            if (!geocodePromise) { geocodePromise = geocodeAddress(addressQuery); geocodeInFlight.set(addressKey, geocodePromise); }
+            const geocoded = await geocodePromise;
+            if (!geocoded) return unit;
+            saveCachedGeocode(addressKey, geocoded.lat, geocoded.lng);
+            return { ...unit, latitude: geocoded.lat, longitude: geocoded.lng };
+          } catch {
+            return unit;
+          }
+        })
+      );
 
-    // Geocode missing coordinates
-    const geocodeInFlight = new Map<string, Promise<{ lat: number; lng: number } | null>>();
-    unitList = await Promise.all(
-      unitList.map(async (unit) => {
-        if (unit.latitude && unit.longitude) return unit;
-        const addressQuery = buildAddressQuery(unit);
-        if (!addressQuery) return unit;
-        const addressKey = normalizeText(addressQuery);
-        const cached = readCachedGeocode(addressKey);
-        if (cached) return { ...unit, latitude: cached.lat, longitude: cached.lng };
-        let geocodePromise = geocodeInFlight.get(addressKey);
-        if (!geocodePromise) { geocodePromise = geocodeAddress(addressQuery); geocodeInFlight.set(addressKey, geocodePromise); }
-        const geocoded = await geocodePromise;
-        if (!geocoded) return unit;
-        saveCachedGeocode(addressKey, geocoded.lat, geocoded.lng);
-        return { ...unit, latitude: geocoded.lat, longitude: geocoded.lng };
-      })
-    );
-
-    setAllUnits(unitList);
-    setIsLoading(false);
+      setAllUnits(unitList);
+    } catch (err) {
+      console.error("Erro inesperado ao carregar unidades:", err);
+      toast.error("Erro ao carregar barbearias");
+      setAllUnits([]);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // ── Sort by distance ──
