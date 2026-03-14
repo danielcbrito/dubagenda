@@ -187,15 +187,13 @@ const TravelTimeBadge = ({ travelTime, travelMinutes }: { travelTime: string | n
 
   return (
     <div className="flex flex-col items-center justify-center bg-success/10 border border-success/20 rounded-2xl px-2.5 py-2 min-w-[48px] shrink-0 gap-0.5">
-      <Car className="w-[11px] h-[11px] text-success" />
+      <Footprints className="w-[11px] h-[11px] text-success" />
       <span className="text-[17px] font-bold text-success leading-none font-mono tabular-nums">
         {formatted.value}
       </span>
-      {formatted.unit && (
-        <span className="text-[8px] text-muted-foreground/60 uppercase font-mono">
-          {formatted.unit}
-        </span>
-      )}
+      <span className="text-[8px] text-muted-foreground/70 uppercase font-mono leading-none">
+        {formatted.unit ? `${formatted.unit} a pé` : "a pé"}
+      </span>
     </div>
   );
 };
