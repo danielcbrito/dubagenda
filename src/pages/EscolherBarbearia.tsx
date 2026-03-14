@@ -389,6 +389,34 @@ const EscolherBarbearia = () => {
     requestLocation();
   }, []);
 
+  // ── Watch position for movement >500m ──
+  useEffect(() => {
+    if (locationStatus !== "ready" || !userLocation || !navigator.geolocation) return;
+
+    lastLocationRef.current = userLocation;
+
+    watchIdRef.current = navigator.geolocation.watchPosition(
+      (pos) => {
+        const prev = lastLocationRef.current;
+        if (!prev) return;
+        const moved = haversineKm(prev.lat, prev.lng, pos.coords.latitude, pos.coords.longitude);
+        if (moved > 0.5) {
+          const newLoc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+          lastLocationRef.current = newLoc;
+          setUserLocation(newLoc);
+        }
+      },
+      undefined,
+      { enableHighAccuracy: true, maximumAge: 60000 }
+    );
+
+    return () => {
+      if (watchIdRef.current !== null) {
+        navigator.geolocation.clearWatch(watchIdRef.current);
+      }
+    };
+  }, [locationStatus]);
+
   // ── Load units ──
   const loadUnits = async () => {
     setIsLoading(true);
