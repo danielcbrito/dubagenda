@@ -347,7 +347,7 @@ const EscolherBarbearia = () => {
     const { data: units, error } = await supabase
       .from("tenant_unidades")
       .select(`
-        id, nome, bairro, cidade, estado, is_sede, latitude, longitude, tenant_id,
+        id, nome, rua, numero, cep, bairro, cidade, estado, is_sede, latitude, longitude, tenant_id,
         tenant:tenants!tenant_id (
           id, nome, slug, slogan, logo_url, ativo, onboarding_completed
         )
@@ -363,15 +363,18 @@ const EscolherBarbearia = () => {
     }
 
     let unitList: UnitData[] = (units ?? [])
-      .filter(u => {
+      .filter((u) => {
         const t = u.tenant as unknown as TenantJoin | null;
         return t?.ativo && t?.onboarding_completed;
       })
-      .map(u => {
+      .map((u) => {
         const t = u.tenant as unknown as TenantJoin;
         return {
           id: u.id,
           nome: u.nome,
+          rua: u.rua,
+          numero: u.numero,
+          cep: u.cep,
           bairro: u.bairro,
           cidade: u.cidade,
           estado: u.estado,
@@ -396,15 +399,37 @@ const EscolherBarbearia = () => {
       .is("deleted_at", null);
 
     const activeTenantIds = new Set(
-      (barbers ?? []).map(b => b.tenant_id).filter((tid): tid is string => !!tid)
+      (barbers ?? []).map((b) => b.tenant_id).filter((tid): tid is string => !!tid)
     );
-    const hasGlobalBarbers = (barbers ?? []).some(b => !b.tenant_id);
+    const hasGlobalBarbers = (barbers ?? []).some((b) => !b.tenant_id);
 
-    unitList = unitList.filter(u => {
-      const isDub = normalizeText(u.brandSlug ?? "") === "barbeariadub" || normalizeText(u.brandName) === "barbeariadub";
+    unitList = unitList.filter((u) => {
+      const isDub =
+        normalizeText(u.brandSlug ?? "") === "barbeariadub" ||
+        normalizeText(u.brandName) === "barbeariadub";
+
       if (isDub && hasGlobalBarbers) return true;
       return u.tenant_id ? activeTenantIds.has(u.tenant_id) : false;
     });
+
+    unitList = await Promise.all(
+      unitList.map(async (unit) => {
+        const addressQuery = buildAddressQuery(unit);
+        if (!addressQuery) return unit;
+
+        const addressKey = normalizeText(addressQuery);
+        const cached = readCachedGeocode(addressKey);
+        if (cached) {
+          return { ...unit, latitude: cached.lat, longitude: cached.lng };
+        }
+
+        const geocoded = await geocodeAddress(addressQuery);
+        if (!geocoded) return unit;
+
+        saveCachedGeocode(addressKey, geocoded.lat, geocoded.lng);
+        return { ...unit, latitude: geocoded.lat, longitude: geocoded.lng };
+      })
+    );
 
     setAllUnits(unitList);
     setIsLoading(false);
