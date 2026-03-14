@@ -30,13 +30,13 @@ const Index = () => {
             />
           </motion.div>
 
-          {/* ── Scene 2: Friend — right side, shifted down ── */}
+          {/* ── Scene 2: Friend — right side, overlapping into text area ── */}
           <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.5, delay: 0.7 }}
-            className="self-end"
-            style={{ width: "58%" }}
+            className="self-end -mb-16 relative z-10"
+            style={{ width: "65%" }}
           >
             <img
               src={sceneFriendApp}
@@ -50,8 +50,8 @@ const Index = () => {
 
       {/* ── Fixed bottom: Text + Button ── */}
       <div
-        className="flex-shrink-0 px-6 pb-[calc(env(safe-area-inset-bottom,0px)+20px)] pt-3"
-        style={{ background: "linear-gradient(to top, white 80%, transparent)" }}
+        className="flex-shrink-0 px-6 pb-[calc(env(safe-area-inset-bottom,0px)+20px)] pt-3 relative z-20"
+        style={{ background: "white" }}
       >
         {/* Text */}
         <motion.div
