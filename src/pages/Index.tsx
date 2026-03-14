@@ -1,26 +1,24 @@
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowRight } from "lucide-react";
-import sceneClientSad from "@/assets/scene-client-sad.png";
-import sceneFriendApp from "@/assets/scene-friend-app.png";
+import sceneClientSad from "@/assets/scene-client-sad-transparent.png";
+import sceneFriendApp from "@/assets/scene-friend-app-transparent-clean.png";
 
 const Index = () => {
   const navigate = useNavigate();
 
   return (
     <div className="fixed inset-0 flex flex-col overflow-hidden bg-white">
-
       {/* Scrollable content area */}
       <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
-        <div className="flex flex-col px-5 pt-[calc(env(safe-area-inset-top,0px)+8px)]">
-
-          {/* ── Scene 1: Client sad — top left, bigger ── */}
+        <div className="flex flex-col px-3 pt-[calc(env(safe-area-inset-top,0px)+6px)] pb-2">
+          {/* ── Scene 1: Client sad — top right, bigger ── */}
           <motion.div
-            initial={{ opacity: 0, x: -20 }}
+            initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.5, delay: 0.2 }}
-            className="self-start -mb-4"
-            style={{ width: "62%" }}
+            className="self-end -mb-10"
+            style={{ width: "82%" }}
           >
             <img
               src={sceneClientSad}
@@ -30,13 +28,13 @@ const Index = () => {
             />
           </motion.div>
 
-          {/* ── Scene 2: Friend — right side, overlapping into text area ── */}
+          {/* ── Scene 2: Friend — bottom left, bigger ── */}
           <motion.div
-            initial={{ opacity: 0, x: 20 }}
+            initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.5, delay: 0.7 }}
-            className="self-end mb-2 relative z-10"
-            style={{ width: "65%" }}
+            className="self-start -mt-2"
+            style={{ width: "80%" }}
           >
             <img
               src={sceneFriendApp}
@@ -86,8 +84,7 @@ const Index = () => {
             Encontre o barbeiro{" "}
             <em style={{ fontStyle: "italic" }}>certo</em>
             <br />
-            perto{" "}
-            <span style={{ color: "#E53E3E" }}>de você.</span>
+            perto <span style={{ color: "#E53E3E" }}>de você.</span>
           </h1>
 
           <p
