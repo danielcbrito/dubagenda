@@ -1,25 +1,47 @@
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 import sceneClientSad from "@/assets/scene-client-sad.png";
 import sceneFriendApp from "@/assets/scene-friend-app.png";
 
+const ARTBOARD_WIDTH = 390;
+const ARTBOARD_HEIGHT = 844;
+
 const Index = () => {
   const navigate = useNavigate();
+  const [scale, setScale] = useState(1);
+
+  useEffect(() => {
+    const updateScale = () => {
+      const widthScale = window.innerWidth / ARTBOARD_WIDTH;
+      const heightScale = window.innerHeight / ARTBOARD_HEIGHT;
+      setScale(Math.min(widthScale, heightScale));
+    };
+
+    updateScale();
+    window.addEventListener("resize", updateScale);
+    return () => window.removeEventListener("resize", updateScale);
+  }, []);
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center bg-white">
+    <div className="fixed inset-0 flex items-center justify-center overflow-hidden bg-white">
       <div
-        className="relative w-full h-full overflow-hidden bg-white"
-        style={{ maxWidth: 480 }}
+        className="relative overflow-hidden bg-white"
+        style={{
+          width: ARTBOARD_WIDTH,
+          height: ARTBOARD_HEIGHT,
+          transform: `scale(${scale})`,
+          transformOrigin: "center center",
+        }}
       >
-        {/* Scene 1: Sad client — top left */}
+        {/* Scene 1: Sad client — fixed composition position */}
         <motion.div
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.5, delay: 0.2 }}
-          className="absolute left-5"
-          style={{ top: "calc(env(safe-area-inset-top, 0px) + 8px)", width: "55%", zIndex: 1 }}
+          className="absolute"
+          style={{ top: 28, left: 20, width: 225, zIndex: 1 }}
         >
           <img
             src={sceneClientSad}
@@ -29,13 +51,13 @@ const Index = () => {
           />
         </motion.div>
 
-        {/* Scene 2: Friend with app — right side, vertically centered in top half */}
+        {/* Scene 2: Friend with app — fixed composition position */}
         <motion.div
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.5, delay: 0.7 }}
-          className="absolute right-3"
-          style={{ top: "30%", width: "50%", zIndex: 1 }}
+          className="absolute"
+          style={{ top: 345, right: 22, width: 178, zIndex: 1 }}
         >
           <img
             src={sceneFriendApp}
@@ -45,12 +67,12 @@ const Index = () => {
           />
         </motion.div>
 
-        {/* Footer: Label + Title + CTA — anchored to bottom */}
+        {/* Footer */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 1.0 }}
-          className="absolute bottom-0 left-0 right-0 px-6 pb-[calc(env(safe-area-inset-bottom,0px)+20px)]"
+          className="absolute left-0 right-0 bottom-0 px-5 pb-6"
           style={{ zIndex: 2 }}
         >
           <span
@@ -62,7 +84,7 @@ const Index = () => {
               letterSpacing: "2.5px",
               textTransform: "uppercase" as const,
               display: "block",
-              marginBottom: 6,
+              marginBottom: 8,
             }}
           >
             DUB AGENDA
@@ -72,20 +94,24 @@ const Index = () => {
             style={{
               background: "white",
               borderRadius: "24px 24px 0 0",
-              paddingTop: 8,
+              paddingTop: 6,
               boxShadow: "0 -20px 40px rgba(255,255,255,0.95)",
             }}
-            className="px-6 pb-[calc(env(safe-area-inset-bottom,0px)+20px)] -mx-6"
+            className="pb-2"
           >
-            <div className="flex flex-col items-start gap-1 mb-4">
+            <div className="flex flex-col items-start gap-1 mb-5">
               <h1
                 style={{
                   fontFamily: "'Plus Jakarta Sans', Inter, sans-serif",
                   fontWeight: 900,
-                  fontSize: 27,
+                  fontSize: 54,
                   color: "#111",
-                  lineHeight: 1.18,
+                  lineHeight: 1.03,
                   margin: 0,
+                  letterSpacing: "-1.2px",
+                  transform: "scale(0.5)",
+                  transformOrigin: "top left",
+                  width: "200%",
                 }}
               >
                 Encontre o barbeiro{" "}
@@ -103,6 +129,7 @@ const Index = () => {
                   color: "#aaa",
                   lineHeight: 1.5,
                   margin: 0,
+                  marginTop: -14,
                 }}
               >
                 Agendamento sem ligação, sem espera.
@@ -115,26 +142,29 @@ const Index = () => {
               style={{
                 fontFamily: "'Plus Jakarta Sans', Inter, sans-serif",
                 fontWeight: 700,
-                fontSize: 13,
+                fontSize: 32,
                 color: "#111",
                 background: "transparent",
                 borderRadius: 12,
-                padding: "11px 14px",
+                padding: "22px 28px",
                 border: "1.6px solid #111",
                 cursor: "pointer",
+                transform: "scale(0.5)",
+                transformOrigin: "top left",
+                width: "200%",
               }}
             >
               <span>Encontrar Barbearias</span>
               <span
                 className="flex items-center justify-center"
                 style={{
-                  width: 24,
-                  height: 24,
-                  borderRadius: 7,
+                  width: 48,
+                  height: 48,
+                  borderRadius: 12,
                   background: "#111",
                 }}
               >
-                <ArrowRight className="w-3 h-3 text-white" />
+                <ArrowRight className="w-6 h-6 text-white" />
               </span>
             </button>
           </div>
