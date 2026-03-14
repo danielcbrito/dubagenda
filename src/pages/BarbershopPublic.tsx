@@ -791,35 +791,55 @@ const BarbershopPublic = () => {
         style={{ background: "linear-gradient(to top, hsl(var(--background)) 60%, transparent)" }}
       >
         {isLoggedIn ? (
-          <motion.button
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5 }}
-            onClick={handleJoin}
-            disabled={saving || !!isCurrent}
-            className={cn(
-              "w-full h-[52px] rounded-xl font-semibold text-[14px] tracking-wide",
-              "flex items-center justify-center gap-2",
-              "transition-all duration-200 active:scale-[0.985]",
-              isCurrent
-                ? "bg-card border border-border text-muted-foreground"
-                : "bg-foreground text-background shadow-lg",
-              saving && "opacity-70 pointer-events-none"
+          <div className="flex gap-2.5">
+            {/* Botão Entrar — sempre visível quando logado */}
+            <motion.button
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5 }}
+              onClick={() => navigate("/cliente")}
+              className={cn(
+                "h-[52px] rounded-xl font-semibold text-[13px] tracking-wide",
+                "flex items-center justify-center gap-1.5",
+                "transition-all duration-200 active:scale-[0.985]",
+                isCurrent
+                  ? "flex-1 bg-foreground text-background shadow-lg"
+                  : "flex-shrink-0 px-5 bg-card border border-border text-foreground"
+              )}
+            >
+              <span>Entrar</span>
+              <ArrowRight className="w-4 h-4" />
+            </motion.button>
+
+            {/* Botão Escolher — só quando NÃO é a barbearia atual */}
+            {!isCurrent && (
+              <motion.button
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.55 }}
+                onClick={handleJoin}
+                disabled={saving}
+                className={cn(
+                  "flex-1 h-[52px] rounded-xl font-semibold text-[13px] tracking-wide",
+                  "flex items-center justify-center gap-1.5",
+                  "transition-all duration-200 active:scale-[0.985]",
+                  "bg-foreground text-background shadow-lg",
+                  saving && "opacity-70 pointer-events-none"
+                )}
+              >
+                {saving ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : isDubTenant ? (
+                  "Voltar para DUB"
+                ) : (
+                  <>
+                    <span>Escolher barbearia</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </>
+                )}
+              </motion.button>
             )}
-          >
-            {saving ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : isCurrent ? (
-              "Barbearia atual"
-            ) : isDubTenant ? (
-              "Voltar para DUB"
-            ) : (
-              <>
-                <span>Escolher esta barbearia</span>
-                <ArrowRight className="w-4 h-4" />
-              </>
-            )}
-          </motion.button>
+          </div>
         ) : (
           <div className="flex gap-2.5">
             <motion.button
