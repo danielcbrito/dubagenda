@@ -297,6 +297,8 @@ const EscolherBarbearia = () => {
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [locationStatus, setLocationStatus] = useState<"loading" | "ready" | "unavailable">("loading");
   const [hasAutoOpened, setHasAutoOpened] = useState(false);
+  const lastLocationRef = useRef<{ lat: number; lng: number } | null>(null);
+  const watchIdRef = useRef<number | null>(null);
 
   const isChangeMode = searchParams.get("mode") === "change";
   const shouldOpenCurrent = searchParams.get("open") === "current";
