@@ -10,16 +10,14 @@ const Index = () => {
   return (
     <div className="fixed inset-0 flex flex-col overflow-hidden bg-white">
 
-      {/* ── Top area: both illustrations side by side ── */}
-      <div className="flex-1 min-h-0 relative">
-
-        {/* Boy — top left, smaller */}
+      {/* ── Top area: Scene 1 (sad client) — top left ── */}
+      <div className="flex-shrink-0 px-5 pt-[calc(env(safe-area-inset-top,0px)+8px)]">
         <motion.div
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.5, delay: 0.2 }}
-          className="absolute left-3"
-          style={{ top: "calc(env(safe-area-inset-top, 0px) + 12px)", width: "48%", zIndex: 1 }}
+          className="self-start"
+          style={{ width: "58%" }}
         >
           <img
             src={sceneClientSad}
@@ -28,14 +26,18 @@ const Index = () => {
             draggable={false}
           />
         </motion.div>
+      </div>
 
-        {/* Girl — right side, bigger, overlaps into title area (behind the wall) */}
+      {/* ── Middle: relative container for depth effect ── */}
+      <div className="flex-1 min-h-0 relative">
+
+        {/* Layer 1 (behind): Friend illustration — absolute, right-aligned */}
         <motion.div
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.5, delay: 0.7 }}
-          className="absolute right-2"
-          style={{ top: "calc(env(safe-area-inset-top, 0px) + 60px)", width: "58%", zIndex: 1 }}
+          className="absolute right-4"
+          style={{ top: "-10%", width: "55%", zIndex: 1 }}
         >
           <img
             src={sceneFriendApp}
@@ -45,7 +47,7 @@ const Index = () => {
           />
         </motion.div>
 
-        {/* ── Bottom: Text block (the "wall") ── */}
+        {/* "DUB AGENDA" label — outside white container, directly on screen */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -53,7 +55,6 @@ const Index = () => {
           className="absolute bottom-0 left-0 right-0 px-6 pb-[calc(env(safe-area-inset-bottom,0px)+20px)]"
           style={{ zIndex: 2 }}
         >
-          {/* Label outside white block */}
           <span
             style={{
               fontFamily: "Inter, sans-serif",
@@ -69,77 +70,77 @@ const Index = () => {
             DUB AGENDA
           </span>
 
-          {/* White wall — covers lower body of girl */}
+          {/* White container starts at h1 */}
           <div
             style={{
               background: "white",
               borderRadius: "24px 24px 0 0",
-              paddingTop: 10,
-              boxShadow: "0 -24px 48px rgba(255,255,255,0.97)",
+              paddingTop: 8,
+              boxShadow: "0 -20px 40px rgba(255,255,255,0.95)",
             }}
             className="px-6 pb-[calc(env(safe-area-inset-bottom,0px)+20px)] -mx-6"
           >
             <div className="flex flex-col items-start gap-1 mb-4">
               <h1
-                style={{
-                  fontFamily: "'Plus Jakarta Sans', Inter, sans-serif",
-                  fontWeight: 900,
-                  fontSize: 27,
-                  color: "#111",
-                  lineHeight: 1.18,
-                  margin: 0,
-                }}
-              >
-                Encontre o barbeiro{" "}
-                <em style={{ fontStyle: "italic" }}>certo</em>
-                <br />
-                perto{" "}
-                <span style={{ color: "#E53E3E" }}>de você.</span>
-              </h1>
-
-              <p
-                style={{
-                  fontFamily: "Inter, sans-serif",
-                  fontWeight: 400,
-                  fontSize: 12,
-                  color: "#aaa",
-                  lineHeight: 1.5,
-                  margin: 0,
-                }}
-              >
-                Agendamento sem ligação, sem espera.
-              </p>
-            </div>
-
-            {/* Button */}
-            <button
-              onClick={() => navigate("/escolher-barbearia")}
-              className="w-full flex items-center justify-between active:scale-[0.98] transition-transform"
               style={{
                 fontFamily: "'Plus Jakarta Sans', Inter, sans-serif",
-                fontWeight: 700,
-                fontSize: 13,
+                fontWeight: 900,
+                fontSize: 27,
                 color: "#111",
-                background: "transparent",
-                borderRadius: 12,
-                padding: "11px 14px",
-                border: "1.6px solid #111",
-                cursor: "pointer",
+                lineHeight: 1.18,
+                margin: 0,
               }}
             >
-              <span>Encontrar Barbearias</span>
-              <span
-                className="flex items-center justify-center"
-                style={{
-                  width: 24,
-                  height: 24,
-                  borderRadius: 7,
-                  background: "#111",
-                }}
-              >
-                <ArrowRight className="w-3 h-3 text-white" />
-              </span>
-            </button>
+              Encontre o barbeiro{" "}
+              <em style={{ fontStyle: "italic" }}>certo</em>
+              <br />
+              perto{" "}
+              <span style={{ color: "#E53E3E" }}>de você.</span>
+            </h1>
+
+            <p
+              style={{
+                fontFamily: "Inter, sans-serif",
+                fontWeight: 400,
+                fontSize: 12,
+                color: "#aaa",
+                lineHeight: 1.5,
+                margin: 0,
+              }}
+            >
+              Agendamento sem ligação, sem espera.
+            </p>
+          </div>
+
+          {/* Button */}
+          <button
+            onClick={() => navigate("/escolher-barbearia")}
+            className="w-full flex items-center justify-between active:scale-[0.98] transition-transform"
+            style={{
+              fontFamily: "'Plus Jakarta Sans', Inter, sans-serif",
+              fontWeight: 700,
+              fontSize: 13,
+              color: "#111",
+              background: "transparent",
+              borderRadius: 12,
+              padding: "11px 14px",
+              border: "1.6px solid #111",
+              cursor: "pointer",
+            }}
+          >
+            <span>Encontrar Barbearias</span>
+            <span
+              className="flex items-center justify-center"
+              style={{
+                width: 24,
+                height: 24,
+                borderRadius: 7,
+                background: "#111",
+              }}
+            >
+              <ArrowRight className="w-3 h-3 text-white" />
+            </span>
+          </button>
           </div>
         </motion.div>
       </div>
