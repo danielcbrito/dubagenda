@@ -1,47 +1,25 @@
-import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 import sceneClientSad from "@/assets/scene-client-sad.png";
 import sceneFriendApp from "@/assets/scene-friend-app.png";
 
-const ARTBOARD_WIDTH = 390;
-const ARTBOARD_HEIGHT = 844;
-
 const Index = () => {
   const navigate = useNavigate();
-  const [scale, setScale] = useState(1);
-
-  useEffect(() => {
-    const updateScale = () => {
-      const widthScale = window.innerWidth / ARTBOARD_WIDTH;
-      const heightScale = window.innerHeight / ARTBOARD_HEIGHT;
-      setScale(Math.min(widthScale, heightScale));
-    };
-
-    updateScale();
-    window.addEventListener("resize", updateScale);
-    return () => window.removeEventListener("resize", updateScale);
-  }, []);
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center overflow-hidden bg-white">
+    <div className="fixed inset-0 flex items-center justify-center bg-white">
       <div
-        className="relative overflow-hidden bg-white"
-        style={{
-          width: ARTBOARD_WIDTH,
-          height: ARTBOARD_HEIGHT,
-          transform: `scale(${scale})`,
-          transformOrigin: "center center",
-        }}
+        className="relative w-full h-full overflow-hidden bg-white"
+        style={{ maxWidth: 480 }}
       >
-        {/* Scene 1: Sad client — fixed composition position */}
+        {/* Scene 1: Sad client — top left */}
         <motion.div
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.5, delay: 0.2 }}
-          className="absolute"
-          style={{ top: 28, left: 20, width: 225, zIndex: 1 }}
+          className="absolute left-5"
+          style={{ top: "calc(env(safe-area-inset-top, 0px) + 8px)", width: "55%", zIndex: 1 }}
         >
           <img
             src={sceneClientSad}
@@ -51,13 +29,13 @@ const Index = () => {
           />
         </motion.div>
 
-        {/* Scene 2: Friend with app — fixed composition position */}
+        {/* Scene 2: Friend with app — right side, vertically centered in top half */}
         <motion.div
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.5, delay: 0.7 }}
-          className="absolute"
-          style={{ top: 345, right: 22, width: 178, zIndex: 1 }}
+          className="absolute right-3"
+          style={{ top: "30%", width: "50%", zIndex: 1 }}
         >
           <img
             src={sceneFriendApp}
@@ -67,12 +45,12 @@ const Index = () => {
           />
         </motion.div>
 
-        {/* Footer */}
+        {/* Footer: Label + Title + CTA — anchored to bottom */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 1.0 }}
-          className="absolute left-0 right-0 bottom-0 px-5 pb-6"
+          className="absolute bottom-0 left-0 right-0 px-6 pb-[calc(env(safe-area-inset-bottom,0px)+20px)]"
           style={{ zIndex: 2 }}
         >
           <span
@@ -84,7 +62,7 @@ const Index = () => {
               letterSpacing: "2.5px",
               textTransform: "uppercase" as const,
               display: "block",
-              marginBottom: 8,
+              marginBottom: 6,
             }}
           >
             DUB AGENDA
@@ -94,10 +72,10 @@ const Index = () => {
             style={{
               background: "white",
               borderRadius: "24px 24px 0 0",
-              paddingTop: 6,
+              paddingTop: 8,
               boxShadow: "0 -20px 40px rgba(255,255,255,0.95)",
             }}
-            className="pb-2"
+            className="px-6 pb-[calc(env(safe-area-inset-bottom,0px)+20px)] -mx-6"
           >
             <div className="flex flex-col items-start gap-1 mb-4">
               <h1
