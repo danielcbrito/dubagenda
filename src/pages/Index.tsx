@@ -10,37 +10,40 @@ const Index = () => {
   return (
     <div className="fixed inset-0 flex flex-col overflow-hidden bg-white">
       <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
-        <div className="flex flex-col px-5 pt-[calc(env(safe-area-inset-top,0px)+12px)] pb-32">
+        <div className="flex flex-col px-5 pt-[calc(env(safe-area-inset-top,0px)+16px)] pb-32">
 
-          {/* ── Scene 1: Client sad ── */}
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-            className="flex justify-center mb-2"
-          >
-            <img
-              src={sceneClientSad}
-              alt="Cliente triste sem lugar pra agendar"
-              className="w-[220px] h-auto object-contain"
-              draggable={false}
-            />
-          </motion.div>
+          {/* ── Comic strip: two characters side by side ── */}
+          <div className="flex items-start justify-center gap-2 mb-4">
+            {/* Left — Client sad */}
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+              className="flex-1 max-w-[48%]"
+            >
+              <img
+                src={sceneClientSad}
+                alt="Cliente triste sem lugar pra agendar"
+                className="w-full h-auto object-contain"
+                draggable={false}
+              />
+            </motion.div>
 
-          {/* ── Scene 2: Friend showing app ── */}
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.7 }}
-            className="flex justify-center mb-4"
-          >
-            <img
-              src={sceneFriendApp}
-              alt="Amiga mostrando o app DubAgenda"
-              className="w-[200px] h-auto object-contain"
-              draggable={false}
-            />
-          </motion.div>
+            {/* Right — Friend showing app */}
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.5, delay: 0.7 }}
+              className="flex-1 max-w-[48%]"
+            >
+              <img
+                src={sceneFriendApp}
+                alt="Amiga mostrando o app DubAgenda"
+                className="w-full h-auto object-contain"
+                draggable={false}
+              />
+            </motion.div>
+          </div>
 
           {/* ── Text Section ── */}
           <motion.div
