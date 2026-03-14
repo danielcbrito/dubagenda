@@ -22,17 +22,17 @@ const Index = () => {
           {/* Ambient light system */}
           <AmbientEffects />
 
-          {/* ── Menino triste — ESQUERDA ── */}
+          {/* ── Menino triste — descido para ficar mais "dentro" da tela ── */}
           <motion.div
-            initial={{ opacity: 0, x: -40 }}
+            initial={{ opacity: 0, x: -30 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.6, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
             className="absolute"
             style={{
-              top: "clamp(-2%, -1vh, 1%)",
-              left: "clamp(-22%, -14vw, -10%)",
-              width: "clamp(112%, 128vw, 152%)",
-              height: "clamp(58%, 70vh, 84%)",
+              top: "clamp(6%, 8vh, 12%)",
+              left: "clamp(-14%, -10vw, -6%)",
+              width: "clamp(88%, 100vw, 120%)",
+              height: "clamp(42%, 48vh, 56%)",
               display: "flex",
               alignItems: "flex-start",
               justifyContent: "flex-start",
@@ -45,27 +45,19 @@ const Index = () => {
               className="w-full h-full block"
               style={{ objectFit: "contain", objectPosition: "left top" }}
             />
-            {/* Subtle glow behind character */}
-            <div
-              className="absolute inset-0 pointer-events-none"
-              style={{
-                background: "radial-gradient(ellipse at 35% 40%, hsl(var(--primary) / 0.04) 0%, transparent 60%)",
-                filter: "blur(40px)",
-              }}
-            />
           </motion.div>
 
           {/* ── Menina com celular — DIREITA ── */}
           <motion.div
-            initial={{ opacity: 0, x: 40 }}
+            initial={{ opacity: 0, x: 30 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.6, delay: 0.65, ease: [0.22, 1, 0.36, 1] }}
             className="absolute"
             style={{
-              bottom: "clamp(-8%, -4vh, -2%)",
-              right: "clamp(-24%, -16vw, -12%)",
-              width: "clamp(118%, 134vw, 160%)",
-              height: "clamp(60%, 72vh, 86%)",
+              bottom: "clamp(-4%, -2vh, 0%)",
+              right: "clamp(-16%, -10vw, -6%)",
+              width: "clamp(92%, 106vw, 126%)",
+              height: "clamp(44%, 52vh, 60%)",
               display: "flex",
               alignItems: "flex-end",
               justifyContent: "flex-end",
@@ -77,14 +69,6 @@ const Index = () => {
               draggable={false}
               className="w-full h-full block"
               style={{ objectFit: "contain", objectPosition: "right bottom" }}
-            />
-            {/* Subtle glow behind character */}
-            <div
-              className="absolute inset-0 pointer-events-none"
-              style={{
-                background: "radial-gradient(ellipse at 65% 60%, hsl(var(--gold) / 0.03) 0%, transparent 60%)",
-                filter: "blur(40px)",
-              }}
             />
           </motion.div>
         </div>
@@ -99,7 +83,7 @@ const Index = () => {
           }}
         />
 
-        {/* ═══ FOOTER — title & CTA (untouched) ═══ */}
+        {/* ═══ FOOTER ═══ */}
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
@@ -114,7 +98,7 @@ const Index = () => {
             DUB AGENDA
           </span>
 
-          <div className="flex flex-col items-start gap-1 mb-4">
+          <div className="flex flex-col items-start gap-1 mb-5">
             <h1
               style={{
                 fontFamily: "'Plus Jakarta Sans', Inter, sans-serif",
@@ -136,24 +120,25 @@ const Index = () => {
             </p>
           </div>
 
+          {/* Botão maior e mais impactante */}
           <button
             onClick={() => navigate("/escolher-barbearia")}
-            className="w-full flex items-center justify-between active:scale-[0.98] transition-transform border-foreground text-foreground"
+            className="w-full flex items-center justify-between active:scale-[0.97] transition-all border-foreground text-foreground"
             style={{
               fontFamily: "'Plus Jakarta Sans', Inter, sans-serif",
-              fontWeight: 700, fontSize: 13,
-              background: "transparent", borderRadius: 12,
-              padding: "11px 14px", borderWidth: "1.6px", borderStyle: "solid",
+              fontWeight: 700, fontSize: 15,
+              background: "transparent", borderRadius: 14,
+              padding: "14px 18px", borderWidth: "1.8px", borderStyle: "solid",
               cursor: "pointer",
-              marginBottom: "calc(env(safe-area-inset-bottom, 0px) + 20px)",
+              marginBottom: "calc(env(safe-area-inset-bottom, 0px) + 22px)",
             }}
           >
             <span>Encontrar Barbearias</span>
             <span
               className="flex items-center justify-center bg-foreground"
-              style={{ width: 24, height: 24, borderRadius: 7 }}
+              style={{ width: 28, height: 28, borderRadius: 8 }}
             >
-              <ArrowRight className="w-3 h-3 text-background" />
+              <ArrowRight className="w-3.5 h-3.5 text-background" />
             </span>
           </button>
         </motion.div>
