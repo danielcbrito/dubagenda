@@ -40,7 +40,7 @@ const Index = () => {
           <img
             src={sceneFriendApp}
             alt="Amiga mostrando o app DubAgenda"
-            className="w-full h-auto object-contain"
+            className="w-full h-auto object-contain mix-blend-multiply"
             draggable={false}
           />
         </motion.div>
