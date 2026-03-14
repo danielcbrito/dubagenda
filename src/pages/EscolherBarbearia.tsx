@@ -52,8 +52,13 @@ function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): nu
 }
 
 function kmToMinutes(km: number): number {
-  const speedKmH = 25;
-  return Math.max(1, Math.round((km / speedKmH) * 60 * 1.2));
+  if (km <= 0.2) return 2;
+
+  const averageSpeedKmH = 32;
+  const trafficFactor = km < 2 ? 1.1 : km < 6 ? 1.2 : 1.3;
+  const estimated = (km / averageSpeedKmH) * 60 * trafficFactor;
+
+  return Math.max(2, Math.round(estimated));
 }
 
 function formatTravelTime(minutes: number): { value: string; unit: string } {
