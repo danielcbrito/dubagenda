@@ -468,12 +468,12 @@ const EscolherBarbearia = () => {
       <div className="absolute inset-0" style={{ height: `${sheetTop * 100}%` }}>
         {!isLoading && (
           <DiscoverMap
-            units={filtered}
+            units={searchFilteredUnits}
             userLocation={userLocation}
             selectedId={selectedUnitId}
             onSelectUnit={handleSelectUnit}
             onRecenter={handleRecenter}
-            onBoundsChange={setMapBounds}
+            onBoundsChange={handleBoundsChange}
           />
         )}
       </div>
