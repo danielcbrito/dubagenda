@@ -269,7 +269,7 @@ export default function ClienteBarbearia() {
             transition={{ delay: 0.2, duration: 0.35 }}
           >
             <button
-              onClick={() => navigate(`/b/${barbershop.slug}/unidades`)}
+              onClick={() => navigate(`/b/${barbershop.slug}/unidades${unidadeAtual?.id ? `?current=${unidadeAtual.id}` : ""}`)}
               className={cn(
                 "w-full flex items-center gap-3 px-4 h-14 rounded-2xl",
                 "bg-card border border-border",
