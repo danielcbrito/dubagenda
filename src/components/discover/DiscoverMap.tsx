@@ -294,9 +294,9 @@ export function DiscoverMap({
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
-    const timer = window.setTimeout(() => map.invalidateSize(), 400);
+    const timer = window.setTimeout(() => map.invalidateSize(), 200);
     return () => window.clearTimeout(timer);
-  });
+  }, []);
 
 
   return (

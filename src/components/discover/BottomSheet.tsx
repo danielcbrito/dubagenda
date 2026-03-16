@@ -72,6 +72,7 @@ export function BottomSheet({ children, header, initialSnap = SNAP_MID, onSnapCh
   const viewportHeightRef = useRef(getViewportHeight());
   const currentSnapRef = useRef(initialSnap);
   const currentTranslateYRef = useRef(snapToTranslateY(initialSnap, viewportHeightRef.current));
+  const pendingTranslateYRef = useRef(currentTranslateYRef.current);
   const animationFrameRef = useRef<number | null>(null);
   const gestureRef = useRef<GestureState>(INITIAL_GESTURE);
 
@@ -81,13 +82,15 @@ export function BottomSheet({ children, header, initialSnap = SNAP_MID, onSnapCh
 
     const nextTranslateY = clampTranslateY(translateY, viewportHeightRef.current);
     currentTranslateYRef.current = nextTranslateY;
+    pendingTranslateYRef.current = nextTranslateY;
 
-    if (animationFrameRef.current !== null) {
-      cancelAnimationFrame(animationFrameRef.current);
-    }
+    if (animationFrameRef.current !== null) return;
 
     animationFrameRef.current = requestAnimationFrame(() => {
-      sheet.style.transform = `translate3d(0, ${nextTranslateY}px, 0)`;
+      const nextFrameTranslateY = pendingTranslateYRef.current;
+      if (sheetRef.current) {
+        sheetRef.current.style.transform = `translate3d(0, ${nextFrameTranslateY}px, 0)`;
+      }
       animationFrameRef.current = null;
     });
   }, []);
@@ -173,6 +176,22 @@ export function BottomSheet({ children, header, initialSnap = SNAP_MID, onSnapCh
       startScrollTop: list.scrollTop,
       velocityY: 0,
     };
+  }, []);
+
+  const handoffContentGestureToSheet = useCallback(() => {
+    const gesture = gestureRef.current;
+    const list = listRef.current;
+    if (!gesture.active || !list) return;
+
+    const previousStartY = gesture.startY;
+    const previousStartScrollTop = gesture.startScrollTop;
+    const currentScrollTop = list.scrollTop;
+
+    list.scrollTop = Math.max(0, currentScrollTop);
+    gesture.mode = "sheet";
+    gesture.startTranslateY = currentTranslateYRef.current;
+    gesture.startY = previousStartY + Math.max(0, previousStartScrollTop - currentScrollTop);
+    gesture.startScrollTop = list.scrollTop;
   }, []);
 
   const updateVelocity = useCallback((clientY: number) => {
@@ -283,11 +302,19 @@ export function BottomSheet({ children, header, initialSnap = SNAP_MID, onSnapCh
       gesture.mode = shouldDragSheetFromContent(deltaY) ? "sheet" : "content";
     }
 
-    if (gesture.mode === "content") return;
+    if (gesture.mode === "content") {
+      const deltaY = clientY - gesture.startY;
+      const isPullingDown = deltaY > DRAG_DECISION_PX;
+      const isAtTop = (listRef.current?.scrollTop ?? 0) <= 0.5;
+
+      if (!isPullingDown || !isAtTop) return;
+
+      handoffContentGestureToSheet();
+    }
 
     event.preventDefault();
     dragSheet(clientY, true);
-  }, [dragSheet, shouldDragSheetFromContent, updateVelocity]);
+  }, [dragSheet, handoffContentGestureToSheet, shouldDragSheetFromContent, updateVelocity]);
 
   const handleHandleMouseDown = useCallback((event: ReactMouseEvent<HTMLDivElement>) => {
     event.preventDefault();

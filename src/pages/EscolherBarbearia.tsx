@@ -10,6 +10,7 @@ import { DiscoverMap } from "@/components/discover/DiscoverMap";
 import { DiscoverUnitCard } from "@/components/discover/DiscoverUnitCard";
 import { BottomSheet, SNAP_MID } from "@/components/discover/BottomSheet";
 import { getDiscoverUnitFullName } from "@/components/discover/discoverUnitUtils";
+import { getCache, setCache } from "@/utils/cache";
 import type L from "leaflet";
 
 // ── Types ──
@@ -82,6 +83,8 @@ function normalizeText(value: string): string {
 
 const GEOCODE_CACHE_PREFIX = "unit-geocode-v4:";
 const GEOCODE_CACHE_TTL_MS = 1000 * 60 * 60 * 24 * 30;
+const DISCOVER_UNITS_CACHE_KEY = "discover-units:v1";
+const DISCOVER_UNITS_CACHE_TTL_MINUTES = 10;
 
 interface GeocodeResult {
   lat: number;
@@ -190,29 +193,6 @@ const EscolherBarbearia = () => {
   const shouldOpenCurrent = searchParams.get("open") === "current";
   const isAuthenticated = !!userId;
 
-  // ── Auth check ──
-  useEffect(() => {
-    const init = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        setUserId(session.user.id);
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("barbearia_preferida_id")
-          .eq("id", session.user.id)
-          .single();
-        if (profile?.barbearia_preferida_id) {
-          setCurrentPreferred(profile.barbearia_preferida_id);
-        }
-      } else if (isChangeMode) {
-        navigate("/auth?mode=login");
-        return;
-      }
-      await loadUnits();
-    };
-    init();
-  }, []);
-
   // ── Auto-open ──
   useEffect(() => {
     if (!shouldOpenCurrent || isLoading || hasAutoOpened) return;
@@ -274,110 +254,206 @@ const EscolherBarbearia = () => {
   }, [locationStatus]);
 
   // ── Load units ──
-  const loadUnits = async () => {
-    setIsLoading(true);
-    // Clear stale v3 geocode cache entries
+  const loadUnits = useCallback(async ({ preserveVisible = false }: { preserveVisible?: boolean } = {}) => {
+    const cachedUnits = getCache<UnitData[]>(DISCOVER_UNITS_CACHE_KEY);
+    const hasCachedUnits = Array.isArray(cachedUnits) && cachedUnits.length > 0;
+    const shouldKeepVisible = preserveVisible || hasCachedUnits;
+
+    if (hasCachedUnits && !preserveVisible) {
+      setAllUnits(cachedUnits);
+      setIsLoading(false);
+    } else if (!shouldKeepVisible) {
+      setIsLoading(true);
+    }
+
     try {
-      const keysToRemove: string[] = [];
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key && key.startsWith("unit-geocode-v3:")) keysToRemove.push(key);
+      // Clear stale v3 geocode cache entries
+      try {
+        const keysToRemove: string[] = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && key.startsWith("unit-geocode-v3:")) keysToRemove.push(key);
+        }
+        keysToRemove.forEach((k) => localStorage.removeItem(k));
+      } catch {
+        /* ignore */
       }
-      keysToRemove.forEach((k) => localStorage.removeItem(k));
-    } catch { /* ignore */ }
-    try {
-      const { data: units, error } = await supabase
-        .from("tenant_unidades")
-        .select(`id, nome, rua, numero, cep, bairro, cidade, estado, is_sede, latitude, longitude, tenant_id,
-          tenant:tenants!tenant_id (id, nome, slug, slogan, logo_url, ativo, onboarding_completed)`)
-        .eq("ativo", true);
+
+      const [{ data: units, error }, { data: barbers }] = await Promise.all([
+        supabase
+          .from("tenant_unidades")
+          .select(`id, nome, rua, numero, cep, bairro, cidade, estado, is_sede, latitude, longitude, tenant_id,
+            tenant:tenants!tenant_id (id, nome, slug, slogan, logo_url, ativo, onboarding_completed)`)
+          .eq("ativo", true),
+        supabase
+          .from("barbeiros")
+          .select("id, tenant_id")
+          .eq("ativo", true)
+          .is("deleted_at", null),
+      ]);
 
       if (error) {
-        console.error("Erro ao carregar unidades:", error);
-        toast.error("Erro ao carregar barbearias");
-        setAllUnits([]); setIsLoading(false); return;
-      }
-
-      // Fetch banners via secure RPC
-      const tenantIds = [...new Set((units ?? []).map(u => u.tenant_id).filter(Boolean))];
-      const bannerMap = new Map<string, string>();
-      if (tenantIds.length > 0) {
-        const { data: banners } = await supabase
-          .rpc("get_tenant_banners", { p_tenant_ids: tenantIds });
-        (banners ?? []).forEach((b: { tenant_id: string; banner_url: string }) => {
-          bannerMap.set(b.tenant_id, b.banner_url);
-        });
+        throw error;
       }
 
       let unitList: UnitData[] = (units ?? [])
-        .filter((u) => { const t = u.tenant as unknown as TenantJoin | null; return t?.ativo && t?.onboarding_completed; })
+        .filter((u) => {
+          const t = u.tenant as unknown as TenantJoin | null;
+          return t?.ativo && t?.onboarding_completed;
+        })
         .map((u) => {
           const t = u.tenant as unknown as TenantJoin;
+          const baseUnit: UnitData = {
+            id: u.id,
+            nome: u.nome,
+            rua: u.rua,
+            numero: u.numero,
+            cep: u.cep,
+            bairro: u.bairro,
+            cidade: u.cidade,
+            estado: u.estado,
+            is_sede: u.is_sede ?? false,
+            latitude: u.latitude,
+            longitude: u.longitude,
+            tenant_id: u.tenant_id,
+            brandName: t?.nome ?? u.nome,
+            brandSlug: t?.slug ?? null,
+            brandLogo: t?.logo_url ?? null,
+            bannerUrl: null,
+            distance: null,
+            travelTime: null,
+            travelMinutes: null,
+            travelMode: null,
+          };
+
+          if (baseUnit.latitude !== null && baseUnit.longitude !== null) {
+            return baseUnit;
+          }
+
+          const addressQuery = buildAddressQuery(baseUnit);
+          if (!addressQuery) return baseUnit;
+
+          const cachedGeocode = readCachedGeocode(normalizeText(addressQuery));
+          if (!cachedGeocode) return baseUnit;
+
           return {
-            id: u.id, nome: u.nome, rua: u.rua, numero: u.numero, cep: u.cep,
-            bairro: u.bairro, cidade: u.cidade, estado: u.estado,
-            is_sede: u.is_sede ?? false, latitude: u.latitude, longitude: u.longitude,
-            tenant_id: u.tenant_id, brandName: t?.nome ?? u.nome,
-            brandSlug: t?.slug ?? null, brandLogo: t?.logo_url ?? null,
-            bannerUrl: bannerMap.get(u.tenant_id) ?? null,
-            distance: null, travelTime: null, travelMinutes: null, travelMode: null,
+            ...baseUnit,
+            latitude: cachedGeocode.lat,
+            longitude: cachedGeocode.lng,
           };
         });
 
-      // Filter by active barbers
-      const { data: barbers } = await supabase
-        .from("barbeiros").select("id, tenant_id").eq("ativo", true).is("deleted_at", null);
       const activeTenantIds = new Set((barbers ?? []).map((b) => b.tenant_id).filter((tid): tid is string => !!tid));
       const hasGlobalBarbers = (barbers ?? []).some((b) => !b.tenant_id);
+
       unitList = unitList.filter((u) => {
         const isDub = normalizeText(u.brandSlug ?? "") === "barbeariadub" || normalizeText(u.brandName) === "barbeariadub";
         if (isDub && hasGlobalBarbers) return true;
         return u.tenant_id ? activeTenantIds.has(u.tenant_id) : false;
       });
 
-      // Geocode using exact address components when available
-      const geocodeInFlight = new Map<string, Promise<GeocodeResult | null>>();
-      unitList = await Promise.all(
-        unitList.map(async (unit) => {
-          try {
-            // Only geocode units that DON'T have coordinates in the database
-            if (unit.latitude !== null && unit.longitude !== null) return unit;
-
-            const addressQuery = buildAddressQuery(unit);
-            if (!addressQuery) return unit;
-
-            const addressKey = normalizeText(addressQuery);
-            const cached = readCachedGeocode(addressKey);
-            if (cached) {
-              return { ...unit, latitude: cached.lat, longitude: cached.lng };
-            }
-
-            let geocodePromise = geocodeInFlight.get(addressKey);
-            if (!geocodePromise) {
-              geocodePromise = geocodeAddress(unit);
-              geocodeInFlight.set(addressKey, geocodePromise);
-            }
-
-            const geocoded = await geocodePromise;
-            if (!geocoded) return unit;
-
-            saveCachedGeocode(addressKey, geocoded);
-            return { ...unit, latitude: geocoded.lat, longitude: geocoded.lng };
-          } catch {
-            return unit;
-          }
-        })
-      );
-
       setAllUnits(unitList);
+      setCache(DISCOVER_UNITS_CACHE_KEY, unitList, DISCOVER_UNITS_CACHE_TTL_MINUTES);
+      setIsLoading(false);
+
+      const tenantIds = [...new Set(unitList.map((unit) => unit.tenant_id).filter(Boolean))];
+      const geocodeInFlight = new Map<string, Promise<GeocodeResult | null>>();
+
+      const [bannerResponse, geocodedUnits] = await Promise.all([
+        tenantIds.length > 0
+          ? supabase.rpc("get_tenant_banners", { p_tenant_ids: tenantIds })
+          : Promise.resolve({ data: [] as Array<{ tenant_id: string; banner_url: string }> | null }),
+        Promise.all(
+          unitList.map(async (unit) => {
+            try {
+              if (unit.latitude !== null && unit.longitude !== null) return unit;
+
+              const addressQuery = buildAddressQuery(unit);
+              if (!addressQuery) return unit;
+
+              const addressKey = normalizeText(addressQuery);
+              let geocodePromise = geocodeInFlight.get(addressKey);
+              if (!geocodePromise) {
+                geocodePromise = geocodeAddress(unit);
+                geocodeInFlight.set(addressKey, geocodePromise);
+              }
+
+              const geocoded = await geocodePromise;
+              if (!geocoded) return unit;
+
+              saveCachedGeocode(addressKey, geocoded);
+              return { ...unit, latitude: geocoded.lat, longitude: geocoded.lng };
+            } catch {
+              return unit;
+            }
+          })
+        ),
+      ]);
+
+      const bannerMap = new Map<string, string>();
+      (bannerResponse.data ?? []).forEach((banner: { tenant_id: string; banner_url: string }) => {
+        bannerMap.set(banner.tenant_id, banner.banner_url);
+      });
+
+      const enrichedUnits = geocodedUnits.map((unit) => ({
+        ...unit,
+        bannerUrl: bannerMap.get(unit.tenant_id) ?? unit.bannerUrl,
+      }));
+
+      setAllUnits(enrichedUnits);
+      setCache(DISCOVER_UNITS_CACHE_KEY, enrichedUnits, DISCOVER_UNITS_CACHE_TTL_MINUTES);
     } catch (err) {
       console.error("Erro inesperado ao carregar unidades:", err);
       toast.error("Erro ao carregar barbearias");
-      setAllUnits([]);
+      if (!shouldKeepVisible) {
+        setAllUnits([]);
+      }
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
+
+  // ── Auth check ──
+  useEffect(() => {
+    const init = async () => {
+      const cachedUnits = getCache<UnitData[]>(DISCOVER_UNITS_CACHE_KEY);
+      const hasCachedUnits = Array.isArray(cachedUnits) && cachedUnits.length > 0;
+
+      if (hasCachedUnits) {
+        setAllUnits(cachedUnits);
+        setIsLoading(false);
+      }
+
+      const { data: { session } } = await supabase.auth.getSession();
+
+      if (session) {
+        setUserId(session.user.id);
+
+        const loadPromise = loadUnits({ preserveVisible: hasCachedUnits });
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("barbearia_preferida_id")
+          .eq("id", session.user.id)
+          .single();
+
+        if (profile?.barbearia_preferida_id) {
+          setCurrentPreferred(profile.barbearia_preferida_id);
+        }
+
+        await loadPromise;
+        return;
+      }
+
+      if (isChangeMode) {
+        navigate("/auth?mode=login");
+        return;
+      }
+
+      await loadUnits({ preserveVisible: hasCachedUnits });
+    };
+
+    void init();
+  }, [isChangeMode, loadUnits, navigate]);
 
   // ── Sort by distance ──
   const sortedUnits = useMemo(() => {
@@ -476,18 +552,6 @@ const EscolherBarbearia = () => {
     if (!bounds.isValid()) return;
     setMapReady(true);
     setMapBounds(bounds);
-  }, []);
-
-  // Clear stale geocode cache on mount to use fresh DB coordinates
-  useEffect(() => {
-    try {
-      const keysToRemove: string[] = [];
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key?.startsWith(GEOCODE_CACHE_PREFIX)) keysToRemove.push(key);
-      }
-      keysToRemove.forEach((k) => localStorage.removeItem(k));
-    } catch { /* ignore */ }
   }, []);
 
   // ── Select unit syncs map ↔ list ──
