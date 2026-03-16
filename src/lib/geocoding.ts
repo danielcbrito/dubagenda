@@ -16,12 +16,14 @@ export interface GeocodeResult {
   score?: number | null;
 }
 
-export const FRONTEND_GEOCODE_CACHE_PREFIX = "unit-geocode-v7:";
+export const FRONTEND_GEOCODE_CACHE_PREFIX = "unit-geocode-v9:";
 export const LEGACY_GEOCODE_CACHE_PREFIXES = [
   "unit-geocode-v3:",
   "unit-geocode-v4:",
   "unit-geocode-v5:",
   "unit-geocode-v6:",
+  "unit-geocode-v7:",
+  "unit-geocode-v8:",
 ] as const;
 
 const GEOCODE_CACHE_TTL_MS = 1000 * 60 * 60 * 24 * 30;
@@ -168,12 +170,12 @@ export function pickResolvedCoordinates(
   stored: { lat: number; lng: number } | null,
   cached: GeocodeResult | null,
 ): { lat: number; lng: number } | null {
-  if (isHighConfidenceGeocodeResult(cached)) {
-    return { lat: cached.lat, lng: cached.lng };
-  }
-
   if (stored) {
     return stored;
+  }
+
+  if (isHighConfidenceGeocodeResult(cached)) {
+    return { lat: cached.lat, lng: cached.lng };
   }
 
   if (cached) {
@@ -188,10 +190,9 @@ export function shouldPreferGeocodedCoordinates(
   geocoded: GeocodeResult,
   minimumDistanceKm = 0.05,
 ): boolean {
-  if (!stored) return true;
-  if (!isHighConfidenceGeocodeResult(geocoded)) return false;
-
-  return haversineKm(stored.lat, stored.lng, geocoded.lat, geocoded.lng) > minimumDistanceKm;
+  void geocoded;
+  void minimumDistanceKm;
+  return !stored;
 }
 
 export function clearLegacyGeocodeCaches(discoverCacheKeys: string[] = []): void {

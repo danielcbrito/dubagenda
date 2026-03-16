@@ -85,9 +85,9 @@ function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): nu
 const WALKING_THRESHOLD_KM = 1.5;
 const WALKING_SPEED_KMH = 4.8;
 const DRIVING_SPEED_KMH = 25;
-const DISCOVER_UNITS_CACHE_KEY = "discover-units:v4";
+const DISCOVER_UNITS_CACHE_KEY = "discover-units:v6";
 const DISCOVER_UNITS_CACHE_TTL_MINUTES = 10;
-const DISCOVER_CACHE_KEYS_TO_CLEAR = ["discover-units:v1", "discover-units:v2", "discover-units:v3"];
+const DISCOVER_CACHE_KEYS_TO_CLEAR = ["discover-units:v1", "discover-units:v2", "discover-units:v3", "discover-units:v4", "discover-units:v5"];
 
 function kmToMinutes(km: number, mode: "walking" | "driving"): number {
   const speed = mode === "walking" ? WALKING_SPEED_KMH : DRIVING_SPEED_KMH;
