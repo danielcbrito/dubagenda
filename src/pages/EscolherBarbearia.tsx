@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Search, SearchX, X } from "lucide-react";
+import { Search, SearchX, X, Map as MapIcon, Satellite, Locate } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -178,6 +178,7 @@ const EscolherBarbearia = () => {
   const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null);
   const [mapBounds, setMapBounds] = useState<L.LatLngBounds | null>(null);
   const [mapReady, setMapReady] = useState(false);
+  const [mapStyle, setMapStyle] = useState<"satellite" | "street">("satellite");
   const lastLocationRef = useRef<{ lat: number; lng: number } | null>(null);
   const watchIdRef = useRef<number | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
@@ -500,10 +501,17 @@ const EscolherBarbearia = () => {
   }, []);
 
   // ── Sheet drag handlers ──
+  const velocityRef = useRef(0);
+  const lastMoveY = useRef(0);
+  const lastMoveTime = useRef(0);
+
   const handleDragStart = useCallback((clientY: number) => {
     isDragging.current = true;
     dragStartY.current = clientY;
     dragStartTop.current = sheetTop;
+    lastMoveY.current = clientY;
+    lastMoveTime.current = Date.now();
+    velocityRef.current = 0;
   }, [sheetTop]);
 
   const handleDragMove = useCallback((clientY: number) => {
@@ -511,13 +519,34 @@ const EscolherBarbearia = () => {
     const vh = window.innerHeight;
     const deltaRatio = (clientY - dragStartY.current) / vh;
     const newTop = Math.max(SHEET_SNAP_TOP, Math.min(SHEET_SNAP_BOTTOM, dragStartTop.current + deltaRatio));
+    // Track velocity
+    const now = Date.now();
+    const dt = now - lastMoveTime.current;
+    if (dt > 0) {
+      velocityRef.current = (clientY - lastMoveY.current) / dt; // px/ms
+    }
+    lastMoveY.current = clientY;
+    lastMoveTime.current = now;
     setSheetTop(newTop);
   }, []);
 
   const handleDragEnd = useCallback(() => {
     isDragging.current = false;
-    // Snap to closest
+    const v = velocityRef.current; // px/ms, positive = dragging down
     const snaps = [SHEET_SNAP_TOP, SHEET_SNAP_MID, SHEET_SNAP_BOTTOM];
+
+    // Fling: if fast enough, go to next snap in direction
+    if (Math.abs(v) > 0.4) {
+      const direction = v > 0 ? 1 : -1; // 1 = down (collapse), -1 = up (expand)
+      const candidates = snaps.filter((s) => (direction > 0 ? s > sheetTop + 0.02 : s < sheetTop - 0.02));
+      if (candidates.length > 0) {
+        const target = direction > 0 ? Math.min(...candidates) : Math.max(...candidates);
+        setSheetTop(target);
+        return;
+      }
+    }
+
+    // Otherwise snap to closest
     const closest = snaps.reduce((prev, curr) =>
       Math.abs(curr - sheetTop) < Math.abs(prev - sheetTop) ? curr : prev
     );
@@ -564,8 +593,38 @@ const EscolherBarbearia = () => {
             onSelectUnit={handleSelectUnit}
             onRecenter={handleRecenter}
             onBoundsChange={handleBoundsChange}
+            mapStyle={mapStyle}
           />
         )}
+      </div>
+
+      {/* ═══ Map controls — float above sheet ═══ */}
+      <div
+        className="absolute right-3 z-[550] flex flex-col items-center gap-2"
+        style={{
+          top: `calc(${sheetTop * 100}% - 6.5rem)`,
+          transition: isDragging.current ? "none" : "top 0.35s cubic-bezier(0.32, 0.72, 0, 1)",
+        }}
+      >
+        {userLocation && (
+          <button
+            onClick={handleRecenter}
+            className="flex h-10 w-10 items-center justify-center rounded-full border border-border/60 bg-card/95 shadow-lg backdrop-blur-sm transition-transform active:scale-90"
+          >
+            <Locate className="h-[17px] w-[17px] text-foreground" />
+          </button>
+        )}
+        <button
+          onClick={() => setMapStyle((prev) => (prev === "satellite" ? "street" : "satellite"))}
+          className="flex h-10 w-10 items-center justify-center rounded-full border border-border/60 bg-card/95 shadow-lg backdrop-blur-sm transition-transform active:scale-90"
+          title={mapStyle === "satellite" ? "Ver mapa" : "Ver satélite"}
+        >
+          {mapStyle === "satellite" ? (
+            <MapIcon className="h-[17px] w-[17px] text-foreground" />
+          ) : (
+            <Satellite className="h-[17px] w-[17px] text-foreground" />
+          )}
+        </button>
       </div>
 
       {/* ═══ Draggable sheet ═══ */}
@@ -610,9 +669,31 @@ const EscolherBarbearia = () => {
           className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 pb-8"
           onScroll={(e) => {
             const el = e.currentTarget;
+            // Expand sheet when scrolling down
             if (el.scrollTop > 30 && sheetTop > SHEET_SNAP_TOP) {
               setSheetTop(SHEET_SNAP_TOP);
             }
+          }}
+          onTouchStart={(e) => {
+            // Track touch on list to allow pull-down-to-collapse
+            const el = listRef.current;
+            if (el && el.scrollTop <= 0) {
+              handleDragStart(e.touches[0].clientY);
+            }
+          }}
+          onTouchMove={(e) => {
+            const el = listRef.current;
+            // Only drag sheet if list is at top and pulling down
+            if (el && el.scrollTop <= 0 && isDragging.current) {
+              const deltaY = e.touches[0].clientY - dragStartY.current;
+              if (deltaY > 0) {
+                e.preventDefault();
+                handleDragMove(e.touches[0].clientY);
+              }
+            }
+          }}
+          onTouchEnd={() => {
+            if (isDragging.current) handleDragEnd();
           }}
         >
           {isLoading ? (

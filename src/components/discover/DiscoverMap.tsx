@@ -1,5 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Map as MapIcon, Satellite } from "lucide-react";
+import { useEffect, useMemo, useRef } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import {
@@ -40,6 +39,7 @@ interface DiscoverMapProps {
   onSelectUnit: (id: string) => void;
   onRecenter: () => void;
   onBoundsChange?: (bounds: L.LatLngBounds) => void;
+  mapStyle: "satellite" | "street";
 }
 
 function buildClientIcon() {
@@ -110,13 +110,13 @@ export function DiscoverMap({
   onSelectUnit,
   onRecenter,
   onBoundsChange,
+  mapStyle,
 }: DiscoverMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
   const markersRef = useRef<Map<string, L.Marker>>(new Map());
   const userMarkerRef = useRef<L.CircleMarker | null>(null);
   const tileLayerRef = useRef<L.TileLayer | null>(null);
-  const [mapStyle, setMapStyle] = useState<"satellite" | "street">("satellite");
 
   const mappableUnits = useMemo(
     () =>
@@ -302,45 +302,6 @@ export function DiscoverMap({
   return (
     <div className="relative h-full w-full">
       <div ref={containerRef} className="h-full w-full z-0" />
-
-      {/* ── Right-side controls ── */}
-      <div className="absolute right-3 bottom-6 z-[700] flex flex-col items-center gap-2.5">
-        {/* Recenter */}
-        {userLocation && (
-          <button
-            onClick={handleRecenter}
-            className="flex h-10 w-10 items-center justify-center rounded-full border border-border/60 bg-card/95 shadow-lg backdrop-blur-sm transition-transform active:scale-90"
-          >
-            <svg
-              width="17"
-              height="17"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="text-foreground"
-            >
-              <circle cx="12" cy="12" r="3" />
-              <path d="M12 2v4M12 18v4M2 12h4M18 12h4" />
-            </svg>
-          </button>
-        )}
-
-        {/* Map style toggle — cycles between street and satellite */}
-        <button
-          onClick={() => setMapStyle((prev) => (prev === "satellite" ? "street" : "satellite"))}
-          className="flex h-10 w-10 items-center justify-center rounded-full border border-border/60 bg-card/95 shadow-lg backdrop-blur-sm transition-transform active:scale-90"
-          title={mapStyle === "satellite" ? "Ver mapa" : "Ver satélite"}
-        >
-          {mapStyle === "satellite" ? (
-            <MapIcon className="h-[17px] w-[17px] text-foreground" />
-          ) : (
-            <Satellite className="h-[17px] w-[17px] text-foreground" />
-          )}
-        </button>
-      </div>
     </div>
   );
 }
