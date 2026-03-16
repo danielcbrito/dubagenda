@@ -339,7 +339,7 @@ const EscolherBarbearia = () => {
 
             const addressKey = normalizeText(addressQuery);
             const cached = readCachedGeocode(addressKey);
-            if (cached && (cached.exact || unit.latitude === null || unit.longitude === null)) {
+            if (cached) {
               return { ...unit, latitude: cached.lat, longitude: cached.lng };
             }
 
@@ -353,12 +353,7 @@ const EscolherBarbearia = () => {
             if (!geocoded) return unit;
 
             saveCachedGeocode(addressKey, geocoded);
-
-            if (geocoded.exact || unit.latitude === null || unit.longitude === null) {
-              return { ...unit, latitude: geocoded.lat, longitude: geocoded.lng };
-            }
-
-            return unit;
+            return { ...unit, latitude: geocoded.lat, longitude: geocoded.lng };
           } catch {
             return unit;
           }
