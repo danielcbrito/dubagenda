@@ -16,14 +16,16 @@ export interface GeocodeResult {
   score?: number | null;
 }
 
-export const FRONTEND_GEOCODE_CACHE_PREFIX = "unit-geocode-v6:";
+export const FRONTEND_GEOCODE_CACHE_PREFIX = "unit-geocode-v7:";
 export const LEGACY_GEOCODE_CACHE_PREFIXES = [
   "unit-geocode-v3:",
   "unit-geocode-v4:",
   "unit-geocode-v5:",
+  "unit-geocode-v6:",
 ] as const;
 
 const GEOCODE_CACHE_TTL_MS = 1000 * 60 * 60 * 24 * 30;
+const HIGH_CONFIDENCE_GEOCODE_SCORE = 110;
 const BRAZIL_COORDINATE_BOUNDS = {
   minLat: -35.5,
   maxLat: 5.5,
@@ -152,11 +154,21 @@ export function saveCachedGeocode(addressKey: string, result: GeocodeResult): vo
   }
 }
 
+export function isHighConfidenceGeocodeResult(
+  result: GeocodeResult | null | undefined,
+): boolean {
+  return Boolean(
+    result &&
+      (result.exact === true ||
+        (typeof result.score === "number" && result.score >= HIGH_CONFIDENCE_GEOCODE_SCORE)),
+  );
+}
+
 export function pickResolvedCoordinates(
   stored: { lat: number; lng: number } | null,
   cached: GeocodeResult | null,
 ): { lat: number; lng: number } | null {
-  if (cached?.exact) {
+  if (isHighConfidenceGeocodeResult(cached)) {
     return { lat: cached.lat, lng: cached.lng };
   }
 
@@ -177,7 +189,7 @@ export function shouldPreferGeocodedCoordinates(
   minimumDistanceKm = 0.05,
 ): boolean {
   if (!stored) return true;
-  if (!geocoded.exact) return false;
+  if (!isHighConfidenceGeocodeResult(geocoded)) return false;
 
   return haversineKm(stored.lat, stored.lng, geocoded.lat, geocoded.lng) > minimumDistanceKm;
 }
