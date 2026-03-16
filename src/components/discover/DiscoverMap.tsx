@@ -114,6 +114,8 @@ export function DiscoverMap({
   const mapRef = useRef<L.Map | null>(null);
   const markersRef = useRef<Map<string, L.Marker>>(new Map());
   const userMarkerRef = useRef<L.CircleMarker | null>(null);
+  const tileLayerRef = useRef<L.TileLayer | null>(null);
+  const [mapStyle, setMapStyle] = useState<"satellite" | "street">("satellite");
 
   const mappableUnits = useMemo(
     () =>
