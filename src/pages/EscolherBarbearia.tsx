@@ -22,6 +22,12 @@ interface TenantJoin {
   logo_url: string | null;
   ativo: boolean;
   onboarding_completed: boolean;
+  rua: string | null;
+  numero: string | null;
+  bairro: string | null;
+  cidade: string | null;
+  estado: string | null;
+  endereco_completo: string | null;
 }
 
 interface UnitData {
@@ -40,6 +46,12 @@ interface UnitData {
   brandName: string;
   brandSlug: string | null;
   brandLogo: string | null;
+  tenantRua: string | null;
+  tenantNumero: string | null;
+  tenantBairro: string | null;
+  tenantCidade: string | null;
+  tenantEstado: string | null;
+  tenantEnderecoCompleto: string | null;
   bannerUrl: string | null;
   distance: number | null;
   travelTime: string | null;
@@ -61,6 +73,22 @@ function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): nu
 const WALKING_THRESHOLD_KM = 1.5;
 const WALKING_SPEED_KMH = 4.8;
 const DRIVING_SPEED_KMH = 25;
+const GEOCODE_CACHE_PREFIX = "unit-geocode-v5:";
+const GEOCODE_CACHE_TTL_MS = 1000 * 60 * 60 * 24 * 30;
+const DISCOVER_UNITS_CACHE_KEY = "discover-units:v2";
+const DISCOVER_UNITS_CACHE_TTL_MINUTES = 10;
+const BRAZIL_COORDINATE_BOUNDS = {
+  minLat: -35.5,
+  maxLat: 5.5,
+  minLng: -74.5,
+  maxLng: -28,
+};
+
+interface GeocodeResult {
+  lat: number;
+  lng: number;
+  exact: boolean;
+}
 
 function kmToMinutes(km: number, mode: "walking" | "driving"): number {
   const speed = mode === "walking" ? WALKING_SPEED_KMH : DRIVING_SPEED_KMH;
@@ -81,27 +109,54 @@ function normalizeText(value: string): string {
     .toLowerCase();
 }
 
-const GEOCODE_CACHE_PREFIX = "unit-geocode-v4:";
-const GEOCODE_CACHE_TTL_MS = 1000 * 60 * 60 * 24 * 30;
-const DISCOVER_UNITS_CACHE_KEY = "discover-units:v1";
-const DISCOVER_UNITS_CACHE_TTL_MINUTES = 10;
-
-interface GeocodeResult {
-  lat: number;
-  lng: number;
-  exact: boolean;
+function buildAddressParts(unit: Pick<UnitData, "rua" | "numero" | "bairro" | "cidade" | "estado" | "cep" | "tenantRua" | "tenantNumero" | "tenantBairro" | "tenantCidade" | "tenantEstado">) {
+  return {
+    street: unit.rua?.trim() || unit.tenantRua?.trim() || null,
+    number: unit.numero?.trim() || unit.tenantNumero?.trim() || null,
+    neighborhood: unit.bairro?.trim() || unit.tenantBairro?.trim() || null,
+    city: unit.cidade?.trim() || unit.tenantCidade?.trim() || null,
+    state: unit.estado?.trim() || unit.tenantEstado?.trim() || null,
+    postalCode: unit.cep?.trim() || null,
+  };
 }
 
 function buildAddressQuery(unit: UnitData): string | null {
-  const parts = [unit.rua, unit.numero, unit.bairro, unit.cidade, unit.estado, unit.cep, "Brasil"]
-    .map((part) => part?.trim())
-    .filter((part): part is string => !!part && part.length > 0);
-  if (parts.length < 3) return null;
-  return parts.join(", ");
+  const { street, number, neighborhood, city, state, postalCode } = buildAddressParts(unit);
+  if (!street || !city) return null;
+
+  return [street, number, neighborhood, city, state, postalCode, "Brasil"]
+    .filter((part): part is string => Boolean(part && part.length > 0))
+    .join(", ");
 }
 
 function hasPreciseAddress(unit: UnitData): boolean {
-  return !!unit.rua?.trim() && !!unit.numero?.trim() && !!unit.cidade?.trim();
+  const { street, number, city, state } = buildAddressParts(unit);
+  return Boolean(street && number && city && state);
+}
+
+function isValidBrazilCoordinatePair(lat: number, lng: number) {
+  return (
+    lat >= BRAZIL_COORDINATE_BOUNDS.minLat &&
+    lat <= BRAZIL_COORDINATE_BOUNDS.maxLat &&
+    lng >= BRAZIL_COORDINATE_BOUNDS.minLng &&
+    lng <= BRAZIL_COORDINATE_BOUNDS.maxLng
+  );
+}
+
+function resolveStoredCoordinates(latitude: number | null, longitude: number | null) {
+  if (typeof latitude !== "number" || typeof longitude !== "number") {
+    return null;
+  }
+
+  if (isValidBrazilCoordinatePair(latitude, longitude)) {
+    return { lat: latitude, lng: longitude };
+  }
+
+  if (isValidBrazilCoordinatePair(longitude, latitude)) {
+    return { lat: longitude, lng: latitude };
+  }
+
+  return null;
 }
 
 function readCachedGeocode(addressKey: string): GeocodeResult | null {
@@ -126,12 +181,16 @@ function saveCachedGeocode(addressKey: string, result: GeocodeResult) {
       `${GEOCODE_CACHE_PREFIX}${addressKey}`,
       JSON.stringify({ ...result, savedAt: Date.now() })
     );
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 }
 
 async function geocodeAddress(unit: UnitData): Promise<GeocodeResult | null> {
   const addressQuery = buildAddressQuery(unit);
   if (!addressQuery) return null;
+
+  const addressParts = buildAddressParts(unit);
 
   try {
     const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
@@ -145,13 +204,24 @@ async function geocodeAddress(unit: UnitData): Promise<GeocodeResult | null> {
         Authorization: `Bearer ${anonKey}`,
         apikey: anonKey,
       },
-      body: JSON.stringify({ address: addressQuery }),
+      body: JSON.stringify({
+        address: addressQuery,
+        components: {
+          rua: addressParts.street,
+          numero: addressParts.number,
+          bairro: addressParts.neighborhood,
+          cidade: addressParts.city,
+          estado: addressParts.state,
+          cep: addressParts.postalCode,
+        },
+      }),
     });
 
     if (!response.ok) return null;
 
     const data = await response.json();
     if (data.lat == null || data.lng == null) return null;
+    if (!isValidBrazilCoordinatePair(data.lat, data.lng)) return null;
 
     return {
       lat: data.lat,

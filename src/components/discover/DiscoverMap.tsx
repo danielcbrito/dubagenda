@@ -4,7 +4,7 @@ import "leaflet/dist/leaflet.css";
 import {
   getCoordinateGroupKey,
   getDiscoverUnitDisplayName,
-  offsetDuplicateCoordinate,
+  getDuplicateMarkerPixelOffset,
 } from "./discoverUnitUtils";
 
 function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
