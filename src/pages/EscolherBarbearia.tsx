@@ -215,19 +215,7 @@ const EscolherBarbearia = () => {
     }
 
     try {
-      try {
-        const localStorageKeysToRemove: string[] = [];
-        for (let i = 0; i < localStorage.length; i++) {
-          const key = localStorage.key(i);
-          if (key && (key.startsWith("unit-geocode-v3:") || key.startsWith("unit-geocode-v4:"))) {
-            localStorageKeysToRemove.push(key);
-          }
-        }
-        localStorageKeysToRemove.forEach((key) => localStorage.removeItem(key));
-        sessionStorage.removeItem("discover-units:v1");
-      } catch {
-        /* ignore */
-      }
+      clearLegacyGeocodeCaches(DISCOVER_CACHE_KEYS_TO_CLEAR);
 
       const [{ data: units, error }, { data: barbers }] = await Promise.all([
         supabase
