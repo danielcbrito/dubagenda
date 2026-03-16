@@ -294,28 +294,15 @@ const EscolherBarbearia = () => {
         setAllUnits([]); setIsLoading(false); return;
       }
 
-      // Fetch banners: tenant owner_user_id → profiles.banner_url
-      const tenantIds = [...new Set((units ?? []).map(u => (u.tenant as unknown as TenantJoin)?.id).filter(Boolean))];
+      // Fetch banners via secure RPC
+      const tenantIds = [...new Set((units ?? []).map(u => u.tenant_id).filter(Boolean))];
       const bannerMap = new Map<string, string>();
       if (tenantIds.length > 0) {
-        const { data: tenantOwners } = await supabase
-          .from("tenants")
-          .select("id, owner_user_id")
-          .in("id", tenantIds);
-        if (tenantOwners && tenantOwners.length > 0) {
-          const ownerIds = tenantOwners.map(t => t.owner_user_id).filter(Boolean);
-          const { data: profiles } = await supabase
-            .from("profiles")
-            .select("id, banner_url")
-            .in("id", ownerIds)
-            .not("banner_url", "is", null);
-          const ownerBannerMap = new Map<string, string>();
-          (profiles ?? []).forEach(p => { if (p.banner_url) ownerBannerMap.set(p.id, p.banner_url); });
-          tenantOwners.forEach(t => {
-            const b = ownerBannerMap.get(t.owner_user_id);
-            if (b) bannerMap.set(t.id, b);
-          });
-        }
+        const { data: banners } = await supabase
+          .rpc("get_tenant_banners", { p_tenant_ids: tenantIds });
+        (banners ?? []).forEach((b: { tenant_id: string; banner_url: string }) => {
+          bannerMap.set(b.tenant_id, b.banner_url);
+        });
       }
 
       let unitList: UnitData[] = (units ?? [])
