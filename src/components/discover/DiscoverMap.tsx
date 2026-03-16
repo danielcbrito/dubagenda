@@ -202,13 +202,10 @@ export function DiscoverMap({
     }
 
     if (userLocation) {
-      userMarkerRef.current = L.circleMarker([userLocation.lat, userLocation.lng], {
-        radius: 8,
-        fillColor: "hsl(var(--primary))",
-        fillOpacity: 1,
-        color: "hsl(var(--background))",
-        weight: 3,
-      }).addTo(map);
+      userMarkerRef.current = L.marker([userLocation.lat, userLocation.lng], {
+        icon: buildClientIcon(),
+        zIndexOffset: 1000,
+      }).addTo(map) as unknown as L.CircleMarker;
     }
   }, [userLocation]);
 
