@@ -9,6 +9,7 @@ interface UnitCardData {
   brandName: string;
   brandLogo: string | null;
   brandSlug: string | null;
+  bannerUrl: string | null;
   bairro: string | null;
   cidade: string | null;
   rua: string | null;
@@ -43,6 +44,7 @@ export function DiscoverUnitCard({
   const title = getDiscoverUnitFullName(unit.brandName, unit.nome);
   const address = [unit.rua, unit.numero].filter(Boolean).join(", ");
   const locality = [unit.bairro, unit.cidade].filter(Boolean).join(" · ");
+  const heroImage = unit.bannerUrl || unit.brandLogo;
 
   return (
     <motion.button
@@ -59,10 +61,11 @@ export function DiscoverUnitCard({
       )}
       style={{ WebkitTapHighlightColor: "transparent" }}
     >
+      {/* Banner */}
       <div className="relative h-28 overflow-hidden bg-secondary/40">
-        {unit.brandLogo ? (
+        {heroImage ? (
           <img
-            src={unit.brandLogo}
+            src={heroImage}
             alt={title}
             className="h-full w-full object-cover"
           />
@@ -75,7 +78,7 @@ export function DiscoverUnitCard({
         )}
 
         {unit.travelMinutes !== null && unit.travelMode && (
-          <div className="absolute right-2.5 top-2.5 flex items-center gap-1 rounded-full border border-border/40 bg-card/90 px-2.5 py-1 text-[11px] font-semibold text-foreground shadow-md backdrop-blur-md">
+          <div className="absolute left-2.5 top-2.5 flex items-center gap-1 rounded-full border border-border/40 bg-card/90 px-2.5 py-1 text-[11px] font-semibold text-foreground shadow-md backdrop-blur-md">
             {unit.travelMode === "walking" ? (
               <Footprints className="h-3 w-3" />
             ) : (
@@ -86,50 +89,54 @@ export function DiscoverUnitCard({
         )}
       </div>
 
-      {/* Logo circle overlapping banner */}
-      <div className="relative bg-card px-3.5 pt-5 pb-3.5">
-        <div className="absolute -top-5 left-3.5 h-10 w-10 overflow-hidden rounded-full border-2 border-card bg-secondary shadow-md">
-          {unit.brandLogo ? (
-            <img
-              src={unit.brandLogo}
-              alt={unit.brandName}
-              className="h-full w-full object-cover"
-            />
-          ) : (
-            <div className="flex h-full w-full items-center justify-center bg-secondary">
-              <span className="text-sm font-bold text-muted-foreground/40">
-                {brandInitial}
-              </span>
-            </div>
-          )}
-        </div>
-
-        <div className="space-y-1.5">
-          <h3 className="line-clamp-2 text-[14px] font-bold leading-tight text-foreground">
-            {title}
-          </h3>
-          {!unit.is_sede && (
-            <p className="text-[9px] font-semibold uppercase tracking-[0.22em] text-muted-foreground/60">
-              Unidade independente
-            </p>
-          )}
-          {(address || locality) && (
-            <div className="flex items-start gap-1.5">
-              <MapPin className="mt-0.5 h-3 w-3 shrink-0 text-muted-foreground/40" />
-              <div className="flex flex-col">
-                {address && (
-                  <span className="line-clamp-1 text-[11px] leading-tight text-muted-foreground/60">
-                    {address}
-                  </span>
-                )}
-                {locality && (
-                  <span className="text-[10px] leading-tight text-muted-foreground/40">
-                    {locality}
-                  </span>
-                )}
+      {/* Content with logo on the right */}
+      <div className="relative bg-card px-3.5 pt-2.5 pb-3">
+        <div className="flex items-start gap-3">
+          {/* Text info — left */}
+          <div className="flex-1 min-w-0 space-y-1">
+            <h3 className="line-clamp-2 text-[14px] font-bold leading-tight text-foreground">
+              {title}
+            </h3>
+            {!unit.is_sede && (
+              <p className="text-[9px] font-semibold uppercase tracking-[0.22em] text-muted-foreground/60">
+                Unidade independente
+              </p>
+            )}
+            {(address || locality) && (
+              <div className="flex items-start gap-1.5">
+                <MapPin className="mt-0.5 h-3 w-3 shrink-0 text-muted-foreground/40" />
+                <div className="flex flex-col">
+                  {address && (
+                    <span className="line-clamp-1 text-[11px] leading-tight text-muted-foreground/60">
+                      {address}
+                    </span>
+                  )}
+                  {locality && (
+                    <span className="text-[10px] leading-tight text-muted-foreground/40">
+                      {locality}
+                    </span>
+                  )}
+                </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
+
+          {/* Logo circle — right, bigger */}
+          <div className="relative -mt-8 h-14 w-14 flex-shrink-0 overflow-hidden rounded-full border-[3px] border-card bg-secondary shadow-lg">
+            {unit.brandLogo ? (
+              <img
+                src={unit.brandLogo}
+                alt={unit.brandName}
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center bg-secondary">
+                <span className="text-lg font-bold text-muted-foreground/40">
+                  {brandInitial}
+                </span>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </motion.button>
