@@ -10,6 +10,7 @@ import { DiscoverMap } from "@/components/discover/DiscoverMap";
 import { DiscoverUnitCard } from "@/components/discover/DiscoverUnitCard";
 import { BottomSheet, SNAP_MID } from "@/components/discover/BottomSheet";
 import { getDiscoverUnitFullName } from "@/components/discover/discoverUnitUtils";
+import { getCache, setCache } from "@/utils/cache";
 import type L from "leaflet";
 
 // ── Types ──
