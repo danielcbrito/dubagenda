@@ -271,24 +271,17 @@ const EscolherBarbearia = () => {
             travelMode: null,
           };
 
-          if (baseUnit.latitude !== null && baseUnit.longitude !== null) {
-            return baseUnit;
-          }
-
-          if (!hasPreciseAddress(baseUnit)) {
-            return baseUnit;
-          }
-
-          const addressQuery = buildAddressQuery(baseUnit);
-          if (!addressQuery) return baseUnit;
-
-          const cachedGeocode = readCachedGeocode(normalizeText(addressQuery));
-          if (!cachedGeocode) return baseUnit;
+          const addressParts = buildAddressParts(baseUnit);
+          const addressQuery = buildAddressQueryFromParts(addressParts);
+          const cachedGeocode = addressQuery
+            ? readCachedGeocode(normalizeText(addressQuery))
+            : null;
+          const resolvedCoords = pickResolvedCoordinates(persistedCoords, cachedGeocode);
 
           return {
             ...baseUnit,
-            latitude: cachedGeocode.lat,
-            longitude: cachedGeocode.lng,
+            latitude: resolvedCoords?.lat ?? null,
+            longitude: resolvedCoords?.lng ?? null,
           };
         });
 
