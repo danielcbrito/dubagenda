@@ -51,17 +51,17 @@ interface DiscoverMapProps {
 function buildClientIcon() {
   return L.divIcon({
     html: `
-      <div style="position:relative;width:44px;height:44px;">
-        <div style="position:absolute;top:0;left:0;width:44px;height:44px;border-radius:50%;background:rgba(74,144,217,0.15);animation:discover-pulse 2s infinite;"></div>
-        <div style="position:absolute;top:6px;left:6px;width:32px;height:32px;border-radius:50%;background:rgba(74,144,217,0.2);"></div>
-        <div style="position:absolute;top:10px;left:10px;width:24px;height:24px;border-radius:50%;background:#4A90D9;border:2.5px solid white;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(74,144,217,0.4);">
-          <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="4" r="2.5" fill="white"/><path d="M2 11 Q6 8 10 11" stroke="white" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>
+      <div style="position:relative;width:48px;height:48px;">
+        <div style="position:absolute;inset:0;border-radius:50%;background:rgba(74,144,217,0.15);animation:clientPulse 2s ease-out infinite;"></div>
+        <div style="position:absolute;inset:8px;border-radius:50%;background:rgba(74,144,217,0.25);"></div>
+        <div style="position:absolute;inset:14px;border-radius:50%;background:#4A90D9;border:2.5px solid white;box-shadow:0 2px 10px rgba(74,144,217,0.5);display:flex;align-items:center;justify-content:center;">
+          <svg width="10" height="12" viewBox="0 0 10 12" fill="none"><circle cx="5" cy="3.5" r="2.5" fill="white"/><path d="M1 10.5 Q5 7.5 9 10.5" stroke="white" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>
         </div>
       </div>
     `,
-    className: "",
-    iconSize: [44, 44],
-    iconAnchor: [22, 22],
+    className: "custom-client-pin",
+    iconSize: [48, 48],
+    iconAnchor: [24, 24],
   });
 }
 
