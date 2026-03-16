@@ -154,11 +154,21 @@ export function saveCachedGeocode(addressKey: string, result: GeocodeResult): vo
   }
 }
 
+export function isHighConfidenceGeocodeResult(
+  result: GeocodeResult | null | undefined,
+): result is GeocodeResult {
+  return Boolean(
+    result &&
+      (result.exact === true ||
+        (typeof result.score === "number" && result.score >= HIGH_CONFIDENCE_GEOCODE_SCORE)),
+  );
+}
+
 export function pickResolvedCoordinates(
   stored: { lat: number; lng: number } | null,
   cached: GeocodeResult | null,
 ): { lat: number; lng: number } | null {
-  if (cached?.exact) {
+  if (isHighConfidenceGeocodeResult(cached)) {
     return { lat: cached.lat, lng: cached.lng };
   }
 
@@ -179,7 +189,7 @@ export function shouldPreferGeocodedCoordinates(
   minimumDistanceKm = 0.05,
 ): boolean {
   if (!stored) return true;
-  if (!geocoded.exact) return false;
+  if (!isHighConfidenceGeocodeResult(geocoded)) return false;
 
   return haversineKm(stored.lat, stored.lng, geocoded.lat, geocoded.lng) > minimumDistanceKm;
 }

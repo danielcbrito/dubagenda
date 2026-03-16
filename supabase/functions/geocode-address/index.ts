@@ -538,7 +538,9 @@ Deno.serve(async (req) => {
         JSON.stringify({
           lat: bestArcGis.result.location.y ?? null,
           lng: bestArcGis.result.location.x ?? null,
-          exact: isExactArcGisCandidate(bestArcGis.result, input),
+          exact:
+            isExactArcGisCandidate(bestArcGis.result, input) ||
+            bestArcGis.score >= HIGH_CONFIDENCE_GEOCODE_SCORE,
           locationType: "ARCGIS",
           formattedAddress: bestArcGis.result.address ?? null,
           score: bestArcGis.score,
