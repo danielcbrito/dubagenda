@@ -98,12 +98,12 @@ const AdminFixCoordinates = () => {
       return;
     }
 
-    const [{ data: isAdmin }, { data: ownedTenants }] = await Promise.all([
+    const [{ data: isAdmin }, { data: ownedTenantId }] = await Promise.all([
       supabase.rpc("is_admin"),
-      supabase.from("tenants").select("id").eq("owner_user_id", user.id),
+      supabase.rpc("get_user_tenant_id"),
     ]);
 
-    const tenantIds = (ownedTenants ?? []).map((tenant) => tenant.id);
+    const tenantIds = ownedTenantId ? [ownedTenantId] : [];
     const canAccess = Boolean(isAdmin) || tenantIds.length > 0;
     setAuthorized(canAccess);
 
