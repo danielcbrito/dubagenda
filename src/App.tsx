@@ -37,6 +37,7 @@ const SupportChat = lazy(() => import("./pages/SupportChat"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const BarberReviews = lazy(() => import("./pages/BarberReviews"));
 const EscolherBarbearia = lazy(() => import("./pages/EscolherBarbearia"));
+const AdminFixCoordinates = lazy(() => import("./pages/AdminFixCoordinates"));
 const BarbershopPublic = lazy(() => import("./pages/BarbershopPublic"));
 const BarbershopUnidades = lazy(() => import("./pages/BarbershopUnidades"));
 const Flowchart = lazy(() => import("./pages/Flowchart"));
