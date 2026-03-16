@@ -123,6 +123,7 @@ export function DiscoverMap({
   const markersRef = useRef<Map<string, L.Marker>>(new Map());
   const userMarkerRef = useRef<L.CircleMarker | null>(null);
   const tileLayerRef = useRef<L.TileLayer | null>(null);
+  const initialMapStyleRef = useRef(mapStyle);
 
   const mappableUnits = useMemo(
     () =>
