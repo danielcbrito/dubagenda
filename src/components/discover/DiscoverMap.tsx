@@ -273,6 +273,23 @@ export function DiscoverMap({
     onRecenter();
   };
 
+  // ── Toggle tile layer on mapStyle change ──
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    if (tileLayerRef.current) {
+      tileLayerRef.current.remove();
+    }
+
+    const tileUrl =
+      mapStyle === "satellite"
+        ? "https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}"
+        : "https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}";
+
+    tileLayerRef.current = L.tileLayer(tileUrl, { maxZoom: 20 }).addTo(map);
+  }, [mapStyle]);
+
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
@@ -280,9 +297,38 @@ export function DiscoverMap({
     return () => window.clearTimeout(timer);
   });
 
+  const toggleMapStyle = () => {
+    setMapStyle((prev) => (prev === "satellite" ? "street" : "satellite"));
+  };
+
   return (
     <div className="relative h-full w-full">
       <div ref={containerRef} className="h-full w-full z-0" />
+
+      {/* Toggle satellite / street */}
+      <button
+        onClick={toggleMapStyle}
+        className="absolute top-3 right-3 z-[500] flex items-center gap-1.5 rounded-lg border border-border bg-card/95 backdrop-blur-sm px-2.5 py-1.5 shadow-lg transition-transform active:scale-95"
+      >
+        {mapStyle === "satellite" ? (
+          <>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-foreground">
+              <rect x="3" y="3" width="18" height="18" rx="2" />
+              <path d="M3 9h18M3 15h18M9 3v18M15 3v18" />
+            </svg>
+            <span className="text-[10px] font-semibold text-foreground uppercase tracking-wider">Mapa</span>
+          </>
+        ) : (
+          <>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-foreground">
+              <circle cx="12" cy="12" r="10" />
+              <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20" />
+              <path d="M2 12h20" />
+            </svg>
+            <span className="text-[10px] font-semibold text-foreground uppercase tracking-wider">Satélite</span>
+          </>
+        )}
+      </button>
 
       {userLocation && (
         <button
