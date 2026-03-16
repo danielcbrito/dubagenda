@@ -72,6 +72,7 @@ export function BottomSheet({ children, header, initialSnap = SNAP_MID, onSnapCh
   const viewportHeightRef = useRef(getViewportHeight());
   const currentSnapRef = useRef(initialSnap);
   const currentTranslateYRef = useRef(snapToTranslateY(initialSnap, viewportHeightRef.current));
+  const pendingTranslateYRef = useRef(currentTranslateYRef.current);
   const animationFrameRef = useRef<number | null>(null);
   const gestureRef = useRef<GestureState>(INITIAL_GESTURE);
 
