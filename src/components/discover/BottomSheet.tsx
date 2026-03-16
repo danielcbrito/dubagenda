@@ -302,11 +302,19 @@ export function BottomSheet({ children, header, initialSnap = SNAP_MID, onSnapCh
       gesture.mode = shouldDragSheetFromContent(deltaY) ? "sheet" : "content";
     }
 
-    if (gesture.mode === "content") return;
+    if (gesture.mode === "content") {
+      const deltaY = clientY - gesture.startY;
+      const isPullingDown = deltaY > DRAG_DECISION_PX;
+      const isAtTop = (listRef.current?.scrollTop ?? 0) <= 0.5;
+
+      if (!isPullingDown || !isAtTop) return;
+
+      handoffContentGestureToSheet();
+    }
 
     event.preventDefault();
     dragSheet(clientY, true);
-  }, [dragSheet, shouldDragSheetFromContent, updateVelocity]);
+  }, [dragSheet, handoffContentGestureToSheet, shouldDragSheetFromContent, updateVelocity]);
 
   const handleHandleMouseDown = useCallback((event: ReactMouseEvent<HTMLDivElement>) => {
     event.preventDefault();
