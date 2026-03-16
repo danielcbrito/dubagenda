@@ -59,38 +59,46 @@ function buildClientIcon() {
 }
 
 function buildBarberIcon(label: string, selected: boolean) {
-  const truncated = label.length > 22 ? `${label.slice(0, 21)}…` : label;
-  const scissorsColor = selected ? "#DC2626" : "#B91C1C";
-  const scissorsSize = selected ? 28 : 22;
-  const labelBg = selected ? "#111" : "white";
-  const labelColor = selected ? "white" : "#111";
-  const labelBorder = selected ? "none" : "1.5px solid #ddd";
-  const labelSize = selected ? "11px" : "9px";
-  const labelWeight = selected ? "700" : "600";
-  const labelPad = selected ? "4px 12px" : "3px 9px";
-  const shadow = selected
-    ? "filter:drop-shadow(0 3px 6px rgba(220,38,38,0.35));"
-    : "filter:drop-shadow(0 2px 4px rgba(0,0,0,0.18));";
+  const truncated = label.length > 20 ? `${label.slice(0, 19)}…` : label;
+
+  if (selected) {
+    return L.divIcon({
+      html: `
+        <div style="display:inline-flex;align-items:center;gap:6px;background:#111;color:white;border-radius:999px;padding:6px 14px 6px 8px;font-family:system-ui,sans-serif;white-space:nowrap;box-shadow:0 4px 14px rgba(0,0,0,0.3);border:2px solid white;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style="flex-shrink:0;">
+            <path d="M6.5 3L12 14.5" stroke="#EF4444" stroke-width="2.4" stroke-linecap="round"/>
+            <path d="M17.5 3L12 14.5" stroke="#EF4444" stroke-width="2.4" stroke-linecap="round"/>
+            <circle cx="5" cy="18.5" r="3" stroke="#EF4444" stroke-width="1.8" fill="none"/>
+            <circle cx="19" cy="18.5" r="3" stroke="#EF4444" stroke-width="1.8" fill="none"/>
+            <line x1="7.6" y1="16.5" x2="12" y2="14.5" stroke="#EF4444" stroke-width="1.8" stroke-linecap="round"/>
+            <line x1="16.4" y1="16.5" x2="12" y2="14.5" stroke="#EF4444" stroke-width="1.8" stroke-linecap="round"/>
+          </svg>
+          <span style="font-size:12px;font-weight:700;letter-spacing:0.02em;">${truncated}</span>
+        </div>
+      `,
+      className: "",
+      iconSize: [180, 36],
+      iconAnchor: [90, 18],
+    });
+  }
 
   return L.divIcon({
     html: `
-      <div style="display:flex;flex-direction:column;align-items:center;${shadow}">
-        <svg width="${scissorsSize}" height="${scissorsSize}" viewBox="0 0 24 24" fill="none">
-          <path d="M6.5 3L12 14.5" stroke="${scissorsColor}" stroke-width="2.4" stroke-linecap="round"/>
-          <path d="M17.5 3L12 14.5" stroke="${scissorsColor}" stroke-width="2.4" stroke-linecap="round"/>
-          <circle cx="5" cy="18.5" r="3.2" stroke="${scissorsColor}" stroke-width="1.8" fill="none"/>
-          <circle cx="19" cy="18.5" r="3.2" stroke="${scissorsColor}" stroke-width="1.8" fill="none"/>
-          <line x1="7.8" y1="16.5" x2="12" y2="14.5" stroke="${scissorsColor}" stroke-width="1.8" stroke-linecap="round"/>
-          <line x1="16.2" y1="16.5" x2="12" y2="14.5" stroke="${scissorsColor}" stroke-width="1.8" stroke-linecap="round"/>
+      <div style="display:inline-flex;align-items:center;gap:5px;background:white;color:#111;border-radius:999px;padding:5px 12px 5px 7px;font-family:system-ui,sans-serif;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,0.15);border:1.5px solid #e5e5e5;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" style="flex-shrink:0;">
+          <path d="M6.5 3L12 14.5" stroke="#DC2626" stroke-width="2.4" stroke-linecap="round"/>
+          <path d="M17.5 3L12 14.5" stroke="#DC2626" stroke-width="2.4" stroke-linecap="round"/>
+          <circle cx="5" cy="18.5" r="3" stroke="#DC2626" stroke-width="1.8" fill="none"/>
+          <circle cx="19" cy="18.5" r="3" stroke="#DC2626" stroke-width="1.8" fill="none"/>
+          <line x1="7.6" y1="16.5" x2="12" y2="14.5" stroke="#DC2626" stroke-width="1.8" stroke-linecap="round"/>
+          <line x1="16.4" y1="16.5" x2="12" y2="14.5" stroke="#DC2626" stroke-width="1.8" stroke-linecap="round"/>
         </svg>
-        <div style="background:${labelBg};color:${labelColor};border:${labelBorder};border-radius:20px;padding:${labelPad};font-family:system-ui,sans-serif;font-size:${labelSize};font-weight:${labelWeight};white-space:nowrap;margin-top:2px;box-shadow:0 1px 4px rgba(0,0,0,0.12);">
-          ${truncated}
-        </div>
+        <span style="font-size:10px;font-weight:600;letter-spacing:0.02em;">${truncated}</span>
       </div>
     `,
     className: "",
-    iconSize: [140, 70],
-    iconAnchor: [70, 40],
+    iconSize: [160, 30],
+    iconAnchor: [80, 15],
   });
 }
 
