@@ -446,6 +446,7 @@ const EscolherBarbearia = () => {
             selectedId={selectedUnitId}
             onSelectUnit={handleSelectUnit}
             onRecenter={handleRecenter}
+            onBoundsChange={setMapBounds}
           />
         )}
       </div>
