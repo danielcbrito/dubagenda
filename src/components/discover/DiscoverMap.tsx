@@ -41,40 +41,62 @@ interface DiscoverMapProps {
   onBoundsChange?: (bounds: L.LatLngBounds) => void;
 }
 
-function buildIcon(label: string, selected: boolean) {
-  const bg = selected ? "hsl(var(--foreground))" : "hsl(var(--card))";
-  const color = selected ? "hsl(var(--background))" : "hsl(var(--foreground))";
-  const border = "hsl(var(--foreground))";
-  const shadow = selected
-    ? "0 6px 16px hsl(var(--foreground) / 0.22)"
-    : "0 3px 10px hsl(var(--foreground) / 0.14)";
-  const scale = selected ? "scale(1.08)" : "scale(1)";
-  const truncated = label.length > 26 ? `${label.slice(0, 25)}…` : label;
-  const width = Math.max(132, Math.min(210, truncated.length * 7 + 26));
+function buildClientIcon() {
+  return L.divIcon({
+    html: `
+      <div style="position:relative;width:44px;height:44px;">
+        <div style="position:absolute;top:0;left:0;width:44px;height:44px;border-radius:50%;background:rgba(74,144,217,0.15);animation:discover-pulse 2s infinite;"></div>
+        <div style="position:absolute;top:6px;left:6px;width:32px;height:32px;border-radius:50%;background:rgba(74,144,217,0.2);"></div>
+        <div style="position:absolute;top:10px;left:10px;width:24px;height:24px;border-radius:50%;background:#4A90D9;border:2.5px solid white;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(74,144,217,0.4);">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="4" r="2.5" fill="white"/><path d="M2 11 Q6 8 10 11" stroke="white" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>
+        </div>
+      </div>
+    `,
+    className: "",
+    iconSize: [44, 44],
+    iconAnchor: [22, 22],
+  });
+}
+
+const SCISSORS_SVG_DARK = `<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="4" cy="14" r="3.5" stroke="white" stroke-width="1.5" fill="none"/><circle cx="16" cy="14" r="3.5" stroke="white" stroke-width="1.5" fill="none"/><circle cx="4" cy="14" r="1.5" fill="white"/><circle cx="16" cy="14" r="1.5" fill="white"/><line x1="6.5" y1="11.5" x2="11" y2="3" stroke="white" stroke-width="1.8" stroke-linecap="round"/><line x1="13.5" y1="11.5" x2="9" y2="3" stroke="white" stroke-width="1.8" stroke-linecap="round"/></svg>`;
+
+const SCISSORS_SVG_LIGHT = `<svg width="14" height="14" viewBox="0 0 20 20" fill="none"><circle cx="4" cy="14" r="3.5" stroke="#555" stroke-width="1.5" fill="none"/><circle cx="16" cy="14" r="3.5" stroke="#555" stroke-width="1.5" fill="none"/><circle cx="4" cy="14" r="1.5" fill="#555"/><circle cx="16" cy="14" r="1.5" fill="#555"/><line x1="6.5" y1="11.5" x2="11" y2="3" stroke="#333" stroke-width="1.8" stroke-linecap="round"/><line x1="13.5" y1="11.5" x2="9" y2="3" stroke="#333" stroke-width="1.8" stroke-linecap="round"/></svg>`;
+
+function buildBarberIcon(label: string, selected: boolean) {
+  const truncated = label.length > 22 ? `${label.slice(0, 21)}…` : label;
+
+  if (selected) {
+    return L.divIcon({
+      html: `
+        <div style="display:flex;flex-direction:column;align-items:center;">
+          <div style="width:44px;height:52px;background:#111;border-radius:50% 50% 50% 50% / 60% 60% 40% 40%;clip-path:polygon(50% 100%,0% 30%,7% 0%,93% 0%,100% 30%);display:flex;align-items:center;justify-content:center;padding-bottom:12px;box-shadow:0 4px 16px rgba(0,0,0,0.3);">
+            ${SCISSORS_SVG_DARK}
+          </div>
+          <div style="background:#111;color:white;border-radius:20px;padding:4px 10px;font-family:system-ui,sans-serif;font-size:10px;font-weight:700;white-space:nowrap;margin-top:-4px;box-shadow:0 2px 8px rgba(0,0,0,0.2);">
+            ${truncated}
+          </div>
+        </div>
+      `,
+      className: "",
+      iconSize: [120, 80],
+      iconAnchor: [60, 80],
+    });
+  }
 
   return L.divIcon({
-    className: "custom-pill-icon",
-    iconSize: [width, 34],
-    iconAnchor: [width / 2, 17],
-    popupAnchor: [0, -17],
-    html: `<div class="discover-map-pill" style="
-      background:${bg};
-      color:${color};
-      border:2px solid ${border};
-      border-radius:999px;
-      padding:5px 12px;
-      font-size:11px;
-      font-weight:700;
-      line-height:1;
-      white-space:nowrap;
-      box-shadow:${shadow};
-      transform:${scale};
-      transition:all 0.2s ease;
-      cursor:pointer;
-      font-family:system-ui, sans-serif;
-      position:relative;
-      z-index:1000;
-    ">${truncated}</div>`,
+    html: `
+      <div style="display:flex;flex-direction:column;align-items:center;">
+        <div style="width:34px;height:40px;background:white;border:2px solid #111;border-radius:50% 50% 50% 50% / 60% 60% 40% 40%;clip-path:polygon(50% 100%,0% 30%,7% 0%,93% 0%,100% 30%);display:flex;align-items:center;justify-content:center;padding-bottom:8px;box-shadow:0 2px 8px rgba(0,0,0,0.15);">
+          ${SCISSORS_SVG_LIGHT}
+        </div>
+        <div style="background:white;color:#111;border:1.5px solid #ddd;border-radius:20px;padding:3px 8px;font-family:system-ui,sans-serif;font-size:9px;font-weight:600;white-space:nowrap;margin-top:-3px;box-shadow:0 1px 4px rgba(0,0,0,0.1);">
+          ${truncated}
+        </div>
+      </div>
+    `,
+    className: "",
+    iconSize: [100, 65],
+    iconAnchor: [50, 65],
   });
 }
 
@@ -180,13 +202,10 @@ export function DiscoverMap({
     }
 
     if (userLocation) {
-      userMarkerRef.current = L.circleMarker([userLocation.lat, userLocation.lng], {
-        radius: 8,
-        fillColor: "hsl(var(--primary))",
-        fillOpacity: 1,
-        color: "hsl(var(--background))",
-        weight: 3,
-      }).addTo(map);
+      userMarkerRef.current = L.marker([userLocation.lat, userLocation.lng], {
+        icon: buildClientIcon(),
+        zIndexOffset: 1000,
+      }).addTo(map) as unknown as L.CircleMarker;
     }
   }, [userLocation]);
 
@@ -199,7 +218,7 @@ export function DiscoverMap({
 
     markerUnits.forEach((unit) => {
       const marker = L.marker([unit.markerLatitude, unit.markerLongitude], {
-        icon: buildIcon(unit.displayLabel, unit.id === selectedId),
+        icon: buildBarberIcon(unit.displayLabel, unit.id === selectedId),
       })
         .on("click", () => onSelectUnit(unit.id))
         .addTo(map);
