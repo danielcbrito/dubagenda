@@ -181,7 +181,10 @@ export function DiscoverMap({
       zoomControl: false,
       attributionControl: false,
     });
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
+    // Google Maps hybrid satellite tile layer
+    L.tileLayer("https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}", {
+      maxZoom: 20,
+    }).addTo(map);
     mapRef.current = map;
 
     const emitBounds = () => {
