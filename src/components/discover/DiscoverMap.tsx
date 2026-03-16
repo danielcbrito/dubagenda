@@ -218,7 +218,7 @@ export function DiscoverMap({
 
     markerUnits.forEach((unit) => {
       const marker = L.marker([unit.markerLatitude, unit.markerLongitude], {
-        icon: buildIcon(unit.displayLabel, unit.id === selectedId),
+        icon: buildBarberIcon(unit.displayLabel, unit.id === selectedId),
       })
         .on("click", () => onSelectUnit(unit.id))
         .addTo(map);
