@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DiscoverMap } from "@/components/discover/DiscoverMap";
 import { DiscoverUnitCard } from "@/components/discover/DiscoverUnitCard";
+import { BottomSheet, SNAP_MID, SNAP_FULL } from "@/components/discover/BottomSheet";
 import { getDiscoverUnitFullName } from "@/components/discover/discoverUnitUtils";
 import type L from "leaflet";
 
@@ -159,10 +160,7 @@ async function geocodeAddress(unit: UnitData): Promise<GeocodeResult | null> {
   }
 }
 
-// ── Draggable sheet constants ──
-const SHEET_SNAP_TOP = 0.3; // 30% from top = 70% sheet
-const SHEET_SNAP_MID = 0.55; // 55% from top = 45% sheet
-const SHEET_SNAP_BOTTOM = 0.85; // 85% from top = 15% sheet (collapsed)
+// (Sheet logic moved to BottomSheet component)
 
 // ── Main Page ──
 const EscolherBarbearia = () => {
@@ -182,14 +180,11 @@ const EscolherBarbearia = () => {
   const [mapStyle, setMapStyle] = useState<"satellite" | "street">("satellite");
   const lastLocationRef = useRef<{ lat: number; lng: number } | null>(null);
   const watchIdRef = useRef<number | null>(null);
-  const listRef = useRef<HTMLDivElement>(null);
+  
   const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
-  // Sheet drag state
-  const [sheetTop, setSheetTop] = useState(SHEET_SNAP_MID);
-  const isDragging = useRef(false);
-  const dragStartY = useRef(0);
-  const dragStartTop = useRef(0);
+  // Sheet snap state
+  const [currentSheetSnap, setCurrentSheetSnap] = useState(SNAP_MID);
 
   const isChangeMode = searchParams.get("mode") === "change";
   const shouldOpenCurrent = searchParams.get("open") === "current";
@@ -494,14 +489,11 @@ const EscolherBarbearia = () => {
   // ── Select unit syncs map ↔ list ──
   const handleSelectUnit = useCallback((id: string) => {
     setSelectedUnitId((prev) => (prev === id ? null : id));
-    // Scroll card into view
     setTimeout(() => {
       const el = cardRefs.current.get(id);
       if (el) el.scrollIntoView({ behavior: "smooth", block: "nearest" });
     }, 100);
-    // Expand sheet if collapsed
-    if (sheetTop > SHEET_SNAP_MID) setSheetTop(SHEET_SNAP_MID);
-  }, [sheetTop]);
+  }, []);
 
   const handleCardClick = useCallback((unit: UnitData) => {
     const slug = unit.brandSlug || unit.id;
@@ -512,59 +504,6 @@ const EscolherBarbearia = () => {
   const handleRecenter = useCallback(() => {
     setSelectedUnitId(null);
   }, []);
-
-  // ── Sheet drag handlers ──
-  const velocityRef = useRef(0);
-  const lastMoveY = useRef(0);
-  const lastMoveTime = useRef(0);
-
-  const handleDragStart = useCallback((clientY: number) => {
-    isDragging.current = true;
-    dragStartY.current = clientY;
-    dragStartTop.current = sheetTop;
-    lastMoveY.current = clientY;
-    lastMoveTime.current = Date.now();
-    velocityRef.current = 0;
-  }, [sheetTop]);
-
-  const handleDragMove = useCallback((clientY: number) => {
-    if (!isDragging.current) return;
-    const vh = window.innerHeight;
-    const deltaRatio = (clientY - dragStartY.current) / vh;
-    const newTop = Math.max(SHEET_SNAP_TOP, Math.min(SHEET_SNAP_BOTTOM, dragStartTop.current + deltaRatio));
-    // Track velocity
-    const now = Date.now();
-    const dt = now - lastMoveTime.current;
-    if (dt > 0) {
-      velocityRef.current = (clientY - lastMoveY.current) / dt; // px/ms
-    }
-    lastMoveY.current = clientY;
-    lastMoveTime.current = now;
-    setSheetTop(newTop);
-  }, []);
-
-  const handleDragEnd = useCallback(() => {
-    isDragging.current = false;
-    const v = velocityRef.current; // px/ms, positive = dragging down
-    const snaps = [SHEET_SNAP_TOP, SHEET_SNAP_MID, SHEET_SNAP_BOTTOM];
-
-    // Fling: if fast enough, go to next snap in direction
-    if (Math.abs(v) > 0.4) {
-      const direction = v > 0 ? 1 : -1; // 1 = down (collapse), -1 = up (expand)
-      const candidates = snaps.filter((s) => (direction > 0 ? s > sheetTop + 0.02 : s < sheetTop - 0.02));
-      if (candidates.length > 0) {
-        const target = direction > 0 ? Math.min(...candidates) : Math.max(...candidates);
-        setSheetTop(target);
-        return;
-      }
-    }
-
-    // Otherwise snap to closest
-    const closest = snaps.reduce((prev, curr) =>
-      Math.abs(curr - sheetTop) < Math.abs(prev - sheetTop) ? curr : prev
-    );
-    setSheetTop(closest);
-  }, [sheetTop]);
 
   return (
     <div className="relative bg-background" style={{ height: "100dvh", overflow: "hidden" }}>
@@ -615,8 +554,8 @@ const EscolherBarbearia = () => {
       <div
         className="absolute right-3 z-[550] flex flex-col items-center gap-2"
         style={{
-          top: `calc(${sheetTop * 100}% - 6.5rem)`,
-          transition: isDragging.current ? "none" : "top 0.35s cubic-bezier(0.32, 0.72, 0, 1)",
+          bottom: `calc(${currentSheetSnap * 100}% + 1rem)`,
+          transition: "bottom 0.4s cubic-bezier(0.32, 0.72, 0, 1)",
         }}
       >
         {userLocation && (
@@ -640,75 +579,22 @@ const EscolherBarbearia = () => {
         </button>
       </div>
 
-      {/* ═══ Draggable sheet ═══ */}
-      <div
-        className="absolute left-0 right-0 bottom-0 z-[500] bg-background rounded-t-[20px] border-t border-border/50 shadow-[0_-4px_30px_rgba(0,0,0,0.15)] flex flex-col"
-        style={{
-          top: `${sheetTop * 100}%`,
-          transition: isDragging.current ? "none" : "top 0.35s cubic-bezier(0.32, 0.72, 0, 1)",
-        }}
+      {/* ═══ Bottom Sheet ═══ */}
+      <BottomSheet
+        onSnapChange={setCurrentSheetSnap}
+        header={
+          <div className="px-5 pb-3 pt-1">
+            <p className="text-[14px] font-semibold text-foreground text-center">
+              {isLoading
+                ? "Carregando..."
+                : inBoundsCount >= visibleUnits.length
+                  ? `${visibleUnits.length} barbearia${visibleUnits.length !== 1 ? "s" : ""} nesta área`
+                  : `${visibleUnits.length} barbearia${visibleUnits.length !== 1 ? "s" : ""} mais próximas`}
+            </p>
+          </div>
+        }
       >
-        {/* Handle */}
-        <div
-          className="flex-shrink-0 flex items-center justify-center pt-2.5 pb-1 cursor-grab active:cursor-grabbing"
-          onTouchStart={(e) => handleDragStart(e.touches[0].clientY)}
-          onTouchMove={(e) => handleDragMove(e.touches[0].clientY)}
-          onTouchEnd={handleDragEnd}
-          onMouseDown={(e) => {
-            handleDragStart(e.clientY);
-            const moveHandler = (ev: MouseEvent) => handleDragMove(ev.clientY);
-            const upHandler = () => { handleDragEnd(); window.removeEventListener("mousemove", moveHandler); window.removeEventListener("mouseup", upHandler); };
-            window.addEventListener("mousemove", moveHandler);
-            window.addEventListener("mouseup", upHandler);
-          }}
-        >
-          <div className="w-10 h-1 rounded-full bg-muted-foreground/25" />
-        </div>
-
-        {/* Count */}
-        <div className="flex-shrink-0 px-5 pb-3 pt-1">
-          <p className="text-[14px] font-semibold text-foreground text-center">
-            {isLoading
-              ? "Carregando..."
-              : inBoundsCount >= visibleUnits.length
-                ? `${visibleUnits.length} barbearia${visibleUnits.length !== 1 ? "s" : ""} nesta área`
-                : `${visibleUnits.length} barbearia${visibleUnits.length !== 1 ? "s" : ""} mais próximas`}
-          </p>
-        </div>
-
-        {/* List */}
-        <div
-          ref={listRef}
-          className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 pb-8"
-          onScroll={(e) => {
-            const el = e.currentTarget;
-            // Expand sheet when scrolling down
-            if (el.scrollTop > 30 && sheetTop > SHEET_SNAP_TOP) {
-              setSheetTop(SHEET_SNAP_TOP);
-            }
-          }}
-          onTouchStart={(e) => {
-            // Track touch on list to allow pull-down-to-collapse
-            const el = listRef.current;
-            if (el && el.scrollTop <= 0) {
-              handleDragStart(e.touches[0].clientY);
-            }
-          }}
-          onTouchMove={(e) => {
-            const el = listRef.current;
-            // Only drag sheet if list is at top and pulling down
-            if (el && el.scrollTop <= 0 && isDragging.current) {
-              const deltaY = e.touches[0].clientY - dragStartY.current;
-              if (deltaY > 0) {
-                e.preventDefault();
-                handleDragMove(e.touches[0].clientY);
-              }
-            }
-          }}
-          onTouchEnd={() => {
-            if (isDragging.current) handleDragEnd();
-          }}
-        >
+        <div className="px-4 pb-8">
           {isLoading ? (
             <div className="space-y-4">
               {[0, 1, 2].map(i => (
@@ -753,7 +639,7 @@ const EscolherBarbearia = () => {
             </div>
           )}
         </div>
-      </div>
+      </BottomSheet>
     </div>
   );
 };
