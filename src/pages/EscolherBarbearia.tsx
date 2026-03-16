@@ -669,9 +669,31 @@ const EscolherBarbearia = () => {
           className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 pb-8"
           onScroll={(e) => {
             const el = e.currentTarget;
+            // Expand sheet when scrolling down
             if (el.scrollTop > 30 && sheetTop > SHEET_SNAP_TOP) {
               setSheetTop(SHEET_SNAP_TOP);
             }
+          }}
+          onTouchStart={(e) => {
+            // Track touch on list to allow pull-down-to-collapse
+            const el = listRef.current;
+            if (el && el.scrollTop <= 0) {
+              handleDragStart(e.touches[0].clientY);
+            }
+          }}
+          onTouchMove={(e) => {
+            const el = listRef.current;
+            // Only drag sheet if list is at top and pulling down
+            if (el && el.scrollTop <= 0 && isDragging.current) {
+              const deltaY = e.touches[0].clientY - dragStartY.current;
+              if (deltaY > 0) {
+                e.preventDefault();
+                handleDragMove(e.touches[0].clientY);
+              }
+            }
+          }}
+          onTouchEnd={() => {
+            if (isDragging.current) handleDragEnd();
           }}
         >
           {isLoading ? (
