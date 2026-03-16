@@ -154,9 +154,6 @@ export function DiscoverMap({
   const tileLayerRef = useRef<L.TileLayer | null>(null);
   const initialMapStyleRef = useRef(mapStyle);
   const [currentZoom, setCurrentZoom] = useState(14);
-  const userMarkerRef = useRef<L.CircleMarker | null>(null);
-  const tileLayerRef = useRef<L.TileLayer | null>(null);
-  const initialMapStyleRef = useRef(mapStyle);
 
   const mappableUnits = useMemo(
     () =>
