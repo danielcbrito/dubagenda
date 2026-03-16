@@ -155,11 +155,13 @@ export function DiscoverMap({
 
     return Array.from(groupedUnits.values()).flatMap((group) =>
       group.map((unit, index) => {
-        const offsetPosition = offsetDuplicateCoordinate(unit.latitude, unit.longitude, index, group.length);
+        const markerOffset = getDuplicateMarkerPixelOffset(index, group.length);
         return {
           ...unit,
-          markerLatitude: offsetPosition.lat,
-          markerLongitude: offsetPosition.lng,
+          markerLatitude: unit.latitude,
+          markerLongitude: unit.longitude,
+          markerOffsetX: markerOffset.x,
+          markerOffsetY: markerOffset.y,
           displayLabel: getDiscoverUnitDisplayName(unit.brandName, unit.nome),
         };
       })
