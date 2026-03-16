@@ -84,6 +84,19 @@ export function DiscoverMap({
   const markersRef = useRef<Map<string, L.Marker>>(new Map());
   const userMarkerRef = useRef<L.CircleMarker | null>(null);
 
+  // Parse units with valid coordinates
+  const mappableUnits = useMemo(
+    () => units
+      .map((unit) => {
+        const latitude = Number.parseFloat(String(unit.latitude));
+        const longitude = Number.parseFloat(String(unit.longitude));
+        if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null;
+        return { ...unit, latitude, longitude };
+      })
+      .filter((unit): unit is MapUnit & { latitude: number; longitude: number } => unit !== null),
+    [units]
+  );
+
   const defaultCenter: L.LatLngExpression = userLocation
     ? [userLocation.lat, userLocation.lng]
     : [-23.55, -46.63];
