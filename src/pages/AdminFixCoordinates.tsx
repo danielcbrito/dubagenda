@@ -81,20 +81,7 @@ async function geocodeAddress(unit: FixableUnit): Promise<{ lat: number; lng: nu
 }
 
 function clearDiscoveryLocationCaches() {
-  try {
-    DISCOVER_CACHE_KEYS.forEach((key) => sessionStorage.removeItem(key));
-
-    const keysToRemove: string[] = [];
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key && GEOCODE_CACHE_PREFIXES.some((prefix) => key.startsWith(prefix))) {
-        keysToRemove.push(key);
-      }
-    }
-    keysToRemove.forEach((key) => localStorage.removeItem(key));
-  } catch {
-    /* ignore */
-  }
+  clearLegacyGeocodeCaches(DISCOVER_CACHE_KEYS);
 }
 
 function wait(ms: number) {

@@ -506,6 +506,48 @@ Deno.serve(async (req) => {
       );
     }
 
+    let bestArcGis:
+      | { result: ArcGisCandidate; score: number; queryUsed: string }
+      | null = null;
+
+    for (const candidate of candidates) {
+      try {
+        const results = await fetchArcGisResults(candidate);
+        const ranked = results
+          .map((result) => ({ result, score: scoreArcGisCandidate(result, input) }))
+          .filter((entry) => Number.isFinite(entry.score))
+          .sort((a, b) => b.score - a.score);
+
+        if (ranked[0]) {
+          bestArcGis = {
+            result: ranked[0].result,
+            score: ranked[0].score,
+            queryUsed: candidate,
+          };
+          break;
+        }
+      } catch {
+        /* keep trying next candidate */
+      }
+    }
+
+    if (bestArcGis?.result.location) {
+      return new Response(
+        JSON.stringify({
+          lat: bestArcGis.result.location.y ?? null,
+          lng: bestArcGis.result.location.x ?? null,
+          exact: isExactArcGisCandidate(bestArcGis.result, input),
+          locationType: "ARCGIS",
+          formattedAddress: bestArcGis.result.address ?? null,
+          score: bestArcGis.score,
+          queryUsed: bestArcGis.queryUsed,
+          provider: "arcgis",
+          fallbackReason: googleStatus,
+        }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
     let bestNominatim:
       | { result: NominatimResult; score: number; queryUsed: string }
       | null = null;

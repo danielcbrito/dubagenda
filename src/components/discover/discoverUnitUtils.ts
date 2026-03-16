@@ -11,20 +11,29 @@ const GENERIC_PREFIXES = ["barbearia", "barbershop", "barber", "salao", "studio"
 
 export function getDiscoverUnitDisplayName(
   brandName: string,
-  _unitName: string | null | undefined
+  unitName: string | null | undefined
 ): string {
   const words = brandName.trim().split(/\s+/);
-  if (words.length <= 1) return brandName.trim();
+  const shortBrandName = words.length <= 1
+    ? brandName.trim()
+    : (() => {
+        const firstNormalized = normalizeDiscoverText(words[0]);
+        if (GENERIC_PREFIXES.includes(firstNormalized)) {
+          const rest = words.slice(1).join(" ");
+          return rest || brandName.trim();
+        }
+        return brandName.trim();
+      })();
 
-  // If first word is a generic prefix like "Barbearia", return the rest
-  const firstNormalized = normalizeDiscoverText(words[0]);
-  if (GENERIC_PREFIXES.includes(firstNormalized)) {
-    const rest = words.slice(1).join(" ");
-    return rest || brandName.trim();
+  const cleanUnitName = unitName?.trim();
+  const normalizedUnit = normalizeDiscoverText(cleanUnitName);
+  const normalizedBrand = normalizeDiscoverText(brandName);
+
+  if (!cleanUnitName || !normalizedUnit || normalizedUnit === normalizedBrand) {
+    return shortBrandName;
   }
 
-  // Otherwise return the full brand name
-  return brandName.trim();
+  return `${shortBrandName} • ${cleanUnitName}`;
 }
 
 /** Full display name with unit detail — used in cards */

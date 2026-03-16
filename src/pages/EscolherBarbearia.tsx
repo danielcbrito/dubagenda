@@ -308,16 +308,16 @@ const EscolherBarbearia = () => {
           Promise.all(
             unitList.map(async (unit) => {
               try {
-                if (unit.latitude !== null && unit.longitude !== null) return unit;
-                if (!hasPreciseAddress(unit)) return unit;
+                const addressParts = buildAddressParts(unit);
+                if (!hasPreciseAddressParts(addressParts)) return unit;
 
-                const addressQuery = buildAddressQuery(unit);
+                const addressQuery = buildAddressQueryFromParts(addressParts);
                 if (!addressQuery) return unit;
 
                 const addressKey = normalizeText(addressQuery);
                 let geocodePromise = geocodeInFlight.get(addressKey);
                 if (!geocodePromise) {
-                  geocodePromise = geocodeAddress(unit);
+                  geocodePromise = geocodeAddressFromParts(addressParts);
                   geocodeInFlight.set(addressKey, geocodePromise);
                 }
 
@@ -325,6 +325,11 @@ const EscolherBarbearia = () => {
                 if (!geocoded) return unit;
 
                 saveCachedGeocode(addressKey, geocoded);
+                const storedCoords = resolveStoredCoordinates(unit.latitude, unit.longitude);
+                if (!shouldPreferGeocodedCoordinates(storedCoords, geocoded) && storedCoords) {
+                  return unit;
+                }
+
                 return { ...unit, latitude: geocoded.lat, longitude: geocoded.lng };
               } catch {
                 return unit;

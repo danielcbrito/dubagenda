@@ -546,9 +546,9 @@ const BarbershopPublic = () => {
       : currentPreferred === tenant.id
   );
 
-  // Use unit coordinates for distance, falling back to tenant-level
-  const effectiveLat = unidadeAtual?.latitude ?? tenant?.latitude;
-  const effectiveLng = unidadeAtual?.longitude ?? tenant?.longitude;
+  // Use resolved coordinates for distance and navigation
+  const effectiveLat = resolvedUnitCoords?.lat ?? null;
+  const effectiveLng = resolvedUnitCoords?.lng ?? null;
 
   const distance = userLocation && effectiveLat != null && effectiveLng != null
     ? haversineDistance(userLocation.lat, userLocation.lng, effectiveLat, effectiveLng)

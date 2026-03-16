@@ -288,8 +288,8 @@ export default function ClienteBarbearia() {
                 label="Endereço"
                 value={address}
                 href={
-                  unidadeAtual?.latitude != null && unidadeAtual?.longitude != null
-                    ? `https://www.google.com/maps/dir/?api=1&destination=${unidadeAtual.latitude},${unidadeAtual.longitude}`
+                  resolvedUnitCoords?.lat != null && resolvedUnitCoords?.lng != null
+                    ? `https://www.google.com/maps/dir/?api=1&destination=${resolvedUnitCoords.lat},${resolvedUnitCoords.lng}`
                     : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`
                 }
                 delay={0.15}
