@@ -15,6 +15,7 @@ interface DiscoverMapProps {
   selectedId: string | null;
   onSelectUnit: (id: string) => void;
   onRecenter: () => void;
+  onBoundsChange?: (bounds: L.LatLngBounds) => void;
 }
 
 function buildIcon(label: string, selected: boolean) {
