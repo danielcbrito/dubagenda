@@ -59,6 +59,15 @@ type NominatimResult = {
   };
 };
 
+type ArcGisCandidate = {
+  address?: string;
+  score?: number;
+  location?: {
+    x?: number;
+    y?: number;
+  };
+};
+
 function normalizeText(value: string | null | undefined) {
   return (value ?? "")
     .normalize("NFD")
