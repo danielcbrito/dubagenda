@@ -82,7 +82,7 @@ export function UnitLocationMiniMap({
 
     map.on("click", (event) => {
       syncMarker(event.latlng.lat, event.latlng.lng, false);
-      onChange({ lat: event.latlng.lat, lng: event.latlng.lng });
+      onChangeRef.current({ lat: event.latlng.lat, lng: event.latlng.lng });
     });
 
     const invalidateTimer = window.setTimeout(() => map.invalidateSize(), 250);
