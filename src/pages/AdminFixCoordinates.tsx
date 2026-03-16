@@ -45,8 +45,7 @@ interface FixResult {
 }
 
 const REQUEST_DELAY_MS = 1200;
-const DISCOVER_CACHE_KEYS = ["discover-units:v1", "discover-units:v2"];
-const GEOCODE_CACHE_PREFIXES = ["unit-geocode-v3:", "unit-geocode-v4:", "unit-geocode-v5:"];
+const DISCOVER_CACHE_KEYS = ["discover-units:v1", "discover-units:v2", "discover-units:v3"];
 
 function buildAddressParts(unit: FixableUnit) {
   return {
