@@ -446,31 +446,32 @@ const EscolherBarbearia = () => {
         tenantIds.length > 0
           ? supabase.rpc("get_tenant_banners", { p_tenant_ids: tenantIds })
           : Promise.resolve({ data: [] as Array<{ tenant_id: string; banner_url: string }> | null }),
-        Promise.all(
-          unitList.map(async (unit) => {
-            try {
-              if (unit.latitude !== null && unit.longitude !== null) return unit;
+          Promise.all(
+            unitList.map(async (unit) => {
+              try {
+                if (unit.latitude !== null && unit.longitude !== null) return unit;
+                if (!hasPreciseAddress(unit)) return unit;
 
-              const addressQuery = buildAddressQuery(unit);
-              if (!addressQuery) return unit;
+                const addressQuery = buildAddressQuery(unit);
+                if (!addressQuery) return unit;
 
-              const addressKey = normalizeText(addressQuery);
-              let geocodePromise = geocodeInFlight.get(addressKey);
-              if (!geocodePromise) {
-                geocodePromise = geocodeAddress(unit);
-                geocodeInFlight.set(addressKey, geocodePromise);
+                const addressKey = normalizeText(addressQuery);
+                let geocodePromise = geocodeInFlight.get(addressKey);
+                if (!geocodePromise) {
+                  geocodePromise = geocodeAddress(unit);
+                  geocodeInFlight.set(addressKey, geocodePromise);
+                }
+
+                const geocoded = await geocodePromise;
+                if (!geocoded) return unit;
+
+                saveCachedGeocode(addressKey, geocoded);
+                return { ...unit, latitude: geocoded.lat, longitude: geocoded.lng };
+              } catch {
+                return unit;
               }
-
-              const geocoded = await geocodePromise;
-              if (!geocoded) return unit;
-
-              saveCachedGeocode(addressKey, geocoded);
-              return { ...unit, latitude: geocoded.lat, longitude: geocoded.lng };
-            } catch {
-              return unit;
-            }
-          })
-        ),
+            })
+          ),
       ]);
 
       const bannerMap = new Map<string, string>();
