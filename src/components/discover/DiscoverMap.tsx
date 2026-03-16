@@ -65,52 +65,76 @@ function buildClientIcon() {
   });
 }
 
+const PIN_WIDTH = 36;
+const PIN_HEIGHT = 44;
+const LABEL_HEIGHT = 22;
+const TOTAL_HEIGHT = PIN_HEIGHT + LABEL_HEIGHT;
+
 function buildBarberIcon(
   label: string,
   selected: boolean,
-  markerOffset: { x: number; y: number }
+  _markerOffset: { x: number; y: number },
+  zoom: number
 ) {
   const truncated = label.length > 20 ? `${label.slice(0, 19)}…` : label;
-  const transform = `transform:translate(${markerOffset.x}px, ${markerOffset.y}px);`;
 
-  if (selected) {
+  // Zoom muito afastado: só um pontinho
+  if (zoom < 10) {
     return L.divIcon({
-      html: `
-        <div style="display:inline-flex;align-items:center;gap:6px;background:#111;color:white;border-radius:999px;padding:6px 14px 6px 8px;font-family:system-ui,sans-serif;white-space:nowrap;box-shadow:0 4px 14px rgba(0,0,0,0.3);border:2px solid white;${transform}">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style="flex-shrink:0;">
-            <path d="M6.5 3L12 14.5" stroke="#EF4444" stroke-width="2.4" stroke-linecap="round"/>
-            <path d="M17.5 3L12 14.5" stroke="#EF4444" stroke-width="2.4" stroke-linecap="round"/>
-            <circle cx="5" cy="18.5" r="3" stroke="#EF4444" stroke-width="1.8" fill="none"/>
-            <circle cx="19" cy="18.5" r="3" stroke="#EF4444" stroke-width="1.8" fill="none"/>
-            <line x1="7.6" y1="16.5" x2="12" y2="14.5" stroke="#EF4444" stroke-width="1.8" stroke-linecap="round"/>
-            <line x1="16.4" y1="16.5" x2="12" y2="14.5" stroke="#EF4444" stroke-width="1.8" stroke-linecap="round"/>
-          </svg>
-          <span style="font-size:12px;font-weight:700;letter-spacing:0.02em;">${truncated}</span>
-        </div>
-      `,
-      className: "",
-      iconSize: [180, 36],
-      iconAnchor: [90, 18],
+      html: `<div style="width:8px;height:8px;background:#111;border-radius:50%;border:1.5px solid white;"></div>`,
+      iconSize: [8, 8],
+      iconAnchor: [4, 4],
+      className: "custom-barber-pin",
     });
   }
 
+  const fill = selected ? "#111111" : "#ffffff";
+  const stroke = selected ? "none" : "#111111";
+  const scissorStroke = selected ? "#fff" : "#555";
+  const scissorLine = selected ? "#fff" : "#333";
+  const scissorFill = selected ? "#fff" : "#555";
+
+  const teardropSvg = `
+    <svg width="${PIN_WIDTH}" height="${PIN_HEIGHT}" viewBox="0 0 36 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M18 0 C8.059 0 0 8.059 0 18 C0 28.627 18 44 18 44 C18 44 36 28.627 36 18 C36 8.059 27.941 0 18 0Z" fill="${fill}" stroke="${stroke}" stroke-width="2"/>
+      <g transform="translate(9, 6)">
+        <circle cx="4" cy="14" r="3" stroke="${scissorStroke}" stroke-width="1.5" fill="none"/>
+        <circle cx="14" cy="14" r="3" stroke="${scissorStroke}" stroke-width="1.5" fill="none"/>
+        <circle cx="4" cy="14" r="1.2" fill="${scissorFill}"/>
+        <circle cx="14" cy="14" r="1.2" fill="${scissorFill}"/>
+        <line x1="6" y1="11.5" x2="10" y2="3" stroke="${scissorLine}" stroke-width="1.8" stroke-linecap="round"/>
+        <line x1="12" y1="11.5" x2="8" y2="3" stroke="${scissorLine}" stroke-width="1.8" stroke-linecap="round"/>
+      </g>
+    </svg>
+  `;
+
+  // Zoom médio: só pin sem label
+  if (zoom < 13) {
+    return L.divIcon({
+      html: `<div style="display:flex;flex-direction:column;align-items:center;width:${PIN_WIDTH}px;">${teardropSvg}</div>`,
+      className: "custom-barber-pin",
+      iconSize: [PIN_WIDTH, PIN_HEIGHT],
+      iconAnchor: [PIN_WIDTH / 2, PIN_HEIGHT],
+      popupAnchor: [0, -PIN_HEIGHT],
+    });
+  }
+
+  // Zoom próximo: pin completo com label
+  const labelBg = selected ? "#111" : "#fff";
+  const labelColor = selected ? "#fff" : "#111";
+  const labelBorder = selected ? "none" : "1.5px solid #ddd";
+
   return L.divIcon({
     html: `
-      <div style="display:inline-flex;align-items:center;gap:5px;background:white;color:#111;border-radius:999px;padding:5px 12px 5px 7px;font-family:system-ui,sans-serif;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,0.15);border:1.5px solid #e5e5e5;${transform}">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" style="flex-shrink:0;">
-          <path d="M6.5 3L12 14.5" stroke="#DC2626" stroke-width="2.4" stroke-linecap="round"/>
-          <path d="M17.5 3L12 14.5" stroke="#DC2626" stroke-width="2.4" stroke-linecap="round"/>
-          <circle cx="5" cy="18.5" r="3" stroke="#DC2626" stroke-width="1.8" fill="none"/>
-          <circle cx="19" cy="18.5" r="3" stroke="#DC2626" stroke-width="1.8" fill="none"/>
-          <line x1="7.6" y1="16.5" x2="12" y2="14.5" stroke="#DC2626" stroke-width="1.8" stroke-linecap="round"/>
-          <line x1="16.4" y1="16.5" x2="12" y2="14.5" stroke="#DC2626" stroke-width="1.8" stroke-linecap="round"/>
-        </svg>
-        <span style="font-size:10px;font-weight:600;letter-spacing:0.02em;">${truncated}</span>
+      <div style="display:flex;flex-direction:column;align-items:center;width:${PIN_WIDTH}px;">
+        ${teardropSvg}
+        <div style="background:${labelBg};color:${labelColor};border:${labelBorder};border-radius:20px;padding:3px 8px;font-family:system-ui,sans-serif;font-size:10px;font-weight:700;white-space:nowrap;margin-top:-6px;box-shadow:0 2px 6px rgba(0,0,0,0.15);max-width:120px;overflow:hidden;text-overflow:ellipsis;">${truncated}</div>
       </div>
     `,
-    className: "",
-    iconSize: [160, 30],
-    iconAnchor: [80, 15],
+    className: "custom-barber-pin",
+    iconSize: [PIN_WIDTH, TOTAL_HEIGHT],
+    iconAnchor: [PIN_WIDTH / 2, PIN_HEIGHT],
+    popupAnchor: [0, -PIN_HEIGHT],
   });
 }
 

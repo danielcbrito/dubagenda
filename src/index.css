@@ -8,6 +8,28 @@
   100% { transform: scale(0.8); opacity: 0.8; }
 }
 
+/* Leaflet custom pin resets */
+.custom-barber-pin,
+.custom-client-pin {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+@keyframes clientPulse {
+  0% { transform: scale(0.8); opacity: 1; }
+  70% { transform: scale(2); opacity: 0; }
+  100% { transform: scale(0.8); opacity: 0; }
+}
+
+.leaflet-marker-pane {
+  z-index: 600 !important;
+}
+
+.leaflet-marker-icon {
+  z-index: 600 !important;
+}
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
