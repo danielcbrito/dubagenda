@@ -86,47 +86,50 @@ export function DiscoverUnitCard({
         )}
       </div>
 
-      <div className="space-y-2 bg-card p-3.5">
-        <div className="flex items-start justify-between gap-2">
-          <div className="space-y-1">
-            <h3 className="line-clamp-2 text-[15px] font-bold leading-tight text-foreground">
-              {title}
-            </h3>
-            {!unit.is_sede && (
-              <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground/75">
-                Unidade independente
-              </p>
-            )}
-          </div>
+      {/* Logo circle overlapping banner */}
+      <div className="relative bg-card px-3.5 pt-5 pb-3.5">
+        <div className="absolute -top-5 left-3.5 h-10 w-10 overflow-hidden rounded-full border-2 border-card bg-secondary shadow-md">
+          {unit.brandLogo ? (
+            <img
+              src={unit.brandLogo}
+              alt={unit.brandName}
+              className="h-full w-full object-cover"
+            />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center bg-secondary">
+              <span className="text-sm font-bold text-muted-foreground/40">
+                {brandInitial}
+              </span>
+            </div>
+          )}
         </div>
 
-        {(address || locality) && (
-          <div className="flex items-start gap-1.5">
-            <MapPin className="mt-0.5 h-3 w-3 shrink-0 text-muted-foreground/50" />
-            <div className="flex flex-col">
-              {address && (
-                <span className="line-clamp-1 text-[12px] leading-tight text-muted-foreground/70">
-                  {address}
-                </span>
-              )}
-              {locality && (
-                <span className="text-[11px] leading-tight text-muted-foreground/50">
-                  {locality}
-                </span>
-              )}
+        <div className="space-y-1.5">
+          <h3 className="line-clamp-2 text-[14px] font-bold leading-tight text-foreground">
+            {title}
+          </h3>
+          {!unit.is_sede && (
+            <p className="text-[9px] font-semibold uppercase tracking-[0.22em] text-muted-foreground/60">
+              Unidade independente
+            </p>
+          )}
+          {(address || locality) && (
+            <div className="flex items-start gap-1.5">
+              <MapPin className="mt-0.5 h-3 w-3 shrink-0 text-muted-foreground/40" />
+              <div className="flex flex-col">
+                {address && (
+                  <span className="line-clamp-1 text-[11px] leading-tight text-muted-foreground/60">
+                    {address}
+                  </span>
+                )}
+                {locality && (
+                  <span className="text-[10px] leading-tight text-muted-foreground/40">
+                    {locality}
+                  </span>
+                )}
+              </div>
             </div>
-          </div>
-        )}
-
-        <div className="pt-1">
-          <div
-            className={cn(
-              "flex h-9 w-full items-center justify-center rounded-xl text-[12px] font-semibold transition-colors",
-              isSelected ? "bg-foreground text-background" : "bg-secondary text-foreground"
-            )}
-          >
-            Ver horários desta unidade
-          </div>
+          )}
         </div>
       </div>
     </motion.button>
