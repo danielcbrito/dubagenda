@@ -276,6 +276,15 @@ const EscolherBarbearia = () => {
   // ── Load units ──
   const loadUnits = async () => {
     setIsLoading(true);
+    // Clear stale v3 geocode cache entries
+    try {
+      const keysToRemove: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith("unit-geocode-v3:")) keysToRemove.push(key);
+      }
+      keysToRemove.forEach((k) => localStorage.removeItem(k));
+    } catch { /* ignore */ }
     try {
       const { data: units, error } = await supabase
         .from("tenant_unidades")
