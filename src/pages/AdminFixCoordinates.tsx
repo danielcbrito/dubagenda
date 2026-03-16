@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { UnitLocationMiniMap } from "@/components/admin/UnitLocationMiniMap";
-import { getDiscoverUnitDisplayName } from "@/components/discover/discoverUnitUtils";
+import { getDiscoverUnitFullName } from "@/components/discover/discoverUnitUtils";
 
 interface FixableUnit {
   id: string;
