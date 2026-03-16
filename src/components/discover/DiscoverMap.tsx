@@ -153,16 +153,23 @@ export function DiscoverMap({
 
   const defaultCenter: L.LatLngExpression = userLocation
     ? [userLocation.lat, userLocation.lng]
-    : [-23.55, -46.63];
+    : mappableUnits.length > 0
+      ? [mappableUnits[0].latitude, mappableUnits[0].longitude]
+      : [-23.55, -46.63];
 
   const initialZoom = useMemo(() => {
-    if (!userLocation || mappableUnits.length === 0) return 14;
-    let minDist = Infinity;
-    for (const unit of mappableUnits) {
-      const distance = haversineKm(userLocation.lat, userLocation.lng, unit.latitude, unit.longitude);
-      if (distance < minDist) minDist = distance;
+    if (userLocation && mappableUnits.length > 0) {
+      let minDist = Infinity;
+      for (const unit of mappableUnits) {
+        const distance = haversineKm(userLocation.lat, userLocation.lng, unit.latitude, unit.longitude);
+        if (distance < minDist) minDist = distance;
+      }
+      return smartZoomForDistance(minDist);
     }
-    return smartZoomForDistance(minDist);
+
+    if (mappableUnits.length === 1) return 16;
+    if (mappableUnits.length > 1) return 14;
+    return 14;
   }, [userLocation, mappableUnits]);
 
   useEffect(() => {
