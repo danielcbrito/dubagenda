@@ -58,45 +58,43 @@ function buildClientIcon() {
   });
 }
 
-const SCISSORS_SVG_DARK = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="6" cy="17" r="3" stroke="white" stroke-width="1.6" fill="none"/><circle cx="18" cy="17" r="3" stroke="white" stroke-width="1.6" fill="none"/><circle cx="6" cy="17" r="1.2" fill="white"/><circle cx="18" cy="17" r="1.2" fill="white"/><line x1="8.2" y1="14.8" x2="13" y2="4" stroke="white" stroke-width="2" stroke-linecap="round"/><line x1="15.8" y1="14.8" x2="11" y2="4" stroke="white" stroke-width="2" stroke-linecap="round"/></svg>`;
-
-const SCISSORS_SVG_LIGHT = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="6" cy="17" r="3" stroke="#444" stroke-width="1.6" fill="none"/><circle cx="18" cy="17" r="3" stroke="#444" stroke-width="1.6" fill="none"/><circle cx="6" cy="17" r="1.2" fill="#444"/><circle cx="18" cy="17" r="1.2" fill="#444"/><line x1="8.2" y1="14.8" x2="13" y2="4" stroke="#333" stroke-width="2" stroke-linecap="round"/><line x1="15.8" y1="14.8" x2="11" y2="4" stroke="#333" stroke-width="2" stroke-linecap="round"/></svg>`;
-
 function buildBarberIcon(label: string, selected: boolean) {
   const truncated = label.length > 22 ? `${label.slice(0, 21)}…` : label;
 
   if (selected) {
     return L.divIcon({
       html: `
-        <div style="display:flex;flex-direction:column;align-items:center;">
-          <div style="width:44px;height:52px;background:#111;border-radius:50% 50% 50% 50% / 60% 60% 40% 40%;clip-path:polygon(50% 100%,0% 30%,7% 0%,93% 0%,100% 30%);display:flex;align-items:center;justify-content:center;padding-bottom:12px;box-shadow:0 4px 16px rgba(0,0,0,0.3);">
-            ${SCISSORS_SVG_DARK}
+        <div style="display:flex;flex-direction:column;align-items:center;filter:drop-shadow(0 3px 8px rgba(0,0,0,0.35));">
+          <div style="width:42px;height:42px;border-radius:50%;background:#111;display:flex;align-items:center;justify-content:center;border:3px solid white;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M6.5 4L12 15" stroke="white" stroke-width="2.2" stroke-linecap="round"/><path d="M17.5 4L12 15" stroke="white" stroke-width="2.2" stroke-linecap="round"/><circle cx="5" cy="18" r="3" stroke="white" stroke-width="1.8" fill="none"/><circle cx="19" cy="18" r="3" stroke="white" stroke-width="1.8" fill="none"/><line x1="7.5" y1="16" x2="12" y2="15" stroke="white" stroke-width="1.8" stroke-linecap="round"/><line x1="16.5" y1="16" x2="12" y2="15" stroke="white" stroke-width="1.8" stroke-linecap="round"/></svg>
           </div>
-          <div style="background:#111;color:white;border-radius:20px;padding:4px 10px;font-family:system-ui,sans-serif;font-size:10px;font-weight:700;white-space:nowrap;margin-top:-4px;box-shadow:0 2px 8px rgba(0,0,0,0.2);">
+          <div style="width:0;height:0;border-left:7px solid transparent;border-right:7px solid transparent;border-top:8px solid #111;margin-top:-2px;"></div>
+          <div style="background:#111;color:white;border-radius:20px;padding:4px 12px;font-family:system-ui,sans-serif;font-size:11px;font-weight:700;white-space:nowrap;margin-top:2px;box-shadow:0 2px 8px rgba(0,0,0,0.2);">
             ${truncated}
           </div>
         </div>
       `,
       className: "",
-      iconSize: [120, 80],
-      iconAnchor: [60, 80],
+      iconSize: [140, 90],
+      iconAnchor: [70, 58],
     });
   }
 
   return L.divIcon({
     html: `
-      <div style="display:flex;flex-direction:column;align-items:center;">
-        <div style="width:34px;height:40px;background:white;border:2px solid #111;border-radius:50% 50% 50% 50% / 60% 60% 40% 40%;clip-path:polygon(50% 100%,0% 30%,7% 0%,93% 0%,100% 30%);display:flex;align-items:center;justify-content:center;padding-bottom:8px;box-shadow:0 2px 8px rgba(0,0,0,0.15);">
-          ${SCISSORS_SVG_LIGHT}
+      <div style="display:flex;flex-direction:column;align-items:center;filter:drop-shadow(0 2px 5px rgba(0,0,0,0.2));">
+        <div style="width:34px;height:34px;border-radius:50%;background:white;display:flex;align-items:center;justify-content:center;border:2.5px solid #222;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M6.5 4L12 15" stroke="#333" stroke-width="2.2" stroke-linecap="round"/><path d="M17.5 4L12 15" stroke="#333" stroke-width="2.2" stroke-linecap="round"/><circle cx="5" cy="18" r="3" stroke="#555" stroke-width="1.8" fill="none"/><circle cx="19" cy="18" r="3" stroke="#555" stroke-width="1.8" fill="none"/><line x1="7.5" y1="16" x2="12" y2="15" stroke="#444" stroke-width="1.8" stroke-linecap="round"/><line x1="16.5" y1="16" x2="12" y2="15" stroke="#444" stroke-width="1.8" stroke-linecap="round"/></svg>
         </div>
-        <div style="background:white;color:#111;border:1.5px solid #ddd;border-radius:20px;padding:3px 8px;font-family:system-ui,sans-serif;font-size:9px;font-weight:600;white-space:nowrap;margin-top:-3px;box-shadow:0 1px 4px rgba(0,0,0,0.1);">
+        <div style="width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-top:6px solid #222;margin-top:-2px;"></div>
+        <div style="background:white;color:#111;border:1.5px solid #ddd;border-radius:20px;padding:3px 9px;font-family:system-ui,sans-serif;font-size:9px;font-weight:600;white-space:nowrap;margin-top:1px;box-shadow:0 1px 4px rgba(0,0,0,0.1);">
           ${truncated}
         </div>
       </div>
     `,
     className: "",
-    iconSize: [100, 65],
-    iconAnchor: [50, 65],
+    iconSize: [120, 75],
+    iconAnchor: [60, 48],
   });
 }
 

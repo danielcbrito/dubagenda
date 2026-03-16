@@ -6,13 +6,25 @@ export function normalizeDiscoverText(value: string | null | undefined): string 
     .toLowerCase();
 }
 
+/** Words to strip from brand name for short map pin labels */
+const GENERIC_PREFIXES = ["barbearia", "barbershop", "barber", "salao", "studio", "estudio"];
+
 export function getDiscoverUnitDisplayName(
   brandName: string,
   _unitName: string | null | undefined
 ): string {
-  // Show only brand first name on the map pin for cleaner look
-  const firstName = brandName.trim().split(/\s+/)[0];
-  return firstName || brandName;
+  const words = brandName.trim().split(/\s+/);
+  if (words.length <= 1) return brandName.trim();
+
+  // If first word is a generic prefix like "Barbearia", return the rest
+  const firstNormalized = normalizeDiscoverText(words[0]);
+  if (GENERIC_PREFIXES.includes(firstNormalized)) {
+    const rest = words.slice(1).join(" ");
+    return rest || brandName.trim();
+  }
+
+  // Otherwise return the full brand name
+  return brandName.trim();
 }
 
 /** Full display name with unit detail — used in cards */
