@@ -372,8 +372,8 @@ const BarbershopPublic = () => {
   };
 
   const handleOpenMaps = () => {
-    const lat = unidadeAtual?.latitude ?? tenant?.latitude;
-    const lng = unidadeAtual?.longitude ?? tenant?.longitude;
+    const lat = resolvedUnitCoords?.lat;
+    const lng = resolvedUnitCoords?.lng;
     if (lat != null && lng != null) {
       window.open(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`, "_blank");
     }
