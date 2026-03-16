@@ -472,7 +472,16 @@ const EscolherBarbearia = () => {
         </div>
 
         {/* List */}
-        <div ref={listRef} className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 pb-8">
+        <div
+          ref={listRef}
+          className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 pb-8"
+          onScroll={(e) => {
+            const el = e.currentTarget;
+            if (el.scrollTop > 30 && sheetTop > SHEET_SNAP_TOP) {
+              setSheetTop(SHEET_SNAP_TOP);
+            }
+          }}
+        >
           {isLoading ? (
             <div className="space-y-4">
               {[0, 1, 2].map(i => (
