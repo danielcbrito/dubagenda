@@ -85,22 +85,9 @@ function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): nu
 const WALKING_THRESHOLD_KM = 1.5;
 const WALKING_SPEED_KMH = 4.8;
 const DRIVING_SPEED_KMH = 25;
-const GEOCODE_CACHE_PREFIX = "unit-geocode-v5:";
-const GEOCODE_CACHE_TTL_MS = 1000 * 60 * 60 * 24 * 30;
-const DISCOVER_UNITS_CACHE_KEY = "discover-units:v2";
+const DISCOVER_UNITS_CACHE_KEY = "discover-units:v3";
 const DISCOVER_UNITS_CACHE_TTL_MINUTES = 10;
-const BRAZIL_COORDINATE_BOUNDS = {
-  minLat: -35.5,
-  maxLat: 5.5,
-  minLng: -74.5,
-  maxLng: -28,
-};
-
-interface GeocodeResult {
-  lat: number;
-  lng: number;
-  exact: boolean;
-}
+const DISCOVER_CACHE_KEYS_TO_CLEAR = ["discover-units:v1", "discover-units:v2"];
 
 function kmToMinutes(km: number, mode: "walking" | "driving"): number {
   const speed = mode === "walking" ? WALKING_SPEED_KMH : DRIVING_SPEED_KMH;
@@ -113,14 +100,6 @@ function getSmartTravelMode(km: number): "walking" | "driving" {
   return km <= WALKING_THRESHOLD_KM ? "walking" : "driving";
 }
 
-function normalizeText(value: string): string {
-  return value
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-zA-Z0-9]/g, "")
-    .toLowerCase();
-}
-
 function buildAddressParts(unit: Pick<UnitData, "rua" | "numero" | "bairro" | "cidade" | "estado" | "cep" | "tenantRua" | "tenantNumero" | "tenantBairro" | "tenantCidade" | "tenantEstado">) {
   return {
     street: unit.rua?.trim() || unit.tenantRua?.trim() || null,
@@ -130,119 +109,6 @@ function buildAddressParts(unit: Pick<UnitData, "rua" | "numero" | "bairro" | "c
     state: unit.estado?.trim() || unit.tenantEstado?.trim() || null,
     postalCode: unit.cep?.trim() || null,
   };
-}
-
-function buildAddressQuery(unit: UnitData): string | null {
-  const { street, number, neighborhood, city, state, postalCode } = buildAddressParts(unit);
-  if (!street || !city) return null;
-
-  return [street, number, neighborhood, city, state, postalCode, "Brasil"]
-    .filter((part): part is string => Boolean(part && part.length > 0))
-    .join(", ");
-}
-
-function hasPreciseAddress(unit: UnitData): boolean {
-  const { street, number, city, state } = buildAddressParts(unit);
-  return Boolean(street && number && city && state);
-}
-
-function isValidBrazilCoordinatePair(lat: number, lng: number) {
-  return (
-    lat >= BRAZIL_COORDINATE_BOUNDS.minLat &&
-    lat <= BRAZIL_COORDINATE_BOUNDS.maxLat &&
-    lng >= BRAZIL_COORDINATE_BOUNDS.minLng &&
-    lng <= BRAZIL_COORDINATE_BOUNDS.maxLng
-  );
-}
-
-function resolveStoredCoordinates(latitude: number | null, longitude: number | null) {
-  if (typeof latitude !== "number" || typeof longitude !== "number") {
-    return null;
-  }
-
-  if (isValidBrazilCoordinatePair(latitude, longitude)) {
-    return { lat: latitude, lng: longitude };
-  }
-
-  if (isValidBrazilCoordinatePair(longitude, latitude)) {
-    return { lat: longitude, lng: latitude };
-  }
-
-  return null;
-}
-
-function readCachedGeocode(addressKey: string): GeocodeResult | null {
-  try {
-    const raw = localStorage.getItem(`${GEOCODE_CACHE_PREFIX}${addressKey}`);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as { lat?: number; lng?: number; exact?: boolean; savedAt?: number };
-    const isExpired = !parsed.savedAt || Date.now() - parsed.savedAt > GEOCODE_CACHE_TTL_MS;
-    if (isExpired || typeof parsed.lat !== "number" || typeof parsed.lng !== "number") {
-      localStorage.removeItem(`${GEOCODE_CACHE_PREFIX}${addressKey}`);
-      return null;
-    }
-    return { lat: parsed.lat, lng: parsed.lng, exact: parsed.exact === true };
-  } catch {
-    return null;
-  }
-}
-
-function saveCachedGeocode(addressKey: string, result: GeocodeResult) {
-  try {
-    localStorage.setItem(
-      `${GEOCODE_CACHE_PREFIX}${addressKey}`,
-      JSON.stringify({ ...result, savedAt: Date.now() })
-    );
-  } catch {
-    /* ignore */
-  }
-}
-
-async function geocodeAddress(unit: UnitData): Promise<GeocodeResult | null> {
-  const addressQuery = buildAddressQuery(unit);
-  if (!addressQuery) return null;
-
-  const addressParts = buildAddressParts(unit);
-
-  try {
-    const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
-    const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-    const url = `https://${projectId}.supabase.co/functions/v1/geocode-address`;
-
-    const response = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${anonKey}`,
-        apikey: anonKey,
-      },
-      body: JSON.stringify({
-        address: addressQuery,
-        components: {
-          rua: addressParts.street,
-          numero: addressParts.number,
-          bairro: addressParts.neighborhood,
-          cidade: addressParts.city,
-          estado: addressParts.state,
-          cep: addressParts.postalCode,
-        },
-      }),
-    });
-
-    if (!response.ok) return null;
-
-    const data = await response.json();
-    if (data.lat == null || data.lng == null) return null;
-    if (!isValidBrazilCoordinatePair(data.lat, data.lng)) return null;
-
-    return {
-      lat: data.lat,
-      lng: data.lng,
-      exact: data.exact === true,
-    };
-  } catch {
-    return null;
-  }
 }
 
 // (Sheet logic moved to BottomSheet component)
