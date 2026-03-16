@@ -565,8 +565,38 @@ const EscolherBarbearia = () => {
             onSelectUnit={handleSelectUnit}
             onRecenter={handleRecenter}
             onBoundsChange={handleBoundsChange}
+            mapStyle={mapStyle}
           />
         )}
+      </div>
+
+      {/* ═══ Map controls — float above sheet ═══ */}
+      <div
+        className="absolute right-3 z-[550] flex flex-col items-center gap-2"
+        style={{
+          top: `calc(${sheetTop * 100}% - 6.5rem)`,
+          transition: isDragging.current ? "none" : "top 0.35s cubic-bezier(0.32, 0.72, 0, 1)",
+        }}
+      >
+        {userLocation && (
+          <button
+            onClick={handleRecenter}
+            className="flex h-10 w-10 items-center justify-center rounded-full border border-border/60 bg-card/95 shadow-lg backdrop-blur-sm transition-transform active:scale-90"
+          >
+            <Locate className="h-[17px] w-[17px] text-foreground" />
+          </button>
+        )}
+        <button
+          onClick={() => setMapStyle((prev) => (prev === "satellite" ? "street" : "satellite"))}
+          className="flex h-10 w-10 items-center justify-center rounded-full border border-border/60 bg-card/95 shadow-lg backdrop-blur-sm transition-transform active:scale-90"
+          title={mapStyle === "satellite" ? "Ver mapa" : "Ver satélite"}
+        >
+          {mapStyle === "satellite" ? (
+            <MapIcon className="h-[17px] w-[17px] text-foreground" />
+          ) : (
+            <Satellite className="h-[17px] w-[17px] text-foreground" />
+          )}
+        </button>
       </div>
 
       {/* ═══ Draggable sheet ═══ */}
