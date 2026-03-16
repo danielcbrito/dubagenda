@@ -80,7 +80,7 @@ function normalizeText(value: string): string {
     .toLowerCase();
 }
 
-const GEOCODE_CACHE_PREFIX = "unit-geocode-v3:";
+const GEOCODE_CACHE_PREFIX = "unit-geocode-v4:";
 const GEOCODE_CACHE_TTL_MS = 1000 * 60 * 60 * 24 * 30;
 
 interface GeocodeResult {
@@ -276,6 +276,15 @@ const EscolherBarbearia = () => {
   // ── Load units ──
   const loadUnits = async () => {
     setIsLoading(true);
+    // Clear stale v3 geocode cache entries
+    try {
+      const keysToRemove: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith("unit-geocode-v3:")) keysToRemove.push(key);
+      }
+      keysToRemove.forEach((k) => localStorage.removeItem(k));
+    } catch { /* ignore */ }
     try {
       const { data: units, error } = await supabase
         .from("tenant_unidades")
@@ -331,15 +340,15 @@ const EscolherBarbearia = () => {
       unitList = await Promise.all(
         unitList.map(async (unit) => {
           try {
-            const addressQuery = buildAddressQuery(unit);
-            const preciseAddress = hasPreciseAddress(unit);
-            const shouldResolveExact = preciseAddress || unit.latitude === null || unit.longitude === null;
+            // Only geocode units that DON'T have coordinates in the database
+            if (unit.latitude !== null && unit.longitude !== null) return unit;
 
-            if (!addressQuery || !shouldResolveExact) return unit;
+            const addressQuery = buildAddressQuery(unit);
+            if (!addressQuery) return unit;
 
             const addressKey = normalizeText(addressQuery);
             const cached = readCachedGeocode(addressKey);
-            if (cached && (cached.exact || unit.latitude === null || unit.longitude === null)) {
+            if (cached) {
               return { ...unit, latitude: cached.lat, longitude: cached.lng };
             }
 
@@ -353,12 +362,7 @@ const EscolherBarbearia = () => {
             if (!geocoded) return unit;
 
             saveCachedGeocode(addressKey, geocoded);
-
-            if (geocoded.exact || unit.latitude === null || unit.longitude === null) {
-              return { ...unit, latitude: geocoded.lat, longitude: geocoded.lng };
-            }
-
-            return unit;
+            return { ...unit, latitude: geocoded.lat, longitude: geocoded.lng };
           } catch {
             return unit;
           }

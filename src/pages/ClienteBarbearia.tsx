@@ -224,7 +224,11 @@ export default function ClienteBarbearia() {
                 icon={MapPin}
                 label="Endereço"
                 value={address}
-                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`}
+                href={
+                  unidadeAtual?.latitude != null && unidadeAtual?.longitude != null
+                    ? `https://www.google.com/maps/dir/?api=1&destination=${unidadeAtual.latitude},${unidadeAtual.longitude}`
+                    : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`
+                }
                 delay={0.15}
               />
             )}
