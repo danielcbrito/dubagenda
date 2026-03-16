@@ -15,6 +15,19 @@ html {
   translate: no;
 }
 
+.custom-pill-icon {
+  background: transparent !important;
+  border: none !important;
+}
+
+.leaflet-marker-icon.custom-pill-icon {
+  z-index: 1000 !important;
+}
+
+.custom-pill-icon .discover-map-pill {
+  transform-origin: center center;
+}
+
 /* 💎 BARBEARIA DUB - ULTRA PREMIUM 2025 DESIGN SYSTEM 
 All colors MUST be HSL. */
 

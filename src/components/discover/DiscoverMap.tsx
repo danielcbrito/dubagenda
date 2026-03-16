@@ -19,23 +19,37 @@ interface DiscoverMapProps {
 }
 
 function buildIcon(label: string, selected: boolean) {
-  const bg = selected ? "#0a0a0a" : "#ffffff";
-  const color = selected ? "#ffffff" : "#0a0a0a";
-  const border = selected ? "#0a0a0a" : "#d4d4d4";
-  const shadow = selected ? "0 4px 12px rgba(0,0,0,0.3)" : "0 2px 6px rgba(0,0,0,0.12)";
-  const scale = selected ? "scale(1.1)" : "scale(1)";
-  const truncated = label.length > 14 ? label.slice(0, 13) + "…" : label;
+  const bg = selected ? "hsl(var(--foreground))" : "hsl(var(--card))";
+  const color = selected ? "hsl(var(--background))" : "hsl(var(--foreground))";
+  const border = "hsl(var(--foreground))";
+  const shadow = selected
+    ? "0 6px 16px hsl(var(--foreground) / 0.22)"
+    : "0 3px 10px hsl(var(--foreground) / 0.14)";
+  const scale = selected ? "scale(1.08)" : "scale(1)";
+  const truncated = label.length > 18 ? `${label.slice(0, 17)}…` : label;
 
   return L.divIcon({
-    className: "",
-    iconSize: [0, 0],
-    iconAnchor: [0, 16],
-    html: `<div style="
-      background:${bg};color:${color};border:1.5px solid ${border};
-      padding:4px 10px;border-radius:20px;font-size:12px;font-weight:600;
-      white-space:nowrap;box-shadow:${shadow};transform:${scale};
-      transition:all 0.2s ease;cursor:pointer;font-family:system-ui;
-      display:flex;align-items:center;gap:4px;
+    className: "custom-pill-icon",
+    iconSize: [120, 34],
+    iconAnchor: [60, 17],
+    popupAnchor: [0, -17],
+    html: `<div class="discover-map-pill" style="
+      background:${bg};
+      color:${color};
+      border:2px solid ${border};
+      border-radius:999px;
+      padding:5px 12px;
+      font-size:11px;
+      font-weight:700;
+      line-height:1;
+      white-space:nowrap;
+      box-shadow:${shadow};
+      transform:${scale};
+      transition:all 0.2s ease;
+      cursor:pointer;
+      font-family:system-ui, sans-serif;
+      position:relative;
+      z-index:1000;
     ">${truncated}</div>`,
   });
 }
@@ -71,14 +85,16 @@ export function DiscoverMap({
 
     // Track bounds changes
     const emitBounds = () => {
-      if (onBoundsChange) onBoundsChange(map.getBounds());
+      if (onBoundsChange && map.getBounds().isValid()) {
+        onBoundsChange(map.getBounds());
+      }
     };
     map.on("moveend", emitBounds);
     map.on("zoomend", emitBounds);
-    // Emit initial bounds
-    setTimeout(emitBounds, 300);
+    const initialBoundsTimer = window.setTimeout(emitBounds, 500);
 
     return () => {
+      window.clearTimeout(initialBoundsTimer);
       map.remove();
       mapRef.current = null;
     };
@@ -95,9 +111,9 @@ export function DiscoverMap({
     if (userLocation) {
       userMarkerRef.current = L.circleMarker([userLocation.lat, userLocation.lng], {
         radius: 8,
-        fillColor: "#4285F4",
+        fillColor: "hsl(var(--primary))",
         fillOpacity: 1,
-        color: "#ffffff",
+        color: "hsl(var(--background))",
         weight: 3,
       }).addTo(map);
     }
@@ -105,7 +121,22 @@ export function DiscoverMap({
 
   // Update unit markers
   const mappableUnits = useMemo(
-    () => units.filter((u) => u.latitude !== null && u.longitude !== null),
+    () => units
+      .map((unit) => {
+        const latitude = Number.parseFloat(String(unit.latitude));
+        const longitude = Number.parseFloat(String(unit.longitude));
+
+        if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+          return null;
+        }
+
+        return {
+          ...unit,
+          latitude,
+          longitude,
+        };
+      })
+      .filter((unit): unit is MapUnit & { latitude: number; longitude: number } => unit !== null),
     [units]
   );
 
@@ -132,15 +163,22 @@ export function DiscoverMap({
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
+
     if (selectedId) {
       const unit = units.find((u) => u.id === selectedId);
-      if (unit?.latitude && unit?.longitude) {
-        map.flyTo([unit.latitude, unit.longitude], 16, { duration: 0.8 });
+      const latitude = Number.parseFloat(String(unit?.latitude));
+      const longitude = Number.parseFloat(String(unit?.longitude));
+
+      if (Number.isFinite(latitude) && Number.isFinite(longitude)) {
+        map.flyTo([latitude, longitude], 16, { duration: 0.8 });
       }
-    } else if (userLocation) {
+      return;
+    }
+
+    if (userLocation) {
       map.flyTo([userLocation.lat, userLocation.lng], 14, { duration: 0.8 });
     }
-  }, [selectedId]);
+  }, [selectedId, units, userLocation]);
 
   // Handle recenter
   const handleRecenter = () => {

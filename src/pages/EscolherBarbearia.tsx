@@ -153,6 +153,7 @@ const EscolherBarbearia = () => {
   const [hasAutoOpened, setHasAutoOpened] = useState(false);
   const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null);
   const [mapBounds, setMapBounds] = useState<L.LatLngBounds | null>(null);
+  const [mapReady, setMapReady] = useState(false);
   const lastLocationRef = useRef<{ lat: number; lng: number } | null>(null);
   const watchIdRef = useRef<number | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
@@ -297,7 +298,7 @@ const EscolherBarbearia = () => {
       unitList = await Promise.all(
         unitList.map(async (unit) => {
           try {
-            if (unit.latitude && unit.longitude) return unit;
+            if (unit.latitude !== null && unit.longitude !== null) return unit;
             const addressQuery = buildAddressQuery(unit);
             if (!addressQuery) return unit;
             const addressKey = normalizeText(addressQuery);
@@ -339,25 +340,51 @@ const EscolherBarbearia = () => {
   }, [allUnits, userLocation]);
 
   // ── Filtered by search + map bounds ──
-  const filtered = useMemo(() => {
-    let result = sortedUnits;
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      result = result.filter(u =>
-        u.nome.toLowerCase().includes(q) ||
-        u.brandName.toLowerCase().includes(q) ||
-        (u.bairro && u.bairro.toLowerCase().includes(q)) ||
-        (u.cidade && u.cidade.toLowerCase().includes(q))
-      );
-    }
-    if (mapBounds) {
-      result = result.filter(u => {
-        if (u.latitude === null || u.longitude === null) return true;
-        return mapBounds.contains([u.latitude, u.longitude]);
-      });
-    }
-    return result;
-  }, [sortedUnits, search, mapBounds]);
+  const searchFilteredUnits = useMemo(() => {
+    if (!search.trim()) return sortedUnits;
+
+    const q = search.toLowerCase();
+    return sortedUnits.filter(u =>
+      u.nome.toLowerCase().includes(q) ||
+      u.brandName.toLowerCase().includes(q) ||
+      (u.bairro && u.bairro.toLowerCase().includes(q)) ||
+      (u.cidade && u.cidade.toLowerCase().includes(q))
+    );
+  }, [sortedUnits, search]);
+
+  const visibleUnits = useMemo(() => {
+    if (!mapReady || !mapBounds) return searchFilteredUnits;
+
+    return searchFilteredUnits.filter((unit) => {
+      if (unit.latitude === null || unit.longitude === null) return false;
+
+      const lat = Number.parseFloat(String(unit.latitude));
+      const lng = Number.parseFloat(String(unit.longitude));
+
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) return false;
+
+      try {
+        return mapBounds.contains([lat, lng]);
+      } catch {
+        return true;
+      }
+    });
+  }, [mapBounds, mapReady, searchFilteredUnits]);
+
+  const handleBoundsChange = useCallback((bounds: L.LatLngBounds) => {
+    if (!bounds.isValid()) return;
+    setMapReady(true);
+    setMapBounds(bounds);
+  }, []);
+
+  useEffect(() => {
+    console.log("[Discover] Total barbearias:", allUnits.length);
+    console.log("[Discover] Primeira unidade:", allUnits[0] ?? null);
+    console.log(
+      "[Discover] Com coordenadas válidas:",
+      allUnits.filter((unit) => unit.latitude !== null && unit.longitude !== null).length
+    );
+  }, [allUnits]);
 
   // ── Select unit syncs map ↔ list ──
   const handleSelectUnit = useCallback((id: string) => {
@@ -441,12 +468,12 @@ const EscolherBarbearia = () => {
       <div className="absolute inset-0" style={{ height: `${sheetTop * 100}%` }}>
         {!isLoading && (
           <DiscoverMap
-            units={filtered}
+            units={searchFilteredUnits}
             userLocation={userLocation}
             selectedId={selectedUnitId}
             onSelectUnit={handleSelectUnit}
             onRecenter={handleRecenter}
-            onBoundsChange={setMapBounds}
+            onBoundsChange={handleBoundsChange}
           />
         )}
       </div>
@@ -479,7 +506,7 @@ const EscolherBarbearia = () => {
         {/* Count */}
         <div className="flex-shrink-0 px-5 pb-3 pt-1">
           <p className="text-[14px] font-semibold text-foreground text-center">
-            {isLoading ? "Carregando..." : `${filtered.length} barbearia${filtered.length !== 1 ? "s" : ""} nesta área`}
+            {isLoading ? "Carregando..." : `${visibleUnits.length} barbearia${visibleUnits.length !== 1 ? "s" : ""} nesta área`}
           </p>
         </div>
 
@@ -507,7 +534,7 @@ const EscolherBarbearia = () => {
                 </div>
               ))}
             </div>
-          ) : filtered.length === 0 ? (
+          ) : visibleUnits.length === 0 ? (
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
@@ -525,7 +552,7 @@ const EscolherBarbearia = () => {
             </motion.div>
           ) : (
             <div className="space-y-4">
-              {filtered.map((unit, index) => (
+              {visibleUnits.map((unit, index) => (
                 <div key={unit.id} ref={(el) => { if (el) cardRefs.current.set(unit.id, el); }}>
                   <DiscoverUnitCard
                     unit={unit}
