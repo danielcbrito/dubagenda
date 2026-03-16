@@ -24,6 +24,12 @@ function smartZoomForDistance(km: number): number {
   return 14;
 }
 
+function getTileUrl(mapStyle: "satellite" | "street") {
+  return mapStyle === "satellite"
+    ? "https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}"
+    : "https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}";
+}
+
 interface MapUnit {
   id: string;
   nome: string;
@@ -117,6 +123,7 @@ export function DiscoverMap({
   const markersRef = useRef<Map<string, L.Marker>>(new Map());
   const userMarkerRef = useRef<L.CircleMarker | null>(null);
   const tileLayerRef = useRef<L.TileLayer | null>(null);
+  const initialMapStyleRef = useRef(mapStyle);
 
   const mappableUnits = useMemo(
     () =>
@@ -184,8 +191,7 @@ export function DiscoverMap({
       zoomControl: false,
       attributionControl: false,
     });
-    // Google Maps hybrid satellite tile layer
-    const initialTile = L.tileLayer("https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}", {
+    const initialTile = L.tileLayer(getTileUrl(initialMapStyleRef.current), {
       maxZoom: 20,
     }).addTo(map);
     tileLayerRef.current = initialTile;
@@ -283,12 +289,7 @@ export function DiscoverMap({
       tileLayerRef.current.remove();
     }
 
-    const tileUrl =
-      mapStyle === "satellite"
-        ? "https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}"
-        : "https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}";
-
-    tileLayerRef.current = L.tileLayer(tileUrl, { maxZoom: 20 }).addTo(map);
+    tileLayerRef.current = L.tileLayer(getTileUrl(mapStyle), { maxZoom: 20 }).addTo(map);
   }, [mapStyle]);
 
   useEffect(() => {
