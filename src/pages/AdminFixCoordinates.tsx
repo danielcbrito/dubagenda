@@ -3,6 +3,11 @@ import { Loader2, LocateFixed, MapPin, RefreshCw, Save } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  clearLegacyGeocodeCaches,
+  geocodeAddressFromParts,
+  hasPreciseAddressParts,
+} from "@/lib/geocoding";
 import { UnitLocationMiniMap } from "@/components/admin/UnitLocationMiniMap";
 import { getDiscoverUnitFullName } from "@/components/discover/discoverUnitUtils";
 

@@ -5,11 +5,23 @@ import { Search, SearchX, X, Map as MapIcon, Satellite, Locate } from "lucide-re
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import {
+  type GeocodeResult,
+  buildAddressQueryFromParts,
+  clearLegacyGeocodeCaches,
+  geocodeAddressFromParts,
+  hasPreciseAddressParts,
+  normalizeLocationText as normalizeText,
+  pickResolvedCoordinates,
+  readCachedGeocode,
+  resolveStoredCoordinates,
+  saveCachedGeocode,
+  shouldPreferGeocodedCoordinates,
+} from "@/lib/geocoding";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DiscoverMap } from "@/components/discover/DiscoverMap";
 import { DiscoverUnitCard } from "@/components/discover/DiscoverUnitCard";
 import { BottomSheet, SNAP_MID } from "@/components/discover/BottomSheet";
-import { getDiscoverUnitFullName } from "@/components/discover/discoverUnitUtils";
 import { getCache, setCache } from "@/utils/cache";
 import type L from "leaflet";
 

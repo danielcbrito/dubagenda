@@ -4,6 +4,17 @@ import { motion } from "framer-motion";
 import { Star, MapPin, Navigation, Scissors, Users, Loader2, ExternalLink, ChevronRight, ArrowRight, Building2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+import {
+  buildAddressQueryFromParts,
+  geocodeAddressFromParts,
+  hasPreciseAddressParts,
+  normalizeLocationText,
+  pickResolvedCoordinates,
+  readCachedGeocode,
+  resolveStoredCoordinates,
+  saveCachedGeocode,
+  shouldPreferGeocodedCoordinates,
+} from "@/lib/geocoding";
 import logoDub from "@/assets/logo-dub.png";
 import { useQuery } from "@tanstack/react-query";
 import { BarberProfileSheet } from "@/components/discover/BarberProfileSheet";

@@ -5,6 +5,17 @@ import { motion } from "framer-motion";
 import { ArrowLeft, MapPin, Phone, Mail, Globe, Scissors, Star, Crown, ExternalLink, Building2, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+import {
+  buildAddressQueryFromParts,
+  geocodeAddressFromParts,
+  hasPreciseAddressParts,
+  normalizeLocationText,
+  pickResolvedCoordinates,
+  readCachedGeocode,
+  resolveStoredCoordinates,
+  saveCachedGeocode,
+  shouldPreferGeocodedCoordinates,
+} from "@/lib/geocoding";
 import { Skeleton } from "@/components/ui/skeleton";
 import logoDub from "@/assets/logo-dub.png";
 
