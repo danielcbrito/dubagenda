@@ -281,9 +281,6 @@ export default function ClienteBarbearia() {
               <span className="flex-1 text-sm font-medium text-foreground text-left">
                 Ver todas as unidades
               </span>
-              <span className="text-[11px] font-mono tabular-nums bg-secondary border border-border rounded-full px-2 py-0.5 text-muted-foreground">
-                {unidadesCount}
-              </span>
               <ChevronRight className="w-4 h-4 text-muted-foreground/40 shrink-0" />
             </button>
           </motion.div>
