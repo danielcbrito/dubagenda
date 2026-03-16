@@ -161,6 +161,7 @@ export function DiscoverMap({
   }, [userLocation]);
 
   // Update unit markers
+  useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
 
