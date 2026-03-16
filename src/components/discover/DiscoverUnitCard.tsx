@@ -1,7 +1,7 @@
 import { MapPin, Footprints, Car } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
-import { getDiscoverUnitDisplayName } from "./discoverUnitUtils";
+import { getDiscoverUnitFullName } from "./discoverUnitUtils";
 
 interface UnitCardData {
   id: string;
