@@ -170,12 +170,12 @@ export function pickResolvedCoordinates(
   stored: { lat: number; lng: number } | null,
   cached: GeocodeResult | null,
 ): { lat: number; lng: number } | null {
-  if (isHighConfidenceGeocodeResult(cached)) {
-    return { lat: cached.lat, lng: cached.lng };
-  }
-
   if (stored) {
     return stored;
+  }
+
+  if (isHighConfidenceGeocodeResult(cached)) {
+    return { lat: cached.lat, lng: cached.lng };
   }
 
   if (cached) {
@@ -190,10 +190,9 @@ export function shouldPreferGeocodedCoordinates(
   geocoded: GeocodeResult,
   minimumDistanceKm = 0.05,
 ): boolean {
-  if (!stored) return true;
-  if (!isHighConfidenceGeocodeResult(geocoded)) return false;
-
-  return haversineKm(stored.lat, stored.lng, geocoded.lat, geocoded.lng) > minimumDistanceKm;
+  void geocoded;
+  void minimumDistanceKm;
+  return !stored;
 }
 
 export function clearLegacyGeocodeCaches(discoverCacheKeys: string[] = []): void {
