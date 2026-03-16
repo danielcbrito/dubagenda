@@ -72,6 +72,7 @@ export default function ClienteBarbearia() {
   const [barbershop, setBarbershop] = useState<BarbershopInfo | null>(null);
   const [isDub, setIsDub] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [resolvedUnitCoords, setResolvedUnitCoords] = useState<{ lat: number; lng: number } | null>(null);
 
   useEffect(() => {
     loadBarbershop();
