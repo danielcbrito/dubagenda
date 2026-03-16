@@ -160,10 +160,7 @@ async function geocodeAddress(unit: UnitData): Promise<GeocodeResult | null> {
   }
 }
 
-// ── Draggable sheet constants ──
-const SHEET_SNAP_TOP = 0.3; // 30% from top = 70% sheet
-const SHEET_SNAP_MID = 0.55; // 55% from top = 45% sheet
-const SHEET_SNAP_BOTTOM = 0.85; // 85% from top = 15% sheet (collapsed)
+// (Sheet logic moved to BottomSheet component)
 
 // ── Main Page ──
 const EscolherBarbearia = () => {
