@@ -1,0 +1,1 @@
+UPDATE profiles SET telefone = '81982892797' WHERE id = 'e7dba4bf-63e8-49ff-91b9-2b523f011678';
