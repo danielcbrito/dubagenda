@@ -181,7 +181,7 @@ const AdminFixCoordinates = () => {
         latitude,
         longitude,
         is_sede,
-        tenant:tenants!tenant_id (nome, slug)
+        tenant:tenants!tenant_id (nome, slug, rua, numero, bairro, cidade, estado, endereco_completo)
       `)
       .eq("ativo", true)
       .order("tenant_id")
