@@ -340,25 +340,51 @@ const EscolherBarbearia = () => {
   }, [allUnits, userLocation]);
 
   // ── Filtered by search + map bounds ──
-  const filtered = useMemo(() => {
-    let result = sortedUnits;
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      result = result.filter(u =>
-        u.nome.toLowerCase().includes(q) ||
-        u.brandName.toLowerCase().includes(q) ||
-        (u.bairro && u.bairro.toLowerCase().includes(q)) ||
-        (u.cidade && u.cidade.toLowerCase().includes(q))
-      );
-    }
-    if (mapBounds) {
-      result = result.filter(u => {
-        if (u.latitude === null || u.longitude === null) return true;
-        return mapBounds.contains([u.latitude, u.longitude]);
-      });
-    }
-    return result;
-  }, [sortedUnits, search, mapBounds]);
+  const searchFilteredUnits = useMemo(() => {
+    if (!search.trim()) return sortedUnits;
+
+    const q = search.toLowerCase();
+    return sortedUnits.filter(u =>
+      u.nome.toLowerCase().includes(q) ||
+      u.brandName.toLowerCase().includes(q) ||
+      (u.bairro && u.bairro.toLowerCase().includes(q)) ||
+      (u.cidade && u.cidade.toLowerCase().includes(q))
+    );
+  }, [sortedUnits, search]);
+
+  const visibleUnits = useMemo(() => {
+    if (!mapReady || !mapBounds) return searchFilteredUnits;
+
+    return searchFilteredUnits.filter((unit) => {
+      if (unit.latitude === null || unit.longitude === null) return false;
+
+      const lat = Number.parseFloat(String(unit.latitude));
+      const lng = Number.parseFloat(String(unit.longitude));
+
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) return false;
+
+      try {
+        return mapBounds.contains([lat, lng]);
+      } catch {
+        return true;
+      }
+    });
+  }, [mapBounds, mapReady, searchFilteredUnits]);
+
+  const handleBoundsChange = useCallback((bounds: L.LatLngBounds) => {
+    if (!bounds.isValid()) return;
+    setMapReady(true);
+    setMapBounds(bounds);
+  }, []);
+
+  useEffect(() => {
+    console.log("[Discover] Total barbearias:", allUnits.length);
+    console.log("[Discover] Primeira unidade:", allUnits[0] ?? null);
+    console.log(
+      "[Discover] Com coordenadas válidas:",
+      allUnits.filter((unit) => unit.latitude !== null && unit.longitude !== null).length
+    );
+  }, [allUnits]);
 
   // ── Select unit syncs map ↔ list ──
   const handleSelectUnit = useCallback((id: string) => {
