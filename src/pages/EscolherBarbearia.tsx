@@ -38,6 +38,7 @@ interface UnitData {
   brandName: string;
   brandSlug: string | null;
   brandLogo: string | null;
+  bannerUrl: string | null;
   distance: number | null;
   travelTime: string | null;
   travelMinutes: number | null;
@@ -293,6 +294,30 @@ const EscolherBarbearia = () => {
         setAllUnits([]); setIsLoading(false); return;
       }
 
+      // Fetch banners: tenant owner_user_id → profiles.banner_url
+      const tenantIds = [...new Set((units ?? []).map(u => (u.tenant as unknown as TenantJoin)?.id).filter(Boolean))];
+      const bannerMap = new Map<string, string>();
+      if (tenantIds.length > 0) {
+        const { data: tenantOwners } = await supabase
+          .from("tenants")
+          .select("id, owner_user_id")
+          .in("id", tenantIds);
+        if (tenantOwners && tenantOwners.length > 0) {
+          const ownerIds = tenantOwners.map(t => t.owner_user_id).filter(Boolean);
+          const { data: profiles } = await supabase
+            .from("profiles")
+            .select("id, banner_url")
+            .in("id", ownerIds)
+            .not("banner_url", "is", null);
+          const ownerBannerMap = new Map<string, string>();
+          (profiles ?? []).forEach(p => { if (p.banner_url) ownerBannerMap.set(p.id, p.banner_url); });
+          tenantOwners.forEach(t => {
+            const b = ownerBannerMap.get(t.owner_user_id);
+            if (b) bannerMap.set(t.id, b);
+          });
+        }
+      }
+
       let unitList: UnitData[] = (units ?? [])
         .filter((u) => { const t = u.tenant as unknown as TenantJoin | null; return t?.ativo && t?.onboarding_completed; })
         .map((u) => {
@@ -303,6 +328,7 @@ const EscolherBarbearia = () => {
             is_sede: u.is_sede ?? false, latitude: u.latitude, longitude: u.longitude,
             tenant_id: u.tenant_id, brandName: t?.nome ?? u.nome,
             brandSlug: t?.slug ?? null, brandLogo: t?.logo_url ?? null,
+            bannerUrl: bannerMap.get(u.tenant_id) ?? null,
             distance: null, travelTime: null, travelMinutes: null, travelMode: null,
           };
         });
