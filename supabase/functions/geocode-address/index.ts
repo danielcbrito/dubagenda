@@ -59,6 +59,15 @@ type NominatimResult = {
   };
 };
 
+type ArcGisCandidate = {
+  address?: string;
+  score?: number;
+  location?: {
+    x?: number;
+    y?: number;
+  };
+};
+
 function normalizeText(value: string | null | undefined) {
   return (value ?? "")
     .normalize("NFD")
@@ -222,6 +231,69 @@ function scoreNominatimResult(result: NominatimResult, input: GeocodeInput) {
   return score;
 }
 
+function isExactArcGisCandidate(candidate: ArcGisCandidate, input: GeocodeInput) {
+  const components = input.components ?? {};
+  const address = candidate.address ?? "";
+
+  const streetMatches = !components.rua || matchesText(address, components.rua);
+  const numberMatches =
+    !components.numero || digitsOnly(address).includes(digitsOnly(components.numero));
+  const cityMatches = !components.cidade || matchesText(address, components.cidade);
+  const postalCodeMatches =
+    !components.cep || digitsOnly(address).includes(digitsOnly(components.cep));
+
+  return Boolean(
+    (candidate.score ?? 0) >= 95 &&
+      streetMatches &&
+      numberMatches &&
+      cityMatches &&
+      postalCodeMatches,
+  );
+}
+
+function scoreArcGisCandidate(candidate: ArcGisCandidate, input: GeocodeInput) {
+  const lat = candidate.location?.y;
+  const lng = candidate.location?.x;
+
+  if (typeof lat !== "number" || typeof lng !== "number" || !isWithinBrazil(lat, lng)) {
+    return Number.NEGATIVE_INFINITY;
+  }
+
+  const components = input.components ?? {};
+  const address = candidate.address ?? "";
+  let score = candidate.score ?? 0;
+
+  if (components.rua) {
+    score += matchesText(address, components.rua) ? 16 : -12;
+  }
+
+  if (components.numero) {
+    score += digitsOnly(address).includes(digitsOnly(components.numero)) ? 22 : -8;
+  }
+
+  if (components.bairro) {
+    score += matchesText(address, components.bairro) ? 10 : -4;
+  }
+
+  if (components.cidade) {
+    score += matchesText(address, components.cidade) ? 16 : -18;
+  }
+
+  if (components.estado) {
+    score += matchesText(address, components.estado) ? 8 : -6;
+  }
+
+  if (components.cep) {
+    score += digitsOnly(address).includes(digitsOnly(components.cep)) ? 16 : 0;
+  }
+
+  if (input.address && matchesText(address, input.address)) {
+    score += 12;
+  }
+
+  return score;
+}
+
 function buildAddressCandidates(input: GeocodeInput) {
   const candidates = new Set<string>();
   const trimmedAddress = input.address?.trim();
@@ -312,6 +384,28 @@ async function fetchGoogleResults(address: string, apiKey: string, googleCompone
       ? (payload.results as GoogleGeocodeResult[])
       : [],
   };
+}
+
+async function fetchArcGisResults(address: string) {
+  const params = new URLSearchParams({
+    SingleLine: address,
+    f: "pjson",
+    countryCode: "BRA",
+    maxLocations: "5",
+  });
+
+  const response = await fetch(
+    `https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer/findAddressCandidates?${params.toString()}`,
+  );
+
+  if (!response.ok) {
+    throw new Error(`ArcGIS error: ${response.status}`);
+  }
+
+  const payload = await response.json();
+  return Array.isArray(payload.candidates)
+    ? (payload.candidates as ArcGisCandidate[])
+    : [];
 }
 
 async function fetchNominatimResults(address: string) {
@@ -407,6 +501,48 @@ Deno.serve(async (req) => {
           score: bestGoogle.score,
           queryUsed: bestGoogle.queryUsed,
           provider: "google",
+        }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
+    let bestArcGis:
+      | { result: ArcGisCandidate; score: number; queryUsed: string }
+      | null = null;
+
+    for (const candidate of candidates) {
+      try {
+        const results = await fetchArcGisResults(candidate);
+        const ranked = results
+          .map((result) => ({ result, score: scoreArcGisCandidate(result, input) }))
+          .filter((entry) => Number.isFinite(entry.score))
+          .sort((a, b) => b.score - a.score);
+
+        if (ranked[0]) {
+          bestArcGis = {
+            result: ranked[0].result,
+            score: ranked[0].score,
+            queryUsed: candidate,
+          };
+          break;
+        }
+      } catch {
+        /* keep trying next candidate */
+      }
+    }
+
+    if (bestArcGis?.result.location) {
+      return new Response(
+        JSON.stringify({
+          lat: bestArcGis.result.location.y ?? null,
+          lng: bestArcGis.result.location.x ?? null,
+          exact: isExactArcGisCandidate(bestArcGis.result, input),
+          locationType: "ARCGIS",
+          formattedAddress: bestArcGis.result.address ?? null,
+          score: bestArcGis.score,
+          queryUsed: bestArcGis.queryUsed,
+          provider: "arcgis",
+          fallbackReason: googleStatus,
         }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );

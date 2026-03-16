@@ -3,6 +3,11 @@ import { Loader2, LocateFixed, MapPin, RefreshCw, Save } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  clearLegacyGeocodeCaches,
+  geocodeAddressFromParts,
+  hasPreciseAddressParts,
+} from "@/lib/geocoding";
 import { UnitLocationMiniMap } from "@/components/admin/UnitLocationMiniMap";
 import { getDiscoverUnitFullName } from "@/components/discover/discoverUnitUtils";
 
@@ -40,8 +45,7 @@ interface FixResult {
 }
 
 const REQUEST_DELAY_MS = 1200;
-const DISCOVER_CACHE_KEYS = ["discover-units:v1", "discover-units:v2"];
-const GEOCODE_CACHE_PREFIXES = ["unit-geocode-v3:", "unit-geocode-v4:", "unit-geocode-v5:"];
+const DISCOVER_CACHE_KEYS = ["discover-units:v1", "discover-units:v2", "discover-units:v3"];
 
 function buildAddressParts(unit: FixableUnit) {
   return {
@@ -63,41 +67,13 @@ function buildFullAddress(unit: FixableUnit): string {
 }
 
 async function geocodeAddress(unit: FixableUnit): Promise<{ lat: number; lng: number } | null> {
-  const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
-  const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-  const address = buildFullAddress(unit);
   const addressParts = buildAddressParts(unit);
-
-  if (!addressParts.street || !addressParts.number || !addressParts.city || !addressParts.state) {
+  if (!hasPreciseAddressParts(addressParts)) {
     return null;
   }
 
-  const response = await fetch(`https://${projectId}.supabase.co/functions/v1/geocode-address`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${anonKey}`,
-      apikey: anonKey,
-    },
-    body: JSON.stringify({
-      address,
-      components: {
-        rua: addressParts.street,
-        numero: addressParts.number,
-        bairro: addressParts.neighborhood,
-        cidade: addressParts.city,
-        estado: addressParts.state,
-        cep: addressParts.postalCode,
-      },
-    }),
-  });
-
-  if (!response.ok) {
-    throw new Error("Falha ao consultar o geocoding");
-  }
-
-  const payload = await response.json();
-  if (typeof payload.lat !== "number" || typeof payload.lng !== "number") {
+  const payload = await geocodeAddressFromParts(addressParts);
+  if (!payload) {
     return null;
   }
 
@@ -105,20 +81,7 @@ async function geocodeAddress(unit: FixableUnit): Promise<{ lat: number; lng: nu
 }
 
 function clearDiscoveryLocationCaches() {
-  try {
-    DISCOVER_CACHE_KEYS.forEach((key) => sessionStorage.removeItem(key));
-
-    const keysToRemove: string[] = [];
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key && GEOCODE_CACHE_PREFIXES.some((prefix) => key.startsWith(prefix))) {
-        keysToRemove.push(key);
-      }
-    }
-    keysToRemove.forEach((key) => localStorage.removeItem(key));
-  } catch {
-    /* ignore */
-  }
+  clearLegacyGeocodeCaches(DISCOVER_CACHE_KEYS);
 }
 
 function wait(ms: number) {

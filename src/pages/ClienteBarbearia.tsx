@@ -5,6 +5,17 @@ import { motion } from "framer-motion";
 import { ArrowLeft, MapPin, Phone, Mail, Globe, Scissors, Star, Crown, ExternalLink, Building2, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+import {
+  buildAddressQueryFromParts,
+  geocodeAddressFromParts,
+  hasPreciseAddressParts,
+  normalizeLocationText,
+  pickResolvedCoordinates,
+  readCachedGeocode,
+  resolveStoredCoordinates,
+  saveCachedGeocode,
+  shouldPreferGeocodedCoordinates,
+} from "@/lib/geocoding";
 import { Skeleton } from "@/components/ui/skeleton";
 import logoDub from "@/assets/logo-dub.png";
 
@@ -61,6 +72,7 @@ export default function ClienteBarbearia() {
   const [barbershop, setBarbershop] = useState<BarbershopInfo | null>(null);
   const [isDub, setIsDub] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [resolvedUnitCoords, setResolvedUnitCoords] = useState<{ lat: number; lng: number } | null>(null);
 
   useEffect(() => {
     loadBarbershop();
@@ -100,7 +112,7 @@ export default function ClienteBarbearia() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("tenant_unidades")
-        .select("id, nome, rua, numero, bairro, cidade, estado, telefone, whatsapp, latitude, longitude, is_sede")
+        .select("id, nome, rua, numero, bairro, cidade, estado, cep, telefone, whatsapp, latitude, longitude, is_sede")
         .eq("tenant_id", barbershop!.id)
         .eq("is_sede", true)
         .limit(1)
@@ -125,6 +137,57 @@ export default function ClienteBarbearia() {
          .filter(Boolean).join(", "));
 
   const phone = unidadeAtual?.whatsapp || unidadeAtual?.telefone || barbershop?.whatsapp || barbershop?.telefone;
+
+  useEffect(() => {
+    const addressParts = {
+      street: unidadeAtual?.rua ?? null,
+      number: unidadeAtual?.numero ?? null,
+      neighborhood: unidadeAtual?.bairro ?? null,
+      city: unidadeAtual?.cidade ?? null,
+      state: unidadeAtual?.estado ?? null,
+      postalCode: unidadeAtual?.cep ?? null,
+    };
+    const storedCoords = resolveStoredCoordinates(
+      unidadeAtual?.latitude ?? null,
+      unidadeAtual?.longitude ?? null,
+    );
+    const addressQuery = buildAddressQueryFromParts(addressParts);
+    const cachedGeocode = addressQuery
+      ? readCachedGeocode(normalizeLocationText(addressQuery))
+      : null;
+
+    setResolvedUnitCoords(pickResolvedCoordinates(storedCoords, cachedGeocode));
+
+    if (!addressQuery || !hasPreciseAddressParts(addressParts)) {
+      return;
+    }
+
+    let isActive = true;
+
+    void (async () => {
+      const geocoded = await geocodeAddressFromParts(addressParts);
+      if (!geocoded || !isActive) return;
+
+      saveCachedGeocode(normalizeLocationText(addressQuery), geocoded);
+      if (shouldPreferGeocodedCoordinates(storedCoords, geocoded) || !storedCoords) {
+        setResolvedUnitCoords({ lat: geocoded.lat, lng: geocoded.lng });
+      }
+    })();
+
+    return () => {
+      isActive = false;
+    };
+  }, [
+    unidadeAtual?.id,
+    unidadeAtual?.rua,
+    unidadeAtual?.numero,
+    unidadeAtual?.bairro,
+    unidadeAtual?.cidade,
+    unidadeAtual?.estado,
+    unidadeAtual?.cep,
+    unidadeAtual?.latitude,
+    unidadeAtual?.longitude,
+  ]);
 
   // Units count query for "Ver todas as unidades" row
   const { data: unidadesCount } = useQuery({
@@ -225,8 +288,8 @@ export default function ClienteBarbearia() {
                 label="Endereço"
                 value={address}
                 href={
-                  unidadeAtual?.latitude != null && unidadeAtual?.longitude != null
-                    ? `https://www.google.com/maps/dir/?api=1&destination=${unidadeAtual.latitude},${unidadeAtual.longitude}`
+                  resolvedUnitCoords?.lat != null && resolvedUnitCoords?.lng != null
+                    ? `https://www.google.com/maps/dir/?api=1&destination=${resolvedUnitCoords.lat},${resolvedUnitCoords.lng}`
                     : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`
                 }
                 delay={0.15}

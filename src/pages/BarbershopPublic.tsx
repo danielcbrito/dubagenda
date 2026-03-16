@@ -4,6 +4,17 @@ import { motion } from "framer-motion";
 import { Star, MapPin, Navigation, Scissors, Users, Loader2, ExternalLink, ChevronRight, ArrowRight, Building2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+import {
+  buildAddressQueryFromParts,
+  geocodeAddressFromParts,
+  hasPreciseAddressParts,
+  normalizeLocationText,
+  pickResolvedCoordinates,
+  readCachedGeocode,
+  resolveStoredCoordinates,
+  saveCachedGeocode,
+  shouldPreferGeocodedCoordinates,
+} from "@/lib/geocoding";
 import logoDub from "@/assets/logo-dub.png";
 import { useQuery } from "@tanstack/react-query";
 import { BarberProfileSheet } from "@/components/discover/BarberProfileSheet";
@@ -139,6 +150,7 @@ const BarbershopPublic = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [currentPreferred, setCurrentPreferred] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
+  const [resolvedUnitCoords, setResolvedUnitCoords] = useState<{ lat: number; lng: number } | null>(null);
 
   // Check auth + preferred barbershop
   useEffect(() => {
@@ -360,8 +372,8 @@ const BarbershopPublic = () => {
   };
 
   const handleOpenMaps = () => {
-    const lat = unidadeAtual?.latitude ?? tenant?.latitude;
-    const lng = unidadeAtual?.longitude ?? tenant?.longitude;
+    const lat = resolvedUnitCoords?.lat;
+    const lng = resolvedUnitCoords?.lng;
     if (lat != null && lng != null) {
       window.open(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`, "_blank");
     }
@@ -373,7 +385,7 @@ const BarbershopPublic = () => {
     queryFn: async () => {
       const baseQuery = supabase
         .from("tenant_unidades")
-        .select("id, nome, rua, numero, bairro, cidade, estado, telefone, whatsapp, latitude, longitude, is_sede, slug")
+        .select("id, nome, rua, numero, bairro, cidade, estado, cep, telefone, whatsapp, latitude, longitude, is_sede, slug")
         .eq("tenant_id", tenant!.id);
 
       if (unidadeIdParam) {
@@ -385,7 +397,7 @@ const BarbershopPublic = () => {
 
       const { data, error } = await supabase
         .from("tenant_unidades")
-        .select("id, nome, rua, numero, bairro, cidade, estado, telefone, whatsapp, latitude, longitude, is_sede, slug")
+        .select("id, nome, rua, numero, bairro, cidade, estado, cep, telefone, whatsapp, latitude, longitude, is_sede, slug")
         .eq("tenant_id", tenant!.id)
         .eq("is_sede", true)
         .limit(1)
@@ -396,6 +408,64 @@ const BarbershopPublic = () => {
     enabled: !!tenant?.id,
     staleTime: 5 * 60 * 1000,
   });
+
+  useEffect(() => {
+    const addressParts = {
+      street: unidadeAtual?.rua ?? tenant?.rua ?? null,
+      number: unidadeAtual?.numero ?? tenant?.numero ?? null,
+      neighborhood: unidadeAtual?.bairro ?? tenant?.bairro ?? null,
+      city: unidadeAtual?.cidade ?? tenant?.cidade ?? null,
+      state: unidadeAtual?.estado ?? tenant?.estado ?? null,
+      postalCode: unidadeAtual?.cep ?? null,
+    };
+    const storedCoords = resolveStoredCoordinates(
+      unidadeAtual?.latitude ?? tenant?.latitude ?? null,
+      unidadeAtual?.longitude ?? tenant?.longitude ?? null,
+    );
+    const addressQuery = buildAddressQueryFromParts(addressParts);
+    const cachedGeocode = addressQuery
+      ? readCachedGeocode(normalizeLocationText(addressQuery))
+      : null;
+
+    setResolvedUnitCoords(pickResolvedCoordinates(storedCoords, cachedGeocode));
+
+    if (!addressQuery || !hasPreciseAddressParts(addressParts)) {
+      return;
+    }
+
+    let isActive = true;
+
+    void (async () => {
+      const geocoded = await geocodeAddressFromParts(addressParts);
+      if (!geocoded || !isActive) return;
+
+      saveCachedGeocode(normalizeLocationText(addressQuery), geocoded);
+      if (shouldPreferGeocodedCoordinates(storedCoords, geocoded) || !storedCoords) {
+        setResolvedUnitCoords({ lat: geocoded.lat, lng: geocoded.lng });
+      }
+    })();
+
+    return () => {
+      isActive = false;
+    };
+  }, [
+    tenant?.rua,
+    tenant?.numero,
+    tenant?.bairro,
+    tenant?.cidade,
+    tenant?.estado,
+    tenant?.latitude,
+    tenant?.longitude,
+    unidadeAtual?.id,
+    unidadeAtual?.rua,
+    unidadeAtual?.numero,
+    unidadeAtual?.bairro,
+    unidadeAtual?.cidade,
+    unidadeAtual?.estado,
+    unidadeAtual?.cep,
+    unidadeAtual?.latitude,
+    unidadeAtual?.longitude,
+  ]);
 
   // Units count query for "Ver todas as unidades" row
   const { data: unidadesCount } = useQuery({
@@ -476,9 +546,9 @@ const BarbershopPublic = () => {
       : currentPreferred === tenant.id
   );
 
-  // Use unit coordinates for distance, falling back to tenant-level
-  const effectiveLat = unidadeAtual?.latitude ?? tenant?.latitude;
-  const effectiveLng = unidadeAtual?.longitude ?? tenant?.longitude;
+  // Use resolved coordinates for distance and navigation
+  const effectiveLat = resolvedUnitCoords?.lat ?? null;
+  const effectiveLng = resolvedUnitCoords?.lng ?? null;
 
   const distance = userLocation && effectiveLat != null && effectiveLng != null
     ? haversineDistance(userLocation.lat, userLocation.lng, effectiveLat, effectiveLng)
