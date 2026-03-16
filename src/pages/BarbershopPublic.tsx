@@ -681,7 +681,7 @@ const BarbershopPublic = () => {
             className="px-5 mb-6"
           >
             <button
-              onClick={() => navigate(`/b/${slug}/unidades`)}
+              onClick={() => navigate(`/b/${slug}/unidades${unidadeAtual?.id ? `?current=${unidadeAtual.id}` : ""}`)}
               className={cn(
                 "w-full flex items-center gap-3 px-4 h-14 rounded-2xl",
                 "bg-card border border-border",

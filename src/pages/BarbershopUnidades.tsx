@@ -1,27 +1,17 @@
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { MapPin, ChevronRight, Building2 } from "lucide-react";
+import { MapPin, SearchX } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { BackArrow } from "@/components/ui/back-arrow";
-
-interface Unidade {
-  id: string;
-  nome: string;
-  slug: string | null;
-  bairro: string | null;
-  cidade: string | null;
-  estado: string | null;
-  is_sede: boolean;
-  logo_url: string | null;
-  telefone: string | null;
-}
+import { DiscoverUnitCard } from "@/components/discover/DiscoverUnitCard";
 
 const BarbershopUnidades = () => {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const currentUnitId = searchParams.get("current");
 
   const { data: shop } = useQuery({
     queryKey: ["shop-by-slug", slug],
@@ -39,27 +29,57 @@ const BarbershopUnidades = () => {
   });
 
   const { data: unidades = [], isLoading } = useQuery({
-    queryKey: ["unidades", shop?.id],
+    queryKey: ["unidades-full", shop?.id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("tenant_unidades")
-        .select("id, nome, slug, bairro, cidade, estado, is_sede, logo_url, telefone")
+        .select("id, nome, slug, bairro, cidade, estado, rua, numero, is_sede, logo_url, latitude, longitude")
         .eq("tenant_id", shop!.id)
+        .eq("ativo", true)
         .order("is_sede", { ascending: false })
         .order("nome", { ascending: true });
       if (error) throw error;
-      return (data ?? []) as Unidade[];
+      return data ?? [];
     },
     enabled: !!shop?.id,
     staleTime: 5 * 60 * 1000,
   });
 
-  const handleUnitTap = (unidade: Unidade) => {
-    if (unidade.slug) {
-      navigate(`/b/${unidade.slug}`);
-    } else {
-      navigate(`/b/${slug}?unidade=${unidade.id}`);
-    }
+  // Fetch banner for the brand
+  const { data: bannerUrl } = useQuery({
+    queryKey: ["tenant-banner-unidades", shop?.id],
+    queryFn: async () => {
+      const { data } = await supabase.rpc("get_tenant_banners", {
+        p_tenant_ids: [shop!.id],
+      });
+      const banners = data as { tenant_id: string; banner_url: string }[] | null;
+      return banners?.[0]?.banner_url ?? null;
+    },
+    enabled: !!shop?.id,
+    staleTime: 10 * 60 * 1000,
+  });
+
+  // Filter out the current unit and map to DiscoverUnitCard format
+  const displayUnits = unidades
+    .filter((u) => u.id !== currentUnitId)
+    .map((u) => ({
+      id: u.id,
+      nome: u.nome,
+      brandName: shop?.nome ?? u.nome,
+      brandLogo: u.logo_url || shop?.logo_url || null,
+      brandSlug: shop?.slug ?? null,
+      bannerUrl: bannerUrl ?? null,
+      bairro: u.bairro,
+      cidade: u.cidade,
+      rua: u.rua,
+      numero: u.numero,
+      travelMinutes: null,
+      travelMode: null as "walking" | "driving" | null,
+      is_sede: u.is_sede ?? false,
+    }));
+
+  const handleCardClick = (unitId: string) => {
+    navigate(`/${shop?.slug ?? slug}?unidade=${unitId}&from=discover`);
   };
 
   return (
@@ -77,9 +97,9 @@ const BarbershopUnidades = () => {
             <h1 className="text-[18px] font-bold text-foreground leading-none tracking-tight font-['Space_Grotesk']">
               {shop?.nome ?? "Carregando..."}
             </h1>
-            {!isLoading && unidades.length > 0 && (
+            {!isLoading && displayUnits.length > 0 && (
               <p className="text-[10px] text-muted-foreground/35 mt-0.5 font-medium">
-                {unidades.length} {unidades.length === 1 ? "unidade" : "unidades"}
+                {displayUnits.length} {displayUnits.length === 1 ? "outra unidade" : "outras unidades"}
               </p>
             )}
           </div>
@@ -93,120 +113,41 @@ const BarbershopUnidades = () => {
           style={{ background: "linear-gradient(to bottom, hsl(var(--background)), transparent)" }}
         />
 
-        <div className="h-full overflow-y-auto overscroll-contain px-5 pb-24">
+        <div className="h-full overflow-y-auto overscroll-contain px-4 pb-24">
           {isLoading ? (
-            <div className="space-y-3 pt-2">
+            <div className="space-y-4 pt-2">
               {[0, 1, 2].map((i) => (
-                <div
-                  key={i}
-                  className="flex items-center gap-3.5 p-4 rounded-2xl border border-border bg-card"
-                >
-                  <Skeleton className="w-12 h-12 rounded-xl" />
-                  <div className="space-y-1.5 flex-1">
-                    <Skeleton className="h-4 w-36" />
-                    <Skeleton className="h-3 w-24" />
+                <div key={i} className="rounded-2xl overflow-hidden border border-border/40">
+                  <Skeleton className="h-28 w-full rounded-none" />
+                  <div className="p-3.5 space-y-2">
+                    <Skeleton className="h-4 w-36 rounded-lg" />
+                    <Skeleton className="h-3 w-48 rounded-lg" />
                   </div>
                 </div>
               ))}
             </div>
-          ) : unidades.length === 0 ? (
+          ) : displayUnits.length === 0 ? (
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               className="flex flex-col items-center py-16"
             >
-              <MapPin className="w-8 h-8 text-muted-foreground/20 mb-3" />
+              <SearchX className="w-8 h-8 text-muted-foreground/20 mb-3" />
               <p className="text-sm text-muted-foreground">
-                Nenhuma unidade encontrada
+                Nenhuma outra unidade encontrada
               </p>
             </motion.div>
           ) : (
-            <div className="space-y-2 pt-1">
-              {unidades.map((u, index) => {
-                const loc = [u.bairro, u.cidade].filter(Boolean).join(", ");
-                const logoSrc = u.logo_url || shop?.logo_url || null;
-
-                return (
-                  <motion.button
-                    key={u.id}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{
-                      duration: 0.25,
-                      delay: index * 0.05,
-                      ease: [0.22, 1, 0.36, 1],
-                    }}
-                    onClick={() => handleUnitTap(u)}
-                    className={cn(
-                      "group relative w-full flex items-center gap-3.5 p-4 rounded-2xl",
-                      "bg-card border border-border",
-                      "hover:border-primary/20 active:scale-[0.98] transition-all text-left"
-                    )}
-                    style={{ WebkitTapHighlightColor: "transparent" }}
-                  >
-                    {/* Sede accent bar */}
-                    {u.is_sede && (
-                      <div className="absolute left-0 top-[20%] bottom-[20%] w-[3px] rounded-r-full bg-primary" />
-                    )}
-
-                    {/* Logo / Icon */}
-                    <div
-                      className={cn(
-                        "w-12 h-12 rounded-xl flex items-center justify-center shrink-0 overflow-hidden border",
-                        u.is_sede
-                          ? "bg-primary/10 border-primary/20"
-                          : "bg-secondary border-border"
-                      )}
-                    >
-                      {logoSrc ? (
-                        <img
-                          src={logoSrc}
-                          alt={u.nome}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center bg-muted/20">
-                          <span className="text-[15px] font-bold text-muted-foreground/30 font-mono">
-                            {u.nome.charAt(0).toUpperCase()}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Text content */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="text-[15px] font-semibold text-foreground font-['Space_Grotesk'] truncate">
-                          {u.nome}
-                        </span>
-                        {u.is_sede && (
-                          <span className="text-[9px] font-bold uppercase tracking-widest bg-primary/10 text-primary border border-primary/20 px-1.5 py-0.5 rounded flex-shrink-0 font-mono">
-                            Sede
-                          </span>
-                        )}
-                      </div>
-                      {loc ? (
-                        <div className="flex items-center gap-1 mt-0.5">
-                          <MapPin className="w-3 h-3 text-muted-foreground/40 flex-shrink-0" />
-                          <span className="text-xs text-muted-foreground truncate">
-                            {loc}
-                          </span>
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-1 mt-0.5">
-                          <MapPin className="w-3 h-3 text-muted-foreground/30 flex-shrink-0" />
-                          <span className="text-xs text-muted-foreground/50 italic">
-                            Endereço não informado
-                          </span>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Arrow */}
-                    <ChevronRight className="w-4 h-4 text-muted-foreground/30 shrink-0" />
-                  </motion.button>
-                );
-              })}
+            <div className="space-y-4 pt-1">
+              {displayUnits.map((unit, index) => (
+                <DiscoverUnitCard
+                  key={unit.id}
+                  unit={unit}
+                  index={index}
+                  isSelected={false}
+                  onClick={() => handleCardClick(unit.id)}
+                />
+              ))}
             </div>
           )}
         </div>
