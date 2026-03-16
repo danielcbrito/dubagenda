@@ -138,6 +138,57 @@ export default function ClienteBarbearia() {
 
   const phone = unidadeAtual?.whatsapp || unidadeAtual?.telefone || barbershop?.whatsapp || barbershop?.telefone;
 
+  useEffect(() => {
+    const addressParts = {
+      street: unidadeAtual?.rua ?? null,
+      number: unidadeAtual?.numero ?? null,
+      neighborhood: unidadeAtual?.bairro ?? null,
+      city: unidadeAtual?.cidade ?? null,
+      state: unidadeAtual?.estado ?? null,
+      postalCode: unidadeAtual?.cep ?? null,
+    };
+    const storedCoords = resolveStoredCoordinates(
+      unidadeAtual?.latitude ?? null,
+      unidadeAtual?.longitude ?? null,
+    );
+    const addressQuery = buildAddressQueryFromParts(addressParts);
+    const cachedGeocode = addressQuery
+      ? readCachedGeocode(normalizeLocationText(addressQuery))
+      : null;
+
+    setResolvedUnitCoords(pickResolvedCoordinates(storedCoords, cachedGeocode));
+
+    if (!addressQuery || !hasPreciseAddressParts(addressParts)) {
+      return;
+    }
+
+    let isActive = true;
+
+    void (async () => {
+      const geocoded = await geocodeAddressFromParts(addressParts);
+      if (!geocoded || !isActive) return;
+
+      saveCachedGeocode(normalizeLocationText(addressQuery), geocoded);
+      if (shouldPreferGeocodedCoordinates(storedCoords, geocoded) || !storedCoords) {
+        setResolvedUnitCoords({ lat: geocoded.lat, lng: geocoded.lng });
+      }
+    })();
+
+    return () => {
+      isActive = false;
+    };
+  }, [
+    unidadeAtual?.id,
+    unidadeAtual?.rua,
+    unidadeAtual?.numero,
+    unidadeAtual?.bairro,
+    unidadeAtual?.cidade,
+    unidadeAtual?.estado,
+    unidadeAtual?.cep,
+    unidadeAtual?.latitude,
+    unidadeAtual?.longitude,
+  ]);
+
   // Units count query for "Ver todas as unidades" row
   const { data: unidadesCount } = useQuery({
     queryKey: ["unidades-count", barbershop?.id],
