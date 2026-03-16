@@ -15,6 +15,16 @@
 /* 🚫 PREVENT BROWSER AUTO-TRANSLATION */
 html {
   translate: no;
+  color-scheme: dark;
+}
+
+/* ═══ EDGE-TO-EDGE IMMERSIVE ═══ */
+html, body {
+  margin: 0;
+  padding: 0;
+  overscroll-behavior: none;
+  -webkit-overflow-scrolling: touch;
+  background-color: hsl(0 0% 5%);
 }
 
 .notranslate {
