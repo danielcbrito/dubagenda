@@ -78,7 +78,7 @@ function normalizeText(value: string): string {
     .toLowerCase();
 }
 
-const GEOCODE_CACHE_PREFIX = "unit-geocode-v2:";
+const GEOCODE_CACHE_PREFIX = "unit-geocode-v3:";
 const GEOCODE_CACHE_TTL_MS = 1000 * 60 * 60 * 24 * 30;
 
 interface GeocodeResult {
@@ -97,85 +97,6 @@ function buildAddressQuery(unit: UnitData): string | null {
 
 function hasPreciseAddress(unit: UnitData): boolean {
   return !!unit.rua?.trim() && !!unit.numero?.trim() && !!unit.cidade?.trim();
-}
-
-function buildGeocodeQueries(unit: UnitData): URLSearchParams[] {
-  const queries: URLSearchParams[] = [];
-
-  if (unit.rua?.trim() && unit.numero?.trim()) {
-    const structured = new URLSearchParams({
-      format: "jsonv2",
-      limit: "3",
-      countrycodes: "br",
-      addressdetails: "1",
-      street: `${unit.rua.trim()}, ${unit.numero.trim()}`,
-      city: unit.cidade?.trim() ?? "",
-      state: unit.estado?.trim() ?? "",
-      postalcode: unit.cep?.trim() ?? "",
-    });
-    queries.push(structured);
-
-    const structuredAlt = new URLSearchParams({
-      format: "jsonv2",
-      limit: "3",
-      countrycodes: "br",
-      addressdetails: "1",
-      street: `${unit.rua.trim()} ${unit.numero.trim()}`,
-      city: unit.cidade?.trim() ?? "",
-      state: unit.estado?.trim() ?? "",
-      postalcode: unit.cep?.trim() ?? "",
-    });
-    queries.push(structuredAlt);
-  }
-
-  const fullQuery = buildAddressQuery(unit);
-  if (fullQuery) {
-    queries.push(
-      new URLSearchParams({
-        q: fullQuery,
-        format: "jsonv2",
-        limit: "3",
-        countrycodes: "br",
-        addressdetails: "1",
-      })
-    );
-  }
-
-  return queries;
-}
-
-function isGeocodeMatchExact(unit: UnitData, candidate: { display_name?: string; address?: Record<string, string | undefined> }): boolean {
-  const display = normalizeText(candidate.display_name ?? "");
-  const address = candidate.address ?? {};
-  const streetNeedle = normalizeText(unit.rua ?? "");
-  const numberNeedle = normalizeText(unit.numero ?? "");
-  const cityNeedle = normalizeText(unit.cidade ?? "");
-  const cepNeedle = normalizeText(unit.cep ?? "");
-
-  const streetHaystack = normalizeText([
-    address.road,
-    address.pedestrian,
-    address.residential,
-    address.footway,
-    candidate.display_name,
-  ].filter(Boolean).join(" "));
-  const numberHaystack = normalizeText([address.house_number, candidate.display_name].filter(Boolean).join(" "));
-  const cityHaystack = normalizeText([
-    address.city,
-    address.town,
-    address.village,
-    address.suburb,
-    address.county,
-    candidate.display_name,
-  ].filter(Boolean).join(" "));
-  const postcodeHaystack = normalizeText([address.postcode, candidate.display_name].filter(Boolean).join(" "));
-
-  const streetMatches = !!streetNeedle && streetHaystack.includes(streetNeedle);
-  const numberMatches = !!numberNeedle && numberHaystack.includes(numberNeedle);
-  const cityMatches = !cityNeedle || cityHaystack.includes(cityNeedle) || display.includes(cityNeedle);
-  const cepMatches = !cepNeedle || postcodeHaystack.includes(cepNeedle) || display.includes(cepNeedle);
-
-  return streetMatches && numberMatches && cityMatches && cepMatches;
 }
 
 function readCachedGeocode(addressKey: string): GeocodeResult | null {
@@ -204,40 +125,38 @@ function saveCachedGeocode(addressKey: string, result: GeocodeResult) {
 }
 
 async function geocodeAddress(unit: UnitData): Promise<GeocodeResult | null> {
-  const queries = buildGeocodeQueries(unit);
-  if (queries.length === 0) return null;
+  const addressQuery = buildAddressQuery(unit);
+  if (!addressQuery) return null;
 
-  for (const params of queries) {
-    const controller = new AbortController();
-    const timeoutId = window.setTimeout(() => controller.abort(), 7000);
+  try {
+    const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+    const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+    const url = `https://${projectId}.supabase.co/functions/v1/geocode-address`;
 
-    try {
-      const response = await fetch(`https://nominatim.openstreetmap.org/search?${params.toString()}`, {
-        signal: controller.signal,
-        headers: { Accept: "application/json" },
-      });
-      if (!response.ok) continue;
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${anonKey}`,
+        apikey: anonKey,
+      },
+      body: JSON.stringify({ address: addressQuery }),
+    });
 
-      const data = (await response.json()) as Array<{
-        lat: string;
-        lon: string;
-        display_name?: string;
-        address?: Record<string, string | undefined>;
-      }>;
+    if (!response.ok) return null;
 
-      const exactHit = data.find((hit) => isGeocodeMatchExact(unit, hit));
-      const chosenHit = exactHit ?? data[0];
-      if (!chosenHit) continue;
+    const data = await response.json();
+    if (data.lat == null || data.lng == null) return null;
 
-      const lat = Number(chosenHit.lat);
-      const lng = Number(chosenHit.lon);
-      if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
-
-      return { lat, lng, exact: chosenHit === exactHit };
-    } catch {
-      continue;
-    } finally {
-      window.clearTimeout(timeoutId);
+    return {
+      lat: data.lat,
+      lng: data.lng,
+      exact: data.exact === true,
+    };
+  } catch {
+    return null;
+  }
+}
     }
   }
 
