@@ -85,14 +85,16 @@ export function DiscoverMap({
 
     // Track bounds changes
     const emitBounds = () => {
-      if (onBoundsChange) onBoundsChange(map.getBounds());
+      if (onBoundsChange && map.getBounds().isValid()) {
+        onBoundsChange(map.getBounds());
+      }
     };
     map.on("moveend", emitBounds);
     map.on("zoomend", emitBounds);
-    // Emit initial bounds
-    setTimeout(emitBounds, 300);
+    const initialBoundsTimer = window.setTimeout(emitBounds, 500);
 
     return () => {
+      window.clearTimeout(initialBoundsTimer);
       map.remove();
       mapRef.current = null;
     };
