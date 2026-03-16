@@ -345,7 +345,7 @@ const EscolherBarbearia = () => {
 
     console.table(
       allUnits.map((unit) => ({
-        unidade: getDiscoverUnitDisplayName(unit.brandName, unit.nome),
+        unidade: getDiscoverUnitFullName(unit.brandName, unit.nome),
         marca: unit.brandName,
         lat: unit.latitude,
         lng: unit.longitude,

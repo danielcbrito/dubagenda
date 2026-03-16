@@ -319,7 +319,7 @@ const AdminFixCoordinates = () => {
           <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
             <div className="space-y-4">
               {units.map((unit, index) => {
-                const title = getDiscoverUnitDisplayName(unit.tenant?.nome || unit.nome, unit.nome);
+                const title = getDiscoverUnitFullName(unit.tenant?.nome || unit.nome, unit.nome);
                 const fullAddress = buildFullAddress(unit);
                 const draftPosition = draftPositions[unit.id];
                 const result = results[unit.id];
