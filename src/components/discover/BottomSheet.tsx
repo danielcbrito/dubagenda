@@ -370,7 +370,6 @@ export function BottomSheet({ children, header, initialSnap = SNAP_MID, onSnapCh
         style={{
           WebkitOverflowScrolling: "touch",
           overscrollBehaviorY: "contain",
-          touchAction: "pan-y",
         }}
         onTouchStart={handleContentTouchStart}
         onTouchMove={handleContentTouchMove}
