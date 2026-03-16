@@ -64,7 +64,7 @@ export function UnitLocationMiniMap({
         })
           .on("dragend", (event) => {
             const next = (event.target as L.Marker).getLatLng();
-            onChange({ lat: next.lat, lng: next.lng });
+            onChangeRef.current({ lat: next.lat, lng: next.lng });
           })
           .addTo(map);
       } else {
