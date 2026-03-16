@@ -196,25 +196,44 @@ const EscolherBarbearia = () => {
   // ── Auth check ──
   useEffect(() => {
     const init = async () => {
+      const cachedUnits = getCache<UnitData[]>(DISCOVER_UNITS_CACHE_KEY);
+      const hasCachedUnits = Array.isArray(cachedUnits) && cachedUnits.length > 0;
+
+      if (hasCachedUnits) {
+        setAllUnits(cachedUnits);
+        setIsLoading(false);
+      }
+
       const { data: { session } } = await supabase.auth.getSession();
+
       if (session) {
         setUserId(session.user.id);
+
+        const loadPromise = loadUnits({ preserveVisible: hasCachedUnits });
         const { data: profile } = await supabase
           .from("profiles")
           .select("barbearia_preferida_id")
           .eq("id", session.user.id)
           .single();
+
         if (profile?.barbearia_preferida_id) {
           setCurrentPreferred(profile.barbearia_preferida_id);
         }
-      } else if (isChangeMode) {
+
+        await loadPromise;
+        return;
+      }
+
+      if (isChangeMode) {
         navigate("/auth?mode=login");
         return;
       }
-      await loadUnits();
+
+      await loadUnits({ preserveVisible: hasCachedUnits });
     };
-    init();
-  }, []);
+
+    void init();
+  }, [isChangeMode, loadUnits, navigate]);
 
   // ── Auto-open ──
   useEffect(() => {
