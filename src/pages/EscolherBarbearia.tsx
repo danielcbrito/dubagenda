@@ -331,11 +331,11 @@ const EscolherBarbearia = () => {
       unitList = await Promise.all(
         unitList.map(async (unit) => {
           try {
-            const addressQuery = buildAddressQuery(unit);
-            const preciseAddress = hasPreciseAddress(unit);
-            const shouldResolveExact = preciseAddress || unit.latitude === null || unit.longitude === null;
+            // Only geocode units that DON'T have coordinates in the database
+            if (unit.latitude !== null && unit.longitude !== null) return unit;
 
-            if (!addressQuery || !shouldResolveExact) return unit;
+            const addressQuery = buildAddressQuery(unit);
+            if (!addressQuery) return unit;
 
             const addressKey = normalizeText(addressQuery);
             const cached = readCachedGeocode(addressKey);
