@@ -80,7 +80,7 @@ function normalizeText(value: string): string {
     .toLowerCase();
 }
 
-const GEOCODE_CACHE_PREFIX = "unit-geocode-v3:";
+const GEOCODE_CACHE_PREFIX = "unit-geocode-v4:";
 const GEOCODE_CACHE_TTL_MS = 1000 * 60 * 60 * 24 * 30;
 
 interface GeocodeResult {
