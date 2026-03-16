@@ -8,6 +8,16 @@ export function normalizeDiscoverText(value: string | null | undefined): string 
 
 export function getDiscoverUnitDisplayName(
   brandName: string,
+  _unitName: string | null | undefined
+): string {
+  // Show only brand first name on the map pin for cleaner look
+  const firstName = brandName.trim().split(/\s+/)[0];
+  return firstName || brandName;
+}
+
+/** Full display name with unit detail — used in cards */
+export function getDiscoverUnitFullName(
+  brandName: string,
   unitName: string | null | undefined
 ): string {
   if (!unitName?.trim()) return brandName;

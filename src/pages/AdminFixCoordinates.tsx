@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { UnitLocationMiniMap } from "@/components/admin/UnitLocationMiniMap";
-import { getDiscoverUnitDisplayName } from "@/components/discover/discoverUnitUtils";
+import { getDiscoverUnitFullName } from "@/components/discover/discoverUnitUtils";
 
 interface FixableUnit {
   id: string;
@@ -319,7 +319,7 @@ const AdminFixCoordinates = () => {
           <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
             <div className="space-y-4">
               {units.map((unit, index) => {
-                const title = getDiscoverUnitDisplayName(unit.tenant?.nome || unit.nome, unit.nome);
+                const title = getDiscoverUnitFullName(unit.tenant?.nome || unit.nome, unit.nome);
                 const fullAddress = buildFullAddress(unit);
                 const draftPosition = draftPositions[unit.id];
                 const result = results[unit.id];

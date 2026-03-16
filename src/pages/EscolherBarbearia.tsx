@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DiscoverMap } from "@/components/discover/DiscoverMap";
 import { DiscoverUnitCard } from "@/components/discover/DiscoverUnitCard";
-import { getDiscoverUnitDisplayName } from "@/components/discover/discoverUnitUtils";
+import { getDiscoverUnitFullName } from "@/components/discover/discoverUnitUtils";
 import type L from "leaflet";
 
 // ── Types ──
@@ -345,7 +345,7 @@ const EscolherBarbearia = () => {
 
     console.table(
       allUnits.map((unit) => ({
-        unidade: getDiscoverUnitDisplayName(unit.brandName, unit.nome),
+        unidade: getDiscoverUnitFullName(unit.brandName, unit.nome),
         marca: unit.brandName,
         lat: unit.latitude,
         lng: unit.longitude,
