@@ -82,7 +82,7 @@ const GEOCODE_CACHE_PREFIX = "unit-geocode-v1:";
 const GEOCODE_CACHE_TTL_MS = 1000 * 60 * 60 * 24 * 30;
 
 function buildAddressQuery(unit: UnitData): string | null {
-  const parts = [unit.rua, unit.numero, unit.bairro, unit.cidade, unit.estado, unit.cep]
+  const parts = [unit.rua, unit.numero, unit.bairro, unit.cidade, unit.estado, unit.cep, "Brasil"]
     .map((part) => part?.trim())
     .filter((part): part is string => !!part && part.length > 0);
   if (parts.length < 3) return null;
