@@ -285,7 +285,7 @@ export function DiscoverMap({
 
       markersRef.current.set(unit.id, marker);
     });
-  }, [markerUnits, selectedId, onSelectUnit]);
+  }, [markerUnits, selectedId, onSelectUnit, currentZoom]);
 
   useEffect(() => {
     const map = mapRef.current;
