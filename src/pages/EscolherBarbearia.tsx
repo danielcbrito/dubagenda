@@ -352,24 +352,56 @@ const EscolherBarbearia = () => {
     );
   }, [sortedUnits, search]);
 
+  const MIN_VISIBLE = 5;
+
   const visibleUnits = useMemo(() => {
     if (!mapReady || !mapBounds) return searchFilteredUnits;
 
-    return searchFilteredUnits.filter((unit) => {
-      if (unit.latitude === null || unit.longitude === null) return false;
+    const mapCenter = mapBounds.getCenter();
 
+    // 1. Units within current map bounds
+    const inBounds = searchFilteredUnits.filter((unit) => {
+      if (unit.latitude === null || unit.longitude === null) return false;
       const lat = Number.parseFloat(String(unit.latitude));
       const lng = Number.parseFloat(String(unit.longitude));
-
       if (!Number.isFinite(lat) || !Number.isFinite(lng)) return false;
-
       try {
         return mapBounds.contains([lat, lng]);
       } catch {
         return true;
       }
     });
+
+    // 2. If enough results, return sorted by distance from map center
+    if (inBounds.length >= MIN_VISIBLE) {
+      return inBounds.sort((a, b) => {
+        const dA = haversineKm(mapCenter.lat, mapCenter.lng, a.latitude!, a.longitude!);
+        const dB = haversineKm(mapCenter.lat, mapCenter.lng, b.latitude!, b.longitude!);
+        return dA - dB;
+      });
+    }
+
+    // 3. Not enough in bounds — always show at least MIN_VISIBLE closest to map center
+    const withCoords = searchFilteredUnits.filter(
+      (u) => u.latitude !== null && u.longitude !== null
+    );
+    const sortedByCenter = [...withCoords].sort((a, b) => {
+      const dA = haversineKm(mapCenter.lat, mapCenter.lng, a.latitude!, a.longitude!);
+      const dB = haversineKm(mapCenter.lat, mapCenter.lng, b.latitude!, b.longitude!);
+      return dA - dB;
+    });
+    return sortedByCenter.slice(0, Math.max(MIN_VISIBLE, inBounds.length));
   }, [mapBounds, mapReady, searchFilteredUnits]);
+
+  const inBoundsCount = useMemo(() => {
+    if (!mapReady || !mapBounds) return visibleUnits.length;
+    return visibleUnits.filter((unit) => {
+      if (unit.latitude === null || unit.longitude === null) return false;
+      try {
+        return mapBounds.contains([Number.parseFloat(String(unit.latitude)), Number.parseFloat(String(unit.longitude))]);
+      } catch { return false; }
+    }).length;
+  }, [visibleUnits, mapBounds, mapReady]);
 
   const handleBoundsChange = useCallback((bounds: L.LatLngBounds) => {
     if (!bounds.isValid()) return;
@@ -506,7 +538,11 @@ const EscolherBarbearia = () => {
         {/* Count */}
         <div className="flex-shrink-0 px-5 pb-3 pt-1">
           <p className="text-[14px] font-semibold text-foreground text-center">
-            {isLoading ? "Carregando..." : `${visibleUnits.length} barbearia${visibleUnits.length !== 1 ? "s" : ""} nesta área`}
+            {isLoading
+              ? "Carregando..."
+              : inBoundsCount >= visibleUnits.length
+                ? `${visibleUnits.length} barbearia${visibleUnits.length !== 1 ? "s" : ""} nesta área`
+                : `${visibleUnits.length} barbearia${visibleUnits.length !== 1 ? "s" : ""} mais próximas`}
           </p>
         </div>
 

@@ -1,6 +1,23 @@
-import { useEffect, useRef, useMemo } from "react";
+import { useEffect, useRef, useMemo, useCallback } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+
+function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function smartZoomForDistance(km: number): number {
+  if (km > 10) return 11;
+  if (km > 5) return 12;
+  if (km > 2) return 13;
+  return 14;
+}
 
 interface MapUnit {
   id: string;
@@ -67,16 +84,40 @@ export function DiscoverMap({
   const markersRef = useRef<Map<string, L.Marker>>(new Map());
   const userMarkerRef = useRef<L.CircleMarker | null>(null);
 
+  // Parse units with valid coordinates
+  const mappableUnits = useMemo(
+    () => units
+      .map((unit) => {
+        const latitude = Number.parseFloat(String(unit.latitude));
+        const longitude = Number.parseFloat(String(unit.longitude));
+        if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null;
+        return { ...unit, latitude, longitude };
+      })
+      .filter((unit): unit is MapUnit & { latitude: number; longitude: number } => unit !== null),
+    [units]
+  );
+
   const defaultCenter: L.LatLngExpression = userLocation
     ? [userLocation.lat, userLocation.lng]
     : [-23.55, -46.63];
+
+  // Compute smart initial zoom based on nearest unit
+  const initialZoom = useMemo(() => {
+    if (!userLocation || mappableUnits.length === 0) return 14;
+    let minDist = Infinity;
+    for (const u of mappableUnits) {
+      const d = haversineKm(userLocation.lat, userLocation.lng, u.latitude, u.longitude);
+      if (d < minDist) minDist = d;
+    }
+    return smartZoomForDistance(minDist);
+  }, [userLocation, mappableUnits]);
 
   // Initialize map
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
     const map = L.map(containerRef.current, {
       center: defaultCenter,
-      zoom: 14,
+      zoom: initialZoom,
       zoomControl: false,
       attributionControl: false,
     });
@@ -120,26 +161,6 @@ export function DiscoverMap({
   }, [userLocation]);
 
   // Update unit markers
-  const mappableUnits = useMemo(
-    () => units
-      .map((unit) => {
-        const latitude = Number.parseFloat(String(unit.latitude));
-        const longitude = Number.parseFloat(String(unit.longitude));
-
-        if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
-          return null;
-        }
-
-        return {
-          ...unit,
-          latitude,
-          longitude,
-        };
-      })
-      .filter((unit): unit is MapUnit & { latitude: number; longitude: number } => unit !== null),
-    [units]
-  );
-
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
