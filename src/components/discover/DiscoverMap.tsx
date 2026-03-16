@@ -69,6 +69,15 @@ export function DiscoverMap({
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
     mapRef.current = map;
 
+    // Track bounds changes
+    const emitBounds = () => {
+      if (onBoundsChange) onBoundsChange(map.getBounds());
+    };
+    map.on("moveend", emitBounds);
+    map.on("zoomend", emitBounds);
+    // Emit initial bounds
+    setTimeout(emitBounds, 300);
+
     return () => {
       map.remove();
       mapRef.current = null;
