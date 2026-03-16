@@ -479,7 +479,7 @@ const EscolherBarbearia = () => {
         {/* Count */}
         <div className="flex-shrink-0 px-5 pb-3 pt-1">
           <p className="text-[14px] font-semibold text-foreground text-center">
-            {isLoading ? "Carregando..." : `${filtered.length} barbearia${filtered.length !== 1 ? "s" : ""}`}
+            {isLoading ? "Carregando..." : `${filtered.length} barbearia${filtered.length !== 1 ? "s" : ""} nesta área`}
           </p>
         </div>
 
