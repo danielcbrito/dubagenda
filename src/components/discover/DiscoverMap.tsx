@@ -121,7 +121,22 @@ export function DiscoverMap({
 
   // Update unit markers
   const mappableUnits = useMemo(
-    () => units.filter((u) => u.latitude !== null && u.longitude !== null),
+    () => units
+      .map((unit) => {
+        const latitude = Number.parseFloat(String(unit.latitude));
+        const longitude = Number.parseFloat(String(unit.longitude));
+
+        if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+          return null;
+        }
+
+        return {
+          ...unit,
+          latitude,
+          longitude,
+        };
+      })
+      .filter((unit): unit is MapUnit & { latitude: number; longitude: number } => unit !== null),
     [units]
   );
 
