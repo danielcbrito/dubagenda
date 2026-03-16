@@ -338,17 +338,26 @@ const EscolherBarbearia = () => {
       .sort((a, b) => (a.distance ?? Infinity) - (b.distance ?? Infinity));
   }, [allUnits, userLocation]);
 
-  // ── Filtered ──
+  // ── Filtered by search + map bounds ──
   const filtered = useMemo(() => {
-    if (!search.trim()) return sortedUnits;
-    const q = search.toLowerCase();
-    return sortedUnits.filter(u =>
-      u.nome.toLowerCase().includes(q) ||
-      u.brandName.toLowerCase().includes(q) ||
-      (u.bairro && u.bairro.toLowerCase().includes(q)) ||
-      (u.cidade && u.cidade.toLowerCase().includes(q))
-    );
-  }, [sortedUnits, search]);
+    let result = sortedUnits;
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      result = result.filter(u =>
+        u.nome.toLowerCase().includes(q) ||
+        u.brandName.toLowerCase().includes(q) ||
+        (u.bairro && u.bairro.toLowerCase().includes(q)) ||
+        (u.cidade && u.cidade.toLowerCase().includes(q))
+      );
+    }
+    if (mapBounds) {
+      result = result.filter(u => {
+        if (u.latitude === null || u.longitude === null) return true;
+        return mapBounds.contains([u.latitude, u.longitude]);
+      });
+    }
+    return result;
+  }, [sortedUnits, search, mapBounds]);
 
   // ── Select unit syncs map ↔ list ──
   const handleSelectUnit = useCallback((id: string) => {
