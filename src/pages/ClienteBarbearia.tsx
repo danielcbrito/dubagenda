@@ -112,7 +112,7 @@ export default function ClienteBarbearia() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("tenant_unidades")
-        .select("id, nome, rua, numero, bairro, cidade, estado, telefone, whatsapp, latitude, longitude, is_sede")
+        .select("id, nome, rua, numero, bairro, cidade, estado, cep, telefone, whatsapp, latitude, longitude, is_sede")
         .eq("tenant_id", barbershop!.id)
         .eq("is_sede", true)
         .limit(1)
