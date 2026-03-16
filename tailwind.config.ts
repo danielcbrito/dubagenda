@@ -65,6 +65,12 @@ export default {
           foreground: "hsl(var(--gold-foreground))",
         },
       },
+      height: {
+        screen: '100dvh',
+      },
+      minHeight: {
+        screen: '100dvh',
+      },
       borderRadius: {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
