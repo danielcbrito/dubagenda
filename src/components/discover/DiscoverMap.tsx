@@ -24,6 +24,12 @@ function smartZoomForDistance(km: number): number {
   return 14;
 }
 
+function getTileUrl(mapStyle: "satellite" | "street") {
+  return mapStyle === "satellite"
+    ? "https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}"
+    : "https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}";
+}
+
 interface MapUnit {
   id: string;
   nome: string;

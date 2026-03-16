@@ -212,14 +212,9 @@ export function BottomSheet({ children, header, initialSnap = SNAP_MID, onSnapCh
   const shouldDragSheetFromContent = useCallback((deltaY: number) => {
     const list = listRef.current;
     const isAtTop = (list?.scrollTop ?? 0) <= 0.5;
-    const isFullyExpanded = currentTranslateYRef.current <= snapToTranslateY(SNAP_FULL, viewportHeightRef.current) + 1;
 
     if (deltaY > 0) {
       return isAtTop;
-    }
-
-    if (deltaY < 0) {
-      return !isFullyExpanded;
     }
 
     return false;
