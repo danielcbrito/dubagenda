@@ -385,7 +385,7 @@ const BarbershopPublic = () => {
     queryFn: async () => {
       const baseQuery = supabase
         .from("tenant_unidades")
-        .select("id, nome, rua, numero, bairro, cidade, estado, telefone, whatsapp, latitude, longitude, is_sede, slug")
+        .select("id, nome, rua, numero, bairro, cidade, estado, cep, telefone, whatsapp, latitude, longitude, is_sede, slug")
         .eq("tenant_id", tenant!.id);
 
       if (unidadeIdParam) {
@@ -397,7 +397,7 @@ const BarbershopPublic = () => {
 
       const { data, error } = await supabase
         .from("tenant_unidades")
-        .select("id, nome, rua, numero, bairro, cidade, estado, telefone, whatsapp, latitude, longitude, is_sede, slug")
+        .select("id, nome, rua, numero, bairro, cidade, estado, cep, telefone, whatsapp, latitude, longitude, is_sede, slug")
         .eq("tenant_id", tenant!.id)
         .eq("is_sede", true)
         .limit(1)
