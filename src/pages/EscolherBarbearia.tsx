@@ -9,14 +9,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { DiscoverMap } from "@/components/discover/DiscoverMap";
 import { DiscoverUnitCard } from "@/components/discover/DiscoverUnitCard";
 import type L from "leaflet";
-import { motion } from "framer-motion";
-import { Search, SearchX, X } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
-import { cn } from "@/lib/utils";
-import { Skeleton } from "@/components/ui/skeleton";
-import { DiscoverMap } from "@/components/discover/DiscoverMap";
-import { DiscoverUnitCard } from "@/components/discover/DiscoverUnitCard";
 
 // ── Types ──
 interface TenantJoin {
