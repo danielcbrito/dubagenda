@@ -156,7 +156,7 @@ export function saveCachedGeocode(addressKey: string, result: GeocodeResult): vo
 
 export function isHighConfidenceGeocodeResult(
   result: GeocodeResult | null | undefined,
-): result is GeocodeResult {
+): boolean {
   return Boolean(
     result &&
       (result.exact === true ||
