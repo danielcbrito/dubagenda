@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DiscoverMap } from "@/components/discover/DiscoverMap";
 import { DiscoverUnitCard } from "@/components/discover/DiscoverUnitCard";
+import type L from "leaflet";
 
 // ── Types ──
 interface TenantJoin {
@@ -151,6 +152,7 @@ const EscolherBarbearia = () => {
   const [locationStatus, setLocationStatus] = useState<"loading" | "ready" | "unavailable">("loading");
   const [hasAutoOpened, setHasAutoOpened] = useState(false);
   const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null);
+  const [mapBounds, setMapBounds] = useState<L.LatLngBounds | null>(null);
   const lastLocationRef = useRef<{ lat: number; lng: number } | null>(null);
   const watchIdRef = useRef<number | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
@@ -336,17 +338,26 @@ const EscolherBarbearia = () => {
       .sort((a, b) => (a.distance ?? Infinity) - (b.distance ?? Infinity));
   }, [allUnits, userLocation]);
 
-  // ── Filtered ──
+  // ── Filtered by search + map bounds ──
   const filtered = useMemo(() => {
-    if (!search.trim()) return sortedUnits;
-    const q = search.toLowerCase();
-    return sortedUnits.filter(u =>
-      u.nome.toLowerCase().includes(q) ||
-      u.brandName.toLowerCase().includes(q) ||
-      (u.bairro && u.bairro.toLowerCase().includes(q)) ||
-      (u.cidade && u.cidade.toLowerCase().includes(q))
-    );
-  }, [sortedUnits, search]);
+    let result = sortedUnits;
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      result = result.filter(u =>
+        u.nome.toLowerCase().includes(q) ||
+        u.brandName.toLowerCase().includes(q) ||
+        (u.bairro && u.bairro.toLowerCase().includes(q)) ||
+        (u.cidade && u.cidade.toLowerCase().includes(q))
+      );
+    }
+    if (mapBounds) {
+      result = result.filter(u => {
+        if (u.latitude === null || u.longitude === null) return true;
+        return mapBounds.contains([u.latitude, u.longitude]);
+      });
+    }
+    return result;
+  }, [sortedUnits, search, mapBounds]);
 
   // ── Select unit syncs map ↔ list ──
   const handleSelectUnit = useCallback((id: string) => {
@@ -435,6 +446,7 @@ const EscolherBarbearia = () => {
             selectedId={selectedUnitId}
             onSelectUnit={handleSelectUnit}
             onRecenter={handleRecenter}
+            onBoundsChange={setMapBounds}
           />
         )}
       </div>
@@ -467,7 +479,7 @@ const EscolherBarbearia = () => {
         {/* Count */}
         <div className="flex-shrink-0 px-5 pb-3 pt-1">
           <p className="text-[14px] font-semibold text-foreground text-center">
-            {isLoading ? "Carregando..." : `${filtered.length} barbearia${filtered.length !== 1 ? "s" : ""}`}
+            {isLoading ? "Carregando..." : `${filtered.length} barbearia${filtered.length !== 1 ? "s" : ""} nesta área`}
           </p>
         </div>
 

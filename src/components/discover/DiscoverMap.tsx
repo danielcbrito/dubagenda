@@ -15,6 +15,7 @@ interface DiscoverMapProps {
   selectedId: string | null;
   onSelectUnit: (id: string) => void;
   onRecenter: () => void;
+  onBoundsChange?: (bounds: L.LatLngBounds) => void;
 }
 
 function buildIcon(label: string, selected: boolean) {
@@ -45,6 +46,7 @@ export function DiscoverMap({
   selectedId,
   onSelectUnit,
   onRecenter,
+  onBoundsChange,
 }: DiscoverMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
@@ -66,6 +68,15 @@ export function DiscoverMap({
     });
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
     mapRef.current = map;
+
+    // Track bounds changes
+    const emitBounds = () => {
+      if (onBoundsChange) onBoundsChange(map.getBounds());
+    };
+    map.on("moveend", emitBounds);
+    map.on("zoomend", emitBounds);
+    // Emit initial bounds
+    setTimeout(emitBounds, 300);
 
     return () => {
       map.remove();
