@@ -409,14 +409,17 @@ const EscolherBarbearia = () => {
     setMapBounds(bounds);
   }, []);
 
+  // Clear stale geocode cache on mount to use fresh DB coordinates
   useEffect(() => {
-    console.log("[Discover] Total barbearias:", allUnits.length);
-    console.log("[Discover] Primeira unidade:", allUnits[0] ?? null);
-    console.log(
-      "[Discover] Com coordenadas válidas:",
-      allUnits.filter((unit) => unit.latitude !== null && unit.longitude !== null).length
-    );
-  }, [allUnits]);
+    try {
+      const keysToRemove: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key?.startsWith(GEOCODE_CACHE_PREFIX)) keysToRemove.push(key);
+      }
+      keysToRemove.forEach((k) => localStorage.removeItem(k));
+    } catch { /* ignore */ }
+  }, []);
 
   // ── Select unit syncs map ↔ list ──
   const handleSelectUnit = useCallback((id: string) => {
