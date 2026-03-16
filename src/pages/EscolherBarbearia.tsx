@@ -340,6 +340,22 @@ const EscolherBarbearia = () => {
       .sort((a, b) => (a.distance ?? Infinity) - (b.distance ?? Infinity));
   }, [allUnits, userLocation]);
 
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+
+    console.table(
+      allUnits.map((unit) => ({
+        unidade: getDiscoverUnitDisplayName(unit.brandName, unit.nome),
+        marca: unit.brandName,
+        lat: unit.latitude,
+        lng: unit.longitude,
+        endereco: [unit.rua, unit.numero, unit.bairro, unit.cidade, unit.estado]
+          .filter(Boolean)
+          .join(", "),
+      }))
+    );
+  }, [allUnits]);
+
   // ── Filtered by search + map bounds ──
   const searchFilteredUnits = useMemo(() => {
     if (!search.trim()) return sortedUnits;
