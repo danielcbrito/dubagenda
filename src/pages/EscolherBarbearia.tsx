@@ -554,18 +554,6 @@ const EscolherBarbearia = () => {
     setMapBounds(bounds);
   }, []);
 
-  // Clear stale geocode cache on mount to use fresh DB coordinates
-  useEffect(() => {
-    try {
-      const keysToRemove: string[] = [];
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key?.startsWith(GEOCODE_CACHE_PREFIX)) keysToRemove.push(key);
-      }
-      keysToRemove.forEach((k) => localStorage.removeItem(k));
-    } catch { /* ignore */ }
-  }, []);
-
   // ── Select unit syncs map ↔ list ──
   const handleSelectUnit = useCallback((id: string) => {
     setSelectedUnitId((prev) => (prev === id ? null : id));
