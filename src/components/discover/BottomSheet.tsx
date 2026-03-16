@@ -212,9 +212,16 @@ export function BottomSheet({ children, header, initialSnap = SNAP_MID, onSnapCh
   const shouldDragSheetFromContent = useCallback((deltaY: number) => {
     const list = listRef.current;
     const isAtTop = (list?.scrollTop ?? 0) <= 0.5;
+    const isFullyExpanded = currentTranslateYRef.current <= snapToTranslateY(SNAP_FULL, viewportHeightRef.current) + 1;
 
+    // Pulling down — drag sheet only if list is at top
     if (deltaY > 0) {
       return isAtTop;
+    }
+
+    // Swiping up — drag sheet if not fully expanded yet
+    if (deltaY < 0) {
+      return !isFullyExpanded;
     }
 
     return false;
@@ -363,7 +370,6 @@ export function BottomSheet({ children, header, initialSnap = SNAP_MID, onSnapCh
         style={{
           WebkitOverflowScrolling: "touch",
           overscrollBehaviorY: "contain",
-          touchAction: "pan-y",
         }}
         onTouchStart={handleContentTouchStart}
         onTouchMove={handleContentTouchMove}
