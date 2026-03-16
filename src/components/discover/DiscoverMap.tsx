@@ -191,8 +191,7 @@ export function DiscoverMap({
       zoomControl: false,
       attributionControl: false,
     });
-    // Google Maps hybrid satellite tile layer
-    const initialTile = L.tileLayer("https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}", {
+    const initialTile = L.tileLayer(getTileUrl(initialMapStyleRef.current), {
       maxZoom: 20,
     }).addTo(map);
     tileLayerRef.current = initialTile;
