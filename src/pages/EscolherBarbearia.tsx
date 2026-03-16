@@ -180,7 +180,7 @@ const EscolherBarbearia = () => {
   const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null);
   const [mapBounds, setMapBounds] = useState<L.LatLngBounds | null>(null);
   const [mapReady, setMapReady] = useState(false);
-  const [mapStyle, setMapStyle] = useState<"satellite" | "street">("satellite");
+  const [mapStyle, setMapStyle] = useState<"satellite" | "street">("street");
   const lastLocationRef = useRef<{ lat: number; lng: number } | null>(null);
   const watchIdRef = useRef<number | null>(null);
   

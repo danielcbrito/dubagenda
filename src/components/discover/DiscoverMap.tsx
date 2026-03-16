@@ -289,12 +289,7 @@ export function DiscoverMap({
       tileLayerRef.current.remove();
     }
 
-    const tileUrl =
-      mapStyle === "satellite"
-        ? "https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}"
-        : "https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}";
-
-    tileLayerRef.current = L.tileLayer(tileUrl, { maxZoom: 20 }).addTo(map);
+    tileLayerRef.current = L.tileLayer(getTileUrl(mapStyle), { maxZoom: 20 }).addTo(map);
   }, [mapStyle]);
 
   useEffect(() => {
