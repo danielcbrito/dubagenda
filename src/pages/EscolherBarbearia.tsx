@@ -403,23 +403,39 @@ const EscolherBarbearia = () => {
         return u.tenant_id ? activeTenantIds.has(u.tenant_id) : false;
       });
 
-      // Geocode missing coordinates
-      const geocodeInFlight = new Map<string, Promise<{ lat: number; lng: number } | null>>();
+      // Geocode using exact address components when available
+      const geocodeInFlight = new Map<string, Promise<GeocodeResult | null>>();
       unitList = await Promise.all(
         unitList.map(async (unit) => {
           try {
-            if (unit.latitude !== null && unit.longitude !== null) return unit;
             const addressQuery = buildAddressQuery(unit);
-            if (!addressQuery) return unit;
+            const preciseAddress = hasPreciseAddress(unit);
+            const shouldResolveExact = preciseAddress || unit.latitude === null || unit.longitude === null;
+
+            if (!addressQuery || !shouldResolveExact) return unit;
+
             const addressKey = normalizeText(addressQuery);
             const cached = readCachedGeocode(addressKey);
-            if (cached) return { ...unit, latitude: cached.lat, longitude: cached.lng };
+            if (cached && (cached.exact || unit.latitude === null || unit.longitude === null)) {
+              return { ...unit, latitude: cached.lat, longitude: cached.lng };
+            }
+
             let geocodePromise = geocodeInFlight.get(addressKey);
-            if (!geocodePromise) { geocodePromise = geocodeAddress(addressQuery); geocodeInFlight.set(addressKey, geocodePromise); }
+            if (!geocodePromise) {
+              geocodePromise = geocodeAddress(unit);
+              geocodeInFlight.set(addressKey, geocodePromise);
+            }
+
             const geocoded = await geocodePromise;
             if (!geocoded) return unit;
-            saveCachedGeocode(addressKey, geocoded.lat, geocoded.lng);
-            return { ...unit, latitude: geocoded.lat, longitude: geocoded.lng };
+
+            saveCachedGeocode(addressKey, geocoded);
+
+            if (geocoded.exact || unit.latitude === null || unit.longitude === null) {
+              return { ...unit, latitude: geocoded.lat, longitude: geocoded.lng };
+            }
+
+            return unit;
           } catch {
             return unit;
           }
