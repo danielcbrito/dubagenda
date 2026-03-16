@@ -184,9 +184,10 @@ export function DiscoverMap({
       attributionControl: false,
     });
     // Google Maps hybrid satellite tile layer
-    L.tileLayer("https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}", {
+    const initialTile = L.tileLayer("https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}", {
       maxZoom: 20,
     }).addTo(map);
+    tileLayerRef.current = initialTile;
     mapRef.current = map;
 
     const emitBounds = () => {
