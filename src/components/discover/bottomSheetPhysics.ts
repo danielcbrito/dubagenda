@@ -29,7 +29,7 @@ function resolveTargetSnap(currentTranslateY: number, velocityY: number, viewpor
     viewportHeight
   );
 
-  let closestSnap = SNAPS[0];
+  let closestSnap: number = SNAPS[0];
   let minDistance = Number.POSITIVE_INFINITY;
 
   for (const snap of SNAPS) {
