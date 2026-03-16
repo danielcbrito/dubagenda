@@ -534,7 +534,7 @@ const EscolherBarbearia = () => {
                 </div>
               ))}
             </div>
-          ) : filtered.length === 0 ? (
+          ) : visibleUnits.length === 0 ? (
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
@@ -552,7 +552,7 @@ const EscolherBarbearia = () => {
             </motion.div>
           ) : (
             <div className="space-y-4">
-              {filtered.map((unit, index) => (
+              {visibleUnits.map((unit, index) => (
                 <div key={unit.id} ref={(el) => { if (el) cardRefs.current.set(unit.id, el); }}>
                   <DiscoverUnitCard
                     unit={unit}
