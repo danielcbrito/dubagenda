@@ -78,8 +78,14 @@ function normalizeText(value: string): string {
     .toLowerCase();
 }
 
-const GEOCODE_CACHE_PREFIX = "unit-geocode-v1:";
+const GEOCODE_CACHE_PREFIX = "unit-geocode-v2:";
 const GEOCODE_CACHE_TTL_MS = 1000 * 60 * 60 * 24 * 30;
+
+interface GeocodeResult {
+  lat: number;
+  lng: number;
+  exact: boolean;
+}
 
 function buildAddressQuery(unit: UnitData): string | null {
   const parts = [unit.rua, unit.numero, unit.bairro, unit.cidade, unit.estado, unit.cep, "Brasil"]
@@ -89,50 +95,153 @@ function buildAddressQuery(unit: UnitData): string | null {
   return parts.join(", ");
 }
 
-function readCachedGeocode(addressKey: string): { lat: number; lng: number } | null {
+function hasPreciseAddress(unit: UnitData): boolean {
+  return !!unit.rua?.trim() && !!unit.numero?.trim() && !!unit.cidade?.trim();
+}
+
+function buildGeocodeQueries(unit: UnitData): URLSearchParams[] {
+  const queries: URLSearchParams[] = [];
+
+  if (unit.rua?.trim() && unit.numero?.trim()) {
+    const structured = new URLSearchParams({
+      format: "jsonv2",
+      limit: "3",
+      countrycodes: "br",
+      addressdetails: "1",
+      street: `${unit.rua.trim()}, ${unit.numero.trim()}`,
+      city: unit.cidade?.trim() ?? "",
+      state: unit.estado?.trim() ?? "",
+      postalcode: unit.cep?.trim() ?? "",
+    });
+    queries.push(structured);
+
+    const structuredAlt = new URLSearchParams({
+      format: "jsonv2",
+      limit: "3",
+      countrycodes: "br",
+      addressdetails: "1",
+      street: `${unit.rua.trim()} ${unit.numero.trim()}`,
+      city: unit.cidade?.trim() ?? "",
+      state: unit.estado?.trim() ?? "",
+      postalcode: unit.cep?.trim() ?? "",
+    });
+    queries.push(structuredAlt);
+  }
+
+  const fullQuery = buildAddressQuery(unit);
+  if (fullQuery) {
+    queries.push(
+      new URLSearchParams({
+        q: fullQuery,
+        format: "jsonv2",
+        limit: "3",
+        countrycodes: "br",
+        addressdetails: "1",
+      })
+    );
+  }
+
+  return queries;
+}
+
+function isGeocodeMatchExact(unit: UnitData, candidate: { display_name?: string; address?: Record<string, string | undefined> }): boolean {
+  const display = normalizeText(candidate.display_name ?? "");
+  const address = candidate.address ?? {};
+  const streetNeedle = normalizeText(unit.rua ?? "");
+  const numberNeedle = normalizeText(unit.numero ?? "");
+  const cityNeedle = normalizeText(unit.cidade ?? "");
+  const cepNeedle = normalizeText(unit.cep ?? "");
+
+  const streetHaystack = normalizeText([
+    address.road,
+    address.pedestrian,
+    address.residential,
+    address.footway,
+    candidate.display_name,
+  ].filter(Boolean).join(" "));
+  const numberHaystack = normalizeText([address.house_number, candidate.display_name].filter(Boolean).join(" "));
+  const cityHaystack = normalizeText([
+    address.city,
+    address.town,
+    address.village,
+    address.suburb,
+    address.county,
+    candidate.display_name,
+  ].filter(Boolean).join(" "));
+  const postcodeHaystack = normalizeText([address.postcode, candidate.display_name].filter(Boolean).join(" "));
+
+  const streetMatches = !!streetNeedle && streetHaystack.includes(streetNeedle);
+  const numberMatches = !!numberNeedle && numberHaystack.includes(numberNeedle);
+  const cityMatches = !cityNeedle || cityHaystack.includes(cityNeedle) || display.includes(cityNeedle);
+  const cepMatches = !cepNeedle || postcodeHaystack.includes(cepNeedle) || display.includes(cepNeedle);
+
+  return streetMatches && numberMatches && cityMatches && cepMatches;
+}
+
+function readCachedGeocode(addressKey: string): GeocodeResult | null {
   try {
     const raw = localStorage.getItem(`${GEOCODE_CACHE_PREFIX}${addressKey}`);
     if (!raw) return null;
-    const parsed = JSON.parse(raw) as { lat?: number; lng?: number; savedAt?: number };
+    const parsed = JSON.parse(raw) as { lat?: number; lng?: number; exact?: boolean; savedAt?: number };
     const isExpired = !parsed.savedAt || Date.now() - parsed.savedAt > GEOCODE_CACHE_TTL_MS;
     if (isExpired || typeof parsed.lat !== "number" || typeof parsed.lng !== "number") {
       localStorage.removeItem(`${GEOCODE_CACHE_PREFIX}${addressKey}`);
       return null;
     }
-    return { lat: parsed.lat, lng: parsed.lng };
+    return { lat: parsed.lat, lng: parsed.lng, exact: parsed.exact === true };
   } catch {
     return null;
   }
 }
 
-function saveCachedGeocode(addressKey: string, lat: number, lng: number) {
+function saveCachedGeocode(addressKey: string, result: GeocodeResult) {
   try {
     localStorage.setItem(
       `${GEOCODE_CACHE_PREFIX}${addressKey}`,
-      JSON.stringify({ lat, lng, savedAt: Date.now() })
+      JSON.stringify({ ...result, savedAt: Date.now() })
     );
   } catch { /* ignore */ }
 }
 
-async function geocodeAddress(addressQuery: string): Promise<{ lat: number; lng: number } | null> {
-  const params = new URLSearchParams({
-    q: addressQuery, format: "jsonv2", limit: "1", countrycodes: "br",
-  });
-  const controller = new AbortController();
-  const timeoutId = window.setTimeout(() => controller.abort(), 7000);
-  try {
-    const response = await fetch(`https://nominatim.openstreetmap.org/search?${params.toString()}`, {
-      signal: controller.signal, headers: { Accept: "application/json" },
-    });
-    if (!response.ok) return null;
-    const data = (await response.json()) as Array<{ lat: string; lon: string }>;
-    const hit = data[0];
-    if (!hit) return null;
-    const lat = Number(hit.lat);
-    const lng = Number(hit.lon);
-    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
-    return { lat, lng };
-  } catch { return null; } finally { window.clearTimeout(timeoutId); }
+async function geocodeAddress(unit: UnitData): Promise<GeocodeResult | null> {
+  const queries = buildGeocodeQueries(unit);
+  if (queries.length === 0) return null;
+
+  for (const params of queries) {
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), 7000);
+
+    try {
+      const response = await fetch(`https://nominatim.openstreetmap.org/search?${params.toString()}`, {
+        signal: controller.signal,
+        headers: { Accept: "application/json" },
+      });
+      if (!response.ok) continue;
+
+      const data = (await response.json()) as Array<{
+        lat: string;
+        lon: string;
+        display_name?: string;
+        address?: Record<string, string | undefined>;
+      }>;
+
+      const exactHit = data.find((hit) => isGeocodeMatchExact(unit, hit));
+      const chosenHit = exactHit ?? data[0];
+      if (!chosenHit) continue;
+
+      const lat = Number(chosenHit.lat);
+      const lng = Number(chosenHit.lon);
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
+
+      return { lat, lng, exact: chosenHit === exactHit };
+    } catch {
+      continue;
+    } finally {
+      window.clearTimeout(timeoutId);
+    }
+  }
+
+  return null;
 }
 
 // ── Draggable sheet constants ──
