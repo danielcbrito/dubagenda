@@ -45,7 +45,7 @@ interface FixResult {
 }
 
 const REQUEST_DELAY_MS = 1200;
-const DISCOVER_CACHE_KEYS = ["discover-units:v1", "discover-units:v2", "discover-units:v3", "discover-units:v4"];
+const DISCOVER_CACHE_KEYS = ["discover-units:v1", "discover-units:v2", "discover-units:v3", "discover-units:v4", "discover-units:v5"];
 
 function buildAddressParts(unit: FixableUnit) {
   return {
