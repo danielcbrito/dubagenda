@@ -65,13 +65,18 @@ function buildClientIcon() {
   });
 }
 
-function buildBarberIcon(label: string, selected: boolean) {
+function buildBarberIcon(
+  label: string,
+  selected: boolean,
+  markerOffset: { x: number; y: number }
+) {
   const truncated = label.length > 20 ? `${label.slice(0, 19)}…` : label;
+  const transform = `transform:translate(${markerOffset.x}px, ${markerOffset.y}px);`;
 
   if (selected) {
     return L.divIcon({
       html: `
-        <div style="display:inline-flex;align-items:center;gap:6px;background:#111;color:white;border-radius:999px;padding:6px 14px 6px 8px;font-family:system-ui,sans-serif;white-space:nowrap;box-shadow:0 4px 14px rgba(0,0,0,0.3);border:2px solid white;">
+        <div style="display:inline-flex;align-items:center;gap:6px;background:#111;color:white;border-radius:999px;padding:6px 14px 6px 8px;font-family:system-ui,sans-serif;white-space:nowrap;box-shadow:0 4px 14px rgba(0,0,0,0.3);border:2px solid white;${transform}">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style="flex-shrink:0;">
             <path d="M6.5 3L12 14.5" stroke="#EF4444" stroke-width="2.4" stroke-linecap="round"/>
             <path d="M17.5 3L12 14.5" stroke="#EF4444" stroke-width="2.4" stroke-linecap="round"/>
@@ -91,7 +96,7 @@ function buildBarberIcon(label: string, selected: boolean) {
 
   return L.divIcon({
     html: `
-      <div style="display:inline-flex;align-items:center;gap:5px;background:white;color:#111;border-radius:999px;padding:5px 12px 5px 7px;font-family:system-ui,sans-serif;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,0.15);border:1.5px solid #e5e5e5;">
+      <div style="display:inline-flex;align-items:center;gap:5px;background:white;color:#111;border-radius:999px;padding:5px 12px 5px 7px;font-family:system-ui,sans-serif;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,0.15);border:1.5px solid #e5e5e5;${transform}">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" style="flex-shrink:0;">
           <path d="M6.5 3L12 14.5" stroke="#DC2626" stroke-width="2.4" stroke-linecap="round"/>
           <path d="M17.5 3L12 14.5" stroke="#DC2626" stroke-width="2.4" stroke-linecap="round"/>
