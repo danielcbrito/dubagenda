@@ -156,7 +156,7 @@ async function geocodeAddress(unit: UnitData): Promise<GeocodeResult | null> {
   } catch {
     return null;
   }
-
+}
 
 // ── Draggable sheet constants ──
 const SHEET_SNAP_TOP = 0.3; // 30% from top = 70% sheet
