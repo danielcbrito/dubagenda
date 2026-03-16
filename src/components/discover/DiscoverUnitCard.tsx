@@ -40,7 +40,7 @@ export function DiscoverUnitCard({
   onClick,
 }: DiscoverUnitCardProps) {
   const brandInitial = unit.brandName?.[0]?.toUpperCase() ?? "?";
-  const title = getDiscoverUnitDisplayName(unit.brandName, unit.nome);
+  const title = getDiscoverUnitFullName(unit.brandName, unit.nome);
   const address = [unit.rua, unit.numero].filter(Boolean).join(", ");
   const locality = [unit.bairro, unit.cidade].filter(Boolean).join(" · ");
 
