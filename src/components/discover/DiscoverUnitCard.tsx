@@ -1,6 +1,7 @@
-import { MapPin, Footprints, Car, Star, Clock } from "lucide-react";
+import { MapPin, Footprints, Car } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
+import { getDiscoverUnitDisplayName } from "./discoverUnitUtils";
 
 interface UnitCardData {
   id: string;
@@ -39,6 +40,7 @@ export function DiscoverUnitCard({
   onClick,
 }: DiscoverUnitCardProps) {
   const brandInitial = unit.brandName?.[0]?.toUpperCase() ?? "?";
+  const title = getDiscoverUnitDisplayName(unit.brandName, unit.nome);
   const address = [unit.rua, unit.numero].filter(Boolean).join(", ");
   const locality = [unit.bairro, unit.cidade].filter(Boolean).join(" · ");
 
@@ -49,7 +51,7 @@ export function DiscoverUnitCard({
       transition={{ delay: index * 0.04, duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
       onClick={onClick}
       className={cn(
-        "w-full text-left rounded-2xl overflow-hidden border transition-all duration-200",
+        "w-full overflow-hidden rounded-2xl border text-left transition-all duration-200",
         "active:scale-[0.98]",
         isSelected
           ? "border-foreground/80 shadow-lg ring-1 ring-foreground/10"
@@ -57,54 +59,58 @@ export function DiscoverUnitCard({
       )}
       style={{ WebkitTapHighlightColor: "transparent" }}
     >
-      {/* Header band with logo */}
-      <div className="relative h-28 bg-secondary/40 overflow-hidden">
+      <div className="relative h-28 overflow-hidden bg-secondary/40">
         {unit.brandLogo ? (
           <img
             src={unit.brandLogo}
-            alt={unit.brandName}
-            className="w-full h-full object-cover"
+            alt={title}
+            className="h-full w-full object-cover"
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center bg-secondary">
+          <div className="flex h-full w-full items-center justify-center bg-secondary">
             <span className="text-3xl font-bold text-muted-foreground/30">
               {brandInitial}
             </span>
           </div>
         )}
 
-        {/* Travel badge */}
         {unit.travelMinutes !== null && unit.travelMode && (
-          <div className="absolute top-2.5 right-2.5 flex items-center gap-1 bg-card/90 backdrop-blur-md text-foreground rounded-full px-2.5 py-1 text-[11px] font-semibold shadow-md border border-border/40">
+          <div className="absolute right-2.5 top-2.5 flex items-center gap-1 rounded-full border border-border/40 bg-card/90 px-2.5 py-1 text-[11px] font-semibold text-foreground shadow-md backdrop-blur-md">
             {unit.travelMode === "walking" ? (
-              <Footprints className="w-3 h-3" />
+              <Footprints className="h-3 w-3" />
             ) : (
-              <Car className="w-3 h-3" />
+              <Car className="h-3 w-3" />
             )}
             {formatTravelTime(unit.travelMinutes)}
           </div>
         )}
       </div>
 
-      {/* Body */}
-      <div className="p-3.5 bg-card space-y-2">
+      <div className="space-y-2 bg-card p-3.5">
         <div className="flex items-start justify-between gap-2">
-          <h3 className="text-[15px] font-bold text-foreground leading-tight line-clamp-1">
-            {unit.brandName}
-          </h3>
+          <div className="space-y-1">
+            <h3 className="line-clamp-2 text-[15px] font-bold leading-tight text-foreground">
+              {title}
+            </h3>
+            {!unit.is_sede && (
+              <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground/75">
+                Unidade independente
+              </p>
+            )}
+          </div>
         </div>
 
         {(address || locality) && (
           <div className="flex items-start gap-1.5">
-            <MapPin className="w-3 h-3 text-muted-foreground/50 mt-0.5 shrink-0" />
+            <MapPin className="mt-0.5 h-3 w-3 shrink-0 text-muted-foreground/50" />
             <div className="flex flex-col">
               {address && (
-                <span className="text-[12px] text-muted-foreground/70 leading-tight line-clamp-1">
+                <span className="line-clamp-1 text-[12px] leading-tight text-muted-foreground/70">
                   {address}
                 </span>
               )}
               {locality && (
-                <span className="text-[11px] text-muted-foreground/50 leading-tight">
+                <span className="text-[11px] leading-tight text-muted-foreground/50">
                   {locality}
                 </span>
               )}
@@ -112,17 +118,14 @@ export function DiscoverUnitCard({
           </div>
         )}
 
-        {/* CTA */}
         <div className="pt-1">
           <div
             className={cn(
-              "w-full h-9 rounded-xl flex items-center justify-center text-[12px] font-semibold transition-colors",
-              isSelected
-                ? "bg-foreground text-background"
-                : "bg-secondary text-foreground"
+              "flex h-9 w-full items-center justify-center rounded-xl text-[12px] font-semibold transition-colors",
+              isSelected ? "bg-foreground text-background" : "bg-secondary text-foreground"
             )}
           >
-            Ver horários disponíveis
+            Ver horários desta unidade
           </div>
         </div>
       </div>

@@ -1,6 +1,11 @@
-import { useEffect, useRef, useMemo, useCallback } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import {
+  getCoordinateGroupKey,
+  getDiscoverUnitDisplayName,
+  offsetDuplicateCoordinate,
+} from "./discoverUnitUtils";
 
 function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 6371;
@@ -21,6 +26,7 @@ function smartZoomForDistance(km: number): number {
 
 interface MapUnit {
   id: string;
+  nome: string;
   latitude: number | null;
   longitude: number | null;
   brandName: string;
@@ -43,12 +49,13 @@ function buildIcon(label: string, selected: boolean) {
     ? "0 6px 16px hsl(var(--foreground) / 0.22)"
     : "0 3px 10px hsl(var(--foreground) / 0.14)";
   const scale = selected ? "scale(1.08)" : "scale(1)";
-  const truncated = label.length > 18 ? `${label.slice(0, 17)}…` : label;
+  const truncated = label.length > 26 ? `${label.slice(0, 25)}…` : label;
+  const width = Math.max(132, Math.min(210, truncated.length * 7 + 26));
 
   return L.divIcon({
     className: "custom-pill-icon",
-    iconSize: [120, 34],
-    iconAnchor: [60, 17],
+    iconSize: [width, 34],
+    iconAnchor: [width / 2, 17],
     popupAnchor: [0, -17],
     html: `<div class="discover-map-pill" style="
       background:${bg};
@@ -84,37 +91,59 @@ export function DiscoverMap({
   const markersRef = useRef<Map<string, L.Marker>>(new Map());
   const userMarkerRef = useRef<L.CircleMarker | null>(null);
 
-  // Parse units with valid coordinates
   const mappableUnits = useMemo(
-    () => units
-      .map((unit) => {
-        const latitude = Number.parseFloat(String(unit.latitude));
-        const longitude = Number.parseFloat(String(unit.longitude));
-        if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null;
-        return { ...unit, latitude, longitude };
-      })
-      .filter((unit): unit is MapUnit & { latitude: number; longitude: number } => unit !== null),
+    () =>
+      units
+        .map((unit) => {
+          const latitude = Number.parseFloat(String(unit.latitude));
+          const longitude = Number.parseFloat(String(unit.longitude));
+          if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null;
+          return { ...unit, latitude, longitude };
+        })
+        .filter((unit): unit is MapUnit & { latitude: number; longitude: number } => unit !== null),
     [units]
   );
+
+  const markerUnits = useMemo(() => {
+    const groupedUnits = new Map<string, Array<MapUnit & { latitude: number; longitude: number }>>();
+
+    mappableUnits.forEach((unit) => {
+      const key = getCoordinateGroupKey(unit.latitude, unit.longitude);
+      const current = groupedUnits.get(key) ?? [];
+      current.push(unit);
+      groupedUnits.set(key, current);
+    });
+
+    return Array.from(groupedUnits.values()).flatMap((group) =>
+      group.map((unit, index) => {
+        const offsetPosition = offsetDuplicateCoordinate(unit.latitude, unit.longitude, index, group.length);
+        return {
+          ...unit,
+          markerLatitude: offsetPosition.lat,
+          markerLongitude: offsetPosition.lng,
+          displayLabel: getDiscoverUnitDisplayName(unit.brandName, unit.nome),
+        };
+      })
+    );
+  }, [mappableUnits]);
 
   const defaultCenter: L.LatLngExpression = userLocation
     ? [userLocation.lat, userLocation.lng]
     : [-23.55, -46.63];
 
-  // Compute smart initial zoom based on nearest unit
   const initialZoom = useMemo(() => {
     if (!userLocation || mappableUnits.length === 0) return 14;
     let minDist = Infinity;
-    for (const u of mappableUnits) {
-      const d = haversineKm(userLocation.lat, userLocation.lng, u.latitude, u.longitude);
-      if (d < minDist) minDist = d;
+    for (const unit of mappableUnits) {
+      const distance = haversineKm(userLocation.lat, userLocation.lng, unit.latitude, unit.longitude);
+      if (distance < minDist) minDist = distance;
     }
     return smartZoomForDistance(minDist);
   }, [userLocation, mappableUnits]);
 
-  // Initialize map
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
+
     const map = L.map(containerRef.current, {
       center: defaultCenter,
       zoom: initialZoom,
@@ -124,12 +153,12 @@ export function DiscoverMap({
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
     mapRef.current = map;
 
-    // Track bounds changes
     const emitBounds = () => {
       if (onBoundsChange && map.getBounds().isValid()) {
         onBoundsChange(map.getBounds());
       }
     };
+
     map.on("moveend", emitBounds);
     map.on("zoomend", emitBounds);
     const initialBoundsTimer = window.setTimeout(emitBounds, 500);
@@ -141,14 +170,15 @@ export function DiscoverMap({
     };
   }, []);
 
-  // Update user location marker
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
+
     if (userMarkerRef.current) {
       userMarkerRef.current.remove();
       userMarkerRef.current = null;
     }
+
     if (userLocation) {
       userMarkerRef.current = L.circleMarker([userLocation.lat, userLocation.lng], {
         radius: 8,
@@ -160,72 +190,64 @@ export function DiscoverMap({
     }
   }, [userLocation]);
 
-  // Update unit markers
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
 
-    // Remove old markers
-    markersRef.current.forEach((m) => m.remove());
+    markersRef.current.forEach((marker) => marker.remove());
     markersRef.current.clear();
 
-    // Add new markers
-    mappableUnits.forEach((unit) => {
-      const marker = L.marker([unit.latitude!, unit.longitude!], {
-        icon: buildIcon(unit.brandName, unit.id === selectedId),
+    markerUnits.forEach((unit) => {
+      const marker = L.marker([unit.markerLatitude, unit.markerLongitude], {
+        icon: buildIcon(unit.displayLabel, unit.id === selectedId),
       })
         .on("click", () => onSelectUnit(unit.id))
         .addTo(map);
+
       markersRef.current.set(unit.id, marker);
     });
-  }, [mappableUnits, selectedId, onSelectUnit]);
+  }, [markerUnits, selectedId, onSelectUnit]);
 
-  // Fly to selected
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
 
     if (selectedId) {
-      const unit = units.find((u) => u.id === selectedId);
-      const latitude = Number.parseFloat(String(unit?.latitude));
-      const longitude = Number.parseFloat(String(unit?.longitude));
-
-      if (Number.isFinite(latitude) && Number.isFinite(longitude)) {
-        map.flyTo([latitude, longitude], 16, { duration: 0.8 });
+      const unit = mappableUnits.find((entry) => entry.id === selectedId);
+      if (unit) {
+        map.flyTo([unit.latitude, unit.longitude], 16, { duration: 0.8 });
       }
       return;
     }
 
     if (userLocation) {
-      map.flyTo([userLocation.lat, userLocation.lng], 14, { duration: 0.8 });
+      map.flyTo([userLocation.lat, userLocation.lng], initialZoom, { duration: 0.8 });
     }
-  }, [selectedId, units, userLocation]);
+  }, [selectedId, mappableUnits, userLocation, initialZoom]);
 
-  // Handle recenter
   const handleRecenter = () => {
     const map = mapRef.current;
     if (map && userLocation) {
-      map.flyTo([userLocation.lat, userLocation.lng], 14, { duration: 0.8 });
+      map.flyTo([userLocation.lat, userLocation.lng], initialZoom, { duration: 0.8 });
     }
     onRecenter();
   };
 
-  // Invalidate size when container resizes
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
-    const timer = setTimeout(() => map.invalidateSize(), 400);
-    return () => clearTimeout(timer);
+    const timer = window.setTimeout(() => map.invalidateSize(), 400);
+    return () => window.clearTimeout(timer);
   });
 
   return (
-    <div className="relative w-full h-full">
-      <div ref={containerRef} className="w-full h-full z-0" />
+    <div className="relative h-full w-full">
+      <div ref={containerRef} className="h-full w-full z-0" />
 
       {userLocation && (
         <button
           onClick={handleRecenter}
-          className="absolute bottom-4 right-4 z-[500] w-10 h-10 rounded-full bg-card border border-border shadow-lg flex items-center justify-center active:scale-90 transition-transform"
+          className="absolute bottom-4 right-4 z-[500] flex h-10 w-10 items-center justify-center rounded-full border border-border bg-card shadow-lg transition-transform active:scale-90"
         >
           <svg
             width="18"

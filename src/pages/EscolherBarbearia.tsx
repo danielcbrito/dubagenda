@@ -453,8 +453,7 @@ const EscolherBarbearia = () => {
   const handleCardClick = useCallback((unit: UnitData) => {
     const slug = unit.brandSlug || unit.id;
     const fromParam = isChangeMode ? "change" : "discover";
-    const unidadeParam = unit.is_sede ? "" : `&unidade=${unit.id}`;
-    navigate(`/${slug}?from=${fromParam}${unidadeParam}`);
+    navigate(`/${slug}?from=${fromParam}&unidade=${unit.id}`);
   }, [isChangeMode, navigate]);
 
   const handleRecenter = useCallback(() => {
