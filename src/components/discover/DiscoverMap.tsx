@@ -163,15 +163,22 @@ export function DiscoverMap({
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
+
     if (selectedId) {
       const unit = units.find((u) => u.id === selectedId);
-      if (unit?.latitude && unit?.longitude) {
-        map.flyTo([unit.latitude, unit.longitude], 16, { duration: 0.8 });
+      const latitude = Number.parseFloat(String(unit?.latitude));
+      const longitude = Number.parseFloat(String(unit?.longitude));
+
+      if (Number.isFinite(latitude) && Number.isFinite(longitude)) {
+        map.flyTo([latitude, longitude], 16, { duration: 0.8 });
       }
-    } else if (userLocation) {
+      return;
+    }
+
+    if (userLocation) {
       map.flyTo([userLocation.lat, userLocation.lng], 14, { duration: 0.8 });
     }
-  }, [selectedId]);
+  }, [selectedId, units, userLocation]);
 
   // Handle recenter
   const handleRecenter = () => {

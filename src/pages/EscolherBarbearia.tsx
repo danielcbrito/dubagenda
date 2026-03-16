@@ -298,7 +298,7 @@ const EscolherBarbearia = () => {
       unitList = await Promise.all(
         unitList.map(async (unit) => {
           try {
-            if (unit.latitude && unit.longitude) return unit;
+            if (unit.latitude !== null && unit.longitude !== null) return unit;
             const addressQuery = buildAddressQuery(unit);
             if (!addressQuery) return unit;
             const addressKey = normalizeText(addressQuery);
