@@ -183,11 +183,8 @@ const EscolherBarbearia = () => {
   const listRef = useRef<HTMLDivElement>(null);
   const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
-  // Sheet drag state
-  const [sheetTop, setSheetTop] = useState(SHEET_SNAP_MID);
-  const isDragging = useRef(false);
-  const dragStartY = useRef(0);
-  const dragStartTop = useRef(0);
+  // Sheet snap state
+  const [currentSheetSnap, setCurrentSheetSnap] = useState(SNAP_MID);
 
   const isChangeMode = searchParams.get("mode") === "change";
   const shouldOpenCurrent = searchParams.get("open") === "current";
