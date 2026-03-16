@@ -67,41 +67,13 @@ function buildFullAddress(unit: FixableUnit): string {
 }
 
 async function geocodeAddress(unit: FixableUnit): Promise<{ lat: number; lng: number } | null> {
-  const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
-  const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-  const address = buildFullAddress(unit);
   const addressParts = buildAddressParts(unit);
-
-  if (!addressParts.street || !addressParts.number || !addressParts.city || !addressParts.state) {
+  if (!hasPreciseAddressParts(addressParts)) {
     return null;
   }
 
-  const response = await fetch(`https://${projectId}.supabase.co/functions/v1/geocode-address`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${anonKey}`,
-      apikey: anonKey,
-    },
-    body: JSON.stringify({
-      address,
-      components: {
-        rua: addressParts.street,
-        numero: addressParts.number,
-        bairro: addressParts.neighborhood,
-        cidade: addressParts.city,
-        estado: addressParts.state,
-        cep: addressParts.postalCode,
-      },
-    }),
-  });
-
-  if (!response.ok) {
-    throw new Error("Falha ao consultar o geocoding");
-  }
-
-  const payload = await response.json();
-  if (typeof payload.lat !== "number" || typeof payload.lng !== "number") {
+  const payload = await geocodeAddressFromParts(addressParts);
+  if (!payload) {
     return null;
   }
 
