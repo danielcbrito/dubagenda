@@ -1,31 +1,23 @@
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
-
-/**
- * High-performance bottom sheet with 3 snap points.
- * Uses CSS `transform: translateY()` for GPU-accelerated 60fps movement.
- *
- * Snap points are expressed as fractions of viewport height
- * representing how much of the sheet is VISIBLE:
- *   peek  = ~15%  (collapsed, just handle + title)
- *   mid   = ~45%  (default, half screen)
- *   full  = ~85%  (expanded, almost full screen)
- */
-
-// ── Snap points (fraction of viewport the sheet occupies) ──
-const SNAP_PEEK = 0.15;
-const SNAP_MID = 0.45;
-const SNAP_FULL = 0.85;
-const SNAPS = [SNAP_PEEK, SNAP_MID, SNAP_FULL];
-
-// Convert snap (visible fraction) to translateY px
-function snapToTranslateY(snap: number, vh: number): number {
-  return vh * (1 - snap);
-}
-
-// Convert translateY px to snap (visible fraction)
-function translateYToSnap(ty: number, vh: number): number {
-  return 1 - ty / vh;
-}
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  type MouseEvent as ReactMouseEvent,
+  type ReactNode,
+  type TouchEvent as ReactTouchEvent,
+} from "react";
+import {
+  ANIMATION_DURATION_MS,
+  ANIMATION_EASING,
+  DRAG_DECISION_PX,
+  SNAP_FULL,
+  SNAP_MID,
+  SNAP_PEEK,
+  clampTranslateY,
+  resolveTargetSnap,
+  snapToTranslateY,
+} from "./bottomSheetPhysics";
 
 interface BottomSheetProps {
   children: ReactNode;
@@ -34,304 +26,326 @@ interface BottomSheetProps {
   onSnapChange?: (snap: number) => void;
 }
 
+type DragSource = "handle" | "content";
+type DragMode = "undecided" | "sheet" | "content";
+
+interface GestureState {
+  active: boolean;
+  source: DragSource;
+  mode: DragMode;
+  startY: number;
+  lastY: number;
+  lastTime: number;
+  startTranslateY: number;
+  startScrollTop: number;
+  velocityY: number;
+}
+
+const INITIAL_GESTURE: GestureState = {
+  active: false,
+  source: "handle",
+  mode: "undecided",
+  startY: 0,
+  lastY: 0,
+  lastTime: 0,
+  startTranslateY: 0,
+  startScrollTop: 0,
+  velocityY: 0,
+};
+
+function getViewportHeight(): number {
+  return window.visualViewport?.height ?? window.innerHeight;
+}
+
+/**
+ * Bottom sheet com 3 etapas e gesto contínuo:
+ * - bem baixo
+ * - metade da tela
+ * - quase tela cheia
+ *
+ * O drag usa requestAnimationFrame e transfere o gesto para o scroll
+ * quando a sheet encosta no topo, evitando o "teleporte" ao subir.
+ */
 export function BottomSheet({ children, header, initialSnap = SNAP_MID, onSnapChange }: BottomSheetProps) {
   const sheetRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
-  const [currentSnap, setCurrentSnap] = useState(initialSnap);
+  const viewportHeightRef = useRef(getViewportHeight());
+  const currentSnapRef = useRef(initialSnap);
+  const currentTranslateYRef = useRef(snapToTranslateY(initialSnap, viewportHeightRef.current));
+  const animationFrameRef = useRef<number | null>(null);
+  const gestureRef = useRef<GestureState>(INITIAL_GESTURE);
 
-  // Refs for gesture tracking (no re-renders during drag)
-  const isDragging = useRef(false);
-  const startY = useRef(0);
-  const startTranslateY = useRef(0);
-  const currentTranslateY = useRef(0);
-  const velocityY = useRef(0);
-  const lastTouchY = useRef(0);
-  const lastTouchTime = useRef(0);
-  const listScrollLocked = useRef(false);
-  const dragDecided = useRef(false);
-  const isListDrag = useRef(false);
+  const applyTranslateY = useCallback((translateY: number) => {
+    const sheet = sheetRef.current;
+    if (!sheet) return;
 
-  const vh = useRef(window.innerHeight);
+    const nextTranslateY = clampTranslateY(translateY, viewportHeightRef.current);
+    currentTranslateYRef.current = nextTranslateY;
 
-  // Keep vh fresh
-  useEffect(() => {
-    const update = () => { vh.current = window.innerHeight; };
-    window.addEventListener("resize", update);
-    return () => window.removeEventListener("resize", update);
+    if (animationFrameRef.current !== null) {
+      cancelAnimationFrame(animationFrameRef.current);
+    }
+
+    animationFrameRef.current = requestAnimationFrame(() => {
+      sheet.style.transform = `translate3d(0, ${nextTranslateY}px, 0)`;
+      animationFrameRef.current = null;
+    });
   }, []);
 
-  // ── Animate to snap ──
   const animateToSnap = useCallback((snap: number) => {
     const sheet = sheetRef.current;
     if (!sheet) return;
 
-    const targetTY = snapToTranslateY(snap, vh.current);
-    currentTranslateY.current = targetTY;
+    const targetTranslateY = snapToTranslateY(snap, viewportHeightRef.current);
+    currentSnapRef.current = snap;
+    currentTranslateYRef.current = targetTranslateY;
 
-    sheet.style.transition = "transform 0.4s cubic-bezier(0.32, 0.72, 0, 1)";
-    sheet.style.transform = `translateY(${targetTY}px)`;
+    if (animationFrameRef.current !== null) {
+      cancelAnimationFrame(animationFrameRef.current);
+      animationFrameRef.current = null;
+    }
 
-    setCurrentSnap(snap);
+    sheet.style.transition = `transform ${ANIMATION_DURATION_MS}ms ${ANIMATION_EASING}`;
+    sheet.style.transform = `translate3d(0, ${targetTranslateY}px, 0)`;
     onSnapChange?.(snap);
+
+    const clearTransition = () => {
+      if (sheetRef.current) {
+        sheetRef.current.style.transition = "";
+      }
+    };
+
+    sheet.addEventListener("transitionend", clearTransition, { once: true });
   }, [onSnapChange]);
 
-  // Set initial position
+  const syncToCurrentSnap = useCallback(() => {
+    viewportHeightRef.current = getViewportHeight();
+    const translateY = snapToTranslateY(currentSnapRef.current, viewportHeightRef.current);
+
+    if (sheetRef.current) {
+      sheetRef.current.style.transition = "none";
+    }
+
+    applyTranslateY(translateY);
+  }, [applyTranslateY]);
+
+  useLayoutEffect(() => {
+    currentSnapRef.current = initialSnap;
+    viewportHeightRef.current = getViewportHeight();
+    const initialTranslateY = snapToTranslateY(initialSnap, viewportHeightRef.current);
+    currentTranslateYRef.current = initialTranslateY;
+
+    if (sheetRef.current) {
+      sheetRef.current.style.transform = `translate3d(0, ${initialTranslateY}px, 0)`;
+    }
+  }, [initialSnap]);
+
   useEffect(() => {
-    const sheet = sheetRef.current;
-    if (!sheet) return;
+    const handleViewportResize = () => syncToCurrentSnap();
 
-    const ty = snapToTranslateY(initialSnap, vh.current);
-    currentTranslateY.current = ty;
-    sheet.style.transform = `translateY(${ty}px)`;
-  }, []);
+    window.addEventListener("resize", handleViewportResize);
+    window.visualViewport?.addEventListener("resize", handleViewportResize);
 
-  // ── Find best snap based on position + velocity ──
-  const findTargetSnap = useCallback((currentVisibleFraction: number, velocity: number): number => {
-    const FLING_THRESHOLD = 0.5; // px/ms
+    return () => {
+      window.removeEventListener("resize", handleViewportResize);
+      window.visualViewport?.removeEventListener("resize", handleViewportResize);
 
-    // Fling detection: velocity > 0 means dragging DOWN (collapsing)
-    if (Math.abs(velocity) > FLING_THRESHOLD) {
-      const direction = velocity > 0 ? -1 : 1; // -1 = collapse, 1 = expand
-      const candidates = SNAPS.filter(s =>
-        direction > 0 ? s > currentVisibleFraction + 0.03 : s < currentVisibleFraction - 0.03
-      );
-      if (candidates.length > 0) {
-        return direction > 0 ? Math.min(...candidates) : Math.max(...candidates);
+      if (animationFrameRef.current !== null) {
+        cancelAnimationFrame(animationFrameRef.current);
       }
-    }
+    };
+  }, [syncToCurrentSnap]);
 
-    // Snap to nearest
-    let closest = SNAPS[0];
-    let minDist = Infinity;
-    for (const s of SNAPS) {
-      const d = Math.abs(s - currentVisibleFraction);
-      if (d < minDist) { minDist = d; closest = s; }
-    }
-    return closest;
-  }, []);
-
-  // ── Handle area: always drags the sheet ──
-  const onHandleTouchStart = useCallback((e: React.TouchEvent) => {
+  const beginGesture = useCallback((clientY: number, source: DragSource) => {
     const sheet = sheetRef.current;
-    if (!sheet) return;
+    const list = listRef.current;
+    if (!sheet || !list) return;
 
     sheet.style.transition = "none";
-    isDragging.current = true;
-    dragDecided.current = true;
-    isListDrag.current = false;
-    listScrollLocked.current = true;
-
-    const touch = e.touches[0];
-    startY.current = touch.clientY;
-    startTranslateY.current = currentTranslateY.current;
-    lastTouchY.current = touch.clientY;
-    lastTouchTime.current = Date.now();
-    velocityY.current = 0;
+    gestureRef.current = {
+      active: true,
+      source,
+      mode: source === "handle" ? "sheet" : "undecided",
+      startY: clientY,
+      lastY: clientY,
+      lastTime: performance.now(),
+      startTranslateY: currentTranslateYRef.current,
+      startScrollTop: list.scrollTop,
+      velocityY: 0,
+    };
   }, []);
 
-  const onHandleTouchMove = useCallback((e: React.TouchEvent) => {
-    if (!isDragging.current) return;
+  const updateVelocity = useCallback((clientY: number) => {
+    const gesture = gestureRef.current;
+    if (!gesture.active) return;
 
-    const touch = e.touches[0];
-    const deltaY = touch.clientY - startY.current;
-    const newTY = Math.max(
-      snapToTranslateY(SNAP_FULL, vh.current),
-      Math.min(snapToTranslateY(SNAP_PEEK, vh.current), startTranslateY.current + deltaY)
-    );
-
-    // Track velocity
-    const now = Date.now();
-    const dt = now - lastTouchTime.current;
-    if (dt > 0) {
-      velocityY.current = (touch.clientY - lastTouchY.current) / dt;
+    const now = performance.now();
+    const deltaTime = now - gesture.lastTime;
+    if (deltaTime > 0) {
+      const instantVelocity = (clientY - gesture.lastY) / deltaTime;
+      gesture.velocityY = gesture.velocityY * 0.35 + instantVelocity * 0.65;
     }
-    lastTouchY.current = touch.clientY;
-    lastTouchTime.current = now;
 
-    currentTranslateY.current = newTY;
-    const sheet = sheetRef.current;
-    if (sheet) sheet.style.transform = `translateY(${newTY}px)`;
+    gesture.lastY = clientY;
+    gesture.lastTime = now;
   }, []);
 
-  const onHandleTouchEnd = useCallback(() => {
-    if (!isDragging.current) return;
-    isDragging.current = false;
-    listScrollLocked.current = false;
-
-    const currentFraction = translateYToSnap(currentTranslateY.current, vh.current);
-    const target = findTargetSnap(currentFraction, velocityY.current);
-    animateToSnap(target);
-  }, [findTargetSnap, animateToSnap]);
-
-  // ── List area: scroll content OR drag sheet ──
-  const onListTouchStart = useCallback((e: React.TouchEvent) => {
+  const shouldDragSheetFromContent = useCallback((deltaY: number) => {
     const list = listRef.current;
-    const sheet = sheetRef.current;
-    if (!list || !sheet) return;
+    const isAtTop = (list?.scrollTop ?? 0) <= 0.5;
+    const isFullyExpanded = currentTranslateYRef.current <= snapToTranslateY(SNAP_FULL, viewportHeightRef.current) + 1;
 
-    sheet.style.transition = "none";
-    dragDecided.current = false;
-    isListDrag.current = false;
-    listScrollLocked.current = false;
-
-    const touch = e.touches[0];
-    startY.current = touch.clientY;
-    startTranslateY.current = currentTranslateY.current;
-    lastTouchY.current = touch.clientY;
-    lastTouchTime.current = Date.now();
-    velocityY.current = 0;
-  }, []);
-
-  const onListTouchMove = useCallback((e: React.TouchEvent) => {
-    const list = listRef.current;
-    const sheet = sheetRef.current;
-    if (!list || !sheet) return;
-
-    const touch = e.touches[0];
-    const deltaY = touch.clientY - startY.current;
-
-    // Track velocity regardless
-    const now = Date.now();
-    const dt = now - lastTouchTime.current;
-    if (dt > 0) {
-      velocityY.current = (touch.clientY - lastTouchY.current) / dt;
+    if (deltaY > 0) {
+      return isAtTop;
     }
-    lastTouchY.current = touch.clientY;
-    lastTouchTime.current = now;
 
-    // Decision point: are we dragging the sheet or scrolling the list?
-    if (!dragDecided.current) {
-      if (Math.abs(deltaY) < 8) return; // wait for enough movement
-      dragDecided.current = true;
+    if (deltaY < 0) {
+      return !isFullyExpanded;
+    }
 
-      const isAtTop = list.scrollTop <= 0;
-      const pullingDown = deltaY > 0;
-      const isNotFullyExpanded = currentSnap < SNAP_FULL - 0.02;
+    return false;
+  }, []);
 
-      // Drag sheet if:
-      // 1. Pulling down AND list is at top (collapse gesture)
-      // 2. Pulling up AND sheet not fully expanded yet
-      if ((pullingDown && isAtTop) || (!pullingDown && isNotFullyExpanded)) {
-        isListDrag.current = false; // dragging the sheet
-        isDragging.current = true;
-        listScrollLocked.current = true;
-        list.style.overflowY = "hidden";
-        list.style.touchAction = "none";
-      } else {
-        isListDrag.current = true; // scrolling the list
-        return;
+  const dragSheet = useCallback((clientY: number, allowScrollHandoff: boolean) => {
+    const gesture = gestureRef.current;
+    const list = listRef.current;
+    if (!gesture.active) return;
+
+    const minTranslateY = snapToTranslateY(SNAP_FULL, viewportHeightRef.current);
+    const maxTranslateY = snapToTranslateY(SNAP_PEEK, viewportHeightRef.current);
+    const deltaY = clientY - gesture.startY;
+    const rawTranslateY = gesture.startTranslateY + deltaY;
+
+    if (rawTranslateY < minTranslateY) {
+      applyTranslateY(minTranslateY);
+
+      if (allowScrollHandoff && list) {
+        const overflow = minTranslateY - rawTranslateY;
+        list.scrollTop = gesture.startScrollTop + overflow;
       }
-    }
 
-    if (isListDrag.current) return; // let browser handle scroll
-
-    // Sheet dragging
-    e.preventDefault();
-    const newTY = Math.max(
-      snapToTranslateY(SNAP_FULL, vh.current),
-      Math.min(snapToTranslateY(SNAP_PEEK, vh.current), startTranslateY.current + deltaY)
-    );
-
-    currentTranslateY.current = newTY;
-    sheet.style.transform = `translateY(${newTY}px)`;
-  }, [currentSnap]);
-
-  const onListTouchEnd = useCallback(() => {
-    const list = listRef.current;
-    if (list) {
-      list.style.overflowY = "auto";
-      list.style.touchAction = "";
-    }
-
-    if (!isDragging.current) {
-      listScrollLocked.current = false;
       return;
     }
 
-    isDragging.current = false;
-    listScrollLocked.current = false;
+    if (rawTranslateY > maxTranslateY) {
+      applyTranslateY(maxTranslateY);
+      return;
+    }
 
-    const currentFraction = translateYToSnap(currentTranslateY.current, vh.current);
-    const target = findTargetSnap(currentFraction, velocityY.current);
-    animateToSnap(target);
-  }, [findTargetSnap, animateToSnap]);
+    applyTranslateY(rawTranslateY);
+  }, [applyTranslateY]);
 
-  // ── Expose snap control for parent ──
-  const expandToMid = useCallback(() => {
-    if (currentSnap < SNAP_MID) animateToSnap(SNAP_MID);
-  }, [currentSnap, animateToSnap]);
+  const finishGesture = useCallback(() => {
+    const gesture = gestureRef.current;
+    if (!gesture.active) return;
+
+    const shouldSnap = gesture.mode !== "content";
+    const velocityY = gesture.velocityY;
+    gestureRef.current = { ...INITIAL_GESTURE };
+
+    if (!shouldSnap) return;
+
+    const targetSnap = resolveTargetSnap(
+      currentTranslateYRef.current,
+      velocityY,
+      viewportHeightRef.current
+    );
+
+    animateToSnap(targetSnap);
+  }, [animateToSnap]);
+
+  const handleHandleTouchStart = useCallback((event: ReactTouchEvent<HTMLDivElement>) => {
+    beginGesture(event.touches[0].clientY, "handle");
+  }, [beginGesture]);
+
+  const handleHandleTouchMove = useCallback((event: ReactTouchEvent<HTMLDivElement>) => {
+    if (!gestureRef.current.active) return;
+    const clientY = event.touches[0].clientY;
+    updateVelocity(clientY);
+    event.preventDefault();
+    dragSheet(clientY, false);
+  }, [dragSheet, updateVelocity]);
+
+  const handleContentTouchStart = useCallback((event: ReactTouchEvent<HTMLDivElement>) => {
+    beginGesture(event.touches[0].clientY, "content");
+  }, [beginGesture]);
+
+  const handleContentTouchMove = useCallback((event: ReactTouchEvent<HTMLDivElement>) => {
+    const gesture = gestureRef.current;
+    if (!gesture.active) return;
+
+    const clientY = event.touches[0].clientY;
+    updateVelocity(clientY);
+
+    if (gesture.mode === "undecided") {
+      const deltaY = clientY - gesture.startY;
+      if (Math.abs(deltaY) < DRAG_DECISION_PX) return;
+      gesture.mode = shouldDragSheetFromContent(deltaY) ? "sheet" : "content";
+    }
+
+    if (gesture.mode === "content") return;
+
+    event.preventDefault();
+    dragSheet(clientY, true);
+  }, [dragSheet, shouldDragSheetFromContent, updateVelocity]);
+
+  const handleHandleMouseDown = useCallback((event: ReactMouseEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    beginGesture(event.clientY, "handle");
+
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      if (!gestureRef.current.active) return;
+      updateVelocity(moveEvent.clientY);
+      dragSheet(moveEvent.clientY, false);
+    };
+
+    const handleMouseUp = () => {
+      finishGesture();
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+  }, [beginGesture, dragSheet, finishGesture, updateVelocity]);
 
   return (
     <div
       ref={sheetRef}
-      className="absolute left-0 right-0 z-[500] bg-background rounded-t-[22px] flex flex-col will-change-transform"
+      className="absolute left-0 right-0 z-[500] flex h-full flex-col rounded-t-[22px] bg-background will-change-transform"
       style={{
         top: 0,
-        height: "100%",
         boxShadow: "0 -8px 40px rgba(0,0,0,0.18), 0 -2px 6px rgba(0,0,0,0.08)",
         borderTop: "1px solid hsl(var(--border) / 0.4)",
+        contain: "layout paint style",
+        backfaceVisibility: "hidden",
       }}
     >
-      {/* ── Drag handle ── */}
       <div
-        className="flex-shrink-0 flex items-center justify-center pt-3 pb-1.5 cursor-grab active:cursor-grabbing select-none"
-        onTouchStart={onHandleTouchStart}
-        onTouchMove={onHandleTouchMove}
-        onTouchEnd={onHandleTouchEnd}
-        onMouseDown={(e) => {
-          // Desktop support
-          const sheet = sheetRef.current;
-          if (!sheet) return;
-          sheet.style.transition = "none";
-          isDragging.current = true;
-          startY.current = e.clientY;
-          startTranslateY.current = currentTranslateY.current;
-          lastTouchY.current = e.clientY;
-          lastTouchTime.current = Date.now();
-          velocityY.current = 0;
-
-          const move = (ev: MouseEvent) => {
-            if (!isDragging.current) return;
-            const deltaY = ev.clientY - startY.current;
-            const now = Date.now();
-            const dt = now - lastTouchTime.current;
-            if (dt > 0) velocityY.current = (ev.clientY - lastTouchY.current) / dt;
-            lastTouchY.current = ev.clientY;
-            lastTouchTime.current = now;
-            const newTY = Math.max(
-              snapToTranslateY(SNAP_FULL, vh.current),
-              Math.min(snapToTranslateY(SNAP_PEEK, vh.current), startTranslateY.current + deltaY)
-            );
-            currentTranslateY.current = newTY;
-            if (sheet) sheet.style.transform = `translateY(${newTY}px)`;
-          };
-          const up = () => {
-            isDragging.current = false;
-            const frac = translateYToSnap(currentTranslateY.current, vh.current);
-            const target = findTargetSnap(frac, velocityY.current);
-            animateToSnap(target);
-            window.removeEventListener("mousemove", move);
-            window.removeEventListener("mouseup", up);
-          };
-          window.addEventListener("mousemove", move);
-          window.addEventListener("mouseup", up);
-        }}
+        className="flex flex-shrink-0 select-none items-center justify-center pt-3 pb-1.5 cursor-grab active:cursor-grabbing"
+        style={{ touchAction: "none" }}
+        onTouchStart={handleHandleTouchStart}
+        onTouchMove={handleHandleTouchMove}
+        onTouchEnd={finishGesture}
+        onTouchCancel={finishGesture}
+        onMouseDown={handleHandleMouseDown}
       >
-        <div className="w-9 h-[5px] rounded-full bg-muted-foreground/20" />
+        <div className="h-[5px] w-9 rounded-full bg-muted-foreground/20" />
       </div>
 
-      {/* ── Header (counter, etc) ── */}
-      <div className="flex-shrink-0">
-        {header}
-      </div>
+      <div className="flex-shrink-0">{header}</div>
 
-      {/* ── Scrollable list ── */}
       <div
         ref={listRef}
         className="flex-1 min-h-0 overflow-y-auto overscroll-contain"
-        onTouchStart={onListTouchStart}
-        onTouchMove={onListTouchMove}
-        onTouchEnd={onListTouchEnd}
+        style={{
+          WebkitOverflowScrolling: "touch",
+          overscrollBehaviorY: "contain",
+        }}
+        onTouchStart={handleContentTouchStart}
+        onTouchMove={handleContentTouchMove}
+        onTouchEnd={finishGesture}
+        onTouchCancel={finishGesture}
       >
         {children}
       </div>
@@ -339,5 +353,4 @@ export function BottomSheet({ children, header, initialSnap = SNAP_MID, onSnapCh
   );
 }
 
-// Export snap constants for parent usage
 export { SNAP_PEEK, SNAP_MID, SNAP_FULL };
