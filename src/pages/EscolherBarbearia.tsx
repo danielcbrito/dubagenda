@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DiscoverMap } from "@/components/discover/DiscoverMap";
 import { DiscoverUnitCard } from "@/components/discover/DiscoverUnitCard";
+import { getDiscoverUnitDisplayName } from "@/components/discover/discoverUnitUtils";
 import type L from "leaflet";
 
 // ── Types ──
@@ -81,7 +82,7 @@ const GEOCODE_CACHE_PREFIX = "unit-geocode-v1:";
 const GEOCODE_CACHE_TTL_MS = 1000 * 60 * 60 * 24 * 30;
 
 function buildAddressQuery(unit: UnitData): string | null {
-  const parts = [unit.rua, unit.numero, unit.bairro, unit.cidade, unit.estado, unit.cep]
+  const parts = [unit.rua, unit.numero, unit.bairro, unit.cidade, unit.estado, unit.cep, "Brasil"]
     .map((part) => part?.trim())
     .filter((part): part is string => !!part && part.length > 0);
   if (parts.length < 3) return null;
@@ -339,6 +340,22 @@ const EscolherBarbearia = () => {
       .sort((a, b) => (a.distance ?? Infinity) - (b.distance ?? Infinity));
   }, [allUnits, userLocation]);
 
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+
+    console.table(
+      allUnits.map((unit) => ({
+        unidade: getDiscoverUnitDisplayName(unit.brandName, unit.nome),
+        marca: unit.brandName,
+        lat: unit.latitude,
+        lng: unit.longitude,
+        endereco: [unit.rua, unit.numero, unit.bairro, unit.cidade, unit.estado]
+          .filter(Boolean)
+          .join(", "),
+      }))
+    );
+  }, [allUnits]);
+
   // ── Filtered by search + map bounds ──
   const searchFilteredUnits = useMemo(() => {
     if (!search.trim()) return sortedUnits;
@@ -436,8 +453,7 @@ const EscolherBarbearia = () => {
   const handleCardClick = useCallback((unit: UnitData) => {
     const slug = unit.brandSlug || unit.id;
     const fromParam = isChangeMode ? "change" : "discover";
-    const unidadeParam = unit.is_sede ? "" : `&unidade=${unit.id}`;
-    navigate(`/${slug}?from=${fromParam}${unidadeParam}`);
+    navigate(`/${slug}?from=${fromParam}&unidade=${unit.id}`);
   }, [isChangeMode, navigate]);
 
   const handleRecenter = useCallback(() => {
