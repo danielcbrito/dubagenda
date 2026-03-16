@@ -409,6 +409,64 @@ const BarbershopPublic = () => {
     staleTime: 5 * 60 * 1000,
   });
 
+  useEffect(() => {
+    const addressParts = {
+      street: unidadeAtual?.rua ?? tenant?.rua ?? null,
+      number: unidadeAtual?.numero ?? tenant?.numero ?? null,
+      neighborhood: unidadeAtual?.bairro ?? tenant?.bairro ?? null,
+      city: unidadeAtual?.cidade ?? tenant?.cidade ?? null,
+      state: unidadeAtual?.estado ?? tenant?.estado ?? null,
+      postalCode: unidadeAtual?.cep ?? null,
+    };
+    const storedCoords = resolveStoredCoordinates(
+      unidadeAtual?.latitude ?? tenant?.latitude ?? null,
+      unidadeAtual?.longitude ?? tenant?.longitude ?? null,
+    );
+    const addressQuery = buildAddressQueryFromParts(addressParts);
+    const cachedGeocode = addressQuery
+      ? readCachedGeocode(normalizeLocationText(addressQuery))
+      : null;
+
+    setResolvedUnitCoords(pickResolvedCoordinates(storedCoords, cachedGeocode));
+
+    if (!addressQuery || !hasPreciseAddressParts(addressParts)) {
+      return;
+    }
+
+    let isActive = true;
+
+    void (async () => {
+      const geocoded = await geocodeAddressFromParts(addressParts);
+      if (!geocoded || !isActive) return;
+
+      saveCachedGeocode(normalizeLocationText(addressQuery), geocoded);
+      if (shouldPreferGeocodedCoordinates(storedCoords, geocoded) || !storedCoords) {
+        setResolvedUnitCoords({ lat: geocoded.lat, lng: geocoded.lng });
+      }
+    })();
+
+    return () => {
+      isActive = false;
+    };
+  }, [
+    tenant?.rua,
+    tenant?.numero,
+    tenant?.bairro,
+    tenant?.cidade,
+    tenant?.estado,
+    tenant?.latitude,
+    tenant?.longitude,
+    unidadeAtual?.id,
+    unidadeAtual?.rua,
+    unidadeAtual?.numero,
+    unidadeAtual?.bairro,
+    unidadeAtual?.cidade,
+    unidadeAtual?.estado,
+    unidadeAtual?.cep,
+    unidadeAtual?.latitude,
+    unidadeAtual?.longitude,
+  ]);
+
   // Units count query for "Ver todas as unidades" row
   const { data: unidadesCount } = useQuery({
     queryKey: ["unidades-count", tenant?.id],
