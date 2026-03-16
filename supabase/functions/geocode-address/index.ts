@@ -231,6 +231,69 @@ function scoreNominatimResult(result: NominatimResult, input: GeocodeInput) {
   return score;
 }
 
+function isExactArcGisCandidate(candidate: ArcGisCandidate, input: GeocodeInput) {
+  const components = input.components ?? {};
+  const address = candidate.address ?? "";
+
+  const streetMatches = !components.rua || matchesText(address, components.rua);
+  const numberMatches =
+    !components.numero || digitsOnly(address).includes(digitsOnly(components.numero));
+  const cityMatches = !components.cidade || matchesText(address, components.cidade);
+  const postalCodeMatches =
+    !components.cep || digitsOnly(address).includes(digitsOnly(components.cep));
+
+  return Boolean(
+    (candidate.score ?? 0) >= 95 &&
+      streetMatches &&
+      numberMatches &&
+      cityMatches &&
+      postalCodeMatches,
+  );
+}
+
+function scoreArcGisCandidate(candidate: ArcGisCandidate, input: GeocodeInput) {
+  const lat = candidate.location?.y;
+  const lng = candidate.location?.x;
+
+  if (typeof lat !== "number" || typeof lng !== "number" || !isWithinBrazil(lat, lng)) {
+    return Number.NEGATIVE_INFINITY;
+  }
+
+  const components = input.components ?? {};
+  const address = candidate.address ?? "";
+  let score = candidate.score ?? 0;
+
+  if (components.rua) {
+    score += matchesText(address, components.rua) ? 16 : -12;
+  }
+
+  if (components.numero) {
+    score += digitsOnly(address).includes(digitsOnly(components.numero)) ? 22 : -8;
+  }
+
+  if (components.bairro) {
+    score += matchesText(address, components.bairro) ? 10 : -4;
+  }
+
+  if (components.cidade) {
+    score += matchesText(address, components.cidade) ? 16 : -18;
+  }
+
+  if (components.estado) {
+    score += matchesText(address, components.estado) ? 8 : -6;
+  }
+
+  if (components.cep) {
+    score += digitsOnly(address).includes(digitsOnly(components.cep)) ? 16 : 0;
+  }
+
+  if (input.address && matchesText(address, input.address)) {
+    score += 12;
+  }
+
+  return score;
+}
+
 function buildAddressCandidates(input: GeocodeInput) {
   const candidates = new Set<string>();
   const trimmedAddress = input.address?.trim();
