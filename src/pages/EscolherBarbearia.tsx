@@ -497,7 +497,7 @@ const EscolherBarbearia = () => {
   const MIN_VISIBLE = 5;
 
   const visibleUnits = useMemo(() => {
-    if (!mapReady || !mapBounds) return searchFilteredUnits;
+    if (!mapReady || !mapBounds || !userLocation) return searchFilteredUnits;
 
     const mapCenter = mapBounds.getCenter();
 

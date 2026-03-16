@@ -250,6 +250,12 @@ export function DiscoverMap({
 
     if (userLocation) {
       map.flyTo([userLocation.lat, userLocation.lng], initialZoom, { duration: 0.8 });
+      return;
+    }
+
+    if (mappableUnits.length > 0) {
+      const primaryUnit = mappableUnits[0];
+      map.flyTo([primaryUnit.latitude, primaryUnit.longitude], initialZoom, { duration: 0.8 });
     }
   }, [selectedId, mappableUnits, userLocation, initialZoom]);
 
