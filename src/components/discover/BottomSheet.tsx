@@ -178,6 +178,22 @@ export function BottomSheet({ children, header, initialSnap = SNAP_MID, onSnapCh
     };
   }, []);
 
+  const handoffContentGestureToSheet = useCallback(() => {
+    const gesture = gestureRef.current;
+    const list = listRef.current;
+    if (!gesture.active || !list) return;
+
+    const previousStartY = gesture.startY;
+    const previousStartScrollTop = gesture.startScrollTop;
+    const currentScrollTop = list.scrollTop;
+
+    list.scrollTop = Math.max(0, currentScrollTop);
+    gesture.mode = "sheet";
+    gesture.startTranslateY = currentTranslateYRef.current;
+    gesture.startY = previousStartY + Math.max(0, previousStartScrollTop - currentScrollTop);
+    gesture.startScrollTop = list.scrollTop;
+  }, []);
+
   const updateVelocity = useCallback((clientY: number) => {
     const gesture = gestureRef.current;
     if (!gesture.active) return;
