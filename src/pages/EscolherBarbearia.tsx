@@ -501,10 +501,17 @@ const EscolherBarbearia = () => {
   }, []);
 
   // ── Sheet drag handlers ──
+  const velocityRef = useRef(0);
+  const lastMoveY = useRef(0);
+  const lastMoveTime = useRef(0);
+
   const handleDragStart = useCallback((clientY: number) => {
     isDragging.current = true;
     dragStartY.current = clientY;
     dragStartTop.current = sheetTop;
+    lastMoveY.current = clientY;
+    lastMoveTime.current = Date.now();
+    velocityRef.current = 0;
   }, [sheetTop]);
 
   const handleDragMove = useCallback((clientY: number) => {
@@ -512,13 +519,34 @@ const EscolherBarbearia = () => {
     const vh = window.innerHeight;
     const deltaRatio = (clientY - dragStartY.current) / vh;
     const newTop = Math.max(SHEET_SNAP_TOP, Math.min(SHEET_SNAP_BOTTOM, dragStartTop.current + deltaRatio));
+    // Track velocity
+    const now = Date.now();
+    const dt = now - lastMoveTime.current;
+    if (dt > 0) {
+      velocityRef.current = (clientY - lastMoveY.current) / dt; // px/ms
+    }
+    lastMoveY.current = clientY;
+    lastMoveTime.current = now;
     setSheetTop(newTop);
   }, []);
 
   const handleDragEnd = useCallback(() => {
     isDragging.current = false;
-    // Snap to closest
+    const v = velocityRef.current; // px/ms, positive = dragging down
     const snaps = [SHEET_SNAP_TOP, SHEET_SNAP_MID, SHEET_SNAP_BOTTOM];
+
+    // Fling: if fast enough, go to next snap in direction
+    if (Math.abs(v) > 0.4) {
+      const direction = v > 0 ? 1 : -1; // 1 = down (collapse), -1 = up (expand)
+      const candidates = snaps.filter((s) => (direction > 0 ? s > sheetTop + 0.02 : s < sheetTop - 0.02));
+      if (candidates.length > 0) {
+        const target = direction > 0 ? Math.min(...candidates) : Math.max(...candidates);
+        setSheetTop(target);
+        return;
+      }
+    }
+
+    // Otherwise snap to closest
     const closest = snaps.reduce((prev, curr) =>
       Math.abs(curr - sheetTop) < Math.abs(prev - sheetTop) ? curr : prev
     );
