@@ -38,6 +38,7 @@ interface UnitData {
   brandName: string;
   brandSlug: string | null;
   brandLogo: string | null;
+  bannerUrl: string | null;
   distance: number | null;
   travelTime: string | null;
   travelMinutes: number | null;
