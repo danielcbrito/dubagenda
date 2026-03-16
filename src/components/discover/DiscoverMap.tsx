@@ -45,6 +45,7 @@ export function DiscoverMap({
   selectedId,
   onSelectUnit,
   onRecenter,
+  onBoundsChange,
 }: DiscoverMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
