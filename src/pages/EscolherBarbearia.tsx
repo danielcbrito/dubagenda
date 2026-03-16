@@ -337,14 +337,16 @@ const EscolherBarbearia = () => {
     }
 
     try {
-      // Clear stale v3 geocode cache entries
       try {
-        const keysToRemove: string[] = [];
+        const localStorageKeysToRemove: string[] = [];
         for (let i = 0; i < localStorage.length; i++) {
           const key = localStorage.key(i);
-          if (key && key.startsWith("unit-geocode-v3:")) keysToRemove.push(key);
+          if (key && (key.startsWith("unit-geocode-v3:") || key.startsWith("unit-geocode-v4:"))) {
+            localStorageKeysToRemove.push(key);
+          }
         }
-        keysToRemove.forEach((k) => localStorage.removeItem(k));
+        localStorageKeysToRemove.forEach((key) => localStorage.removeItem(key));
+        sessionStorage.removeItem("discover-units:v1");
       } catch {
         /* ignore */
       }
@@ -353,7 +355,7 @@ const EscolherBarbearia = () => {
         supabase
           .from("tenant_unidades")
           .select(`id, nome, rua, numero, cep, bairro, cidade, estado, is_sede, latitude, longitude, tenant_id,
-            tenant:tenants!tenant_id (id, nome, slug, slogan, logo_url, ativo, onboarding_completed)`)
+            tenant:tenants!tenant_id (id, nome, slug, slogan, logo_url, ativo, onboarding_completed, rua, numero, bairro, cidade, estado, endereco_completo)`)
           .eq("ativo", true),
         supabase
           .from("barbeiros")
@@ -373,6 +375,7 @@ const EscolherBarbearia = () => {
         })
         .map((u) => {
           const t = u.tenant as unknown as TenantJoin;
+          const persistedCoords = resolveStoredCoordinates(u.latitude, u.longitude);
           const baseUnit: UnitData = {
             id: u.id,
             nome: u.nome,
@@ -383,12 +386,18 @@ const EscolherBarbearia = () => {
             cidade: u.cidade,
             estado: u.estado,
             is_sede: u.is_sede ?? false,
-            latitude: u.latitude,
-            longitude: u.longitude,
+            latitude: persistedCoords?.lat ?? null,
+            longitude: persistedCoords?.lng ?? null,
             tenant_id: u.tenant_id,
             brandName: t?.nome ?? u.nome,
             brandSlug: t?.slug ?? null,
             brandLogo: t?.logo_url ?? null,
+            tenantRua: t?.rua ?? null,
+            tenantNumero: t?.numero ?? null,
+            tenantBairro: t?.bairro ?? null,
+            tenantCidade: t?.cidade ?? null,
+            tenantEstado: t?.estado ?? null,
+            tenantEnderecoCompleto: t?.endereco_completo ?? null,
             bannerUrl: null,
             distance: null,
             travelTime: null,
@@ -397,6 +406,10 @@ const EscolherBarbearia = () => {
           };
 
           if (baseUnit.latitude !== null && baseUnit.longitude !== null) {
+            return baseUnit;
+          }
+
+          if (!hasPreciseAddress(baseUnit)) {
             return baseUnit;
           }
 
