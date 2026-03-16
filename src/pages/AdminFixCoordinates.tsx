@@ -251,6 +251,7 @@ const AdminFixCoordinates = () => {
           : entry
       )
     );
+    clearDiscoveryLocationCaches();
     setResults((current) => ({
       ...current,
       [unit.id]: {
