@@ -42,6 +42,23 @@ type GoogleGeocodeResult = {
   };
 };
 
+type NominatimResult = {
+  lat: string;
+  lon: string;
+  display_name?: string;
+  address?: {
+    road?: string;
+    house_number?: string;
+    suburb?: string;
+    neighbourhood?: string;
+    city?: string;
+    town?: string;
+    village?: string;
+    state?: string;
+    postcode?: string;
+  };
+};
+
 function normalizeText(value: string | null | undefined) {
   return (value ?? "")
     .normalize("NFD")
@@ -87,7 +104,7 @@ function matchesText(actual: string | null | undefined, expected: string | null 
   );
 }
 
-function scoreResult(result: GoogleGeocodeResult, input: GeocodeInput) {
+function scoreGoogleResult(result: GoogleGeocodeResult, input: GeocodeInput) {
   const lat = result.geometry?.location?.lat;
   const lng = result.geometry?.location?.lng;
 
@@ -159,6 +176,52 @@ function scoreResult(result: GoogleGeocodeResult, input: GeocodeInput) {
   return score;
 }
 
+function scoreNominatimResult(result: NominatimResult, input: GeocodeInput) {
+  const lat = Number(result.lat);
+  const lng = Number(result.lon);
+
+  if (!Number.isFinite(lat) || !Number.isFinite(lng) || !isWithinBrazil(lat, lng)) {
+    return Number.NEGATIVE_INFINITY;
+  }
+
+  const components = input.components ?? {};
+  const address = result.address ?? {};
+  const city = address.city ?? address.town ?? address.village ?? null;
+  const neighborhood = address.suburb ?? address.neighbourhood ?? null;
+
+  let score = 12;
+
+  if (components.rua) {
+    score += matchesText(address.road, components.rua) ? 22 : -10;
+  }
+
+  if (components.numero) {
+    score += digitsOnly(address.house_number) === digitsOnly(components.numero) ? 18 : -6;
+  }
+
+  if (components.bairro && matchesText(neighborhood, components.bairro)) {
+    score += 10;
+  }
+
+  if (components.cidade) {
+    score += matchesText(city, components.cidade) ? 16 : -18;
+  }
+
+  if (components.estado) {
+    score += matchesText(address.state, components.estado) ? 8 : -10;
+  }
+
+  if (components.cep) {
+    score += digitsOnly(address.postcode) === digitsOnly(components.cep) ? 16 : 0;
+  }
+
+  if (input.address && matchesText(result.display_name, input.address)) {
+    score += 10;
+  }
+
+  return score;
+}
+
 function buildAddressCandidates(input: GeocodeInput) {
   const candidates = new Set<string>();
   const trimmedAddress = input.address?.trim();
@@ -221,7 +284,7 @@ function buildGoogleComponents(input: GeocodeInput) {
   return filters.join("|");
 }
 
-async function fetchResults(address: string, apiKey: string, googleComponents: string) {
+async function fetchGoogleResults(address: string, apiKey: string, googleComponents: string) {
   const params = new URLSearchParams({
     address,
     key: apiKey,
@@ -242,11 +305,40 @@ async function fetchResults(address: string, apiKey: string, googleComponents: s
   }
 
   const payload = await res.json();
-  if (payload.status !== "OK" || !Array.isArray(payload.results)) {
-    return [] as GoogleGeocodeResult[];
+
+  return {
+    status: payload.status as string,
+    results: Array.isArray(payload.results)
+      ? (payload.results as GoogleGeocodeResult[])
+      : [],
+  };
+}
+
+async function fetchNominatimResults(address: string) {
+  const params = new URLSearchParams({
+    q: address,
+    format: "jsonv2",
+    limit: "5",
+    countrycodes: "br",
+    addressdetails: "1",
+  });
+
+  const response = await fetch(
+    `https://nominatim.openstreetmap.org/search?${params.toString()}`,
+    {
+      headers: {
+        Accept: "application/json",
+        "User-Agent": "DubAgenda/1.0",
+      },
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error(`Nominatim error: ${response.status}`);
   }
 
-  return payload.results as GoogleGeocodeResult[];
+  const payload = await response.json();
+  return Array.isArray(payload) ? (payload as NominatimResult[]) : [];
 }
 
 Deno.serve(async (req) => {
@@ -256,14 +348,8 @@ Deno.serve(async (req) => {
 
   try {
     const GOOGLE_MAPS_API_KEY = Deno.env.get("GOOGLE_MAPS_API_KEY");
-    if (!GOOGLE_MAPS_API_KEY) {
-      return new Response(
-        JSON.stringify({ error: "GOOGLE_MAPS_API_KEY not configured" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
-    }
-
     const input = (await req.json()) as GeocodeInput;
+
     if (!input.address || typeof input.address !== "string") {
       return new Response(
         JSON.stringify({ error: "address is required" }),
@@ -274,52 +360,109 @@ Deno.serve(async (req) => {
     const candidates = buildAddressCandidates(input);
     const googleComponents = buildGoogleComponents(input);
 
-    let selectedQuery: string | null = null;
-    let results: GoogleGeocodeResult[] = [];
+    let googleStatus: string | null = null;
+    let bestGoogle:
+      | { result: GoogleGeocodeResult; score: number; queryUsed: string }
+      | null = null;
 
-    for (const candidate of candidates) {
-      const nextResults = await fetchResults(candidate, GOOGLE_MAPS_API_KEY, googleComponents);
-      if (nextResults.length > 0) {
-        selectedQuery = candidate;
-        results = nextResults;
-        break;
+    if (GOOGLE_MAPS_API_KEY) {
+      for (const candidate of candidates) {
+        try {
+          const { status, results } = await fetchGoogleResults(
+            candidate,
+            GOOGLE_MAPS_API_KEY,
+            googleComponents,
+          );
+          googleStatus = status;
+
+          const ranked = results
+            .map((result) => ({ result, score: scoreGoogleResult(result, input) }))
+            .filter((entry) => Number.isFinite(entry.score))
+            .sort((a, b) => b.score - a.score);
+
+          if (ranked[0]) {
+            bestGoogle = {
+              result: ranked[0].result,
+              score: ranked[0].score,
+              queryUsed: candidate,
+            };
+            break;
+          }
+        } catch {
+          googleStatus = "REQUEST_FAILED";
+        }
       }
     }
 
-    if (!results.length) {
+    if (bestGoogle?.result.geometry?.location) {
       return new Response(
-        JSON.stringify({ lat: null, lng: null, exact: false, status: "ZERO_RESULTS" }),
+        JSON.stringify({
+          lat: bestGoogle.result.geometry.location.lat ?? null,
+          lng: bestGoogle.result.geometry.location.lng ?? null,
+          exact:
+            bestGoogle.result.geometry.location_type === "ROOFTOP" ||
+            bestGoogle.result.geometry.location_type === "RANGE_INTERPOLATED",
+          locationType: bestGoogle.result.geometry.location_type ?? null,
+          formattedAddress: bestGoogle.result.formatted_address ?? null,
+          score: bestGoogle.score,
+          queryUsed: bestGoogle.queryUsed,
+          provider: "google",
+        }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
-    const ranked = results
-      .map((result) => ({ result, score: scoreResult(result, input) }))
-      .filter((entry) => Number.isFinite(entry.score))
-      .sort((a, b) => b.score - a.score);
+    let bestNominatim:
+      | { result: NominatimResult; score: number; queryUsed: string }
+      | null = null;
 
-    const best = ranked[0]?.result;
-    const bestScore = ranked[0]?.score ?? Number.NEGATIVE_INFINITY;
-    const location = best?.geometry?.location;
+    for (const candidate of candidates) {
+      try {
+        const results = await fetchNominatimResults(candidate);
+        const ranked = results
+          .map((result) => ({ result, score: scoreNominatimResult(result, input) }))
+          .filter((entry) => Number.isFinite(entry.score))
+          .sort((a, b) => b.score - a.score);
 
-    if (!best || typeof location?.lat !== "number" || typeof location?.lng !== "number") {
+        if (ranked[0]) {
+          bestNominatim = {
+            result: ranked[0].result,
+            score: ranked[0].score,
+            queryUsed: candidate,
+          };
+          break;
+        }
+      } catch {
+        /* keep trying next candidate */
+      }
+    }
+
+    if (!bestNominatim) {
       return new Response(
-        JSON.stringify({ lat: null, lng: null, exact: false, status: "NO_VALID_RESULT" }),
+        JSON.stringify({
+          lat: null,
+          lng: null,
+          exact: false,
+          status: googleStatus ?? "ZERO_RESULTS",
+        }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
     return new Response(
       JSON.stringify({
-        lat: location.lat,
-        lng: location.lng,
-        exact:
-          best.geometry?.location_type === "ROOFTOP" ||
-          best.geometry?.location_type === "RANGE_INTERPOLATED",
-        locationType: best.geometry?.location_type ?? null,
-        formattedAddress: best.formatted_address ?? null,
-        score: bestScore,
-        queryUsed: selectedQuery,
+        lat: Number(bestNominatim.result.lat),
+        lng: Number(bestNominatim.result.lon),
+        exact: Boolean(
+          bestNominatim.result.address?.road &&
+            bestNominatim.result.address?.house_number,
+        ),
+        locationType: "NOMINATIM",
+        formattedAddress: bestNominatim.result.display_name ?? null,
+        score: bestNominatim.score,
+        queryUsed: bestNominatim.queryUsed,
+        provider: "nominatim",
+        fallbackReason: googleStatus,
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
