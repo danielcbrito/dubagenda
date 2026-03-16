@@ -180,7 +180,7 @@ const EscolherBarbearia = () => {
   const [mapStyle, setMapStyle] = useState<"satellite" | "street">("satellite");
   const lastLocationRef = useRef<{ lat: number; lng: number } | null>(null);
   const watchIdRef = useRef<number | null>(null);
-  const listRef = useRef<HTMLDivElement>(null);
+  
   const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
   // Sheet snap state
