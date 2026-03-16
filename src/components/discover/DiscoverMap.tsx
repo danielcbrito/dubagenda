@@ -88,12 +88,23 @@ export function DiscoverMap({
     ? [userLocation.lat, userLocation.lng]
     : [-23.55, -46.63];
 
+  // Compute smart initial zoom based on nearest unit
+  const initialZoom = useMemo(() => {
+    if (!userLocation || mappableUnits.length === 0) return 14;
+    let minDist = Infinity;
+    for (const u of mappableUnits) {
+      const d = haversineKm(userLocation.lat, userLocation.lng, u.latitude, u.longitude);
+      if (d < minDist) minDist = d;
+    }
+    return smartZoomForDistance(minDist);
+  }, [userLocation, mappableUnits]);
+
   // Initialize map
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
     const map = L.map(containerRef.current, {
       center: defaultCenter,
-      zoom: 14,
+      zoom: initialZoom,
       zoomControl: false,
       attributionControl: false,
     });
