@@ -386,6 +386,28 @@ async function fetchGoogleResults(address: string, apiKey: string, googleCompone
   };
 }
 
+async function fetchArcGisResults(address: string) {
+  const params = new URLSearchParams({
+    SingleLine: address,
+    f: "pjson",
+    countryCode: "BRA",
+    maxLocations: "5",
+  });
+
+  const response = await fetch(
+    `https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer/findAddressCandidates?${params.toString()}`,
+  );
+
+  if (!response.ok) {
+    throw new Error(`ArcGIS error: ${response.status}`);
+  }
+
+  const payload = await response.json();
+  return Array.isArray(payload.candidates)
+    ? (payload.candidates as ArcGisCandidate[])
+    : [];
+}
+
 async function fetchNominatimResults(address: string) {
   const params = new URLSearchParams({
     q: address,
