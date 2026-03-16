@@ -281,14 +281,14 @@ const AdminFixCoordinates = () => {
     }
 
     try {
-      const nextCoords = await geocodeAddress(address);
+      const nextCoords = await geocodeAddress(unit);
       if (!nextCoords) {
         setResults((current) => ({
           ...current,
           [unit.id]: {
             unitId: unit.id,
             status: "NAO_ENCONTRADO",
-            message: "Nominatim não encontrou este endereço",
+            message: "Não foi possível encontrar esse endereço com precisão",
           },
         }));
         return false;
