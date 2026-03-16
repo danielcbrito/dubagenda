@@ -245,6 +245,17 @@ export function DiscoverMap({
         .on("click", () => onSelectUnit(unit.id))
         .addTo(map);
 
+      // Debug popup — ajuda a verificar se pin bate com Google Maps
+      marker.bindPopup(
+        `<div style="font-size:11px;line-height:1.4;">
+          <strong>${unit.displayLabel}</strong><br/>
+          Lat: ${unit.latitude}<br/>
+          Lng: ${unit.longitude}<br/>
+          <a href="https://www.google.com/maps?q=${unit.latitude},${unit.longitude}" target="_blank" style="color:#2563eb;">Verificar no Google Maps</a>
+        </div>`,
+        { closeButton: false, offset: [0, -10] }
+      );
+
       markersRef.current.set(unit.id, marker);
     });
   }, [markerUnits, selectedId, onSelectUnit]);

@@ -469,19 +469,15 @@ const EscolherBarbearia = () => {
   }, [allUnits, userLocation]);
 
   useEffect(() => {
-    if (!import.meta.env.DEV) return;
-
-    console.table(
-      allUnits.map((unit) => ({
-        unidade: getDiscoverUnitFullName(unit.brandName, unit.nome),
-        marca: unit.brandName,
-        lat: unit.latitude,
-        lng: unit.longitude,
-        endereco: [unit.rua, unit.numero, unit.bairro, unit.cidade, unit.estado]
-          .filter(Boolean)
-          .join(", "),
-      }))
-    );
+    allUnits.forEach((unit) => {
+      console.log(
+        `===== ${unit.brandName} — ${unit.nome} =====\n` +
+        `Endereço: ${[unit.rua, unit.numero, unit.bairro, unit.cidade, unit.estado].filter(Boolean).join(", ")}\n` +
+        `Lat salva: ${unit.latitude}\n` +
+        `Lng salva: ${unit.longitude}\n` +
+        `Google Maps: https://www.google.com/maps?q=${unit.latitude},${unit.longitude}`
+      );
+    });
   }, [allUnits]);
 
   // ── Filtered by search + map bounds ──
