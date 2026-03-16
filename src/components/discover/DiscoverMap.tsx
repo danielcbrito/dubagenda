@@ -60,41 +60,37 @@ function buildClientIcon() {
 
 function buildBarberIcon(label: string, selected: boolean) {
   const truncated = label.length > 22 ? `${label.slice(0, 21)}…` : label;
-
-  if (selected) {
-    return L.divIcon({
-      html: `
-        <div style="display:flex;flex-direction:column;align-items:center;filter:drop-shadow(0 3px 8px rgba(0,0,0,0.35));">
-          <div style="width:42px;height:42px;border-radius:50%;background:#111;display:flex;align-items:center;justify-content:center;border:3px solid white;">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M6.5 4L12 15" stroke="white" stroke-width="2.2" stroke-linecap="round"/><path d="M17.5 4L12 15" stroke="white" stroke-width="2.2" stroke-linecap="round"/><circle cx="5" cy="18" r="3" stroke="white" stroke-width="1.8" fill="none"/><circle cx="19" cy="18" r="3" stroke="white" stroke-width="1.8" fill="none"/><line x1="7.5" y1="16" x2="12" y2="15" stroke="white" stroke-width="1.8" stroke-linecap="round"/><line x1="16.5" y1="16" x2="12" y2="15" stroke="white" stroke-width="1.8" stroke-linecap="round"/></svg>
-          </div>
-          <div style="width:0;height:0;border-left:7px solid transparent;border-right:7px solid transparent;border-top:8px solid #111;margin-top:-2px;"></div>
-          <div style="background:#111;color:white;border-radius:20px;padding:4px 12px;font-family:system-ui,sans-serif;font-size:11px;font-weight:700;white-space:nowrap;margin-top:2px;box-shadow:0 2px 8px rgba(0,0,0,0.2);">
-            ${truncated}
-          </div>
-        </div>
-      `,
-      className: "",
-      iconSize: [140, 90],
-      iconAnchor: [70, 58],
-    });
-  }
+  const scissorsColor = selected ? "#DC2626" : "#B91C1C";
+  const scissorsSize = selected ? 28 : 22;
+  const labelBg = selected ? "#111" : "white";
+  const labelColor = selected ? "white" : "#111";
+  const labelBorder = selected ? "none" : "1.5px solid #ddd";
+  const labelSize = selected ? "11px" : "9px";
+  const labelWeight = selected ? "700" : "600";
+  const labelPad = selected ? "4px 12px" : "3px 9px";
+  const shadow = selected
+    ? "filter:drop-shadow(0 3px 6px rgba(220,38,38,0.35));"
+    : "filter:drop-shadow(0 2px 4px rgba(0,0,0,0.18));";
 
   return L.divIcon({
     html: `
-      <div style="display:flex;flex-direction:column;align-items:center;filter:drop-shadow(0 2px 5px rgba(0,0,0,0.2));">
-        <div style="width:34px;height:34px;border-radius:50%;background:white;display:flex;align-items:center;justify-content:center;border:2.5px solid #222;">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M6.5 4L12 15" stroke="#333" stroke-width="2.2" stroke-linecap="round"/><path d="M17.5 4L12 15" stroke="#333" stroke-width="2.2" stroke-linecap="round"/><circle cx="5" cy="18" r="3" stroke="#555" stroke-width="1.8" fill="none"/><circle cx="19" cy="18" r="3" stroke="#555" stroke-width="1.8" fill="none"/><line x1="7.5" y1="16" x2="12" y2="15" stroke="#444" stroke-width="1.8" stroke-linecap="round"/><line x1="16.5" y1="16" x2="12" y2="15" stroke="#444" stroke-width="1.8" stroke-linecap="round"/></svg>
-        </div>
-        <div style="width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-top:6px solid #222;margin-top:-2px;"></div>
-        <div style="background:white;color:#111;border:1.5px solid #ddd;border-radius:20px;padding:3px 9px;font-family:system-ui,sans-serif;font-size:9px;font-weight:600;white-space:nowrap;margin-top:1px;box-shadow:0 1px 4px rgba(0,0,0,0.1);">
+      <div style="display:flex;flex-direction:column;align-items:center;${shadow}">
+        <svg width="${scissorsSize}" height="${scissorsSize}" viewBox="0 0 24 24" fill="none">
+          <path d="M6.5 3L12 14.5" stroke="${scissorsColor}" stroke-width="2.4" stroke-linecap="round"/>
+          <path d="M17.5 3L12 14.5" stroke="${scissorsColor}" stroke-width="2.4" stroke-linecap="round"/>
+          <circle cx="5" cy="18.5" r="3.2" stroke="${scissorsColor}" stroke-width="1.8" fill="none"/>
+          <circle cx="19" cy="18.5" r="3.2" stroke="${scissorsColor}" stroke-width="1.8" fill="none"/>
+          <line x1="7.8" y1="16.5" x2="12" y2="14.5" stroke="${scissorsColor}" stroke-width="1.8" stroke-linecap="round"/>
+          <line x1="16.2" y1="16.5" x2="12" y2="14.5" stroke="${scissorsColor}" stroke-width="1.8" stroke-linecap="round"/>
+        </svg>
+        <div style="background:${labelBg};color:${labelColor};border:${labelBorder};border-radius:20px;padding:${labelPad};font-family:system-ui,sans-serif;font-size:${labelSize};font-weight:${labelWeight};white-space:nowrap;margin-top:2px;box-shadow:0 1px 4px rgba(0,0,0,0.12);">
           ${truncated}
         </div>
       </div>
     `,
     className: "",
-    iconSize: [120, 75],
-    iconAnchor: [60, 48],
+    iconSize: [140, 70],
+    iconAnchor: [70, 40],
   });
 }
 
