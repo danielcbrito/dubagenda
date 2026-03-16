@@ -16,14 +16,16 @@ export interface GeocodeResult {
   score?: number | null;
 }
 
-export const FRONTEND_GEOCODE_CACHE_PREFIX = "unit-geocode-v6:";
+export const FRONTEND_GEOCODE_CACHE_PREFIX = "unit-geocode-v7:";
 export const LEGACY_GEOCODE_CACHE_PREFIXES = [
   "unit-geocode-v3:",
   "unit-geocode-v4:",
   "unit-geocode-v5:",
+  "unit-geocode-v6:",
 ] as const;
 
 const GEOCODE_CACHE_TTL_MS = 1000 * 60 * 60 * 24 * 30;
+const HIGH_CONFIDENCE_GEOCODE_SCORE = 110;
 const BRAZIL_COORDINATE_BOUNDS = {
   minLat: -35.5,
   maxLat: 5.5,

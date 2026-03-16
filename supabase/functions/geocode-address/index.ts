@@ -4,6 +4,8 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
+const HIGH_CONFIDENCE_GEOCODE_SCORE = 110;
+
 const BRAZIL_BOUNDS = {
   minLat: -35.5,
   maxLat: 5.5,
