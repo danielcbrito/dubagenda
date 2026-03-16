@@ -4541,6 +4541,13 @@ export type Database = {
           updated_at: string
         }[]
       }
+      get_tenant_banners: {
+        Args: { p_tenant_ids: string[] }
+        Returns: {
+          banner_url: string
+          tenant_id: string
+        }[]
+      }
       get_tenant_subscription_status: {
         Args: { p_tenant_id: string }
         Returns: {
