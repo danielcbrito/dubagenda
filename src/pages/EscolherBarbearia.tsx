@@ -83,6 +83,8 @@ function normalizeText(value: string): string {
 
 const GEOCODE_CACHE_PREFIX = "unit-geocode-v4:";
 const GEOCODE_CACHE_TTL_MS = 1000 * 60 * 60 * 24 * 30;
+const DISCOVER_UNITS_CACHE_KEY = "discover-units:v1";
+const DISCOVER_UNITS_CACHE_TTL_MINUTES = 10;
 
 interface GeocodeResult {
   lat: number;
