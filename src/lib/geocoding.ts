@@ -16,13 +16,14 @@ export interface GeocodeResult {
   score?: number | null;
 }
 
-export const FRONTEND_GEOCODE_CACHE_PREFIX = "unit-geocode-v8:";
+export const FRONTEND_GEOCODE_CACHE_PREFIX = "unit-geocode-v9:";
 export const LEGACY_GEOCODE_CACHE_PREFIXES = [
   "unit-geocode-v3:",
   "unit-geocode-v4:",
   "unit-geocode-v5:",
   "unit-geocode-v6:",
   "unit-geocode-v7:",
+  "unit-geocode-v8:",
 ] as const;
 
 const GEOCODE_CACHE_TTL_MS = 1000 * 60 * 60 * 24 * 30;
