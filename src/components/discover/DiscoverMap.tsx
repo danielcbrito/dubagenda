@@ -40,6 +40,7 @@ interface DiscoverMapProps {
   onSelectUnit: (id: string) => void;
   onRecenter: () => void;
   onBoundsChange?: (bounds: L.LatLngBounds) => void;
+  mapStyle: "satellite" | "street";
 }
 
 function buildClientIcon() {
