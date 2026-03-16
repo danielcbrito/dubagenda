@@ -610,8 +610,8 @@ const EscolherBarbearia = () => {
       <div
         className="absolute right-3 z-[550] flex flex-col items-center gap-2"
         style={{
-          top: `calc(${sheetTop * 100}% - 6.5rem)`,
-          transition: isDragging.current ? "none" : "top 0.35s cubic-bezier(0.32, 0.72, 0, 1)",
+          bottom: `calc(${currentSheetSnap * 100}% + 1rem)`,
+          transition: "bottom 0.4s cubic-bezier(0.32, 0.72, 0, 1)",
         }}
       >
         {userLocation && (
@@ -635,75 +635,22 @@ const EscolherBarbearia = () => {
         </button>
       </div>
 
-      {/* ═══ Draggable sheet ═══ */}
-      <div
-        className="absolute left-0 right-0 bottom-0 z-[500] bg-background rounded-t-[20px] border-t border-border/50 shadow-[0_-4px_30px_rgba(0,0,0,0.15)] flex flex-col"
-        style={{
-          top: `${sheetTop * 100}%`,
-          transition: isDragging.current ? "none" : "top 0.35s cubic-bezier(0.32, 0.72, 0, 1)",
-        }}
+      {/* ═══ Bottom Sheet ═══ */}
+      <BottomSheet
+        onSnapChange={setCurrentSheetSnap}
+        header={
+          <div className="px-5 pb-3 pt-1">
+            <p className="text-[14px] font-semibold text-foreground text-center">
+              {isLoading
+                ? "Carregando..."
+                : inBoundsCount >= visibleUnits.length
+                  ? `${visibleUnits.length} barbearia${visibleUnits.length !== 1 ? "s" : ""} nesta área`
+                  : `${visibleUnits.length} barbearia${visibleUnits.length !== 1 ? "s" : ""} mais próximas`}
+            </p>
+          </div>
+        }
       >
-        {/* Handle */}
-        <div
-          className="flex-shrink-0 flex items-center justify-center pt-2.5 pb-1 cursor-grab active:cursor-grabbing"
-          onTouchStart={(e) => handleDragStart(e.touches[0].clientY)}
-          onTouchMove={(e) => handleDragMove(e.touches[0].clientY)}
-          onTouchEnd={handleDragEnd}
-          onMouseDown={(e) => {
-            handleDragStart(e.clientY);
-            const moveHandler = (ev: MouseEvent) => handleDragMove(ev.clientY);
-            const upHandler = () => { handleDragEnd(); window.removeEventListener("mousemove", moveHandler); window.removeEventListener("mouseup", upHandler); };
-            window.addEventListener("mousemove", moveHandler);
-            window.addEventListener("mouseup", upHandler);
-          }}
-        >
-          <div className="w-10 h-1 rounded-full bg-muted-foreground/25" />
-        </div>
-
-        {/* Count */}
-        <div className="flex-shrink-0 px-5 pb-3 pt-1">
-          <p className="text-[14px] font-semibold text-foreground text-center">
-            {isLoading
-              ? "Carregando..."
-              : inBoundsCount >= visibleUnits.length
-                ? `${visibleUnits.length} barbearia${visibleUnits.length !== 1 ? "s" : ""} nesta área`
-                : `${visibleUnits.length} barbearia${visibleUnits.length !== 1 ? "s" : ""} mais próximas`}
-          </p>
-        </div>
-
-        {/* List */}
-        <div
-          ref={listRef}
-          className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 pb-8"
-          onScroll={(e) => {
-            const el = e.currentTarget;
-            // Expand sheet when scrolling down
-            if (el.scrollTop > 30 && sheetTop > SHEET_SNAP_TOP) {
-              setSheetTop(SHEET_SNAP_TOP);
-            }
-          }}
-          onTouchStart={(e) => {
-            // Track touch on list to allow pull-down-to-collapse
-            const el = listRef.current;
-            if (el && el.scrollTop <= 0) {
-              handleDragStart(e.touches[0].clientY);
-            }
-          }}
-          onTouchMove={(e) => {
-            const el = listRef.current;
-            // Only drag sheet if list is at top and pulling down
-            if (el && el.scrollTop <= 0 && isDragging.current) {
-              const deltaY = e.touches[0].clientY - dragStartY.current;
-              if (deltaY > 0) {
-                e.preventDefault();
-                handleDragMove(e.touches[0].clientY);
-              }
-            }
-          }}
-          onTouchEnd={() => {
-            if (isDragging.current) handleDragEnd();
-          }}
-        >
+        <div className="px-4 pb-8">
           {isLoading ? (
             <div className="space-y-4">
               {[0, 1, 2].map(i => (
@@ -748,7 +695,7 @@ const EscolherBarbearia = () => {
             </div>
           )}
         </div>
-      </div>
+      </BottomSheet>
     </div>
   );
 };
