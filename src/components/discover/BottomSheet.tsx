@@ -57,15 +57,6 @@ function getViewportHeight(): number {
   return window.visualViewport?.height ?? window.innerHeight;
 }
 
-/**
- * Bottom sheet com 3 etapas e gesto contínuo:
- * - bem baixo
- * - metade da tela
- * - quase tela cheia
- *
- * O drag usa requestAnimationFrame e transfere o gesto para o scroll
- * quando a sheet encosta no topo, evitando o "teleporte" ao subir.
- */
 export function BottomSheet({ children, header, initialSnap = SNAP_MID, onSnapChange }: BottomSheetProps) {
   const sheetRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
@@ -75,6 +66,8 @@ export function BottomSheet({ children, header, initialSnap = SNAP_MID, onSnapCh
   const pendingTranslateYRef = useRef(currentTranslateYRef.current);
   const animationFrameRef = useRef<number | null>(null);
   const gestureRef = useRef<GestureState>(INITIAL_GESTURE);
+
+  // ── Transform helpers ──
 
   const applyTranslateY = useCallback((translateY: number) => {
     const sheet = sheetRef.current;
@@ -87,9 +80,8 @@ export function BottomSheet({ children, header, initialSnap = SNAP_MID, onSnapCh
     if (animationFrameRef.current !== null) return;
 
     animationFrameRef.current = requestAnimationFrame(() => {
-      const nextFrameTranslateY = pendingTranslateYRef.current;
       if (sheetRef.current) {
-        sheetRef.current.style.transform = `translate3d(0, ${nextFrameTranslateY}px, 0)`;
+        sheetRef.current.style.transform = `translate3d(0, ${pendingTranslateYRef.current}px, 0)`;
       }
       animationFrameRef.current = null;
     });
@@ -112,23 +104,17 @@ export function BottomSheet({ children, header, initialSnap = SNAP_MID, onSnapCh
     sheet.style.transform = `translate3d(0, ${targetTranslateY}px, 0)`;
     onSnapChange?.(snap);
 
-    const clearTransition = () => {
-      if (sheetRef.current) {
-        sheetRef.current.style.transition = "";
-      }
-    };
-
-    sheet.addEventListener("transitionend", clearTransition, { once: true });
+    sheet.addEventListener("transitionend", () => {
+      if (sheetRef.current) sheetRef.current.style.transition = "";
+    }, { once: true });
   }, [onSnapChange]);
+
+  // ── Viewport sync ──
 
   const syncToCurrentSnap = useCallback(() => {
     viewportHeightRef.current = getViewportHeight();
     const translateY = snapToTranslateY(currentSnapRef.current, viewportHeightRef.current);
-
-    if (sheetRef.current) {
-      sheetRef.current.style.transition = "none";
-    }
-
+    if (sheetRef.current) sheetRef.current.style.transition = "none";
     applyTranslateY(translateY);
   }, [applyTranslateY]);
 
@@ -137,27 +123,23 @@ export function BottomSheet({ children, header, initialSnap = SNAP_MID, onSnapCh
     viewportHeightRef.current = getViewportHeight();
     const initialTranslateY = snapToTranslateY(initialSnap, viewportHeightRef.current);
     currentTranslateYRef.current = initialTranslateY;
-
     if (sheetRef.current) {
       sheetRef.current.style.transform = `translate3d(0, ${initialTranslateY}px, 0)`;
     }
   }, [initialSnap]);
 
   useEffect(() => {
-    const handleViewportResize = () => syncToCurrentSnap();
-
-    window.addEventListener("resize", handleViewportResize);
-    window.visualViewport?.addEventListener("resize", handleViewportResize);
-
+    const handleResize = () => syncToCurrentSnap();
+    window.addEventListener("resize", handleResize);
+    window.visualViewport?.addEventListener("resize", handleResize);
     return () => {
-      window.removeEventListener("resize", handleViewportResize);
-      window.visualViewport?.removeEventListener("resize", handleViewportResize);
-
-      if (animationFrameRef.current !== null) {
-        cancelAnimationFrame(animationFrameRef.current);
-      }
+      window.removeEventListener("resize", handleResize);
+      window.visualViewport?.removeEventListener("resize", handleResize);
+      if (animationFrameRef.current !== null) cancelAnimationFrame(animationFrameRef.current);
     };
   }, [syncToCurrentSnap]);
+
+  // ── Gesture core ──
 
   const beginGesture = useCallback((clientY: number, source: DragSource) => {
     const sheet = sheetRef.current;
@@ -178,165 +160,184 @@ export function BottomSheet({ children, header, initialSnap = SNAP_MID, onSnapCh
     };
   }, []);
 
-  const handoffContentGestureToSheet = useCallback(() => {
-    const gesture = gestureRef.current;
-    const list = listRef.current;
-    if (!gesture.active || !list) return;
-
-    const previousStartY = gesture.startY;
-    const previousStartScrollTop = gesture.startScrollTop;
-    const currentScrollTop = list.scrollTop;
-
-    list.scrollTop = Math.max(0, currentScrollTop);
-    gesture.mode = "sheet";
-    gesture.startTranslateY = currentTranslateYRef.current;
-    gesture.startY = previousStartY + Math.max(0, previousStartScrollTop - currentScrollTop);
-    gesture.startScrollTop = list.scrollTop;
-  }, []);
-
   const updateVelocity = useCallback((clientY: number) => {
-    const gesture = gestureRef.current;
-    if (!gesture.active) return;
-
+    const g = gestureRef.current;
+    if (!g.active) return;
     const now = performance.now();
-    const deltaTime = now - gesture.lastTime;
-    if (deltaTime > 0) {
-      const instantVelocity = (clientY - gesture.lastY) / deltaTime;
-      gesture.velocityY = gesture.velocityY * 0.35 + instantVelocity * 0.65;
+    const dt = now - g.lastTime;
+    if (dt > 0) {
+      g.velocityY = g.velocityY * 0.35 + ((clientY - g.lastY) / dt) * 0.65;
     }
-
-    gesture.lastY = clientY;
-    gesture.lastTime = now;
+    g.lastY = clientY;
+    g.lastTime = now;
   }, []);
 
-  const shouldDragSheetFromContent = useCallback((deltaY: number) => {
-    const list = listRef.current;
-    const isAtTop = (list?.scrollTop ?? 0) <= 0.5;
-    const isFullyExpanded = currentTranslateYRef.current <= snapToTranslateY(SNAP_FULL, viewportHeightRef.current) + 1;
-
-    // Pulling down — drag sheet only if list is at top
-    if (deltaY > 0) {
-      return isAtTop;
-    }
-
-    // Swiping up — drag sheet if not fully expanded yet
-    if (deltaY < 0) {
-      return !isFullyExpanded;
-    }
-
-    return false;
+  const isFullyExpanded = useCallback(() => {
+    return currentTranslateYRef.current <= snapToTranslateY(SNAP_FULL, viewportHeightRef.current) + 1;
   }, []);
 
   const dragSheet = useCallback((clientY: number, allowScrollHandoff: boolean) => {
-    const gesture = gestureRef.current;
+    const g = gestureRef.current;
     const list = listRef.current;
-    if (!gesture.active) return;
+    if (!g.active) return;
 
-    const minTranslateY = snapToTranslateY(SNAP_FULL, viewportHeightRef.current);
-    const maxTranslateY = snapToTranslateY(SNAP_PEEK, viewportHeightRef.current);
-    const deltaY = clientY - gesture.startY;
-    const rawTranslateY = gesture.startTranslateY + deltaY;
+    const minTY = snapToTranslateY(SNAP_FULL, viewportHeightRef.current);
+    const maxTY = snapToTranslateY(SNAP_PEEK, viewportHeightRef.current);
+    const rawTY = g.startTranslateY + (clientY - g.startY);
 
-    if (rawTranslateY < minTranslateY) {
-      applyTranslateY(minTranslateY);
-
+    if (rawTY < minTY) {
+      applyTranslateY(minTY);
       if (allowScrollHandoff && list) {
-        const overflow = minTranslateY - rawTranslateY;
-        list.scrollTop = gesture.startScrollTop + overflow;
+        list.scrollTop = g.startScrollTop + (minTY - rawTY);
       }
-
       return;
     }
 
-    if (rawTranslateY > maxTranslateY) {
-      applyTranslateY(maxTranslateY);
+    if (rawTY > maxTY) {
+      applyTranslateY(maxTY);
       return;
     }
 
-    applyTranslateY(rawTranslateY);
+    applyTranslateY(rawTY);
   }, [applyTranslateY]);
 
   const finishGesture = useCallback(() => {
-    const gesture = gestureRef.current;
-    if (!gesture.active) return;
+    const g = gestureRef.current;
+    if (!g.active) return;
 
-    const shouldSnap = gesture.mode !== "content";
-    const velocityY = gesture.velocityY;
+    const shouldSnap = g.mode !== "content";
+    const velocityY = g.velocityY;
     gestureRef.current = { ...INITIAL_GESTURE };
+
+    // Re-enable list scrolling
+    const list = listRef.current;
+    if (list) list.style.overflow = "";
 
     if (!shouldSnap) return;
 
-    const targetSnap = resolveTargetSnap(
+    animateToSnap(resolveTargetSnap(
       currentTranslateYRef.current,
       velocityY,
-      viewportHeightRef.current
-    );
-
-    animateToSnap(targetSnap);
+      viewportHeightRef.current,
+    ));
   }, [animateToSnap]);
 
-  const handleHandleTouchStart = useCallback((event: ReactTouchEvent<HTMLDivElement>) => {
-    beginGesture(event.touches[0].clientY, "handle");
+  // ── Handle (drag bar) touch — React events are fine here ──
+
+  const handleHandleTouchStart = useCallback((e: ReactTouchEvent) => {
+    beginGesture(e.touches[0].clientY, "handle");
   }, [beginGesture]);
 
-  const handleHandleTouchMove = useCallback((event: ReactTouchEvent<HTMLDivElement>) => {
+  const handleHandleTouchMove = useCallback((e: ReactTouchEvent) => {
     if (!gestureRef.current.active) return;
-    const clientY = event.touches[0].clientY;
+    const clientY = e.touches[0].clientY;
     updateVelocity(clientY);
-    event.preventDefault();
+    e.preventDefault();
     dragSheet(clientY, false);
   }, [dragSheet, updateVelocity]);
 
-  const handleContentTouchStart = useCallback((event: ReactTouchEvent<HTMLDivElement>) => {
-    beginGesture(event.touches[0].clientY, "content");
-  }, [beginGesture]);
+  const handleHandleMouseDown = useCallback((e: ReactMouseEvent) => {
+    e.preventDefault();
+    beginGesture(e.clientY, "handle");
 
-  const handleContentTouchMove = useCallback((event: ReactTouchEvent<HTMLDivElement>) => {
-    const gesture = gestureRef.current;
-    if (!gesture.active) return;
-
-    const clientY = event.touches[0].clientY;
-    updateVelocity(clientY);
-
-    if (gesture.mode === "undecided") {
-      const deltaY = clientY - gesture.startY;
-      if (Math.abs(deltaY) < DRAG_DECISION_PX) return;
-      gesture.mode = shouldDragSheetFromContent(deltaY) ? "sheet" : "content";
-    }
-
-    if (gesture.mode === "content") {
-      const deltaY = clientY - gesture.startY;
-      const isPullingDown = deltaY > DRAG_DECISION_PX;
-      const isAtTop = (listRef.current?.scrollTop ?? 0) <= 0.5;
-
-      if (!isPullingDown || !isAtTop) return;
-
-      handoffContentGestureToSheet();
-    }
-
-    event.preventDefault();
-    dragSheet(clientY, true);
-  }, [dragSheet, handoffContentGestureToSheet, shouldDragSheetFromContent, updateVelocity]);
-
-  const handleHandleMouseDown = useCallback((event: ReactMouseEvent<HTMLDivElement>) => {
-    event.preventDefault();
-    beginGesture(event.clientY, "handle");
-
-    const handleMouseMove = (moveEvent: MouseEvent) => {
+    const onMove = (me: MouseEvent) => {
       if (!gestureRef.current.active) return;
-      updateVelocity(moveEvent.clientY);
-      dragSheet(moveEvent.clientY, false);
+      updateVelocity(me.clientY);
+      dragSheet(me.clientY, false);
     };
-
-    const handleMouseUp = () => {
+    const onUp = () => {
       finishGesture();
-      window.removeEventListener("mousemove", handleMouseMove);
-      window.removeEventListener("mouseup", handleMouseUp);
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    };
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+  }, [beginGesture, dragSheet, finishGesture, updateVelocity]);
+
+  // ── Content area touch — NATIVE listeners with { passive: false } ──
+
+  useEffect(() => {
+    const list = listRef.current;
+    if (!list) return;
+
+    const onTouchStart = (e: TouchEvent) => {
+      beginGesture(e.touches[0].clientY, "content");
     };
 
-    window.addEventListener("mousemove", handleMouseMove);
-    window.addEventListener("mouseup", handleMouseUp);
-  }, [beginGesture, dragSheet, finishGesture, updateVelocity]);
+    const onTouchMove = (e: TouchEvent) => {
+      const g = gestureRef.current;
+      if (!g.active) return;
+
+      const clientY = e.touches[0].clientY;
+      updateVelocity(clientY);
+
+      // ── Decision phase ──
+      if (g.mode === "undecided") {
+        const deltaY = clientY - g.startY;
+        if (Math.abs(deltaY) < DRAG_DECISION_PX) return;
+
+        const scrollTop = list.scrollTop;
+        const atTop = scrollTop <= 0.5;
+        const expanded = isFullyExpanded();
+
+        if (deltaY > 0 && atTop) {
+          // Pulling down at top → drag sheet down
+          g.mode = "sheet";
+        } else if (deltaY < 0 && !expanded) {
+          // Swiping up but sheet not fully open → drag sheet up
+          g.mode = "sheet";
+        } else {
+          // Normal list scroll
+          g.mode = "content";
+          return; // Let browser handle scroll natively
+        }
+
+        // We're taking over — block native scroll
+        list.style.overflow = "hidden";
+      }
+
+      // ── Content mode: check for handoff to sheet ──
+      if (g.mode === "content") {
+        const deltaY = clientY - g.startY;
+        const atTop = (list.scrollTop) <= 0.5;
+
+        if (deltaY > DRAG_DECISION_PX && atTop) {
+          // User scrolled to top and is still pulling down → take over
+          g.mode = "sheet";
+          g.startTranslateY = currentTranslateYRef.current;
+          g.startY = clientY;
+          g.startScrollTop = 0;
+          list.style.overflow = "hidden";
+          list.scrollTop = 0;
+        } else {
+          return; // Let native scroll continue
+        }
+      }
+
+      // ── Sheet mode ──
+      e.preventDefault();
+      dragSheet(clientY, true);
+    };
+
+    const onTouchEnd = () => {
+      finishGesture();
+    };
+
+    // { passive: false } is CRITICAL — allows preventDefault to work
+    list.addEventListener("touchstart", onTouchStart, { passive: true });
+    list.addEventListener("touchmove", onTouchMove, { passive: false });
+    list.addEventListener("touchend", onTouchEnd, { passive: true });
+    list.addEventListener("touchcancel", onTouchEnd, { passive: true });
+
+    return () => {
+      list.removeEventListener("touchstart", onTouchStart);
+      list.removeEventListener("touchmove", onTouchMove);
+      list.removeEventListener("touchend", onTouchEnd);
+      list.removeEventListener("touchcancel", onTouchEnd);
+    };
+  }, [beginGesture, dragSheet, finishGesture, isFullyExpanded, updateVelocity]);
+
+  // ── Render ──
 
   return (
     <div
@@ -350,6 +351,7 @@ export function BottomSheet({ children, header, initialSnap = SNAP_MID, onSnapCh
         backfaceVisibility: "hidden",
       }}
     >
+      {/* ── Drag handle ── */}
       <div
         className="flex flex-shrink-0 select-none items-center justify-center pt-3 pb-1.5 cursor-grab active:cursor-grabbing"
         style={{ touchAction: "none" }}
@@ -362,8 +364,10 @@ export function BottomSheet({ children, header, initialSnap = SNAP_MID, onSnapCh
         <div className="h-[5px] w-9 rounded-full bg-muted-foreground/20" />
       </div>
 
+      {/* ── Header ── */}
       <div className="flex-shrink-0">{header}</div>
 
+      {/* ── Scrollable content ── */}
       <div
         ref={listRef}
         className="flex-1 min-h-0 overflow-y-auto overscroll-contain"
@@ -371,10 +375,6 @@ export function BottomSheet({ children, header, initialSnap = SNAP_MID, onSnapCh
           WebkitOverflowScrolling: "touch",
           overscrollBehaviorY: "contain",
         }}
-        onTouchStart={handleContentTouchStart}
-        onTouchMove={handleContentTouchMove}
-        onTouchEnd={finishGesture}
-        onTouchCancel={finishGesture}
       >
         {children}
       </div>
