@@ -298,9 +298,6 @@ export function DiscoverMap({
     return () => window.clearTimeout(timer);
   });
 
-  const toggleMapStyle = () => {
-    setMapStyle((prev) => (prev === "satellite" ? "street" : "satellite"));
-  };
 
   return (
     <div className="relative h-full w-full">
