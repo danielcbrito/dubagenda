@@ -277,7 +277,7 @@ export function DiscoverMap({
         icon: buildBarberIcon(unit.displayLabel, unit.id === selectedId, {
           x: unit.markerOffsetX,
           y: unit.markerOffsetY,
-        }),
+        }, currentZoom),
         zIndexOffset: unit.id === selectedId ? 900 : 500,
       })
         .on("click", () => onSelectUnit(unit.id))
