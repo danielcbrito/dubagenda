@@ -237,6 +237,8 @@ export function DiscoverMap({
 
     map.on("moveend", emitBounds);
     map.on("zoomend", emitBounds);
+    map.on("zoomend", () => setCurrentZoom(map.getZoom()));
+    setCurrentZoom(map.getZoom());
     const initialBoundsTimer = window.setTimeout(emitBounds, 500);
 
     return () => {
