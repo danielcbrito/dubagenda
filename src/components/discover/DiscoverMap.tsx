@@ -337,7 +337,7 @@ export function DiscoverMap({
       {userLocation && (
         <button
           onClick={handleRecenter}
-          className="absolute bottom-4 right-4 z-[500] flex h-10 w-10 items-center justify-center rounded-full border border-border bg-card shadow-lg transition-transform active:scale-90"
+          className="absolute bottom-4 right-4 z-[700] flex h-10 w-10 items-center justify-center rounded-full border border-border bg-card shadow-lg transition-transform active:scale-90"
         >
           <svg
             width="18"
