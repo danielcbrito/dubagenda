@@ -82,13 +82,15 @@ export function BottomSheet({ children, header, initialSnap = SNAP_MID, onSnapCh
 
     const nextTranslateY = clampTranslateY(translateY, viewportHeightRef.current);
     currentTranslateYRef.current = nextTranslateY;
+    pendingTranslateYRef.current = nextTranslateY;
 
-    if (animationFrameRef.current !== null) {
-      cancelAnimationFrame(animationFrameRef.current);
-    }
+    if (animationFrameRef.current !== null) return;
 
     animationFrameRef.current = requestAnimationFrame(() => {
-      sheet.style.transform = `translate3d(0, ${nextTranslateY}px, 0)`;
+      const nextFrameTranslateY = pendingTranslateYRef.current;
+      if (sheetRef.current) {
+        sheetRef.current.style.transform = `translate3d(0, ${nextFrameTranslateY}px, 0)`;
+      }
       animationFrameRef.current = null;
     });
   }, []);
