@@ -161,27 +161,6 @@ export function DiscoverMap({
   }, [userLocation]);
 
   // Update unit markers
-  const mappableUnits = useMemo(
-    () => units
-      .map((unit) => {
-        const latitude = Number.parseFloat(String(unit.latitude));
-        const longitude = Number.parseFloat(String(unit.longitude));
-
-        if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
-          return null;
-        }
-
-        return {
-          ...unit,
-          latitude,
-          longitude,
-        };
-      })
-      .filter((unit): unit is MapUnit & { latitude: number; longitude: number } => unit !== null),
-    [units]
-  );
-
-  useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
 
