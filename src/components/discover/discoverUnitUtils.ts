@@ -51,19 +51,17 @@ export function getCoordinateGroupKey(lat: number, lng: number): string {
   return `${lat.toFixed(6)}:${lng.toFixed(6)}`;
 }
 
-export function offsetDuplicateCoordinate(
-  lat: number,
-  lng: number,
+export function getDuplicateMarkerPixelOffset(
   index: number,
   total: number
-): { lat: number; lng: number } {
-  if (total <= 1) return { lat, lng };
+): { x: number; y: number } {
+  if (total <= 1) return { x: 0, y: 0 };
 
-  const radius = 0.00022 + Math.min(total, 6) * 0.00003;
+  const radius = total === 2 ? 10 : 12;
   const angle = (Math.PI * 2 * index) / total - Math.PI / 2;
 
   return {
-    lat: lat + Math.sin(angle) * radius,
-    lng: lng + Math.cos(angle) * radius,
+    x: Math.round(Math.cos(angle) * radius),
+    y: Math.round(Math.sin(angle) * radius),
   };
 }

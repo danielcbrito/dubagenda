@@ -22,6 +22,12 @@ interface FixableUnit {
   tenant: {
     nome: string | null;
     slug: string | null;
+    rua: string | null;
+    numero: string | null;
+    bairro: string | null;
+    cidade: string | null;
+    estado: string | null;
+    endereco_completo: string | null;
   } | null;
 }
 
@@ -34,39 +40,85 @@ interface FixResult {
 }
 
 const REQUEST_DELAY_MS = 1200;
+const DISCOVER_CACHE_KEYS = ["discover-units:v1", "discover-units:v2"];
+const GEOCODE_CACHE_PREFIXES = ["unit-geocode-v3:", "unit-geocode-v4:", "unit-geocode-v5:"];
+
+function buildAddressParts(unit: FixableUnit) {
+  return {
+    street: unit.rua?.trim() || unit.tenant?.rua?.trim() || null,
+    number: unit.numero?.trim() || unit.tenant?.numero?.trim() || null,
+    neighborhood: unit.bairro?.trim() || unit.tenant?.bairro?.trim() || null,
+    city: unit.cidade?.trim() || unit.tenant?.cidade?.trim() || null,
+    state: unit.estado?.trim() || unit.tenant?.estado?.trim() || null,
+    postalCode: unit.cep?.trim() || null,
+  };
+}
 
 function buildFullAddress(unit: FixableUnit): string {
-  return [unit.rua, unit.numero, unit.bairro, unit.cidade, unit.estado, unit.cep, "Brasil"]
-    .map((part) => part?.trim())
-    .filter((part): part is string => !!part && part.length > 0)
+  const { street, number, neighborhood, city, state, postalCode } = buildAddressParts(unit);
+
+  return [street, number, neighborhood, city, state, postalCode, "Brasil"]
+    .filter((part): part is string => Boolean(part && part.length > 0))
     .join(", ");
 }
 
-async function geocodeAddress(address: string): Promise<{ lat: number; lng: number } | null> {
-  const params = new URLSearchParams({
-    q: address,
-    format: "jsonv2",
-    limit: "1",
-    countrycodes: "br",
-  });
+async function geocodeAddress(unit: FixableUnit): Promise<{ lat: number; lng: number } | null> {
+  const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+  const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+  const address = buildFullAddress(unit);
+  const addressParts = buildAddressParts(unit);
 
-  const response = await fetch(`https://nominatim.openstreetmap.org/search?${params.toString()}`, {
-    headers: { Accept: "application/json" },
+  if (!addressParts.street || !addressParts.number || !addressParts.city || !addressParts.state) {
+    return null;
+  }
+
+  const response = await fetch(`https://${projectId}.supabase.co/functions/v1/geocode-address`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${anonKey}`,
+      apikey: anonKey,
+    },
+    body: JSON.stringify({
+      address,
+      components: {
+        rua: addressParts.street,
+        numero: addressParts.number,
+        bairro: addressParts.neighborhood,
+        cidade: addressParts.city,
+        estado: addressParts.state,
+        cep: addressParts.postalCode,
+      },
+    }),
   });
 
   if (!response.ok) {
     throw new Error("Falha ao consultar o geocoding");
   }
 
-  const payload = (await response.json()) as Array<{ lat: string; lon: string }>;
-  const match = payload[0];
-  if (!match) return null;
+  const payload = await response.json();
+  if (typeof payload.lat !== "number" || typeof payload.lng !== "number") {
+    return null;
+  }
 
-  const lat = Number(match.lat);
-  const lng = Number(match.lon);
-  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+  return { lat: payload.lat, lng: payload.lng };
+}
 
-  return { lat, lng };
+function clearDiscoveryLocationCaches() {
+  try {
+    DISCOVER_CACHE_KEYS.forEach((key) => sessionStorage.removeItem(key));
+
+    const keysToRemove: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && GEOCODE_CACHE_PREFIXES.some((prefix) => key.startsWith(prefix))) {
+        keysToRemove.push(key);
+      }
+    }
+    keysToRemove.forEach((key) => localStorage.removeItem(key));
+  } catch {
+    /* ignore */
+  }
 }
 
 function wait(ms: number) {
@@ -129,7 +181,7 @@ const AdminFixCoordinates = () => {
         latitude,
         longitude,
         is_sede,
-        tenant:tenants!tenant_id (nome, slug)
+        tenant:tenants!tenant_id (nome, slug, rua, numero, bairro, cidade, estado, endereco_completo)
       `)
       .eq("ativo", true)
       .order("tenant_id")
@@ -199,6 +251,7 @@ const AdminFixCoordinates = () => {
           : entry
       )
     );
+    clearDiscoveryLocationCaches();
     setResults((current) => ({
       ...current,
       [unit.id]: {
@@ -228,14 +281,14 @@ const AdminFixCoordinates = () => {
     }
 
     try {
-      const nextCoords = await geocodeAddress(address);
+      const nextCoords = await geocodeAddress(unit);
       if (!nextCoords) {
         setResults((current) => ({
           ...current,
           [unit.id]: {
             unitId: unit.id,
             status: "NAO_ENCONTRADO",
-            message: "Nominatim não encontrou este endereço",
+            message: "Não foi possível encontrar esse endereço com precisão",
           },
         }));
         return false;

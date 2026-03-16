@@ -4,7 +4,7 @@ import "leaflet/dist/leaflet.css";
 import {
   getCoordinateGroupKey,
   getDiscoverUnitDisplayName,
-  offsetDuplicateCoordinate,
+  getDuplicateMarkerPixelOffset,
 } from "./discoverUnitUtils";
 
 function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
@@ -65,13 +65,18 @@ function buildClientIcon() {
   });
 }
 
-function buildBarberIcon(label: string, selected: boolean) {
+function buildBarberIcon(
+  label: string,
+  selected: boolean,
+  markerOffset: { x: number; y: number }
+) {
   const truncated = label.length > 20 ? `${label.slice(0, 19)}…` : label;
+  const transform = `transform:translate(${markerOffset.x}px, ${markerOffset.y}px);`;
 
   if (selected) {
     return L.divIcon({
       html: `
-        <div style="display:inline-flex;align-items:center;gap:6px;background:#111;color:white;border-radius:999px;padding:6px 14px 6px 8px;font-family:system-ui,sans-serif;white-space:nowrap;box-shadow:0 4px 14px rgba(0,0,0,0.3);border:2px solid white;">
+        <div style="display:inline-flex;align-items:center;gap:6px;background:#111;color:white;border-radius:999px;padding:6px 14px 6px 8px;font-family:system-ui,sans-serif;white-space:nowrap;box-shadow:0 4px 14px rgba(0,0,0,0.3);border:2px solid white;${transform}">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style="flex-shrink:0;">
             <path d="M6.5 3L12 14.5" stroke="#EF4444" stroke-width="2.4" stroke-linecap="round"/>
             <path d="M17.5 3L12 14.5" stroke="#EF4444" stroke-width="2.4" stroke-linecap="round"/>
@@ -91,7 +96,7 @@ function buildBarberIcon(label: string, selected: boolean) {
 
   return L.divIcon({
     html: `
-      <div style="display:inline-flex;align-items:center;gap:5px;background:white;color:#111;border-radius:999px;padding:5px 12px 5px 7px;font-family:system-ui,sans-serif;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,0.15);border:1.5px solid #e5e5e5;">
+      <div style="display:inline-flex;align-items:center;gap:5px;background:white;color:#111;border-radius:999px;padding:5px 12px 5px 7px;font-family:system-ui,sans-serif;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,0.15);border:1.5px solid #e5e5e5;${transform}">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" style="flex-shrink:0;">
           <path d="M6.5 3L12 14.5" stroke="#DC2626" stroke-width="2.4" stroke-linecap="round"/>
           <path d="M17.5 3L12 14.5" stroke="#DC2626" stroke-width="2.4" stroke-linecap="round"/>
@@ -150,11 +155,13 @@ export function DiscoverMap({
 
     return Array.from(groupedUnits.values()).flatMap((group) =>
       group.map((unit, index) => {
-        const offsetPosition = offsetDuplicateCoordinate(unit.latitude, unit.longitude, index, group.length);
+        const markerOffset = getDuplicateMarkerPixelOffset(index, group.length);
         return {
           ...unit,
-          markerLatitude: offsetPosition.lat,
-          markerLongitude: offsetPosition.lng,
+          markerLatitude: unit.latitude,
+          markerLongitude: unit.longitude,
+          markerOffsetX: markerOffset.x,
+          markerOffsetY: markerOffset.y,
           displayLabel: getDiscoverUnitDisplayName(unit.brandName, unit.nome),
         };
       })
@@ -240,21 +247,14 @@ export function DiscoverMap({
 
     markerUnits.forEach((unit) => {
       const marker = L.marker([unit.markerLatitude, unit.markerLongitude], {
-        icon: buildBarberIcon(unit.displayLabel, unit.id === selectedId),
+        icon: buildBarberIcon(unit.displayLabel, unit.id === selectedId, {
+          x: unit.markerOffsetX,
+          y: unit.markerOffsetY,
+        }),
+        zIndexOffset: unit.id === selectedId ? 900 : 500,
       })
         .on("click", () => onSelectUnit(unit.id))
         .addTo(map);
-
-      // Debug popup — ajuda a verificar se pin bate com Google Maps
-      marker.bindPopup(
-        `<div style="font-size:11px;line-height:1.4;">
-          <strong>${unit.displayLabel}</strong><br/>
-          Lat: ${unit.latitude}<br/>
-          Lng: ${unit.longitude}<br/>
-          <a href="https://www.google.com/maps?q=${unit.latitude},${unit.longitude}" target="_blank" style="color:#2563eb;">Verificar no Google Maps</a>
-        </div>`,
-        { closeButton: false, offset: [0, -10] }
-      );
 
       markersRef.current.set(unit.id, marker);
     });
