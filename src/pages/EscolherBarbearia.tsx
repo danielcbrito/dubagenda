@@ -152,6 +152,7 @@ const EscolherBarbearia = () => {
   const [locationStatus, setLocationStatus] = useState<"loading" | "ready" | "unavailable">("loading");
   const [hasAutoOpened, setHasAutoOpened] = useState(false);
   const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null);
+  const [mapBounds, setMapBounds] = useState<L.LatLngBounds | null>(null);
   const lastLocationRef = useRef<{ lat: number; lng: number } | null>(null);
   const watchIdRef = useRef<number | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
