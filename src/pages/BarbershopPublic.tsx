@@ -150,6 +150,7 @@ const BarbershopPublic = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [currentPreferred, setCurrentPreferred] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
+  const [resolvedUnitCoords, setResolvedUnitCoords] = useState<{ lat: number; lng: number } | null>(null);
 
   // Check auth + preferred barbershop
   useEffect(() => {
