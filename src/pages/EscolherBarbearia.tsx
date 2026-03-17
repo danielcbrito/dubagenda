@@ -506,9 +506,30 @@ const EscolherBarbearia = () => {
   }, []);
 
   return (
-    <div className="relative bg-background" style={{ height: "100dvh", overflow: "hidden" }}>
-      {/* ═══ Search bar ═══ */}
-      <div className="absolute top-0 left-0 right-0 z-[600] px-4 pt-[calc(env(safe-area-inset-top)+0.75rem)] pb-2">
+    <div
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        width: '100%',
+        height: '100%',
+        overflow: 'hidden',
+        background: 'hsl(var(--background))',
+        WebkitOverflowScrolling: 'touch',
+      }}
+    >
+      {/* ═══ Search bar — respeita safe area do iPhone ═══ */}
+      <div
+        className="z-[600]"
+        style={{
+          position: 'absolute',
+          top: 'calc(env(safe-area-inset-top, 0px) + 12px)',
+          left: 'calc(env(safe-area-inset-left, 0px) + 16px)',
+          right: 'calc(env(safe-area-inset-right, 0px) + 16px)',
+        }}
+      >
         <div className="relative">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/50" />
           <input
