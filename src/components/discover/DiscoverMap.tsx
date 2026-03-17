@@ -104,7 +104,7 @@ function buildBarberIcon(
           <circle cx="12" cy="12" r="0.8" fill="${ringFill}"/>
         </svg>
       </div>
-      <div style="width:0;height:0;border-left:7px solid transparent;border-right:7px solid transparent;border-top:10px solid ${bg};margin-top:-3px;filter:drop-shadow(0 3px 4px rgba(0,0,0,0.15));"></div>
+      <div style="height:4px;"></div>
   `;
 
   // Zoom médio: pin sem label
