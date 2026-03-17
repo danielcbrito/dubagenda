@@ -92,7 +92,7 @@ function buildBarberIcon(
 
   const pinHtml = `
     <div style="display:flex;flex-direction:column;align-items:center;">
-      <div style="width:48px;height:48px;background:${bg};border:2.5px solid #111;border-radius:50% 50% 50% 50% / 40% 40% 60% 60%;clip-path:ellipse(50% 50% at 50% 40%);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(0,0,0,0.2);">
+      <div style="width:48px;height:48px;background:transparent;display:flex;align-items:center;justify-content:center;">
         <svg width="26" height="26" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
           <path d="M6 3 L12 12" stroke="#E53E3E" stroke-width="2.2" stroke-linecap="round"/>
           <path d="M18 3 L12 12" stroke="#E53E3E" stroke-width="2.2" stroke-linecap="round"/>
