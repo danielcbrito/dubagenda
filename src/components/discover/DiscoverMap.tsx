@@ -88,23 +88,27 @@ function buildBarberIcon(
   }
 
   const bg = selected ? "#111" : "#fff";
+  const border = selected ? "2.5px solid #fff" : "2.5px solid #111";
+  const shadow = selected ? "0 4px 14px rgba(0,0,0,0.35)" : "0 4px 12px rgba(0,0,0,0.2)";
   const ringFill = selected ? "#111" : "#fff";
 
   const pinHtml = `
     <div style="display:flex;flex-direction:column;align-items:center;">
-      <div style="width:48px;height:48px;background:transparent;display:flex;align-items:center;justify-content:center;">
-        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M6 3 L12 12" stroke="#E53E3E" stroke-width="2.2" stroke-linecap="round"/>
-          <path d="M18 3 L12 12" stroke="#E53E3E" stroke-width="2.2" stroke-linecap="round"/>
-          <path d="M12 12 L4.5 19.5" stroke="#E53E3E" stroke-width="2" stroke-linecap="round"/>
-          <path d="M12 12 L19.5 19.5" stroke="#E53E3E" stroke-width="2" stroke-linecap="round"/>
-          <circle cx="4" cy="20" r="2.8" stroke="#E53E3E" stroke-width="2" fill="${ringFill}"/>
-          <circle cx="20" cy="20" r="2.8" stroke="#E53E3E" stroke-width="2" fill="${ringFill}"/>
-          <circle cx="12" cy="12" r="2" fill="#E53E3E"/>
-          <circle cx="12" cy="12" r="0.8" fill="${ringFill}"/>
-        </svg>
-      </div>
-      <div style="height:4px;"></div>
+      <!-- Pin gota estilo Google Maps -->
+      <svg width="40" height="52" viewBox="0 0 40 52" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter:drop-shadow(${shadow});">
+        <path d="M20 0C9 0 0 9 0 20c0 13.5 20 32 20 32s20-18.5 20-32C40 9 31 0 20 0Z" fill="${bg}" stroke="${selected ? '#fff' : '#222'}" stroke-width="1.5"/>
+        <!-- tesoura vermelha centralizada -->
+        <g transform="translate(8, 6)">
+          <path d="M5 2 L12 12" stroke="#E53E3E" stroke-width="2.2" stroke-linecap="round"/>
+          <path d="M19 2 L12 12" stroke="#E53E3E" stroke-width="2.2" stroke-linecap="round"/>
+          <path d="M12 12 L5.5 19" stroke="#E53E3E" stroke-width="2" stroke-linecap="round"/>
+          <path d="M12 12 L18.5 19" stroke="#E53E3E" stroke-width="2" stroke-linecap="round"/>
+          <circle cx="5" cy="19.5" r="2.5" stroke="#E53E3E" stroke-width="1.8" fill="${ringFill}"/>
+          <circle cx="19" cy="19.5" r="2.5" stroke="#E53E3E" stroke-width="1.8" fill="${ringFill}"/>
+          <circle cx="12" cy="12" r="1.8" fill="#E53E3E"/>
+          <circle cx="12" cy="12" r="0.7" fill="${ringFill}"/>
+        </g>
+      </svg>
   `;
 
   // Zoom médio: pin sem label
