@@ -65,9 +65,9 @@ function buildClientIcon() {
   });
 }
 
-const PIN_ICON_SIZE = 48;
-const PIN_TOTAL_HEIGHT = 90;
-const PIN_TIP_Y = 58; // anchor at tip of triangle
+const PIN_ICON_WIDTH = 40;
+const PIN_SVG_HEIGHT = 52;
+const PIN_TOTAL_HEIGHT = 76; // svg + label
 
 function buildBarberIcon(
   label: string,
