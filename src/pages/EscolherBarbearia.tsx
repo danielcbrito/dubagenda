@@ -661,6 +661,53 @@ const EscolherBarbearia = () => {
           )}
         </div>
       </BottomSheet>
+
+      {/* ═══ iOS Install Banner ═══ */}
+      {showInstallBanner && (
+        <div
+          style={{
+            position: 'fixed',
+            bottom: 'calc(env(safe-area-inset-bottom, 0px) + 16px)',
+            left: 16,
+            right: 16,
+            background: 'hsl(0 0% 7%)',
+            color: 'hsl(0 0% 96%)',
+            borderRadius: 16,
+            padding: '14px 16px',
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 12,
+            boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
+            border: '1px solid hsl(0 0% 18%)',
+          }}
+        >
+          <div style={{ flex: 1 }}>
+            <p style={{ fontSize: 13, fontWeight: 700, margin: '0 0 2px' }}>
+              Adicione à tela inicial
+            </p>
+            <p style={{ fontSize: 11, color: 'hsl(0 0% 64%)', margin: 0 }}>
+              Toque em <span style={{ fontSize: 13 }}>↑</span> compartilhar e depois "Adicionar à Tela de Início" para tela cheia
+            </p>
+          </div>
+          <button
+            onClick={() => {
+              setShowInstallBanner(false);
+              localStorage.setItem('installBannerDismissed', 'true');
+            }}
+            style={{
+              background: 'transparent',
+              border: 'none',
+              color: 'hsl(0 0% 96%)',
+              fontSize: 18,
+              cursor: 'pointer',
+              padding: '0 4px',
+            }}
+          >
+            ✕
+          </button>
+        </div>
+      )}
     </div>
   );
 };
