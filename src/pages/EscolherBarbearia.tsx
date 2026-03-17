@@ -557,7 +557,7 @@ const EscolherBarbearia = () => {
       </div>
 
       {/* ═══ Map — full screen behind sheet ═══ */}
-      <div className="absolute inset-0">
+      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 0 }}>
         {!isLoading && (
           <DiscoverMap
             units={searchFilteredUnits}
