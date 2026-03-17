@@ -116,9 +116,9 @@ function buildBarberIcon(
     return L.divIcon({
       html: `${pinHtml}</div>`,
       className: "barber-pin-clean",
-      iconSize: [PIN_ICON_SIZE, PIN_TIP_Y + 2],
-      iconAnchor: [PIN_ICON_SIZE / 2, PIN_TIP_Y],
-      popupAnchor: [0, -PIN_TIP_Y],
+      iconSize: [PIN_ICON_WIDTH, PIN_SVG_HEIGHT],
+      iconAnchor: [PIN_ICON_WIDTH / 2, PIN_SVG_HEIGHT],
+      popupAnchor: [0, -PIN_SVG_HEIGHT],
     });
   }
 
