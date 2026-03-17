@@ -134,9 +134,9 @@ function buildBarberIcon(
       </div>
     `,
     className: "barber-pin-clean",
-    iconSize: [PIN_ICON_SIZE, PIN_TOTAL_HEIGHT],
-    iconAnchor: [PIN_ICON_SIZE / 2, PIN_TIP_Y],
-    popupAnchor: [0, -PIN_TIP_Y],
+    iconSize: [PIN_ICON_WIDTH, PIN_TOTAL_HEIGHT],
+    iconAnchor: [PIN_ICON_WIDTH / 2, PIN_SVG_HEIGHT],
+    popupAnchor: [0, -PIN_SVG_HEIGHT],
   });
 }
 
