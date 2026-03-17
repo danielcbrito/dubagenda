@@ -34,19 +34,56 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Reset base para fullscreen real no iOS */
+*, *::before, *::after {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
 /* 🚫 PREVENT BROWSER AUTO-TRANSLATION */
 html {
   translate: no;
   color-scheme: dark;
+  height: -webkit-fill-available;
+  height: 100%;
+  overflow: hidden;
+  position: fixed;
+  width: 100%;
 }
 
 /* ═══ EDGE-TO-EDGE IMMERSIVE ═══ */
-html, body {
-  margin: 0;
-  padding: 0;
+body {
+  height: -webkit-fill-available;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   overscroll-behavior: none;
   -webkit-overflow-scrolling: touch;
+  margin: 0;
+  padding: 0;
   background-color: hsl(0 0% 5%);
+}
+
+#root {
+  height: 100%;
+  height: -webkit-fill-available;
+  width: 100%;
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+}
+
+/* Variáveis de safe area para usar em todo app */
+:root {
+  --sat: env(safe-area-inset-top);
+  --sab: env(safe-area-inset-bottom);
+  --sal: env(safe-area-inset-left);
+  --sar: env(safe-area-inset-right);
 }
 
 .notranslate {

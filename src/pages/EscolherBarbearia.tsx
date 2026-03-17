@@ -136,8 +136,20 @@ const EscolherBarbearia = () => {
 
   // Sheet snap state
   const [currentSheetSnap, setCurrentSheetSnap] = useState(SNAP_MID);
+  const [showInstallBanner, setShowInstallBanner] = useState(false);
 
   const isChangeMode = searchParams.get("mode") === "change";
+
+  // ── iOS install banner ──
+  useEffect(() => {
+    const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
+    const alreadyDismissed = localStorage.getItem('installBannerDismissed');
+    if (isIOS && !isStandalone && !alreadyDismissed) {
+      const timer = setTimeout(() => setShowInstallBanner(true), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, []);
   const shouldOpenCurrent = searchParams.get("open") === "current";
   const isAuthenticated = !!userId;
 
@@ -506,9 +518,30 @@ const EscolherBarbearia = () => {
   }, []);
 
   return (
-    <div className="relative bg-background" style={{ height: "100dvh", overflow: "hidden" }}>
-      {/* ═══ Search bar ═══ */}
-      <div className="absolute top-0 left-0 right-0 z-[600] px-4 pt-[calc(env(safe-area-inset-top)+0.75rem)] pb-2">
+    <div
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        width: '100%',
+        height: '100%',
+        overflow: 'hidden',
+        background: 'hsl(var(--background))',
+        WebkitOverflowScrolling: 'touch',
+      }}
+    >
+      {/* ═══ Search bar — respeita safe area do iPhone ═══ */}
+      <div
+        className="z-[600]"
+        style={{
+          position: 'absolute',
+          top: 'calc(env(safe-area-inset-top, 0px) + 12px)',
+          left: 'calc(env(safe-area-inset-left, 0px) + 16px)',
+          right: 'calc(env(safe-area-inset-right, 0px) + 16px)',
+        }}
+      >
         <div className="relative">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/50" />
           <input
@@ -536,7 +569,7 @@ const EscolherBarbearia = () => {
       </div>
 
       {/* ═══ Map — full screen behind sheet ═══ */}
-      <div className="absolute inset-0">
+      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 0 }}>
         {!isLoading && (
           <DiscoverMap
             units={searchFilteredUnits}
@@ -640,6 +673,53 @@ const EscolherBarbearia = () => {
           )}
         </div>
       </BottomSheet>
+
+      {/* ═══ iOS Install Banner ═══ */}
+      {showInstallBanner && (
+        <div
+          style={{
+            position: 'fixed',
+            bottom: 'calc(env(safe-area-inset-bottom, 0px) + 16px)',
+            left: 16,
+            right: 16,
+            background: 'hsl(0 0% 7%)',
+            color: 'hsl(0 0% 96%)',
+            borderRadius: 16,
+            padding: '14px 16px',
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 12,
+            boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
+            border: '1px solid hsl(0 0% 18%)',
+          }}
+        >
+          <div style={{ flex: 1 }}>
+            <p style={{ fontSize: 13, fontWeight: 700, margin: '0 0 2px' }}>
+              Adicione à tela inicial
+            </p>
+            <p style={{ fontSize: 11, color: 'hsl(0 0% 64%)', margin: 0 }}>
+              Toque em <span style={{ fontSize: 13 }}>↑</span> compartilhar e depois "Adicionar à Tela de Início" para tela cheia
+            </p>
+          </div>
+          <button
+            onClick={() => {
+              setShowInstallBanner(false);
+              localStorage.setItem('installBannerDismissed', 'true');
+            }}
+            style={{
+              background: 'transparent',
+              border: 'none',
+              color: 'hsl(0 0% 96%)',
+              fontSize: 18,
+              cursor: 'pointer',
+              padding: '0 4px',
+            }}
+          >
+            ✕
+          </button>
+        </div>
+      )}
     </div>
   );
 };
