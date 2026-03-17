@@ -53,7 +53,8 @@ html, body {
   translate: no;
 }
 
-.custom-pill-icon {
+.custom-pill-icon,
+.barber-pin-clean {
   background: transparent !important;
   border: none !important;
 }

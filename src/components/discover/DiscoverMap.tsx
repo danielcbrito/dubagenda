@@ -65,10 +65,9 @@ function buildClientIcon() {
   });
 }
 
-const PIN_WIDTH = 36;
-const PIN_HEIGHT = 44;
-const LABEL_HEIGHT = 22;
-const TOTAL_HEIGHT = PIN_HEIGHT + LABEL_HEIGHT;
+const PIN_ICON_SIZE = 48;
+const PIN_TOTAL_HEIGHT = 90;
+const PIN_TIP_Y = 58; // anchor at tip of triangle
 
 function buildBarberIcon(
   label: string,
@@ -84,57 +83,56 @@ function buildBarberIcon(
       html: `<div style="width:8px;height:8px;background:#111;border-radius:50%;border:1.5px solid white;"></div>`,
       iconSize: [8, 8],
       iconAnchor: [4, 4],
-      className: "custom-barber-pin",
+      className: "barber-pin-clean",
     });
   }
 
-  const fill = selected ? "#111111" : "#ffffff";
-  const stroke = selected ? "none" : "#111111";
-  const scissorStroke = selected ? "#fff" : "#555";
-  const scissorLine = selected ? "#fff" : "#333";
-  const scissorFill = selected ? "#fff" : "#555";
+  const bg = selected ? "#111" : "#fff";
+  const ringFill = selected ? "#111" : "#fff";
 
-  const teardropSvg = `
-    <svg width="${PIN_WIDTH}" height="${PIN_HEIGHT}" viewBox="0 0 36 44" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M18 0 C8.059 0 0 8.059 0 18 C0 28.627 18 44 18 44 C18 44 36 28.627 36 18 C36 8.059 27.941 0 18 0Z" fill="${fill}" stroke="${stroke}" stroke-width="2"/>
-      <g transform="translate(9, 6)">
-        <circle cx="4" cy="14" r="3" stroke="${scissorStroke}" stroke-width="1.5" fill="none"/>
-        <circle cx="14" cy="14" r="3" stroke="${scissorStroke}" stroke-width="1.5" fill="none"/>
-        <circle cx="4" cy="14" r="1.2" fill="${scissorFill}"/>
-        <circle cx="14" cy="14" r="1.2" fill="${scissorFill}"/>
-        <line x1="6" y1="11.5" x2="10" y2="3" stroke="${scissorLine}" stroke-width="1.8" stroke-linecap="round"/>
-        <line x1="12" y1="11.5" x2="8" y2="3" stroke="${scissorLine}" stroke-width="1.8" stroke-linecap="round"/>
-      </g>
-    </svg>
+  const pinHtml = `
+    <div style="display:flex;flex-direction:column;align-items:center;">
+      <div style="width:48px;height:48px;background:${bg};border:2.5px solid #111;border-radius:50% 50% 50% 50% / 40% 40% 60% 60%;clip-path:ellipse(50% 50% at 50% 40%);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(0,0,0,0.2);">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M6 3 L12 12" stroke="#E53E3E" stroke-width="2.2" stroke-linecap="round"/>
+          <path d="M18 3 L12 12" stroke="#E53E3E" stroke-width="2.2" stroke-linecap="round"/>
+          <path d="M12 12 L4.5 19.5" stroke="#E53E3E" stroke-width="2" stroke-linecap="round"/>
+          <path d="M12 12 L19.5 19.5" stroke="#E53E3E" stroke-width="2" stroke-linecap="round"/>
+          <circle cx="4" cy="20" r="2.8" stroke="#E53E3E" stroke-width="2" fill="${ringFill}"/>
+          <circle cx="20" cy="20" r="2.8" stroke="#E53E3E" stroke-width="2" fill="${ringFill}"/>
+          <circle cx="12" cy="12" r="2" fill="#E53E3E"/>
+          <circle cx="12" cy="12" r="0.8" fill="${ringFill}"/>
+        </svg>
+      </div>
+      <div style="width:0;height:0;border-left:7px solid transparent;border-right:7px solid transparent;border-top:10px solid ${bg};margin-top:-3px;filter:drop-shadow(0 3px 4px rgba(0,0,0,0.15));"></div>
   `;
 
-  // Zoom médio: só pin sem label
+  // Zoom médio: pin sem label
   if (zoom < 13) {
     return L.divIcon({
-      html: `<div style="display:flex;flex-direction:column;align-items:center;width:${PIN_WIDTH}px;">${teardropSvg}</div>`,
-      className: "custom-barber-pin",
-      iconSize: [PIN_WIDTH, PIN_HEIGHT],
-      iconAnchor: [PIN_WIDTH / 2, PIN_HEIGHT],
-      popupAnchor: [0, -PIN_HEIGHT],
+      html: `${pinHtml}</div>`,
+      className: "barber-pin-clean",
+      iconSize: [PIN_ICON_SIZE, PIN_TIP_Y + 2],
+      iconAnchor: [PIN_ICON_SIZE / 2, PIN_TIP_Y],
+      popupAnchor: [0, -PIN_TIP_Y],
     });
   }
 
-  // Zoom próximo: pin completo com label
+  // Zoom próximo: pin + label
   const labelBg = selected ? "#111" : "#fff";
   const labelColor = selected ? "#fff" : "#111";
-  const labelBorder = selected ? "none" : "1.5px solid #ddd";
+  const labelBorder = selected ? "none" : "1.5px solid #e0e0e0";
 
   return L.divIcon({
     html: `
-      <div style="display:flex;flex-direction:column;align-items:center;width:${PIN_WIDTH}px;">
-        ${teardropSvg}
-        <div style="background:${labelBg};color:${labelColor};border:${labelBorder};border-radius:20px;padding:3px 8px;font-family:system-ui,sans-serif;font-size:10px;font-weight:700;white-space:nowrap;margin-top:-6px;box-shadow:0 2px 6px rgba(0,0,0,0.15);max-width:120px;overflow:hidden;text-overflow:ellipsis;">${truncated}</div>
+      ${pinHtml}
+        <div style="background:${labelBg};color:${labelColor};border:${labelBorder};border-radius:20px;padding:4px 10px;font-family:system-ui,sans-serif;font-size:10px;font-weight:700;white-space:nowrap;margin-top:2px;box-shadow:0 2px 8px rgba(0,0,0,0.12);max-width:120px;overflow:hidden;text-overflow:ellipsis;">${truncated}</div>
       </div>
     `,
-    className: "custom-barber-pin",
-    iconSize: [PIN_WIDTH, TOTAL_HEIGHT],
-    iconAnchor: [PIN_WIDTH / 2, PIN_HEIGHT],
-    popupAnchor: [0, -PIN_HEIGHT],
+    className: "barber-pin-clean",
+    iconSize: [PIN_ICON_SIZE, PIN_TOTAL_HEIGHT],
+    iconAnchor: [PIN_ICON_SIZE / 2, PIN_TIP_Y],
+    popupAnchor: [0, -PIN_TIP_Y],
   });
 }
 
