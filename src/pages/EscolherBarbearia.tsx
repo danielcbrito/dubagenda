@@ -136,8 +136,20 @@ const EscolherBarbearia = () => {
 
   // Sheet snap state
   const [currentSheetSnap, setCurrentSheetSnap] = useState(SNAP_MID);
+  const [showInstallBanner, setShowInstallBanner] = useState(false);
 
   const isChangeMode = searchParams.get("mode") === "change";
+
+  // ── iOS install banner ──
+  useEffect(() => {
+    const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
+    const alreadyDismissed = localStorage.getItem('installBannerDismissed');
+    if (isIOS && !isStandalone && !alreadyDismissed) {
+      const timer = setTimeout(() => setShowInstallBanner(true), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, []);
   const shouldOpenCurrent = searchParams.get("open") === "current";
   const isAuthenticated = !!userId;
 
