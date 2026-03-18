@@ -604,7 +604,7 @@ const BarbershopPublic = () => {
 
   // ── Main ──
   return (
-    <div className="flex flex-col bg-background" style={{ height: "100dvh" }}>
+    <div className="relative flex flex-col bg-background" style={{ height: "100dvh" }}>
       <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain pb-32">
 
         {/* ── Hero Banner ── */}
