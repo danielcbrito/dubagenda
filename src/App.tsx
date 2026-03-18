@@ -161,28 +161,27 @@ function MaintenanceWrapper({ children }: { children: React.ReactNode }) {
  * Limpa sessões inválidas automaticamente para evitar loops de erro
  */
 function AuthSessionGuard({ children }: { children: React.ReactNode }) {
-  const navigate = useNavigate();
-  const location = useLocation();
-
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'TOKEN_REFRESHED') {
-        console.log('[Auth] Token refreshed successfully');
+        console.log('[Auth] Token renovado com sucesso');
       }
       if (event === 'SIGNED_OUT') {
-        console.log('[Auth] User signed out');
+        console.log('[Auth] Usuário fez logout');
+      }
+      if (event === 'SIGNED_IN') {
+        console.log('[Auth] Sessão restaurada/login');
       }
     });
 
-    // Verificar sessão inicial e limpar se inválida
-    supabase.auth.getSession().then(({ error }) => {
+    // Apenas verificar sessão — NÃO forçar signOut em erro.
+    // Erros de getSession podem ser temporários (rede, timing).
+    // O autoRefreshToken do Supabase resolve sozinho.
+    supabase.auth.getSession().then(({ data, error }) => {
       if (error) {
-        console.warn('[Auth] Sessão inválida detectada, limpando...', error.message);
-        supabase.auth.signOut().then(() => {
-          if (!PUBLIC_ROUTES.some(r => location.pathname === r || location.pathname.startsWith('/auth'))) {
-            navigate('/auth?mode=login');
-          }
-        });
+        console.warn('[Auth] Erro ao verificar sessão (não deslogando):', error.message);
+      } else if (data.session) {
+        console.log('[Auth] Sessão ativa encontrada');
       }
     });
 
