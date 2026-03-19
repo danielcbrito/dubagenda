@@ -113,6 +113,7 @@ const ClienteAgendar = () => {
   const [rescheduleAppointmentId, setRescheduleAppointmentId] = useState<string | null>(null);
   const [unavailableMessage, setUnavailableMessage] = useState<string | null>(null);
   const servicesListRef = useRef<HTMLDivElement | null>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
   const [activeSubscription, setActiveSubscription] = useState<ActiveSubscription | null>(null);
   const [subscriptionBlocked, setSubscriptionBlocked] = useState(false);
   const [subscriptionLimitReached, setSubscriptionLimitReached] = useState(false);
@@ -459,7 +460,7 @@ const ClienteAgendar = () => {
 
   // Scroll to top on step change
   useEffect(() => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    containerRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
   }, [step]);
 
   useEffect(() => {
@@ -1862,7 +1863,11 @@ const ClienteAgendar = () => {
   }
 
   return (
-    <div className="min-h-screen">
+    <div 
+      ref={containerRef}
+      className="h-screen overflow-y-auto overscroll-contain bg-background"
+      style={{ WebkitOverflowScrolling: 'touch' }}
+    >
       {/* Header fixo — Seta + Dots */}
       <div className="fixed top-0 left-0 right-0 z-50">
         <div className="bg-background/90 backdrop-blur-xl">
