@@ -22,6 +22,7 @@ const VerificarWhatsApp = lazy(() => import("./pages/VerificarWhatsApp"));
 const EscolherVerificacao = lazy(() => import("./pages/EscolherVerificacao"));
 const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
+const CompletarPerfil = lazy(() => import("./pages/CompletarPerfil"));
 const Cliente = lazy(() => import("./pages/Cliente"));
 const ClienteAgendar = lazy(() => import("./pages/ClienteAgendar"));
 const ClienteAssinar = lazy(() => import("./pages/ClienteAssinar"));
@@ -248,6 +249,7 @@ function AppRoutes() {
             <Route path="/escolher-verificacao" element={<EscolherVerificacao />} />
             <Route path="/esqueci-senha" element={<ForgotPassword />} />
             <Route path="/resetar-senha" element={<ResetPassword />} />
+            <Route path="/completar-perfil" element={<CompletarPerfil />} />
             <Route path="/cliente" element={<Cliente />} />
             <Route path="/cliente/agendar" element={<ClienteAgendar />} />
             <Route path="/cliente/assinar" element={<ClienteAssinar />} />
