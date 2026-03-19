@@ -161,19 +161,6 @@ const Auth = () => {
       }
     }
 
-    if (name === "cpf") {
-      formattedValue = formatCPF(value);
-      const cleanCpf = value.replace(/\D/g, '');
-      if (cleanCpf.length === 11) {
-        if (!validateCPF(cleanCpf)) {
-          setCpfError("CPF inválido.");
-        } else {
-          setCpfError("");
-        }
-      } else {
-        setCpfError("");
-      }
-    }
 
     setFormData(prev => ({ ...prev, [name]: formattedValue }));
   };
