@@ -51,7 +51,6 @@ const Auth = () => {
     nome: "",
     email: "",
     telefone: "",
-    cpf: "",
     senha: "",
   });
   const [telefoneError, setTelefoneError] = useState("");
