@@ -231,31 +231,56 @@ const Index = () => {
               </button>
             </div>
           ) : (
-            /* New visitor — original CTA */
-            <button
-              onClick={() => navigate("/escolher-barbearia")}
-              className="w-full flex items-center justify-between active:scale-[0.97] transition-all border-foreground text-foreground"
-              style={{
-                fontFamily: "'Plus Jakarta Sans', Inter, sans-serif",
-                fontWeight: 700,
-                fontSize: 15,
-                background: "transparent",
-                borderRadius: 14,
-                padding: "14px 18px",
-                borderWidth: "1.8px",
-                borderStyle: "solid",
-                cursor: "pointer",
-                marginBottom: "calc(env(safe-area-inset-bottom, 0px) + 22px)",
-              }}
+            /* New visitor — two CTAs */
+            <div
+              className="flex flex-col"
+              style={{ marginBottom: "calc(env(safe-area-inset-bottom, 0px) + 22px)" }}
             >
-              <span>Encontrar Barbearias</span>
-              <span
-                className="flex items-center justify-center bg-foreground"
-                style={{ width: 28, height: 28, borderRadius: 8 }}
+              <button
+                onClick={() => navigate("/escolher-barbearia")}
+                className="w-full flex items-center justify-between active:scale-[0.97] transition-all border-foreground text-foreground"
+                style={{
+                  fontFamily: "'Plus Jakarta Sans', Inter, sans-serif",
+                  fontWeight: 700,
+                  fontSize: 15,
+                  background: "transparent",
+                  borderRadius: 14,
+                  padding: "14px 18px",
+                  borderWidth: "1.8px",
+                  borderStyle: "solid",
+                  cursor: "pointer",
+                }}
               >
-                <ArrowRight className="w-3.5 h-3.5 text-background" />
-              </span>
-            </button>
+                <span>Encontrar Barbearias</span>
+                <span
+                  className="flex items-center justify-center bg-foreground"
+                  style={{ width: 28, height: 28, borderRadius: 8 }}
+                >
+                  <ArrowRight className="w-3.5 h-3.5 text-background" />
+                </span>
+              </button>
+
+              <button
+                onClick={() => navigate("/auth?mode=login&context=returning")}
+                className="w-full active:opacity-70 transition-opacity text-muted-foreground mt-3"
+                style={{
+                  fontFamily: "'Plus Jakarta Sans', Inter, sans-serif",
+                  fontWeight: 500,
+                  fontSize: 13,
+                  background: "transparent",
+                  borderRadius: 14,
+                  padding: "12px 18px",
+                  cursor: "pointer",
+                  border: "1.5px solid hsl(var(--border))",
+                }}
+              >
+                Já tenho uma barbearia
+              </button>
+
+              <p className="text-center text-[11px] text-muted-foreground/40 mt-2">
+                Entre com seu login para agendar
+              </p>
+            </div>
           )}
         </motion.div>
       </div>
