@@ -193,13 +193,11 @@ const Auth = () => {
             return;
           }
           const msgs: Record<string, string> = {
-            cpf: "Este CPF já está cadastrado.",
             telefone: "Este telefone já está cadastrado.",
             email: "Este email já está cadastrado.",
           };
           const firstDup = dupData.duplicates[0];
           toast.error(msgs[firstDup] || "Dados já cadastrados.");
-          if (firstDup === 'cpf') setCpfError(msgs.cpf);
           if (firstDup === 'telefone') setTelefoneError(msgs.telefone);
           setIsLoading(false);
           return;
