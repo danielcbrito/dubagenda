@@ -556,47 +556,48 @@ const Auth = () => {
 
           {/* Login error recovery */}
           {!isSignup && loginError && (
-            <div className="space-y-2 pt-1">
+            <div className="space-y-3 pt-1">
               <p className="text-[13px] text-destructive text-center font-medium">
                 {loginError}
               </p>
+
               <button
                 type="button"
                 onClick={() => navigate('/esqueci-senha')}
-                className="w-full text-[12px] text-primary hover:text-primary/80 text-center transition-colors"
+                className="w-full text-[13px] text-primary hover:text-primary/80 text-center py-2 active:opacity-70 transition-colors"
               >
-                Esqueci minha senha
+                🔑 Esqueci minha senha
               </button>
-              <p className="text-[11px] text-muted-foreground text-center">
-                Não tem cadastro?{' '}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setLoginError(null);
-                    navigate(`/auth?mode=signup`);
-                  }}
-                  className="text-primary hover:text-primary/80 font-medium transition-colors"
-                >
-                  Criar conta grátis
-                </button>
-              </p>
-              {isReturning && (
-                <p className="text-[11px] text-muted-foreground text-center">
-                  Está na barbearia errada?{' '}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      localStorage.removeItem('dub_has_barbershop');
-                      localStorage.removeItem('dub_last_barbershop_slug');
-                      localStorage.removeItem('dub_last_barbershop_name');
-                      navigate('/escolher-barbearia');
-                    }}
-                    className="text-muted-foreground underline hover:text-foreground transition-colors"
-                  >
-                    Escolher outra
-                  </button>
-                </p>
-              )}
+
+              <div className="flex items-center gap-2">
+                <div className="flex-1 h-px bg-border" />
+                <span className="text-[11px] text-muted-foreground">ou</span>
+                <div className="flex-1 h-px bg-border" />
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setLoginError(null);
+                  navigate('/auth?mode=signup');
+                }}
+                className="w-full text-[12px] text-muted-foreground text-center py-2 active:opacity-70 transition-colors"
+              >
+                Não tenho cadastro — criar conta
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  localStorage.removeItem('dub_has_barbershop');
+                  localStorage.removeItem('dub_last_barbershop_slug');
+                  localStorage.removeItem('dub_last_barbershop_name');
+                  navigate('/escolher-barbearia');
+                }}
+                className="w-full text-[11px] text-muted-foreground/60 text-center py-1 active:opacity-70 transition-colors"
+              >
+                Estou na barbearia errada — escolher outra
+              </button>
             </div>
           )}
 
