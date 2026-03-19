@@ -168,7 +168,7 @@ const Auth = () => {
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (telefoneError || cpfError) {
+    if (telefoneError) {
       toast.error("Corrija os erros antes de continuar");
       return;
     }
