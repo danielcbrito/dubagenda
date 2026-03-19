@@ -8,7 +8,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, useNavigate, useLocation } from "react-router-dom";
 import { useMaintenanceMode } from "@/hooks/useMaintenanceMode";
 import { MaintenanceScreen } from "@/components/MaintenanceScreen";
-import { MaintenanceWarningBanner } from "@/components/MaintenanceWarningBanner";
+
 import { supabase } from "@/integrations/supabase/client";
 import { lazy, Suspense } from "react";
 import { SupportChatBubble } from "@/components/support/SupportChatBubble";
@@ -122,10 +122,7 @@ function MaintenanceWrapper({ children }: { children: React.ReactNode }) {
   if (isAllowedUser) {
     return (
       <div className="flex flex-col min-h-dvh">
-        {warningActive && warningMessage && (
-          <MaintenanceWarningBanner message={warningMessage} />
-        )}
-        <div className="flex-1 flex flex-col min-h-0">
+      <div className="flex-1 flex flex-col min-h-0">
           {children}
         </div>
       </div>
@@ -144,12 +141,9 @@ function MaintenanceWrapper({ children }: { children: React.ReactNode }) {
     );
   }
 
-  // Normal flow - show warning banner if active
+  // Normal flow
   return (
     <div className="flex flex-col min-h-dvh">
-      {warningActive && warningMessage && (
-        <MaintenanceWarningBanner message={warningMessage} />
-      )}
       <div className="flex-1 flex flex-col min-h-0">
         {children}
       </div>
