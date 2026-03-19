@@ -122,10 +122,7 @@ function MaintenanceWrapper({ children }: { children: React.ReactNode }) {
   if (isAllowedUser) {
     return (
       <div className="flex flex-col min-h-dvh">
-        {warningActive && warningMessage && (
-          <MaintenanceWarningBanner message={warningMessage} />
-        )}
-        <div className="flex-1 flex flex-col min-h-0">
+      <div className="flex-1 flex flex-col min-h-0">
           {children}
         </div>
       </div>
