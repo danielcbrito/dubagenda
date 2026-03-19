@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowRight } from "lucide-react";
@@ -7,47 +7,34 @@ import sceneFriendApp from "@/assets/scene-friend-app.png";
 import { AmbientEffects } from "@/components/landing/AmbientEffects";
 import { supabase } from "@/integrations/supabase/client";
 
-type ClienteState = "loading" | "autenticado" | "retornante" | "novo";
-
 const Index = () => {
   const navigate = useNavigate();
-  const [clienteState, setClienteState] = useState<ClienteState>("loading");
+  const [isCheckingSession, setIsCheckingSession] = useState(false);
 
-  const lastShopName = typeof window !== "undefined"
-    ? localStorage.getItem("dub_last_barbershop_name")
-    : null;
+  const handleJaTenhoBarbearia = async () => {
+    if (isCheckingSession) return;
+    setIsCheckingSession(true);
 
-  useEffect(() => {
-    const detect = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session) {
-          navigate("/cliente", { replace: true });
-          return;
-        }
-      } catch {
-        // Ignore — continue detection
-      }
-
-      const hasBarbershop = localStorage.getItem("dub_has_barbershop");
-      if (hasBarbershop === "true") {
-        setClienteState("retornante");
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        navigate('/cliente');
         return;
       }
 
-      setClienteState("novo");
-    };
-    detect();
-  }, [navigate]);
+      const { data: { session: refreshed } } = await supabase.auth.refreshSession();
+      if (refreshed) {
+        navigate('/cliente');
+        return;
+      }
+    } catch {
+      // ignore
+    } finally {
+      setIsCheckingSession(false);
+    }
 
-  // Splash while detecting state
-  if (clienteState === "loading") {
-    return (
-      <div className="fixed inset-0 flex items-center justify-center bg-background">
-        <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
-  }
+    navigate('/auth');
+  };
 
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-background">
@@ -149,139 +136,67 @@ const Index = () => {
               }}
               className="text-foreground"
             >
-              {clienteState === "retornante" ? (
-                <>
-                  Sua barbearia{" "}
-                  <span className="text-primary">te espera.</span>
-                </>
-              ) : (
-                <>
-                  Encontre o barbeiro{" "}
-                  <em style={{ fontStyle: "italic" }}>certo</em>
-                  <br />
-                  perto{" "}
-                  <span className="text-primary">de você.</span>
-                </>
-              )}
+              Encontre o barbeiro{" "}
+              <em style={{ fontStyle: "italic" }}>certo</em>
+              <br />
+              perto{" "}
+              <span className="text-primary">de você.</span>
             </h1>
             <p className="text-[12px] text-muted-foreground/60 leading-relaxed m-0">
-              {clienteState === "retornante"
-                ? "Entre para agendar em segundos."
-                : "Agendamento sem ligação, sem espera."}
+              Agendamento sem ligação, sem espera.
             </p>
           </div>
 
-          {clienteState === "retornante" ? (
-            <div
-              className="flex flex-col gap-2.5"
-              style={{ marginBottom: "calc(env(safe-area-inset-bottom, 0px) + 22px)" }}
+          <div
+            className="flex flex-col"
+            style={{ marginBottom: "calc(env(safe-area-inset-bottom, 0px) + 22px)" }}
+          >
+            <button
+              onClick={() => navigate("/escolher-barbearia")}
+              className="w-full flex items-center justify-between active:scale-[0.97] transition-all border-foreground text-foreground"
+              style={{
+                fontFamily: "'Plus Jakarta Sans', Inter, sans-serif",
+                fontWeight: 700,
+                fontSize: 15,
+                background: "transparent",
+                borderRadius: 14,
+                padding: "14px 18px",
+                borderWidth: "1.8px",
+                borderStyle: "solid",
+                cursor: "pointer",
+              }}
             >
-              {/* Primary — return to barbershop */}
-              <button
-                onClick={() => navigate("/auth?mode=login&context=returning")}
-                className="w-full flex items-center justify-between active:scale-[0.97] transition-all"
-                style={{
-                  fontFamily: "'Plus Jakarta Sans', Inter, sans-serif",
-                  fontWeight: 700,
-                  fontSize: 15,
-                  background: "hsl(var(--primary))",
-                  color: "hsl(var(--primary-foreground))",
-                  borderRadius: 14,
-                  padding: "14px 18px",
-                  cursor: "pointer",
-                  border: "none",
-                }}
+              <span>Encontrar Barbearias</span>
+              <span
+                className="flex items-center justify-center bg-foreground"
+                style={{ width: 28, height: 28, borderRadius: 8 }}
               >
-                <span>Entrar na minha barbearia</span>
-                <span
-                  className="flex items-center justify-center"
-                  style={{
-                    width: 28,
-                    height: 28,
-                    borderRadius: 8,
-                    background: "hsla(var(--primary-foreground) / 0.2)",
-                  }}
-                >
-                  <ArrowRight className="w-3.5 h-3.5 text-primary-foreground" />
-                </span>
-              </button>
+                <ArrowRight className="w-3.5 h-3.5 text-background" />
+              </span>
+            </button>
 
-              {lastShopName && (
-                <p className="text-center text-[12px] text-muted-foreground/50">
-                  Sua barbearia: {lastShopName}
-                </p>
-              )}
-
-              {/* Secondary — find another */}
-              <button
-                onClick={() => navigate("/escolher-barbearia")}
-                className="w-full flex items-center justify-center active:scale-[0.97] transition-all text-muted-foreground"
-                style={{
-                  fontFamily: "'Plus Jakarta Sans', Inter, sans-serif",
-                  fontWeight: 600,
-                  fontSize: 13,
-                  background: "transparent",
-                  borderRadius: 14,
-                  padding: "12px 18px",
-                  cursor: "pointer",
-                  border: "1.5px solid hsl(var(--border))",
-                }}
-              >
-                Encontrar outra barbearia
-              </button>
-            </div>
-          ) : (
-            /* New visitor — two CTAs */
-            <div
-              className="flex flex-col"
-              style={{ marginBottom: "calc(env(safe-area-inset-bottom, 0px) + 22px)" }}
+            <button
+              onClick={handleJaTenhoBarbearia}
+              disabled={isCheckingSession}
+              className="w-full active:opacity-70 transition-opacity text-muted-foreground mt-3"
+              style={{
+                fontFamily: "'Plus Jakarta Sans', Inter, sans-serif",
+                fontWeight: 500,
+                fontSize: 13,
+                background: "transparent",
+                borderRadius: 14,
+                padding: "12px 18px",
+                cursor: "pointer",
+                border: "1.5px solid hsl(var(--border))",
+              }}
             >
-              <button
-                onClick={() => navigate("/escolher-barbearia")}
-                className="w-full flex items-center justify-between active:scale-[0.97] transition-all border-foreground text-foreground"
-                style={{
-                  fontFamily: "'Plus Jakarta Sans', Inter, sans-serif",
-                  fontWeight: 700,
-                  fontSize: 15,
-                  background: "transparent",
-                  borderRadius: 14,
-                  padding: "14px 18px",
-                  borderWidth: "1.8px",
-                  borderStyle: "solid",
-                  cursor: "pointer",
-                }}
-              >
-                <span>Encontrar Barbearias</span>
-                <span
-                  className="flex items-center justify-center bg-foreground"
-                  style={{ width: 28, height: 28, borderRadius: 8 }}
-                >
-                  <ArrowRight className="w-3.5 h-3.5 text-background" />
-                </span>
-              </button>
+              {isCheckingSession ? "Verificando..." : "Já tenho uma barbearia"}
+            </button>
 
-              <button
-                onClick={() => navigate("/auth?mode=login&context=returning")}
-                className="w-full active:opacity-70 transition-opacity text-muted-foreground mt-3"
-                style={{
-                  fontFamily: "'Plus Jakarta Sans', Inter, sans-serif",
-                  fontWeight: 500,
-                  fontSize: 13,
-                  background: "transparent",
-                  borderRadius: 14,
-                  padding: "12px 18px",
-                  cursor: "pointer",
-                  border: "1.5px solid hsl(var(--border))",
-                }}
-              >
-                Já tenho uma barbearia
-              </button>
-
-              <p className="text-center text-[11px] text-muted-foreground/40 mt-2">
-                Entre com seu login para agendar
-              </p>
-            </div>
-          )}
+            <p className="text-center text-[11px] text-muted-foreground/40 mt-2">
+              Entre com seu login para agendar
+            </p>
+          </div>
         </motion.div>
       </div>
     </div>
