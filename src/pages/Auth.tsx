@@ -181,7 +181,6 @@ const Auth = () => {
       try {
         const { data: dupData, error: dupError } = await supabase.functions.invoke('check-duplicate-signup', {
           body: {
-            cpf: validated.cpf,
             telefone: validated.telefone,
             email: validated.email,
           }
