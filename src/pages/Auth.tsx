@@ -54,7 +54,7 @@ const Auth = () => {
     senha: "",
   });
   const [telefoneError, setTelefoneError] = useState("");
-  const [cpfError, setCpfError] = useState("");
+  
   const [showPassword, setShowPassword] = useState(false);
   const [showDubExclusiveDialog, setShowDubExclusiveDialog] = useState(false);
 
