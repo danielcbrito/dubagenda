@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { z } from "zod";
-import { Loader2, Eye, EyeOff, User, Mail, Phone, Lock, CreditCard } from "lucide-react";
+import { Loader2, Eye, EyeOff, User, Mail, Phone, Lock } from "lucide-react";
 import { BackArrow } from "@/components/ui/back-arrow";
 import { formatPhone, validatePhone, formatCPF, validateCPF } from "@/lib/validators";
 import { cn } from "@/lib/utils";
