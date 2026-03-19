@@ -48,11 +48,7 @@ const Auth = () => {
   const [searchParams] = useSearchParams();
   const mode = searchParams.get("mode") || "login";
   const signupOrigin = searchParams.get("origin") || "dub_exclusive";
-  const isReturning = searchParams.get("context") === "returning";
-  const lastShopName = typeof window !== "undefined"
-    ? localStorage.getItem("dub_last_barbershop_name")
-    : null;
-  
+
   const [isLoading, setIsLoading] = useState(false);
   const [cooldownTimer, setCooldownTimer] = useState<number>(0);
   const [loginError, setLoginError] = useState<string | null>(null);
@@ -112,7 +108,6 @@ const Auth = () => {
     // If tenant was pre-selected (from discover/public link flow), save it now
     const preSelectedTenant = searchParams.get("tenant");
     if (preSelectedTenant) {
-      // Check if this is DUB (set null + dub_exclusive) or a regular tenant
       const { data: tenantData } = await supabase
         .from("tenants")
         .select("nome")
@@ -212,7 +207,6 @@ const Auth = () => {
         });
 
         if (!dupError && dupData?.duplicates?.length > 0) {
-          // If user is coming from discover flow and already has an account, show special dialog
           if (signupOrigin === "discover") {
             setShowDubExclusiveDialog(true);
             setIsLoading(false);
@@ -358,7 +352,7 @@ const Auth = () => {
 
   return (
     <div className="min-h-screen min-h-[100dvh] flex flex-col bg-background">
-      {/* Back button - absolute so it doesn't affect centering */}
+      {/* Back button */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -398,28 +392,9 @@ const Auth = () => {
           <p className="text-[13px] text-muted-foreground mt-1.5">
             {isSignup
               ? "Preencha seus dados para começar"
-              : isReturning && lastShopName
-                ? `Entre para agendar na ${lastShopName}`
-                : "Entre com seu email e senha"}
+              : "Entre com seu email e senha"}
           </p>
         </motion.div>
-
-        {/* Returning welcome card */}
-        {!isSignup && isReturning && (
-          <motion.div
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, delay: 0.05 }}
-            className="w-full max-w-sm mx-auto rounded-xl bg-primary/10 border border-primary/20 p-4 mb-4 text-center"
-          >
-            <p className="text-[13px] font-medium text-primary">
-              Bem-vindo de volta! 👋
-            </p>
-            <p className="text-[11px] text-muted-foreground mt-1">
-              Entre com seus dados para acessar sua barbearia
-            </p>
-          </motion.div>
-        )}
 
         {/* Form */}
         <motion.form
@@ -554,51 +529,11 @@ const Auth = () => {
             </div>
           </div>
 
-          {/* Login error recovery */}
+          {/* Login error */}
           {!isSignup && loginError && (
-            <div className="space-y-3 pt-1">
-              <p className="text-[13px] text-destructive text-center font-medium">
-                {loginError}
-              </p>
-
-              <button
-                type="button"
-                onClick={() => navigate('/esqueci-senha')}
-                className="w-full text-[13px] text-primary hover:text-primary/80 text-center py-2 active:opacity-70 transition-colors"
-              >
-                🔑 Esqueci minha senha
-              </button>
-
-              <div className="flex items-center gap-2">
-                <div className="flex-1 h-px bg-border" />
-                <span className="text-[11px] text-muted-foreground">ou</span>
-                <div className="flex-1 h-px bg-border" />
-              </div>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setLoginError(null);
-                  navigate('/auth?mode=signup');
-                }}
-                className="w-full text-[12px] text-muted-foreground text-center py-2 active:opacity-70 transition-colors"
-              >
-                Não tenho cadastro — criar conta
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  localStorage.removeItem('dub_has_barbershop');
-                  localStorage.removeItem('dub_last_barbershop_slug');
-                  localStorage.removeItem('dub_last_barbershop_name');
-                  navigate('/escolher-barbearia');
-                }}
-                className="w-full text-[11px] text-muted-foreground/60 text-center py-1 active:opacity-70 transition-colors"
-              >
-                Estou na barbearia errada — escolher outra
-              </button>
-            </div>
+            <p className="text-[13px] text-destructive text-center font-medium">
+              {loginError}
+            </p>
           )}
 
           {/* Submit */}
