@@ -948,6 +948,10 @@ const Cliente = () => {
             {/* Schedule Button */}
             <div className="mb-6">
               <ScheduleButton onClick={() => {
+                if (!preferredShop) {
+                  navigate('/escolher-barbearia');
+                  return;
+                }
                 if (activeSubscription?.barbeiro_id) {
                   navigate(`/cliente/agendar?barber=${activeSubscription.barbeiro_id}`);
                 } else {
