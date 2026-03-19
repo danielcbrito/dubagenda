@@ -499,7 +499,7 @@ const Auth = () => {
               background: "var(--gradient-primary)",
               boxShadow: "var(--shadow-glow-red)",
             }}
-            disabled={isLoading || cooldownTimer > 0 || (isSignup && (!!telefoneError || !!cpfError))}
+            disabled={isLoading || cooldownTimer > 0 || (isSignup && !!telefoneError)}
           >
             {isLoading ? (
               <span className="flex items-center gap-2">
