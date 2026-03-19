@@ -321,12 +321,13 @@ const Auth = () => {
 
       if (error) {
         if (error.message.includes("Invalid login")) {
-          toast.error("Email ou senha incorretos");
+          setLoginError("Email ou senha incorretos");
         } else if (error.message.includes("Email not confirmed")) {
-          toast.error("Por favor, confirme seu cadastro antes de fazer login");
+          setLoginError("Por favor, confirme seu cadastro antes de fazer login");
         } else {
-          toast.error("Erro ao fazer login: " + error.message);
+          setLoginError("Erro ao fazer login: " + error.message);
         }
+        toast.error(error.message.includes("Invalid login") ? "Email ou senha incorretos" : error.message);
         return;
       }
 
