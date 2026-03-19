@@ -178,16 +178,16 @@ const Index = () => {
             <button
               onClick={handleJaTenhoBarbearia}
               disabled={isCheckingSession}
-              className="w-full active:opacity-70 transition-opacity text-muted-foreground mt-3"
+              className="w-full active:opacity-80 transition-opacity text-foreground/70 mt-3"
               style={{
                 fontFamily: "'Plus Jakarta Sans', Inter, sans-serif",
-                fontWeight: 500,
+                fontWeight: 600,
                 fontSize: 13,
                 background: "transparent",
                 borderRadius: 14,
-                padding: "12px 18px",
+                padding: "13px 18px",
                 cursor: "pointer",
-                border: "1.5px solid hsl(var(--border))",
+                border: "1.5px solid hsl(var(--foreground) / 0.2)",
               }}
             >
               {isCheckingSession ? "Verificando..." : "Já tenho uma barbearia"}
