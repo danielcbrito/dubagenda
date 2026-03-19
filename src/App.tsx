@@ -8,7 +8,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, useNavigate, useLocation } from "react-router-dom";
 import { useMaintenanceMode } from "@/hooks/useMaintenanceMode";
 import { MaintenanceScreen } from "@/components/MaintenanceScreen";
-import { MaintenanceWarningBanner } from "@/components/MaintenanceWarningBanner";
+
 import { supabase } from "@/integrations/supabase/client";
 import { lazy, Suspense } from "react";
 import { SupportChatBubble } from "@/components/support/SupportChatBubble";
