@@ -182,6 +182,12 @@ const BarbershopPublic = () => {
 
       if (!error) {
         setCurrentPreferred(tenant.id);
+        // Persist device-level signal for smart landing page
+        localStorage.setItem('dub_has_barbershop', 'true');
+        if (slug) {
+          localStorage.setItem('dub_last_barbershop_slug', slug);
+        }
+        localStorage.setItem('dub_last_barbershop_name', tenant.nome);
         console.log('[AutoSave] barbearia_preferida_id atualizado para', tenant.id);
       }
     };
