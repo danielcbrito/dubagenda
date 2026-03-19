@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { z } from "zod";
 import { Loader2, Eye, EyeOff, User, Mail, Phone, Lock } from "lucide-react";
 import { BackArrow } from "@/components/ui/back-arrow";
-import { formatPhone, validatePhone, formatCPF, validateCPF } from "@/lib/validators";
+import { formatPhone, validatePhone } from "@/lib/validators";
 import { cn } from "@/lib/utils";
 import { SupportChatBubble } from "@/components/support/SupportChatBubble";
 import logoDub from "@/assets/logo-dub.png";
