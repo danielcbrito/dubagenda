@@ -397,7 +397,9 @@ const Auth = () => {
           <p className="text-[13px] text-muted-foreground mt-1.5">
             {isSignup
               ? "Preencha seus dados para começar"
-              : "Entre com seu email e senha"}
+              : isReturning && lastShopName
+                ? `Entre para agendar na ${lastShopName}`
+                : "Entre com seu email e senha"}
           </p>
         </motion.div>
 
