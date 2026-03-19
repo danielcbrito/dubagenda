@@ -249,6 +249,7 @@ function AppRoutes() {
             <Route path="/escolher-verificacao" element={<EscolherVerificacao />} />
             <Route path="/esqueci-senha" element={<ForgotPassword />} />
             <Route path="/resetar-senha" element={<ResetPassword />} />
+            <Route path="/completar-perfil" element={<CompletarPerfil />} />
             <Route path="/cliente" element={<Cliente />} />
             <Route path="/cliente/agendar" element={<ClienteAgendar />} />
             <Route path="/cliente/assinar" element={<ClienteAssinar />} />
