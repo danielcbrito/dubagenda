@@ -213,7 +213,6 @@ const Auth = () => {
           data: {
             nome: validated.nome,
             telefone: validated.telefone,
-            cpf: validated.cpf,
             signup_origin: signupOrigin,
           },
         },
