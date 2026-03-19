@@ -1863,7 +1863,11 @@ const ClienteAgendar = () => {
   }
 
   return (
-    <div className="min-h-screen">
+    <div 
+      ref={containerRef}
+      className="h-screen overflow-y-auto overscroll-contain bg-background"
+      style={{ WebkitOverflowScrolling: 'touch' }}
+    >
       {/* Header fixo — Seta + Dots */}
       <div className="fixed top-0 left-0 right-0 z-50">
         <div className="bg-background/90 backdrop-blur-xl">
