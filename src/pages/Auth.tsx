@@ -457,7 +457,7 @@ const Auth = () => {
             ) : cooldownTimer > 0 ? (
               `Aguarde ${cooldownTimer}s`
             ) : (
-              isSignup ? "Enviar link de acesso" : "Entrar"
+              isSignup ? "Continuar" : "Entrar"
             )}
           </Button>
         </motion.form>
