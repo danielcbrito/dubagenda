@@ -22,6 +22,7 @@ const VerificarWhatsApp = lazy(() => import("./pages/VerificarWhatsApp"));
 const EscolherVerificacao = lazy(() => import("./pages/EscolherVerificacao"));
 const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
+const CompletarPerfil = lazy(() => import("./pages/CompletarPerfil"));
 const Cliente = lazy(() => import("./pages/Cliente"));
 const ClienteAgendar = lazy(() => import("./pages/ClienteAgendar"));
 const ClienteAssinar = lazy(() => import("./pages/ClienteAssinar"));
