@@ -425,28 +425,6 @@ const Auth = () => {
                 )}
               </div>
 
-              {/* CPF */}
-              <div className="space-y-1.5">
-                <label className="text-[12px] font-medium text-muted-foreground uppercase tracking-wider block">
-                  CPF
-                </label>
-                <div className="relative">
-                  <CreditCard className="absolute left-3.5 top-1/2 -translate-y-1/2 w-[18px] h-[18px] text-muted-foreground/40" />
-                  <Input
-                    name="cpf"
-                    type="text"
-                    required
-                    maxLength={14}
-                    value={formData.cpf}
-                    onChange={handleInputChange}
-                    className={`${inputClasses} ${cpfError ? 'border-destructive/50 focus:border-destructive/50' : ''}`}
-                    placeholder="000.000.000-00"
-                  />
-                </div>
-                {cpfError && (
-                  <p className="text-[11px] text-destructive pl-1">{cpfError}</p>
-                )}
-              </div>
             </>
           )}
 
