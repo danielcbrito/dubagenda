@@ -460,7 +460,7 @@ const ClienteAgendar = () => {
 
   // Scroll to top on step change
   useEffect(() => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    containerRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
   }, [step]);
 
   useEffect(() => {
