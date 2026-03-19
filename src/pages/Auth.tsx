@@ -404,6 +404,23 @@ const Auth = () => {
           </p>
         </motion.div>
 
+        {/* Returning welcome card */}
+        {!isSignup && isReturning && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: 0.05 }}
+            className="w-full max-w-sm mx-auto rounded-xl bg-primary/10 border border-primary/20 p-4 mb-4 text-center"
+          >
+            <p className="text-[13px] font-medium text-primary">
+              Bem-vindo de volta! 👋
+            </p>
+            <p className="text-[11px] text-muted-foreground mt-1">
+              Entre com seus dados para acessar sua barbearia
+            </p>
+          </motion.div>
+        )}
+
         {/* Form */}
         <motion.form
           initial={{ opacity: 0, y: 12 }}
