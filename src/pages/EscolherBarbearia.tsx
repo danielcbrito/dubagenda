@@ -131,6 +131,7 @@ const EscolherBarbearia = () => {
   const [mapStyle, setMapStyle] = useState<"satellite" | "street">("street");
   const lastLocationRef = useRef<{ lat: number; lng: number } | null>(null);
   const watchIdRef = useRef<number | null>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
   
   const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
@@ -139,6 +140,7 @@ const EscolherBarbearia = () => {
   const [showInstallBanner, setShowInstallBanner] = useState(false);
 
   const isChangeMode = searchParams.get("mode") === "change";
+  const isSearchMode = searchParams.get("mode") === "search";
 
   // ── iOS install banner ──
   useEffect(() => {
