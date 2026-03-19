@@ -141,12 +141,9 @@ function MaintenanceWrapper({ children }: { children: React.ReactNode }) {
     );
   }
 
-  // Normal flow - show warning banner if active
+  // Normal flow
   return (
     <div className="flex flex-col min-h-dvh">
-      {warningActive && warningMessage && (
-        <MaintenanceWarningBanner message={warningMessage} />
-      )}
       <div className="flex-1 flex flex-col min-h-0">
         {children}
       </div>
