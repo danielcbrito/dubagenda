@@ -761,25 +761,63 @@ const Cliente = () => {
               />
             </div>
 
-            {/* Barbershop Card — minimal inline */}
+            {/* Barbershop Card or Onboarding */}
             {!profileLoading && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="mb-5 flex items-center gap-2.5 px-1"
-              >
-                <Store className="w-4 h-4 text-muted-foreground/40 flex-shrink-0" />
-                <p className="text-[12px] text-muted-foreground/60 font-medium truncate flex-1">
-                  {preferredShop?.nome || "Barbearia DUB"}
-                </p>
-                <button
-                  onClick={() => navigate("/escolher-barbearia")}
-                  className="text-[10px] text-primary font-semibold flex items-center gap-0.5 active:opacity-70 transition-opacity flex-shrink-0"
+              preferredShop ? (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="mb-5 flex items-center gap-2.5 px-1"
                 >
-                  Trocar
-                  <ChevronRight className="w-3 h-3" />
-                </button>
-              </motion.div>
+                  <Store className="w-4 h-4 text-muted-foreground/40 flex-shrink-0" />
+                  <p className="text-[12px] text-muted-foreground/60 font-medium truncate flex-1">
+                    {preferredShop.nome}
+                  </p>
+                  <button
+                    onClick={() => navigate("/escolher-barbearia?mode=change")}
+                    className="text-[10px] text-primary font-semibold flex items-center gap-0.5 active:opacity-70 transition-opacity flex-shrink-0"
+                  >
+                    Trocar
+                    <ChevronRight className="w-3 h-3" />
+                  </button>
+                </motion.div>
+              ) : (
+                <motion.div
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="mb-5 rounded-2xl border border-primary/20 bg-primary/5 p-5"
+                >
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                      <Scissors className="w-5 h-5 text-primary" />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-sm text-foreground">
+                        Escolha sua barbearia
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Para agendar, selecione onde você quer se cuidar
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => navigate('/escolher-barbearia')}
+                    className="w-full flex items-center gap-3 rounded-xl bg-primary text-primary-foreground py-3 px-4 mb-2 active:opacity-80 transition-opacity"
+                  >
+                    <MapPin className="w-4 h-4" />
+                    <span className="text-sm font-medium">Usar minha localização</span>
+                  </button>
+
+                  <button
+                    onClick={() => navigate('/escolher-barbearia?mode=search')}
+                    className="w-full flex items-center gap-3 rounded-xl border border-border py-3 px-4 active:opacity-80 transition-opacity"
+                  >
+                    <Search className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground">Buscar por nome ou endereço</span>
+                  </button>
+                </motion.div>
+              )
             )}
             
             {/* Plan Tracker ou Loyalty Card */}
