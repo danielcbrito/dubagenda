@@ -168,8 +168,22 @@ const EscolherBarbearia = () => {
     }
   }, [shouldOpenCurrent, isLoading, hasAutoOpened, currentPreferred, allUnits]);
 
+  // ── Auto-focus search when mode=search ──
+  useEffect(() => {
+    if (isSearchMode && searchInputRef.current) {
+      // Small delay to ensure DOM is ready
+      const timer = setTimeout(() => searchInputRef.current?.focus(), 300);
+      return () => clearTimeout(timer);
+    }
+  }, [isSearchMode]);
+
   // ── Geolocation ──
   useEffect(() => {
+    // In search mode, don't request geolocation immediately
+    if (isSearchMode) {
+      setLocationStatus("unavailable");
+      return;
+    }
     if (!navigator.geolocation) { setLocationStatus("unavailable"); return; }
 
     const getPosition = (options: PositionOptions) =>
@@ -192,7 +206,7 @@ const EscolherBarbearia = () => {
       } catch { setLocationStatus("unavailable"); }
     };
     requestLocation();
-  }, []);
+  }, [isSearchMode]);
 
   // ── Watch position ──
   useEffect(() => {
