@@ -192,7 +192,7 @@ const BarbershopPublic = () => {
       }
     };
     autoSave();
-  }, [isLoggedIn, tenant, userId, currentPreferred]);
+  }, [isLoggedIn, tenant, userId, currentPreferred, slug]);
 
   // Geolocation
   useEffect(() => {
