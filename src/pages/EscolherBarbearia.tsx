@@ -131,6 +131,7 @@ const EscolherBarbearia = () => {
   const [mapStyle, setMapStyle] = useState<"satellite" | "street">("street");
   const lastLocationRef = useRef<{ lat: number; lng: number } | null>(null);
   const watchIdRef = useRef<number | null>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
   
   const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
@@ -139,6 +140,7 @@ const EscolherBarbearia = () => {
   const [showInstallBanner, setShowInstallBanner] = useState(false);
 
   const isChangeMode = searchParams.get("mode") === "change";
+  const isSearchMode = searchParams.get("mode") === "search";
 
   // ── iOS install banner ──
   useEffect(() => {
@@ -166,8 +168,22 @@ const EscolherBarbearia = () => {
     }
   }, [shouldOpenCurrent, isLoading, hasAutoOpened, currentPreferred, allUnits]);
 
+  // ── Auto-focus search when mode=search ──
+  useEffect(() => {
+    if (isSearchMode && searchInputRef.current) {
+      // Small delay to ensure DOM is ready
+      const timer = setTimeout(() => searchInputRef.current?.focus(), 300);
+      return () => clearTimeout(timer);
+    }
+  }, [isSearchMode]);
+
   // ── Geolocation ──
   useEffect(() => {
+    // In search mode, don't request geolocation immediately
+    if (isSearchMode) {
+      setLocationStatus("unavailable");
+      return;
+    }
     if (!navigator.geolocation) { setLocationStatus("unavailable"); return; }
 
     const getPosition = (options: PositionOptions) =>
@@ -190,7 +206,7 @@ const EscolherBarbearia = () => {
       } catch { setLocationStatus("unavailable"); }
     };
     requestLocation();
-  }, []);
+  }, [isSearchMode]);
 
   // ── Watch position ──
   useEffect(() => {
@@ -545,6 +561,7 @@ const EscolherBarbearia = () => {
         <div className="relative">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/50" />
           <input
+            ref={searchInputRef}
             type="text"
             placeholder="Buscar barbearias..."
             value={search}

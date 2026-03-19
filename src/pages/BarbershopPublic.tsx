@@ -168,6 +168,26 @@ const BarbershopPublic = () => {
     });
   }, []);
 
+  // Auto-save barbearia_preferida_id for logged-in users without one
+  useEffect(() => {
+    if (!isLoggedIn || !tenant || !userId) return;
+    // Only auto-save if user has NO preferred barbershop
+    if (currentPreferred) return;
+
+    const autoSave = async () => {
+      const { error } = await supabase
+        .from("profiles")
+        .update({ barbearia_preferida_id: tenant.id })
+        .eq("id", userId);
+
+      if (!error) {
+        setCurrentPreferred(tenant.id);
+        console.log('[AutoSave] barbearia_preferida_id atualizado para', tenant.id);
+      }
+    };
+    autoSave();
+  }, [isLoggedIn, tenant, userId, currentPreferred]);
+
   // Geolocation
   useEffect(() => {
     if (!navigator.geolocation) return;
