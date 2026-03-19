@@ -526,6 +526,12 @@ const EscolherBarbearia = () => {
   const handleCardClick = useCallback((unit: UnitData) => {
     const slug = unit.brandSlug || unit.id;
     const fromParam = isChangeMode ? "change" : "discover";
+
+    // Persist device-level signal for smart landing page
+    localStorage.setItem('dub_has_barbershop', 'true');
+    localStorage.setItem('dub_last_barbershop_slug', slug);
+    localStorage.setItem('dub_last_barbershop_name', unit.brandName || unit.nome);
+
     navigate(`/${slug}?from=${fromParam}&unidade=${unit.id}`);
   }, [isChangeMode, navigate]);
 

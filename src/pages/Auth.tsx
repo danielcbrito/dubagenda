@@ -48,9 +48,14 @@ const Auth = () => {
   const [searchParams] = useSearchParams();
   const mode = searchParams.get("mode") || "login";
   const signupOrigin = searchParams.get("origin") || "dub_exclusive";
+  const isReturning = searchParams.get("context") === "returning";
+  const lastShopName = typeof window !== "undefined"
+    ? localStorage.getItem("dub_last_barbershop_name")
+    : null;
   
   const [isLoading, setIsLoading] = useState(false);
   const [cooldownTimer, setCooldownTimer] = useState<number>(0);
+  const [loginError, setLoginError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     nome: "",
     email: "",

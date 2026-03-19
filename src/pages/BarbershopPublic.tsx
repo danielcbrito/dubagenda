@@ -535,6 +535,11 @@ const BarbershopPublic = () => {
 
       if (error) throw error;
 
+      // Persist device-level signal for smart landing page
+      localStorage.setItem('dub_has_barbershop', 'true');
+      localStorage.setItem('dub_last_barbershop_slug', slug || tenant.id);
+      localStorage.setItem('dub_last_barbershop_name', tenant.nome);
+
       const { toast } = await import("sonner");
       toast.success(isChangeMode ? "Barbearia atualizada!" : "Barbearia selecionada!");
       navigate(isChangeMode ? "/cliente/perfil" : "/cliente");
