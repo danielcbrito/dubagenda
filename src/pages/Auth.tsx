@@ -30,11 +30,6 @@ const signupSchema = z.object({
     .trim()
     .transform(val => val.replace(/\D/g, ''))
     .refine(validatePhone, "Por favor, insira um telefone válido."),
-  cpf: z.string()
-    .trim()
-    .transform(val => val.replace(/\D/g, ''))
-    .refine(val => val.length === 11, "CPF é obrigatório.")
-    .refine(validateCPF, "CPF inválido."),
   senha: z.string().min(6, "Senha deve ter pelo menos 6 caracteres"),
 });
 
