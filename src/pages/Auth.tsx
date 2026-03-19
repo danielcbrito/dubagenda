@@ -48,9 +48,14 @@ const Auth = () => {
   const [searchParams] = useSearchParams();
   const mode = searchParams.get("mode") || "login";
   const signupOrigin = searchParams.get("origin") || "dub_exclusive";
+  const isReturning = searchParams.get("context") === "returning";
+  const lastShopName = typeof window !== "undefined"
+    ? localStorage.getItem("dub_last_barbershop_name")
+    : null;
   
   const [isLoading, setIsLoading] = useState(false);
   const [cooldownTimer, setCooldownTimer] = useState<number>(0);
+  const [loginError, setLoginError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     nome: "",
     email: "",
@@ -302,6 +307,7 @@ const Auth = () => {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setLoginError(null);
 
     try {
       const validated = loginSchema.parse({
@@ -316,12 +322,13 @@ const Auth = () => {
 
       if (error) {
         if (error.message.includes("Invalid login")) {
-          toast.error("Email ou senha incorretos");
+          setLoginError("Email ou senha incorretos");
         } else if (error.message.includes("Email not confirmed")) {
-          toast.error("Por favor, confirme seu cadastro antes de fazer login");
+          setLoginError("Por favor, confirme seu cadastro antes de fazer login");
         } else {
-          toast.error("Erro ao fazer login: " + error.message);
+          setLoginError("Erro ao fazer login: " + error.message);
         }
+        toast.error(error.message.includes("Invalid login") ? "Email ou senha incorretos" : error.message);
         return;
       }
 
@@ -391,7 +398,9 @@ const Auth = () => {
           <p className="text-[13px] text-muted-foreground mt-1.5">
             {isSignup
               ? "Preencha seus dados para começar"
-              : "Entre com seu email e senha"}
+              : isReturning && lastShopName
+                ? `Entre para agendar na ${lastShopName}`
+                : "Entre com seu email e senha"}
           </p>
         </motion.div>
 
@@ -527,6 +536,52 @@ const Auth = () => {
               </button>
             </div>
           </div>
+
+          {/* Login error recovery */}
+          {!isSignup && loginError && (
+            <div className="space-y-2 pt-1">
+              <p className="text-[13px] text-destructive text-center font-medium">
+                {loginError}
+              </p>
+              <button
+                type="button"
+                onClick={() => navigate('/esqueci-senha')}
+                className="w-full text-[12px] text-primary hover:text-primary/80 text-center transition-colors"
+              >
+                Esqueci minha senha
+              </button>
+              <p className="text-[11px] text-muted-foreground text-center">
+                Não tem cadastro?{' '}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setLoginError(null);
+                    navigate(`/auth?mode=signup`);
+                  }}
+                  className="text-primary hover:text-primary/80 font-medium transition-colors"
+                >
+                  Criar conta grátis
+                </button>
+              </p>
+              {isReturning && (
+                <p className="text-[11px] text-muted-foreground text-center">
+                  Está na barbearia errada?{' '}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      localStorage.removeItem('dub_has_barbershop');
+                      localStorage.removeItem('dub_last_barbershop_slug');
+                      localStorage.removeItem('dub_last_barbershop_name');
+                      navigate('/escolher-barbearia');
+                    }}
+                    className="text-muted-foreground underline hover:text-foreground transition-colors"
+                  >
+                    Escolher outra
+                  </button>
+                </p>
+              )}
+            </div>
+          )}
 
           {/* Submit */}
           <Button

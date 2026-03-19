@@ -7,29 +7,41 @@ import sceneFriendApp from "@/assets/scene-friend-app.png";
 import { AmbientEffects } from "@/components/landing/AmbientEffects";
 import { supabase } from "@/integrations/supabase/client";
 
+type ClienteState = "loading" | "autenticado" | "retornante" | "novo";
+
 const Index = () => {
   const navigate = useNavigate();
-  const [checkingAuth, setCheckingAuth] = useState(true);
+  const [clienteState, setClienteState] = useState<ClienteState>("loading");
 
-  // Redirect authenticated users straight to dashboard
+  const lastShopName = typeof window !== "undefined"
+    ? localStorage.getItem("dub_last_barbershop_name")
+    : null;
+
   useEffect(() => {
-    const checkSession = async () => {
+    const detect = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         if (session) {
-          navigate('/cliente', { replace: true });
+          navigate("/cliente", { replace: true });
           return;
         }
       } catch {
-        // Ignore errors — show landing page
+        // Ignore — continue detection
       }
-      setCheckingAuth(false);
+
+      const hasBarbershop = localStorage.getItem("dub_has_barbershop");
+      if (hasBarbershop === "true") {
+        setClienteState("retornante");
+        return;
+      }
+
+      setClienteState("novo");
     };
-    checkSession();
+    detect();
   }, [navigate]);
 
-  // Show nothing while checking auth to avoid flash
-  if (checkingAuth) {
+  // Splash while detecting state
+  if (clienteState === "loading") {
     return (
       <div className="fixed inset-0 flex items-center justify-center bg-background">
         <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
@@ -48,10 +60,8 @@ const Index = () => {
           className="flex-1 min-h-0 relative overflow-hidden"
           style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}
         >
-          {/* Ambient light system */}
           <AmbientEffects />
 
-          {/* ── Menino triste — descido para ficar mais "dentro" da tela ── */}
           <motion.div
             initial={{ opacity: 0, x: -30 }}
             animate={{ opacity: 1, x: 0 }}
@@ -76,7 +86,6 @@ const Index = () => {
             />
           </motion.div>
 
-          {/* ── Menina com celular — DIREITA ── */}
           <motion.div
             initial={{ opacity: 0, x: 30 }}
             animate={{ opacity: 1, x: 0 }}
@@ -106,9 +115,11 @@ const Index = () => {
         <div
           className="flex-shrink-0 pointer-events-none"
           style={{
-            height: 60, marginTop: -60,
+            height: 60,
+            marginTop: -60,
             background: "linear-gradient(to bottom, transparent, hsl(var(--background)))",
-            position: "relative", zIndex: 2,
+            position: "relative",
+            zIndex: 2,
           }}
         />
 
@@ -138,38 +149,114 @@ const Index = () => {
               }}
               className="text-foreground"
             >
-              Encontre o barbeiro{" "}
-              <em style={{ fontStyle: "italic" }}>certo</em>
-              <br />
-              perto{" "}
-              <span className="text-primary">de você.</span>
+              {clienteState === "retornante" ? (
+                <>
+                  Sua barbearia{" "}
+                  <span className="text-primary">te espera.</span>
+                </>
+              ) : (
+                <>
+                  Encontre o barbeiro{" "}
+                  <em style={{ fontStyle: "italic" }}>certo</em>
+                  <br />
+                  perto{" "}
+                  <span className="text-primary">de você.</span>
+                </>
+              )}
             </h1>
             <p className="text-[12px] text-muted-foreground/60 leading-relaxed m-0">
-              Agendamento sem ligação, sem espera.
+              {clienteState === "retornante"
+                ? "Entre para agendar em segundos."
+                : "Agendamento sem ligação, sem espera."}
             </p>
           </div>
 
-          {/* Botão maior e mais impactante */}
-          <button
-            onClick={() => navigate("/escolher-barbearia")}
-            className="w-full flex items-center justify-between active:scale-[0.97] transition-all border-foreground text-foreground"
-            style={{
-              fontFamily: "'Plus Jakarta Sans', Inter, sans-serif",
-              fontWeight: 700, fontSize: 15,
-              background: "transparent", borderRadius: 14,
-              padding: "14px 18px", borderWidth: "1.8px", borderStyle: "solid",
-              cursor: "pointer",
-              marginBottom: "calc(env(safe-area-inset-bottom, 0px) + 22px)",
-            }}
-          >
-            <span>Encontrar Barbearias</span>
-            <span
-              className="flex items-center justify-center bg-foreground"
-              style={{ width: 28, height: 28, borderRadius: 8 }}
+          {clienteState === "retornante" ? (
+            <div
+              className="flex flex-col gap-2.5"
+              style={{ marginBottom: "calc(env(safe-area-inset-bottom, 0px) + 22px)" }}
             >
-              <ArrowRight className="w-3.5 h-3.5 text-background" />
-            </span>
-          </button>
+              {/* Primary — return to barbershop */}
+              <button
+                onClick={() => navigate("/auth?mode=login&context=returning")}
+                className="w-full flex items-center justify-between active:scale-[0.97] transition-all"
+                style={{
+                  fontFamily: "'Plus Jakarta Sans', Inter, sans-serif",
+                  fontWeight: 700,
+                  fontSize: 15,
+                  background: "hsl(var(--primary))",
+                  color: "hsl(var(--primary-foreground))",
+                  borderRadius: 14,
+                  padding: "14px 18px",
+                  cursor: "pointer",
+                  border: "none",
+                }}
+              >
+                <span>Entrar na minha barbearia</span>
+                <span
+                  className="flex items-center justify-center"
+                  style={{
+                    width: 28,
+                    height: 28,
+                    borderRadius: 8,
+                    background: "hsla(var(--primary-foreground) / 0.2)",
+                  }}
+                >
+                  <ArrowRight className="w-3.5 h-3.5 text-primary-foreground" />
+                </span>
+              </button>
+
+              {lastShopName && (
+                <p className="text-center text-[12px] text-muted-foreground/50">
+                  Sua barbearia: {lastShopName}
+                </p>
+              )}
+
+              {/* Secondary — find another */}
+              <button
+                onClick={() => navigate("/escolher-barbearia")}
+                className="w-full flex items-center justify-center active:scale-[0.97] transition-all text-muted-foreground"
+                style={{
+                  fontFamily: "'Plus Jakarta Sans', Inter, sans-serif",
+                  fontWeight: 600,
+                  fontSize: 13,
+                  background: "transparent",
+                  borderRadius: 14,
+                  padding: "12px 18px",
+                  cursor: "pointer",
+                  border: "1.5px solid hsl(var(--border))",
+                }}
+              >
+                Encontrar outra barbearia
+              </button>
+            </div>
+          ) : (
+            /* New visitor — original CTA */
+            <button
+              onClick={() => navigate("/escolher-barbearia")}
+              className="w-full flex items-center justify-between active:scale-[0.97] transition-all border-foreground text-foreground"
+              style={{
+                fontFamily: "'Plus Jakarta Sans', Inter, sans-serif",
+                fontWeight: 700,
+                fontSize: 15,
+                background: "transparent",
+                borderRadius: 14,
+                padding: "14px 18px",
+                borderWidth: "1.8px",
+                borderStyle: "solid",
+                cursor: "pointer",
+                marginBottom: "calc(env(safe-area-inset-bottom, 0px) + 22px)",
+              }}
+            >
+              <span>Encontrar Barbearias</span>
+              <span
+                className="flex items-center justify-center bg-foreground"
+                style={{ width: 28, height: 28, borderRadius: 8 }}
+              >
+                <ArrowRight className="w-3.5 h-3.5 text-background" />
+              </span>
+            </button>
+          )}
         </motion.div>
       </div>
     </div>
