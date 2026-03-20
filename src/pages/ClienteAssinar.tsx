@@ -110,7 +110,7 @@ function BarbershopCard({
             <span className="text-[14px] font-bold text-foreground truncate">{name}</span>
             {isDub && (
               <span className="text-[8px] font-bold uppercase tracking-widest bg-primary/10 text-primary px-1.5 py-0.5 rounded flex-shrink-0">
-                <Crown className="w-2.5 h-2.5 inline -mt-px mr-0.5" />
+                <Star className="w-2.5 h-2.5 inline -mt-px mr-0.5" />
                 Referência
               </span>
             )}
