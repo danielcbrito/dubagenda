@@ -5,10 +5,9 @@ import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { z } from "zod";
-import { Loader2, Eye, EyeOff, Mail, Lock } from "lucide-react";
+import { Loader2, Eye, EyeOff, Mail } from "lucide-react";
 import { BackArrow } from "@/components/ui/back-arrow";
 import { SupportChatBubble } from "@/components/support/SupportChatBubble";
-import logoDub from "@/assets/logo-dub.png";
 import { motion } from "framer-motion";
 
 const signupSchema = z.object({
@@ -234,7 +233,7 @@ const Auth = () => {
     });
   };
 
-  const inputClasses = "h-12 pl-11 bg-muted/50 border-border text-foreground placeholder:text-muted-foreground/50 rounded-xl focus:border-primary/50 focus:ring-1 focus:ring-primary/20 transition-all text-sm";
+  const inputClasses = "h-14 bg-muted/40 border-border/60 text-foreground placeholder:text-muted-foreground/40 rounded-2xl focus:border-foreground/30 focus:ring-0 transition-all text-[15px] px-5";
 
   // Magic link sent confirmation screen
   if (isSignup && magicLinkSent) {
@@ -308,179 +307,170 @@ const Auth = () => {
         </button>
       </motion.div>
 
-      {/* Content */}
-      <div className="flex-1 flex flex-col justify-center px-6 overflow-y-auto">
-        {/* Logo + Title */}
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-          className="flex flex-col items-center mb-6"
-        >
-          {/* Logo removed — clean entry */}
-          <h1 className="text-2xl font-bold text-foreground tracking-tight font-display">
-            {isSignup ? "Criar conta" : "Bem-vindo de volta"}
-          </h1>
-          <p className="text-[13px] text-muted-foreground mt-1.5">
-            {isSignup
-              ? "Informe seu email para receber o link de acesso"
-              : "Entre com seu email e senha"}
-          </p>
-        </motion.div>
-
-        {/* OAuth buttons */}
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.08, ease: [0.22, 1, 0.36, 1] }}
-          className="w-full max-w-sm mx-auto space-y-3 mb-6"
-        >
-          <button
-            type="button"
-            onClick={handleAppleLogin}
-            className="w-full flex items-center justify-center gap-3 py-3.5 rounded-xl bg-foreground text-background font-medium text-sm border border-foreground active:opacity-80 transition-opacity"
+      {/* Content — centered with keyboard-safe padding */}
+      <div
+        className="flex-1 flex flex-col justify-center px-6 overflow-y-auto"
+        style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
+      >
+        <div className="w-full max-w-sm mx-auto">
+          {/* Title */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+            className="text-center mb-8"
           >
-            <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current">
-              <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/>
-            </svg>
-            Continuar com Apple
-          </button>
+            <h1 className="text-[22px] font-bold text-foreground tracking-tight font-display">
+              {isSignup ? "Entrar ou criar conta" : "Entrar na sua conta"}
+            </h1>
+          </motion.div>
 
-          <button
-            type="button"
-            onClick={handleGoogleLogin}
-            className="w-full flex items-center justify-center gap-3 py-3.5 rounded-xl bg-card text-foreground font-medium text-sm border border-border active:opacity-80 transition-opacity"
+          {/* Form — Email first, then Continue */}
+          <motion.form
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.06, ease: [0.22, 1, 0.36, 1] }}
+            onSubmit={isSignup ? handleSignup : handleLogin}
+            className="space-y-3"
           >
-            <svg viewBox="0 0 24 24" className="w-5 h-5">
-              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-              <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-            </svg>
-            Continuar com Google
-          </button>
+            {/* Email */}
+            <Input
+              name="email"
+              type="email"
+              required
+              value={formData.email}
+              onChange={handleInputChange}
+              className={inputClasses}
+              placeholder="seu@email.com"
+              autoComplete="email"
+              inputMode="email"
+            />
+
+            {/* Senha — only for login */}
+            {!isSignup && (
+              <div className="space-y-2">
+                <div className="relative">
+                  <Input
+                    name="senha"
+                    type={showPassword ? "text" : "password"}
+                    required
+                    value={formData.senha}
+                    onChange={handleInputChange}
+                    className={`${inputClasses} pr-12`}
+                    placeholder="Sua senha"
+                    autoComplete="current-password"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground/40 hover:text-muted-foreground transition-colors"
+                  >
+                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  </button>
+                </div>
+                <div className="flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() => navigate("/esqueci-senha")}
+                    className="text-[12px] text-primary/80 hover:text-primary transition-colors font-medium"
+                  >
+                    Esqueci a senha
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Login error */}
+            {!isSignup && loginError && (
+              <p className="text-[13px] text-destructive text-center font-medium">
+                {loginError}
+              </p>
+            )}
+
+            {/* Continue / Entrar button */}
+            <Button
+              type="submit"
+              className="w-full h-14 rounded-2xl text-[15px] font-semibold bg-foreground text-background hover:bg-foreground/90 active:scale-[0.98] transition-all duration-200"
+              disabled={isLoading || cooldownTimer > 0}
+            >
+              {isLoading ? (
+                <span className="flex items-center gap-2">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  {isSignup ? "Enviando..." : "Entrando..."}
+                </span>
+              ) : cooldownTimer > 0 ? (
+                `Aguarde ${cooldownTimer}s`
+              ) : (
+                "Continuar"
+              )}
+            </Button>
+          </motion.form>
 
           {/* Separator */}
-          <div className="flex items-center gap-3 py-1">
-            <div className="flex-1 h-px bg-border" />
-            <span className="text-[11px] text-muted-foreground/60 uppercase tracking-wider">ou</span>
-            <div className="flex-1 h-px bg-border" />
-          </div>
-        </motion.div>
-
-        {/* Form */}
-        <motion.form
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
-          onSubmit={isSignup ? handleSignup : handleLogin}
-          className="w-full max-w-sm mx-auto space-y-4"
-        >
-          {/* Email */}
-          <div className="space-y-1.5">
-            <label className="text-[12px] font-medium text-muted-foreground uppercase tracking-wider block">
-              Email
-            </label>
-            <div className="relative">
-              <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-[18px] h-[18px] text-muted-foreground/40" />
-              <Input
-                name="email"
-                type="email"
-                required
-                value={formData.email}
-                onChange={handleInputChange}
-                className={inputClasses}
-                placeholder="seu@email.com"
-              />
-            </div>
-          </div>
-
-          {/* Senha — only for login */}
-          {!isSignup && (
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <label className="text-[12px] font-medium text-muted-foreground uppercase tracking-wider">
-                  Senha
-                </label>
-                <button
-                  type="button"
-                  onClick={() => navigate("/esqueci-senha")}
-                  className="text-[11px] text-primary/80 hover:text-primary transition-colors font-medium"
-                >
-                  Esqueci a senha
-                </button>
-              </div>
-              <div className="relative">
-                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-[18px] h-[18px] text-muted-foreground/40" />
-                <Input
-                  name="senha"
-                  type={showPassword ? "text" : "password"}
-                  required
-                  value={formData.senha}
-                  onChange={handleInputChange}
-                  className={`${inputClasses} pr-11`}
-                  placeholder="Sua senha"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground/40 hover:text-muted-foreground transition-colors"
-                >
-                  {showPassword ? <EyeOff className="w-[18px] h-[18px]" /> : <Eye className="w-[18px] h-[18px]" />}
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Login error */}
-          {!isSignup && loginError && (
-            <p className="text-[13px] text-destructive text-center font-medium">
-              {loginError}
-            </p>
-          )}
-
-          {/* Submit */}
-          <Button
-            type="submit"
-            className="w-full h-[50px] mt-2 rounded-xl text-[14px] font-semibold transition-all duration-200"
-            style={{
-              background: "var(--gradient-primary)",
-              boxShadow: "var(--shadow-glow-red)",
-            }}
-            disabled={isLoading || cooldownTimer > 0}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.4, delay: 0.12 }}
+            className="flex items-center gap-4 my-5"
           >
-            {isLoading ? (
-              <span className="flex items-center gap-2">
-                <Loader2 className="w-4 h-4 animate-spin" />
-                {isSignup ? "Enviando..." : "Entrando..."}
-              </span>
-            ) : cooldownTimer > 0 ? (
-              `Aguarde ${cooldownTimer}s`
-            ) : (
-              isSignup ? "Continuar" : "Entrar"
-            )}
-          </Button>
-        </motion.form>
+            <div className="flex-1 h-px bg-border" />
+            <span className="text-[12px] text-muted-foreground/50 lowercase">ou</span>
+            <div className="flex-1 h-px bg-border" />
+          </motion.div>
 
-        {/* Toggle Mode */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.4, delay: 0.3 }}
-          className="text-center mt-6 pb-8"
-          style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 2rem)" }}
-        >
-          <p className="text-[13px] text-muted-foreground">
-            {isSignup ? "Já tem conta?" : "Não tem conta?"}
+          {/* OAuth buttons */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.14, ease: [0.22, 1, 0.36, 1] }}
+            className="space-y-3"
+          >
             <button
               type="button"
-              onClick={() => navigate(`/auth?mode=${isSignup ? "login" : "signup"}`)}
-              className="ml-1.5 text-primary hover:text-primary/80 font-semibold transition-colors"
+              onClick={handleGoogleLogin}
+              className="w-full flex items-center justify-center gap-3 h-14 rounded-2xl bg-card text-foreground font-medium text-[15px] border border-border/60 active:scale-[0.98] transition-all"
             >
-              {isSignup ? "Entrar" : "Criar agora"}
+              <svg viewBox="0 0 24 24" className="w-5 h-5">
+                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+              </svg>
+              Continuar com Google
             </button>
-          </p>
-        </motion.div>
+
+            <button
+              type="button"
+              onClick={handleAppleLogin}
+              className="w-full flex items-center justify-center gap-3 h-14 rounded-2xl bg-foreground text-background font-medium text-[15px] border border-foreground active:scale-[0.98] transition-all"
+            >
+              <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current">
+                <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/>
+              </svg>
+              Continuar com Apple
+            </button>
+          </motion.div>
+
+          {/* Toggle Mode */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.4, delay: 0.2 }}
+            className="text-center mt-8 pb-6"
+            style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 1.5rem)" }}
+          >
+            <p className="text-[13px] text-muted-foreground">
+              {isSignup ? "Já tem conta?" : "Não tem conta?"}
+              <button
+                type="button"
+                onClick={() => navigate(`/auth?mode=${isSignup ? "login" : "signup"}`)}
+                className="ml-1.5 text-primary hover:text-primary/80 font-semibold transition-colors"
+              >
+                {isSignup ? "Entrar" : "Criar agora"}
+              </button>
+            </p>
+          </motion.div>
+        </div>
       </div>
 
       <SupportChatBubble />
