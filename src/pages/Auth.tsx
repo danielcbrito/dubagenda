@@ -453,25 +453,8 @@ const Auth = () => {
               )}
             </Button>
 
-            {/* Change email link when on password step */}
-            <AnimatePresence>
-              {step === "password" && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="text-center"
-                >
-                  <button
-                    type="button"
-                    onClick={handleBack}
-                    className="text-[12px] text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    Usar outro email
-                  </button>
-                </motion.div>
-              )}
-            </AnimatePresence>
+
+
           </motion.form>
 
           {/* Separator */}
