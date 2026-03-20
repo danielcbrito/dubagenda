@@ -741,7 +741,7 @@ const ClienteAssinar = () => {
                               </div>
                               <button
                                 onClick={handleChangeShop}
-                                style={{ fontSize: '12px', fontWeight: 700, color: '#C9A84C' }}
+                                style={{ fontSize: '12px', fontWeight: 700, color: 'hsl(var(--primary))' }}
                                 className="flex-shrink-0 hover:opacity-80 transition-opacity"
                               >
                                 Trocar
