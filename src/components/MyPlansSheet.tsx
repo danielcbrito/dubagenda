@@ -108,6 +108,10 @@ export function MyPlansSheet({ open, onOpenChange, userId, onSubscriptionChanged
         setLoadingState("error");
         setErrorMessage("Não foi possível carregar os dados do plano. Tente novamente.");
         toast.error("Erro ao carregar plano");
+      } else if (!data) {
+        // Sem plano ativo → redireciona direto para página de assinar
+        onOpenChange(false);
+        navigate("/cliente/assinar");
       } else {
         setSubscription(data);
         setLoadingState("success");
