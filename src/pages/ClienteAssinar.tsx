@@ -21,7 +21,7 @@ import {
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
-import useEmblaCarousel from "embla-carousel-react";
+
 import pixIcon from "@/assets/pix-icon.png";
 import logoDub from "@/assets/logo-dub.png";
 import scissorsDecor from "@/assets/scissors-decorative.png";
