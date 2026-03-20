@@ -658,7 +658,7 @@ const ClienteAssinar = () => {
                                     width: '36px',
                                     height: '36px',
                                     borderRadius: '10px',
-                                    background: '#C9A84C',
+                                    background: 'hsl(var(--primary))',
                                   }}
                                 >
                                   <Calendar className="w-4.5 h-4.5 text-white" strokeWidth={2} style={{ width: '18px', height: '18px' }} />
