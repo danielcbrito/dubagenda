@@ -110,7 +110,7 @@ function ProfileItem({ icon: Icon, label, onClick, trailing, badge, danger }: Pr
 }
 
 function ThemeToggleItem() {
-  const { resolvedTheme, setTheme } = useTheme();
+  const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === "dark";
 
   return (
@@ -125,19 +125,7 @@ function ThemeToggleItem() {
       <span className="flex-1 text-left text-[13px] font-medium text-foreground">
         {isDark ? "Modo escuro" : "Modo claro"}
       </span>
-      <button
-        onClick={() => setTheme(isDark ? "light" : "dark")}
-        className={cn(
-          "relative w-10 h-[22px] rounded-full transition-colors duration-200",
-          isDark ? "bg-primary" : "bg-muted-foreground/20"
-        )}
-      >
-        <motion.div
-          className="absolute top-[2px] left-[2px] w-[18px] h-[18px] rounded-full bg-primary-foreground shadow-sm"
-          animate={{ x: isDark ? 18 : 0 }}
-          transition={{ type: "spring", stiffness: 500, damping: 30 }}
-        />
-      </button>
+      <ThemeToggle />
     </div>
   );
 }
