@@ -573,7 +573,7 @@ const ClienteAssinar = () => {
                               </h2>
                               <div
                                 className="mt-2 rounded-full"
-                                style={{ width: '32px', height: '2px', background: '#C9A84C', borderRadius: '2px' }}
+                                style={{ width: '32px', height: '2px', background: 'hsl(var(--primary))', borderRadius: '2px' }}
                               />
                             </motion.div>
 
