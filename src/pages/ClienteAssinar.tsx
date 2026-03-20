@@ -545,7 +545,7 @@ const ClienteAssinar = () => {
                                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-[20px]"
                                   style={{ background: '#111111' }}
                                 >
-                                  <Star className="w-2.5 h-2.5" style={{ color: '#C9A84C' }} fill="#C9A84C" strokeWidth={0} />
+                                  <Star className="w-2.5 h-2.5 text-primary-foreground" fill="hsl(var(--primary))" strokeWidth={0} />
                                   <span className="text-[10px] font-bold uppercase text-white" style={{ letterSpacing: '1px' }}>
                                     Mais escolhido
                                   </span>
@@ -573,7 +573,7 @@ const ClienteAssinar = () => {
                               </h2>
                               <div
                                 className="mt-2 rounded-full"
-                                style={{ width: '32px', height: '2px', background: '#C9A84C', borderRadius: '2px' }}
+                                style={{ width: '32px', height: '2px', background: 'hsl(var(--primary))', borderRadius: '2px' }}
                               />
                             </motion.div>
 
@@ -622,13 +622,13 @@ const ClienteAssinar = () => {
                                   /mês
                                 </span>
                               </div>
-                              <p className="mt-1.5" style={{ fontSize: '12px', fontWeight: 600, color: '#C9A84C' }}>
+                              <p className="mt-1.5" style={{ fontSize: '12px', fontWeight: 600, color: 'hsl(var(--primary))' }}>
                                 Apenas R$ {dailyCost}/dia · Cancele quando quiser
                               </p>
                             </motion.div>
 
                             {/* ── Divider ── */}
-                            <div className="my-6" style={{ height: '1px', background: '#EEE9E0' }} />
+                            <div className="my-6" style={{ height: '1px', background: 'hsl(var(--border))' }} />
 
                             {/* ── Seção Benefícios ── */}
                             <motion.div
@@ -636,7 +636,7 @@ const ClienteAssinar = () => {
                               animate={{ opacity: 1 }}
                               transition={{ delay: 0.18, duration: 0.3 }}
                             >
-                              <p className="mb-4" style={{ fontSize: '10px', fontWeight: 700, color: '#C9A84C', textTransform: 'uppercase', letterSpacing: '2px' }}>
+                              <p className="mb-4" style={{ fontSize: '10px', fontWeight: 700, color: 'hsl(var(--primary))', textTransform: 'uppercase', letterSpacing: '2px' }}>
                                 BENEFÍCIOS EXCLUSIVOS
                               </p>
 
@@ -658,7 +658,7 @@ const ClienteAssinar = () => {
                                     width: '36px',
                                     height: '36px',
                                     borderRadius: '10px',
-                                    background: '#C9A84C',
+                                    background: 'hsl(var(--primary))',
                                   }}
                                 >
                                   <Calendar className="w-4.5 h-4.5 text-white" strokeWidth={2} style={{ width: '18px', height: '18px' }} />
@@ -684,7 +684,7 @@ const ClienteAssinar = () => {
                                     className="flex items-center gap-3"
                                     style={{
                                       padding: '12px 0',
-                                      borderBottom: i < benefits.length - 1 ? '1px solid #F0EBE2' : 'none',
+                                      borderBottom: i < benefits.length - 1 ? '1px solid hsl(var(--border))' : 'none',
                                     }}
                                   >
                                     <div
@@ -741,7 +741,7 @@ const ClienteAssinar = () => {
                               </div>
                               <button
                                 onClick={handleChangeShop}
-                                style={{ fontSize: '12px', fontWeight: 700, color: '#C9A84C' }}
+                                style={{ fontSize: '12px', fontWeight: 700, color: 'hsl(var(--primary))' }}
                                 className="flex-shrink-0 hover:opacity-80 transition-opacity"
                               >
                                 Trocar
