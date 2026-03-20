@@ -55,10 +55,10 @@ const Index = () => {
             transition={{ duration: 0.6, delay: 0.65, ease: [0.22, 1, 0.36, 1] }}
             className="absolute"
             style={{
-              bottom: "clamp(-4%, -2vh, 0%)",
-              right: "clamp(-16%, -10vw, -6%)",
-              width: "clamp(92%, 106vw, 126%)",
-              height: "clamp(44%, 52vh, 60%)",
+              bottom: "clamp(-2%, 0vh, 2%)",
+              right: "clamp(-14%, -8vw, -4%)",
+              width: "clamp(85%, 98vw, 116%)",
+              height: "clamp(40%, 46vh, 54%)",
               display: "flex",
               alignItems: "flex-end",
               justifyContent: "flex-end",
