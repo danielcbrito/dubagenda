@@ -545,7 +545,7 @@ const ClienteAssinar = () => {
                                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-[20px]"
                                   style={{ background: '#111111' }}
                                 >
-                                  <Star className="w-2.5 h-2.5" style={{ color: '#C9A84C' }} fill="#C9A84C" strokeWidth={0} />
+                                  <Star className="w-2.5 h-2.5 text-primary-foreground" fill="hsl(var(--primary))" strokeWidth={0} />
                                   <span className="text-[10px] font-bold uppercase text-white" style={{ letterSpacing: '1px' }}>
                                     Mais escolhido
                                   </span>
