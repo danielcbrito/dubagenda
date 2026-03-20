@@ -473,10 +473,13 @@ const ClienteAssinar = () => {
             </motion.div>
           )}
 
-          {/* ═══ Step 2: Planos — Premium Barbershop Showcase ═══ */}
+          {/* ═══ Step 2: Planos — Redesign Premium ═══ */}
           {step === 2 && (
-            <motion.div key="step2" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              className="h-full flex flex-col">
+            <motion.div key="step2" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+              transition={{ duration: 0.4, ease: "easeOut" }}
+              className="h-full flex flex-col"
+              style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+            >
 
               {hasActiveSubscription && (
                 <div className="flex-shrink-0 mx-4 mb-2 bg-destructive/10 border border-destructive/30 rounded-lg p-3">
@@ -486,7 +489,7 @@ const ClienteAssinar = () => {
 
               {plans.length === 0 ? (
                 <div className="flex-1 flex flex-col items-center justify-center px-6">
-                  <Crown className="w-6 h-6 text-muted-foreground/40 mb-3" />
+                  <Scissors className="w-6 h-6 text-muted-foreground/40 mb-3" />
                   <p className="text-sm font-medium text-muted-foreground">Nenhum plano disponível</p>
                   <p className="text-xs text-muted-foreground/60 mt-1">Esta barbearia ainda não possui planos</p>
                 </div>
@@ -513,191 +516,227 @@ const ClienteAssinar = () => {
                       const benefits = Array.isArray(plan.beneficios_json) ? plan.beneficios_json : [];
                       const dailyCost = (plan.preco_mensal / 30).toFixed(2).replace('.', ',');
                       const isPopular = planIdx === 0 || plans.length === 1;
+                      const priceWhole = Math.floor(plan.preco_mensal);
+                      const priceCents = (plan.preco_mensal % 1).toFixed(2).slice(2);
 
                       return (
                         <div
                           key={plan.id}
                           className="w-full flex-shrink-0 snap-center overflow-y-auto overscroll-y-contain"
                         >
-                          <div className="px-5 pt-2 pb-8 max-w-md mx-auto flex flex-col justify-between min-h-full">
-                            <div>
-                              {/* ── Decorative scissors watermark ── */}
-                              <div className="relative">
-                                <motion.div
-                                  initial={{ opacity: 0, rotate: -15 }}
-                                  animate={{ opacity: 0.04, rotate: 0 }}
-                                  transition={{ duration: 0.8 }}
-                                  className="absolute -top-2 -right-2 w-24 h-24 pointer-events-none"
-                                >
-                                  <img src={scissorsDecor} alt="" className="w-full h-full object-contain opacity-50" />
-                                </motion.div>
+                          <div className="px-5 pt-2 pb-8 max-w-md mx-auto">
 
-                                {/* Popular badge */}
-                                {isPopular && (
-                                  <motion.div
-                                    initial={{ opacity: 0, y: -8 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ delay: 0.1 }}
-                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full mb-4"
-                                    style={{
-                                      background: "linear-gradient(135deg, hsl(var(--gold) / 0.15), hsl(var(--gold) / 0.05))",
-                                      border: "1px solid hsl(var(--gold) / 0.25)",
-                                    }}
-                                  >
-                                    <Star className="w-3 h-3 text-gold fill-gold" />
-                                    <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-gold">
-                                      Mais escolhido
-                                    </span>
-                                  </motion.div>
-                                )}
-
-                                {/* Plan name — editorial serif feel */}
-                                <motion.div
-                                  key={`name-${plan.id}`}
-                                  initial={{ opacity: 0, y: 10 }}
-                                  animate={{ opacity: 1, y: 0 }}
-                                  transition={{ duration: 0.4, ease: "easeOut" }}
-                                >
-                                  <h2 className="text-2xl font-bold text-foreground tracking-tight leading-tight font-display">
-                                    {plan.nome}
-                                  </h2>
-                                  {/* Gold accent underline */}
-                                  <div className="mt-2 flex items-center gap-2">
-                                    <div className="h-[2px] w-8 rounded-full bg-gold" />
-                                    <div className="h-[2px] w-3 rounded-full bg-gold/40" />
-                                  </div>
-                                </motion.div>
-
-                                {plan.descricao && (
-                                  <motion.p
-                                    key={`desc-${plan.id}`}
-                                    initial={{ opacity: 0 }}
-                                    animate={{ opacity: 1 }}
-                                    transition={{ delay: 0.08, duration: 0.3 }}
-                                    className="text-[13px] text-muted-foreground leading-relaxed mt-3"
-                                  >
-                                    {plan.descricao}
-                                  </motion.p>
-                                )}
-                              </div>
-
-                              {/* ── Price block — hero pricing ── */}
+                            {/* ── Badge "MAIS ESCOLHIDO" ── */}
+                            {isPopular && (
                               <motion.div
-                                key={`price-${plan.id}`}
-                                initial={{ opacity: 0, y: 12 }}
+                                initial={{ opacity: 0, y: -8 }}
                                 animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: 0.12, duration: 0.4 }}
-                                className="mt-7 relative"
+                                transition={{ delay: 0.1 }}
+                                className="inline-flex items-center gap-1.5 mb-5"
                               >
-                                {/* Subtle glow behind price */}
                                 <div
-                                  className="absolute -inset-4 rounded-2xl pointer-events-none"
-                                  style={{
-                                    background: "radial-gradient(ellipse at center, hsl(var(--gold) / 0.06) 0%, transparent 70%)",
-                                  }}
-                                />
-                                <div className="relative">
-                                  <div className="flex items-baseline">
-                                    <span className="text-sm text-muted-foreground/60 font-medium mr-1.5">R$</span>
-                                    <span className="text-[52px] font-extrabold text-foreground tabular-nums tracking-tighter leading-none">
-                                      {Math.floor(plan.preco_mensal)}
-                                    </span>
-                                    <span className="text-[24px] font-bold text-foreground/70 tabular-nums leading-none ml-0.5">
-                                      ,{(plan.preco_mensal % 1).toFixed(2).slice(2)}
-                                    </span>
-                                    <span className="text-xs text-muted-foreground/40 font-medium ml-2 self-end mb-1.5">/mês</span>
-                                  </div>
-                                  <div className="flex items-center gap-2 mt-1.5">
-                                    <Zap className="w-3 h-3 text-gold/60" />
-                                    <p className="text-[11px] text-muted-foreground/50">
-                                      Apenas R$ {dailyCost}/dia · Cancele quando quiser
-                                    </p>
-                                  </div>
+                                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-[20px]"
+                                  style={{ background: '#111111' }}
+                                >
+                                  <Star className="w-2.5 h-2.5" style={{ color: '#C9A84C' }} fill="#C9A84C" strokeWidth={0} />
+                                  <span className="text-[10px] font-bold uppercase text-white" style={{ letterSpacing: '1px' }}>
+                                    Mais escolhido
+                                  </span>
                                 </div>
                               </motion.div>
+                            )}
 
-                              {/* ── Ornamental divider ── */}
-                              <div className="flex items-center gap-3 my-6">
-                                <div className="flex-1 h-px bg-border/30" />
-                                <Scissors className="w-3.5 h-3.5 text-gold/30 rotate-90" />
-                                <div className="flex-1 h-px bg-border/30" />
-                              </div>
+                            {/* ── Título + Linha dourada ── */}
+                            <motion.div
+                              initial={{ opacity: 0, y: 10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ duration: 0.4, ease: "easeOut" }}
+                            >
+                              <h2
+                                className="leading-none"
+                                style={{
+                                  fontSize: '32px',
+                                  fontWeight: 900,
+                                  letterSpacing: '-1px',
+                                  lineHeight: 1.05,
+                                  color: 'hsl(var(--foreground))',
+                                }}
+                              >
+                                {plan.nome}
+                              </h2>
+                              <div
+                                className="mt-2 rounded-full"
+                                style={{ width: '32px', height: '2px', background: '#C9A84C', borderRadius: '2px' }}
+                              />
+                            </motion.div>
 
-                              {/* ── Benefits list ── */}
-                              <motion.div
-                                key={`benefits-${plan.id}`}
+                            {/* ── Descrição ── */}
+                            {plan.descricao && (
+                              <motion.p
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
-                                transition={{ delay: 0.18, duration: 0.3 }}
+                                transition={{ delay: 0.08, duration: 0.3 }}
+                                className="mt-3 line-clamp-2"
+                                style={{ fontSize: '13px', color: '#888888', lineHeight: 1.6 }}
                               >
-                                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-gold/50 mb-4 flex items-center gap-2">
-                                  <Sparkles className="w-3 h-3" />
-                                  Benefícios exclusivos
-                                </p>
+                                {plan.descricao}
+                              </motion.p>
+                            )}
 
-                                <div className="space-y-3.5">
-                                  {/* Agendamentos — highlighted */}
-                                  <motion.div
-                                    initial={{ opacity: 0, x: -6 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    transition={{ delay: 0.22 }}
-                                    className="flex items-start gap-3 p-3 rounded-xl"
-                                    style={{
-                                      background: "linear-gradient(135deg, hsl(var(--gold) / 0.08), hsl(var(--gold) / 0.02))",
-                                      border: "1px solid hsl(var(--gold) / 0.12)",
-                                    }}
-                                  >
-                                    <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5"
-                                      style={{ background: "hsl(var(--gold) / 0.15)" }}>
-                                      <Crown className="w-3.5 h-3.5 text-gold" />
-                                    </div>
-                                    <div>
-                                      <span className="text-[13px] text-foreground leading-snug font-semibold">
-                                        {plan.limite_agendamentos_mes} agendamento{plan.limite_agendamentos_mes > 1 ? 's' : ''} por mês
-                                      </span>
-                                      <p className="text-[11px] text-muted-foreground/50 mt-0.5">
-                                        Escolha seu horário preferido com prioridade
-                                      </p>
-                                    </div>
-                                  </motion.div>
+                            {/* ── Preço — bloco tipográfico ── */}
+                            <motion.div
+                              initial={{ opacity: 0, y: 12 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ delay: 0.12, duration: 0.4 }}
+                              className="mt-7"
+                            >
+                              <div className="flex items-baseline">
+                                <span style={{ fontSize: '14px', color: '#888888', fontWeight: 500 }} className="mr-1 self-end mb-2">
+                                  R$
+                                </span>
+                                <span
+                                  className="tabular-nums leading-none"
+                                  style={{
+                                    fontSize: '56px',
+                                    fontWeight: 900,
+                                    letterSpacing: '-3px',
+                                    color: 'hsl(var(--foreground))',
+                                  }}
+                                >
+                                  {priceWhole}
+                                </span>
+                                <span
+                                  className="tabular-nums leading-none self-end mb-1.5"
+                                  style={{ fontSize: '20px', fontWeight: 700, color: 'hsl(var(--foreground) / 0.7)' }}
+                                >
+                                  ,{priceCents}
+                                </span>
+                                <span className="self-end mb-2 ml-1.5" style={{ fontSize: '13px', color: '#888888' }}>
+                                  /mês
+                                </span>
+                              </div>
+                              <p className="mt-1.5" style={{ fontSize: '12px', fontWeight: 600, color: '#C9A84C' }}>
+                                Apenas R$ {dailyCost}/dia · Cancele quando quiser
+                              </p>
+                            </motion.div>
 
-                                  {benefits.map((benefit: string, i: number) => (
-                                    <motion.div
-                                      key={i}
-                                      initial={{ opacity: 0, x: -6 }}
-                                      animate={{ opacity: 1, x: 0 }}
-                                      transition={{ delay: 0.26 + i * 0.04 }}
-                                      className="flex items-start gap-3 pl-1"
-                                    >
-                                      <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5"
-                                        style={{ background: "hsl(var(--primary) / 0.1)" }}>
-                                        <Check className="w-3 h-3 text-primary" strokeWidth={2.5} />
-                                      </div>
-                                      <span className="text-[13px] text-muted-foreground leading-snug">{benefit}</span>
-                                    </motion.div>
-                                  ))}
+                            {/* ── Divider ── */}
+                            <div className="my-6" style={{ height: '1px', background: '#EEE9E0' }} />
+
+                            {/* ── Seção Benefícios ── */}
+                            <motion.div
+                              initial={{ opacity: 0 }}
+                              animate={{ opacity: 1 }}
+                              transition={{ delay: 0.18, duration: 0.3 }}
+                            >
+                              <p className="mb-4" style={{ fontSize: '10px', fontWeight: 700, color: '#C9A84C', textTransform: 'uppercase', letterSpacing: '2px' }}>
+                                BENEFÍCIOS EXCLUSIVOS
+                              </p>
+
+                              {/* Card destaque — agendamentos */}
+                              <motion.div
+                                initial={{ opacity: 0, x: -6 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ delay: 0.22 }}
+                                className="flex items-center gap-3.5 mb-4"
+                                style={{
+                                  background: '#111111',
+                                  borderRadius: '16px',
+                                  padding: '14px 16px',
+                                }}
+                              >
+                                <div
+                                  className="flex items-center justify-center flex-shrink-0"
+                                  style={{
+                                    width: '36px',
+                                    height: '36px',
+                                    borderRadius: '10px',
+                                    background: '#C9A84C',
+                                  }}
+                                >
+                                  <Calendar className="w-4.5 h-4.5 text-white" strokeWidth={2} style={{ width: '18px', height: '18px' }} />
+                                </div>
+                                <div>
+                                  <span style={{ fontSize: '13px', fontWeight: 700, color: '#FFFFFF' }}>
+                                    {plan.limite_agendamentos_mes} agendamento{plan.limite_agendamentos_mes > 1 ? 's' : ''} por mês
+                                  </span>
+                                  <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.5)', marginTop: '2px' }}>
+                                    Escolha seu horário preferido com prioridade
+                                  </p>
                                 </div>
                               </motion.div>
-                            </div>
 
-                            {/* ── Shop indicator — bottom ── */}
+                              {/* Lista de benefícios */}
+                              <div>
+                                {benefits.map((benefit: string, i: number) => (
+                                  <motion.div
+                                    key={i}
+                                    initial={{ opacity: 0, x: -6 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    transition={{ delay: 0.26 + i * 0.04 }}
+                                    className="flex items-center gap-3"
+                                    style={{
+                                      padding: '12px 0',
+                                      borderBottom: i < benefits.length - 1 ? '1px solid #F0EBE2' : 'none',
+                                    }}
+                                  >
+                                    <div
+                                      className="flex items-center justify-center flex-shrink-0"
+                                      style={{
+                                        width: '20px',
+                                        height: '20px',
+                                        borderRadius: '50%',
+                                        background: '#EEFAF0',
+                                      }}
+                                    >
+                                      <Check className="w-3 h-3" style={{ color: '#22A855' }} strokeWidth={2.5} />
+                                    </div>
+                                    <span style={{ fontSize: '13px', color: 'hsl(var(--foreground) / 0.8)', fontWeight: 500 }}>
+                                      {benefit}
+                                    </span>
+                                  </motion.div>
+                                ))}
+                              </div>
+                            </motion.div>
+
+                            {/* ── Card barbearia selecionada ── */}
                             <motion.div
                               initial={{ opacity: 0 }}
                               animate={{ opacity: 1 }}
                               transition={{ delay: 0.35 }}
-                              className="mt-8 flex items-center gap-2.5 py-3 px-3 rounded-xl border border-border/15 bg-secondary/20"
+                              className="mt-6 flex items-center gap-3"
+                              style={{
+                                background: 'hsl(var(--muted) / 0.3)',
+                                borderRadius: '12px',
+                                padding: '12px 14px',
+                              }}
                             >
-                              <div className="w-7 h-7 rounded-lg bg-muted/30 flex items-center justify-center overflow-hidden flex-shrink-0">
+                              <div
+                                className="flex items-center justify-center flex-shrink-0 overflow-hidden"
+                                style={{
+                                  width: '28px',
+                                  height: '28px',
+                                  borderRadius: '8px',
+                                  background: '#111111',
+                                }}
+                              >
                                 {selectedTenantId === "dub" ? (
                                   <img src={logoDub} alt="DUB" className="w-4 h-4 object-contain" />
                                 ) : (
-                                  <Scissors className="w-3.5 h-3.5 text-muted-foreground/35" />
+                                  <Scissors className="w-3.5 h-3.5 text-white" />
                                 )}
                               </div>
                               <div className="flex-1 min-w-0">
-                                <span className="text-[11px] text-muted-foreground/50 block truncate">{selectedShopName}</span>
+                                <span style={{ fontSize: '13px', fontWeight: 600, color: 'hsl(var(--foreground))' }} className="block truncate">
+                                  {selectedShopName}
+                                </span>
+                                <span style={{ fontSize: '11px', color: '#888888' }}>Unidade selecionada</span>
                               </div>
-                              <button onClick={handleChangeShop} className="text-[11px] text-primary/60 font-medium hover:text-primary transition-colors flex-shrink-0">
+                              <button
+                                onClick={handleChangeShop}
+                                style={{ fontSize: '12px', fontWeight: 700, color: '#C9A84C' }}
+                                className="flex-shrink-0 hover:opacity-80 transition-opacity"
+                              >
                                 Trocar
                               </button>
                             </motion.div>
@@ -708,39 +747,46 @@ const ClienteAssinar = () => {
                   </div>
 
                   {/* Fixed bottom area — CTA */}
-                  <div className="flex-shrink-0 px-5 pb-[max(env(safe-area-inset-bottom),1rem)] pt-3">
+                  <div
+                    className="flex-shrink-0"
+                    style={{
+                      background: 'hsl(var(--background))',
+                      borderTop: '1px solid #EEE9E0',
+                      padding: '14px 20px 32px',
+                    }}
+                  >
                     <div className="max-w-md mx-auto space-y-3">
                       <motion.button
                         whileTap={{ scale: 0.97 }}
                         onClick={() => !hasActiveSubscription && plans[currentPlanIndex] && handleSelectPlan(plans[currentPlanIndex])}
                         disabled={hasActiveSubscription}
                         className={cn(
-                          "w-full h-[52px] rounded-xl text-sm font-semibold flex items-center justify-center gap-2 transition-all relative overflow-hidden",
-                          "bg-foreground text-background",
+                          "w-full flex items-center justify-center gap-2 transition-all relative overflow-hidden",
                           hasActiveSubscription && "opacity-50 cursor-not-allowed"
                         )}
+                        style={{
+                          background: '#111111',
+                          borderRadius: '16px',
+                          padding: '16px',
+                          color: '#FFFFFF',
+                          fontSize: '15px',
+                          fontWeight: 800,
+                        }}
                       >
-                        {/* Shine effect */}
-                        <div
-                          className="absolute inset-0 pointer-events-none"
-                          style={{
-                            background: "linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.08) 50%, transparent 60%)",
-                          }}
-                        />
-                        <span className="relative z-10">Assinar este plano</span>
-                        <ArrowRight className="w-4 h-4 relative z-10" />
+                        <span>Assinar este plano</span>
+                        <ArrowRight className="w-4 h-4" />
                       </motion.button>
 
                       {/* Trust signals */}
-                      <div className="flex items-center justify-center gap-3">
-                        <div className="flex items-center gap-1">
-                          <Shield className="w-3 h-3 text-muted-foreground/30" />
-                          <span className="text-[9px] text-muted-foreground/30 uppercase tracking-wider font-medium">Seguro</span>
+                      <div className="flex items-center justify-center gap-4">
+                        <div className="flex items-center gap-1.5">
+                          <Shield className="w-3 h-3" style={{ color: '#888888' }} />
+                          <span style={{ fontSize: '10px', color: '#888888', fontWeight: 500 }}>Seguro</span>
                         </div>
-                        <div className="w-px h-2.5 bg-border/20" />
-                        <div className="flex items-center gap-1">
-                          <Zap className="w-3 h-3 text-muted-foreground/30" />
-                          <span className="text-[9px] text-muted-foreground/30 uppercase tracking-wider font-medium">Cancele a qualquer hora</span>
+                        <div style={{ width: '1px', height: '10px', background: '#E0DAD2' }} />
+                        <div className="flex items-center gap-1.5">
+                          <Check className="w-3 h-3" style={{ color: '#888888' }} strokeWidth={2} />
+                          <span style={{ fontSize: '10px', color: '#888888', fontWeight: 500 }}>Cancele quando quiser</span>
                         </div>
                       </div>
                     </div>
