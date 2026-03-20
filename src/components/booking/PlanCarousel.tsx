@@ -5,7 +5,7 @@ import {
   ArrowRight,
   Calendar,
   Check,
-  ChevronRight,
+  MapPin,
   Shield,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -82,33 +82,28 @@ export function PlanCarousel({
   return (
     <div className="flex-1 flex flex-col min-h-0">
 
-      {/* Shop selector — compact top bar */}
-      <div className="flex-shrink-0 px-5 pt-1 pb-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 min-w-0">
-            <div className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
-            <span className="text-xs text-muted-foreground truncate">
-              {selectedShopName}
-            </span>
-          </div>
-          <button
-            onClick={onChangeShop}
-            className="flex items-center gap-0.5 text-primary active:opacity-70 transition-opacity flex-shrink-0"
-          >
-            <span style={{ fontSize: "11px", fontWeight: 600 }}>Trocar</span>
-            <ChevronRight className="w-3 h-3" />
-          </button>
-        </div>
+      {/* Shop selector — inline pill */}
+      <div className="flex-shrink-0 flex justify-center pt-1 pb-3">
+        <button
+          onClick={onChangeShop}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border/50 bg-card active:scale-[0.97] transition-transform"
+        >
+          <MapPin className="w-3 h-3 text-muted-foreground/50" />
+          <span className="text-[11px] font-medium text-foreground/80 truncate max-w-[160px]">
+            {selectedShopName}
+          </span>
+          <span className="text-[10px] font-semibold text-primary">Trocar</span>
+        </button>
       </div>
 
-      {/* Carousel */}
+      {/* Carousel — full height, no bg separation */}
       <div className="flex-1 min-h-0 flex flex-col justify-center">
         <div className="overflow-hidden" ref={emblaRef}>
           <div className="flex">
             {plans.map((plan, idx) => {
               const progress = scrollProgress[idx] ?? 0;
-              const scale = 0.85 + progress * 0.15;
-              const opacity = 0.35 + progress * 0.65;
+              const scale = 0.86 + progress * 0.14;
+              const opacity = 0.5 + progress * 0.5;
               const benefits = Array.isArray(plan.beneficios_json)
                 ? plan.beneficios_json
                 : [];
@@ -121,7 +116,7 @@ export function PlanCarousel({
               return (
                 <div
                   key={plan.id}
-                  className="flex-[0_0_78%] min-w-0 px-1.5"
+                  className="flex-[0_0_76%] min-w-0 px-1.5"
                   style={{
                     transform: `scale(${scale})`,
                     opacity,
@@ -132,16 +127,16 @@ export function PlanCarousel({
                   <div
                     className={cn(
                       "rounded-2xl p-5 h-full flex flex-col",
-                      "bg-card border",
+                      "border",
                       isActive
-                        ? "border-border shadow-[0_4px_24px_rgba(0,0,0,0.06)]"
-                        : "border-border/30"
+                        ? "bg-card border-border/60 shadow-[0_2px_16px_rgba(0,0,0,0.05)]"
+                        : "bg-card/60 border-border/20"
                     )}
                   >
-                    {/* Plan name — minimal */}
+                    {/* Plan name */}
                     <div className="mb-1">
                       <p
-                        className="text-muted-foreground uppercase"
+                        className="text-muted-foreground/50 uppercase"
                         style={{
                           fontSize: "9px",
                           fontWeight: 700,
@@ -165,15 +160,15 @@ export function PlanCarousel({
 
                     {plan.descricao && (
                       <p
-                        className="text-muted-foreground line-clamp-1"
+                        className="text-muted-foreground/60 line-clamp-1"
                         style={{ fontSize: "11px", lineHeight: 1.5 }}
                       >
                         {plan.descricao}
                       </p>
                     )}
 
-                    {/* Price block — centered, dominant */}
-                    <div className="flex-1 flex flex-col items-center justify-center py-5">
+                    {/* Price — centered */}
+                    <div className="flex-1 flex flex-col items-center justify-center py-4">
                       <div className="flex items-baseline">
                         <span
                           className="text-muted-foreground self-end mb-2.5"
@@ -199,7 +194,7 @@ export function PlanCarousel({
                             ,{priceCents}
                           </span>
                           <span
-                            className="text-muted-foreground"
+                            className="text-muted-foreground/50"
                             style={{
                               fontSize: "10px",
                               fontWeight: 500,
@@ -228,9 +223,9 @@ export function PlanCarousel({
                     </div>
 
                     {/* Divider */}
-                    <div className="border-t border-border/40 mb-3" />
+                    <div className="border-t border-border/30 mb-3" />
 
-                    {/* Appointments card */}
+                    {/* Appointments */}
                     <div className="flex items-center gap-3 mb-3 bg-foreground rounded-xl p-3">
                       <div
                         className="flex items-center justify-center flex-shrink-0 bg-primary rounded-[10px]"
@@ -270,7 +265,7 @@ export function PlanCarousel({
                               padding: "7px 0",
                               borderBottom:
                                 i < Math.min(benefits.length, 3) - 1
-                                  ? "1px solid hsl(var(--border) / 0.3)"
+                                  ? "1px solid hsl(var(--border) / 0.25)"
                                   : "none",
                             }}
                           >
@@ -283,13 +278,12 @@ export function PlanCarousel({
                               }}
                             >
                               <Check
-                                className="text-success"
                                 strokeWidth={3}
                                 style={{ width: "10px", height: "10px", color: "#22A855" }}
                               />
                             </div>
                             <span
-                              className="text-foreground/65"
+                              className="text-foreground/60"
                               style={{ fontSize: "11px", fontWeight: 500 }}
                             >
                               {b}
@@ -327,11 +321,11 @@ export function PlanCarousel({
         )}
       </div>
 
-      {/* Bottom CTA — clean, just the button */}
+      {/* Bottom CTA — no background separation, seamless */}
       <div
-        className="flex-shrink-0 border-t border-border/30 bg-background"
+        className="flex-shrink-0"
         style={{
-          padding: "12px 20px max(env(safe-area-inset-bottom), 16px)",
+          padding: "10px 20px max(env(safe-area-inset-bottom), 14px)",
         }}
       >
         <div className="max-w-md mx-auto">
@@ -359,24 +353,24 @@ export function PlanCarousel({
             <ArrowRight className="w-4 h-4" />
           </motion.button>
 
-          <div className="flex items-center justify-center gap-3 mt-2.5">
+          <div className="flex items-center justify-center gap-3 mt-2">
             <div className="flex items-center gap-1">
-              <Shield className="w-2.5 h-2.5 text-muted-foreground/30" />
+              <Shield className="w-2.5 h-2.5 text-muted-foreground/25" />
               <span
-                className="text-muted-foreground/30"
+                className="text-muted-foreground/25"
                 style={{ fontSize: "9px", fontWeight: 500 }}
               >
                 Seguro
               </span>
             </div>
-            <div className="w-px h-2 bg-border/40" />
+            <div className="w-px h-2 bg-border/30" />
             <div className="flex items-center gap-1">
               <Check
-                className="w-2.5 h-2.5 text-muted-foreground/30"
+                className="w-2.5 h-2.5 text-muted-foreground/25"
                 strokeWidth={2}
               />
               <span
-                className="text-muted-foreground/30"
+                className="text-muted-foreground/25"
                 style={{ fontSize: "9px", fontWeight: 500 }}
               >
                 Cancele quando quiser
