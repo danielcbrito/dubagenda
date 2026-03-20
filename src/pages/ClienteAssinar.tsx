@@ -796,9 +796,7 @@ const ClienteAssinar = () => {
               )}
             </motion.div>
           )}
-              )}
-            </motion.div>
-          )}
+
 
           {/* ═══ Step 3: Barbeiro ═══ */}
           {step === 3 && (
