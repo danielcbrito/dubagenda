@@ -156,6 +156,9 @@ function MaintenanceWrapper({ children }: { children: React.ReactNode }) {
  * Limpa sessões inválidas automaticamente para evitar loops de erro
  */
 function AuthSessionGuard({ children }: { children: React.ReactNode }) {
+  const navigate = useNavigate();
+  const location = useLocation();
+
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'TOKEN_REFRESHED') {
@@ -163,15 +166,13 @@ function AuthSessionGuard({ children }: { children: React.ReactNode }) {
       }
       if (event === 'SIGNED_OUT') {
         console.log('[Auth] Usuário fez logout');
+        queryClient.clear();
       }
       if (event === 'SIGNED_IN') {
         console.log('[Auth] Sessão restaurada/login');
       }
     });
 
-    // Apenas verificar sessão — NÃO forçar signOut em erro.
-    // Erros de getSession podem ser temporários (rede, timing).
-    // O autoRefreshToken do Supabase resolve sozinho.
     supabase.auth.getSession().then(({ data, error }) => {
       if (error) {
         console.warn('[Auth] Erro ao verificar sessão (não deslogando):', error.message);
@@ -182,6 +183,80 @@ function AuthSessionGuard({ children }: { children: React.ReactNode }) {
 
     return () => subscription.unsubscribe();
   }, []);
+
+  return <>{children}</>;
+}
+
+/**
+ * Redireciona usuários logados da landing page direto para /cliente.
+ * Verifica sessão ANTES de renderizar a rota.
+ */
+function AuthRedirectGuard({ children }: { children: React.ReactNode }) {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    // Rotas públicas que não precisam de verificação
+    const isPublicRoute =
+      location.pathname.startsWith('/auth') ||
+      location.pathname.startsWith('/b/') ||
+      location.pathname === '/esqueci-senha' ||
+      location.pathname === '/resetar-senha' ||
+      location.pathname === '/verificar-email' ||
+      location.pathname === '/verificar-whatsapp' ||
+      location.pathname === '/escolher-verificacao' ||
+      location.pathname === '/escolher-barbearia' ||
+      location.pathname === '/completar-perfil' ||
+      location.pathname === '/flowchart' ||
+      location.pathname === '/responsive-preview';
+
+    // Rotas de barbearia pública (/:slug — single segment, not a known route)
+    const segments = location.pathname.split('/').filter(Boolean);
+    const isBarbershopSlug = segments.length === 1 &&
+      !['cliente', 'suporte', 'admin', 'auth'].includes(segments[0]);
+
+    if (isPublicRoute || isBarbershopSlug) {
+      setReady(true);
+      return;
+    }
+
+    // Só verifica redirect na landing page "/"
+    if (location.pathname !== '/') {
+      setReady(true);
+      return;
+    }
+
+    // Verificar sessão para redirecionar da landing
+    const check = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          navigate('/cliente', { replace: true });
+          return;
+        }
+
+        const { data: { session: refreshed } } = await supabase.auth.refreshSession();
+        if (refreshed) {
+          navigate('/cliente', { replace: true });
+          return;
+        }
+      } catch {
+        // Ignora erro — mostra landing normalmente
+      }
+      setReady(true);
+    };
+
+    check();
+  }, [location.pathname]);
+
+  if (!ready) {
+    return (
+      <div className="fixed inset-0 bg-background flex items-center justify-center">
+        <div className="w-8 h-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+      </div>
+    );
+  }
 
   return <>{children}</>;
 }
