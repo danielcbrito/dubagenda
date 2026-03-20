@@ -39,7 +39,7 @@ export function ThemeToggle({ className }: ThemeToggleProps) {
           <Moon
             className={cn(
               "w-3.5 h-3.5 transition-colors",
-              isDark ? "text-foreground" : "text-muted-foreground/40"
+              isDark ? "text-muted-foreground/30" : "text-background"
             )}
             strokeWidth={1.8}
           />
@@ -48,7 +48,7 @@ export function ThemeToggle({ className }: ThemeToggleProps) {
           <Sun
             className={cn(
               "w-3.5 h-3.5 transition-colors",
-              isDark ? "text-muted-foreground/40" : "text-foreground"
+              isDark ? "text-background" : "text-muted-foreground/30"
             )}
             strokeWidth={1.8}
           />
