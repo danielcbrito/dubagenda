@@ -684,7 +684,7 @@ const ClienteAssinar = () => {
                                     className="flex items-center gap-3"
                                     style={{
                                       padding: '12px 0',
-                                      borderBottom: i < benefits.length - 1 ? '1px solid #F0EBE2' : 'none',
+                                      borderBottom: i < benefits.length - 1 ? '1px solid hsl(var(--border))' : 'none',
                                     }}
                                   >
                                     <div
