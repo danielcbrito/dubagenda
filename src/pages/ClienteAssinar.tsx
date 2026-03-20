@@ -414,20 +414,9 @@ const ClienteAssinar = () => {
             <ChevronLeft className="w-4 h-4 text-foreground" strokeWidth={2} />
           </button>
 
-          {step === 2 && plans.length > 1 && (
-            <div className="flex items-center gap-1.5">
-              {plans.map((_, i) => (
-                <div
-                  key={i}
-                  className="rounded-full transition-all duration-300"
-                  style={{
-                    width: i === currentPlanIndex ? '6px' : '5px',
-                    height: i === currentPlanIndex ? '6px' : '5px',
-                    background: i === currentPlanIndex ? 'hsl(var(--foreground))' : '#D0CCC4',
-                  }}
-                />
-              ))}
-            </div>
+          {/* Title for non-carousel steps */}
+          {step !== 2 && (
+            <span className="text-sm font-semibold text-foreground">{headerTitle}</span>
           )}
         </div>
       </div>
