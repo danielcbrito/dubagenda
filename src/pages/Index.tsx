@@ -1,39 +1,15 @@
-import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 import sceneClientSad from "@/assets/scene-client-sad.png";
 import sceneFriendApp from "@/assets/scene-friend-app.png";
 import { AmbientEffects } from "@/components/landing/AmbientEffects";
-import { supabase } from "@/integrations/supabase/client";
 
 const Index = () => {
   const navigate = useNavigate();
-  const [isCheckingSession, setIsCheckingSession] = useState(false);
 
-  const handleJaTenhoBarbearia = async () => {
-    if (isCheckingSession) return;
-    setIsCheckingSession(true);
-
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        navigate('/cliente');
-        return;
-      }
-
-      const { data: { session: refreshed } } = await supabase.auth.refreshSession();
-      if (refreshed) {
-        navigate('/cliente');
-        return;
-      }
-    } catch {
-      // ignore
-    } finally {
-      setIsCheckingSession(false);
-    }
-
-    navigate('/auth');
+  const handleJaTenhoBarbearia = () => {
+    navigate('/auth?mode=login');
   };
 
   return (
@@ -177,7 +153,6 @@ const Index = () => {
 
             <button
               onClick={handleJaTenhoBarbearia}
-              disabled={isCheckingSession}
               className="w-full active:opacity-80 transition-opacity text-foreground/70 mt-3"
               style={{
                 fontFamily: "'Plus Jakarta Sans', Inter, sans-serif",
@@ -190,7 +165,7 @@ const Index = () => {
                 border: "1.5px solid hsl(var(--foreground) / 0.2)",
               }}
             >
-              {isCheckingSession ? "Verificando..." : "Já tenho uma barbearia"}
+              Já tenho uma barbearia
             </button>
 
             <p className="text-center text-[11px] text-muted-foreground/40 mt-2">
