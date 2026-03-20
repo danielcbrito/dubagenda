@@ -480,7 +480,7 @@ const ClienteAssinar = () => {
             </motion.div>
           )}
 
-          {/* ═══ Step 2: Planos — Redesign Premium ═══ */}
+          {/* ═══ Step 2: Planos — Ultra Premium ═══ */}
           {step === 2 && (
             <motion.div key="step2" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
               transition={{ duration: 0.4, ease: "easeOut" }}
@@ -502,7 +502,6 @@ const ClienteAssinar = () => {
                 </div>
               ) : (
                 <div className="flex-1 flex flex-col min-h-0">
-                   {/* Swipeable plan carousel */}
                    <div
                     ref={(el) => {
                       if (!el) return;
@@ -531,50 +530,55 @@ const ClienteAssinar = () => {
                           key={plan.id}
                           className="w-full flex-shrink-0 snap-center overflow-y-auto overscroll-y-contain"
                         >
-                          <div className="px-5 pt-2 pb-8 max-w-md mx-auto">
+                          <div className="px-6 pt-4 pb-10 max-w-md mx-auto">
 
-                            {/* ── Badge "MAIS ESCOLHIDO" ── */}
+                            {/* ── Badge ── */}
                             {isPopular && (
                               <motion.div
-                                initial={{ opacity: 0, y: -8 }}
+                                initial={{ opacity: 0, y: -6 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: 0.1 }}
-                                className="inline-flex items-center gap-1.5 mb-5"
+                                className="mb-6"
                               >
                                 <div
-                                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-[20px]"
-                                  style={{ background: '#111111' }}
+                                  className="inline-flex items-center gap-1.5 rounded-md"
+                                  style={{
+                                    background: 'hsl(var(--primary))',
+                                    padding: '4px 10px',
+                                  }}
                                 >
-                                  <Star className="w-2.5 h-2.5 text-primary-foreground" fill="hsl(var(--primary))" strokeWidth={0} />
-                                  <span className="text-[10px] font-bold uppercase text-white" style={{ letterSpacing: '1px' }}>
+                                  <span
+                                    className="text-primary-foreground"
+                                    style={{
+                                      fontSize: '9px',
+                                      fontWeight: 800,
+                                      textTransform: 'uppercase',
+                                      letterSpacing: '1.5px',
+                                    }}
+                                  >
                                     Mais escolhido
                                   </span>
                                 </div>
                               </motion.div>
                             )}
 
-                            {/* ── Título + Linha dourada ── */}
+                            {/* ── Nome do plano ── */}
                             <motion.div
                               initial={{ opacity: 0, y: 10 }}
                               animate={{ opacity: 1, y: 0 }}
-                              transition={{ duration: 0.4, ease: "easeOut" }}
+                              transition={{ duration: 0.35 }}
                             >
                               <h2
-                                className="leading-none"
                                 style={{
-                                  fontSize: '32px',
+                                  fontSize: '28px',
                                   fontWeight: 900,
-                                  letterSpacing: '-1px',
-                                  lineHeight: 1.05,
+                                  letterSpacing: '-0.5px',
+                                  lineHeight: 1.1,
                                   color: 'hsl(var(--foreground))',
                                 }}
                               >
                                 {plan.nome}
                               </h2>
-                              <div
-                                className="mt-2 rounded-full"
-                                style={{ width: '32px', height: '2px', background: 'hsl(var(--primary))', borderRadius: '2px' }}
-                              />
                             </motion.div>
 
                             {/* ── Descrição ── */}
@@ -582,123 +586,129 @@ const ClienteAssinar = () => {
                               <motion.p
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
-                                transition={{ delay: 0.08, duration: 0.3 }}
-                                className="mt-3 line-clamp-2"
-                                style={{ fontSize: '13px', color: '#888888', lineHeight: 1.6 }}
+                                transition={{ delay: 0.06 }}
+                                className="mt-2 line-clamp-2 text-muted-foreground"
+                                style={{ fontSize: '13px', lineHeight: 1.5 }}
                               >
                                 {plan.descricao}
                               </motion.p>
                             )}
 
-                            {/* ── Preço — bloco tipográfico ── */}
+                            {/* ── Preço ── */}
                             <motion.div
-                              initial={{ opacity: 0, y: 12 }}
+                              initial={{ opacity: 0, y: 10 }}
                               animate={{ opacity: 1, y: 0 }}
-                              transition={{ delay: 0.12, duration: 0.4 }}
-                              className="mt-7"
+                              transition={{ delay: 0.1, duration: 0.35 }}
+                              className="mt-8"
                             >
-                              <div className="flex items-baseline">
-                                <span style={{ fontSize: '14px', color: '#888888', fontWeight: 500 }} className="mr-1 self-end mb-2">
+                              <div className="flex items-baseline gap-0.5">
+                                <span className="text-muted-foreground self-end mb-3" style={{ fontSize: '15px', fontWeight: 500 }}>
                                   R$
                                 </span>
                                 <span
-                                  className="tabular-nums leading-none"
+                                  className="tabular-nums leading-none text-foreground"
                                   style={{
-                                    fontSize: '56px',
+                                    fontSize: '64px',
                                     fontWeight: 900,
-                                    letterSpacing: '-3px',
-                                    color: 'hsl(var(--foreground))',
+                                    letterSpacing: '-4px',
                                   }}
                                 >
                                   {priceWhole}
                                 </span>
-                                <span
-                                  className="tabular-nums leading-none self-end mb-1.5"
-                                  style={{ fontSize: '20px', fontWeight: 700, color: 'hsl(var(--foreground) / 0.7)' }}
-                                >
-                                  ,{priceCents}
-                                </span>
-                                <span className="self-end mb-2 ml-1.5" style={{ fontSize: '13px', color: '#888888' }}>
-                                  /mês
-                                </span>
+                                <div className="flex flex-col self-end mb-1.5 ml-0.5">
+                                  <span
+                                    className="tabular-nums leading-none text-foreground"
+                                    style={{ fontSize: '22px', fontWeight: 800 }}
+                                  >
+                                    ,{priceCents}
+                                  </span>
+                                  <span className="text-muted-foreground" style={{ fontSize: '11px', fontWeight: 500, marginTop: '2px' }}>
+                                    /mês
+                                  </span>
+                                </div>
                               </div>
-                              <p className="mt-1.5" style={{ fontSize: '12px', fontWeight: 600, color: 'hsl(var(--primary))' }}>
-                                Apenas R$ {dailyCost}/dia · Cancele quando quiser
+                              <p className="mt-2 text-muted-foreground" style={{ fontSize: '11px', fontWeight: 500 }}>
+                                <span className="text-primary font-semibold">R$ {dailyCost}/dia</span>
+                                <span className="mx-1.5">·</span>
+                                Sem fidelidade
                               </p>
                             </motion.div>
 
                             {/* ── Divider ── */}
-                            <div className="my-6" style={{ height: '1px', background: 'hsl(var(--border))' }} />
+                            <div className="my-7 border-t border-border" />
 
-                            {/* ── Seção Benefícios ── */}
+                            {/* ── Benefícios ── */}
                             <motion.div
                               initial={{ opacity: 0 }}
                               animate={{ opacity: 1 }}
-                              transition={{ delay: 0.18, duration: 0.3 }}
+                              transition={{ delay: 0.16 }}
                             >
-                              <p className="mb-4" style={{ fontSize: '10px', fontWeight: 700, color: 'hsl(var(--primary))', textTransform: 'uppercase', letterSpacing: '2px' }}>
-                                BENEFÍCIOS EXCLUSIVOS
-                              </p>
-
-                              {/* Card destaque — agendamentos */}
-                              <motion.div
-                                initial={{ opacity: 0, x: -6 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                transition={{ delay: 0.22 }}
-                                className="flex items-center gap-3.5 mb-4"
+                              <p
+                                className="mb-5 text-muted-foreground"
                                 style={{
-                                  background: '#111111',
-                                  borderRadius: '16px',
-                                  padding: '14px 16px',
+                                  fontSize: '10px',
+                                  fontWeight: 700,
+                                  textTransform: 'uppercase',
+                                  letterSpacing: '1.5px',
                                 }}
                               >
+                                O que está incluso
+                              </p>
+
+                              {/* Card principal — agendamentos */}
+                              <motion.div
+                                initial={{ opacity: 0, y: 6 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: 0.2 }}
+                                className="flex items-center gap-3.5 mb-5 border border-border rounded-xl"
+                                style={{ padding: '14px 16px' }}
+                              >
                                 <div
-                                  className="flex items-center justify-center flex-shrink-0"
+                                  className="flex items-center justify-center flex-shrink-0 bg-primary"
                                   style={{
-                                    width: '36px',
-                                    height: '36px',
-                                    borderRadius: '10px',
-                                    background: 'hsl(var(--primary))',
+                                    width: '40px',
+                                    height: '40px',
+                                    borderRadius: '12px',
                                   }}
                                 >
-                                  <Calendar className="w-4.5 h-4.5 text-white" strokeWidth={2} style={{ width: '18px', height: '18px' }} />
+                                  <Calendar className="text-primary-foreground" strokeWidth={2} style={{ width: '20px', height: '20px' }} />
                                 </div>
-                                <div>
-                                  <span style={{ fontSize: '13px', fontWeight: 700, color: '#FFFFFF' }}>
-                                    {plan.limite_agendamentos_mes} agendamento{plan.limite_agendamentos_mes > 1 ? 's' : ''} por mês
+                                <div className="flex-1 min-w-0">
+                                  <span className="text-foreground block" style={{ fontSize: '14px', fontWeight: 700 }}>
+                                    {plan.limite_agendamentos_mes} agendamento{plan.limite_agendamentos_mes > 1 ? 's' : ''}/mês
                                   </span>
-                                  <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.5)', marginTop: '2px' }}>
-                                    Escolha seu horário preferido com prioridade
-                                  </p>
+                                  <span className="text-muted-foreground" style={{ fontSize: '11px' }}>
+                                    Horário prioritário garantido
+                                  </span>
                                 </div>
                               </motion.div>
 
-                              {/* Lista de benefícios */}
-                              <div>
+                              {/* Lista de benefícios — numerada */}
+                              <div className="space-y-0">
                                 {benefits.map((benefit: string, i: number) => (
                                   <motion.div
                                     key={i}
-                                    initial={{ opacity: 0, x: -6 }}
+                                    initial={{ opacity: 0, x: -4 }}
                                     animate={{ opacity: 1, x: 0 }}
-                                    transition={{ delay: 0.26 + i * 0.04 }}
+                                    transition={{ delay: 0.24 + i * 0.03 }}
                                     className="flex items-center gap-3"
                                     style={{
-                                      padding: '12px 0',
-                                      borderBottom: i < benefits.length - 1 ? '1px solid hsl(var(--border))' : 'none',
+                                      padding: '11px 0',
+                                      borderBottom: i < benefits.length - 1 ? '1px solid hsl(var(--border) / 0.5)' : 'none',
                                     }}
                                   >
                                     <div
                                       className="flex items-center justify-center flex-shrink-0"
                                       style={{
-                                        width: '20px',
-                                        height: '20px',
-                                        borderRadius: '50%',
-                                        background: '#EEFAF0',
+                                        width: '22px',
+                                        height: '22px',
+                                        borderRadius: '6px',
+                                        background: 'hsl(142 76% 45% / 0.1)',
                                       }}
                                     >
-                                      <Check className="w-3 h-3" style={{ color: '#22A855' }} strokeWidth={2.5} />
+                                      <Check className="w-3 h-3 text-success" strokeWidth={3} />
                                     </div>
-                                    <span style={{ fontSize: '13px', color: 'hsl(var(--foreground) / 0.8)', fontWeight: 500 }}>
+                                    <span className="text-foreground/80" style={{ fontSize: '13px', fontWeight: 500 }}>
                                       {benefit}
                                     </span>
                                   </motion.div>
@@ -706,43 +716,34 @@ const ClienteAssinar = () => {
                               </div>
                             </motion.div>
 
-                            {/* ── Card barbearia selecionada ── */}
+                            {/* ── Barbearia selecionada ── */}
                             <motion.div
                               initial={{ opacity: 0 }}
                               animate={{ opacity: 1 }}
                               transition={{ delay: 0.35 }}
-                              className="mt-6 flex items-center gap-3"
-                              style={{
-                                background: 'hsl(var(--muted) / 0.3)',
-                                borderRadius: '12px',
-                                padding: '12px 14px',
-                              }}
+                              className="mt-7 flex items-center gap-3 bg-card border border-border rounded-xl"
+                              style={{ padding: '12px 14px' }}
                             >
                               <div
-                                className="flex items-center justify-center flex-shrink-0 overflow-hidden"
-                                style={{
-                                  width: '28px',
-                                  height: '28px',
-                                  borderRadius: '8px',
-                                  background: '#111111',
-                                }}
+                                className="flex items-center justify-center flex-shrink-0 overflow-hidden bg-foreground"
+                                style={{ width: '32px', height: '32px', borderRadius: '10px' }}
                               >
                                 {selectedTenantId === "dub" ? (
-                                  <img src={logoDub} alt="DUB" className="w-4 h-4 object-contain" />
+                                  <img src={logoDub} alt="DUB" className="w-5 h-5 object-contain" />
                                 ) : (
-                                  <Scissors className="w-3.5 h-3.5 text-white" />
+                                  <Scissors className="w-4 h-4 text-background" />
                                 )}
                               </div>
                               <div className="flex-1 min-w-0">
-                                <span style={{ fontSize: '13px', fontWeight: 600, color: 'hsl(var(--foreground))' }} className="block truncate">
+                                <span className="text-foreground block truncate" style={{ fontSize: '13px', fontWeight: 600 }}>
                                   {selectedShopName}
                                 </span>
-                                <span style={{ fontSize: '11px', color: '#888888' }}>Unidade selecionada</span>
+                                <span className="text-muted-foreground" style={{ fontSize: '11px' }}>Unidade selecionada</span>
                               </div>
                               <button
                                 onClick={handleChangeShop}
-                                style={{ fontSize: '12px', fontWeight: 700, color: 'hsl(var(--primary))' }}
-                                className="flex-shrink-0 hover:opacity-80 transition-opacity"
+                                className="flex-shrink-0 text-primary hover:text-primary/80 transition-colors"
+                                style={{ fontSize: '12px', fontWeight: 700 }}
                               >
                                 Trocar
                               </button>
@@ -753,47 +754,40 @@ const ClienteAssinar = () => {
                     })}
                   </div>
 
-                  {/* Fixed bottom area — CTA */}
+                  {/* Bottom CTA */}
                   <div
-                    className="flex-shrink-0"
-                    style={{
-                      background: 'hsl(var(--background))',
-                      borderTop: '1px solid #EEE9E0',
-                      padding: '14px 20px 32px',
-                    }}
+                    className="flex-shrink-0 border-t border-border bg-background"
+                    style={{ padding: '16px 20px max(env(safe-area-inset-bottom), 20px)' }}
                   >
-                    <div className="max-w-md mx-auto space-y-3">
+                    <div className="max-w-md mx-auto">
                       <motion.button
                         whileTap={{ scale: 0.97 }}
                         onClick={() => !hasActiveSubscription && plans[currentPlanIndex] && handleSelectPlan(plans[currentPlanIndex])}
                         disabled={hasActiveSubscription}
                         className={cn(
-                          "w-full flex items-center justify-center gap-2 transition-all relative overflow-hidden",
+                          "w-full flex items-center justify-center gap-2 transition-all bg-foreground text-background active:scale-[0.97]",
                           hasActiveSubscription && "opacity-50 cursor-not-allowed"
                         )}
                         style={{
-                          background: '#111111',
-                          borderRadius: '16px',
-                          padding: '16px',
-                          color: '#FFFFFF',
-                          fontSize: '15px',
-                          fontWeight: 800,
+                          borderRadius: '14px',
+                          padding: '15px',
+                          fontSize: '14px',
+                          fontWeight: 700,
                         }}
                       >
                         <span>Assinar este plano</span>
                         <ArrowRight className="w-4 h-4" />
                       </motion.button>
 
-                      {/* Trust signals */}
-                      <div className="flex items-center justify-center gap-4">
-                        <div className="flex items-center gap-1.5">
-                          <Shield className="w-3 h-3" style={{ color: '#888888' }} />
-                          <span style={{ fontSize: '10px', color: '#888888', fontWeight: 500 }}>Seguro</span>
+                      <div className="flex items-center justify-center gap-3 mt-3">
+                        <div className="flex items-center gap-1">
+                          <Shield className="w-3 h-3 text-muted-foreground/40" />
+                          <span className="text-muted-foreground/40" style={{ fontSize: '10px', fontWeight: 500 }}>Seguro</span>
                         </div>
-                        <div style={{ width: '1px', height: '10px', background: '#E0DAD2' }} />
-                        <div className="flex items-center gap-1.5">
-                          <Check className="w-3 h-3" style={{ color: '#888888' }} strokeWidth={2} />
-                          <span style={{ fontSize: '10px', color: '#888888', fontWeight: 500 }}>Cancele quando quiser</span>
+                        <div className="w-px h-2.5 bg-border" />
+                        <div className="flex items-center gap-1">
+                          <Check className="w-3 h-3 text-muted-foreground/40" strokeWidth={2} />
+                          <span className="text-muted-foreground/40" style={{ fontSize: '10px', fontWeight: 500 }}>Cancele quando quiser</span>
                         </div>
                       </div>
                     </div>
@@ -802,6 +796,7 @@ const ClienteAssinar = () => {
               )}
             </motion.div>
           )}
+
 
           {/* ═══ Step 3: Barbeiro ═══ */}
           {step === 3 && (
