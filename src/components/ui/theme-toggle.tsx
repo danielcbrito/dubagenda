@@ -29,8 +29,8 @@ export function ThemeToggle({ className }: ThemeToggleProps) {
       <div className="flex justify-between items-center w-full relative">
         <motion.div
           className={cn(
-            "absolute w-[22px] h-[22px] rounded-full",
-            isDark ? "bg-secondary/80" : "bg-primary/15"
+            "absolute w-[22px] h-[22px] rounded-full shadow-sm",
+            isDark ? "bg-foreground/90" : "bg-foreground/85"
           )}
           animate={{ x: isDark ? 0 : 23 }}
           transition={{ type: "spring", stiffness: 500, damping: 30 }}
