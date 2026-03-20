@@ -402,16 +402,9 @@ const ClienteAssinar = () => {
         <div className="max-w-2xl mx-auto flex items-center justify-between">
           <button 
             onClick={handleBack}
-            className="flex items-center justify-center transition-colors active:scale-95"
-            style={{
-              width: '32px',
-              height: '32px',
-              borderRadius: '50%',
-              border: '1px solid #EEE9E0',
-              background: 'transparent',
-            }}
+            className="flex items-center justify-center w-8 h-8 rounded-full border border-border/50 active:scale-95 transition-transform"
           >
-            <ChevronLeft className="w-4 h-4 text-foreground" strokeWidth={2} />
+            <BackArrow size={18} className="text-foreground" />
           </button>
 
           {/* Title for non-carousel steps */}
