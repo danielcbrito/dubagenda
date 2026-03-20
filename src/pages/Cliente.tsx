@@ -109,9 +109,9 @@ const fetchAppointmentsData = async (userId: string) => {
     `)
       .eq("user_id", userId)
       .eq("visivel_para_usuario", true)
-      .in("status", ["pending", "confirmed"])
-      .order("data", { ascending: true })
-      .limit(3),
+      .in("status", ["pending", "confirmed", "completed"])
+      .order("data", { ascending: false })
+      .limit(20),
     supabase.from("pagamentos").select("id, metodo, status, agendamento_id").eq("user_id", userId),
     supabase.from("pending_bookings").select(`
       id, data, hora, servico_id, preco, payment_method, created_at,
