@@ -636,7 +636,7 @@ const ClienteAssinar = () => {
                               animate={{ opacity: 1 }}
                               transition={{ delay: 0.18, duration: 0.3 }}
                             >
-                              <p className="mb-4" style={{ fontSize: '10px', fontWeight: 700, color: '#C9A84C', textTransform: 'uppercase', letterSpacing: '2px' }}>
+                              <p className="mb-4" style={{ fontSize: '10px', fontWeight: 700, color: 'hsl(var(--primary))', textTransform: 'uppercase', letterSpacing: '2px' }}>
                                 BENEFÍCIOS EXCLUSIVOS
                               </p>
 
