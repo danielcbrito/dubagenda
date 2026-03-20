@@ -622,7 +622,7 @@ const ClienteAssinar = () => {
                                   /mês
                                 </span>
                               </div>
-                              <p className="mt-1.5" style={{ fontSize: '12px', fontWeight: 600, color: '#C9A84C' }}>
+                              <p className="mt-1.5" style={{ fontSize: '12px', fontWeight: 600, color: 'hsl(var(--primary))' }}>
                                 Apenas R$ {dailyCost}/dia · Cancele quando quiser
                               </p>
                             </motion.div>
