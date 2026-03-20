@@ -27,6 +27,7 @@ import logoDub from "@/assets/logo-dub.png";
 import scissorsDecor from "@/assets/scissors-decorative.png";
 import { BarberCard } from "@/components/booking/BarberCard";
 import { useBarberRatings } from "@/hooks/useBarberRatings";
+import { PlanCarousel } from "@/components/booking/PlanCarousel";
 
 interface Plan {
   id: string;
