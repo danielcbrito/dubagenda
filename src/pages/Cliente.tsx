@@ -1035,76 +1035,42 @@ const Cliente = () => {
                 )}
               </AnimatePresence>
 
-              {(() => {
-                const upcoming = appointments.filter(a => a.status === "pending" || a.status === "confirmed")
-                  .sort((a, b) => `${a.data}${a.hora}`.localeCompare(`${b.data}${b.hora}`));
-                const completed = appointments.filter(a => a.status === "completed")
-                  .sort((a, b) => `${b.data}${b.hora}`.localeCompare(`${a.data}${a.hora}`));
+              <p className="text-[8px] font-semibold text-muted-foreground/30 uppercase tracking-[0.2em] mb-2.5">
+                Meus Agendamentos
+              </p>
 
-                return (
-                  <>
-                    {/* Próximos */}
-                    <p className="text-[8px] font-semibold text-muted-foreground/30 uppercase tracking-[0.2em] mb-2.5">
-                      Próximos Agendamentos
-                    </p>
-
-                    {upcoming.length === 0 && pendingBookings.length === 0 ? (
-                      <motion.div
-                        initial={{ opacity: 0, y: 8 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.15 }}
-                        className="rounded-xl border border-dashed border-border/20 p-6 text-center bg-card/20 mb-6"
-                      >
-                        <div className="w-10 h-10 mx-auto mb-3 rounded-xl flex items-center justify-center bg-muted/10">
-                          <Calendar className="w-5 h-5 text-muted-foreground/20" />
-                        </div>
-                        <p className="text-[12px] text-muted-foreground/50 font-medium">
-                          Nenhum agendamento próximo
-                        </p>
-                        <p className="text-[10px] text-muted-foreground/30 mt-0.5">
-                          Toque em "Agendar Horário" acima
-                        </p>
-                      </motion.div>
-                    ) : (
-                      <div className="space-y-3 mb-6">
-                        {upcoming.map((apt, index) => (
-                          <AppointmentCardPremium
-                            key={apt.id}
-                            appointment={apt}
-                            onCancel={() => invalidateAppointments()}
-                            onConfirm={handleConfirmAppointment}
-                            userId={user?.id}
-                            payments={payments}
-                            index={index}
-                          />
-                        ))}
-                      </div>
-                    )}
-
-                    {/* Histórico */}
-                    {completed.length > 0 && (
-                      <>
-                        <p className="text-[8px] font-semibold text-muted-foreground/30 uppercase tracking-[0.2em] mb-2.5">
-                          Histórico
-                        </p>
-                        <div className="space-y-3">
-                          {completed.map((apt, index) => (
-                            <AppointmentCardPremium
-                              key={apt.id}
-                              appointment={apt}
-                              onCancel={() => invalidateAppointments()}
-                              onConfirm={handleConfirmAppointment}
-                              userId={user?.id}
-                              payments={payments}
-                              index={index}
-                            />
-                          ))}
-                        </div>
-                      </>
-                    )}
-                  </>
-                );
-              })()}
+              {appointments.length === 0 && pendingBookings.length === 0 ? (
+                <motion.div
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.15 }}
+                  className="rounded-xl border border-dashed border-border/20 p-6 text-center bg-card/20"
+                >
+                  <div className="w-10 h-10 mx-auto mb-3 rounded-xl flex items-center justify-center bg-muted/10">
+                    <Calendar className="w-5 h-5 text-muted-foreground/20" />
+                  </div>
+                  <p className="text-[12px] text-muted-foreground/50 font-medium">
+                    Nenhum agendamento
+                  </p>
+                  <p className="text-[10px] text-muted-foreground/30 mt-0.5">
+                    Toque em "Agendar Horário" acima
+                  </p>
+                </motion.div>
+              ) : (
+                <div className="space-y-3">
+                  {appointments.map((apt, index) => (
+                    <AppointmentCardPremium
+                      key={apt.id}
+                      appointment={apt}
+                      onCancel={() => invalidateAppointments()}
+                      onConfirm={handleConfirmAppointment}
+                      userId={user?.id}
+                      payments={payments}
+                      index={index}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
