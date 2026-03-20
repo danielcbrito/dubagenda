@@ -628,7 +628,7 @@ const ClienteAssinar = () => {
                             </motion.div>
 
                             {/* ── Divider ── */}
-                            <div className="my-6" style={{ height: '1px', background: '#EEE9E0' }} />
+                            <div className="my-6" style={{ height: '1px', background: 'hsl(var(--border))' }} />
 
                             {/* ── Seção Benefícios ── */}
                             <motion.div
