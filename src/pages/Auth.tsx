@@ -119,6 +119,27 @@ const Auth = () => {
     navigate("/cliente");
   };
 
+  // Auto-detect email completion and reveal password
+  const emailLooksComplete = (() => {
+    const trimmed = email.trim();
+    if (trimmed.length < 5) return false;
+    const atIndex = trimmed.indexOf("@");
+    if (atIndex < 1) return false;
+    const domain = trimmed.slice(atIndex + 1);
+    return domain.includes(".") && domain.lastIndexOf(".") < domain.length - 1;
+  })();
+
+  // Auto-advance to password step when email looks valid (login only)
+  useEffect(() => {
+    if (!isSignup && emailLooksComplete && step === "email") {
+      setStep("password");
+    }
+    if (!isSignup && !emailLooksComplete && step === "password") {
+      setStep("email");
+      setSenha("");
+    }
+  }, [emailLooksComplete, isSignup]);
+
   // Step 1: validate email and advance
   const handleEmailContinue = (e: React.FormEvent) => {
     e.preventDefault();
@@ -131,8 +152,11 @@ const Auth = () => {
 
     if (isSignup) {
       handleMagicLink();
-    } else {
+    } else if (step === "email") {
       setStep("password");
+    } else {
+      // Already on password step, submit the form
+      handlePasswordSubmit(e);
     }
   };
 
