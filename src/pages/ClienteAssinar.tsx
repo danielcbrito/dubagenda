@@ -395,27 +395,34 @@ const ClienteAssinar = () => {
   return (
     <div className="fixed inset-0 flex flex-col bg-background">
       
-      {/* Header — back arrow + subtle page dots on step 2 */}
+      {/* Header — back arrow + step dots */}
       <div className="flex-shrink-0 px-4 pt-[max(env(safe-area-inset-top),0.75rem)] pb-2">
         <div className="max-w-2xl mx-auto flex items-center justify-between">
           <button 
             onClick={handleBack}
-            className="w-9 h-9 flex items-center justify-center rounded-xl hover:bg-muted transition-colors active:scale-95"
+            className="flex items-center justify-center transition-colors active:scale-95"
+            style={{
+              width: '32px',
+              height: '32px',
+              borderRadius: '50%',
+              border: '1px solid #EEE9E0',
+              background: 'transparent',
+            }}
           >
-            <BackArrow size={22} className="text-foreground" />
+            <ChevronLeft className="w-4 h-4 text-foreground" strokeWidth={2} />
           </button>
 
           {step === 2 && plans.length > 1 && (
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1.5">
               {plans.map((_, i) => (
                 <div
                   key={i}
-                  className={cn(
-                    "rounded-full transition-all duration-300",
-                    i === currentPlanIndex
-                      ? "w-1.5 h-1.5 bg-foreground"
-                      : "w-1 h-1 bg-muted-foreground/20"
-                  )}
+                  className="rounded-full transition-all duration-300"
+                  style={{
+                    width: i === currentPlanIndex ? '6px' : '5px',
+                    height: i === currentPlanIndex ? '6px' : '5px',
+                    background: i === currentPlanIndex ? 'hsl(var(--foreground))' : '#D0CCC4',
+                  }}
                 />
               ))}
             </div>
