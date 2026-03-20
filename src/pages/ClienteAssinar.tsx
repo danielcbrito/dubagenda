@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { sendAssinaturaCashCriadaEvent } from "@/lib/webhookService";
@@ -21,6 +21,7 @@ import {
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
+import useEmblaCarousel from "embla-carousel-react";
 import pixIcon from "@/assets/pix-icon.png";
 import logoDub from "@/assets/logo-dub.png";
 import scissorsDecor from "@/assets/scissors-decorative.png";
