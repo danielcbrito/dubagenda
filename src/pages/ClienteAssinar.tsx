@@ -7,19 +7,16 @@ import { BackArrow } from "@/components/ui/back-arrow";
 import { 
   ArrowRight,
   Banknote,
+  Calendar,
   Check, 
-  CheckCircle2, 
-  ChevronRight,
-  Crown,
+  ChevronLeft,
   CreditCard,
   Loader2,
   MapPin,
   Scissors,
   Shield,
-  Sparkles,
   Star,
   User,
-  Zap,
 } from "lucide-react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
