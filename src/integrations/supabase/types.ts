@@ -2196,6 +2196,7 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          nome_produto: string | null
           pedido_id: string
           preco_unitario: number
           produto_id: string
@@ -2205,6 +2206,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          nome_produto?: string | null
           pedido_id: string
           preco_unitario: number
           produto_id: string
@@ -2214,6 +2216,7 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          nome_produto?: string | null
           pedido_id?: string
           preco_unitario?: number
           produto_id?: string
@@ -2239,48 +2242,95 @@ export type Database = {
       }
       pedidos: {
         Row: {
+          asaas_payment_id: string | null
+          cancelado_em: string | null
           cancelled_at: string | null
+          cliente_id: string | null
           created_at: string
+          desconto: number
+          forma_pagamento: string | null
           id: string
+          numero_pedido: string | null
+          observacoes_admin: string | null
+          observacoes_cliente: string | null
           paid_at: string | null
           payment_id: string | null
           payment_method: string | null
           payment_provider: string
+          pix_copia_cola: string | null
+          pix_qr_code: string | null
           reservation_expires_at: string
           status: string
+          subtotal: number | null
+          tenant_id: string
+          total: number | null
           updated_at: string
           user_id: string
           valor_total: number
         }
         Insert: {
+          asaas_payment_id?: string | null
+          cancelado_em?: string | null
           cancelled_at?: string | null
+          cliente_id?: string | null
           created_at?: string
+          desconto?: number
+          forma_pagamento?: string | null
           id?: string
+          numero_pedido?: string | null
+          observacoes_admin?: string | null
+          observacoes_cliente?: string | null
           paid_at?: string | null
           payment_id?: string | null
           payment_method?: string | null
           payment_provider?: string
+          pix_copia_cola?: string | null
+          pix_qr_code?: string | null
           reservation_expires_at: string
           status?: string
+          subtotal?: number | null
+          tenant_id: string
+          total?: number | null
           updated_at?: string
           user_id: string
           valor_total: number
         }
         Update: {
+          asaas_payment_id?: string | null
+          cancelado_em?: string | null
           cancelled_at?: string | null
+          cliente_id?: string | null
           created_at?: string
+          desconto?: number
+          forma_pagamento?: string | null
           id?: string
+          numero_pedido?: string | null
+          observacoes_admin?: string | null
+          observacoes_cliente?: string | null
           paid_at?: string | null
           payment_id?: string | null
           payment_method?: string | null
           payment_provider?: string
+          pix_copia_cola?: string | null
+          pix_qr_code?: string | null
           reservation_expires_at?: string
           status?: string
+          subtotal?: number | null
+          tenant_id?: string
+          total?: number | null
           updated_at?: string
           user_id?: string
           valor_total?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "pedidos_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       pending_bookings: {
         Row: {
@@ -2695,36 +2745,57 @@ export type Database = {
       }
       produtos: {
         Row: {
+          ativo: boolean
+          categoria: string
           categoria_id: string | null
           created_at: string
-          descricao: string
+          descricao: string | null
+          destaque: boolean
           estoque: number
+          estoque_minimo: number
           id: string
+          imagens: string[]
           nome: string
           preco: number
+          preco_original: number | null
           status: string
+          tenant_id: string
           updated_at: string
         }
         Insert: {
+          ativo?: boolean
+          categoria?: string
           categoria_id?: string | null
           created_at?: string
-          descricao: string
+          descricao?: string | null
+          destaque?: boolean
           estoque?: number
+          estoque_minimo?: number
           id?: string
+          imagens?: string[]
           nome: string
           preco: number
+          preco_original?: number | null
           status?: string
+          tenant_id: string
           updated_at?: string
         }
         Update: {
+          ativo?: boolean
+          categoria?: string
           categoria_id?: string | null
           created_at?: string
-          descricao?: string
+          descricao?: string | null
+          destaque?: boolean
           estoque?: number
+          estoque_minimo?: number
           id?: string
+          imagens?: string[]
           nome?: string
           preco?: number
+          preco_original?: number | null
           status?: string
+          tenant_id?: string
           updated_at?: string
         }
         Relationships: [
@@ -2735,10 +2806,18 @@ export type Database = {
             referencedRelation: "categorias"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "produtos_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
         ]
       }
       profiles: {
         Row: {
+          asaas_customer_id: string | null
           avatar_url: string | null
           banner_url: string | null
           barbearia_preferida_id: string | null
@@ -2761,6 +2840,7 @@ export type Database = {
           wallet_pin_hash: string | null
         }
         Insert: {
+          asaas_customer_id?: string | null
           avatar_url?: string | null
           banner_url?: string | null
           barbearia_preferida_id?: string | null
@@ -2783,6 +2863,7 @@ export type Database = {
           wallet_pin_hash?: string | null
         }
         Update: {
+          asaas_customer_id?: string | null
           avatar_url?: string | null
           banner_url?: string | null
           barbearia_preferida_id?: string | null
@@ -3969,6 +4050,171 @@ export type Database = {
         }
         Relationships: []
       }
+      ti_impersonation_logs: {
+        Row: {
+          cliente_email: string | null
+          cliente_id: string | null
+          cliente_nome: string | null
+          created_at: string | null
+          expires_at: string
+          id: string
+          ip_address: string | null
+          operador_email: string
+          operador_id: string | null
+          token: string
+          usado_em: string | null
+        }
+        Insert: {
+          cliente_email?: string | null
+          cliente_id?: string | null
+          cliente_nome?: string | null
+          created_at?: string | null
+          expires_at: string
+          id?: string
+          ip_address?: string | null
+          operador_email: string
+          operador_id?: string | null
+          token: string
+          usado_em?: string | null
+        }
+        Update: {
+          cliente_email?: string | null
+          cliente_id?: string | null
+          cliente_nome?: string | null
+          created_at?: string | null
+          expires_at?: string
+          id?: string
+          ip_address?: string | null
+          operador_email?: string
+          operador_id?: string | null
+          token?: string
+          usado_em?: string | null
+        }
+        Relationships: []
+      }
+      ti_mudancas_agendadas: {
+        Row: {
+          aplicada_em: string | null
+          aplicar_em: string
+          cancelada_em: string | null
+          created_at: string
+          descricao: string | null
+          erro_msg: string | null
+          id: string
+          operador_email: string | null
+          operador_id: string | null
+          payload: Json | null
+          payload_antes: Json | null
+          payload_depois: Json | null
+          status: string
+          tipo: string
+          titulo: string
+          updated_at: string
+        }
+        Insert: {
+          aplicada_em?: string | null
+          aplicar_em: string
+          cancelada_em?: string | null
+          created_at?: string
+          descricao?: string | null
+          erro_msg?: string | null
+          id?: string
+          operador_email?: string | null
+          operador_id?: string | null
+          payload?: Json | null
+          payload_antes?: Json | null
+          payload_depois?: Json | null
+          status?: string
+          tipo?: string
+          titulo: string
+          updated_at?: string
+        }
+        Update: {
+          aplicada_em?: string | null
+          aplicar_em?: string
+          cancelada_em?: string | null
+          created_at?: string
+          descricao?: string | null
+          erro_msg?: string | null
+          id?: string
+          operador_email?: string | null
+          operador_id?: string | null
+          payload?: Json | null
+          payload_antes?: Json | null
+          payload_depois?: Json | null
+          status?: string
+          tipo?: string
+          titulo?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      ti_permissoes: {
+        Row: {
+          created_at: string | null
+          id: string
+          perm_agendadas: boolean | null
+          perm_agendamentos: boolean | null
+          perm_barbearias: boolean | null
+          perm_clientes: boolean | null
+          perm_dispositivos: boolean | null
+          perm_financeiro: boolean | null
+          perm_impersonar: boolean | null
+          perm_logs: boolean | null
+          perm_manutencao: boolean | null
+          perm_monitoramento: boolean | null
+          perm_notificacoes: boolean | null
+          perm_suporte_ia: boolean | null
+          perm_tenants: boolean | null
+          perm_usuarios: boolean | null
+          perm_webhooks: boolean | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          perm_agendadas?: boolean | null
+          perm_agendamentos?: boolean | null
+          perm_barbearias?: boolean | null
+          perm_clientes?: boolean | null
+          perm_dispositivos?: boolean | null
+          perm_financeiro?: boolean | null
+          perm_impersonar?: boolean | null
+          perm_logs?: boolean | null
+          perm_manutencao?: boolean | null
+          perm_monitoramento?: boolean | null
+          perm_notificacoes?: boolean | null
+          perm_suporte_ia?: boolean | null
+          perm_tenants?: boolean | null
+          perm_usuarios?: boolean | null
+          perm_webhooks?: boolean | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          perm_agendadas?: boolean | null
+          perm_agendamentos?: boolean | null
+          perm_barbearias?: boolean | null
+          perm_clientes?: boolean | null
+          perm_dispositivos?: boolean | null
+          perm_financeiro?: boolean | null
+          perm_impersonar?: boolean | null
+          perm_logs?: boolean | null
+          perm_manutencao?: boolean | null
+          perm_monitoramento?: boolean | null
+          perm_notificacoes?: boolean | null
+          perm_suporte_ia?: boolean | null
+          perm_tenants?: boolean | null
+          perm_usuarios?: boolean | null
+          perm_webhooks?: boolean | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       ti_security_config: {
         Row: {
           created_at: string | null
@@ -3990,6 +4236,39 @@ export type Database = {
           must_change_password?: boolean
           password_hash?: string
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      ti_usuarios: {
+        Row: {
+          ativo: boolean | null
+          created_at: string | null
+          criado_por: string | null
+          email: string
+          id: string
+          nome: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          ativo?: boolean | null
+          created_at?: string | null
+          criado_por?: string | null
+          email: string
+          id?: string
+          nome?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          ativo?: boolean | null
+          created_at?: string | null
+          criado_por?: string | null
+          email?: string
+          id?: string
+          nome?: string | null
+          updated_at?: string | null
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -4435,6 +4714,7 @@ export type Database = {
       }
       check_email_exists: { Args: { p_email: string }; Returns: string }
       clean_expired_pending_bookings: { Args: never; Returns: undefined }
+      clean_expired_reservas_loja: { Args: never; Returns: undefined }
       clean_expired_verification_codes: { Args: never; Returns: undefined }
       count_subscription_uses_in_cycle: {
         Args: {
@@ -4479,10 +4759,12 @@ export type Database = {
         Args: { p_barbeiro_id: string }
         Returns: string
       }
+      get_all_lojas_stats: { Args: never; Returns: Json }
       get_client_loyalty_required_points: {
         Args: { p_user_id: string }
         Returns: number
       }
+      get_loja_stats_admin: { Args: { p_tenant_id: string }; Returns: Json }
       get_maintenance_status: {
         Args: never
         Returns: {
@@ -4507,6 +4789,7 @@ export type Database = {
           manutencao_mensagem: string
         }[]
       }
+      get_meus_pedidos_loja: { Args: { p_cliente_id: string }; Returns: Json }
       get_next_available_date: {
         Args: {
           p_barbeiro_id: string
@@ -4545,6 +4828,25 @@ export type Database = {
         Args: { p_tenant_ids: string[] }
         Returns: {
           banner_url: string
+          tenant_id: string
+        }[]
+      }
+      get_tenant_pedidos_admin: { Args: { p_tenant_id: string }; Returns: Json }
+      get_tenant_produtos_loja: {
+        Args: { p_tenant_id: string }
+        Returns: {
+          categoria: string
+          created_at: string
+          descricao: string
+          destaque: boolean
+          estoque: number
+          estoque_disponivel: number
+          estoque_minimo: number
+          id: string
+          imagens: string[]
+          nome: string
+          preco: number
+          preco_original: number
           tenant_id: string
         }[]
       }
