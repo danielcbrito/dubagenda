@@ -867,6 +867,8 @@ const Cliente = () => {
                   onViewDetails={() => setPlansSheetOpen(true)}
                   assinaturaId={activeSubscription.id}
                   planoPreco={(activeSubscription as any).plano?.preco_mensal}
+                  servicoNome={(activeSubscription as any).plano?.servico?.nome}
+                  diasRestantes={activeSubscription.ciclo_fim ? Math.max(0, Math.ceil((new Date(activeSubscription.ciclo_fim + "T00:00:00").getTime() - Date.now()) / 86400000)) : undefined}
                   userId={user?.id}
                   onRenovado={() => {
                     invalidateLoyalty();
