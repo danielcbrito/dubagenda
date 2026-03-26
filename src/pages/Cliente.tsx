@@ -172,7 +172,7 @@ const fetchLoyaltyData = async (userId: string, tenantId: string | null) => {
   // Buscar assinatura ativa
   const { data: activeSub } = await supabase
     .from("assinaturas")
-    .select("id, status, next_billing_date, plano_id, barbeiro_id, payment_method, cash_payment_confirmed, plano:planos(nome, limite_agendamentos_mes)")
+    .select("id, status, next_billing_date, plano_id, barbeiro_id, payment_method, cash_payment_confirmed, ciclo_fim, plano:planos(nome, limite_agendamentos_mes, preco_mensal, servico:servicos(nome))")
     .eq("user_id", userId)
     .eq("status", "active")
     .order("created_at", { ascending: false })
@@ -583,7 +583,15 @@ const Cliente = () => {
       // ─── Canal 2: Fidelidade ───
       let fidelidadeBuilder = supabase
         .channel('canal-fidelidade')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'assinaturas', filter: `user_id=eq.${userId}` }, () => {
+        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'assinaturas', filter: `user_id=eq.${userId}` }, (payload) => {
+          invalidateLoyalty();
+          const newStatus = (payload.new as any)?.status;
+          const oldStatus = (payload.old as any)?.status;
+          if (newStatus === 'active' && oldStatus === 'pending_renewal') {
+            toast.success('Plano renovado com sucesso! 🎉');
+          }
+        })
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'assinaturas', filter: `user_id=eq.${userId}` }, () => {
           invalidateLoyalty();
         })
         .on('postgres_changes', { event: '*', schema: 'public', table: 'pontos', filter: `user_id=eq.${userId}` }, () => {
@@ -857,6 +865,15 @@ const Cliente = () => {
                   nextBillingDate={activeSubscription.next_billing_date || ""}
                   paymentMethod={activeSubscription.payment_method}
                   onViewDetails={() => setPlansSheetOpen(true)}
+                  assinaturaId={activeSubscription.id}
+                  planoPreco={(activeSubscription as any).plano?.preco_mensal}
+                  servicoNome={(activeSubscription as any).plano?.servico?.nome}
+                  diasRestantes={activeSubscription.ciclo_fim ? Math.max(0, Math.ceil((new Date(activeSubscription.ciclo_fim + "T00:00:00").getTime() - Date.now()) / 86400000)) : undefined}
+                  userId={user?.id}
+                  onRenovado={() => {
+                    invalidateLoyalty();
+                    invalidateAppointments();
+                  }}
                 />
               </>
               ) : pendingSubscription ? (

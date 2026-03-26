@@ -89,12 +89,15 @@ export function MyPlansSheet({ open, onOpenChange, userId, onSubscriptionChanged
           status,
           next_billing_date,
           payment_method,
+          total_renovacoes,
+          usos_ciclo_atual,
           plano:planos(
             id,
             nome,
             descricao,
             preco_mensal,
-            beneficios_json
+            beneficios_json,
+            limite_agendamentos_mes
           )
         `)
         .eq("user_id", userId)
@@ -406,7 +409,37 @@ export function MyPlansSheet({ open, onOpenChange, userId, onSubscriptionChanged
                             <CreditCard className="w-3.5 h-3.5" />
                             <span>{paymentLabel}</span>
                           </div>
+                          {(subscription as any).total_renovacoes > 0 && (
+                            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                              <RefreshCw className="w-3.5 h-3.5" />
+                              <span>Renovado {(subscription as any).total_renovacoes}x</span>
+                            </div>
+                          )}
                         </div>
+
+                        {/* Usage tracker */}
+                        {(subscription as any).plano?.limite_agendamentos_mes && (
+                          <div className="space-y-1.5">
+                            <div className="flex items-center justify-between text-[11px]">
+                              <span className="text-muted-foreground">Usos do ciclo</span>
+                              <span className="text-foreground font-semibold tabular-nums">
+                                {(subscription as any).usos_ciclo_atual || 0} de {(subscription as any).plano.limite_agendamentos_mes}
+                              </span>
+                            </div>
+                            <div className="h-1.5 rounded-full bg-muted-foreground/10 overflow-hidden">
+                              <div
+                                className="h-full rounded-full bg-primary transition-all duration-500"
+                                style={{ width: `${Math.min(100, ((subscription as any).usos_ciclo_atual || 0) / (subscription as any).plano.limite_agendamentos_mes * 100)}%` }}
+                              />
+                            </div>
+                            {((subscription as any).plano.limite_agendamentos_mes - ((subscription as any).usos_ciclo_atual || 0)) <= 0 && (
+                              <div className="flex items-center gap-1 mt-1">
+                                <Sparkles className="w-3 h-3 text-emerald-400" />
+                                <span className="text-[10px] font-semibold text-emerald-400">Pronto para renovar</span>
+                              </div>
+                            )}
+                          </div>
+                        )}
 
                         {/* Pending Cash info */}
                         {isPendingCash && (
