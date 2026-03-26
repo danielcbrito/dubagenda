@@ -420,6 +420,8 @@ export type Database = {
           asaas_payment_id: string | null
           barbeiro_id: string | null
           cash_payment_confirmed: boolean | null
+          ciclo_fim: string | null
+          ciclo_inicio: string | null
           created_at: string | null
           gateway_subscription_id: string | null
           id: string
@@ -429,14 +431,19 @@ export type Database = {
           pix_payload: string | null
           pix_qr_code: string | null
           plano_id: string
+          renovada_antecipadamente: boolean
           status: Database["public"]["Enums"]["subscription_status"] | null
+          total_renovacoes: number
           updated_at: string | null
           user_id: string
+          usos_ciclo_atual: number
         }
         Insert: {
           asaas_payment_id?: string | null
           barbeiro_id?: string | null
           cash_payment_confirmed?: boolean | null
+          ciclo_fim?: string | null
+          ciclo_inicio?: string | null
           created_at?: string | null
           gateway_subscription_id?: string | null
           id?: string
@@ -446,14 +453,19 @@ export type Database = {
           pix_payload?: string | null
           pix_qr_code?: string | null
           plano_id: string
+          renovada_antecipadamente?: boolean
           status?: Database["public"]["Enums"]["subscription_status"] | null
+          total_renovacoes?: number
           updated_at?: string | null
           user_id: string
+          usos_ciclo_atual?: number
         }
         Update: {
           asaas_payment_id?: string | null
           barbeiro_id?: string | null
           cash_payment_confirmed?: boolean | null
+          ciclo_fim?: string | null
+          ciclo_inicio?: string | null
           created_at?: string | null
           gateway_subscription_id?: string | null
           id?: string
@@ -463,9 +475,12 @@ export type Database = {
           pix_payload?: string | null
           pix_qr_code?: string | null
           plano_id?: string
+          renovada_antecipadamente?: boolean
           status?: Database["public"]["Enums"]["subscription_status"] | null
+          total_renovacoes?: number
           updated_at?: string | null
           user_id?: string
+          usos_ciclo_atual?: number
         }
         Relationships: [
           {
@@ -4760,6 +4775,7 @@ export type Database = {
         Returns: string
       }
       get_all_lojas_stats: { Args: never; Returns: Json }
+      get_assinatura_status: { Args: { p_user_id: string }; Returns: Json }
       get_client_loyalty_required_points: {
         Args: { p_user_id: string }
         Returns: number
@@ -4894,6 +4910,10 @@ export type Database = {
         Returns: boolean
       }
       is_ip_allowed_maintenance: { Args: { p_ip: string }; Returns: boolean }
+      renovar_plano_cliente: {
+        Args: { p_assinatura_id: string; p_forma_pagamento: string }
+        Returns: Json
+      }
       store_create_order_with_reservations: {
         Args: {
           p_items: Json
@@ -4957,6 +4977,7 @@ export type Database = {
         | "past_due"
         | "suspended"
         | "pending_cash"
+        | "pending_renewal"
       tenant_subscription_status:
         | "trialing"
         | "active"
@@ -5116,6 +5137,7 @@ export const Constants = {
         "past_due",
         "suspended",
         "pending_cash",
+        "pending_renewal",
       ],
       tenant_subscription_status: [
         "trialing",
