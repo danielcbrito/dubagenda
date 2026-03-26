@@ -172,7 +172,7 @@ const fetchLoyaltyData = async (userId: string, tenantId: string | null) => {
   // Buscar assinatura ativa
   const { data: activeSub } = await supabase
     .from("assinaturas")
-    .select("id, status, next_billing_date, plano_id, barbeiro_id, payment_method, cash_payment_confirmed, plano:planos(nome, limite_agendamentos_mes)")
+    .select("id, status, next_billing_date, plano_id, barbeiro_id, payment_method, cash_payment_confirmed, ciclo_fim, plano:planos(nome, limite_agendamentos_mes, preco_mensal, servico:servicos(nome))")
     .eq("user_id", userId)
     .eq("status", "active")
     .order("created_at", { ascending: false })
