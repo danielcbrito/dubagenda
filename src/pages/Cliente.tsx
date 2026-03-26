@@ -865,6 +865,13 @@ const Cliente = () => {
                   nextBillingDate={activeSubscription.next_billing_date || ""}
                   paymentMethod={activeSubscription.payment_method}
                   onViewDetails={() => setPlansSheetOpen(true)}
+                  assinaturaId={activeSubscription.id}
+                  planoPreco={(activeSubscription as any).plano?.preco_mensal}
+                  userId={user?.id}
+                  onRenovado={() => {
+                    invalidateLoyalty();
+                    invalidateAppointments();
+                  }}
                 />
               </>
               ) : pendingSubscription ? (
