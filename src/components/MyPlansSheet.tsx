@@ -439,7 +439,7 @@ export function MyPlansSheet({ open, onOpenChange, userId, onSubscriptionChanged
                               </div>
                             )}
                           </div>
-                        )
+                        )}
 
                         {/* Pending Cash info */}
                         {isPendingCash && (
