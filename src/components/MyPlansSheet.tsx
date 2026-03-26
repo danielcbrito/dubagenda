@@ -89,12 +89,15 @@ export function MyPlansSheet({ open, onOpenChange, userId, onSubscriptionChanged
           status,
           next_billing_date,
           payment_method,
+          total_renovacoes,
+          usos_ciclo_atual,
           plano:planos(
             id,
             nome,
             descricao,
             preco_mensal,
-            beneficios_json
+            beneficios_json,
+            limite_agendamentos_mes
           )
         `)
         .eq("user_id", userId)
