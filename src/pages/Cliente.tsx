@@ -583,7 +583,15 @@ const Cliente = () => {
       // ─── Canal 2: Fidelidade ───
       let fidelidadeBuilder = supabase
         .channel('canal-fidelidade')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'assinaturas', filter: `user_id=eq.${userId}` }, () => {
+        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'assinaturas', filter: `user_id=eq.${userId}` }, (payload) => {
+          invalidateLoyalty();
+          const newStatus = (payload.new as any)?.status;
+          const oldStatus = (payload.old as any)?.status;
+          if (newStatus === 'active' && oldStatus === 'pending_renewal') {
+            toast.success('Plano renovado com sucesso! 🎉');
+          }
+        })
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'assinaturas', filter: `user_id=eq.${userId}` }, () => {
           invalidateLoyalty();
         })
         .on('postgres_changes', { event: '*', schema: 'public', table: 'pontos', filter: `user_id=eq.${userId}` }, () => {
