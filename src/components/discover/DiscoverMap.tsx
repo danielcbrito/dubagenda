@@ -140,6 +140,19 @@ function buildBarberIcon(
   });
 }
 
+/**
+ * Offset the target LatLng downward so the visual center
+ * appears in the top half of the map (above the bottom sheet).
+ * The sheet covers ~50% at default snap, so we shift by ~30% of container height.
+ */
+function getOffsetCenter(map: L.Map, lat: number, lng: number, zoom: number): L.LatLng {
+  const targetPoint = map.project([lat, lng], zoom);
+  const containerHeight = map.getSize().y;
+  // Shift downward by 30% of container → visually pushes center UP
+  targetPoint.y += containerHeight * 0.22;
+  return map.unproject(targetPoint, zoom);
+}
+
 export function DiscoverMap({
   units,
   userLocation,
@@ -225,6 +238,11 @@ export function DiscoverMap({
       zoomControl: false,
       attributionControl: false,
     });
+
+    // Offset initial center to account for bottom sheet
+    const centerArr: [number, number] = Array.isArray(defaultCenter) ? defaultCenter as [number, number] : [(defaultCenter as L.LatLng).lat, (defaultCenter as L.LatLng).lng];
+    const offsetInitial = getOffsetCenter(map, centerArr[0], centerArr[1], initialZoom);
+    map.setView(offsetInitial, initialZoom, { animate: false });
     const initialTile = L.tileLayer(getTileUrl(initialMapStyleRef.current), {
       maxZoom: 20,
     }).addTo(map);
@@ -296,26 +314,30 @@ export function DiscoverMap({
     if (selectedId) {
       const unit = mappableUnits.find((entry) => entry.id === selectedId);
       if (unit) {
-        map.flyTo([unit.latitude, unit.longitude], 16, { duration: 0.8 });
+        const offset = getOffsetCenter(map, unit.latitude, unit.longitude, 16);
+        map.flyTo(offset, 16, { duration: 0.8 });
       }
       return;
     }
 
     if (userLocation) {
-      map.flyTo([userLocation.lat, userLocation.lng], initialZoom, { duration: 0.8 });
+      const offset = getOffsetCenter(map, userLocation.lat, userLocation.lng, initialZoom);
+      map.flyTo(offset, initialZoom, { duration: 0.8 });
       return;
     }
 
     if (mappableUnits.length > 0) {
       const primaryUnit = mappableUnits[0];
-      map.flyTo([primaryUnit.latitude, primaryUnit.longitude], initialZoom, { duration: 0.8 });
+      const offset = getOffsetCenter(map, primaryUnit.latitude, primaryUnit.longitude, initialZoom);
+      map.flyTo(offset, initialZoom, { duration: 0.8 });
     }
   }, [selectedId, mappableUnits, userLocation, initialZoom]);
 
   const handleRecenter = () => {
     const map = mapRef.current;
     if (map && userLocation) {
-      map.flyTo([userLocation.lat, userLocation.lng], initialZoom, { duration: 0.8 });
+      const offset = getOffsetCenter(map, userLocation.lat, userLocation.lng, initialZoom);
+      map.flyTo(offset, initialZoom, { duration: 0.8 });
     }
     onRecenter();
   };
