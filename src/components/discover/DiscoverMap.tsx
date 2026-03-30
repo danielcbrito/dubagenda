@@ -240,8 +240,8 @@ export function DiscoverMap({
     });
 
     // Offset initial center to account for bottom sheet
-    const centerArr = Array.isArray(defaultCenter) ? defaultCenter : [defaultCenter.lat, defaultCenter.lng];
-    const offsetInitial = getOffsetCenter(map, centerArr[0] as number, centerArr[1] as number, initialZoom);
+    const centerArr: [number, number] = Array.isArray(defaultCenter) ? defaultCenter as [number, number] : [(defaultCenter as L.LatLng).lat, (defaultCenter as L.LatLng).lng];
+    const offsetInitial = getOffsetCenter(map, centerArr[0], centerArr[1], initialZoom);
     map.setView(offsetInitial, initialZoom, { animate: false });
     const initialTile = L.tileLayer(getTileUrl(initialMapStyleRef.current), {
       maxZoom: 20,
