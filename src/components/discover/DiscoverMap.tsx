@@ -140,6 +140,19 @@ function buildBarberIcon(
   });
 }
 
+/**
+ * Offset the target LatLng downward so the visual center
+ * appears in the top half of the map (above the bottom sheet).
+ * The sheet covers ~50% at default snap, so we shift by ~30% of container height.
+ */
+function getOffsetCenter(map: L.Map, lat: number, lng: number, zoom: number): L.LatLng {
+  const targetPoint = map.project([lat, lng], zoom);
+  const containerHeight = map.getSize().y;
+  // Shift downward by 30% of container → visually pushes center UP
+  targetPoint.y += containerHeight * 0.22;
+  return map.unproject(targetPoint, zoom);
+}
+
 export function DiscoverMap({
   units,
   userLocation,
