@@ -124,51 +124,56 @@ const Index = () => {
           </div>
 
           <div
-            className="flex flex-col"
+            className="flex flex-col gap-2.5"
             style={{ marginBottom: "calc(env(safe-area-inset-bottom, 0px) + 22px)" }}
           >
             <button
-              onClick={() => navigate("/escolher-barbearia")}
-              className="w-full flex items-center justify-between active:scale-[0.97] transition-all border-foreground text-foreground"
+              onClick={handleJaTenhoBarbearia}
+              className="w-full flex items-center justify-between active:scale-[0.97] transition-all bg-foreground text-background"
               style={{
                 fontFamily: "'Plus Jakarta Sans', Inter, sans-serif",
                 fontWeight: 700,
                 fontSize: 15,
-                background: "transparent",
                 borderRadius: 14,
                 padding: "14px 18px",
-                borderWidth: "1.8px",
+                border: "none",
+                cursor: "pointer",
+              }}
+            >
+              <span>Já sou cliente</span>
+              <span
+                className="flex items-center justify-center bg-background"
+                style={{ width: 28, height: 28, borderRadius: 8 }}
+              >
+                <ArrowRight className="w-3.5 h-3.5 text-foreground" />
+              </span>
+            </button>
+
+            <button
+              onClick={() => navigate("/escolher-barbearia")}
+              className="w-full flex items-center justify-between active:scale-[0.97] transition-all text-foreground border-foreground/20"
+              style={{
+                fontFamily: "'Plus Jakarta Sans', Inter, sans-serif",
+                fontWeight: 700,
+                fontSize: 15,
+                background: "hsl(var(--muted))",
+                borderRadius: 14,
+                padding: "14px 18px",
+                borderWidth: "1.5px",
                 borderStyle: "solid",
                 cursor: "pointer",
               }}
             >
               <span>Encontrar Barbearias</span>
               <span
-                className="flex items-center justify-center bg-foreground"
+                className="flex items-center justify-center bg-foreground/10"
                 style={{ width: 28, height: 28, borderRadius: 8 }}
               >
-                <ArrowRight className="w-3.5 h-3.5 text-background" />
+                <ArrowRight className="w-3.5 h-3.5 text-foreground" />
               </span>
             </button>
 
-            <button
-              onClick={handleJaTenhoBarbearia}
-              className="w-full active:opacity-80 transition-opacity text-foreground/70 mt-3"
-              style={{
-                fontFamily: "'Plus Jakarta Sans', Inter, sans-serif",
-                fontWeight: 600,
-                fontSize: 13,
-                background: "transparent",
-                borderRadius: 14,
-                padding: "13px 18px",
-                cursor: "pointer",
-                border: "1.5px solid hsl(var(--foreground) / 0.2)",
-              }}
-            >
-              Já tenho uma barbearia
-            </button>
-
-            <p className="text-center text-[11px] text-muted-foreground/40 mt-2">
+            <p className="text-center text-[11px] text-muted-foreground/40 mt-0.5">
               Entre com seu login para agendar
             </p>
           </div>
