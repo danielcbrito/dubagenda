@@ -212,8 +212,12 @@ const Auth = () => {
 
       setStep("magic_sent");
       toast.success("Link de acesso enviado para seu email!");
-    } catch {
-      toast.error("Erro ao processar cadastro");
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        toast.error(err.errors[0]?.message || "Email inválido");
+      } else {
+        toast.error("Não foi possível validar esse e-mail agora. Tente novamente.");
+      }
     } finally {
       setIsLoading(false);
     }

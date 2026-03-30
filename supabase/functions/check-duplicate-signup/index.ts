@@ -6,6 +6,8 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+const emailSchema = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -26,47 +28,88 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, serviceRoleKey);
 
     const duplicates: string[] = [];
+    let duplicateClientAccount = false;
 
-    // Check CPF
     if (cpf) {
-      const cleanCpf = cpf.replace(/\D/g, "");
+      const cleanCpf = String(cpf).replace(/\D/g, "");
       const { data } = await supabase
         .from("profiles")
         .select("id")
         .eq("cpf", cleanCpf)
         .limit(1);
+
       if (data && data.length > 0) {
         duplicates.push("cpf");
       }
     }
 
-    // Check phone
     if (telefone) {
-      const cleanPhone = telefone.replace(/\D/g, "");
+      const cleanPhone = String(telefone).replace(/\D/g, "");
       const { data } = await supabase
         .from("profiles")
         .select("id")
         .eq("telefone", cleanPhone)
         .limit(1);
+
       if (data && data.length > 0) {
         duplicates.push("telefone");
       }
     }
 
-    // Check email via auth (Supabase already blocks duplicate emails,
-    // but we check proactively for a better UX message)
     if (email) {
-      const { data } = await supabase.auth.admin.listUsers();
-      const emailExists = data?.users?.some(
-        (u) => u.email?.toLowerCase() === email.toLowerCase()
-      );
-      if (emailExists) {
-        duplicates.push("email");
+      const normalizedEmail = String(email).trim().toLowerCase();
+
+      if (!emailSchema.test(normalizedEmail)) {
+        return new Response(
+          JSON.stringify({ error: "Email inválido" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      let page = 1;
+      const perPage = 200;
+      let foundUserId: string | null = null;
+      let hasMore = true;
+
+      while (hasMore && !foundUserId) {
+        const { data, error } = await supabase.auth.admin.listUsers({ page, perPage });
+
+        if (error) {
+          throw error;
+        }
+
+        const users = data?.users ?? [];
+        const matchedUser = users.find((user) => user.email?.trim().toLowerCase() === normalizedEmail);
+
+        if (matchedUser) {
+          foundUserId = matchedUser.id;
+          break;
+        }
+
+        hasMore = users.length === perPage;
+        page += 1;
+      }
+
+      if (foundUserId) {
+        const { data: roles, error: rolesError } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", foundUserId);
+
+        if (rolesError) {
+          throw rolesError;
+        }
+
+        duplicateClientAccount = (roles ?? []).some((entry) => entry.role === "cliente");
+
+        if (duplicateClientAccount) {
+          duplicates.push("email");
+        }
       }
     }
 
     return new Response(
-      JSON.stringify({ duplicates }),
+      JSON.stringify({ duplicates, duplicateClientAccount }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err) {
