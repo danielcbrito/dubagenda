@@ -277,6 +277,7 @@ const Cliente = () => {
     queryFn: () => fetchAppointmentsData(user!.id),
     enabled: !!user?.id,
     staleTime: 5 * 60 * 1000, // 5 min
+    refetchOnMount: 'always', // Always refetch when navigating back from booking
   });
 
   const appointments = appointmentsQueryData?.appointments ?? [];
