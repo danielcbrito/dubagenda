@@ -464,7 +464,7 @@ const Auth = () => {
               <Button
                 type="submit"
                 className="w-full h-14 rounded-2xl text-[15px] font-semibold bg-foreground text-background hover:bg-foreground/90 active:scale-[0.98] transition-all duration-200"
-                disabled={isLoading || cooldownTimer > 0 || emailExists}
+                disabled={isLoading || cooldownTimer > 0 || emailExists || checkingEmail}
               >
                 {isLoading ? (
                   <span className="flex items-center gap-2">
