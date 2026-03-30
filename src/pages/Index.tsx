@@ -101,7 +101,7 @@ const Index = () => {
             DUB AGENDA
           </span>
 
-          <div className="flex flex-col items-start gap-1 mb-5">
+          <div className="flex flex-col items-start gap-1 mb-8">
             <h1
               style={{
                 fontFamily: "'Plus Jakarta Sans', Inter, sans-serif",
@@ -125,7 +125,7 @@ const Index = () => {
 
           <div
             className="flex flex-col gap-2.5"
-            style={{ marginBottom: "calc(env(safe-area-inset-bottom, 0px) + 22px)" }}
+            style={{ marginBottom: "calc(env(safe-area-inset-bottom, 0px) + 28px)" }}
           >
             <button
               onClick={handleJaTenhoBarbearia}
@@ -172,10 +172,6 @@ const Index = () => {
                 <ArrowRight className="w-3.5 h-3.5 text-foreground" />
               </span>
             </button>
-
-            <p className="text-center text-[11px] text-muted-foreground/40 mt-0.5">
-              Entre com seu login para agendar
-            </p>
           </div>
         </motion.div>
       </div>
