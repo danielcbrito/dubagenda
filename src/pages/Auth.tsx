@@ -445,32 +445,18 @@ const Auth = () => {
                 )}
               </div>
 
-              {/* Real-time duplicate detection banner */}
+              {/* Real-time duplicate detection — simple red text */}
               <AnimatePresence>
                 {emailExists && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: "auto" }}
-                    exit={{ opacity: 0, height: 0 }}
-                    transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-                    className="overflow-hidden"
+                  <motion.p
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="text-[12px] text-destructive font-medium px-1"
                   >
-                    <div className="rounded-xl bg-primary/8 border border-primary/20 px-4 py-3">
-                      <p className="text-[13px] text-foreground font-medium">
-                        Este email já possui uma conta
-                      </p>
-                      <p className="text-[12px] text-muted-foreground mt-0.5">
-                        Faça login para continuar acessando.
-                      </p>
-                      <button
-                        type="button"
-                        onClick={() => navigate(`/auth?mode=login&email=${encodeURIComponent(email.trim())}`)}
-                        className="mt-2 text-[13px] font-semibold text-primary hover:text-primary/80 transition-colors"
-                      >
-                        Fazer login →
-                      </button>
-                    </div>
-                  </motion.div>
+                    Este email já possui uma conta
+                  </motion.p>
                 )}
               </AnimatePresence>
 
