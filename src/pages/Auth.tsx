@@ -536,10 +536,16 @@ const Auth = () => {
               <button
                 type="button"
                 onClick={() => {
-                  setStep("email");
-                  setSenha("");
-                  setLoginError(null);
-                  navigate(`/auth?mode=${isSignup ? "login" : "signup"}`);
+                  if (isSignup) {
+                    // Already on signup, go to login
+                    setStep("email");
+                    setSenha("");
+                    setLoginError(null);
+                    navigate("/auth?mode=login");
+                  } else {
+                    // From login, redirect to barbershop discovery flow
+                    navigate("/escolher-barbearia");
+                  }
                 }}
                 className="ml-1.5 text-primary hover:text-primary/80 font-semibold transition-colors"
               >
