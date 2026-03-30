@@ -172,24 +172,23 @@ const Auth = () => {
     try {
       const validated = emailSchema.parse(email);
 
-      // Check if email already exists before sending magic link
-      try {
-        const { data: dupData } = await supabase.functions.invoke("check-duplicate-signup", {
-          body: { email: validated },
-        });
-        if (dupData?.duplicates?.includes("email")) {
-          toast.error("Esse email já possui uma conta. Faça login para continuar.", { duration: 5000 });
-          // Switch to login mode automatically
-          setStep("email");
-          setSenha("");
-          setLoginError(null);
-          navigate("/auth?mode=login", { replace: true });
-          setIsLoading(false);
-          return;
-        }
-      } catch {
-        // If duplicate check fails, proceed anyway (don't block signup)
-        console.warn("Duplicate check unavailable, proceeding with signup");
+      const { data: dupData, error: duplicateCheckError } = await supabase.functions.invoke("check-duplicate-signup", {
+        body: { email: validated },
+      });
+
+      if (duplicateCheckError) {
+        throw duplicateCheckError;
+      }
+
+      if (dupData?.duplicateClientAccount || dupData?.duplicates?.includes("email")) {
+        const message = "Já existe uma conta de cliente com esse e-mail. Faça login para continuar.";
+        setStep("email");
+        setSenha("");
+        setLoginError(message);
+        toast.error(message, { duration: 5000 });
+        navigate(`/auth?mode=login&email=${encodeURIComponent(validated)}`, { replace: true });
+        setIsLoading(false);
+        return;
       }
 
       const { error } = await supabase.auth.signInWithOtp({
