@@ -309,26 +309,30 @@ export function DiscoverMap({
     if (selectedId) {
       const unit = mappableUnits.find((entry) => entry.id === selectedId);
       if (unit) {
-        map.flyTo([unit.latitude, unit.longitude], 16, { duration: 0.8 });
+        const offset = getOffsetCenter(map, unit.latitude, unit.longitude, 16);
+        map.flyTo(offset, 16, { duration: 0.8 });
       }
       return;
     }
 
     if (userLocation) {
-      map.flyTo([userLocation.lat, userLocation.lng], initialZoom, { duration: 0.8 });
+      const offset = getOffsetCenter(map, userLocation.lat, userLocation.lng, initialZoom);
+      map.flyTo(offset, initialZoom, { duration: 0.8 });
       return;
     }
 
     if (mappableUnits.length > 0) {
       const primaryUnit = mappableUnits[0];
-      map.flyTo([primaryUnit.latitude, primaryUnit.longitude], initialZoom, { duration: 0.8 });
+      const offset = getOffsetCenter(map, primaryUnit.latitude, primaryUnit.longitude, initialZoom);
+      map.flyTo(offset, initialZoom, { duration: 0.8 });
     }
   }, [selectedId, mappableUnits, userLocation, initialZoom]);
 
   const handleRecenter = () => {
     const map = mapRef.current;
     if (map && userLocation) {
-      map.flyTo([userLocation.lat, userLocation.lng], initialZoom, { duration: 0.8 });
+      const offset = getOffsetCenter(map, userLocation.lat, userLocation.lng, initialZoom);
+      map.flyTo(offset, initialZoom, { duration: 0.8 });
     }
     onRecenter();
   };
