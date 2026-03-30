@@ -238,6 +238,11 @@ export function DiscoverMap({
       zoomControl: false,
       attributionControl: false,
     });
+
+    // Offset initial center to account for bottom sheet
+    const centerArr = Array.isArray(defaultCenter) ? defaultCenter : [defaultCenter.lat, defaultCenter.lng];
+    const offsetInitial = getOffsetCenter(map, centerArr[0] as number, centerArr[1] as number, initialZoom);
+    map.setView(offsetInitial, initialZoom, { animate: false });
     const initialTile = L.tileLayer(getTileUrl(initialMapStyleRef.current), {
       maxZoom: 20,
     }).addTo(map);
