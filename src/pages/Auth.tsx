@@ -33,9 +33,15 @@ const Auth = () => {
   const passwordRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Auto-check session
+  // Auto-check session + prefill email from redirects
   useEffect(() => {
     const verified = searchParams.get("verified");
+    const prefilledEmail = searchParams.get("email");
+
+    if (prefilledEmail) {
+      setEmail(prefilledEmail);
+    }
+
     if (verified === "true" || verified === "whatsapp") {
       toast.success("Conta confirmada com sucesso! Faça login para continuar.", { duration: 5000 });
     }
