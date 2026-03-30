@@ -160,11 +160,32 @@ const Auth = () => {
     }
   };
 
-  // Signup: send magic link
+  // Signup: send magic link (with duplicate check)
   const handleMagicLink = async () => {
     setIsLoading(true);
     try {
       const validated = emailSchema.parse(email);
+
+      // Check if email already exists before sending magic link
+      try {
+        const { data: dupData } = await supabase.functions.invoke("check-duplicate-signup", {
+          body: { email: validated },
+        });
+        if (dupData?.duplicates?.includes("email")) {
+          toast.error("Esse email já possui uma conta. Faça login para continuar.", { duration: 5000 });
+          // Switch to login mode automatically
+          setStep("email");
+          setSenha("");
+          setLoginError(null);
+          navigate("/auth?mode=login", { replace: true });
+          setIsLoading(false);
+          return;
+        }
+      } catch {
+        // If duplicate check fails, proceed anyway (don't block signup)
+        console.warn("Duplicate check unavailable, proceeding with signup");
+      }
+
       const { error } = await supabase.auth.signInWithOtp({
         email: validated,
         options: {
