@@ -939,37 +939,21 @@ const BarbershopPublic = () => {
             )}
           </div>
         ) : (
-          <div className="flex gap-2.5">
-            <motion.button
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.5 }}
-              onClick={handleLogin}
-              className={cn(
-                "flex-1 h-[52px] rounded-xl font-semibold text-[13px] tracking-wide",
-                "flex items-center justify-center gap-1.5",
-                "transition-all duration-200 active:scale-[0.985]",
-                "bg-card border border-border text-foreground"
-              )}
-            >
-              Já sou cliente
-            </motion.button>
-            <motion.button
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.55 }}
-              onClick={handleJoin}
-              className={cn(
-                "flex-1 h-[52px] rounded-xl font-semibold text-[13px] tracking-wide",
-                "flex items-center justify-center gap-1.5",
-                "transition-all duration-200 active:scale-[0.985]",
-                "bg-foreground text-background shadow-lg"
-              )}
-            >
-              <span>Criar conta</span>
-              <ArrowRight className="w-4 h-4" />
-            </motion.button>
-          </div>
+          <motion.button
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5 }}
+            onClick={handleJoin}
+            className={cn(
+              "w-full h-[52px] rounded-xl font-semibold text-[14px] tracking-wide",
+              "flex items-center justify-center gap-2",
+              "transition-all duration-200 active:scale-[0.985]",
+              "bg-foreground text-background shadow-lg"
+            )}
+          >
+            <span>Escolher essa barbearia</span>
+            <ArrowRight className="w-4 h-4" />
+          </motion.button>
         )}
       </div>
       {/* Barber Profile Sheet */}
