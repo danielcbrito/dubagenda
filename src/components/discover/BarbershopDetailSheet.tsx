@@ -291,9 +291,9 @@ export function BarbershopDetailSheet({
                 <h3 className="text-[9px] uppercase tracking-[0.1em] text-muted-foreground font-bold">
                   Profissionais
                 </h3>
-                {!loadingBarbers && barbers.length > 0 && (
+                {!loadingBarbers && visibleBarbers.length > 0 && (
                   <span className="text-[9px] tabular-nums text-muted-foreground/50 font-medium">
-                    {barbers.length}
+                    {visibleBarbers.length}
                   </span>
                 )}
               </div>
@@ -302,13 +302,13 @@ export function BarbershopDetailSheet({
                 <div className="flex items-center justify-center py-8">
                   <Loader2 className="w-4 h-4 text-muted-foreground animate-spin" />
                 </div>
-              ) : barbers.length === 0 ? (
+              ) : visibleBarbers.length === 0 ? (
                 <p className="text-[11px] text-muted-foreground text-center py-6">
                   Nenhum profissional disponível
                 </p>
               ) : (
                 <div className="space-y-2">
-                  {barbers.map((barber, i) => (
+                  {visibleBarbers.map((barber, i) => (
                     <motion.button
                       key={barber.id}
                       initial={{ opacity: 0, y: 8 }}
