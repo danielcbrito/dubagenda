@@ -905,6 +905,48 @@ export type Database = {
         }
         Relationships: []
       }
+      bloqueios_cliente_barbeiro: {
+        Row: {
+          barbeiro_id: string
+          bloqueado_por: string | null
+          created_at: string
+          id: string
+          motivo: string | null
+          user_id: string
+        }
+        Insert: {
+          barbeiro_id: string
+          bloqueado_por?: string | null
+          created_at?: string
+          id?: string
+          motivo?: string | null
+          user_id: string
+        }
+        Update: {
+          barbeiro_id?: string
+          bloqueado_por?: string | null
+          created_at?: string
+          id?: string
+          motivo?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bloqueios_cliente_barbeiro_barbeiro_id_fkey"
+            columns: ["barbeiro_id"]
+            isOneToOne: false
+            referencedRelation: "barbeiros"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bloqueios_cliente_barbeiro_barbeiro_id_fkey"
+            columns: ["barbeiro_id"]
+            isOneToOne: false
+            referencedRelation: "barbeiros_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       categorias: {
         Row: {
           ativo: boolean
@@ -4776,6 +4818,7 @@ export type Database = {
       }
       get_all_lojas_stats: { Args: never; Returns: Json }
       get_assinatura_status: { Args: { p_user_id: string }; Returns: Json }
+      get_blocked_barber_ids: { Args: { p_user_id: string }; Returns: string[] }
       get_client_loyalty_required_points: {
         Args: { p_user_id: string }
         Returns: number
@@ -4901,6 +4944,10 @@ export type Database = {
         Returns: undefined
       }
       is_admin: { Args: never; Returns: boolean }
+      is_client_blocked_from_barber: {
+        Args: { p_barbeiro_id: string; p_user_id: string }
+        Returns: boolean
+      }
       is_device_authorized: {
         Args: { p_fingerprint: string }
         Returns: boolean
