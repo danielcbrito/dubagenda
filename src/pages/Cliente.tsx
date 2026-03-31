@@ -318,7 +318,8 @@ const Cliente = () => {
     staleTime: 30 * 60 * 1000, // 30 min
   });
 
-  const shopBarbers = shopQueryData?.shopBarbers ?? [];
+  const { blockedIds: blockedBarberIds } = useBlockedBarbers();
+  const shopBarbers = (shopQueryData?.shopBarbers ?? []).filter(b => !blockedBarberIds.includes(b.id));
 
   // ─── Remaining manual state ───
   const [pointsModalOpen, setPointsModalOpen] = useState(false);
