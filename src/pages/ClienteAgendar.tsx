@@ -27,6 +27,7 @@ import { TimeSelectionBar } from "@/components/booking/TimeSelectionBar";
 import { FloatingActionBar } from "@/components/booking/FloatingActionBar";
 import { UnitSelector } from "@/components/booking/UnitSelector";
 import { NextAvailableDateButton } from "@/components/booking/NextAvailableDateButton";
+import { useBlockedBarbers } from "@/hooks/useBlockedBarbers";
 
 interface TenantUnit {
   id: string;
@@ -157,6 +158,9 @@ const ClienteAgendar = () => {
     selectedServices?.[0]?.id === activeSubscription.servico_id &&
     activeSubscription.agendamentos_usados < activeSubscription.limite_agendamentos_mes;
 
+  // Barbeiros bloqueados para este cliente
+  const { blockedIds: blockedBarberIds } = useBlockedBarbers();
+
   // Avaliações dos barbeiros
   const { ratings: barberRatings } = useBarberRatings(barbers.map(b => b.id));
 
@@ -246,8 +250,9 @@ const ClienteAgendar = () => {
       .order("apelido");
 
     const [filtered, all] = await Promise.all([query, allQuery]);
-    setBarbers(filtered.data || []);
-    setAllBarbers(all.data || []);
+    const filterBlocked = (list: Barber[]) => list.filter(b => !blockedBarberIds.includes(b.id));
+    setBarbers(filterBlocked(filtered.data || []));
+    setAllBarbers(filterBlocked(all.data || []));
     return filtered.data || [];
   };
 
@@ -817,7 +822,7 @@ const ClienteAgendar = () => {
       ]);
 
       const safeServices = nextServices || [];
-      const safeBarbers = nextBarbers || [];
+      const safeBarbers = (nextBarbers || []).filter(b => !blockedBarberIds.includes(b.id));
 
       setServices(safeServices);
       setBarbers(safeBarbers);

@@ -4,6 +4,7 @@ import { Star, MapPin, Navigation, Scissors, Users, Loader2, ExternalLink, Chevr
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { BarberProfileSheet } from "./BarberProfileSheet";
+import { useBlockedBarbers } from "@/hooks/useBlockedBarbers";
 
 interface Barber {
   id: string;
@@ -61,6 +62,8 @@ export function BarbershopDetailSheet({
   const [loadingBarbers, setLoadingBarbers] = useState(false);
   const [bannerUrl, setBannerUrl] = useState<string | null>(null);
   const [selectedBarber, setSelectedBarber] = useState<Barber | null>(null);
+  const { blockedIds: blockedBarberIds } = useBlockedBarbers();
+  const visibleBarbers = barbers.filter(b => !blockedBarberIds.includes(b.id));
   useEffect(() => {
     if (!open) return;
     loadBarbers();
@@ -133,14 +136,16 @@ export function BarbershopDetailSheet({
         ratingMap.set(r.barber_id, cur);
       }
 
-      setBarbers(barberData.map(b => {
+      const allBarbers = barberData.map(b => {
         const stats = ratingMap.get(b.id);
         return {
           ...b,
           avgRating: stats ? stats.sum / stats.count : null,
           totalReviews: stats?.count || 0,
         };
-      }));
+      });
+      // Filtering will happen in render via blockedBarberIds
+      setBarbers(allBarbers);
     } catch (err) {
       console.error("Error loading barbers:", err);
     } finally {
@@ -286,9 +291,9 @@ export function BarbershopDetailSheet({
                 <h3 className="text-[9px] uppercase tracking-[0.1em] text-muted-foreground font-bold">
                   Profissionais
                 </h3>
-                {!loadingBarbers && barbers.length > 0 && (
+                {!loadingBarbers && visibleBarbers.length > 0 && (
                   <span className="text-[9px] tabular-nums text-muted-foreground/50 font-medium">
-                    {barbers.length}
+                    {visibleBarbers.length}
                   </span>
                 )}
               </div>
@@ -297,13 +302,13 @@ export function BarbershopDetailSheet({
                 <div className="flex items-center justify-center py-8">
                   <Loader2 className="w-4 h-4 text-muted-foreground animate-spin" />
                 </div>
-              ) : barbers.length === 0 ? (
+              ) : visibleBarbers.length === 0 ? (
                 <p className="text-[11px] text-muted-foreground text-center py-6">
                   Nenhum profissional disponível
                 </p>
               ) : (
                 <div className="space-y-2">
-                  {barbers.map((barber, i) => (
+                  {visibleBarbers.map((barber, i) => (
                     <motion.button
                       key={barber.id}
                       initial={{ opacity: 0, y: 8 }}
