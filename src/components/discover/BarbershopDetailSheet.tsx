@@ -134,14 +134,16 @@ export function BarbershopDetailSheet({
         ratingMap.set(r.barber_id, cur);
       }
 
-      setBarbers(barberData.map(b => {
+      const allBarbers = barberData.map(b => {
         const stats = ratingMap.get(b.id);
         return {
           ...b,
           avgRating: stats ? stats.sum / stats.count : null,
           totalReviews: stats?.count || 0,
         };
-      }));
+      });
+      // Filtering will happen in render via blockedBarberIds
+      setBarbers(allBarbers);
     } catch (err) {
       console.error("Error loading barbers:", err);
     } finally {
