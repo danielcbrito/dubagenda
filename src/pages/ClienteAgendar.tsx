@@ -158,6 +158,9 @@ const ClienteAgendar = () => {
     selectedServices?.[0]?.id === activeSubscription.servico_id &&
     activeSubscription.agendamentos_usados < activeSubscription.limite_agendamentos_mes;
 
+  // Barbeiros bloqueados para este cliente
+  const { blockedIds: blockedBarberIds } = useBlockedBarbers();
+
   // Avaliações dos barbeiros
   const { ratings: barberRatings } = useBarberRatings(barbers.map(b => b.id));
 
