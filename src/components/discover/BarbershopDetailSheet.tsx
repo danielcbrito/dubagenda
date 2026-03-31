@@ -4,6 +4,7 @@ import { Star, MapPin, Navigation, Scissors, Users, Loader2, ExternalLink, Chevr
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { BarberProfileSheet } from "./BarberProfileSheet";
+import { useBlockedBarbers } from "@/hooks/useBlockedBarbers";
 
 interface Barber {
   id: string;
