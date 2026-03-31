@@ -62,6 +62,8 @@ export function BarbershopDetailSheet({
   const [loadingBarbers, setLoadingBarbers] = useState(false);
   const [bannerUrl, setBannerUrl] = useState<string | null>(null);
   const [selectedBarber, setSelectedBarber] = useState<Barber | null>(null);
+  const { blockedIds: blockedBarberIds } = useBlockedBarbers();
+  const visibleBarbers = barbers.filter(b => !blockedBarberIds.includes(b.id));
   useEffect(() => {
     if (!open) return;
     loadBarbers();
