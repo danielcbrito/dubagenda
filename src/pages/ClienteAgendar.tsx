@@ -250,8 +250,9 @@ const ClienteAgendar = () => {
       .order("apelido");
 
     const [filtered, all] = await Promise.all([query, allQuery]);
-    setBarbers(filtered.data || []);
-    setAllBarbers(all.data || []);
+    const filterBlocked = (list: Barber[]) => list.filter(b => !blockedBarberIds.includes(b.id));
+    setBarbers(filterBlocked(filtered.data || []));
+    setAllBarbers(filterBlocked(all.data || []));
     return filtered.data || [];
   };
 
