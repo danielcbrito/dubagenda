@@ -822,7 +822,7 @@ const ClienteAgendar = () => {
       ]);
 
       const safeServices = nextServices || [];
-      const safeBarbers = nextBarbers || [];
+      const safeBarbers = (nextBarbers || []).filter(b => !blockedBarberIds.includes(b.id));
 
       setServices(safeServices);
       setBarbers(safeBarbers);
