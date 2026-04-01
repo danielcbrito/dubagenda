@@ -2,7 +2,7 @@ import { useEffect, useState, useRef, useMemo, useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Calendar, Crown, Banknote, Store, ChevronRight, Scissors, MapPin, Search } from "lucide-react";
+import { Calendar, Crown, Store, ChevronRight, Scissors, MapPin, Search } from "lucide-react";
 import { toast } from "sonner";
 import { useDataError } from "@/hooks/useDataError";
 import { useBlockedBarbers } from "@/hooks/useBlockedBarbers";
