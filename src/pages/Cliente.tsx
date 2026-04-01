@@ -1176,10 +1176,19 @@ const Cliente = () => {
         }}
       />
 
+      {/* Plan Renewal Drawer */}
+      <PlanRenewalDrawer
+        open={renewalDrawerOpen}
+        onOpenChange={setRenewalDrawerOpen}
+        planName={(activeSubscription as any)?.plano?.nome || "Meu Plano"}
+        barberId={(activeSubscription as any)?.barbeiro_id}
+      />
+
       {/* Bottom Navigation */}
       <BottomNavigation
         onProfileClick={() => setProfileSheetOpen(true)}
         onPlansClick={() => setPlansSheetOpen(true)}
+        planExhausted={planExhausted}
       />
     </div>
   );
