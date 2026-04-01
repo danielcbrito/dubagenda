@@ -317,27 +317,17 @@ export function RenovacaoSheet({
                     </Button>
                   </div>
 
+                  <div className="flex items-center justify-center gap-2 text-[11px] text-muted-foreground">
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span>Aguardando confirmação do pagamento...</span>
+                  </div>
+
                   <p className="text-[11px] text-muted-foreground text-center leading-relaxed">
                     Após o pagamento, seu plano será renovado automaticamente.
                   </p>
 
                   {/* Actions */}
                   <div className="space-y-2">
-                    <Button
-                      variant="outline"
-                      onClick={async () => {
-                        const { data } = await supabase.rpc("get_assinatura_status", { p_user_id: userId });
-                        if (data && typeof data === "object" && (data as any).status === "active") {
-                          setStep("confirmacao");
-                          onRenovado();
-                        } else {
-                          toast.info("Pagamento ainda não confirmado. Aguarde alguns instantes.");
-                        }
-                      }}
-                      className="w-full h-10 rounded-xl text-[12px]"
-                    >
-                      Já paguei
-                    </Button>
                     <button
                       onClick={handleClose}
                       className="w-full text-center text-[12px] text-destructive py-2"
