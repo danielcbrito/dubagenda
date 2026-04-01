@@ -1,8 +1,7 @@
-import { useState } from "react";
 import { ChevronRight, Banknote, QrCode, Sparkles } from "lucide-react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { RenovacaoSheet } from "@/components/plano/RenovacaoSheet";
+import { useNavigate } from "react-router-dom";
 
 interface PlanTrackerCardProps {
   planName: string;
@@ -58,7 +57,7 @@ export function PlanTrackerCard({
   userId,
   onRenovado,
 }: PlanTrackerCardProps) {
-  const [renewOpen, setRenewOpen] = useState(false);
+  const navigate = useNavigate();
 
   const remaining = Math.max(0, totalAppointments - usedAppointments);
   const steps = Array.from({ length: totalAppointments }, (_, i) => i < usedAppointments);
@@ -179,7 +178,7 @@ export function PlanTrackerCard({
             {assinaturaId && planoPreco !== undefined && userId && (
               <button
                 onClick={() => {
-                  if (canRenew) setRenewOpen(true);
+                  if (canRenew) navigate("/cliente/assinar");
                 }}
                 disabled={!canRenew}
                 className={cn(
@@ -210,20 +209,6 @@ export function PlanTrackerCard({
           )}
         </div>
       </motion.div>
-
-      {/* Renewal Sheet */}
-      {assinaturaId && planoPreco !== undefined && userId && (
-        <RenovacaoSheet
-          open={renewOpen}
-          onOpenChange={setRenewOpen}
-          assinaturaId={assinaturaId}
-          planoNome={planName}
-          planoPreco={planoPreco}
-          servicoNome={servicoNome || "Serviço"}
-          userId={userId}
-          onRenovado={onRenovado || (() => {})}
-        />
-      )}
     </>
   );
 }
