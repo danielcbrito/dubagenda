@@ -39,12 +39,14 @@ interface Subscription {
   status: string;
   next_billing_date: string | null;
   payment_method: string | null;
+  barbeiro_id?: string | null;
   plano: {
     id: string;
     nome: string;
     descricao: string;
     preco_mensal: number;
     beneficios_json: any;
+    limite_agendamentos_mes?: number;
   };
 }
 
