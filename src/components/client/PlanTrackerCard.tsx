@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { ChevronRight, Banknote, QrCode, Sparkles } from "lucide-react";
 import { ChevronRight, Banknote, QrCode, Sparkles } from "lucide-react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
