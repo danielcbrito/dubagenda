@@ -24,28 +24,9 @@ export function ClientHeader({ profileName, email, userId, realtimeConnected = t
       transition={{ duration: 0.3, ease: "easeOut" }}
       className="flex items-center justify-between"
     >
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-1.5 mb-0.5">
-          <p className="text-[9px] font-medium text-muted-foreground/60 uppercase tracking-[0.18em]">
-            {dayOfWeek} · {formattedDate}
-          </p>
-          <AnimatePresence>
-            {!realtimeConnected && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.8 }}
-                title="Atualizações em tempo real temporariamente indisponíveis"
-                className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-destructive/10 border border-destructive/20"
-              >
-                <WifiOff className="w-2.5 h-2.5 text-destructive/70" strokeWidth={2} />
-                <span className="text-[8px] font-semibold text-destructive/70 uppercase tracking-wider">
-                  Offline
-                </span>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
+        <p className="text-[9px] font-medium text-muted-foreground/60 uppercase tracking-[0.18em] mb-0.5">
+          {dayOfWeek} · {formattedDate}
+        </p>
         <h1 className="text-[15px] font-semibold text-foreground font-display tracking-tight leading-snug">
           {firstName ? `Olá, ${firstName}` : "Olá"}
         </h1>
