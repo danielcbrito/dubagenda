@@ -100,21 +100,46 @@ export function RenovacaoSheet({
     }
   }, [open]);
 
-  // PIX polling
+  // PIX polling + Realtime listener
   useEffect(() => {
     if (step !== "pix") return;
-    const interval = setInterval(async () => {
+
+    let cancelled = false;
+
+    const checkStatus = async () => {
       const { data } = await supabase.rpc("get_assinatura_status", { p_user_id: userId });
-      if (data && typeof data === "object" && "status" in (data as any)) {
-        const status = (data as any).status;
-        if (status === "active") {
+      if (!cancelled && data && typeof data === "object" && "status" in (data as any)) {
+        if ((data as any).status === "active") {
           setStep("confirmacao");
           onRenovado();
         }
       }
-    }, 4000);
-    return () => clearInterval(interval);
-  }, [step, userId, onRenovado]);
+    };
+
+    // Poll every 4s
+    const interval = setInterval(checkStatus, 4000);
+
+    // Realtime listener for instant detection
+    const channel = supabase
+      .channel(`renew-sub-${assinaturaId}`)
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "assinaturas", filter: `id=eq.${assinaturaId}` },
+        (payload) => {
+          if (payload.new && (payload.new as any).status === "active") {
+            setStep("confirmacao");
+            onRenovado();
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+      supabase.removeChannel(channel);
+    };
+  }, [step, userId, assinaturaId, onRenovado]);
 
   const handleConfirm = useCallback(async () => {
     if (!formaPagamento) return;
