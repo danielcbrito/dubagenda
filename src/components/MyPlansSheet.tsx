@@ -181,9 +181,6 @@ export function MyPlansSheet({ open, onOpenChange, userId, onSubscriptionChanged
 
   if (!open) return null;
 
-  const benefits = Array.isArray(subscription?.plano?.beneficios_json)
-    ? subscription.plano.beneficios_json
-    : [];
 
   const statusConfig = subscription ? getStatusConfig(subscription.status) : null;
 
