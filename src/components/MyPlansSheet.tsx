@@ -444,6 +444,48 @@ export function MyPlansSheet({ open, onOpenChange, userId, onSubscriptionChanged
                           </div>
                         )}
 
+                        {/* Renewal CTAs — only when exhausted */}
+                        {(subscription as any).plano?.limite_agendamentos_mes &&
+                          ((subscription as any).plano.limite_agendamentos_mes - ((subscription as any).usos_ciclo_atual || 0)) <= 0 && (
+                          <div className="space-y-2 pt-1">
+                            <button
+                              onClick={() => {
+                                onOpenChange(false);
+                                const barberId = (subscription as any).barbeiro_id;
+                                if (barberId) {
+                                  navigate(`/cliente/agendar?barber=${barberId}`);
+                                } else {
+                                  navigate("/cliente/assinar");
+                                }
+                              }}
+                              className={cn(
+                                "w-full h-11 rounded-xl font-semibold text-[13px]",
+                                "bg-foreground text-background",
+                                "flex items-center justify-center gap-2",
+                                "active:scale-[0.98] transition-transform"
+                              )}
+                            >
+                              <Sparkles className="w-4 h-4" />
+                              Renovar plano
+                            </button>
+                            <button
+                              onClick={() => {
+                                onOpenChange(false);
+                                navigate("/cliente/assinar");
+                              }}
+                              className={cn(
+                                "w-full h-11 rounded-xl font-medium text-[13px]",
+                                "border border-border/50 bg-card text-foreground",
+                                "flex items-center justify-center gap-2",
+                                "hover:bg-muted/50 active:scale-[0.98] transition-all"
+                              )}
+                            >
+                              Escolher outro plano
+                              <ArrowRight className="w-3.5 h-3.5 text-muted-foreground" />
+                            </button>
+                          </div>
+                        )}
+
                         {/* Pending Cash info */}
                         {isPendingCash && (
                           <p className="text-[11px] text-muted-foreground bg-amber-500/5 dark:bg-amber-500/8 border border-amber-500/15 rounded-lg px-3 py-2">
