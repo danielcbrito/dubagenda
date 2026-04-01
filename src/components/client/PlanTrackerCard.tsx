@@ -26,12 +26,8 @@ export function PlanTrackerCard({
   onViewDetails,
   servicoNome,
   diasRestantes,
-  assinaturaId,
-  userId,
   cashPending,
 }: PlanTrackerCardProps) {
-  const navigate = useNavigate();
-
   const remaining = Math.max(0, totalAppointments - usedAppointments);
   const progress = totalAppointments > 0 ? (usedAppointments / totalAppointments) * 100 : 0;
   const canRenew = remaining === 0;
