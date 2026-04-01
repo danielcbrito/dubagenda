@@ -5,10 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Calendar,
-  CheckCircle2,
   AlertCircle,
   CreditCard,
-  ChevronRight,
   Sparkles,
   ArrowRight,
   RefreshCw,
