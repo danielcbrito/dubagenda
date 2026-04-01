@@ -347,6 +347,23 @@ const Cliente = () => {
   // Derived dataLoaded — true when all layers have loaded at least once
   const dataLoaded = !profileLoading && !appointmentsLoading && !loyaltyLoading && !shopLoading;
 
+  // Plan exhausted detection
+  const planExhausted = useMemo(() => {
+    if (!activeSubscription) return false;
+    const limite = (activeSubscription as any).plano?.limite_agendamentos_mes || 4;
+    return planUsageCount >= limite;
+  }, [activeSubscription, planUsageCount]);
+
+  // Auto-show renewal drawer when plan is exhausted
+  const renewalDrawerShownRef = useRef(false);
+  useEffect(() => {
+    if (planExhausted && dataLoaded && !renewalDrawerShownRef.current) {
+      renewalDrawerShownRef.current = true;
+      const timer = setTimeout(() => setRenewalDrawerOpen(true), 600);
+      return () => clearTimeout(timer);
+    }
+  }, [planExhausted, dataLoaded]);
+
   // Centralized data error handling
   const { hasError, errors, clearErrors } = useDataError();
   const retryCountRef = useRef(0);
