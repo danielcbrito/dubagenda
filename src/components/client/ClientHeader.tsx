@@ -1,7 +1,6 @@
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { motion, AnimatePresence } from "framer-motion";
-import { WifiOff } from "lucide-react";
+import { motion } from "framer-motion";
 import { NotificationBellPremium } from "./NotificationBellPremium";
 
 interface ClientHeaderProps {
