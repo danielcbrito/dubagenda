@@ -179,7 +179,7 @@ export function PlanTrackerCard({
             {assinaturaId && planoPreco !== undefined && userId && (
               <button
                 onClick={() => {
-                  if (canRenew) setRenewOpen(true);
+                  if (canRenew) navigate("/cliente/assinar");
                 }}
                 disabled={!canRenew}
                 className={cn(
