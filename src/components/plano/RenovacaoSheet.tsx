@@ -100,21 +100,46 @@ export function RenovacaoSheet({
     }
   }, [open]);
 
-  // PIX polling
+  // PIX polling + Realtime listener
   useEffect(() => {
     if (step !== "pix") return;
-    const interval = setInterval(async () => {
+
+    let cancelled = false;
+
+    const checkStatus = async () => {
       const { data } = await supabase.rpc("get_assinatura_status", { p_user_id: userId });
-      if (data && typeof data === "object" && "status" in (data as any)) {
-        const status = (data as any).status;
-        if (status === "active") {
+      if (!cancelled && data && typeof data === "object" && "status" in (data as any)) {
+        if ((data as any).status === "active") {
           setStep("confirmacao");
           onRenovado();
         }
       }
-    }, 4000);
-    return () => clearInterval(interval);
-  }, [step, userId, onRenovado]);
+    };
+
+    // Poll every 4s
+    const interval = setInterval(checkStatus, 4000);
+
+    // Realtime listener for instant detection
+    const channel = supabase
+      .channel(`renew-sub-${assinaturaId}`)
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "assinaturas", filter: `id=eq.${assinaturaId}` },
+        (payload) => {
+          if (payload.new && (payload.new as any).status === "active") {
+            setStep("confirmacao");
+            onRenovado();
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+      supabase.removeChannel(channel);
+    };
+  }, [step, userId, assinaturaId, onRenovado]);
 
   const handleConfirm = useCallback(async () => {
     if (!formaPagamento) return;
@@ -317,27 +342,17 @@ export function RenovacaoSheet({
                     </Button>
                   </div>
 
+                  <div className="flex items-center justify-center gap-2 text-[11px] text-muted-foreground">
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span>Aguardando confirmação do pagamento...</span>
+                  </div>
+
                   <p className="text-[11px] text-muted-foreground text-center leading-relaxed">
                     Após o pagamento, seu plano será renovado automaticamente.
                   </p>
 
                   {/* Actions */}
                   <div className="space-y-2">
-                    <Button
-                      variant="outline"
-                      onClick={async () => {
-                        const { data } = await supabase.rpc("get_assinatura_status", { p_user_id: userId });
-                        if (data && typeof data === "object" && (data as any).status === "active") {
-                          setStep("confirmacao");
-                          onRenovado();
-                        } else {
-                          toast.info("Pagamento ainda não confirmado. Aguarde alguns instantes.");
-                        }
-                      }}
-                      className="w-full h-10 rounded-xl text-[12px]"
-                    >
-                      Já paguei
-                    </Button>
                     <button
                       onClick={handleClose}
                       className="w-full text-center text-[12px] text-destructive py-2"
