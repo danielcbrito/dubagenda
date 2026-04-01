@@ -124,8 +124,15 @@ export function RenovacaoSheet({
         body: { assinaturaId, formaPagamento },
       });
 
-      if (error || data?.error) {
-        throw new Error(data?.error || error?.message || "Erro ao renovar");
+      if (error) {
+        const errorMsg = typeof error === "object" && "message" in error
+          ? (error as any).message
+          : String(error);
+        throw new Error(errorMsg || "Erro ao conectar com o servidor");
+      }
+
+      if (data?.error) {
+        throw new Error(data.error);
       }
 
       if (formaPagamento === "dinheiro") {
@@ -145,6 +152,7 @@ export function RenovacaoSheet({
         }
       }
     } catch (err: any) {
+      console.error("[RenovacaoSheet] Erro:", err);
       toast.error(err.message || "Erro ao renovar plano");
     } finally {
       setLoading(false);

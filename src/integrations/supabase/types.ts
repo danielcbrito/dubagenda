@@ -1034,6 +1034,61 @@ export type Database = {
           },
         ]
       }
+      client_booking_blocks: {
+        Row: {
+          barbeiro_id: string | null
+          blocked_by_user_id: string
+          client_user_id: string
+          created_at: string
+          id: string
+          scope: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          barbeiro_id?: string | null
+          blocked_by_user_id: string
+          client_user_id: string
+          created_at?: string
+          id?: string
+          scope: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          barbeiro_id?: string | null
+          blocked_by_user_id?: string
+          client_user_id?: string
+          created_at?: string
+          id?: string
+          scope?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_booking_blocks_barbeiro_id_fkey"
+            columns: ["barbeiro_id"]
+            isOneToOne: false
+            referencedRelation: "barbeiros"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_booking_blocks_barbeiro_id_fkey"
+            columns: ["barbeiro_id"]
+            isOneToOne: false
+            referencedRelation: "barbeiros_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_booking_blocks_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       comissoes: {
         Row: {
           appointment_id: string
@@ -4944,6 +4999,14 @@ export type Database = {
         Returns: undefined
       }
       is_admin: { Args: never; Returns: boolean }
+      is_client_blocked_for_barber: {
+        Args: {
+          p_barbeiro_id: string
+          p_client_user_id: string
+          p_tenant_id: string
+        }
+        Returns: boolean
+      }
       is_client_blocked_from_barber: {
         Args: { p_barbeiro_id: string; p_user_id: string }
         Returns: boolean
@@ -4957,6 +5020,10 @@ export type Database = {
         Returns: boolean
       }
       is_ip_allowed_maintenance: { Args: { p_ip: string }; Returns: boolean }
+      is_tenant_owner_by_tenant: {
+        Args: { p_tenant_id: string }
+        Returns: boolean
+      }
       renovar_plano_cliente: {
         Args: { p_assinatura_id: string; p_forma_pagamento: string }
         Returns: Json
