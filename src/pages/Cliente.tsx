@@ -26,6 +26,7 @@ import { ClientHeader } from "@/components/client/ClientHeader";
 import { LoyaltyCard } from "@/components/client/LoyaltyCard";
 import { PlanTrackerCard } from "@/components/client/PlanTrackerCard";
 import { PlanExpiredBanner } from "@/components/client/PlanExpiredBanner";
+import { PlanRenewalDrawer } from "@/components/client/PlanRenewalDrawer";
 import { PendingSubscriptionBanner } from "@/components/client/PendingSubscriptionBanner";
 import { ScheduleButton } from "@/components/client/ScheduleButton";
 import { AppointmentCardPremium } from "@/components/client/AppointmentCardPremium";
@@ -328,6 +329,7 @@ const Cliente = () => {
   const [profileSheetOpen, setProfileSheetOpen] = useState(false);
   const [walletSheetOpen, setWalletSheetOpen] = useState(false);
   const [historySheetOpen, setHistorySheetOpen] = useState(false);
+  const [renewalDrawerOpen, setRenewalDrawerOpen] = useState(false);
   const [barberProfileOpen, setBarberProfileOpen] = useState<string | null>(null);
   const [reviewModalData, setReviewModalData] = useState<{
     appointmentId: string;
@@ -344,6 +346,23 @@ const Cliente = () => {
 
   // Derived dataLoaded — true when all layers have loaded at least once
   const dataLoaded = !profileLoading && !appointmentsLoading && !loyaltyLoading && !shopLoading;
+
+  // Plan exhausted detection
+  const planExhausted = useMemo(() => {
+    if (!activeSubscription) return false;
+    const limite = (activeSubscription as any).plano?.limite_agendamentos_mes || 4;
+    return planUsageCount >= limite;
+  }, [activeSubscription, planUsageCount]);
+
+  // Auto-show renewal drawer when plan is exhausted
+  const renewalDrawerShownRef = useRef(false);
+  useEffect(() => {
+    if (planExhausted && dataLoaded && !renewalDrawerShownRef.current) {
+      renewalDrawerShownRef.current = true;
+      const timer = setTimeout(() => setRenewalDrawerOpen(true), 600);
+      return () => clearTimeout(timer);
+    }
+  }, [planExhausted, dataLoaded]);
 
   // Centralized data error handling
   const { hasError, errors, clearErrors } = useDataError();
@@ -1157,10 +1176,19 @@ const Cliente = () => {
         }}
       />
 
+      {/* Plan Renewal Drawer */}
+      <PlanRenewalDrawer
+        open={renewalDrawerOpen}
+        onOpenChange={setRenewalDrawerOpen}
+        planName={(activeSubscription as any)?.plano?.nome || "Meu Plano"}
+        barberId={(activeSubscription as any)?.barbeiro_id}
+      />
+
       {/* Bottom Navigation */}
       <BottomNavigation
         onProfileClick={() => setProfileSheetOpen(true)}
         onPlansClick={() => setPlansSheetOpen(true)}
+        planExhausted={planExhausted}
       />
     </div>
   );

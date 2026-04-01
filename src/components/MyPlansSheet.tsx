@@ -7,12 +7,8 @@ import {
   Calendar,
   CheckCircle2,
   AlertCircle,
-  Crown,
-  Loader2,
   CreditCard,
   ChevronRight,
-  Scissors,
-  Shield,
   Sparkles,
   ArrowRight,
   RefreshCw,
@@ -39,12 +35,14 @@ interface Subscription {
   status: string;
   next_billing_date: string | null;
   payment_method: string | null;
+  barbeiro_id?: string | null;
   plano: {
     id: string;
     nome: string;
     descricao: string;
     preco_mensal: number;
     beneficios_json: any;
+    limite_agendamentos_mes?: number;
   };
 }
 
@@ -91,6 +89,7 @@ export function MyPlansSheet({ open, onOpenChange, userId, onSubscriptionChanged
           payment_method,
           total_renovacoes,
           usos_ciclo_atual,
+          barbeiro_id,
           plano:planos(
             id,
             nome,
@@ -438,6 +437,48 @@ export function MyPlansSheet({ open, onOpenChange, userId, onSubscriptionChanged
                                 <span className="text-[10px] font-semibold text-emerald-400">Pronto para renovar</span>
                               </div>
                             )}
+                          </div>
+                        )}
+
+                        {/* Renewal CTAs — only when exhausted */}
+                        {(subscription as any).plano?.limite_agendamentos_mes &&
+                          ((subscription as any).plano.limite_agendamentos_mes - ((subscription as any).usos_ciclo_atual || 0)) <= 0 && (
+                          <div className="space-y-2 pt-1">
+                            <button
+                              onClick={() => {
+                                onOpenChange(false);
+                                const barberId = (subscription as any).barbeiro_id;
+                                if (barberId) {
+                                  navigate(`/cliente/agendar?barber=${barberId}`);
+                                } else {
+                                  navigate("/cliente/assinar");
+                                }
+                              }}
+                              className={cn(
+                                "w-full h-11 rounded-xl font-semibold text-[13px]",
+                                "bg-foreground text-background",
+                                "flex items-center justify-center gap-2",
+                                "active:scale-[0.98] transition-transform"
+                              )}
+                            >
+                              <Sparkles className="w-4 h-4" />
+                              Renovar plano
+                            </button>
+                            <button
+                              onClick={() => {
+                                onOpenChange(false);
+                                navigate("/cliente/assinar");
+                              }}
+                              className={cn(
+                                "w-full h-11 rounded-xl font-medium text-[13px]",
+                                "border border-border/50 bg-card text-foreground",
+                                "flex items-center justify-center gap-2",
+                                "hover:bg-muted/50 active:scale-[0.98] transition-all"
+                              )}
+                            >
+                              Escolher outro plano
+                              <ArrowRight className="w-3.5 h-3.5 text-muted-foreground" />
+                            </button>
                           </div>
                         )}
 

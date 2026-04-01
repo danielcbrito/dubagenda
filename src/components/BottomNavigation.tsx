@@ -8,22 +8,28 @@ interface NavItemProps {
   icon: React.ElementType;
   label: string;
   isActive?: boolean;
+  showBadge?: boolean;
   onClick: () => void;
 }
 
-function NavItem({ icon: Icon, label, isActive, onClick }: NavItemProps) {
+function NavItem({ icon: Icon, label, isActive, showBadge, onClick }: NavItemProps) {
   return (
     <motion.button
       whileTap={{ scale: 0.9 }}
       onClick={onClick}
-      className="flex flex-col items-center justify-center gap-[2px] px-4 py-1.5"
+      className="flex flex-col items-center justify-center gap-[2px] px-4 py-1.5 relative"
     >
-      <Icon
-        className={`w-[18px] h-[18px] transition-colors duration-200 ${
-          isActive ? "text-primary" : "text-muted-foreground/70"
-        }`}
-        strokeWidth={isActive ? 2.2 : 1.8}
-      />
+      <div className="relative">
+        <Icon
+          className={`w-[18px] h-[18px] transition-colors duration-200 ${
+            isActive ? "text-primary" : "text-muted-foreground/70"
+          }`}
+          strokeWidth={isActive ? 2.2 : 1.8}
+        />
+        {showBadge && (
+          <span className="absolute -top-0.5 -right-1 w-2 h-2 rounded-full bg-destructive" />
+        )}
+      </div>
       <span
         className={`text-[9px] tracking-wide transition-colors duration-200 ${
           isActive ? "text-primary font-semibold" : "text-muted-foreground/60 font-medium"
@@ -38,11 +44,13 @@ function NavItem({ icon: Icon, label, isActive, onClick }: NavItemProps) {
 interface BottomNavigationProps {
   onProfileClick: () => void;
   onPlansClick: () => void;
+  planExhausted?: boolean;
 }
 
 export function BottomNavigation({
   onProfileClick,
   onPlansClick,
+  planExhausted,
 }: BottomNavigationProps) {
   const location = useLocation();
   const navigate = useNavigate();
@@ -73,6 +81,7 @@ export function BottomNavigation({
           <NavItem
             icon={Crown}
             label="Planos"
+            showBadge={planExhausted}
             onClick={onPlansClick}
           />
           <NavItem
