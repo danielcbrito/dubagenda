@@ -44,11 +44,13 @@ function NavItem({ icon: Icon, label, isActive, showBadge, onClick }: NavItemPro
 interface BottomNavigationProps {
   onProfileClick: () => void;
   onPlansClick: () => void;
+  planExhausted?: boolean;
 }
 
 export function BottomNavigation({
   onProfileClick,
   onPlansClick,
+  planExhausted,
 }: BottomNavigationProps) {
   const location = useLocation();
   const navigate = useNavigate();
