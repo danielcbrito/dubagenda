@@ -4,12 +4,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  Calendar,
   AlertCircle,
-  CreditCard,
-  Sparkles,
-  ArrowRight,
   RefreshCw,
+  ArrowRight,
 } from "lucide-react";
 import { BackArrow } from "@/components/ui/back-arrow";
 import { toast } from "sonner";
@@ -109,7 +106,6 @@ export function MyPlansSheet({ open, onOpenChange, userId, onSubscriptionChanged
         setErrorMessage("Não foi possível carregar os dados do plano. Tente novamente.");
         toast.error("Erro ao carregar plano");
       } else if (!data) {
-        // Sem plano ativo → redireciona direto para página de assinar
         onOpenChange(false);
         navigate("/cliente/assinar");
       } else {
@@ -123,43 +119,14 @@ export function MyPlansSheet({ open, onOpenChange, userId, onSubscriptionChanged
     }
   };
 
-  const getStatusConfig = (status: string) => {
-    const map: Record<string, { label: string; className: string; dotColor: string }> = {
-      active: {
-        label: "Ativo",
-        className: "bg-emerald-500/10 text-emerald-500 dark:text-emerald-400",
-        dotColor: "bg-emerald-500",
-      },
-      suspended: {
-        label: "Pendente",
-        className: "bg-primary/10 text-primary",
-        dotColor: "bg-primary",
-      },
-      pending_cash: {
-        label: "Aguardando",
-        className: "bg-amber-500/10 text-amber-600 dark:text-amber-400",
-        dotColor: "bg-amber-500",
-      },
-      past_due: {
-        label: "Vencido",
-        className: "bg-destructive/10 text-destructive",
-        dotColor: "bg-destructive",
-      },
-      cancelled: {
-        label: "Cancelado",
-        className: "bg-muted text-muted-foreground",
-        dotColor: "bg-muted-foreground",
-      },
-    };
-    return map[status] || { label: status, className: "bg-muted text-muted-foreground", dotColor: "bg-muted-foreground" };
-  };
-
   const isSuspended = subscription?.status === "suspended";
   const isPendingCash = subscription?.status === "pending_cash";
 
-  const handleSubscribeClick = () => {
-    navigate("/cliente/assinar");
-  };
+  const usosAtual = (subscription as any)?.usos_ciclo_atual || 0;
+  const limite = (subscription as any)?.plano?.limite_agendamentos_mes || 0;
+  const usosRestantes = Math.max(0, limite - usosAtual);
+  const isExhausted = limite > 0 && usosRestantes <= 0;
+  const progressPct = limite > 0 ? Math.min(100, (usosAtual / limite) * 100) : 0;
 
   const handleCancelSubscription = async () => {
     setCanceling(true);
@@ -181,15 +148,26 @@ export function MyPlansSheet({ open, onOpenChange, userId, onSubscriptionChanged
 
   if (!open) return null;
 
+  const statusLabel = (() => {
+    switch (subscription?.status) {
+      case "active": return "Ativo";
+      case "suspended": return "Pendente";
+      case "pending_cash": return "Aguardando";
+      case "past_due": return "Vencido";
+      case "cancelled": return "Cancelado";
+      default: return subscription?.status || "";
+    }
+  })();
 
-  const statusConfig = subscription ? getStatusConfig(subscription.status) : null;
-
-  const paymentLabel =
-    subscription?.payment_method === "cash"
-      ? "Dinheiro"
-      : subscription?.payment_method === "card"
-        ? "Cartão"
-        : "PIX";
+  const statusDot = (() => {
+    switch (subscription?.status) {
+      case "active": return "bg-emerald-500";
+      case "suspended": return "bg-primary";
+      case "pending_cash": return "bg-amber-500";
+      case "past_due": return "bg-destructive";
+      default: return "bg-muted-foreground";
+    }
+  })();
 
   return (
     <>
@@ -202,26 +180,26 @@ export function MyPlansSheet({ open, onOpenChange, userId, onSubscriptionChanged
             transition={{ type: "spring", damping: 30, stiffness: 300 }}
             className="fixed inset-0 z-50 bg-background flex flex-col"
           >
-            {/* ── Header ── */}
-            <div className="px-4 pt-[max(env(safe-area-inset-top),0.75rem)] pb-2">
+            {/* Header */}
+            <div className="px-4 pt-[max(env(safe-area-inset-top),0.75rem)] pb-3 flex items-center gap-3">
               <button
                 onClick={() => onOpenChange(false)}
                 className="w-9 h-9 flex items-center justify-center rounded-xl hover:bg-muted transition-colors active:scale-95"
               >
                 <BackArrow size={22} className="text-foreground" />
               </button>
+              <h1 className="text-[15px] font-semibold text-foreground">Meu Plano</h1>
             </div>
 
-            {/* ── Content ── */}
+            {/* Content */}
             <div className="flex-1 overflow-y-auto overscroll-contain">
-              <div className="px-4 pb-24 pt-5">
+              <div className="px-4 pb-24">
 
                 {/* Loading */}
                 {loadingState === "loading" && (
-                  <div className="space-y-4 pt-4">
-                    <Skeleton className="h-28 w-full rounded-xl bg-muted" />
-                    <Skeleton className="h-20 w-full rounded-xl bg-muted" />
-                    <Skeleton className="h-14 w-full rounded-xl bg-muted" />
+                  <div className="space-y-3 pt-4">
+                    <Skeleton className="h-32 w-full rounded-xl bg-muted" />
+                    <Skeleton className="h-16 w-full rounded-xl bg-muted" />
                   </div>
                 )}
 
@@ -249,267 +227,220 @@ export function MyPlansSheet({ open, onOpenChange, userId, onSubscriptionChanged
                   </motion.div>
                 )}
 
-                {/* ── Empty State — Text-focused Premium ── */}
+                {/* Empty — no plan */}
                 {loadingState === "success" && !subscription && (
                   <motion.div
                     initial={{ opacity: 0, y: 12 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.4 }}
-                    className="pt-6"
+                    className="pt-16 flex flex-col items-center"
                   >
-                    {/* Hero section — pure typography */}
-                    <div className="text-center mb-10">
-                      <motion.p
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ delay: 0.05 }}
-                        className="text-[10px] font-bold uppercase tracking-[0.2em] text-gold/60 mb-4"
-                      >
-                        Exclusivo para membros
-                      </motion.p>
-
-                      <h2 className="text-2xl font-bold text-foreground tracking-tight mb-3 font-display leading-tight">
-                        Você ainda não tem<br />um plano
-                      </h2>
-
-                      {/* Gold ornamental line */}
-                      <div className="flex items-center justify-center gap-2 mb-4">
-                        <div className="h-[1.5px] w-8 rounded-full bg-gold/30" />
-                        <div className="w-1 h-1 rounded-full bg-gold/40" />
-                        <div className="h-[1.5px] w-8 rounded-full bg-gold/30" />
-                      </div>
-
-                      <p className="text-[13px] text-muted-foreground leading-relaxed max-w-[260px] mx-auto">
-                        Assine e aproveite preços exclusivos, agendamento prioritário e benefícios especiais.
-                      </p>
-                    </div>
-
-                    {/* Benefits — text-only, numbered list */}
-                    <div className="space-y-0 mb-10 border-t border-border/20">
-                      {[
-                        { title: "Preços especiais", desc: "em todos os serviços" },
-                        { title: "Agendamento", desc: "com prioridade garantida" },
-                        { title: "Benefícios exclusivos", desc: "reservados para assinantes" },
-                      ].map((item, i) => (
-                        <motion.div
-                          key={i}
-                          initial={{ opacity: 0, y: 6 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: 0.15 + i * 0.08 }}
-                          className="flex items-baseline gap-4 px-2 py-4 border-b border-border/15"
-                        >
-                          <span className="text-[11px] font-bold tabular-nums text-gold/50 w-5 text-right flex-shrink-0">
-                            0{i + 1}
-                          </span>
-                          <p className="text-[14px] text-foreground leading-snug">
-                            <span className="font-semibold">{item.title}</span>
-                            <span className="text-muted-foreground font-normal"> {item.desc}</span>
-                          </p>
-                        </motion.div>
-                      ))}
-                    </div>
-
-                    {/* CTA */}
-                    <motion.div
-                      initial={{ opacity: 0, y: 8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.4 }}
-                      className="space-y-3"
+                    <h2 className="text-lg font-bold text-foreground tracking-tight mb-2">
+                      Nenhum plano ativo
+                    </h2>
+                    <p className="text-[13px] text-muted-foreground text-center max-w-[260px] mb-8 leading-relaxed">
+                      Assine um plano e aproveite preços exclusivos e agendamento prioritário.
+                    </p>
+                    <button
+                      onClick={() => {
+                        onOpenChange(false);
+                        navigate("/cliente/assinar");
+                      }}
+                      className={cn(
+                        "w-full h-[48px] rounded-xl font-semibold text-[13px]",
+                        "bg-foreground text-background",
+                        "flex items-center justify-center gap-2",
+                        "active:scale-[0.98] transition-transform"
+                      )}
                     >
-                      <button
-                        onClick={handleSubscribeClick}
-                        className={cn(
-                          "w-full h-[52px] rounded-xl font-semibold text-sm relative overflow-hidden",
-                          "bg-foreground text-background",
-                          "flex items-center justify-center gap-2",
-                          "active:scale-[0.98] transition-all"
-                        )}
-                      >
-                        <div
-                          className="absolute inset-0 pointer-events-none"
-                          style={{
-                            background: "linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.06) 50%, transparent 60%)",
-                          }}
-                        />
-                        <span className="relative z-10">Ver planos disponíveis</span>
-                        <ArrowRight className="w-4 h-4 relative z-10" />
-                      </button>
-                      <p className="text-[9px] text-center text-muted-foreground/35 uppercase tracking-[0.12em] font-medium">
-                        Seguro · Cancele quando quiser
-                      </p>
-                    </motion.div>
+                      Ver planos disponíveis
+                      <ArrowRight className="w-4 h-4" />
+                    </button>
                   </motion.div>
                 )}
 
-                {/* ── Subscription Active ── */}
+                {/* Active subscription */}
                 {loadingState === "success" && subscription && (
                   <motion.div
                     initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="space-y-3"
+                    className="space-y-5 pt-2"
                   >
-                    {/* Plan card */}
-                    <div className="rounded-xl border border-border/40 bg-card overflow-hidden">
-                      <div className="h-[2px] bg-gradient-to-r from-primary via-primary/50 to-transparent" />
+                    {/* Plan hero */}
+                    <div className="text-center pt-4 pb-2">
+                      <div className="flex items-center justify-center gap-2 mb-4">
+                        <span className={cn("w-2 h-2 rounded-full", statusDot)} />
+                        <span className="text-[10px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">
+                          {statusLabel}
+                        </span>
+                      </div>
 
-                      <div className="p-4 space-y-4">
-                        {/* Name + Status */}
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="flex-1 min-w-0">
-                            <h2 className="text-base font-bold text-foreground truncate">
-                              {subscription.plano.nome}
-                            </h2>
-                            {subscription.plano.descricao && (
-                              <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2 leading-relaxed">
-                                {subscription.plano.descricao}
-                              </p>
-                            )}
-                          </div>
-                          {statusConfig && (
-                            <span
-                              className={cn(
-                                "inline-flex items-center gap-1.5 text-[10px] font-semibold px-2.5 py-1 rounded-lg shrink-0",
-                                statusConfig.className
-                              )}
-                            >
-                              <span className={cn("w-1.5 h-1.5 rounded-full", statusConfig.dotColor)} />
-                              {statusConfig.label}
-                            </span>
-                          )}
-                        </div>
+                      <h2 className="text-xl font-bold text-foreground tracking-tight mb-1">
+                        {subscription.plano.nome}
+                      </h2>
+                      {subscription.plano.descricao && (
+                        <p className="text-[12px] text-muted-foreground leading-relaxed max-w-[280px] mx-auto">
+                          {subscription.plano.descricao}
+                        </p>
+                      )}
 
-                        {/* Price */}
-                        <div className="flex items-baseline gap-1">
-                          <span className="text-2xl font-bold text-foreground tabular-nums">
-                            R$ {Number(subscription.plano.preco_mensal || 0).toFixed(2).replace(".", ",")}
-                          </span>
-                          <span className="text-xs text-muted-foreground">/mês</span>
-                        </div>
-
-                        {/* Meta info row */}
-                        <div className="flex flex-wrap gap-x-4 gap-y-1.5">
-                          {!isSuspended && subscription.next_billing_date && (
-                            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                              <Calendar className="w-3.5 h-3.5" />
-                              <span>
-                                Renova{" "}
-                                <span className="text-foreground font-medium">
-                                  {format(new Date(subscription.next_billing_date), "dd MMM", { locale: ptBR })}
-                                </span>
-                              </span>
-                            </div>
-                          )}
-                          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                            <CreditCard className="w-3.5 h-3.5" />
-                            <span>{paymentLabel}</span>
-                          </div>
-                          {(subscription as any).total_renovacoes > 0 && (
-                            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                              <RefreshCw className="w-3.5 h-3.5" />
-                              <span>Renovado {(subscription as any).total_renovacoes}x</span>
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Usage tracker */}
-                        {(subscription as any).plano?.limite_agendamentos_mes && (
-                          <div className="space-y-1.5">
-                            <div className="flex items-center justify-between text-[11px]">
-                              <span className="text-muted-foreground">Usos do ciclo</span>
-                              <span className="text-foreground font-semibold tabular-nums">
-                                {(subscription as any).usos_ciclo_atual || 0} de {(subscription as any).plano.limite_agendamentos_mes}
-                              </span>
-                            </div>
-                            <div className="h-1.5 rounded-full bg-muted-foreground/10 overflow-hidden">
-                              <div
-                                className="h-full rounded-full bg-primary transition-all duration-500"
-                                style={{ width: `${Math.min(100, ((subscription as any).usos_ciclo_atual || 0) / (subscription as any).plano.limite_agendamentos_mes * 100)}%` }}
-                              />
-                            </div>
-                            {((subscription as any).plano.limite_agendamentos_mes - ((subscription as any).usos_ciclo_atual || 0)) <= 0 && (
-                              <div className="flex items-center gap-1 mt-1">
-                                <Sparkles className="w-3 h-3 text-emerald-400" />
-                                <span className="text-[10px] font-semibold text-emerald-400">Pronto para renovar</span>
-                              </div>
-                            )}
-                          </div>
-                        )}
-
-                        {/* Renewal CTAs — only when exhausted */}
-                        {(subscription as any).plano?.limite_agendamentos_mes &&
-                          ((subscription as any).plano.limite_agendamentos_mes - ((subscription as any).usos_ciclo_atual || 0)) <= 0 && (
-                          <div className="space-y-2 pt-1">
-                            <button
-                              onClick={() => {
-                                onOpenChange(false);
-                                const barberId = (subscription as any).barbeiro_id;
-                                if (barberId) {
-                                  navigate(`/cliente/agendar?barber=${barberId}`);
-                                } else {
-                                  navigate("/cliente/assinar");
-                                }
-                              }}
-                              className={cn(
-                                "w-full h-11 rounded-xl font-semibold text-[13px]",
-                                "bg-foreground text-background",
-                                "flex items-center justify-center gap-2",
-                                "active:scale-[0.98] transition-transform"
-                              )}
-                            >
-                              <Sparkles className="w-4 h-4" />
-                              Renovar plano
-                            </button>
-                            <button
-                              onClick={() => {
-                                onOpenChange(false);
-                                navigate("/cliente/assinar");
-                              }}
-                              className={cn(
-                                "w-full h-11 rounded-xl font-medium text-[13px]",
-                                "border border-border/50 bg-card text-foreground",
-                                "flex items-center justify-center gap-2",
-                                "hover:bg-muted/50 active:scale-[0.98] transition-all"
-                              )}
-                            >
-                              Escolher outro plano
-                              <ArrowRight className="w-3.5 h-3.5 text-muted-foreground" />
-                            </button>
-                          </div>
-                        )}
-
-                        {/* Pending Cash info */}
-                        {isPendingCash && (
-                          <p className="text-[11px] text-muted-foreground bg-amber-500/5 dark:bg-amber-500/8 border border-amber-500/15 rounded-lg px-3 py-2">
-                            Apresente o pagamento em dinheiro ao barbeiro para ativar o plano.
-                          </p>
-                        )}
-
-                        {/* Suspended CTA */}
-                        {isSuspended && (
-                          <div className="space-y-2">
-                            <p className="text-[11px] text-muted-foreground">
-                              Finalize o pagamento para ativar seus benefícios.
-                            </p>
-                            <Button
-                              onClick={() => {
-                                navigate("/cliente/assinar", {
-                                  state: { resumePlanId: subscription.plano?.id || null },
-                                });
-                              }}
-                              className="w-full h-10 text-sm font-semibold"
-                            >
-                              Finalizar pagamento
-                            </Button>
-                          </div>
-                        )}
+                      <div className="mt-5 flex items-baseline justify-center gap-0.5">
+                        <span className="text-[11px] text-muted-foreground font-medium">R$</span>
+                        <span className="text-[40px] font-bold text-foreground tabular-nums leading-none tracking-tight">
+                          {Math.floor(subscription.plano.preco_mensal || 0)}
+                        </span>
+                        <span className="text-[18px] font-bold text-foreground tabular-nums">
+                          ,{((subscription.plano.preco_mensal || 0) % 1 * 100).toFixed(0).padStart(2, "0")}
+                        </span>
+                        <span className="text-[11px] text-muted-foreground font-medium ml-0.5">/mês</span>
                       </div>
                     </div>
 
+                    {/* Divider */}
+                    <div className="h-px bg-border/30" />
+
+                    {/* Details */}
+                    <div className="space-y-0 divide-y divide-border/20">
+                      {/* Usage */}
+                      {limite > 0 && (
+                        <div className="py-3.5 space-y-2.5">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
+                              Uso do ciclo
+                            </span>
+                            <span className="text-[13px] font-bold text-foreground tabular-nums">
+                              {usosAtual}<span className="text-muted-foreground font-normal text-[11px]"> / {limite}</span>
+                            </span>
+                          </div>
+                          <div className="h-[6px] rounded-full bg-muted/60 overflow-hidden">
+                            <motion.div
+                              initial={{ width: 0 }}
+                              animate={{ width: `${progressPct}%` }}
+                              transition={{ duration: 0.6, ease: "easeOut" }}
+                              className={cn(
+                                "h-full rounded-full transition-colors",
+                                isExhausted ? "bg-primary" : "bg-foreground/70"
+                              )}
+                            />
+                          </div>
+                          {isExhausted && (
+                            <p className="text-[11px] font-medium text-primary">
+                              Todos os usos foram consumidos
+                            </p>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Next billing */}
+                      {!isSuspended && subscription.next_billing_date && (
+                        <div className="py-3.5 flex items-center justify-between">
+                          <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
+                            Próxima renovação
+                          </span>
+                          <span className="text-[13px] font-semibold text-foreground">
+                            {format(new Date(subscription.next_billing_date), "dd 'de' MMMM", { locale: ptBR })}
+                          </span>
+                        </div>
+                      )}
+
+                      {/* Payment method */}
+                      <div className="py-3.5 flex items-center justify-between">
+                        <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
+                          Pagamento
+                        </span>
+                        <span className="text-[13px] font-semibold text-foreground">
+                          {subscription.payment_method === "cash"
+                            ? "Dinheiro"
+                            : subscription.payment_method === "card"
+                              ? "Cartão"
+                              : "PIX"}
+                        </span>
+                      </div>
+
+                      {/* Renewals count */}
+                      {(subscription as any).total_renovacoes > 0 && (
+                        <div className="py-3.5 flex items-center justify-between">
+                          <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
+                            Renovações
+                          </span>
+                          <span className="text-[13px] font-semibold text-foreground tabular-nums">
+                            {(subscription as any).total_renovacoes}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Pending cash info */}
+                    {isPendingCash && (
+                      <p className="text-[11px] text-muted-foreground bg-muted/50 border border-border/30 rounded-lg px-3 py-2.5 leading-relaxed">
+                        Apresente o pagamento em dinheiro ao barbeiro para ativar o plano.
+                      </p>
+                    )}
+
+                    {/* Suspended CTA */}
+                    {isSuspended && (
+                      <div className="space-y-2">
+                        <p className="text-[11px] text-muted-foreground leading-relaxed">
+                          Finalize o pagamento para ativar seus benefícios.
+                        </p>
+                        <Button
+                          onClick={() => {
+                            onOpenChange(false);
+                            navigate("/cliente/assinar", {
+                              state: { resumePlanId: subscription.plano?.id || null },
+                            });
+                          }}
+                          className="w-full h-11 text-[13px] font-semibold rounded-xl"
+                        >
+                          Finalizar pagamento
+                        </Button>
+                      </div>
+                    )}
+
+                    {/* Renewal CTAs — only when exhausted */}
+                    {isExhausted && !isSuspended && !isPendingCash && (
+                      <div className="space-y-2.5 pt-2">
+                        <button
+                          onClick={() => {
+                            onOpenChange(false);
+                            const barberId = (subscription as any).barbeiro_id;
+                            if (barberId) {
+                              navigate(`/cliente/agendar?barber=${barberId}`);
+                            } else {
+                              navigate("/cliente/assinar");
+                            }
+                          }}
+                          className={cn(
+                            "w-full h-[48px] rounded-xl font-semibold text-[13px]",
+                            "bg-foreground text-background",
+                            "flex items-center justify-center gap-2",
+                            "active:scale-[0.98] transition-transform"
+                          )}
+                        >
+                          Renovar plano
+                        </button>
+                        <button
+                          onClick={() => {
+                            onOpenChange(false);
+                            navigate("/cliente/assinar");
+                          }}
+                          className={cn(
+                            "w-full h-[48px] rounded-xl font-medium text-[13px]",
+                            "border border-border/40 text-foreground",
+                            "flex items-center justify-center gap-2",
+                            "hover:bg-muted/40 active:scale-[0.98] transition-all"
+                          )}
+                        >
+                          Escolher outro plano
+                        </button>
+                      </div>
+                    )}
+
                     {/* Cancel */}
-                    <div className="pt-6">
+                    <div className="pt-8">
                       <button
                         onClick={() => setCancelDialogOpen(true)}
-                        className="w-full py-2 text-[11px] text-muted-foreground/40 hover:text-destructive/60 transition-colors"
+                        className="w-full py-2 text-[11px] text-muted-foreground/35 hover:text-destructive/60 transition-colors"
                       >
                         {isSuspended || isPendingCash ? "Cancelar assinatura pendente" : "Cancelar assinatura"}
                       </button>
