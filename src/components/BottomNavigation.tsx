@@ -81,6 +81,7 @@ export function BottomNavigation({
           <NavItem
             icon={Crown}
             label="Planos"
+            showBadge={planExhausted}
             onClick={onPlansClick}
           />
           <NavItem
