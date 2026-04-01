@@ -2,7 +2,7 @@ import { useEffect, useState, useRef, useMemo, useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Calendar, Crown, Banknote, Store, ChevronRight, Scissors, MapPin, Search } from "lucide-react";
+import { Calendar, Crown, Store, ChevronRight, Scissors, MapPin, Search } from "lucide-react";
 import { toast } from "sonner";
 import { useDataError } from "@/hooks/useDataError";
 import { useBlockedBarbers } from "@/hooks/useBlockedBarbers";
@@ -836,32 +836,7 @@ const Cliente = () => {
               {loyaltyLoading ? (
                 <div className="rounded-xl h-[140px] bg-muted/10 animate-pulse" />
               ) : activeSubscription ? (
-              <>
-                {activeSubscription.payment_method === 'cash' && activeSubscription.cash_payment_confirmed === false && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="rounded-xl p-4 mb-3 border border-amber-500/30"
-                    style={{
-                      background: "linear-gradient(135deg, rgba(245,158,11,0.08), rgba(251,191,36,0.04))",
-                    }}
-                  >
-                    <div className="flex items-start gap-3">
-                      <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 bg-amber-500/15">
-                        <Banknote className="w-4 h-4 text-amber-500" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[13px] font-bold text-foreground">
-                          Plano ativo — pagamento pendente
-                        </p>
-                        <p className="text-[11px] text-muted-foreground mt-1 leading-relaxed">
-                          Seus cortes já estão liberados! Pague o valor do plano na barbearia para que o barbeiro confirme o recebimento.
-                        </p>
-                      </div>
-                    </div>
-                  </motion.div>
-                )}
-                <PlanTrackerCard
+              <PlanTrackerCard
                   planName={(activeSubscription as any).plano?.nome || "Meu Plano"}
                   usedAppointments={planUsageCount}
                   totalAppointments={(activeSubscription as any).plano?.limite_agendamentos_mes || 4}
@@ -873,12 +848,12 @@ const Cliente = () => {
                   servicoNome={(activeSubscription as any).plano?.servico?.nome}
                   diasRestantes={activeSubscription.ciclo_fim ? Math.max(0, Math.ceil((new Date(activeSubscription.ciclo_fim + "T00:00:00").getTime() - Date.now()) / 86400000)) : undefined}
                   userId={user?.id}
+                  cashPending={activeSubscription.payment_method === 'cash' && activeSubscription.cash_payment_confirmed === false}
                   onRenovado={() => {
                     invalidateLoyalty();
                     invalidateAppointments();
                   }}
                 />
-              </>
               ) : pendingSubscription ? (
                 <div className="space-y-4">
                   {(pendingSubscription as any).status === 'pending_cash' ? (
