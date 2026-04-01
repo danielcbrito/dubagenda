@@ -93,6 +93,7 @@ export function MyPlansSheet({ open, onOpenChange, userId, onSubscriptionChanged
           payment_method,
           total_renovacoes,
           usos_ciclo_atual,
+          barbeiro_id,
           plano:planos(
             id,
             nome,
