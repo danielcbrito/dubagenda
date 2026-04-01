@@ -1,0 +1,113 @@
+import { useNavigate } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
+import { Crown, ArrowRight, Sparkles } from "lucide-react";
+import { cn } from "@/lib/utils";
+
+interface PlanRenewalDrawerProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  planName: string;
+  barberId?: string | null;
+}
+
+export function PlanRenewalDrawer({ open, onOpenChange, planName, barberId }: PlanRenewalDrawerProps) {
+  const navigate = useNavigate();
+
+  return (
+    <AnimatePresence>
+      {open && (
+        <>
+          {/* Backdrop */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => onOpenChange(false)}
+            className="fixed inset-0 z-50 bg-background/60 backdrop-blur-sm"
+          />
+
+          {/* Drawer */}
+          <motion.div
+            initial={{ y: "100%" }}
+            animate={{ y: 0 }}
+            exit={{ y: "100%" }}
+            transition={{ type: "spring", damping: 32, stiffness: 380 }}
+            className="fixed bottom-0 left-0 right-0 z-50 rounded-t-2xl border-t border-border/40 bg-card"
+            style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
+          >
+            {/* Handle */}
+            <div className="flex justify-center pt-3 pb-1">
+              <div className="w-8 h-1 rounded-full bg-muted-foreground/15" />
+            </div>
+
+            <div className="px-5 pb-6 pt-2">
+              {/* Header */}
+              <div className="flex items-center gap-3 mb-5">
+                <div className="w-10 h-10 rounded-xl bg-destructive/10 flex items-center justify-center flex-shrink-0">
+                  <Crown className="w-5 h-5 text-destructive" />
+                </div>
+                <div className="min-w-0">
+                  <h3 className="text-[15px] font-bold text-foreground">
+                    Plano esgotado
+                  </h3>
+                  <p className="text-[11px] text-muted-foreground mt-0.5 truncate">
+                    {planName} — todos os cortes foram utilizados
+                  </p>
+                </div>
+              </div>
+
+              {/* CTA Buttons */}
+              <div className="space-y-2.5">
+                {/* Renovar mesmo plano */}
+                <button
+                  onClick={() => {
+                    onOpenChange(false);
+                    if (barberId) {
+                      navigate(`/cliente/agendar?barber=${barberId}`);
+                    } else {
+                      navigate("/cliente/assinar");
+                    }
+                  }}
+                  className={cn(
+                    "w-full h-12 rounded-xl font-semibold text-[13px]",
+                    "bg-foreground text-background",
+                    "flex items-center justify-center gap-2",
+                    "active:scale-[0.98] transition-transform"
+                  )}
+                >
+                  <Sparkles className="w-4 h-4" />
+                  Renovar plano
+                </button>
+
+                {/* Escolher outro plano */}
+                <button
+                  onClick={() => {
+                    onOpenChange(false);
+                    navigate("/cliente/assinar");
+                  }}
+                  className={cn(
+                    "w-full h-12 rounded-xl font-medium text-[13px]",
+                    "border border-border/50 bg-card text-foreground",
+                    "flex items-center justify-center gap-2",
+                    "hover:bg-muted/50 active:scale-[0.98] transition-all"
+                  )}
+                >
+                  Escolher outro plano
+                  <ArrowRight className="w-3.5 h-3.5 text-muted-foreground" />
+                </button>
+              </div>
+
+              {/* Dismiss */}
+              <button
+                onClick={() => onOpenChange(false)}
+                className="w-full mt-3 py-2 text-[11px] text-muted-foreground/50 hover:text-muted-foreground transition-colors"
+              >
+                Agora não
+              </button>
+            </div>
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>
+  );
+}

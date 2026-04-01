@@ -122,18 +122,6 @@ export function PlanTrackerCard({
           </button>
         </div>
 
-        {/* Renew button — ONLY when exhausted */}
-        {canRenew && assinaturaId && userId && (
-          <motion.button
-            initial={{ opacity: 0, y: 4 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            onClick={() => navigate("/cliente/assinar")}
-            className="w-full mt-3 h-10 rounded-xl bg-foreground text-background text-[13px] font-semibold active:scale-[0.97] transition-transform"
-          >
-            Renovar plano
-          </motion.button>
-        )}
       </div>
     </motion.div>
   );
