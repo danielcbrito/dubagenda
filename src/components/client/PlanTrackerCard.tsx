@@ -58,7 +58,7 @@ export function PlanTrackerCard({
   userId,
   onRenovado,
 }: PlanTrackerCardProps) {
-  const [renewOpen, setRenewOpen] = useState(false);
+  const navigate = useNavigate();
 
   const remaining = Math.max(0, totalAppointments - usedAppointments);
   const steps = Array.from({ length: totalAppointments }, (_, i) => i < usedAppointments);
