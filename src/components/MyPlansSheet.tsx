@@ -5,10 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Calendar,
-  CheckCircle2,
   AlertCircle,
   CreditCard,
-  ChevronRight,
   Sparkles,
   ArrowRight,
   RefreshCw,
@@ -183,9 +181,6 @@ export function MyPlansSheet({ open, onOpenChange, userId, onSubscriptionChanged
 
   if (!open) return null;
 
-  const benefits = Array.isArray(subscription?.plano?.beneficios_json)
-    ? subscription.plano.beneficios_json
-    : [];
 
   const statusConfig = subscription ? getStatusConfig(subscription.status) : null;
 
@@ -510,46 +505,11 @@ export function MyPlansSheet({ open, onOpenChange, userId, onSubscriptionChanged
                       </div>
                     </div>
 
-                    {/* Benefits */}
-                    {benefits.length > 0 && (
-                      <div className="rounded-xl border border-border/40 bg-card p-4 space-y-3">
-                        <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground/50">
-                          Benefícios inclusos
-                        </p>
-                        <div className="space-y-2.5">
-                          {benefits.map((benefit: string, i: number) => (
-                            <div key={i} className="flex items-start gap-2.5">
-                              <CheckCircle2 className="w-3.5 h-3.5 mt-0.5 text-primary flex-shrink-0" />
-                              <span className="text-xs text-muted-foreground leading-relaxed">{benefit}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Payment management */}
-                    {!isSuspended && (
-                      <button
-                        onClick={() => {
-                          navigate("/cliente/pagamento");
-                        }}
-                        className="w-full rounded-xl border border-border/40 bg-card p-3.5 flex items-center justify-between hover:bg-muted/50 transition-colors active:scale-[0.99]"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-lg bg-secondary/60 flex items-center justify-center">
-                            <CreditCard className="w-4 h-4 text-muted-foreground" />
-                          </div>
-                          <p className="text-xs font-medium text-foreground">Formas de Pagamento</p>
-                        </div>
-                        <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/40" />
-                      </button>
-                    )}
-
                     {/* Cancel */}
-                    <div className="pt-4">
+                    <div className="pt-6">
                       <button
                         onClick={() => setCancelDialogOpen(true)}
-                        className="w-full py-2 text-[11px] text-muted-foreground/50 hover:text-destructive/70 transition-colors"
+                        className="w-full py-2 text-[11px] text-muted-foreground/40 hover:text-destructive/60 transition-colors"
                       >
                         {isSuspended || isPendingCash ? "Cancelar assinatura pendente" : "Cancelar assinatura"}
                       </button>
