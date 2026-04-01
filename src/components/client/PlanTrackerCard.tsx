@@ -210,20 +210,6 @@ export function PlanTrackerCard({
           )}
         </div>
       </motion.div>
-
-      {/* Renewal Sheet */}
-      {assinaturaId && planoPreco !== undefined && userId && (
-        <RenovacaoSheet
-          open={renewOpen}
-          onOpenChange={setRenewOpen}
-          assinaturaId={assinaturaId}
-          planoNome={planName}
-          planoPreco={planoPreco}
-          servicoNome={servicoNome || "Serviço"}
-          userId={userId}
-          onRenovado={onRenovado || (() => {})}
-        />
-      )}
     </>
   );
 }
