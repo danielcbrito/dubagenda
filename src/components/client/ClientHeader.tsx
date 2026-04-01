@@ -10,7 +10,7 @@ interface ClientHeaderProps {
   realtimeConnected?: boolean;
 }
 
-export function ClientHeader({ profileName, email, userId, realtimeConnected = true }: ClientHeaderProps) {
+export function ClientHeader({ profileName, userId }: ClientHeaderProps) {
   const firstName = profileName ? String(profileName).split(" ")[0] : null;
   const initials = firstName ? firstName.charAt(0).toUpperCase() : "?";
   const today = new Date();
@@ -24,6 +24,7 @@ export function ClientHeader({ profileName, email, userId, realtimeConnected = t
       transition={{ duration: 0.3, ease: "easeOut" }}
       className="flex items-center justify-between"
     >
+      <div className="flex-1 min-w-0">
         <p className="text-[9px] font-medium text-muted-foreground/60 uppercase tracking-[0.18em] mb-0.5">
           {dayOfWeek} · {formattedDate}
         </p>
@@ -33,20 +34,15 @@ export function ClientHeader({ profileName, email, userId, realtimeConnected = t
       </div>
 
       <div className="flex items-center gap-2 flex-shrink-0">
-        {/* Notification Bell */}
         {userId && (
           <NotificationBellPremium userId={userId} />
         )}
-
-        {/* Avatar */}
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: 0.08, duration: 0.2 }}
           className="w-8 h-8 rounded-full flex items-center justify-center border border-border"
-          style={{
-            background: "hsl(var(--card))",
-          }}
+          style={{ background: "hsl(var(--card))" }}
         >
           <span className="text-foreground/80 font-semibold text-[11px]">
             {initials}
