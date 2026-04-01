@@ -8,10 +8,11 @@ interface NavItemProps {
   icon: React.ElementType;
   label: string;
   isActive?: boolean;
+  showBadge?: boolean;
   onClick: () => void;
 }
 
-function NavItem({ icon: Icon, label, isActive, onClick }: NavItemProps) {
+function NavItem({ icon: Icon, label, isActive, showBadge, onClick }: NavItemProps) {
   return (
     <motion.button
       whileTap={{ scale: 0.9 }}
