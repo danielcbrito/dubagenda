@@ -171,15 +171,37 @@ const fetchLoyaltyData = async (userId: string, tenantId: string | null) => {
     ? pontosNecessariosResult.data.pontos_necessarios
     : 8;
 
-  // Buscar assinatura ativa
-  const { data: activeSub } = await supabase
-    .from("assinaturas")
-    .select("id, status, next_billing_date, plano_id, barbeiro_id, payment_method, cash_payment_confirmed, ciclo_fim, plano:planos(nome, limite_agendamentos_mes, preco_mensal, servico:servicos(nome))")
-    .eq("user_id", userId)
-    .eq("status", "active")
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+  const loadActiveSubscription = async () => {
+    const { data: activeSubData } = await supabase
+      .from("assinaturas")
+      .select("id, status, next_billing_date, plano_id, barbeiro_id, payment_method, cash_payment_confirmed, ciclo_fim, plano:planos(nome, limite_agendamentos_mes, preco_mensal, servico:servicos(nome))")
+      .eq("user_id", userId)
+      .eq("status", "active")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (!activeSubData) {
+      return { subscription: null, usageCount: 0 };
+    }
+
+    const cycleStart = new Date(`${activeSubData.next_billing_date}T12:00:00`);
+    cycleStart.setMonth(cycleStart.getMonth() - 1);
+    const cycleStartDate = cycleStart.toISOString().split('T')[0];
+
+    const { data: usageCount, error: usageError } = await supabase.rpc('count_subscription_uses_in_cycle', {
+      p_assinatura_id: activeSubData.id,
+      p_cycle_start: cycleStartDate,
+      p_cycle_end: activeSubData.next_billing_date,
+    });
+
+    return {
+      subscription: activeSubData,
+      usageCount: usageError ? 0 : Number(usageCount || 0),
+    };
+  };
+
+  const { subscription: activeSub, usageCount: activeUsageCount } = await loadActiveSubscription();
 
   let activeSubscription: any = null;
   let expiredSubscription: any = null;
@@ -188,29 +210,38 @@ const fetchLoyaltyData = async (userId: string, tenantId: string | null) => {
 
   if (activeSub) {
     activeSubscription = activeSub;
-
-    const cycleStart = new Date(`${activeSub.next_billing_date}T12:00:00`);
-    cycleStart.setMonth(cycleStart.getMonth() - 1);
-    const cycleStartDate = cycleStart.toISOString().split('T')[0];
-
-    const { data: usageCount, error: usageError } = await supabase.rpc('count_subscription_uses_in_cycle', {
-      p_assinatura_id: activeSub.id,
-      p_cycle_start: cycleStartDate,
-      p_cycle_end: activeSub.next_billing_date,
-    });
-
-    planUsageCount = usageError ? 0 : Number(usageCount || 0);
+    planUsageCount = activeUsageCount;
   } else {
     const { data: pendingSub } = await supabase
       .from("assinaturas")
       .select("id, status, plano_id, created_at, payment_method, pix_qr_code, pix_payload, asaas_payment_id, pix_expires_at, plano:planos(nome, preco_mensal)")
       .eq("user_id", userId)
-      .in("status", ["suspended", "pending_cash"] as any)
+      .in("status", ["suspended", "pending_cash", "pending_renewal"] as any)
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
 
     pendingSubscription = pendingSub;
+
+    if (pendingSub?.status === "pending_renewal") {
+      const { data: renewalCheck } = await supabase.functions.invoke("check-subscription-pix", {
+        body: { subscriptionId: pendingSub.id },
+      });
+
+      if (
+        renewalCheck?.status === "paid" ||
+        renewalCheck?.status === "expired" ||
+        renewalCheck?.status === "already_processed"
+      ) {
+        const { subscription: recoveredSub, usageCount: recoveredUsageCount } = await loadActiveSubscription();
+
+        if (recoveredSub) {
+          activeSubscription = recoveredSub;
+          planUsageCount = recoveredUsageCount;
+          pendingSubscription = null;
+        }
+      }
+    }
 
     if (!pendingSub) {
       const thirtyDaysAgo = new Date();
