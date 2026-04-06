@@ -100,46 +100,42 @@ export function RenovacaoSheet({
     }
   }, [open]);
 
-  // PIX polling + Realtime listener
+  // PIX polling via edge function para confirmar e destravar renovações expiradas
   useEffect(() => {
-    if (step !== "pix") return;
+    if (step !== "pix" || !open) return;
 
     let cancelled = false;
 
     const checkStatus = async () => {
-      const { data } = await supabase.rpc("get_assinatura_status", { p_user_id: userId });
-      if (!cancelled && data && typeof data === "object" && "status" in (data as any)) {
-        if ((data as any).status === "active") {
-          setStep("confirmacao");
-          onRenovado();
-        }
+      const { data, error } = await supabase.functions.invoke("check-subscription-pix", {
+        body: { subscriptionId: assinaturaId },
+      });
+
+      if (cancelled || error) return;
+
+      if (data?.status === "paid" || data?.status === "already_processed") {
+        setStep("confirmacao");
+        onRenovado();
+        return;
+      }
+
+      if (data?.status === "expired") {
+        setStep("escolha");
+        setFormaPagamento(null);
+        setPixData(null);
+        queryClient.invalidateQueries({ queryKey: ["assinatura-status"] });
+        toast.error("PIX expirado. Você pode tentar renovar novamente.");
       }
     };
 
-    // Poll every 4s
+    checkStatus();
     const interval = setInterval(checkStatus, 4000);
-
-    // Realtime listener for instant detection
-    const channel = supabase
-      .channel(`renew-sub-${assinaturaId}`)
-      .on(
-        "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "assinaturas", filter: `id=eq.${assinaturaId}` },
-        (payload) => {
-          if (payload.new && (payload.new as any).status === "active") {
-            setStep("confirmacao");
-            onRenovado();
-          }
-        }
-      )
-      .subscribe();
 
     return () => {
       cancelled = true;
       clearInterval(interval);
-      supabase.removeChannel(channel);
     };
-  }, [step, userId, assinaturaId, onRenovado]);
+  }, [step, open, assinaturaId, onRenovado, queryClient]);
 
   const handleConfirm = useCallback(async () => {
     if (!formaPagamento) return;
@@ -196,7 +192,7 @@ export function RenovacaoSheet({
       // Revert status if user cancels PIX
       supabase
         .from("assinaturas")
-        .update({ status: "active" as any, pix_qr_code: null, pix_payload: null, asaas_payment_id: null })
+        .update({ status: "active" as any, pix_qr_code: null, pix_payload: null, pix_expires_at: null, asaas_payment_id: null })
         .eq("id", assinaturaId)
         .then(() => {
           queryClient.invalidateQueries({ queryKey: ["assinatura-status"] });

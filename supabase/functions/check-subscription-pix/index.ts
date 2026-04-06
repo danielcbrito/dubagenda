@@ -62,17 +62,38 @@ serve(async (req) => {
     const { subscriptionId } = body;
     if (!subscriptionId) throw new Error("subscriptionId é obrigatório");
 
-    // Buscar assinatura (inclui barbeiro_id para resolver API key)
+    // Buscar assinatura (inclui pending_renewal para reconciliar renovação PIX)
     const { data: sub } = await supabase
       .from("assinaturas")
       .select("*")
       .eq("id", subscriptionId)
-      .eq("status", "suspended")
+      .in("status", ["suspended", "pending_renewal"])
       .maybeSingle();
 
     if (!sub) {
       return new Response(
         JSON.stringify({ status: "already_processed" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const pixExpired = !!sub.pix_expires_at && new Date(sub.pix_expires_at).getTime() <= Date.now();
+
+    if (sub.status === "pending_renewal" && pixExpired) {
+      await supabase
+        .from("assinaturas")
+        .update({
+          status: "active",
+          asaas_payment_id: null,
+          pix_qr_code: null,
+          pix_payload: null,
+          pix_expires_at: null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", subscriptionId);
+
+      return new Response(
+        JSON.stringify({ status: "expired", revertedTo: "active" }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -97,19 +118,44 @@ serve(async (req) => {
     console.log("[check-subscription-pix] Status:", paymentData.status);
 
     if (paymentData.status === "RECEIVED" || paymentData.status === "CONFIRMED") {
-      const nextBilling = new Date();
-      nextBilling.setMonth(nextBilling.getMonth() + 1);
+      if (sub.status === "pending_renewal") {
+        const today = new Date();
+        const nextBilling = new Date(today);
+        nextBilling.setDate(nextBilling.getDate() + 30);
 
-      await supabase
-        .from("assinaturas")
-        .update({
-          status: "active",
-          next_billing_date: nextBilling.toISOString().split("T")[0],
-          pix_qr_code: null,
-          pix_payload: null,
-          pix_expires_at: null,
-        })
-        .eq("id", subscriptionId);
+        await supabase
+          .from("assinaturas")
+          .update({
+            status: "active",
+            ciclo_inicio: today.toISOString().split("T")[0],
+            ciclo_fim: nextBilling.toISOString().split("T")[0],
+            next_billing_date: nextBilling.toISOString().split("T")[0],
+            usos_ciclo_atual: 0,
+            total_renovacoes: (sub.total_renovacoes || 0) + 1,
+            renovada_antecipadamente: true,
+            cash_payment_confirmed: null,
+            asaas_payment_id: null,
+            pix_qr_code: null,
+            pix_payload: null,
+            pix_expires_at: null,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", subscriptionId);
+      } else {
+        const nextBilling = new Date();
+        nextBilling.setMonth(nextBilling.getMonth() + 1);
+
+        await supabase
+          .from("assinaturas")
+          .update({
+            status: "active",
+            next_billing_date: nextBilling.toISOString().split("T")[0],
+            pix_qr_code: null,
+            pix_payload: null,
+            pix_expires_at: null,
+          })
+          .eq("id", subscriptionId);
+      }
 
       await supabase.from("pagamentos").insert({
         user_id: sub.user_id,
@@ -132,7 +178,22 @@ serve(async (req) => {
       paymentData.status === "REFUNDED" ||
       paymentData.status === "DELETED"
     ) {
-      await supabase.from("assinaturas").delete().eq("id", subscriptionId);
+      if (sub.status === "pending_renewal") {
+        await supabase
+          .from("assinaturas")
+          .update({
+            status: "active",
+            asaas_payment_id: null,
+            pix_qr_code: null,
+            pix_payload: null,
+            pix_expires_at: null,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", subscriptionId);
+      } else {
+        await supabase.from("assinaturas").delete().eq("id", subscriptionId);
+      }
+
       return new Response(
         JSON.stringify({ status: "expired" }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
