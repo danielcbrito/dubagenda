@@ -1043,6 +1043,7 @@ export type Database = {
           id: string
           scope: string
           tenant_id: string
+          unidade_id: string | null
           updated_at: string
         }
         Insert: {
@@ -1053,6 +1054,7 @@ export type Database = {
           id?: string
           scope: string
           tenant_id: string
+          unidade_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -1063,6 +1065,7 @@ export type Database = {
           id?: string
           scope?: string
           tenant_id?: string
+          unidade_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -1085,6 +1088,13 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_booking_blocks_unidade_id_fkey"
+            columns: ["unidade_id"]
+            isOneToOne: false
+            referencedRelation: "tenant_unidades"
             referencedColumns: ["id"]
           },
         ]
@@ -3494,6 +3504,33 @@ export type Database = {
           },
         ]
       }
+      system_config: {
+        Row: {
+          chave: string
+          descricao: string | null
+          id: string
+          updated_at: string | null
+          updated_by: string | null
+          valor: string | null
+        }
+        Insert: {
+          chave: string
+          descricao?: string | null
+          id?: string
+          updated_at?: string | null
+          updated_by?: string | null
+          valor?: string | null
+        }
+        Update: {
+          chave?: string
+          descricao?: string | null
+          id?: string
+          updated_at?: string | null
+          updated_by?: string | null
+          valor?: string | null
+        }
+        Relationships: []
+      }
       system_health_checks: {
         Row: {
           error_message: string | null
@@ -4030,6 +4067,7 @@ export type Database = {
           endereco_completo: string | null
           estado: string | null
           id: string
+          is_test: boolean | null
           latitude: number | null
           logo_url: string | null
           longitude: number | null
@@ -4058,6 +4096,7 @@ export type Database = {
           endereco_completo?: string | null
           estado?: string | null
           id?: string
+          is_test?: boolean | null
           latitude?: number | null
           logo_url?: string | null
           longitude?: number | null
@@ -4086,6 +4125,7 @@ export type Database = {
           endereco_completo?: string | null
           estado?: string | null
           id?: string
+          is_test?: boolean | null
           latitude?: number | null
           logo_url?: string | null
           longitude?: number | null
