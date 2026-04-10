@@ -145,6 +145,12 @@ const ClienteAssinar = () => {
   const location = useLocation();
   const resumePlanId = (location.state as any)?.resumePlanId as string | undefined;
 
+  // Detect renewal/change mode from URL params
+  const searchParams = new URLSearchParams(location.search);
+  const mode = searchParams.get("mode"); // "renew" | "change" | null
+  const isRenewalMode = mode === "renew";
+  const isChangeMode = mode === "change";
+
   // Data
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [plans, setPlans] = useState<Plan[]>([]);
@@ -167,8 +173,14 @@ const ClienteAssinar = () => {
   // ─── Init ─────────────────────────────────
   useEffect(() => {
     loadTenants();
-    checkActiveSubscription();
-    if (!resumePlanId) {
+    if (!isRenewalMode && !isChangeMode) {
+      checkActiveSubscription();
+    }
+    if (isRenewalMode) {
+      initRenewalMode();
+    } else if (isChangeMode) {
+      autoSelectPreferredShop();
+    } else if (!resumePlanId) {
       autoSelectPreferredShop();
     }
   }, []);
