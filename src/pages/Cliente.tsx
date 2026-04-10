@@ -26,7 +26,7 @@ import { ClientHeader } from "@/components/client/ClientHeader";
 import { LoyaltyCard } from "@/components/client/LoyaltyCard";
 import { PlanTrackerCard } from "@/components/client/PlanTrackerCard";
 import { PlanExpiredBanner } from "@/components/client/PlanExpiredBanner";
-import { RenovacaoSheet } from "@/components/plano/RenovacaoSheet";
+import { PlanRenewalDrawer } from "@/components/client/PlanRenewalDrawer";
 import { PendingSubscriptionBanner } from "@/components/client/PendingSubscriptionBanner";
 import { ScheduleButton } from "@/components/client/ScheduleButton";
 import { AppointmentCardPremium } from "@/components/client/AppointmentCardPremium";
@@ -1207,21 +1207,12 @@ const Cliente = () => {
         }}
       />
 
-      {/* Plan Renewal Sheet */}
-      {activeSubscription && (
-        <RenovacaoSheet
-          open={renewalDrawerOpen}
-          onOpenChange={setRenewalDrawerOpen}
-          assinaturaId={activeSubscription.id}
-          planoNome={(activeSubscription as any)?.plano?.nome || "Meu Plano"}
-          planoPreco={(activeSubscription as any)?.plano?.preco_mensal || 0}
-          servicoNome={(activeSubscription as any)?.plano?.servico?.nome || "Corte"}
-          userId={user?.id || ""}
-          onRenovado={() => {
-            invalidateLoyalty();
-          }}
-        />
-      )}
+      {/* Plan Renewal Drawer */}
+      <PlanRenewalDrawer
+        open={renewalDrawerOpen}
+        onOpenChange={setRenewalDrawerOpen}
+        planName={(activeSubscription as any)?.plano?.nome || "Meu Plano"}
+      />
 
       {/* Bottom Navigation */}
       <BottomNavigation
