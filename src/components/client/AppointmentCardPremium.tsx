@@ -115,8 +115,7 @@ export function AppointmentCardPremium({
   const isAwaitingBarberApproval = appointment.status === "pending" && !appointment.barbeiro_confirmou;
   const rescheduleRequested = appointment.remarcacao_solicitada === true;
   const canCancel = (appointment.status === "pending" || appointment.status === "confirmed") && !isAwaitingBarberApproval && !rescheduleRequested;
-  const needsConfirmation = appointment.status === "completed" && !appointment.cliente_confirmou && onConfirm;
-  const hasActionSection = (rescheduleRequested && !isCancelled) || !!needsConfirmation || (canCancel && !rescheduleRequested);
+  const hasActionSection = (rescheduleRequested && !isCancelled) || (canCancel && !rescheduleRequested);
 
   const externalPayment = payments.find(p => p.agendamento_id === appointment.id);
   const inlinePayment = appointment.pagamentos?.find(p => p.status === "paid");
