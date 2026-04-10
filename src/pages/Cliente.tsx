@@ -1212,6 +1212,8 @@ const Cliente = () => {
         open={renewalDrawerOpen}
         onOpenChange={setRenewalDrawerOpen}
         planName={(activeSubscription as any)?.plano?.nome || "Meu Plano"}
+        planPrice={(activeSubscription as any)?.plano?.preco_mensal}
+        serviceName={(activeSubscription as any)?.plano?.servico?.nome}
       />
 
       {/* Bottom Navigation */}

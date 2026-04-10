@@ -1,16 +1,21 @@
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Crown, ArrowRight } from "lucide-react";
+import { Crown } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { format, addDays } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 interface PlanRenewalDrawerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   planName: string;
+  planPrice?: number;
+  serviceName?: string;
 }
 
-export function PlanRenewalDrawer({ open, onOpenChange, planName }: PlanRenewalDrawerProps) {
+export function PlanRenewalDrawer({ open, onOpenChange, planName, planPrice, serviceName }: PlanRenewalDrawerProps) {
   const navigate = useNavigate();
+  const newCycleEnd = format(addDays(new Date(), 30), "dd 'de' MMMM", { locale: ptBR });
 
   return (
     <AnimatePresence>
@@ -55,6 +60,32 @@ export function PlanRenewalDrawer({ open, onOpenChange, planName }: PlanRenewalD
                 </div>
               </div>
 
+              {/* Resumo */}
+              <div className="rounded-xl bg-muted/50 p-4 space-y-2 mb-4">
+                <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/50">
+                  Resumo da renovação
+                </p>
+                <div className="space-y-1.5">
+                  <p className="text-[13px] text-foreground font-medium">{planName}</p>
+                  {serviceName && (
+                    <p className="text-[12px] text-muted-foreground">Serviço: {serviceName}</p>
+                  )}
+                  {planPrice != null && planPrice > 0 && (
+                    <p className="text-[13px] text-foreground font-semibold tabular-nums">
+                      R$ {planPrice.toFixed(2)}/mês
+                    </p>
+                  )}
+                  <p className="text-[11px] text-muted-foreground">
+                    Novo ciclo: hoje → {newCycleEnd}
+                  </p>
+                </div>
+                <div className="mt-2 px-2.5 py-1 rounded-md bg-amber-500/10 border border-amber-500/20 inline-block">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-amber-500">
+                    Ciclo anterior encerrado
+                  </span>
+                </div>
+              </div>
+
               {/* CTA */}
               <button
                 onClick={() => {
@@ -64,12 +95,11 @@ export function PlanRenewalDrawer({ open, onOpenChange, planName }: PlanRenewalD
                 className={cn(
                   "w-full h-12 rounded-xl font-semibold text-[13px]",
                   "bg-foreground text-background",
-                  "flex items-center justify-center gap-2",
+                  "flex items-center justify-center",
                   "active:scale-[0.98] transition-transform"
                 )}
               >
                 Renovar plano
-                <ArrowRight className="w-4 h-4" />
               </button>
 
               {/* Dismiss */}
