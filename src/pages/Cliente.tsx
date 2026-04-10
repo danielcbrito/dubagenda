@@ -1207,21 +1207,12 @@ const Cliente = () => {
         }}
       />
 
-      {/* Plan Renewal Sheet */}
-      {activeSubscription && (
-        <RenovacaoSheet
-          open={renewalDrawerOpen}
-          onOpenChange={setRenewalDrawerOpen}
-          assinaturaId={activeSubscription.id}
-          planoNome={(activeSubscription as any)?.plano?.nome || "Meu Plano"}
-          planoPreco={(activeSubscription as any)?.plano?.preco_mensal || 0}
-          servicoNome={(activeSubscription as any)?.plano?.servico?.nome || "Corte"}
-          userId={user?.id || ""}
-          onRenovado={() => {
-            invalidateLoyalty();
-          }}
-        />
-      )}
+      {/* Plan Renewal Drawer */}
+      <PlanRenewalDrawer
+        open={renewalDrawerOpen}
+        onOpenChange={setRenewalDrawerOpen}
+        planName={(activeSubscription as any)?.plano?.nome || "Meu Plano"}
+      />
 
       {/* Bottom Navigation */}
       <BottomNavigation
