@@ -185,6 +185,41 @@ const ClienteAssinar = () => {
     }
   }, []);
 
+  // Renewal mode: load current plan + barbers, skip to barber selection (step 3)
+  const initRenewalMode = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) { setStep(1); return; }
+
+      // Get active subscription with plan details
+      const { data: activeSub } = await supabase
+        .from("assinaturas")
+        .select("*, plano:planos(*)")
+        .eq("user_id", session.user.id)
+        .eq("status", "active")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (!activeSub?.plano) {
+        toast.error("Nenhum plano ativo encontrado");
+        navigate("/cliente");
+        return;
+      }
+
+      const tenantId = activeSub.plano.tenant_id;
+      const key = tenantId || "dub";
+      setSelectedTenantId(key);
+      setSelectedPlan(activeSub.plano as Plan);
+      await loadPlansForTenant(tenantId);
+      await loadBarbersForTenant(tenantId);
+      setStep(3); // Go straight to barber selection
+    } catch (err) {
+      console.error("Erro ao iniciar renovação:", err);
+      setStep(1);
+    }
+  };
+
   const autoSelectPreferredShop = async () => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
