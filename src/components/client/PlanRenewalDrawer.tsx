@@ -1,6 +1,5 @@
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format, addDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -73,7 +72,7 @@ export function PlanRenewalDrawer({ open, onOpenChange, planName, planPrice, ser
                 <button
                   onClick={() => {
                     onOpenChange(false);
-                    navigate("/cliente/assinar");
+                    navigate("/cliente/assinar?mode=renew");
                   }}
                   className={cn(
                     "w-full h-12 rounded-xl font-semibold text-[13px]",
@@ -88,17 +87,16 @@ export function PlanRenewalDrawer({ open, onOpenChange, planName, planPrice, ser
                 <button
                   onClick={() => {
                     onOpenChange(false);
-                    navigate("/cliente/assinar");
+                    navigate("/cliente/assinar?mode=change");
                   }}
                   className={cn(
                     "w-full h-12 rounded-xl font-medium text-[13px]",
                     "border border-border/50 bg-card text-foreground",
-                    "flex items-center justify-center gap-2",
+                    "flex items-center justify-center",
                     "hover:bg-muted/50 active:scale-[0.98] transition-all"
                   )}
                 >
                   Escolher outro plano
-                  <ArrowRight className="w-3.5 h-3.5 text-muted-foreground" />
                 </button>
               </div>
 
