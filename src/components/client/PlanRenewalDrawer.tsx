@@ -1,16 +1,15 @@
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Crown, ArrowRight, Sparkles } from "lucide-react";
+import { Crown, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface PlanRenewalDrawerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   planName: string;
-  barberId?: string | null;
 }
 
-export function PlanRenewalDrawer({ open, onOpenChange, planName, barberId }: PlanRenewalDrawerProps) {
+export function PlanRenewalDrawer({ open, onOpenChange, planName }: PlanRenewalDrawerProps) {
   const navigate = useNavigate();
 
   return (
@@ -51,51 +50,27 @@ export function PlanRenewalDrawer({ open, onOpenChange, planName, barberId }: Pl
                     Plano esgotado
                   </h3>
                   <p className="text-[11px] text-muted-foreground mt-0.5 truncate">
-                    {planName} — todos os cortes foram utilizados
+                    {planName} — todos os serviços foram utilizados
                   </p>
                 </div>
               </div>
 
-              {/* CTA Buttons */}
-              <div className="space-y-2.5">
-                {/* Renovar mesmo plano */}
-                <button
-                  onClick={() => {
-                    onOpenChange(false);
-                    if (barberId) {
-                      navigate(`/cliente/agendar?barber=${barberId}`);
-                    } else {
-                      navigate("/cliente/assinar");
-                    }
-                  }}
-                  className={cn(
-                    "w-full h-12 rounded-xl font-semibold text-[13px]",
-                    "bg-foreground text-background",
-                    "flex items-center justify-center gap-2",
-                    "active:scale-[0.98] transition-transform"
-                  )}
-                >
-                  <Sparkles className="w-4 h-4" />
-                  Renovar plano
-                </button>
-
-                {/* Escolher outro plano */}
-                <button
-                  onClick={() => {
-                    onOpenChange(false);
-                    navigate("/cliente/assinar");
-                  }}
-                  className={cn(
-                    "w-full h-12 rounded-xl font-medium text-[13px]",
-                    "border border-border/50 bg-card text-foreground",
-                    "flex items-center justify-center gap-2",
-                    "hover:bg-muted/50 active:scale-[0.98] transition-all"
-                  )}
-                >
-                  Escolher outro plano
-                  <ArrowRight className="w-3.5 h-3.5 text-muted-foreground" />
-                </button>
-              </div>
+              {/* CTA */}
+              <button
+                onClick={() => {
+                  onOpenChange(false);
+                  navigate("/cliente/assinar");
+                }}
+                className={cn(
+                  "w-full h-12 rounded-xl font-semibold text-[13px]",
+                  "bg-foreground text-background",
+                  "flex items-center justify-center gap-2",
+                  "active:scale-[0.98] transition-transform"
+                )}
+              >
+                Renovar plano
+                <ArrowRight className="w-4 h-4" />
+              </button>
 
               {/* Dismiss */}
               <button

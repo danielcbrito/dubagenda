@@ -26,7 +26,7 @@ import { ClientHeader } from "@/components/client/ClientHeader";
 import { LoyaltyCard } from "@/components/client/LoyaltyCard";
 import { PlanTrackerCard } from "@/components/client/PlanTrackerCard";
 import { PlanExpiredBanner } from "@/components/client/PlanExpiredBanner";
-import { RenovacaoSheet } from "@/components/plano/RenovacaoSheet";
+import { PlanRenewalDrawer } from "@/components/client/PlanRenewalDrawer";
 import { PendingSubscriptionBanner } from "@/components/client/PendingSubscriptionBanner";
 import { ScheduleButton } from "@/components/client/ScheduleButton";
 import { AppointmentCardPremium } from "@/components/client/AppointmentCardPremium";
