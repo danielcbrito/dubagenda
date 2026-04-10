@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 /** Rotas onde o botão APARECE */
 const VISIBLE_ROUTES = ["/cliente", "/cliente/perfil"];
 
-const WHATSAPP_NUMBER = "5511999999999"; // Substitua pelo seu número real
+const WHATSAPP_NUMBER = "5511963390043";
 const WHATSAPP_MESSAGE = encodeURIComponent("Olá, sou cliente e preciso de suporte.");
 
 /**
