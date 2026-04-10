@@ -368,6 +368,11 @@ const ClienteAssinar = () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) { toast.error("Você precisa estar logado"); navigate("/auth"); return; }
 
+      // In renewal/change mode, remove the old active subscription before creating new one
+      if (isRenewalMode || isChangeMode) {
+        await supabase.from('assinaturas').delete().eq('user_id', session.user.id).eq('status', 'active');
+      }
+
       if (selectedPaymentMethod === "cash") {
         await supabase.from('assinaturas').delete().eq('user_id', session.user.id).in('status', ['suspended', 'pending_cash']);
         await supabase.from('assinaturas').delete().eq('user_id', session.user.id).eq('status', 'active').eq('cash_payment_confirmed', false);
