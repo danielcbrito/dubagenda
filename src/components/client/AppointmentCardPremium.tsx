@@ -257,17 +257,6 @@ export function AppointmentCardPremium({
               </div>
             )}
 
-            {/* Confirmation */}
-            {needsConfirmation && (
-              <Button
-                onClick={() => onConfirm?.(appointment.id)}
-                size="sm"
-                className="w-full mt-1 h-8 text-[11px]"
-              >
-                <Check className="w-3 h-3 mr-1.5" />
-                Confirmar Presença
-              </Button>
-            )}
 
             {/* Actions */}
             {canCancel && !rescheduleRequested && (
