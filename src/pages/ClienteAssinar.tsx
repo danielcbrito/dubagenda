@@ -145,6 +145,12 @@ const ClienteAssinar = () => {
   const location = useLocation();
   const resumePlanId = (location.state as any)?.resumePlanId as string | undefined;
 
+  // Detect renewal/change mode from URL params
+  const searchParams = new URLSearchParams(location.search);
+  const mode = searchParams.get("mode"); // "renew" | "change" | null
+  const isRenewalMode = mode === "renew";
+  const isChangeMode = mode === "change";
+
   // Data
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [plans, setPlans] = useState<Plan[]>([]);
@@ -167,11 +173,52 @@ const ClienteAssinar = () => {
   // ─── Init ─────────────────────────────────
   useEffect(() => {
     loadTenants();
-    checkActiveSubscription();
-    if (!resumePlanId) {
+    if (!isRenewalMode && !isChangeMode) {
+      checkActiveSubscription();
+    }
+    if (isRenewalMode) {
+      initRenewalMode();
+    } else if (isChangeMode) {
+      autoSelectPreferredShop();
+    } else if (!resumePlanId) {
       autoSelectPreferredShop();
     }
   }, []);
+
+  // Renewal mode: load current plan + barbers, skip to barber selection (step 3)
+  const initRenewalMode = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) { setStep(1); return; }
+
+      // Get active subscription with plan details
+      const { data: activeSub } = await supabase
+        .from("assinaturas")
+        .select("*, plano:planos(*)")
+        .eq("user_id", session.user.id)
+        .eq("status", "active")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (!activeSub?.plano) {
+        toast.error("Nenhum plano ativo encontrado");
+        navigate("/cliente");
+        return;
+      }
+
+      const tenantId = activeSub.plano.tenant_id;
+      const key = tenantId || "dub";
+      setSelectedTenantId(key);
+      setSelectedPlan(activeSub.plano as Plan);
+      await loadPlansForTenant(tenantId);
+      await loadBarbersForTenant(tenantId);
+      setStep(3); // Go straight to barber selection
+    } catch (err) {
+      console.error("Erro ao iniciar renovação:", err);
+      setStep(1);
+    }
+  };
 
   const autoSelectPreferredShop = async () => {
     try {
@@ -321,6 +368,11 @@ const ClienteAssinar = () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) { toast.error("Você precisa estar logado"); navigate("/auth"); return; }
 
+      // In renewal/change mode, remove the old active subscription before creating new one
+      if (isRenewalMode || isChangeMode) {
+        await supabase.from('assinaturas').delete().eq('user_id', session.user.id).eq('status', 'active');
+      }
+
       if (selectedPaymentMethod === "cash") {
         await supabase.from('assinaturas').delete().eq('user_id', session.user.id).in('status', ['suspended', 'pending_cash']);
         await supabase.from('assinaturas').delete().eq('user_id', session.user.id).eq('status', 'active').eq('cash_payment_confirmed', false);
@@ -436,7 +488,7 @@ const ClienteAssinar = () => {
                   <p className="text-sm text-muted-foreground mt-1">Selecione onde deseja assinar o plano</p>
                 </div>
 
-                <BarbershopCard isDub isSelected={false} onSelect={() => handleSelectShop(null)} disabled={hasActiveSubscription} />
+                <BarbershopCard isDub isSelected={false} onSelect={() => handleSelectShop(null)} disabled={hasActiveSubscription && !isChangeMode} />
 
                 {tenants.length > 0 && (
                   <div className="flex items-center gap-3 py-1.5 px-1">
@@ -450,7 +502,7 @@ const ClienteAssinar = () => {
 
                 {tenants.map((tenant, index) => (
                   <motion.div key={tenant.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.06 + index * 0.03 }}>
-                    <BarbershopCard tenant={tenant} isSelected={false} onSelect={() => handleSelectShop(tenant.id)} disabled={hasActiveSubscription} />
+                    <BarbershopCard tenant={tenant} isSelected={false} onSelect={() => handleSelectShop(tenant.id)} disabled={hasActiveSubscription && !isChangeMode} />
                   </motion.div>
                 ))}
 
@@ -469,7 +521,7 @@ const ClienteAssinar = () => {
             <motion.div key="step2" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               className="h-full flex flex-col"
             >
-              {hasActiveSubscription && (
+              {hasActiveSubscription && !isRenewalMode && !isChangeMode && (
                 <div className="flex-shrink-0 mx-4 mb-2 bg-destructive/10 border border-destructive/30 rounded-lg p-3">
                   <p className="text-xs text-destructive">Você já possui uma assinatura ativa.</p>
                 </div>
@@ -487,7 +539,7 @@ const ClienteAssinar = () => {
                   currentPlanIndex={currentPlanIndex}
                   setCurrentPlanIndex={setCurrentPlanIndex}
                   onSelectPlan={handleSelectPlan}
-                  hasActiveSubscription={hasActiveSubscription}
+                  hasActiveSubscription={hasActiveSubscription && !isRenewalMode && !isChangeMode}
                   selectedTenantId={selectedTenantId}
                   selectedShopName={selectedShopName}
                   onChangeShop={handleChangeShop}
@@ -621,7 +673,7 @@ const ClienteAssinar = () => {
 
       {/* ═══ Floating Bottom Bars (Steps 3 & 4) ═══ */}
       <AnimatePresence>
-        {step === 3 && selectedBarber && !hasActiveSubscription && (
+        {step === 3 && selectedBarber && (!hasActiveSubscription || isRenewalMode || isChangeMode) && (
           <motion.div key="bar-step3" initial={{ y: 80, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 80, opacity: 0 }}
             transition={{ type: "spring", stiffness: 500, damping: 40 }}
             className="fixed bottom-0 left-0 right-0 z-40">
@@ -654,7 +706,7 @@ const ClienteAssinar = () => {
           </motion.div>
         )}
 
-        {step === 4 && selectedPaymentMethod && !hasActiveSubscription && (
+        {step === 4 && selectedPaymentMethod && (!hasActiveSubscription || isRenewalMode || isChangeMode) && (
           <motion.div key="bar-step4" initial={{ y: 80, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 80, opacity: 0 }}
             transition={{ type: "spring", stiffness: 500, damping: 40 }}
             className="fixed bottom-0 left-0 right-0 z-40">
