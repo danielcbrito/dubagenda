@@ -823,7 +823,7 @@ const Cliente = () => {
             </div>
 
             {/* Barbershop Card or Onboarding */}
-            {!profileLoading && (
+            {!profileLoading && !!user && profileQueryData !== undefined && (
               preferredShop ? (
                 <motion.div
                   initial={{ opacity: 0 }}
