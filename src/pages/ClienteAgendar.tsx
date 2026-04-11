@@ -282,30 +282,6 @@ const ClienteAgendar = () => {
       const uid = session?.user?.id || null;
       if (uid) setUserId(uid);
 
-      // Carregar barbearia preferida + unidade preferida do perfil
-      let tenantId: string | null = null;
-      let userPreferredUnitId: string | null = null;
-      if (uid) {
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("barbearia_preferida_id, unidade_preferida_id")
-          .eq("id", uid)
-          .single();
-
-        if (profile?.barbearia_preferida_id) {
-          tenantId = profile.barbearia_preferida_id;
-          userPreferredUnitId = (profile as any).unidade_preferida_id || null;
-          setPreferredUnitId(userPreferredUnitId);
-          // Buscar nome da barbearia (non-blocking)
-          supabase
-            .from("tenants")
-            .select("id, nome")
-            .eq("id", tenantId)
-            .single()
-            .then(({ data: tenant }) => { if (tenant) setPreferredShop(tenant); });
-        }
-      }
-
       // Check fast session-storage flags BEFORE heavy queries
       const resumePaymentRaw = sessionStorage.getItem("resumeToPaymentStep");
       const isReschedulingSession = sessionStorage.getItem('isRescheduling');
@@ -321,20 +297,51 @@ const ClienteAgendar = () => {
         return;
       }
 
+      const profilePromise = uid
+        ? supabase
+            .from("profiles")
+            .select("barbearia_preferida_id, unidade_preferida_id")
+            .eq("id", uid)
+            .single()
+        : Promise.resolve({ data: null, error: null });
+
+      const [{ data: profile }, subscription] = await Promise.all([
+        profilePromise,
+        !resumePaymentRaw ? loadActiveSubscriptionOptimized(uid) : Promise.resolve(null),
+      ]);
+
+      // Carregar barbearia preferida + unidade preferida do perfil
+      let tenantId: string | null = null;
+      let userPreferredUnitId: string | null = null;
+
+      if (profile?.barbearia_preferida_id) {
+        tenantId = profile.barbearia_preferida_id;
+        userPreferredUnitId = (profile as any).unidade_preferida_id || null;
+        setPreferredUnitId(userPreferredUnitId);
+
+        // Buscar nome da barbearia (non-blocking)
+        supabase
+          .from("tenants")
+          .select("id, nome")
+          .eq("id", tenantId)
+          .single()
+          .then(({ data: tenant }) => {
+            if (tenant) setPreferredShop(tenant);
+          });
+      }
+
       // ══════════════════════════════════════════════════════════════
       // FAST-PATH: Check subscription FIRST to skip heavy queries
       // for plan users (barbers list, credits, redemptions, etc.)
       // ══════════════════════════════════════════════════════════════
-      if (!resumePaymentRaw && !barberFromParam) {
-        const subscription = await loadActiveSubscriptionOptimized(uid);
-        
+      if (!resumePaymentRaw) {
         if (subscription) {
           const restantes = subscription.limite_agendamentos_mes - subscription.agendamentos_usados;
           
           if (restantes > 0) {
             if (subscription.barbeiro) {
               setSelectedBarber(subscription.barbeiro);
-              loadBarberCustomDurations(subscription.barbeiro.id);
+              void loadBarberCustomDurations(subscription.barbeiro.id);
             }
 
             let includedService: Service | null = subscription.servico;
@@ -602,7 +609,13 @@ const ClienteAgendar = () => {
           next_billing_date,
           status,
           barbeiro_id,
-          plano:planos(nome, limite_agendamentos_mes, servico_id)
+          barbeiro:barbeiros(id, apelido, foto_url, tenant_id),
+          plano:planos(
+            nome,
+            limite_agendamentos_mes,
+            servico_id,
+            servico:servicos(id, nome, descricao, duracao_minutos, preco)
+          )
         `)
         .eq("user_id", uid)
         .eq("status", "active")
@@ -629,6 +642,12 @@ const ClienteAgendar = () => {
       }
 
       const planoData = subscription.plano as any;
+      const joinedService = Array.isArray(planoData?.servico)
+        ? planoData.servico[0] ?? null
+        : planoData?.servico ?? null;
+      const joinedBarber = Array.isArray((subscription as any).barbeiro)
+        ? (subscription as any).barbeiro[0] ?? null
+        : (subscription as any).barbeiro ?? null;
 
       // Calcular início do ciclo atual (next_billing_date - 1 mês)
       const cycleStart = new Date(`${subscription.next_billing_date}T12:00:00`);
@@ -642,12 +661,12 @@ const ClienteAgendar = () => {
           p_cycle_start: cycleStartDate,
           p_cycle_end: subscription.next_billing_date,
         }),
-        planoData.servico_id
-          ? supabase.from("servicos").select("id, nome, descricao, duracao_minutos, preco").eq("id", planoData.servico_id).single()
-          : Promise.resolve({ data: null }),
-        subscription.barbeiro_id
-          ? supabase.from("barbeiros").select("id, apelido, foto_url, tenant_id").eq("id", subscription.barbeiro_id).single()
-          : Promise.resolve({ data: null }),
+        joinedService || !planoData.servico_id
+          ? Promise.resolve({ data: joinedService })
+          : supabase.from("servicos").select("id, nome, descricao, duracao_minutos, preco").eq("id", planoData.servico_id).single(),
+        joinedBarber || !subscription.barbeiro_id
+          ? Promise.resolve({ data: joinedBarber })
+          : supabase.from("barbeiros").select("id, apelido, foto_url, tenant_id").eq("id", subscription.barbeiro_id).single(),
       ]);
 
       const usedCount = usageRes.error ? 0 : Number(usageRes.data || 0);
