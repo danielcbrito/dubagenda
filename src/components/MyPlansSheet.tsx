@@ -57,6 +57,7 @@ export function MyPlansSheet({ open, onOpenChange, userId, onSubscriptionChanged
   const [errorMessage, setErrorMessage] = useState<string>("");
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [canceling, setCanceling] = useState(false);
+  const [rpcUsageCount, setRpcUsageCount] = useState(0);
 
   useEffect(() => {
     if (open && userId) {
@@ -83,7 +84,6 @@ export function MyPlansSheet({ open, onOpenChange, userId, onSubscriptionChanged
           next_billing_date,
           payment_method,
           total_renovacoes,
-          usos_ciclo_atual,
           barbeiro_id,
           plano:planos(
             id,
@@ -110,6 +110,24 @@ export function MyPlansSheet({ open, onOpenChange, userId, onSubscriptionChanged
         navigate("/cliente/assinar");
       } else {
         setSubscription(data);
+
+        // Use the same RPC as the home dashboard for accurate usage count
+        if (data.next_billing_date) {
+          const cycleStart = new Date(`${data.next_billing_date}T12:00:00`);
+          cycleStart.setMonth(cycleStart.getMonth() - 1);
+          const cycleStartDate = cycleStart.toISOString().split('T')[0];
+
+          const { data: usageCount, error: usageError } = await supabase.rpc('count_subscription_uses_in_cycle', {
+            p_assinatura_id: data.id,
+            p_cycle_start: cycleStartDate,
+            p_cycle_end: data.next_billing_date,
+          });
+
+          setRpcUsageCount(usageError ? 0 : Number(usageCount || 0));
+        } else {
+          setRpcUsageCount(0);
+        }
+
         setLoadingState("success");
       }
     } catch (err) {
@@ -122,7 +140,7 @@ export function MyPlansSheet({ open, onOpenChange, userId, onSubscriptionChanged
   const isSuspended = subscription?.status === "suspended";
   const isPendingCash = subscription?.status === "pending_cash";
 
-  const usosAtual = (subscription as any)?.usos_ciclo_atual || 0;
+  const usosAtual = rpcUsageCount;
   const limite = (subscription as any)?.plano?.limite_agendamentos_mes || 0;
   const usosRestantes = Math.max(0, limite - usosAtual);
   const isExhausted = limite > 0 && usosRestantes <= 0;
