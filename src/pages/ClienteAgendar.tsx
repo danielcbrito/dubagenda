@@ -296,7 +296,7 @@ const ClienteAgendar = () => {
           tenantId = profile.barbearia_preferida_id;
           userPreferredUnitId = (profile as any).unidade_preferida_id || null;
           setPreferredUnitId(userPreferredUnitId);
-          // Buscar nome da barbearia (non-blocking — will set state async)
+          // Buscar nome da barbearia (non-blocking)
           supabase
             .from("tenants")
             .select("id, nome")
@@ -321,15 +321,73 @@ const ClienteAgendar = () => {
         return;
       }
 
-      // Carregar unidades do tenant + MEGA PARALLEL
+      // ══════════════════════════════════════════════════════════════
+      // FAST-PATH: Check subscription FIRST to skip heavy queries
+      // for plan users (barbers list, credits, redemptions, etc.)
+      // ══════════════════════════════════════════════════════════════
+      if (!resumePaymentRaw && !barberFromParam) {
+        const subscription = await loadActiveSubscriptionOptimized(uid);
+        
+        if (subscription) {
+          const restantes = subscription.limite_agendamentos_mes - subscription.agendamentos_usados;
+          
+          if (restantes > 0) {
+            if (subscription.barbeiro) {
+              setSelectedBarber(subscription.barbeiro);
+              loadBarberCustomDurations(subscription.barbeiro.id);
+            }
+
+            let includedService: Service | null = subscription.servico;
+
+            if (!includedService && subscription.servico_id) {
+              const { data: fallbackServico } = await supabase
+                .from("servicos")
+                .select("id, nome, descricao, duracao_minutos, preco")
+                .eq("id", subscription.servico_id)
+                .maybeSingle();
+              includedService = fallbackServico || null;
+            }
+
+            if (!includedService) {
+              setSubscriptionBlocked(true);
+              toast.error("Seu plano não possui um serviço válido vinculado. Fale com o suporte da barbearia.");
+              setIsInitializing(false);
+              return;
+            }
+
+            setIsPlanFlow(true);
+            setSelectedServices([includedService]);
+            
+            if (subscription.barbeiro) {
+              // ✅ Plan user with barber → DIRECTLY to date (step 3)
+              // Skip loading barbers list, services list, credits, redemptions
+              setStep(3);
+            } else {
+              // Plan without barber → need barber selection
+              await loadBarbers(tenantId, null);
+              setStep(1);
+            }
+            setIsInitializing(false);
+            return;
+          }
+
+          setSubscriptionLimitReached(true);
+          setIsInitializing(false);
+          return;
+        }
+      }
+
+      // ══════════════════════════════════════════════════════════════
+      // NORMAL PATH: Non-plan users — load everything
+      // ══════════════════════════════════════════════════════════════
+
+      // Carregar unidades do tenant
       let units: TenantUnit[] = [];
       let effectiveUnitId: string | null = null;
       
       if (tenantId) {
         units = await loadTenantUnits(tenantId);
-        console.log("[initializeBooking] Units loaded:", units.length, "tenantId:", tenantId);
         
-        // Se tem unidade preferida e ela está nas unidades ativas, auto-selecionar
         if (userPreferredUnitId && units.find(u => u.id === userPreferredUnitId)) {
           const preferredUnit = units.find(u => u.id === userPreferredUnitId)!;
           setSelectedUnit(preferredUnit);
@@ -337,11 +395,10 @@ const ClienteAgendar = () => {
         }
       }
 
-      const [barbersList, , , subscription] = await Promise.all([
+      const [barbersList] = await Promise.all([
         loadBarbers(tenantId, effectiveUnitId),
         loadUserCreditsOptimized(uid),
         loadAvailableRedemptionsOptimized(uid),
-        loadActiveSubscriptionOptimized(uid),
       ]);
 
       // Auto-select barber from query param
@@ -349,7 +406,7 @@ const ClienteAgendar = () => {
         const matchedBarber = barbersList.find((b: Barber) => b.id === barberFromParam);
         if (matchedBarber) {
           setSelectedBarber(matchedBarber);
-          loadBarberCustomDurations(matchedBarber.id); // non-blocking
+          loadBarberCustomDurations(matchedBarber.id);
           setSearchParams(prev => {
             prev.delete("barber");
             return prev;
@@ -385,62 +442,12 @@ const ClienteAgendar = () => {
         }
       }
 
-      if (subscription) {
-        const restantes = subscription.limite_agendamentos_mes - subscription.agendamentos_usados;
-
-        if (restantes > 0) {
-          if (subscription.barbeiro) {
-            setSelectedBarber(subscription.barbeiro);
-            loadBarberCustomDurations(subscription.barbeiro.id); // non-blocking
-          }
-
-          let includedService: Service | null = subscription.servico;
-
-          if (!includedService && subscription.servico_id) {
-            const { data: fallbackServico } = await supabase
-              .from("servicos")
-              .select("id, nome, descricao, duracao_minutos, preco")
-              .eq("id", subscription.servico_id)
-              .maybeSingle();
-
-            includedService = fallbackServico || null;
-          }
-
-          // Plano ativo SEM serviço válido vinculado → bloquear fluxo para evitar seleção indevida
-          if (!includedService) {
-            setSubscriptionBlocked(true);
-            toast.error("Seu plano não possui um serviço válido vinculado. Fale com o suporte da barbearia.");
-            setIsInitializing(false);
-            return;
-          }
-
-          setIsPlanFlow(true);
-          setSelectedServices([includedService]);
-          if (subscription.barbeiro) {
-            setStep(3); // barber + service pre-selected → date
-          } else {
-            setStep(1); // go to barber selection
-          }
-          setIsInitializing(false);
-          return;
-        }
-
-        setSubscriptionLimitReached(true);
-        setIsInitializing(false);
-        return;
-      }
-
       await loadServices(tenantId);
-
-      // Normal flow: if multiple units and no preferred, start at unit selection (step 0)
-      // Otherwise start at barber selection (step 1)
-      console.log("[initializeBooking] Decision:", { unitsCount: units.length, effectiveUnitId, hasMultipleUnits: units.length > 1 });
       setStep(1);
       setIsInitializing(false);
       } catch (err) {
         console.error("[initializeBooking] Fatal error:", err);
         setIsInitializing(false);
-        // Fallback: try to show unit selection or barber selection
         setStep(1);
       }
     };
