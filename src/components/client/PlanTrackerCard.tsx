@@ -28,8 +28,9 @@ export function PlanTrackerCard({
   diasRestantes,
   cashPending,
 }: PlanTrackerCardProps) {
+  const used = Math.max(0, Math.min(usedAppointments, totalAppointments));
   const remaining = Math.max(0, totalAppointments - usedAppointments);
-  const progress = totalAppointments > 0 ? (usedAppointments / totalAppointments) * 100 : 0;
+  const progress = totalAppointments > 0 ? (used / totalAppointments) * 100 : 0;
   const canRenew = remaining === 0;
 
   const formattedDate = (() => {
@@ -80,7 +81,7 @@ export function PlanTrackerCard({
                 : "bg-destructive/10 text-destructive"
             )}
           >
-            {remaining > 0 ? `${remaining}/${totalAppointments}` : "0/" + totalAppointments}
+            {`${used}/${totalAppointments}`}
           </div>
         </div>
 
