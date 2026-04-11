@@ -997,11 +997,7 @@ const Cliente = () => {
                   navigate('/escolher-barbearia');
                   return;
                 }
-                if (activeSubscription?.barbeiro_id) {
-                  navigate(`/cliente/agendar?barber=${activeSubscription.barbeiro_id}`);
-                } else {
-                  navigate("/cliente/agendar");
-                }
+                navigate("/cliente/agendar");
               }} />
             </div>
 
