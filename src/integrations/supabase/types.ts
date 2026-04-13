@@ -4965,6 +4965,16 @@ export type Database = {
           used_count: number
         }[]
       }
+      get_primary_tenant_whatsapp_instance: {
+        Args: { p_tenant_id: string }
+        Returns: {
+          api_key: string
+          barbeiro_id: string
+          barbeiro_nome: string
+          instance_name: string
+          status: string
+        }[]
+      }
       get_store_maintenance_config: {
         Args: never
         Returns: {
