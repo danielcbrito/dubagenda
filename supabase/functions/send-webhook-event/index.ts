@@ -30,6 +30,88 @@ function formatPhoneForWhatsApp(phone: string | null | undefined): string {
   return `${cleaned}@s.whatsapp.net`;
 }
 
+interface WhatsAppInstanceRecord {
+  barbeiro_id: string;
+  instance_name: string | null;
+  api_key: string | null;
+  status: string;
+  connected_at?: string | null;
+  created_at?: string | null;
+  barbeiro_nome?: string | null;
+}
+
+function normalizeLookupText(value: string | null | undefined): string {
+  return (value ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
+}
+
+function extractTenantId(details: Record<string, unknown> | undefined): string | null {
+  const tenantId = details?.tenant_id;
+  return typeof tenantId === 'string' && tenantId.length > 0 ? tenantId : null;
+}
+
+function choosePrimaryTenantInstance(instances: WhatsAppInstanceRecord[]): WhatsAppInstanceRecord | null {
+  const connectedInstances = instances.filter(
+    (instance) => instance.status === 'connected' && instance.instance_name && instance.api_key,
+  );
+
+  if (connectedInstances.length === 0) {
+    return null;
+  }
+
+  connectedInstances.sort((a, b) => {
+    const aPriority = normalizeLookupText(a.barbeiro_nome).includes('tulio') ? 0 : 1;
+    const bPriority = normalizeLookupText(b.barbeiro_nome).includes('tulio') ? 0 : 1;
+
+    if (aPriority !== bPriority) {
+      return aPriority - bPriority;
+    }
+
+    const aDate = a.connected_at || a.created_at || '';
+    const bDate = b.connected_at || b.created_at || '';
+
+    if (aDate !== bDate) {
+      return aDate.localeCompare(bDate);
+    }
+
+    return (a.instance_name || '').localeCompare(b.instance_name || '');
+  });
+
+  return connectedInstances[0];
+}
+
+function resolveWebhookUrl(
+  config: {
+    webhook_url: string | null;
+    ativo: boolean | null;
+    confirmacao_webhook_url: string | null;
+    confirmacao_ativo: boolean | null;
+    lembrete_webhook_url: string | null;
+    lembrete_ativo: boolean | null;
+  },
+  evento: string,
+): string | null {
+  const isConfirmationEvent = evento === 'agendamento_confirmado';
+  const isReminderEvent = evento === 'lembrete_agendamento' || evento.startsWith('reminder_') || evento.includes('lembrete');
+
+  if (isConfirmationEvent && config.confirmacao_ativo && config.confirmacao_webhook_url) {
+    return config.confirmacao_webhook_url;
+  }
+
+  if (isReminderEvent && config.lembrete_ativo && config.lembrete_webhook_url) {
+    return config.lembrete_webhook_url;
+  }
+
+  if (config.ativo && config.webhook_url) {
+    return config.webhook_url;
+  }
+
+  return null;
+}
+
 /**
  * Interface completa para payload de webhook
  * Contém TODOS os dados relevantes para integração externa
@@ -134,7 +216,7 @@ Deno.serve(async (req) => {
     // Buscar configuração do webhook (sempre a mais recente)
     const { data: config, error: configError } = await supabase
       .from('webhook_config')
-      .select('webhook_url, ativo')
+      .select('webhook_url, ativo, confirmacao_webhook_url, confirmacao_ativo, lembrete_webhook_url, lembrete_ativo')
       .order('updated_at', { ascending: false })
       .order('created_at', { ascending: false })
       .limit(1)
@@ -148,7 +230,9 @@ Deno.serve(async (req) => {
       );
     }
 
-    if (!config?.webhook_url || !config?.ativo) {
+    const webhookUrl = resolveWebhookUrl(config, payload.evento);
+
+    if (!webhookUrl) {
       console.log('[send-webhook-event] Webhook não configurado ou inativo');
       return new Response(
         JSON.stringify({ success: false, error: 'Webhook não configurado ou inativo' }),
@@ -193,7 +277,7 @@ Deno.serve(async (req) => {
     }
 
     // Se temos barbeiro_id mas falta nome, buscar
-    if (eventPayload.barbeiro_id && !eventPayload.barbeiro_nome) {
+    if (eventPayload.barbeiro_id && (!eventPayload.barbeiro_nome || !extractTenantId(eventPayload.detalhes))) {
       try {
         const { data: barbeiro } = await supabase
           .from('barbeiros')
@@ -215,7 +299,7 @@ Deno.serve(async (req) => {
     // ====================================================
     // SEMPRE buscar instância WhatsApp do barbeiro
     // ====================================================
-    let whatsappInstance: { instance_name: string | null; api_key: string | null; status: string } | null = null;
+    let whatsappInstance: WhatsAppInstanceRecord | null = null;
     
     // Tentar buscar barbeiro_id do agendamento se não tiver
     let barbeiroIdToUse = eventPayload.barbeiro_id;
@@ -235,11 +319,75 @@ Deno.serve(async (req) => {
       }
     }
 
-    if (barbeiroIdToUse) {
+    let tenantIdToUse = extractTenantId(eventPayload.detalhes);
+
+    if (barbeiroIdToUse && !tenantIdToUse) {
+      try {
+        const { data: barberContext } = await supabase
+          .from('barbeiros')
+          .select('tenant_id, apelido')
+          .eq('id', barbeiroIdToUse)
+          .single();
+
+        if (barberContext?.tenant_id) {
+          tenantIdToUse = barberContext.tenant_id;
+          if (!eventPayload.detalhes) eventPayload.detalhes = {};
+          (eventPayload.detalhes as Record<string, unknown>).tenant_id = barberContext.tenant_id;
+        }
+
+        if (!eventPayload.barbeiro_nome && barberContext?.apelido) {
+          eventPayload.barbeiro_nome = barberContext.apelido;
+        }
+      } catch (e) {
+        console.warn('[send-webhook-event] Não foi possível resolver tenant do barbeiro:', e);
+      }
+    }
+
+    if (tenantIdToUse) {
+      try {
+        const { data: tenantBarbers } = await supabase
+          .from('barbeiros')
+          .select('id, apelido')
+          .eq('tenant_id', tenantIdToUse);
+
+        const barberIds = tenantBarbers?.map((barber) => barber.id) || [];
+
+        if (barberIds.length > 0) {
+          const barberNames = new Map((tenantBarbers || []).map((barber) => [barber.id, barber.apelido]));
+
+          const { data: tenantInstances } = await supabase
+            .from('whatsapp_instances')
+            .select('barbeiro_id, instance_name, api_key, status, connected_at, created_at')
+            .in('barbeiro_id', barberIds)
+            .eq('status', 'connected');
+
+          const resolvedInstance = choosePrimaryTenantInstance(
+            (tenantInstances || []).map((instance) => ({
+              ...instance,
+              barbeiro_nome: barberNames.get(instance.barbeiro_id) || null,
+            })),
+          );
+
+          if (resolvedInstance) {
+            whatsappInstance = resolvedInstance;
+            console.log(
+              '[send-webhook-event] Instância principal do tenant selecionada:',
+              resolvedInstance.instance_name,
+              '| barbeiro:',
+              resolvedInstance.barbeiro_nome,
+            );
+          }
+        }
+      } catch (e) {
+        console.warn('[send-webhook-event] Falha ao buscar instância principal do tenant:', e);
+      }
+    }
+
+    if (!whatsappInstance && barbeiroIdToUse) {
       try {
         const { data: inst } = await supabase
           .from('whatsapp_instances')
-          .select('instance_name, api_key, status')
+          .select('barbeiro_id, instance_name, api_key, status, connected_at, created_at')
           .eq('barbeiro_id', barbeiroIdToUse)
           .eq('status', 'connected')
           .limit(1)
@@ -247,25 +395,10 @@ Deno.serve(async (req) => {
         
         if (inst) {
           whatsappInstance = inst;
-          console.log('[send-webhook-event] WhatsApp instance encontrada:', inst.instance_name);
+          console.log('[send-webhook-event] Fallback para instância do barbeiro:', inst.instance_name);
         }
       } catch (e) {
         console.warn('[send-webhook-event] Nenhuma instância WhatsApp encontrada para barbeiro:', barbeiroIdToUse);
-      }
-
-      // Buscar tenant_id se ainda não temos
-      if (!eventPayload.detalhes || !(eventPayload.detalhes as any).tenant_id) {
-        try {
-          const { data: barb } = await supabase
-            .from('barbeiros')
-            .select('tenant_id')
-            .eq('id', barbeiroIdToUse)
-            .single();
-          if (barb?.tenant_id) {
-            if (!eventPayload.detalhes) eventPayload.detalhes = {};
-            (eventPayload.detalhes as any).tenant_id = barb.tenant_id;
-          }
-        } catch (e) { /* ignore */ }
       }
     }
 
@@ -309,7 +442,7 @@ Deno.serve(async (req) => {
       eventPayload.mensagem = gerarMensagemPersonalizada(eventPayload.evento, eventPayload);
     }
 
-    console.log('[send-webhook-event] Enviando para:', config.webhook_url);
+    console.log('[send-webhook-event] Enviando para:', webhookUrl);
     console.log('[send-webhook-event] Telefone WhatsApp:', eventPayload.cliente_telefone_whatsapp);
     console.log('[send-webhook-event] WhatsApp Instance:', whatsappInstance?.instance_name || 'N/A');
     console.log('[send-webhook-event] Mensagem:', eventPayload.mensagem);
@@ -318,6 +451,8 @@ Deno.serve(async (req) => {
     const finalPayload: Record<string, unknown> = {
       ...eventPayload,
       whatsapp_instance: whatsappInstance ? {
+        barbeiro_id: whatsappInstance.barbeiro_id,
+        barbeiro_nome: whatsappInstance.barbeiro_nome || eventPayload.barbeiro_nome || null,
         instance_name: whatsappInstance.instance_name,
         api_key: whatsappInstance.api_key,
         status: whatsappInstance.status,
@@ -334,7 +469,7 @@ Deno.serve(async (req) => {
     console.log('[send-webhook-event] Payload completo:', JSON.stringify(finalPayload, null, 2));
 
     // Enviar evento para o webhook
-    const webhookResponse = await fetch(config.webhook_url, {
+    const webhookResponse = await fetch(webhookUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -359,7 +494,9 @@ Deno.serve(async (req) => {
           cliente_telefone_whatsapp: eventPayload.cliente_telefone_whatsapp,
           status_code: webhookResponse.status,
           error: errorText,
-          webhook_url: config.webhook_url.substring(0, 50) + '...'
+          webhook_url: webhookUrl.substring(0, 50) + '...',
+          whatsapp_instance_name: whatsappInstance?.instance_name || null,
+          whatsapp_instance_barbeiro_id: whatsappInstance?.barbeiro_id || null,
         }
       });
 
@@ -382,7 +519,9 @@ Deno.serve(async (req) => {
         agendamento_id: payload.agendamento_id,
         cliente_id: payload.cliente_id,
         cliente_telefone: eventPayload.cliente_telefone,
-        cliente_telefone_whatsapp: eventPayload.cliente_telefone_whatsapp
+        cliente_telefone_whatsapp: eventPayload.cliente_telefone_whatsapp,
+        whatsapp_instance_name: whatsappInstance?.instance_name || null,
+        whatsapp_instance_barbeiro_id: whatsappInstance?.barbeiro_id || null,
       }
     });
 
