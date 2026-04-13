@@ -384,6 +384,35 @@ export function useSlotAvailability(
 
       console.log(`[useSlotAvailability FALLBACK] Config do dia ${dayOfWeek}: (${configSource})`, `${config.hora_abertura} - ${config.hora_fechamento}`);
 
+      // CLAMP: Garantir que horário do barbeiro respeite os limites globais
+      if (barbeiroId && configSource !== 'CONFIG GLOBAL' && configSource !== 'padrão global') {
+        const { data: globalData } = await supabase
+          .from('configuracoes_horario')
+          .select('*')
+          .eq('dia_semana', dayOfWeek)
+          .maybeSingle();
+        
+        if (globalData) {
+          if (globalData.aberto === false) {
+            config.aberto = false;
+            console.log('[useSlotAvailability FALLBACK] CLAMP: Global FECHADO');
+          } else if (config.aberto) {
+            const globalOpenMin = timeToMinutes(globalData.hora_abertura || '09:00');
+            const globalCloseMin = timeToMinutes(globalData.hora_fechamento || '21:00');
+            const barberOpenMin = timeToMinutes(config.hora_abertura);
+            const barberCloseMin = timeToMinutes(config.hora_fechamento);
+            if (barberOpenMin < globalOpenMin) {
+              console.log(`[useSlotAvailability FALLBACK] CLAMP: Abertura ${config.hora_abertura} → ${globalData.hora_abertura}`);
+              config.hora_abertura = globalData.hora_abertura || '09:00';
+            }
+            if (barberCloseMin > globalCloseMin) {
+              console.log(`[useSlotAvailability FALLBACK] CLAMP: Fechamento ${config.hora_fechamento} → ${globalData.hora_fechamento}`);
+              config.hora_fechamento = globalData.hora_fechamento || '21:00';
+            }
+          }
+        }
+      }
+
       if (!config.aberto) {
         console.log('[useSlotAvailability FALLBACK] Dia fechado');
         setSlots([]);

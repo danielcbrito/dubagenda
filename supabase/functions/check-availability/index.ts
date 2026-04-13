@@ -278,7 +278,34 @@ Deno.serve(async (req) => {
       config = await getDefaultConfig(supabase, date, dayOfWeek);
     }
 
-    console.log(`[check-availability] Config do dia ${dayOfWeek}:`, JSON.stringify(config));
+    // ============================================
+    // CLAMP: Garantir que horário do barbeiro respeite os limites globais
+    // O horário global da barbearia é o limite máximo de funcionamento
+    // ============================================
+    if (resolvedBarbeiroId) {
+      const globalConfig = await getDefaultConfig(supabase, date, dayOfWeek);
+      
+      if (!globalConfig.aberto) {
+        config.aberto = false;
+        console.log(`[check-availability] CLAMP: Global FECHADO → barbeiro também fechado`);
+      } else if (config.aberto) {
+        const globalOpen = timeToMinutes(globalConfig.hora_abertura);
+        const globalClose = timeToMinutes(globalConfig.hora_fechamento);
+        const barberOpen = timeToMinutes(config.hora_abertura);
+        const barberClose = timeToMinutes(config.hora_fechamento);
+
+        if (barberOpen < globalOpen) {
+          console.log(`[check-availability] CLAMP: Abertura ${config.hora_abertura} → ${globalConfig.hora_abertura} (global)`);
+          config.hora_abertura = globalConfig.hora_abertura;
+        }
+        if (barberClose > globalClose) {
+          console.log(`[check-availability] CLAMP: Fechamento ${config.hora_fechamento} → ${globalConfig.hora_fechamento} (global)`);
+          config.hora_fechamento = globalConfig.hora_fechamento;
+        }
+      }
+    }
+
+    console.log(`[check-availability] Config FINAL do dia ${dayOfWeek}:`, JSON.stringify(config));
     console.log(`[check-availability] Horário: ${config.hora_abertura} - ${config.hora_fechamento}`);
 
     if (!config.aberto) {

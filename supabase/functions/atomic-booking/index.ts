@@ -107,6 +107,47 @@ Deno.serve(async (req) => {
       );
     }
 
+    // CLAMP: Garantir que horário do barbeiro respeite limites globais
+    if (barbeiroId) {
+      // Buscar config global para aplicar limites
+      const { data: globalExc } = await supabase
+        .from('horarios_excepcionais')
+        .select('*')
+        .eq('data', date)
+        .maybeSingle();
+
+      let globalRef: any = globalExc;
+      if (!globalRef) {
+        const { data: globalCfg } = await supabase
+          .from('configuracoes_horario')
+          .select('*')
+          .eq('dia_semana', dayOfWeek)
+          .maybeSingle();
+        globalRef = globalCfg;
+      }
+
+      if (globalRef) {
+        if (globalRef.aberto === false) {
+          return new Response(
+            JSON.stringify({ success: false, message: 'Barbearia fechada neste dia.' }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 409 }
+          );
+        }
+        const gOpen = globalRef.hora_abertura ? globalRef.hora_abertura.substring(0, 5) : null;
+        const gClose = globalRef.hora_fechamento ? globalRef.hora_fechamento.substring(0, 5) : null;
+        if (gOpen && resolvedConfig.hora_abertura) {
+          const gOpenMin = (() => { const [h, m] = gOpen.split(':').map(Number); return h * 60 + m; })();
+          const rOpenMin = (() => { const [h, m] = (resolvedConfig.hora_abertura || '09:00').split(':').map(Number); return h * 60 + m; })();
+          if (rOpenMin < gOpenMin) resolvedConfig.hora_abertura = gOpen;
+        }
+        if (gClose && resolvedConfig.hora_fechamento) {
+          const gCloseMin = (() => { const [h, m] = gClose.split(':').map(Number); return h * 60 + m; })();
+          const rCloseMin = (() => { const [h, m] = (resolvedConfig.hora_fechamento || '20:00').split(':').map(Number); return h * 60 + m; })();
+          if (rCloseMin > gCloseMin) resolvedConfig.hora_fechamento = gClose;
+        }
+      }
+    }
+
     const DELAY_MINUTES = resolvedConfig.delay_entre_servicos || 10;
 
     // Validar horário de expediente

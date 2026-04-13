@@ -89,6 +89,29 @@ export function useBarberBusinessHours(date: Date, barbeiroId: string | null) {
         delay_entre_servicos: 10,
       };
 
+      // CLAMP: Garantir que horário do barbeiro respeite limites globais
+      if (barbeiroId && configSource !== "CONFIG GLOBAL" && configSource !== "padrão global") {
+        const { data: globalData } = await supabase
+          .from("configuracoes_horario")
+          .select("*")
+          .eq("dia_semana", dayOfWeek)
+          .maybeSingle();
+        
+        if (globalData) {
+          if (globalData.aberto === false) {
+            result.aberto = false;
+          } else {
+            const toMin = (t: string) => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
+            const gOpen = toMin(globalData.hora_abertura || "09:00");
+            const gClose = toMin(globalData.hora_fechamento || "21:00");
+            const bOpen = toMin(result.hora_abertura);
+            const bClose = toMin(result.hora_fechamento);
+            if (bOpen < gOpen) result.hora_abertura = (globalData.hora_abertura || "09:00").substring(0, 5);
+            if (bClose > gClose) result.hora_fechamento = (globalData.hora_fechamento || "21:00").substring(0, 5);
+          }
+        }
+      }
+
       console.log(`[useBarberBusinessHours] Dia ${dayOfWeek} (${configSource}): ${result.hora_abertura}-${result.hora_fechamento}`);
       setConfig(result);
       setSource(configSource);
