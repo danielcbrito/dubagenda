@@ -114,7 +114,7 @@ const fetchAppointmentsData = async (userId: string) => {
       .in("status", ["pending", "confirmed", "completed"])
       .order("data", { ascending: false })
       .limit(20),
-    supabase.from("pagamentos").select("id, metodo, status, agendamento_id").eq("user_id", userId),
+    supabase.from("pagamentos").select("id, metodo, status, agendamento_id").eq("user_id", userId).order("created_at", { ascending: false }).limit(50),
     supabase.from("pending_bookings").select(`
       id, data, hora, servico_id, preco, payment_method, created_at,
       pix_qr_code, pix_payload, asaas_payment_id, expires_at, barbeiro_id,
@@ -141,7 +141,17 @@ const fetchAppointmentsData = async (userId: string) => {
 
 // ─── Loyalty query function (extracted for reuse) ───
 const fetchLoyaltyData = async (userId: string, tenantId: string | null) => {
-  const [creditsResult, pontosResult, completedCountResult, activeResgateResult, redemptionsResult, pontosNecessariosResult] = await Promise.all([
+  // Run ALL queries in parallel — no waterfalls
+  const [
+    creditsResult,
+    pontosResult,
+    completedCountResult,
+    activeResgateResult,
+    redemptionsResult,
+    pontosNecessariosResult,
+    activeSubResult,
+    pendingSubResult,
+  ] = await Promise.all([
     supabase.rpc('get_user_available_credits', { p_user_id: userId }),
     supabase.from("pontos").select("pontos").eq("user_id", userId).maybeSingle(),
     supabase.from("agendamentos").select("*", { count: 'exact', head: true }).eq("user_id", userId).eq("status", "completed"),
@@ -156,6 +166,24 @@ const fetchLoyaltyData = async (userId: string, tenantId: string | null) => {
           .limit(1)
           .maybeSingle()
       : Promise.resolve({ data: null, error: null }),
+    // Fetch active subscription in same parallel batch
+    supabase
+      .from("assinaturas")
+      .select("id, status, next_billing_date, plano_id, barbeiro_id, payment_method, cash_payment_confirmed, ciclo_fim, plano:planos(nome, limite_agendamentos_mes, preco_mensal, servico:servicos(nome))")
+      .eq("user_id", userId)
+      .eq("status", "active")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    // Fetch pending subscription in same parallel batch
+    supabase
+      .from("assinaturas")
+      .select("id, status, plano_id, created_at, payment_method, pix_qr_code, pix_payload, asaas_payment_id, pix_expires_at, plano:planos(nome, preco_mensal)")
+      .eq("user_id", userId)
+      .in("status", ["suspended", "pending_cash", "pending_renewal"] as any)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
   ]);
 
   const points = pontosResult.data?.pontos || 0;
@@ -171,20 +199,17 @@ const fetchLoyaltyData = async (userId: string, tenantId: string | null) => {
     ? pontosNecessariosResult.data.pontos_necessarios
     : 8;
 
-  const loadActiveSubscription = async () => {
-    const { data: activeSubData } = await supabase
-      .from("assinaturas")
-      .select("id, status, next_billing_date, plano_id, barbeiro_id, payment_method, cash_payment_confirmed, ciclo_fim, plano:planos(nome, limite_agendamentos_mes, preco_mensal, servico:servicos(nome))")
-      .eq("user_id", userId)
-      .eq("status", "active")
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
+  let activeSubscription: any = null;
+  let expiredSubscription: any = null;
+  let pendingSubscription: any = null;
+  let planUsageCount = 0;
 
-    if (!activeSubData) {
-      return { subscription: null, usageCount: 0 };
-    }
+  const activeSubData = activeSubResult.data;
 
+  if (activeSubData) {
+    activeSubscription = activeSubData;
+
+    // Only sequential query needed: count usage in cycle
     const cycleStart = new Date(`${activeSubData.next_billing_date}T12:00:00`);
     cycleStart.setMonth(cycleStart.getMonth() - 1);
     const cycleStartDate = cycleStart.toISOString().split('T')[0];
@@ -194,33 +219,9 @@ const fetchLoyaltyData = async (userId: string, tenantId: string | null) => {
       p_cycle_start: cycleStartDate,
       p_cycle_end: activeSubData.next_billing_date,
     });
-
-    return {
-      subscription: activeSubData,
-      usageCount: usageError ? 0 : Number(usageCount || 0),
-    };
-  };
-
-  const { subscription: activeSub, usageCount: activeUsageCount } = await loadActiveSubscription();
-
-  let activeSubscription: any = null;
-  let expiredSubscription: any = null;
-  let pendingSubscription: any = null;
-  let planUsageCount = 0;
-
-  if (activeSub) {
-    activeSubscription = activeSub;
-    planUsageCount = activeUsageCount;
+    planUsageCount = usageError ? 0 : Number(usageCount || 0);
   } else {
-    const { data: pendingSub } = await supabase
-      .from("assinaturas")
-      .select("id, status, plano_id, created_at, payment_method, pix_qr_code, pix_payload, asaas_payment_id, pix_expires_at, plano:planos(nome, preco_mensal)")
-      .eq("user_id", userId)
-      .in("status", ["suspended", "pending_cash", "pending_renewal"] as any)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
+    const pendingSub = pendingSubResult.data;
     pendingSubscription = pendingSub;
 
     if (pendingSub?.status === "pending_renewal") {
@@ -233,12 +234,28 @@ const fetchLoyaltyData = async (userId: string, tenantId: string | null) => {
         renewalCheck?.status === "expired" ||
         renewalCheck?.status === "already_processed"
       ) {
-        const { subscription: recoveredSub, usageCount: recoveredUsageCount } = await loadActiveSubscription();
+        // Re-fetch active sub after renewal
+        const { data: recoveredSub } = await supabase
+          .from("assinaturas")
+          .select("id, status, next_billing_date, plano_id, barbeiro_id, payment_method, cash_payment_confirmed, ciclo_fim, plano:planos(nome, limite_agendamentos_mes, preco_mensal, servico:servicos(nome))")
+          .eq("user_id", userId)
+          .eq("status", "active")
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
 
         if (recoveredSub) {
           activeSubscription = recoveredSub;
-          planUsageCount = recoveredUsageCount;
           pendingSubscription = null;
+
+          const cycleStart = new Date(`${recoveredSub.next_billing_date}T12:00:00`);
+          cycleStart.setMonth(cycleStart.getMonth() - 1);
+          const { data: usageCount, error: usageError } = await supabase.rpc('count_subscription_uses_in_cycle', {
+            p_assinatura_id: recoveredSub.id,
+            p_cycle_start: cycleStart.toISOString().split('T')[0],
+            p_cycle_end: recoveredSub.next_billing_date,
+          });
+          planUsageCount = usageError ? 0 : Number(usageCount || 0);
         }
       }
     }
@@ -246,7 +263,6 @@ const fetchLoyaltyData = async (userId: string, tenantId: string | null) => {
     if (!pendingSub) {
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-      const thirtyDaysAgoISO = thirtyDaysAgo.toISOString();
 
       const { data: expiredSub } = await supabase
         .from("assinaturas")
@@ -254,7 +270,7 @@ const fetchLoyaltyData = async (userId: string, tenantId: string | null) => {
         .eq("user_id", userId)
         .eq("status", "cancelled")
         .not("next_billing_date", "is", null)
-        .gte("updated_at", thirtyDaysAgoISO)
+        .gte("updated_at", thirtyDaysAgo.toISOString())
         .order("updated_at", { ascending: false })
         .limit(1)
         .maybeSingle();
