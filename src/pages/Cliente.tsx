@@ -627,6 +627,19 @@ const Cliente = () => {
           { event: '*', schema: 'public', table: 'pending_bookings', filter: `user_id=eq.${userId}` },
           () => invalidateAppointments()
         )
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'pagamentos', filter: `user_id=eq.${userId}` },
+          () => invalidateAppointments()
+        )
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'notificacoes', filter: `user_id=eq.${userId}` },
+          () => {
+            // Trigger notification bell refresh via query invalidation
+            queryClient.invalidateQueries({ queryKey: ['notifications'] });
+          }
+        )
         .subscribe((status) => handleChannelStatus('agendamentos', status, () => {
           initializeChannels();
           queryClient.invalidateQueries({ queryKey: ['cliente', 'profile', userId] });
