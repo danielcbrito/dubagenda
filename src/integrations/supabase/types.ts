@@ -2937,6 +2937,62 @@ export type Database = {
           },
         ]
       }
+      produtos_loja: {
+        Row: {
+          ativo: boolean | null
+          categoria: string
+          created_at: string
+          descricao: string | null
+          destaque: boolean | null
+          estoque: number | null
+          id: string
+          imagem_url: string | null
+          nome: string
+          preco: number
+          preco_promocional: number | null
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean | null
+          categoria?: string
+          created_at?: string
+          descricao?: string | null
+          destaque?: boolean | null
+          estoque?: number | null
+          id?: string
+          imagem_url?: string | null
+          nome: string
+          preco?: number
+          preco_promocional?: number | null
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean | null
+          categoria?: string
+          created_at?: string
+          descricao?: string | null
+          destaque?: boolean | null
+          estoque?: number | null
+          id?: string
+          imagem_url?: string | null
+          nome?: string
+          preco?: number
+          preco_promocional?: number | null
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "produtos_loja_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           asaas_customer_id: string | null
