@@ -114,7 +114,7 @@ const fetchAppointmentsData = async (userId: string) => {
       .in("status", ["pending", "confirmed", "completed"])
       .order("data", { ascending: false })
       .limit(20),
-    supabase.from("pagamentos").select("id, metodo, status, agendamento_id").eq("user_id", userId),
+    supabase.from("pagamentos").select("id, metodo, status, agendamento_id").eq("user_id", userId).order("created_at", { ascending: false }).limit(50),
     supabase.from("pending_bookings").select(`
       id, data, hora, servico_id, preco, payment_method, created_at,
       pix_qr_code, pix_payload, asaas_payment_id, expires_at, barbeiro_id,
