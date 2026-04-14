@@ -34,6 +34,7 @@ const ClientePerfil = lazy(() => import("./pages/ClientePerfil"));
 const ClienteDadosPessoais = lazy(() => import("./pages/ClienteDadosPessoais"));
 const ClienteSeguranca = lazy(() => import("./pages/ClienteSeguranca"));
 const ClienteBarbearia = lazy(() => import("./pages/ClienteBarbearia"));
+const ClienteLoja = lazy(() => import("./pages/ClienteLoja"));
 const SupportChat = lazy(() => import("./pages/SupportChat"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const BarberReviews = lazy(() => import("./pages/BarberReviews"));
