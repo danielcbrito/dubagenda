@@ -309,8 +309,9 @@ const Cliente = () => {
     queryKey: ['cliente', 'appointments', user?.id],
     queryFn: () => fetchAppointmentsData(user!.id),
     enabled: !!user?.id,
-    staleTime: 5 * 60 * 1000, // 5 min
-    refetchOnMount: 'always', // Always refetch when navigating back from booking
+    staleTime: 15 * 1000, // 15s — keep fresh for real-time feel
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
   });
 
   const appointments = appointmentsQueryData?.appointments ?? [];
@@ -326,7 +327,8 @@ const Cliente = () => {
     queryKey: ['cliente', 'loyalty', user?.id, tenantId],
     queryFn: () => fetchLoyaltyData(user!.id, tenantId),
     enabled: !!user?.id && !!tenantId,
-    staleTime: 5 * 60 * 1000, // 5 min
+    staleTime: 30 * 1000, // 30s — responsive to plan/points changes
+    refetchOnWindowFocus: true,
   });
 
   const points = loyaltyQueryData?.points ?? 0;
@@ -624,6 +626,19 @@ const Cliente = () => {
           'postgres_changes',
           { event: '*', schema: 'public', table: 'pending_bookings', filter: `user_id=eq.${userId}` },
           () => invalidateAppointments()
+        )
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'pagamentos', filter: `user_id=eq.${userId}` },
+          () => invalidateAppointments()
+        )
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'notificacoes', filter: `user_id=eq.${userId}` },
+          () => {
+            // Trigger notification bell refresh via query invalidation
+            queryClient.invalidateQueries({ queryKey: ['notifications'] });
+          }
         )
         .subscribe((status) => handleChannelStatus('agendamentos', status, () => {
           initializeChannels();
