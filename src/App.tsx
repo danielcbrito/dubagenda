@@ -338,6 +338,7 @@ function AppRoutes() {
               <Route path="/cliente/dados-pessoais" element={<ClienteDadosPessoais />} />
               <Route path="/cliente/seguranca" element={<ClienteSeguranca />} />
               <Route path="/cliente/barbearia" element={<ClienteBarbearia />} />
+              <Route path="/cliente/loja" element={<ClienteLoja />} />
               <Route path="/cliente/barbeiro/:barberId/avaliacoes" element={<BarberReviews />} />
               <Route path="/suporte" element={<SupportChat />} />
               <Route path="/escolher-barbearia" element={<EscolherBarbearia />} />

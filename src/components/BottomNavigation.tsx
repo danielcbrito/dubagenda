@@ -1,8 +1,6 @@
-import { useState } from "react";
 import { Home, ShoppingBag, Crown, User } from "lucide-react";
 import { motion } from "framer-motion";
 import { useLocation, useNavigate } from "react-router-dom";
-import { StoreComingSoonDialog } from "./client/StoreComingSoonDialog";
 
 interface NavItemProps {
   icon: React.ElementType;
@@ -54,49 +52,42 @@ export function BottomNavigation({
 }: BottomNavigationProps) {
   const location = useLocation();
   const navigate = useNavigate();
-  const [storeDialogOpen, setStoreDialogOpen] = useState(false);
 
   const isActive = (path: string) => location.pathname === path;
 
   return (
-    <>
-      <nav
-        className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-background/98 backdrop-blur-2xl"
-        style={{
-          paddingBottom: "env(safe-area-inset-bottom, 0px)",
-        }}
-      >
-        <div className="flex items-center justify-around h-12 max-w-lg mx-auto">
-          <NavItem
-            icon={Home}
-            label="Início"
-            isActive={isActive("/cliente")}
-            onClick={() => navigate("/cliente")}
-          />
-          <NavItem
-            icon={ShoppingBag}
-            label="Loja"
-            onClick={() => setStoreDialogOpen(true)}
-          />
-          <NavItem
-            icon={Crown}
-            label="Planos"
-            showBadge={planExhausted}
-            onClick={onPlansClick}
-          />
-          <NavItem
-            icon={User}
-            label="Perfil"
-            isActive={isActive("/cliente/perfil")}
-            onClick={() => navigate("/cliente/perfil")}
-          />
-        </div>
-      </nav>
-
-      <StoreComingSoonDialog
-        open={storeDialogOpen}
-        onOpenChange={setStoreDialogOpen}
-      />
-    </>
+    <nav
+      className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-background/98 backdrop-blur-2xl"
+      style={{
+        paddingBottom: "env(safe-area-inset-bottom, 0px)",
+      }}
+    >
+      <div className="flex items-center justify-around h-12 max-w-lg mx-auto">
+        <NavItem
+          icon={Home}
+          label="Início"
+          isActive={isActive("/cliente")}
+          onClick={() => navigate("/cliente")}
+        />
+        <NavItem
+          icon={ShoppingBag}
+          label="Loja"
+          isActive={isActive("/cliente/loja")}
+          onClick={() => navigate("/cliente/loja")}
+        />
+        <NavItem
+          icon={Crown}
+          label="Planos"
+          showBadge={planExhausted}
+          onClick={onPlansClick}
+        />
+        <NavItem
+          icon={User}
+          label="Perfil"
+          isActive={isActive("/cliente/perfil")}
+          onClick={() => navigate("/cliente/perfil")}
+        />
+      </div>
+    </nav>
   );
 }
