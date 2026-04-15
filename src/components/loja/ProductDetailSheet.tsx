@@ -370,27 +370,29 @@ export function ProductDetailSheet({ produto, open, onClose, onAddToCart, allPro
                   ))}
                 </div>
 
-                {/* Ver mais button */}
+                {/* Ver mais link */}
                 {reviewsToShow < FAKE_REVIEWS.length && (
-                  <motion.button
-                    whileTap={{ scale: 0.97 }}
+                  <button
                     onClick={handleSeeMoreReviews}
-                    className="w-full py-3 rounded-xl text-sm font-semibold bg-card border border-border/40 text-foreground cursor-pointer active:scale-[0.98] transition-all"
+                    className="text-xs font-medium text-primary cursor-pointer"
                   >
                     Ver mais avaliações
-                  </motion.button>
+                  </button>
                 )}
               </div>
 
               <div className="h-px bg-border/20" />
 
-              {/* Related products */}
+              {/* Related products — horizontal carousel */}
               {relatedProducts.length > 0 && (
                 <div className="space-y-3 pb-6">
                   <h3 className="text-[11px] font-semibold text-muted-foreground/50 uppercase tracking-widest">
                     Veja também
                   </h3>
-                  <div className="grid grid-cols-3 gap-2.5">
+                  <div
+                    className="flex gap-3 overflow-x-auto pb-2 -mx-5 px-5"
+                    style={{ scrollSnapType: "x mandatory" }}
+                  >
                     {relatedProducts.map((p) => {
                       const pHasPromo = p.preco_promocional != null && p.preco_promocional < p.preco;
                       const pPrice = pHasPromo ? p.preco_promocional! : p.preco;
@@ -399,7 +401,8 @@ export function ProductDetailSheet({ produto, open, onClose, onAddToCart, allPro
                           key={p.id}
                           whileTap={{ scale: 0.96 }}
                           onClick={() => onSelectProduct?.(p)}
-                          className="rounded-xl border border-border/30 bg-card overflow-hidden cursor-pointer active:scale-[0.97] transition-all"
+                          className="flex-shrink-0 w-36 rounded-xl border border-border/30 bg-card overflow-hidden cursor-pointer active:scale-[0.97] transition-all"
+                          style={{ scrollSnapAlign: "start" }}
                         >
                           <div className="aspect-square bg-muted/10 overflow-hidden">
                             {p.imagem_url ? (
@@ -410,7 +413,7 @@ export function ProductDetailSheet({ produto, open, onClose, onAddToCart, allPro
                               </div>
                             )}
                           </div>
-                          <div className="p-2 space-y-1">
+                          <div className="p-2.5 space-y-1">
                             <p className="text-[11px] font-medium text-foreground leading-tight line-clamp-2">{p.nome}</p>
                             <p className="text-xs font-bold text-foreground tabular-nums">R$ {pPrice.toFixed(2)}</p>
                           </div>
