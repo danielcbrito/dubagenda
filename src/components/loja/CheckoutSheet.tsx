@@ -4,6 +4,7 @@ import { ArrowLeft, Check, Package } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import pixIconCheckout from "@/assets/pix-icon-checkout.png";
 import type { CartItem } from "@/hooks/useCart";
 
 interface CheckoutSheetProps {
@@ -278,6 +279,7 @@ export function CheckoutSheet({
               selected={false}
               onSelect={() => {}}
               disabled
+              icon={<img src={pixIconCheckout} alt="Pix" className="w-5 h-5 object-contain" />}
             />
             <PaymentRow
               label="Cartão de Crédito"
@@ -304,7 +306,7 @@ export function CheckoutSheet({
           </div>
           <div className="flex justify-between items-center">
             <span className="text-xs text-muted-foreground/60">Retirada</span>
-            <span className="text-xs text-muted-foreground font-medium">Grátis</span>
+            <span className="text-xs font-semibold text-emerald-500">Grátis</span>
           </div>
           <div className="h-px bg-border/15 my-1" />
           <div className="flex justify-between items-center">
@@ -351,12 +353,14 @@ function PaymentRow({
   selected,
   onSelect,
   disabled = false,
+  icon,
 }: {
   label: string;
   sublabel: string;
   selected: boolean;
   onSelect: () => void;
   disabled?: boolean;
+  icon?: React.ReactNode;
 }) {
   return (
     <button
@@ -377,6 +381,7 @@ function PaymentRow({
       >
         {selected && <div className="w-2 h-2 rounded-full bg-foreground" />}
       </div>
+      {icon && <div className="flex-shrink-0">{icon}</div>}
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium text-foreground">{label}</p>
         <p className="text-[10px] text-muted-foreground/45 mt-0.5">{sublabel}</p>
