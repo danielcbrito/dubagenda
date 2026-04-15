@@ -194,6 +194,21 @@ export default function ClienteLoja() {
     if (searchOpen) searchInputRef.current?.focus();
   }, [searchOpen]);
 
+  // Listen for "open-cart" event from ProductDetailSheet buy-now flow
+  useEffect(() => {
+    const handler = () => setCartOpen(true);
+    document.addEventListener("open-cart", handler);
+    return () => document.removeEventListener("open-cart", handler);
+  }, []);
+
+  const handleQuickAdd = useCallback((e: React.MouseEvent, produto: Produto) => {
+    e.stopPropagation();
+    cart.addItem(produto);
+    toast.success("Produto adicionado ao carrinho", {
+      description: produto.nome,
+    });
+  }, [cart]);
+
   return (
     <div className="flex flex-col bg-background" style={{ height: "100dvh" }}>
       {/* ─── Search Overlay ─── */}
