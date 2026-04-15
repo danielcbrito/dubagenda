@@ -447,8 +447,8 @@ export default function ClienteLoja() {
 
               {/* Inline Categories — sentinel for IntersectionObserver */}
               <div ref={categorySentinelRef} />
-              {categories.length > 0 && (
-                <div className="px-4 pt-1 pb-2.5">
+              {categories.length > 0 && !scrolled && (
+                <div className="px-4 pt-3 pb-3">
                   <div className="flex gap-2 overflow-x-auto scrollbar-hide">
                     <CategoryPill label="Todos" active={!selectedCategory} onClick={() => setSelectedCategory(null)} />
                     {categories.map((cat) => (
