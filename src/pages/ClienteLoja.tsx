@@ -257,9 +257,19 @@ export default function ClienteLoja() {
         produto={selectedProduct}
         open={!!selectedProduct}
         onClose={() => setSelectedProduct(null)}
+        onAddToCart={(p) => cart.addItem(p)}
       />
 
-      {!selectedProduct && (
+      <CartSheet
+        open={cartOpen}
+        onClose={() => setCartOpen(false)}
+        items={cart.items}
+        totalPrice={cart.totalPrice}
+        onUpdateQuantity={cart.updateQuantity}
+        onRemoveItem={cart.removeItem}
+      />
+
+      {!selectedProduct && !cartOpen && (
         <BottomNavigation
           onProfileClick={() => navigate("/cliente/perfil")}
           onPlansClick={() => navigate("/cliente/assinar")}
