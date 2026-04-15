@@ -1,4 +1,5 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 export interface CartItem {
   id: string;
@@ -10,8 +11,66 @@ export interface CartItem {
   estoque: number;
 }
 
+const CART_KEY_PREFIX = "dub_cart_";
+
+function getCartKey(userId: string) {
+  return `${CART_KEY_PREFIX}${userId}`;
+}
+
+function loadCart(userId: string | null): CartItem[] {
+  if (!userId) return [];
+  try {
+    const raw = localStorage.getItem(getCartKey(userId));
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveCart(userId: string | null, items: CartItem[]) {
+  if (!userId) return;
+  try {
+    if (items.length === 0) {
+      localStorage.removeItem(getCartKey(userId));
+    } else {
+      localStorage.setItem(getCartKey(userId), JSON.stringify(items));
+    }
+  } catch {
+    // storage full or unavailable — silent fail
+  }
+}
+
 export function useCart() {
+  const [userId, setUserId] = useState<string | null>(null);
   const [items, setItems] = useState<CartItem[]>([]);
+  const initializedRef = useRef(false);
+
+  // Get current user ID
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      const id = user?.id ?? null;
+      setUserId(id);
+      setItems(loadCart(id));
+      initializedRef.current = true;
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      const id = session?.user?.id ?? null;
+      setUserId(id);
+      setItems(loadCart(id));
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  // Persist whenever items change (after initial load)
+  useEffect(() => {
+    if (initializedRef.current) {
+      saveCart(userId, items);
+    }
+  }, [items, userId]);
 
   const addItem = useCallback((produto: {
     id: string;
