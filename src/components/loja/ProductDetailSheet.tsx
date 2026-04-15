@@ -24,6 +24,8 @@ interface ProductDetailSheetProps {
 }
 
 export function ProductDetailSheet({ produto, open, onClose, onAddToCart }: ProductDetailSheetProps) {
+  const [qty, setQty] = useState(1);
+
   if (!produto) return null;
 
   const hasPromo = produto.preco_promocional != null && produto.preco_promocional < produto.preco;
@@ -35,9 +37,14 @@ export function ProductDetailSheet({ produto, open, onClose, onAddToCart }: Prod
 
   const handleAddToCart = () => {
     if (!outOfStock && onAddToCart) {
-      onAddToCart(produto);
+      for (let i = 0; i < qty; i++) onAddToCart(produto);
+      setQty(1);
       onClose();
     }
+  };
+
+  const handleBuyNow = () => {
+    handleAddToCart();
   };
 
   return (
