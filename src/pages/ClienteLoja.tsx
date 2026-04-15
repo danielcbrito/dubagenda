@@ -282,7 +282,7 @@ export default function ClienteLoja() {
       </AnimatePresence>
 
       {/* ─── Top Bar ─── */}
-      <div className="flex-shrink-0 flex items-center justify-between px-4 pt-4 pb-2">
+      <div className="flex-shrink-0 flex items-center justify-between px-4 pt-4 pb-3">
         <p className="text-sm font-bold text-foreground truncate flex-1 mr-3">
           {userTenant?.nome || "Loja"}
         </p>
