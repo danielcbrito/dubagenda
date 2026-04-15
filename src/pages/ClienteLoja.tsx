@@ -1,8 +1,8 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
-import { Search, ShoppingBag, ShoppingCart, Package } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Search, ShoppingBag, ShoppingCart, Package, X, ChevronLeft, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { BottomNavigation } from "@/components/BottomNavigation";
@@ -28,13 +28,24 @@ interface TenantInfo {
   nome: string;
 }
 
+interface BannerSlide {
+  id: string;
+  imageUrl: string;
+  title: string;
+  subtitle?: string;
+}
+
 export default function ClienteLoja() {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
+  const [searchOpen, setSearchOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedProduct, setSelectedProduct] = useState<Produto | null>(null);
   const [cartOpen, setCartOpen] = useState(false);
+  const [currentSlide, setCurrentSlide] = useState(0);
   const cart = useCart();
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const slideIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const { data: userTenant } = useQuery({
     queryKey: ["user-tenant-loja"],
@@ -88,6 +99,61 @@ export default function ClienteLoja() {
     staleTime: 2 * 60 * 1000,
   });
 
+  // Build carousel slides from banner + featured products with promos
+  const bannerSlides = useMemo<BannerSlide[]>(() => {
+    const slides: BannerSlide[] = [];
+    if (bannerUrl) {
+      slides.push({
+        id: "main-banner",
+        imageUrl: bannerUrl,
+        title: userTenant?.nome || "Loja",
+        subtitle: "Aproveite descontos exclusivos",
+      });
+    }
+    // Add featured products with images as promo slides
+    const promoProducts = produtos.filter(
+      (p) => p.destaque && p.imagem_url && p.preco_promocional && p.preco_promocional < p.preco
+    );
+    promoProducts.slice(0, 4).forEach((p) => {
+      const disc = Math.round(((p.preco - p.preco_promocional!) / p.preco) * 100);
+      slides.push({
+        id: `promo-${p.id}`,
+        imageUrl: p.imagem_url!,
+        title: p.nome,
+        subtitle: `${disc}% OFF — R$ ${p.preco_promocional!.toFixed(2)}`,
+      });
+    });
+    // Fallback if no slides
+    if (slides.length === 0) {
+      slides.push({
+        id: "default",
+        imageUrl: "",
+        title: userTenant?.nome || "Loja DUB",
+        subtitle: "Confira nossos produtos",
+      });
+    }
+    return slides;
+  }, [bannerUrl, produtos, userTenant]);
+
+  // Auto-rotate carousel
+  useEffect(() => {
+    if (bannerSlides.length <= 1) return;
+    slideIntervalRef.current = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % bannerSlides.length);
+    }, 4000);
+    return () => {
+      if (slideIntervalRef.current) clearInterval(slideIntervalRef.current);
+    };
+  }, [bannerSlides.length]);
+
+  const goToSlide = useCallback((i: number) => {
+    setCurrentSlide(i);
+    if (slideIntervalRef.current) clearInterval(slideIntervalRef.current);
+    slideIntervalRef.current = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % bannerSlides.length);
+    }, 4000);
+  }, [bannerSlides.length]);
+
   const categories = useMemo(() => {
     const cats = [...new Set(produtos.map((p) => p.categoria))];
     return cats.sort();
@@ -95,9 +161,7 @@ export default function ClienteLoja() {
 
   const filtered = useMemo(() => {
     let result = produtos;
-    if (selectedCategory) {
-      result = result.filter((p) => p.categoria === selectedCategory);
-    }
+    if (selectedCategory) result = result.filter((p) => p.categoria === selectedCategory);
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       result = result.filter(
@@ -125,70 +189,186 @@ export default function ClienteLoja() {
     return Math.round(((p.preco - p.preco_promocional) / p.preco) * 100);
   };
 
+  useEffect(() => {
+    if (searchOpen) searchInputRef.current?.focus();
+  }, [searchOpen]);
+
   return (
     <div className="flex flex-col bg-background" style={{ height: "100dvh" }}>
-      {/* ─── Hero Banner with overlays ─── */}
-      <div className="relative flex-shrink-0">
-        {/* Banner image */}
-        <div className="relative h-[180px] bg-muted/20 overflow-hidden">
-          {bannerUrl ? (
-            <img
-              src={bannerUrl}
-              alt="Banner"
-              className="w-full h-full object-cover"
-            />
-          ) : (
-            <div className="w-full h-full bg-gradient-to-br from-muted/40 to-muted/10" />
-          )}
-          {/* Dark overlay for readability */}
-          <div className="absolute inset-0 bg-gradient-to-b from-background/80 via-background/30 to-background/80" />
-
-          {/* Top bar: barbershop name + cart */}
-          <div className="absolute top-0 left-0 right-0 px-4 pt-4 flex items-center justify-between">
-            <div className="min-w-0 flex-1 mr-3">
-              <p className="text-sm font-bold text-foreground truncate">
-                {userTenant?.nome || "Loja"}
-              </p>
+      {/* ─── Search Overlay ─── */}
+      <AnimatePresence>
+        {searchOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-50 bg-background flex flex-col"
+          >
+            <div className="flex items-center gap-3 px-4 pt-4 pb-3">
+              <motion.button
+                whileTap={{ scale: 0.9 }}
+                onClick={() => { setSearchOpen(false); setSearchQuery(""); }}
+                className="w-8 h-8 flex items-center justify-center cursor-pointer"
+              >
+                <X className="w-5 h-5 text-foreground" />
+              </motion.button>
+              <div className="flex-1 relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/50" />
+                <input
+                  ref={searchInputRef}
+                  type="text"
+                  placeholder="Buscar produtos..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className={cn(
+                    "w-full h-10 pl-9 pr-4 rounded-full",
+                    "bg-card border border-border/50",
+                    "text-sm text-foreground placeholder:text-muted-foreground/40",
+                    "focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  )}
+                />
+              </div>
             </div>
-            <motion.button
-              whileTap={{ scale: 0.9 }}
-              onClick={() => setCartOpen(true)}
-              className="relative flex items-center justify-center cursor-pointer"
-            >
-              <ShoppingCart className="w-[22px] h-[22px] text-foreground" />
-              {cart.totalItems > 0 && (
-                <span className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center">
-                  {cart.totalItems > 9 ? "9+" : cart.totalItems}
-                </span>
+            <div className="h-px bg-border/30" />
+            <div className="flex-1 overflow-y-auto overscroll-contain px-4 pt-3 pb-8">
+              {searchQuery.trim() === "" ? (
+                <p className="text-xs text-muted-foreground/50 text-center pt-16">
+                  Digite para buscar produtos
+                </p>
+              ) : filtered.length === 0 ? (
+                <div className="flex flex-col items-center pt-16 gap-2">
+                  <Search className="w-8 h-8 text-muted-foreground/20" />
+                  <p className="text-sm font-medium text-foreground">Nenhum resultado</p>
+                  <p className="text-xs text-muted-foreground/50">Tente outro termo</p>
+                </div>
+              ) : (
+                <div className="space-y-1">
+                  {filtered.map((produto) => {
+                    const unitPrice = produto.preco_promocional != null && produto.preco_promocional < produto.preco
+                      ? produto.preco_promocional
+                      : produto.preco;
+                    return (
+                      <motion.div
+                        key={produto.id}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        onClick={() => { setSelectedProduct(produto); setSearchOpen(false); }}
+                        className="flex items-center gap-3 p-2.5 rounded-xl cursor-pointer active:bg-muted/20 transition-colors"
+                      >
+                        <div className="w-12 h-12 rounded-lg bg-muted/15 overflow-hidden flex-shrink-0 border border-border/20">
+                          {produto.imagem_url ? (
+                            <img src={produto.imagem_url} alt={produto.nome} className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center">
+                              <Package className="w-4 h-4 text-muted-foreground/10" />
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-medium text-foreground line-clamp-1">{produto.nome}</p>
+                          <p className="text-sm font-bold text-foreground tabular-nums mt-0.5">
+                            R$ {unitPrice.toFixed(2)}
+                          </p>
+                        </div>
+                      </motion.div>
+                    );
+                  })}
+                </div>
               )}
-            </motion.button>
-          </div>
-
-          {/* Search bar overlaid on banner */}
-          <div className="absolute bottom-3 left-4 right-4">
-            <div className="relative">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-[18px] h-[18px] text-muted-foreground/60" />
-              <input
-                type="text"
-                placeholder="Buscar na loja"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className={cn(
-                  "w-full h-10 pl-10 pr-4 rounded-full",
-                  "bg-background/90 backdrop-blur-md border border-border/40",
-                  "text-sm text-foreground placeholder:text-muted-foreground/40",
-                  "focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/40",
-                  "transition-all duration-200"
-                )}
-              />
             </div>
-          </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ─── Top Bar ─── */}
+      <div className="flex-shrink-0 flex items-center justify-between px-4 pt-4 pb-2">
+        <p className="text-sm font-bold text-foreground truncate flex-1 mr-3">
+          {userTenant?.nome || "Loja"}
+        </p>
+        <div className="flex items-center gap-3">
+          <motion.button
+            whileTap={{ scale: 0.9 }}
+            onClick={() => setSearchOpen(true)}
+            className="flex items-center justify-center cursor-pointer"
+          >
+            <Search className="w-[20px] h-[20px] text-foreground" />
+          </motion.button>
+          <motion.button
+            whileTap={{ scale: 0.9 }}
+            onClick={() => setCartOpen(true)}
+            className="relative flex items-center justify-center cursor-pointer"
+          >
+            <ShoppingCart className="w-[20px] h-[20px] text-foreground" />
+            {cart.totalItems > 0 && (
+              <span className="absolute -top-1.5 -right-1.5 w-[18px] h-[18px] rounded-full bg-primary text-primary-foreground text-[9px] font-bold flex items-center justify-center">
+                {cart.totalItems > 9 ? "9+" : cart.totalItems}
+              </span>
+            )}
+          </motion.button>
         </div>
       </div>
 
-      {/* Categories */}
+      {/* ─── Banner Carousel ─── */}
+      <div className="flex-shrink-0 px-4 pb-2.5">
+        <div className="relative rounded-2xl overflow-hidden bg-muted/20" style={{ aspectRatio: "16/8" }}>
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={bannerSlides[currentSlide]?.id}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.4 }}
+              className="absolute inset-0"
+            >
+              {bannerSlides[currentSlide]?.imageUrl ? (
+                <img
+                  src={bannerSlides[currentSlide].imageUrl}
+                  alt={bannerSlides[currentSlide].title}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full bg-gradient-to-br from-primary/20 to-primary/5" />
+              )}
+              {/* Overlay */}
+              <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/20 to-transparent" />
+              {/* Text */}
+              <div className="absolute bottom-3 left-3.5 right-3.5">
+                <p className="text-xs font-bold text-foreground line-clamp-1 drop-shadow-sm">
+                  {bannerSlides[currentSlide]?.title}
+                </p>
+                {bannerSlides[currentSlide]?.subtitle && (
+                  <p className="text-[10px] text-muted-foreground/80 mt-0.5 line-clamp-1">
+                    {bannerSlides[currentSlide].subtitle}
+                  </p>
+                )}
+              </div>
+            </motion.div>
+          </AnimatePresence>
+
+          {/* Dots */}
+          {bannerSlides.length > 1 && (
+            <div className="absolute bottom-3 right-3.5 flex gap-1">
+              {bannerSlides.map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => goToSlide(i)}
+                  className={cn(
+                    "w-1.5 h-1.5 rounded-full transition-all duration-300 cursor-pointer",
+                    i === currentSlide
+                      ? "bg-foreground w-4"
+                      : "bg-foreground/30"
+                  )}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ─── Categories ─── */}
       {categories.length > 0 && (
-        <div className="flex-shrink-0 px-4 py-2.5">
+        <div className="flex-shrink-0 px-4 pb-2">
           <div className="flex gap-2 overflow-x-auto scrollbar-hide">
             <CategoryPill
               label="Todos"
@@ -207,15 +387,13 @@ export default function ClienteLoja() {
         </div>
       )}
 
-      <div className="h-px bg-border/30 flex-shrink-0" />
+      <div className="h-px bg-border/20 flex-shrink-0" />
 
       {/* ─── Content ─── */}
       <div className="flex-1 min-h-0 relative">
         <div
           className="absolute top-0 left-0 right-0 h-3 z-10 pointer-events-none"
-          style={{
-            background: "linear-gradient(to bottom, hsl(var(--background)), transparent)",
-          }}
+          style={{ background: "linear-gradient(to bottom, hsl(var(--background)), transparent)" }}
         />
         <div className="h-full overflow-y-auto overscroll-contain pb-24">
           {isLoading ? (
@@ -237,14 +415,15 @@ export default function ClienteLoja() {
                 </motion.button>
               }
             />
-          ) : filtered.length === 0 ? (
+          ) : filtered.length === 0 && !searchQuery ? (
             <EmptyState
-              title={searchQuery ? "Nenhum resultado" : "Nenhum produto disponível"}
-              description={
-                searchQuery
-                  ? "Tente buscar por outro termo."
-                  : "A barbearia ainda não cadastrou produtos."
-              }
+              title="Nenhum produto disponível"
+              description="A barbearia ainda não cadastrou produtos."
+            />
+          ) : filtered.length === 0 && searchQuery ? (
+            <EmptyState
+              title="Nenhum resultado"
+              description="Tente buscar por outro termo."
             />
           ) : (
             <div className="px-4 pt-3 space-y-5">
@@ -301,7 +480,7 @@ export default function ClienteLoja() {
         onRemoveItem={cart.removeItem}
       />
 
-      {!selectedProduct && !cartOpen && (
+      {!selectedProduct && !cartOpen && !searchOpen && (
         <BottomNavigation
           onProfileClick={() => navigate("/cliente/perfil")}
           onPlansClick={() => navigate("/cliente/assinar")}
@@ -338,7 +517,7 @@ function SectionLabel({ text }: { text: string }) {
   );
 }
 
-/* ─── Featured Card (horizontal scroll) ─── */
+/* ─── Featured Card ─── */
 function FeaturedCard({ produto, index, discount, onClick }: { produto: Produto; index: number; discount: number; onClick: () => void }) {
   const hasPromo = discount > 0;
   const outOfStock = produto.estoque <= 0;
@@ -383,7 +562,7 @@ function FeaturedCard({ produto, index, discount, onClick }: { produto: Produto;
   );
 }
 
-/* ─── Product Card (grid) ─── */
+/* ─── Product Card ─── */
 function ProductCard({ produto, index, discount, onClick }: { produto: Produto; index: number; discount: number; onClick: () => void }) {
   const hasPromo = discount > 0;
   const outOfStock = produto.estoque <= 0;
