@@ -348,7 +348,7 @@ export default function ClienteLoja() {
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.2 }}
-            className="flex-shrink-0 px-4 pt-3 pb-3 z-20 border-b border-border/10"
+            className="flex-shrink-0 px-4 pt-4 pb-4 z-20 border-b border-border/10"
           >
             <div className="flex gap-2 overflow-x-auto scrollbar-hide">
               <CategoryPill label="Todos" active={!selectedCategory} onClick={() => setSelectedCategory(null)} />
@@ -448,7 +448,7 @@ export default function ClienteLoja() {
               {/* Inline Categories — sentinel for IntersectionObserver */}
               <div ref={categorySentinelRef} />
               {categories.length > 0 && !scrolled && (
-                <div className="px-4 pt-3 pb-3">
+                <div className="px-4 pt-4 pb-4">
                   <div className="flex gap-2 overflow-x-auto scrollbar-hide">
                     <CategoryPill label="Todos" active={!selectedCategory} onClick={() => setSelectedCategory(null)} />
                     {categories.map((cat) => (
@@ -463,13 +463,13 @@ export default function ClienteLoja() {
                 </div>
               )}
 
-              <div className="h-px bg-border/20" />
+              {!scrolled && <div className="h-px bg-border/20" />}
 
               {/* Products */}
               {filtered.length === 0 && searchQuery ? (
                 <EmptyState title="Nenhum resultado" description="Tente buscar por outro termo." />
               ) : (
-                <div className="px-4 pt-3 space-y-5">
+                <div className={cn("px-4 space-y-5", scrolled ? "pt-5" : "pt-4")}>
                   {/* Featured horizontal */}
                   {!selectedCategory && !searchQuery && featured.length > 0 && (
                     <section>
