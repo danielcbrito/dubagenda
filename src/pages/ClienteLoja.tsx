@@ -31,7 +31,6 @@ export default function ClienteLoja() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedProduct, setSelectedProduct] = useState<Produto | null>(null);
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
   const { data: userTenant } = useQuery({
     queryKey: ["user-tenant-loja"],
