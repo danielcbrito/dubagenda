@@ -113,23 +113,13 @@ export default function ClienteLoja() {
       {/* ─── Header ─── */}
       <div className="flex-shrink-0">
         {/* Top bar */}
-        <div className="flex items-center gap-3 px-4 pt-4 pb-2">
-          <motion.button
-            whileTap={{ scale: 0.9 }}
-            onClick={() => navigate("/cliente")}
-            className="w-8 h-8 rounded-full bg-card flex items-center justify-center border border-border/40"
-          >
-            <BackArrow size={18} className="text-foreground" />
-          </motion.button>
-          <div className="flex-1 min-w-0">
-            <h1 className="text-base font-bold text-foreground">Loja</h1>
-            {userTenant?.nome && (
-              <p className="text-[10px] text-muted-foreground/60 truncate">{userTenant.nome}</p>
-            )}
-          </div>
+        <div className="px-4 pt-4 pb-2">
+          <h1 className="text-base font-bold text-foreground">
+            {userTenant?.nome || "Loja"}
+          </h1>
         </div>
 
-        {/* Search bar — MercadoLivre style */}
+        {/* Search bar */}
         <div className="px-4 pb-3">
           <div className="relative">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-[18px] h-[18px] text-muted-foreground/50" />
