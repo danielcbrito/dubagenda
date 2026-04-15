@@ -48,9 +48,12 @@ export default function ClienteLoja() {
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [checkoutSelectedIds, setCheckoutSelectedIds] = useState<Set<string>>(new Set());
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [scrolled, setScrolled] = useState(false);
   const cart = useCart();
   const searchInputRef = useRef<HTMLInputElement>(null);
   const slideIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const categorySentinelRef = useRef<HTMLDivElement>(null);
 
   const { data: userTenant } = useQuery({
     queryKey: ["user-tenant-loja"],
@@ -104,7 +107,6 @@ export default function ClienteLoja() {
     staleTime: 2 * 60 * 1000,
   });
 
-  // Build carousel slides from banner + featured products with promos
   const bannerSlides = useMemo<BannerSlide[]>(() => {
     const slides: BannerSlide[] = [];
     if (bannerUrl) {
@@ -115,7 +117,6 @@ export default function ClienteLoja() {
         subtitle: "Aproveite descontos exclusivos",
       });
     }
-    // Add featured products with images as promo slides
     const promoProducts = produtos.filter(
       (p) => p.destaque && p.imagem_url && p.preco_promocional && p.preco_promocional < p.preco
     );
@@ -128,7 +129,6 @@ export default function ClienteLoja() {
         subtitle: `${disc}% OFF — R$ ${p.preco_promocional!.toFixed(2)}`,
       });
     });
-    // Fallback if no slides
     if (slides.length === 0) {
       slides.push({
         id: "default",
@@ -140,7 +140,6 @@ export default function ClienteLoja() {
     return slides;
   }, [bannerUrl, produtos, userTenant]);
 
-  // Auto-rotate carousel
   useEffect(() => {
     if (bannerSlides.length <= 1) return;
     slideIntervalRef.current = setInterval(() => {
@@ -198,12 +197,23 @@ export default function ClienteLoja() {
     if (searchOpen) searchInputRef.current?.focus();
   }, [searchOpen]);
 
-  // Listen for "open-cart" event from ProductDetailSheet buy-now flow
   useEffect(() => {
     const handler = () => setCartOpen(true);
     document.addEventListener("open-cart", handler);
     return () => document.removeEventListener("open-cart", handler);
   }, []);
+
+  // Detect when categories scroll past the top bar
+  useEffect(() => {
+    const sentinel = categorySentinelRef.current;
+    if (!sentinel) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => setScrolled(!entry.isIntersecting),
+      { root: scrollRef.current, threshold: 0, rootMargin: "-56px 0px 0px 0px" }
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [categories.length]);
 
   const handleQuickAdd = useCallback((e: React.MouseEvent, produto: Produto) => {
     e.stopPropagation();
@@ -301,8 +311,11 @@ export default function ClienteLoja() {
         )}
       </AnimatePresence>
 
-      {/* ─── Top Bar ─── */}
-      <div className="flex-shrink-0 flex items-center justify-between px-4 pt-4 pb-3">
+      {/* ─── Sticky Top Bar ─── */}
+      <div className={cn(
+        "flex-shrink-0 flex items-center justify-between px-4 pt-4 pb-3 z-20 transition-shadow duration-200",
+        scrolled && "shadow-sm shadow-foreground/5"
+      )}>
         <p className="text-sm font-bold text-foreground truncate flex-1 mr-3">
           {userTenant?.nome || "Loja"}
         </p>
@@ -329,93 +342,34 @@ export default function ClienteLoja() {
         </div>
       </div>
 
-      {/* ─── Banner Carousel ─── */}
-      <div className="flex-shrink-0 px-4 pb-3 pt-1">
-        <div className="relative rounded-2xl overflow-hidden bg-muted/20" style={{ aspectRatio: "16/9" }}>
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={bannerSlides[currentSlide]?.id}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.4 }}
-              className="absolute inset-0"
-            >
-              {bannerSlides[currentSlide]?.imageUrl ? (
-                <img
-                  src={bannerSlides[currentSlide].imageUrl}
-                  alt={bannerSlides[currentSlide].title}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div className="w-full h-full bg-gradient-to-br from-primary/20 to-primary/5" />
-              )}
-              {/* Overlay */}
-              <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/20 to-transparent" />
-              {/* Text */}
-              <div className="absolute bottom-3 left-3.5 right-3.5">
-                <p className="text-xs font-bold text-foreground line-clamp-1 drop-shadow-sm">
-                  {bannerSlides[currentSlide]?.title}
-                </p>
-                {bannerSlides[currentSlide]?.subtitle && (
-                  <p className="text-[10px] text-muted-foreground/80 mt-0.5 line-clamp-1">
-                    {bannerSlides[currentSlide].subtitle}
-                  </p>
-                )}
-              </div>
-            </motion.div>
-          </AnimatePresence>
-
-          {/* Dots */}
-          {bannerSlides.length > 1 && (
-            <div className="absolute bottom-3 right-3.5 flex gap-1">
-              {bannerSlides.map((_, i) => (
-                <button
-                  key={i}
-                  onClick={() => goToSlide(i)}
-                  className={cn(
-                    "w-1.5 h-1.5 rounded-full transition-all duration-300 cursor-pointer",
-                    i === currentSlide
-                      ? "bg-foreground w-4"
-                      : "bg-foreground/30"
-                  )}
+      {/* ─── Sticky Categories (appears when scrolled past original) ─── */}
+      <AnimatePresence>
+        {scrolled && categories.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.2 }}
+            className="flex-shrink-0 px-4 pb-2.5 z-20 border-b border-border/10"
+          >
+            <div className="flex gap-2 overflow-x-auto scrollbar-hide">
+              <CategoryPill label="Todos" active={!selectedCategory} onClick={() => setSelectedCategory(null)} />
+              {categories.map((cat) => (
+                <CategoryPill
+                  key={cat}
+                  label={categoryLabels[cat] || cat}
+                  active={cat === selectedCategory}
+                  onClick={() => setSelectedCategory(cat === selectedCategory ? null : cat)}
                 />
               ))}
             </div>
-          )}
-        </div>
-      </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-      {/* ─── Categories ─── */}
-      {categories.length > 0 && (
-        <div className="flex-shrink-0 px-4 pt-1 pb-2.5">
-          <div className="flex gap-2 overflow-x-auto scrollbar-hide">
-            <CategoryPill
-              label="Todos"
-              active={!selectedCategory}
-              onClick={() => setSelectedCategory(null)}
-            />
-            {categories.map((cat) => (
-              <CategoryPill
-                key={cat}
-                label={categoryLabels[cat] || cat}
-                active={cat === selectedCategory}
-                onClick={() => setSelectedCategory(cat === selectedCategory ? null : cat)}
-              />
-            ))}
-          </div>
-        </div>
-      )}
-
-      <div className="h-px bg-border/20 flex-shrink-0" />
-
-      {/* ─── Content ─── */}
+      {/* ─── Scrollable Content (banner + categories + products) ─── */}
       <div className="flex-1 min-h-0 relative">
-        <div
-          className="absolute top-0 left-0 right-0 h-3 z-10 pointer-events-none"
-          style={{ background: "linear-gradient(to bottom, hsl(var(--background)), transparent)" }}
-        />
-        <div className="h-full overflow-y-auto overscroll-contain pb-24">
+        <div ref={scrollRef} className="h-full overflow-y-auto overscroll-contain pb-24">
           {isLoading ? (
             <div className="flex flex-col items-center justify-center py-20 gap-3">
               <div className="w-7 h-7 border-2 border-primary border-t-transparent rounded-full animate-spin" />
@@ -435,51 +389,124 @@ export default function ClienteLoja() {
                 </motion.button>
               }
             />
-          ) : filtered.length === 0 && !searchQuery ? (
+          ) : filtered.length === 0 && !searchQuery && produtos.length === 0 ? (
             <EmptyState
               title="Nenhum produto disponível"
               description="A barbearia ainda não cadastrou produtos."
             />
-          ) : filtered.length === 0 && searchQuery ? (
-            <EmptyState
-              title="Nenhum resultado"
-              description="Tente buscar por outro termo."
-            />
           ) : (
-            <div className="px-4 pt-3 space-y-5">
-              {/* Featured horizontal */}
-              {!selectedCategory && !searchQuery && featured.length > 0 && (
-                <section>
-                  <SectionLabel text="Destaques" />
-                  <div className="flex gap-3 overflow-x-auto scrollbar-hide -mx-4 px-4 pb-1">
-                    {featured.map((produto, i) => (
-                      <FeaturedCard key={produto.id} produto={produto} index={i} discount={discountPercent(produto)} onClick={() => setSelectedProduct(produto)} />
+            <>
+              {/* Banner Carousel — scrolls with content */}
+              <div className="px-4 pb-3 pt-1">
+                <div className="relative rounded-2xl overflow-hidden bg-muted/20" style={{ aspectRatio: "16/9" }}>
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key={bannerSlides[currentSlide]?.id}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.4 }}
+                      className="absolute inset-0"
+                    >
+                      {bannerSlides[currentSlide]?.imageUrl ? (
+                        <img
+                          src={bannerSlides[currentSlide].imageUrl}
+                          alt={bannerSlides[currentSlide].title}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-gradient-to-br from-primary/20 to-primary/5" />
+                      )}
+                      <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/20 to-transparent" />
+                      <div className="absolute bottom-3 left-3.5 right-3.5">
+                        <p className="text-xs font-bold text-foreground line-clamp-1 drop-shadow-sm">
+                          {bannerSlides[currentSlide]?.title}
+                        </p>
+                        {bannerSlides[currentSlide]?.subtitle && (
+                          <p className="text-[10px] text-muted-foreground/80 mt-0.5 line-clamp-1">
+                            {bannerSlides[currentSlide].subtitle}
+                          </p>
+                        )}
+                      </div>
+                    </motion.div>
+                  </AnimatePresence>
+                  {bannerSlides.length > 1 && (
+                    <div className="absolute bottom-3 right-3.5 flex gap-1">
+                      {bannerSlides.map((_, i) => (
+                        <button
+                          key={i}
+                          onClick={() => goToSlide(i)}
+                          className={cn(
+                            "w-1.5 h-1.5 rounded-full transition-all duration-300 cursor-pointer",
+                            i === currentSlide ? "bg-foreground w-4" : "bg-foreground/30"
+                          )}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Inline Categories — sentinel for IntersectionObserver */}
+              <div ref={categorySentinelRef} />
+              {categories.length > 0 && (
+                <div className="px-4 pt-1 pb-2.5">
+                  <div className="flex gap-2 overflow-x-auto scrollbar-hide">
+                    <CategoryPill label="Todos" active={!selectedCategory} onClick={() => setSelectedCategory(null)} />
+                    {categories.map((cat) => (
+                      <CategoryPill
+                        key={cat}
+                        label={categoryLabels[cat] || cat}
+                        active={cat === selectedCategory}
+                        onClick={() => setSelectedCategory(cat === selectedCategory ? null : cat)}
+                      />
                     ))}
                   </div>
-                </section>
+                </div>
               )}
 
-              {/* Products grid */}
-              <section>
-                <div className="flex items-center justify-between mb-2.5">
-                  <SectionLabel
-                    text={
-                      selectedCategory
-                        ? categoryLabels[selectedCategory] || selectedCategory
-                        : "Todos os produtos"
-                    }
-                  />
-                  <span className="text-[11px] text-muted-foreground/50 tabular-nums">
-                    {filtered.length} {filtered.length === 1 ? "item" : "itens"}
-                  </span>
+              <div className="h-px bg-border/20" />
+
+              {/* Products */}
+              {filtered.length === 0 && searchQuery ? (
+                <EmptyState title="Nenhum resultado" description="Tente buscar por outro termo." />
+              ) : (
+                <div className="px-4 pt-3 space-y-5">
+                  {/* Featured horizontal */}
+                  {!selectedCategory && !searchQuery && featured.length > 0 && (
+                    <section>
+                      <SectionLabel text="Destaques" />
+                      <div className="flex gap-3 overflow-x-auto scrollbar-hide -mx-4 px-4 pb-1">
+                        {featured.map((produto, i) => (
+                          <FeaturedCard key={produto.id} produto={produto} index={i} discount={discountPercent(produto)} onClick={() => setSelectedProduct(produto)} />
+                        ))}
+                      </div>
+                    </section>
+                  )}
+
+                  {/* Products grid */}
+                  <section>
+                    <div className="flex items-center justify-between mb-2.5">
+                      <SectionLabel
+                        text={
+                          selectedCategory
+                            ? categoryLabels[selectedCategory] || selectedCategory
+                            : "Todos os produtos"
+                        }
+                      />
+                      <span className="text-[11px] text-muted-foreground/50 tabular-nums">
+                        {filtered.length} {filtered.length === 1 ? "item" : "itens"}
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      {filtered.map((produto, i) => (
+                        <ProductCard key={produto.id} produto={produto} index={i} discount={discountPercent(produto)} onClick={() => setSelectedProduct(produto)} onQuickAdd={(e) => handleQuickAdd(e, produto)} />
+                      ))}
+                    </div>
+                  </section>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
-                  {filtered.map((produto, i) => (
-                    <ProductCard key={produto.id} produto={produto} index={i} discount={discountPercent(produto)} onClick={() => setSelectedProduct(produto)} onQuickAdd={(e) => handleQuickAdd(e, produto)} />
-                  ))}
-                </div>
-              </section>
-            </div>
+              )}
+            </>
           )}
         </div>
       </div>
