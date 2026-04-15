@@ -1,5 +1,6 @@
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Package, Star, ShoppingCart } from "lucide-react";
+import { ArrowLeft, Package, Star, ShoppingCart, Minus, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface Produto {
