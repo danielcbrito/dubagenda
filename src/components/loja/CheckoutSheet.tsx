@@ -353,12 +353,14 @@ function PaymentRow({
   selected,
   onSelect,
   disabled = false,
+  icon,
 }: {
   label: string;
   sublabel: string;
   selected: boolean;
   onSelect: () => void;
   disabled?: boolean;
+  icon?: React.ReactNode;
 }) {
   return (
     <button
@@ -379,6 +381,7 @@ function PaymentRow({
       >
         {selected && <div className="w-2 h-2 rounded-full bg-foreground" />}
       </div>
+      {icon && <div className="flex-shrink-0">{icon}</div>}
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium text-foreground">{label}</p>
         <p className="text-[10px] text-muted-foreground/45 mt-0.5">{sublabel}</p>
