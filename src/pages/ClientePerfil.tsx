@@ -17,6 +17,7 @@ import {
   Store,
   MapPin,
   Bell,
+  Star,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -38,6 +39,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { BarbershopDetailsSheet } from "@/components/client/BarbershopDetailsSheet";
+import { MyReviewsSheet } from "@/components/MyReviewsSheet";
 
 /* ─── Reusable sub-components ─── */
 
@@ -158,6 +160,7 @@ export default function ClientePerfil() {
   const [shopDetailsOpen, setShopDetailsOpen] = useState(false);
   const [shopDetails, setShopDetails] = useState<any>(null);
   const [isDubExclusive, setIsDubExclusive] = useState(false);
+  const [reviewsOpen, setReviewsOpen] = useState(false);
 
   useEffect(() => {
     loadProfile();
@@ -339,6 +342,11 @@ export default function ClientePerfil() {
                 onClick={() => setHistoryOpen(true)}
               />
               <ProfileItem
+                icon={Star}
+                label="Minhas Avaliações"
+                onClick={() => setReviewsOpen(true)}
+              />
+              <ProfileItem
                 icon={Gift}
                 label="Programa de Pontos"
                 badge={redemptions > 0 ? `${redemptions} disponível` : undefined}
@@ -419,6 +427,8 @@ export default function ClientePerfil() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <MyReviewsSheet open={reviewsOpen} onOpenChange={setReviewsOpen} userId={userId} />
 
       {/* Barbershop Details Sheet */}
       <BarbershopDetailsSheet
