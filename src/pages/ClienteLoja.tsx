@@ -282,7 +282,7 @@ function SectionLabel({ text }: { text: string }) {
 }
 
 /* ─── Featured Card (horizontal scroll) ─── */
-function FeaturedCard({ produto, index, discount }: { produto: Produto; index: number; discount: number }) {
+function FeaturedCard({ produto, index, discount, onClick }: { produto: Produto; index: number; discount: number; onClick: () => void }) {
   const hasPromo = discount > 0;
   const outOfStock = produto.estoque <= 0;
 
@@ -326,7 +326,7 @@ function FeaturedCard({ produto, index, discount }: { produto: Produto; index: n
 }
 
 /* ─── Product Card (grid) ─── */
-function ProductCard({ produto, index, discount }: { produto: Produto; index: number; discount: number }) {
+function ProductCard({ produto, index, discount, onClick }: { produto: Produto; index: number; discount: number; onClick: () => void }) {
   const hasPromo = discount > 0;
   const outOfStock = produto.estoque <= 0;
 
