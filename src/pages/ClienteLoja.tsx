@@ -471,7 +471,7 @@ export default function ClienteLoja() {
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   {filtered.map((produto, i) => (
-                    <ProductCard key={produto.id} produto={produto} index={i} discount={discountPercent(produto)} onClick={() => setSelectedProduct(produto)} />
+                    <ProductCard key={produto.id} produto={produto} index={i} discount={discountPercent(produto)} onClick={() => setSelectedProduct(produto)} onQuickAdd={(e) => handleQuickAdd(e, produto)} />
                   ))}
                 </div>
               </section>
