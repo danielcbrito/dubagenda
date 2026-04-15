@@ -545,7 +545,7 @@ export default function ClienteLoja() {
         tenantNome={userTenant?.nome || "Loja"}
       />
 
-      {!selectedProduct && !cartOpen && !searchOpen && (
+      <CartAddedOverlay />
         <BottomNavigation
           onProfileClick={() => navigate("/cliente/perfil")}
           onPlansClick={() => navigate("/cliente/assinar")}
