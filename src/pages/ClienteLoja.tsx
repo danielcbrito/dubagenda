@@ -113,11 +113,7 @@ export default function ClienteLoja() {
       {/* ─── Header ─── */}
       <div className="flex-shrink-0">
         {/* Top bar */}
-        <div className="px-4 pt-4 pb-2">
-          <h1 className="text-base font-bold text-foreground">
-            {userTenant?.nome || "Loja"}
-          </h1>
-        </div>
+        <div className="px-4 pt-4 pb-2" />
 
         {/* Search bar */}
         <div className="px-4 pb-3">
@@ -295,7 +291,7 @@ function FeaturedCard({ produto, index, discount, onClick }: { produto: Produto;
       animate={{ opacity: 1, x: 0 }}
       transition={{ delay: index * 0.04 }}
       className={cn(
-        "flex-shrink-0 w-[180px] rounded-2xl overflow-hidden",
+        "flex-shrink-0 w-[180px] rounded-2xl overflow-hidden cursor-pointer",
         "bg-card border border-border/30",
         "active:scale-[0.97] transition-transform duration-150",
         outOfStock && "opacity-50"
@@ -340,7 +336,7 @@ function ProductCard({ produto, index, discount, onClick }: { produto: Produto; 
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.03 }}
       className={cn(
-        "rounded-2xl overflow-hidden",
+        "rounded-2xl overflow-hidden cursor-pointer",
         "bg-card border border-border/30",
         "active:scale-[0.97] transition-transform duration-150",
         outOfStock && "opacity-50"
