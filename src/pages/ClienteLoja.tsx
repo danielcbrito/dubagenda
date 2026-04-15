@@ -288,6 +288,7 @@ function FeaturedCard({ produto, index, discount, onClick }: { produto: Produto;
 
   return (
     <motion.div
+      onClick={onClick}
       initial={{ opacity: 0, x: 16 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ delay: index * 0.04 }}
@@ -332,6 +333,7 @@ function ProductCard({ produto, index, discount, onClick }: { produto: Produto; 
 
   return (
     <motion.div
+      onClick={onClick}
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.03 }}
