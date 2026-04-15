@@ -1,4 +1,5 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from "react";
+import { MaintenanceScreen } from "@/components/MaintenanceScreen";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -39,6 +40,15 @@ interface BannerSlide {
 
 export default function ClienteLoja() {
   const navigate = useNavigate();
+
+  // Loja em manutenção — bloquear acesso
+  return (
+    <MaintenanceScreen
+      message="A loja está temporariamente em manutenção. Estamos preparando novidades incríveis para você! Volte em breve."
+      onExit={() => navigate("/cliente")}
+    />
+  );
+
   const [searchQuery, setSearchQuery] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
