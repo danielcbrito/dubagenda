@@ -12,9 +12,10 @@ interface CartSheetProps {
   totalPrice: number;
   onUpdateQuantity: (id: string, delta: number) => void;
   onRemoveItem: (id: string) => void;
+  onCheckout?: (selectedIds: Set<string>) => void;
 }
 
-export function CartSheet({ open, onClose, items, totalPrice, onUpdateQuantity, onRemoveItem }: CartSheetProps) {
+export function CartSheet({ open, onClose, items, totalPrice, onUpdateQuantity, onRemoveItem, onCheckout }: CartSheetProps) {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
@@ -224,6 +225,7 @@ export function CartSheet({ open, onClose, items, totalPrice, onUpdateQuantity, 
                 <motion.button
                   whileTap={{ scale: 0.95 }}
                   disabled={selectedCount === 0}
+                  onClick={() => onCheckout?.(selectedIds)}
                   className={cn(
                     "px-8 py-3.5 rounded-xl text-sm font-bold transition-all cursor-pointer",
                     selectedCount > 0
