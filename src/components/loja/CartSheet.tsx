@@ -61,9 +61,9 @@ export function CartSheet({ open, onClose, items, totalPrice, onUpdateQuantity, 
     <AnimatePresence>
       {open && (
         <motion.div
-          initial={{ x: "100%" }}
-          animate={{ x: 0 }}
-          exit={{ x: "100%" }}
+          initial={{ y: "100%" }}
+          animate={{ y: 0 }}
+          exit={{ y: "100%" }}
           transition={{ type: "spring", damping: 30, stiffness: 320 }}
           className="fixed inset-0 z-50 bg-background flex flex-col"
         >
