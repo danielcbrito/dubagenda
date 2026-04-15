@@ -12,6 +12,7 @@ import { CartSheet } from "@/components/loja/CartSheet";
 import { CheckoutSheet } from "@/components/loja/CheckoutSheet";
 import { useCart } from "@/hooks/useCart";
 import { toast } from "sonner";
+import { CartAddedOverlay, showCartAddedToast } from "@/components/loja/CartAddedOverlay";
 
 interface Produto {
   id: string;
@@ -218,9 +219,7 @@ export default function ClienteLoja() {
   const handleQuickAdd = useCallback((e: React.MouseEvent, produto: Produto) => {
     e.stopPropagation();
     cart.addItem(produto);
-    toast.success("Produto adicionado ao carrinho", {
-      description: produto.nome,
-    });
+    showCartAddedToast(produto.nome);
   }, [cart]);
 
   return (
