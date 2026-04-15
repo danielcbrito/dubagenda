@@ -209,7 +209,7 @@ export default function ClienteLoja() {
                   <SectionLabel text="Destaques" />
                   <div className="flex gap-3 overflow-x-auto scrollbar-hide -mx-4 px-4 pb-1">
                     {featured.map((produto, i) => (
-                      <FeaturedCard key={produto.id} produto={produto} index={i} discount={discountPercent(produto)} />
+                      <FeaturedCard key={produto.id} produto={produto} index={i} discount={discountPercent(produto)} onClick={() => setSelectedProduct(produto)} />
                     ))}
                   </div>
                 </section>
@@ -231,7 +231,7 @@ export default function ClienteLoja() {
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   {filtered.map((produto, i) => (
-                    <ProductCard key={produto.id} produto={produto} index={i} discount={discountPercent(produto)} />
+                    <ProductCard key={produto.id} produto={produto} index={i} discount={discountPercent(produto)} onClick={() => setSelectedProduct(produto)} />
                   ))}
                 </div>
               </section>
@@ -239,6 +239,12 @@ export default function ClienteLoja() {
           )}
         </div>
       </div>
+
+      <ProductDetailSheet
+        produto={selectedProduct}
+        open={!!selectedProduct}
+        onClose={() => setSelectedProduct(null)}
+      />
 
       <BottomNavigation
         onProfileClick={() => navigate("/cliente/perfil")}
