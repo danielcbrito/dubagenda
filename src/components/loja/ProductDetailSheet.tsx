@@ -183,7 +183,7 @@ export function ProductDetailSheet({ produto, open, onClose, onAddToCart }: Prod
 
               {/* Quantity selector */}
               {!outOfStock && (
-                <div className="flex items-center gap-4 pt-1">
+                <div className="flex items-center justify-end gap-4 pt-1">
                   <span className="text-[11px] font-semibold text-muted-foreground/50 uppercase tracking-widest">
                     Quantidade
                   </span>
@@ -278,13 +278,6 @@ export function ProductDetailSheet({ produto, open, onClose, onAddToCart }: Prod
                   <span className="text-xs text-primary font-medium cursor-pointer">Ver mais</span>
                 </div>
 
-                {/* Highlight badge */}
-                <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-500/5 border border-amber-500/10">
-                  <span className="text-amber-500 text-xs">💬</span>
-                  <span className="text-xs text-amber-600 dark:text-amber-400 font-medium">
-                    Frequentemente avaliado como produto excelente
-                  </span>
-                </div>
 
                 {/* Individual reviews */}
                 <div className="space-y-5">
