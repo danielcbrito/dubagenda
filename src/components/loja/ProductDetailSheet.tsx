@@ -320,12 +320,10 @@ export function ProductDetailSheet({ produto, open, onClose, onAddToCart, allPro
                     onClick={handleAddToCart}
                     className={cn(
                       "w-full py-4 rounded-xl text-[15px] font-bold transition-all cursor-pointer",
-                      addedFeedback
-                        ? "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20"
-                        : "bg-card border border-border/50 text-foreground active:scale-[0.98]"
+                      "bg-card border border-border/50 text-foreground active:scale-[0.98]"
                     )}
                   >
-                    {addedFeedback ? "Adicionado!" : "Adicionar ao Carrinho"}
+                    Adicionar ao Carrinho
                   </motion.button>
                 </div>
               )}
