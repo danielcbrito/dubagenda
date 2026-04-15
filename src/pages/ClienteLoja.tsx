@@ -3,10 +3,10 @@ import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Search, ShoppingBag, Package } from "lucide-react";
-import { BackArrow } from "@/components/ui/back-arrow";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { BottomNavigation } from "@/components/BottomNavigation";
+import { ProductDetailSheet } from "@/components/loja/ProductDetailSheet";
 
 interface Produto {
   id: string;
@@ -30,6 +30,7 @@ export default function ClienteLoja() {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [selectedProduct, setSelectedProduct] = useState<Produto | null>(null);
 
   const { data: userTenant } = useQuery({
     queryKey: ["user-tenant-loja"],
@@ -112,23 +113,13 @@ export default function ClienteLoja() {
       {/* ─── Header ─── */}
       <div className="flex-shrink-0">
         {/* Top bar */}
-        <div className="flex items-center gap-3 px-4 pt-4 pb-2">
-          <motion.button
-            whileTap={{ scale: 0.9 }}
-            onClick={() => navigate("/cliente")}
-            className="w-8 h-8 rounded-full bg-card flex items-center justify-center border border-border/40"
-          >
-            <BackArrow size={18} className="text-foreground" />
-          </motion.button>
-          <div className="flex-1 min-w-0">
-            <h1 className="text-base font-bold text-foreground">Loja</h1>
-            {userTenant?.nome && (
-              <p className="text-[10px] text-muted-foreground/60 truncate">{userTenant.nome}</p>
-            )}
-          </div>
+        <div className="px-4 pt-4 pb-2">
+          <h1 className="text-base font-bold text-foreground">
+            {userTenant?.nome || "Loja"}
+          </h1>
         </div>
 
-        {/* Search bar — MercadoLivre style */}
+        {/* Search bar */}
         <div className="px-4 pb-3">
           <div className="relative">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-[18px] h-[18px] text-muted-foreground/50" />
@@ -218,7 +209,7 @@ export default function ClienteLoja() {
                   <SectionLabel text="Destaques" />
                   <div className="flex gap-3 overflow-x-auto scrollbar-hide -mx-4 px-4 pb-1">
                     {featured.map((produto, i) => (
-                      <FeaturedCard key={produto.id} produto={produto} index={i} discount={discountPercent(produto)} />
+                      <FeaturedCard key={produto.id} produto={produto} index={i} discount={discountPercent(produto)} onClick={() => setSelectedProduct(produto)} />
                     ))}
                   </div>
                 </section>
@@ -240,7 +231,7 @@ export default function ClienteLoja() {
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   {filtered.map((produto, i) => (
-                    <ProductCard key={produto.id} produto={produto} index={i} discount={discountPercent(produto)} />
+                    <ProductCard key={produto.id} produto={produto} index={i} discount={discountPercent(produto)} onClick={() => setSelectedProduct(produto)} />
                   ))}
                 </div>
               </section>
@@ -248,6 +239,12 @@ export default function ClienteLoja() {
           )}
         </div>
       </div>
+
+      <ProductDetailSheet
+        produto={selectedProduct}
+        open={!!selectedProduct}
+        onClose={() => setSelectedProduct(null)}
+      />
 
       <BottomNavigation
         onProfileClick={() => navigate("/cliente/perfil")}
@@ -285,12 +282,13 @@ function SectionLabel({ text }: { text: string }) {
 }
 
 /* ─── Featured Card (horizontal scroll) ─── */
-function FeaturedCard({ produto, index, discount }: { produto: Produto; index: number; discount: number }) {
+function FeaturedCard({ produto, index, discount, onClick }: { produto: Produto; index: number; discount: number; onClick: () => void }) {
   const hasPromo = discount > 0;
   const outOfStock = produto.estoque <= 0;
 
   return (
     <motion.div
+      onClick={onClick}
       initial={{ opacity: 0, x: 16 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ delay: index * 0.04 }}
@@ -329,12 +327,13 @@ function FeaturedCard({ produto, index, discount }: { produto: Produto; index: n
 }
 
 /* ─── Product Card (grid) ─── */
-function ProductCard({ produto, index, discount }: { produto: Produto; index: number; discount: number }) {
+function ProductCard({ produto, index, discount, onClick }: { produto: Produto; index: number; discount: number; onClick: () => void }) {
   const hasPromo = discount > 0;
   const outOfStock = produto.estoque <= 0;
 
   return (
     <motion.div
+      onClick={onClick}
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.03 }}
