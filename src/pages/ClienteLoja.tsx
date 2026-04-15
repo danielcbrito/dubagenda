@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { BottomNavigation } from "@/components/BottomNavigation";
 import { ProductDetailSheet } from "@/components/loja/ProductDetailSheet";
 import { CartSheet } from "@/components/loja/CartSheet";
+import { CheckoutSheet } from "@/components/loja/CheckoutSheet";
 import { useCart } from "@/hooks/useCart";
 import { toast } from "sonner";
 
@@ -43,6 +44,8 @@ export default function ClienteLoja() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedProduct, setSelectedProduct] = useState<Produto | null>(null);
   const [cartOpen, setCartOpen] = useState(false);
+  const [checkoutOpen, setCheckoutOpen] = useState(false);
+  const [checkoutSelectedIds, setCheckoutSelectedIds] = useState<Set<string>>(new Set());
   const [currentSlide, setCurrentSlide] = useState(0);
   const cart = useCart();
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -496,6 +499,24 @@ export default function ClienteLoja() {
         totalPrice={cart.totalPrice}
         onUpdateQuantity={cart.updateQuantity}
         onRemoveItem={cart.removeItem}
+        onCheckout={(ids) => {
+          setCheckoutSelectedIds(ids);
+          setCartOpen(false);
+          setCheckoutOpen(true);
+        }}
+      />
+
+      <CheckoutSheet
+        open={checkoutOpen}
+        onClose={() => setCheckoutOpen(false)}
+        items={cart.items}
+        selectedIds={checkoutSelectedIds}
+        onOrderPlaced={() => {
+          cart.clearCart();
+          setCheckoutOpen(false);
+        }}
+        tenantId={userTenant?.id || ""}
+        tenantNome={userTenant?.nome || "Loja"}
       />
 
       {!selectedProduct && !cartOpen && !searchOpen && (
