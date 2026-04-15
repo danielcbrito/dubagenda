@@ -116,8 +116,21 @@ export default function ClienteLoja() {
     <div className="flex flex-col bg-background" style={{ height: "100dvh" }}>
       {/* ─── Header ─── */}
       <div className="flex-shrink-0">
-        {/* Top bar */}
-        <div className="px-4 pt-4 pb-2" />
+        {/* Top bar with cart icon */}
+        <div className="px-4 pt-4 pb-2 flex items-center justify-end">
+          <motion.button
+            whileTap={{ scale: 0.9 }}
+            onClick={() => setCartOpen(true)}
+            className="relative w-9 h-9 rounded-full bg-card border border-border/40 flex items-center justify-center cursor-pointer"
+          >
+            <ShoppingCart className="w-[18px] h-[18px] text-foreground" />
+            {cart.totalItems > 0 && (
+              <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center">
+                {cart.totalItems > 9 ? "9+" : cart.totalItems}
+              </span>
+            )}
+          </motion.button>
+        </div>
 
         {/* Search bar */}
         <div className="px-4 pb-3">
