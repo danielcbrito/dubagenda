@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { motion } from "framer-motion";
-import { ArrowLeft, MapPin, Store, CreditCard, QrCode, Banknote, Check, ShoppingBag, Package } from "lucide-react";
+import { ArrowLeft, MapPin, Store, CreditCard, QrCode, Banknote, Check, Package } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
