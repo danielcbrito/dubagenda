@@ -2,11 +2,13 @@ import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Search, ShoppingBag, Package } from "lucide-react";
+import { Search, ShoppingBag, ShoppingCart, Package } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { BottomNavigation } from "@/components/BottomNavigation";
 import { ProductDetailSheet } from "@/components/loja/ProductDetailSheet";
+import { CartSheet } from "@/components/loja/CartSheet";
+import { useCart } from "@/hooks/useCart";
 
 interface Produto {
   id: string;
@@ -31,6 +33,8 @@ export default function ClienteLoja() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedProduct, setSelectedProduct] = useState<Produto | null>(null);
+  const [cartOpen, setCartOpen] = useState(false);
+  const cart = useCart();
 
   const { data: userTenant } = useQuery({
     queryKey: ["user-tenant-loja"],
@@ -112,8 +116,21 @@ export default function ClienteLoja() {
     <div className="flex flex-col bg-background" style={{ height: "100dvh" }}>
       {/* ─── Header ─── */}
       <div className="flex-shrink-0">
-        {/* Top bar */}
-        <div className="px-4 pt-4 pb-2" />
+        {/* Top bar with cart icon */}
+        <div className="px-4 pt-4 pb-2 flex items-center justify-end">
+          <motion.button
+            whileTap={{ scale: 0.9 }}
+            onClick={() => setCartOpen(true)}
+            className="relative w-9 h-9 rounded-full bg-card border border-border/40 flex items-center justify-center cursor-pointer"
+          >
+            <ShoppingCart className="w-[18px] h-[18px] text-foreground" />
+            {cart.totalItems > 0 && (
+              <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center">
+                {cart.totalItems > 9 ? "9+" : cart.totalItems}
+              </span>
+            )}
+          </motion.button>
+        </div>
 
         {/* Search bar */}
         <div className="px-4 pb-3">
@@ -240,9 +257,19 @@ export default function ClienteLoja() {
         produto={selectedProduct}
         open={!!selectedProduct}
         onClose={() => setSelectedProduct(null)}
+        onAddToCart={(p) => cart.addItem(p)}
       />
 
-      {!selectedProduct && (
+      <CartSheet
+        open={cartOpen}
+        onClose={() => setCartOpen(false)}
+        items={cart.items}
+        totalPrice={cart.totalPrice}
+        onUpdateQuantity={cart.updateQuantity}
+        onRemoveItem={cart.removeItem}
+      />
+
+      {!selectedProduct && !cartOpen && (
         <BottomNavigation
           onProfileClick={() => navigate("/cliente/perfil")}
           onPlansClick={() => navigate("/cliente/assinar")}

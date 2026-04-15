@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Package, Star, Minus, Plus } from "lucide-react";
+import { X, Package, Star } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface Produto {
@@ -19,17 +19,10 @@ interface ProductDetailSheetProps {
   produto: Produto | null;
   open: boolean;
   onClose: () => void;
+  onAddToCart?: (produto: Produto) => void;
 }
 
-const categoryLabels: Record<string, string> = {
-  cabelo: "Cabelo",
-  barba: "Barba",
-  skincare: "Skincare",
-  acessorios: "Acessórios",
-  geral: "Geral",
-};
-
-export function ProductDetailSheet({ produto, open, onClose }: ProductDetailSheetProps) {
+export function ProductDetailSheet({ produto, open, onClose, onAddToCart }: ProductDetailSheetProps) {
   if (!produto) return null;
 
   const hasPromo = produto.preco_promocional != null && produto.preco_promocional < produto.preco;
@@ -38,6 +31,13 @@ export function ProductDetailSheet({ produto, open, onClose }: ProductDetailShee
     : 0;
   const outOfStock = produto.estoque <= 0;
   const finalPrice = hasPromo ? produto.preco_promocional! : produto.preco;
+
+  const handleAddToCart = () => {
+    if (!outOfStock && onAddToCart) {
+      onAddToCart(produto);
+      onClose();
+    }
+  };
 
   return (
     <AnimatePresence>
@@ -105,12 +105,10 @@ export function ProductDetailSheet({ produto, open, onClose }: ProductDetailShee
 
               {/* Product info */}
               <div className="px-5 pt-4 space-y-4">
-                {/* Name */}
                 <h2 className="text-lg font-bold text-foreground leading-tight">
                   {produto.nome}
                 </h2>
 
-                {/* Price block */}
                 <div className="flex items-end gap-2.5">
                   <span className="text-2xl font-bold text-foreground tabular-nums">
                     R$ {finalPrice.toFixed(2)}
@@ -122,7 +120,6 @@ export function ProductDetailSheet({ produto, open, onClose }: ProductDetailShee
                   )}
                 </div>
 
-                {/* Stock info */}
                 {!outOfStock && (
                   <p className="text-[11px] text-muted-foreground/60">
                     {produto.estoque <= 5
@@ -131,10 +128,8 @@ export function ProductDetailSheet({ produto, open, onClose }: ProductDetailShee
                   </p>
                 )}
 
-                {/* Divider */}
                 <div className="h-px bg-border/40" />
 
-                {/* Description */}
                 {produto.descricao && (
                   <div className="space-y-2">
                     <h3 className="text-[11px] font-semibold text-muted-foreground/50 uppercase tracking-widest">
@@ -146,10 +141,8 @@ export function ProductDetailSheet({ produto, open, onClose }: ProductDetailShee
                   </div>
                 )}
 
-                {/* Divider */}
                 <div className="h-px bg-border/40" />
 
-                {/* Reviews placeholder */}
                 <div className="space-y-3">
                   <h3 className="text-[11px] font-semibold text-muted-foreground/50 uppercase tracking-widest">
                     Avaliações
@@ -187,14 +180,15 @@ export function ProductDetailSheet({ produto, open, onClose }: ProductDetailShee
                 <motion.button
                   whileTap={{ scale: 0.95 }}
                   disabled={outOfStock}
+                  onClick={handleAddToCart}
                   className={cn(
-                    "px-8 py-3 rounded-xl text-sm font-semibold transition-all",
+                    "px-6 py-3 rounded-xl text-sm font-semibold transition-all",
                     outOfStock
                       ? "bg-muted text-muted-foreground"
                       : "bg-foreground text-background active:scale-[0.97]"
                   )}
                 >
-                  {outOfStock ? "Indisponível" : "Comprar"}
+                  {outOfStock ? "Indisponível" : "Adicionar ao Carrinho"}
                 </motion.button>
               </div>
             </div>
