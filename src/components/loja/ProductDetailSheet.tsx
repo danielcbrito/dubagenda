@@ -156,7 +156,7 @@ function ReviewCard({ review, idx }: { review: typeof FAKE_REVIEWS[0]; idx: numb
 
 export function ProductDetailSheet({ produto, open, onClose, onAddToCart, allProducts, onSelectProduct }: ProductDetailSheetProps) {
   const [qty, setQty] = useState(1);
-  const [addedFeedback, setAddedFeedback] = useState(false);
+  
   const [reviewsToShow, setReviewsToShow] = useState(3);
   const [showAllReviews, setShowAllReviews] = useState(false);
 
@@ -177,8 +177,6 @@ export function ProductDetailSheet({ produto, open, onClose, onAddToCart, allPro
     if (!outOfStock && onAddToCart) {
       for (let i = 0; i < qty; i++) onAddToCart(produto);
       setQty(1);
-      setAddedFeedback(true);
-      setTimeout(() => setAddedFeedback(false), 2000);
       showCartAddedToast(`${qty}x ${produto.nome}`);
     }
   };
