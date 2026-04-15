@@ -7,10 +7,12 @@ import { Search, ShoppingBag, ShoppingCart, Package, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { BottomNavigation } from "@/components/BottomNavigation";
+import { MaintenanceScreen } from "@/components/MaintenanceScreen";
 import { ProductDetailSheet } from "@/components/loja/ProductDetailSheet";
 import { CartSheet } from "@/components/loja/CartSheet";
 import { CheckoutSheet } from "@/components/loja/CheckoutSheet";
 import { useCart } from "@/hooks/useCart";
+import { useStoreMaintenanceMode } from "@/hooks/useStoreMaintenanceMode";
 import { CartAddedOverlay, showCartAddedToast } from "@/components/loja/CartAddedOverlay";
 
 interface Produto {
