@@ -368,7 +368,7 @@ export default function ClienteLoja() {
 
       {/* ─── Categories ─── */}
       {categories.length > 0 && (
-        <div className="flex-shrink-0 px-4 pb-2">
+        <div className="flex-shrink-0 px-4 pt-1 pb-2.5">
           <div className="flex gap-2 overflow-x-auto scrollbar-hide">
             <CategoryPill
               label="Todos"
