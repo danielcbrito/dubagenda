@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Package, Star, Minus, Plus, Check, ThumbsUp } from "lucide-react";
+import { ArrowLeft, Package, Star, Minus, Plus, ThumbsUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
