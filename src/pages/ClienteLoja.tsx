@@ -546,6 +546,8 @@ export default function ClienteLoja() {
       />
 
       <CartAddedOverlay />
+
+      {!selectedProduct && !cartOpen && !searchOpen && (
         <BottomNavigation
           onProfileClick={() => navigate("/cliente/perfil")}
           onPlansClick={() => navigate("/cliente/assinar")}
