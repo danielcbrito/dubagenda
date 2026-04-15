@@ -3,10 +3,10 @@ import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Search, ShoppingBag, Package } from "lucide-react";
-import { BackArrow } from "@/components/ui/back-arrow";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { BottomNavigation } from "@/components/BottomNavigation";
+import { ProductDetailSheet } from "@/components/loja/ProductDetailSheet";
 
 interface Produto {
   id: string;
