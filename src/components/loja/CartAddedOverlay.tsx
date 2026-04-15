@@ -1,15 +1,13 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { ShoppingCart } from "lucide-react";
+import { Check } from "lucide-react";
 import { useState, useCallback, useRef } from "react";
 
 let globalShow: ((name: string) => void) | null = null;
 
-/** Call this from anywhere to show the centered cart feedback */
 export function showCartAddedToast(productName: string) {
   globalShow?.(productName);
 }
 
-/** Mount this once at the app/page level */
 export function CartAddedOverlay() {
   const [visible, setVisible] = useState(false);
   const [productName, setProductName] = useState("");
@@ -19,7 +17,7 @@ export function CartAddedOverlay() {
     if (timerRef.current) clearTimeout(timerRef.current);
     setProductName(name);
     setVisible(true);
-    timerRef.current = setTimeout(() => setVisible(false), 1600);
+    timerRef.current = setTimeout(() => setVisible(false), 1800);
   }, []);
 
   globalShow = show;
@@ -29,28 +27,63 @@ export function CartAddedOverlay() {
       {visible && (
         <motion.div
           key="cart-toast"
-          initial={{ opacity: 0, scale: 0.8 }}
+          initial={{ opacity: 0, scale: 0.85 }}
           animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.85 }}
-          transition={{ type: "spring", damping: 22, stiffness: 340 }}
+          exit={{ opacity: 0, scale: 0.9 }}
+          transition={{ type: "spring", damping: 24, stiffness: 380 }}
           className="fixed inset-0 z-[100] flex items-center justify-center pointer-events-none"
         >
-          <div className="bg-card/95 backdrop-blur-xl border border-border/40 rounded-2xl px-8 py-6 flex flex-col items-center gap-3 shadow-2xl shadow-foreground/5 max-w-[240px]">
-            {/* Animated cart icon */}
+          <div className="bg-card/97 backdrop-blur-2xl border border-border/30 rounded-3xl px-10 py-8 flex flex-col items-center gap-4 shadow-2xl shadow-foreground/8 min-w-[260px] max-w-[300px]">
+            {/* Animated check inside cart circle */}
             <motion.div
-              initial={{ scale: 0, rotate: -20 }}
-              animate={{ scale: 1, rotate: 0 }}
-              transition={{ type: "spring", damping: 14, stiffness: 300, delay: 0.05 }}
-              className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center"
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ type: "spring", damping: 12, stiffness: 260, delay: 0.05 }}
+              className="w-[72px] h-[72px] rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center relative"
             >
-              <ShoppingCart className="w-6 h-6 text-primary" />
+              {/* Cart bag shape */}
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" className="text-primary">
+                <path
+                  d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  fill="currentColor"
+                  fillOpacity="0.08"
+                />
+                <path
+                  d="M3 6h18"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <path
+                  d="M16 10a4 4 0 01-8 0"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+
+              {/* Checkmark badge */}
+              <motion.div
+                initial={{ scale: 0, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ type: "spring", damping: 14, stiffness: 300, delay: 0.2 }}
+                className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-primary flex items-center justify-center shadow-lg shadow-primary/30"
+              >
+                <Check className="w-4 h-4 text-primary-foreground" strokeWidth={3} />
+              </motion.div>
             </motion.div>
 
             <motion.p
-              initial={{ opacity: 0, y: 6 }}
+              initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
-              className="text-sm font-bold text-foreground text-center"
+              transition={{ delay: 0.12 }}
+              className="text-base font-bold text-foreground text-center tracking-tight"
             >
               Adicionado ao carrinho
             </motion.p>
@@ -58,19 +91,10 @@ export function CartAddedOverlay() {
             <motion.p
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              transition={{ delay: 0.15 }}
-              className="text-[11px] text-muted-foreground text-center line-clamp-2 leading-snug"
+              transition={{ delay: 0.2 }}
+              className="text-xs text-muted-foreground text-center line-clamp-2 leading-relaxed max-w-[220px]"
             >
               {productName}
-            </motion.p>
-
-            <motion.p
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.25 }}
-              className="text-[10px] text-primary/70 font-medium"
-            >
-              Continue comprando ✨
             </motion.p>
           </div>
         </motion.div>
