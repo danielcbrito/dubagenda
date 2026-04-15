@@ -2,7 +2,8 @@ import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowLeft, Search, ShoppingBag, Package } from "lucide-react";
+import { Search, ShoppingBag, Package } from "lucide-react";
+import { BackArrow } from "@/components/ui/back-arrow";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { BottomNavigation } from "@/components/BottomNavigation";
@@ -117,9 +118,14 @@ export default function ClienteLoja() {
             onClick={() => navigate("/cliente")}
             className="w-8 h-8 rounded-full bg-card flex items-center justify-center border border-border/40"
           >
-            <ArrowLeft className="w-4 h-4 text-foreground" />
+            <BackArrow size={18} className="text-foreground" />
           </motion.button>
-          <h1 className="flex-1 text-base font-bold text-foreground">Loja</h1>
+          <div className="flex-1 min-w-0">
+            <h1 className="text-base font-bold text-foreground">Loja</h1>
+            {userTenant?.nome && (
+              <p className="text-[10px] text-muted-foreground/60 truncate">{userTenant.nome}</p>
+            )}
+          </div>
         </div>
 
         {/* Search bar — MercadoLivre style */}
