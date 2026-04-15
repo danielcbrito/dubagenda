@@ -485,6 +485,8 @@ export default function ClienteLoja() {
         open={!!selectedProduct}
         onClose={() => setSelectedProduct(null)}
         onAddToCart={(p) => cart.addItem(p)}
+        allProducts={produtos}
+        onSelectProduct={(p) => setSelectedProduct(p)}
       />
 
       <CartSheet
