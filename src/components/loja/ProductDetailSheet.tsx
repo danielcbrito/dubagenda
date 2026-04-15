@@ -2,7 +2,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Package, Star, Minus, Plus, ThumbsUp } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { toast } from "sonner";
+import { showCartAddedToast } from "@/components/loja/CartAddedOverlay";
 
 interface Produto {
   id: string;
@@ -179,16 +179,7 @@ export function ProductDetailSheet({ produto, open, onClose, onAddToCart, allPro
       setQty(1);
       setAddedFeedback(true);
       setTimeout(() => setAddedFeedback(false), 2000);
-      toast.success("Produto adicionado ao carrinho", {
-        description: `${qty}x ${produto.nome}`,
-        action: {
-          label: "Ver carrinho",
-          onClick: () => {
-            onClose();
-            setTimeout(() => document.dispatchEvent(new CustomEvent("open-cart")), 300);
-          },
-        },
-      });
+      showCartAddedToast(`${qty}x ${produto.nome}`);
     }
   };
 
@@ -198,7 +189,7 @@ export function ProductDetailSheet({ produto, open, onClose, onAddToCart, allPro
       setQty(1);
       onClose();
       setTimeout(() => document.dispatchEvent(new CustomEvent("open-cart")), 350);
-      toast.success("Produto pronto para finalizar!", { description: `${qty}x ${produto.nome}` });
+      showCartAddedToast(`${qty}x ${produto.nome}`);
     }
   };
 

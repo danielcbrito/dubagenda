@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from "react";
-import { MaintenanceScreen } from "@/components/MaintenanceScreen";
+
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -11,7 +11,7 @@ import { ProductDetailSheet } from "@/components/loja/ProductDetailSheet";
 import { CartSheet } from "@/components/loja/CartSheet";
 import { CheckoutSheet } from "@/components/loja/CheckoutSheet";
 import { useCart } from "@/hooks/useCart";
-import { toast } from "sonner";
+import { CartAddedOverlay, showCartAddedToast } from "@/components/loja/CartAddedOverlay";
 
 interface Produto {
   id: string;
@@ -218,9 +218,7 @@ export default function ClienteLoja() {
   const handleQuickAdd = useCallback((e: React.MouseEvent, produto: Produto) => {
     e.stopPropagation();
     cart.addItem(produto);
-    toast.success("Produto adicionado ao carrinho", {
-      description: produto.nome,
-    });
+    showCartAddedToast(produto.nome);
   }, [cart]);
 
   return (
@@ -546,6 +544,8 @@ export default function ClienteLoja() {
         tenantId={userTenant?.id || ""}
         tenantNome={userTenant?.nome || "Loja"}
       />
+
+      <CartAddedOverlay />
 
       {!selectedProduct && !cartOpen && !searchOpen && (
         <BottomNavigation
