@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { motion } from "framer-motion";
-import { ArrowLeft, Check, Package, Store, CreditCard } from "lucide-react";
+import { ArrowLeft, Check, Package } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -279,6 +279,7 @@ export function CheckoutSheet({
               selected={false}
               onSelect={() => {}}
               disabled
+              icon={<img src={pixIconCheckout} alt="Pix" className="w-5 h-5 object-contain" />}
             />
             <PaymentRow
               label="Cartão de Crédito"
@@ -305,7 +306,7 @@ export function CheckoutSheet({
           </div>
           <div className="flex justify-between items-center">
             <span className="text-xs text-muted-foreground/60">Retirada</span>
-            <span className="text-xs text-muted-foreground font-medium">Grátis</span>
+            <span className="text-xs font-semibold text-emerald-500">Grátis</span>
           </div>
           <div className="h-px bg-border/15 my-1" />
           <div className="flex justify-between items-center">
