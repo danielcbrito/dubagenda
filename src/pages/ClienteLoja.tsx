@@ -57,6 +57,19 @@ export default function ClienteLoja() {
     staleTime: 5 * 60 * 1000,
   });
 
+  const { data: bannerUrl } = useQuery({
+    queryKey: ["tenant-banner-loja", userTenant?.id],
+    queryFn: async () => {
+      const { data } = await supabase.rpc("get_tenant_banners", {
+        p_tenant_ids: [userTenant!.id],
+      });
+      const banners = data as { tenant_id: string; banner_url: string }[] | null;
+      return banners?.[0]?.banner_url ?? null;
+    },
+    enabled: !!userTenant?.id,
+    staleTime: 10 * 60 * 1000,
+  });
+
   const { data: produtos = [], isLoading } = useQuery({
     queryKey: ["produtos-loja", userTenant?.id],
     queryFn: async () => {
@@ -114,68 +127,87 @@ export default function ClienteLoja() {
 
   return (
     <div className="flex flex-col bg-background" style={{ height: "100dvh" }}>
-      {/* ─── Header ─── */}
-      <div className="flex-shrink-0">
-        {/* Top bar with cart icon */}
-        <div className="px-4 pt-4 pb-2 flex items-center justify-end">
-          <motion.button
-            whileTap={{ scale: 0.9 }}
-            onClick={() => setCartOpen(true)}
-            className="relative w-9 h-9 rounded-full bg-card border border-border/40 flex items-center justify-center cursor-pointer"
-          >
-            <ShoppingCart className="w-[18px] h-[18px] text-foreground" />
-            {cart.totalItems > 0 && (
-              <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center">
-                {cart.totalItems > 9 ? "9+" : cart.totalItems}
-              </span>
-            )}
-          </motion.button>
-        </div>
-
-        {/* Search bar */}
-        <div className="px-4 pb-3">
-          <div className="relative">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-[18px] h-[18px] text-muted-foreground/50" />
-            <input
-              type="text"
-              placeholder="Buscar na loja"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className={cn(
-                "w-full h-11 pl-10 pr-4 rounded-full",
-                "bg-card border border-border/60",
-                "text-sm text-foreground placeholder:text-muted-foreground/40",
-                "focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/40",
-                "transition-all duration-200"
-              )}
+      {/* ─── Hero Banner with overlays ─── */}
+      <div className="relative flex-shrink-0">
+        {/* Banner image */}
+        <div className="relative h-[180px] bg-muted/20 overflow-hidden">
+          {bannerUrl ? (
+            <img
+              src={bannerUrl}
+              alt="Banner"
+              className="w-full h-full object-cover"
             />
-          </div>
-        </div>
+          ) : (
+            <div className="w-full h-full bg-gradient-to-br from-muted/40 to-muted/10" />
+          )}
+          {/* Dark overlay for readability */}
+          <div className="absolute inset-0 bg-gradient-to-b from-background/80 via-background/30 to-background/80" />
 
-        {/* Categories — pill style */}
-        {categories.length > 0 && (
-          <div className="px-4 pb-3">
-            <div className="flex gap-2 overflow-x-auto scrollbar-hide">
-              <CategoryPill
-                label="Todos"
-                active={!selectedCategory}
-                onClick={() => setSelectedCategory(null)}
+          {/* Top bar: barbershop name + cart */}
+          <div className="absolute top-0 left-0 right-0 px-4 pt-4 flex items-center justify-between">
+            <div className="min-w-0 flex-1 mr-3">
+              <p className="text-sm font-bold text-foreground truncate">
+                {userTenant?.nome || "Loja"}
+              </p>
+            </div>
+            <motion.button
+              whileTap={{ scale: 0.9 }}
+              onClick={() => setCartOpen(true)}
+              className="relative flex items-center justify-center cursor-pointer"
+            >
+              <ShoppingCart className="w-[22px] h-[22px] text-foreground" />
+              {cart.totalItems > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center">
+                  {cart.totalItems > 9 ? "9+" : cart.totalItems}
+                </span>
+              )}
+            </motion.button>
+          </div>
+
+          {/* Search bar overlaid on banner */}
+          <div className="absolute bottom-3 left-4 right-4">
+            <div className="relative">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-[18px] h-[18px] text-muted-foreground/60" />
+              <input
+                type="text"
+                placeholder="Buscar na loja"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className={cn(
+                  "w-full h-10 pl-10 pr-4 rounded-full",
+                  "bg-background/90 backdrop-blur-md border border-border/40",
+                  "text-sm text-foreground placeholder:text-muted-foreground/40",
+                  "focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/40",
+                  "transition-all duration-200"
+                )}
               />
-              {categories.map((cat) => (
-                <CategoryPill
-                  key={cat}
-                  label={categoryLabels[cat] || cat}
-                  active={cat === selectedCategory}
-                  onClick={() => setSelectedCategory(cat === selectedCategory ? null : cat)}
-                />
-              ))}
             </div>
           </div>
-        )}
-
-        {/* Subtle divider */}
-        <div className="h-px bg-border/40" />
+        </div>
       </div>
+
+      {/* Categories */}
+      {categories.length > 0 && (
+        <div className="flex-shrink-0 px-4 py-2.5">
+          <div className="flex gap-2 overflow-x-auto scrollbar-hide">
+            <CategoryPill
+              label="Todos"
+              active={!selectedCategory}
+              onClick={() => setSelectedCategory(null)}
+            />
+            {categories.map((cat) => (
+              <CategoryPill
+                key={cat}
+                label={categoryLabels[cat] || cat}
+                active={cat === selectedCategory}
+                onClick={() => setSelectedCategory(cat === selectedCategory ? null : cat)}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="h-px bg-border/30 flex-shrink-0" />
 
       {/* ─── Content ─── */}
       <div className="flex-1 min-h-0 relative">
