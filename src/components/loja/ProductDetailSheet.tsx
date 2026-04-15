@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Package, Star, ShoppingCart, Minus, Plus, Check, Zap } from "lucide-react";
+import { ArrowLeft, Package, Star, Minus, Plus, Check, ThumbsUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -24,6 +24,38 @@ interface ProductDetailSheetProps {
   onAddToCart?: (produto: Produto) => void;
 }
 
+const FAKE_REVIEWS = [
+  {
+    name: "Carlos M.",
+    rating: 5,
+    date: "há 3 dias",
+    comment: "Produto excelente! Qualidade surpreendente, superou minhas expectativas. Recomendo demais!",
+    helpful: 14,
+    images: [
+      "https://images.unsplash.com/photo-1585747860036-4cb2154c4970?w=120&h=120&fit=crop",
+      "https://images.unsplash.com/photo-1626015365107-aa76da6e04c4?w=120&h=120&fit=crop",
+    ],
+  },
+  {
+    name: "Rafael S.",
+    rating: 5,
+    date: "há 1 semana",
+    comment: "Muito bom! Chegou bem embalado e o produto é de primeira. Voltarei a comprar com certeza.",
+    helpful: 23,
+    images: [
+      "https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=120&h=120&fit=crop",
+    ],
+  },
+  {
+    name: "Lucas P.",
+    rating: 4,
+    date: "há 2 semanas",
+    comment: "Produto muito bom, bem confortável. Único detalhe é que demorou um pouco pra chegar, mas valeu a espera.",
+    helpful: 8,
+    images: [],
+  },
+];
+
 export function ProductDetailSheet({ produto, open, onClose, onAddToCart }: ProductDetailSheetProps) {
   const [qty, setQty] = useState(1);
   const [addedFeedback, setAddedFeedback] = useState(false);
@@ -41,18 +73,14 @@ export function ProductDetailSheet({ produto, open, onClose, onAddToCart }: Prod
     if (!outOfStock && onAddToCart) {
       for (let i = 0; i < qty; i++) onAddToCart(produto);
       setQty(1);
-
-      // Show success feedback
       setAddedFeedback(true);
       setTimeout(() => setAddedFeedback(false), 2000);
-
       toast.success("Produto adicionado ao carrinho", {
         description: `${qty}x ${produto.nome}`,
         action: {
           label: "Ver carrinho",
           onClick: () => {
             onClose();
-            // Small delay to let close animation finish
             setTimeout(() => {
               document.dispatchEvent(new CustomEvent("open-cart"));
             }, 300);
@@ -67,15 +95,17 @@ export function ProductDetailSheet({ produto, open, onClose, onAddToCart }: Prod
       for (let i = 0; i < qty; i++) onAddToCart(produto);
       setQty(1);
       onClose();
-      // Open cart immediately for checkout
       setTimeout(() => {
         document.dispatchEvent(new CustomEvent("open-cart"));
       }, 350);
       toast.success("Produto pronto para finalizar!", {
-        description: `${qty}x ${produto.nome} — R$ ${(finalPrice * qty).toFixed(2)}`,
+        description: `${qty}x ${produto.nome}`,
       });
     }
   };
+
+  const avgRating = 4.7;
+  const totalReviews = FAKE_REVIEWS.length;
 
   return (
     <AnimatePresence>
@@ -87,7 +117,7 @@ export function ProductDetailSheet({ produto, open, onClose, onAddToCart }: Prod
           transition={{ type: "spring", damping: 30, stiffness: 320 }}
           className="fixed inset-0 z-50 bg-background flex flex-col"
         >
-          {/* Back button floating over image */}
+          {/* Back button */}
           <motion.button
             whileTap={{ scale: 0.9 }}
             onClick={() => { setQty(1); onClose(); }}
@@ -97,7 +127,7 @@ export function ProductDetailSheet({ produto, open, onClose, onAddToCart }: Prod
           </motion.button>
 
           {/* Scrollable content */}
-          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
+          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain pb-8">
             {/* Product image */}
             <div className="relative aspect-square bg-muted/10 overflow-hidden">
               {produto.imagem_url ? (
@@ -192,6 +222,32 @@ export function ProductDetailSheet({ produto, open, onClose, onAddToCart }: Prod
                 </div>
               )}
 
+              {/* Action buttons — inline, above description */}
+              {!outOfStock && (
+                <div className="flex flex-col gap-2.5 pt-2">
+                  <motion.button
+                    whileTap={{ scale: 0.97 }}
+                    onClick={handleBuyNow}
+                    className="w-full py-4 rounded-xl text-[15px] font-bold bg-foreground text-background active:scale-[0.98] transition-all cursor-pointer"
+                  >
+                    Comprar Agora
+                  </motion.button>
+
+                  <motion.button
+                    whileTap={{ scale: 0.97 }}
+                    onClick={handleAddToCart}
+                    className={cn(
+                      "w-full py-4 rounded-xl text-[15px] font-bold transition-all cursor-pointer",
+                      addedFeedback
+                        ? "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20"
+                        : "bg-card border border-border/50 text-foreground active:scale-[0.98]"
+                    )}
+                  >
+                    {addedFeedback ? "Adicionado!" : "Adicionar ao Carrinho"}
+                  </motion.button>
+                </div>
+              )}
+
               <div className="h-px bg-border/20" />
 
               {/* Description */}
@@ -208,72 +264,103 @@ export function ProductDetailSheet({ produto, open, onClose, onAddToCart }: Prod
 
               {produto.descricao && <div className="h-px bg-border/20" />}
 
-              {/* Reviews */}
-              <div className="space-y-3 pb-6">
-                <h3 className="text-[11px] font-semibold text-muted-foreground/50 uppercase tracking-widest">
-                  Avaliações
-                </h3>
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-1">
-                    {[1, 2, 3, 4, 5].map((star) => (
-                      <Star
-                        key={star}
-                        className="w-4 h-4 text-muted-foreground/15"
-                        fill="currentColor"
-                      />
-                    ))}
+              {/* Reviews section — Shopee style */}
+              <div className="space-y-4 pb-6">
+                {/* Review header */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xl font-bold text-foreground tabular-nums">{avgRating}</span>
+                    <Star className="w-5 h-5 text-amber-400" fill="currentColor" />
+                    <span className="text-sm text-muted-foreground">
+                      Avaliações ({totalReviews})
+                    </span>
                   </div>
-                  <span className="text-xs text-muted-foreground/40">
-                    Sem avaliações ainda
+                  <span className="text-xs text-primary font-medium cursor-pointer">Ver mais</span>
+                </div>
+
+                {/* Highlight badge */}
+                <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-500/5 border border-amber-500/10">
+                  <span className="text-amber-500 text-xs">💬</span>
+                  <span className="text-xs text-amber-600 dark:text-amber-400 font-medium">
+                    Frequentemente avaliado como produto excelente
                   </span>
+                </div>
+
+                {/* Individual reviews */}
+                <div className="space-y-5">
+                  {FAKE_REVIEWS.map((review, idx) => (
+                    <motion.div
+                      key={idx}
+                      initial={{ opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: idx * 0.05 }}
+                      className="space-y-2.5"
+                    >
+                      {/* Review header */}
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center">
+                            <span className="text-[10px] font-bold text-muted-foreground">
+                              {review.name.charAt(0)}
+                            </span>
+                          </div>
+                          <span className="text-sm font-medium text-foreground">{review.name}</span>
+                        </div>
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground/50">
+                          <ThumbsUp className="w-3 h-3" />
+                          <span>Útil ({review.helpful})</span>
+                        </div>
+                      </div>
+
+                      {/* Stars */}
+                      <div className="flex items-center gap-1">
+                        {[1, 2, 3, 4, 5].map((s) => (
+                          <Star
+                            key={s}
+                            className={cn(
+                              "w-3.5 h-3.5",
+                              s <= review.rating ? "text-amber-400" : "text-muted-foreground/15"
+                            )}
+                            fill="currentColor"
+                          />
+                        ))}
+                        <span className="text-[10px] text-muted-foreground/40 ml-2">
+                          {review.date}
+                        </span>
+                      </div>
+
+                      {/* Comment */}
+                      <p className="text-sm text-muted-foreground leading-relaxed">
+                        {review.comment}
+                      </p>
+
+                      {/* Review images */}
+                      {review.images.length > 0 && (
+                        <div className="flex gap-2">
+                          {review.images.map((img, imgIdx) => (
+                            <div
+                              key={imgIdx}
+                              className="w-20 h-20 rounded-lg overflow-hidden bg-muted/20"
+                            >
+                              <img
+                                src={img}
+                                alt={`Avaliação ${idx + 1} foto ${imgIdx + 1}`}
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {idx < FAKE_REVIEWS.length - 1 && (
+                        <div className="h-px bg-border/15 mt-3" />
+                      )}
+                    </motion.div>
+                  ))}
                 </div>
               </div>
             </div>
           </div>
-
-          {/* Bottom sticky CTA bar */}
-          {!outOfStock && (
-            <div
-              className="flex-shrink-0 bg-background/95 backdrop-blur-lg border-t border-border/30 px-4 pt-3"
-              style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 12px)" }}
-            >
-              <div className="flex flex-col gap-2">
-                {/* Buy Now — primary */}
-                <motion.button
-                  whileTap={{ scale: 0.97 }}
-                  onClick={handleBuyNow}
-                  className="w-full py-3 rounded-xl text-sm font-semibold bg-foreground text-background active:scale-[0.98] transition-all cursor-pointer flex items-center justify-center gap-2"
-                >
-                  <Zap className="w-4 h-4" />
-                  Comprar Agora — R$ {(finalPrice * qty).toFixed(2)}
-                </motion.button>
-
-                {/* Add to cart — secondary */}
-                <motion.button
-                  whileTap={{ scale: 0.97 }}
-                  onClick={handleAddToCart}
-                  className={cn(
-                    "w-full py-3 rounded-xl text-sm font-semibold transition-all cursor-pointer flex items-center justify-center gap-2",
-                    addedFeedback
-                      ? "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20"
-                      : "bg-card border border-border/50 text-foreground active:scale-[0.98]"
-                  )}
-                >
-                  {addedFeedback ? (
-                    <>
-                      <Check className="w-4 h-4" />
-                      Adicionado!
-                    </>
-                  ) : (
-                    <>
-                      <ShoppingCart className="w-4 h-4" />
-                      Adicionar ao Carrinho
-                    </>
-                  )}
-                </motion.button>
-              </div>
-            </div>
-          )}
         </motion.div>
       )}
     </AnimatePresence>
