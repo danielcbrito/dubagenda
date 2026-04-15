@@ -189,7 +189,7 @@ export function ProductDetailSheet({ produto, open, onClose, onAddToCart, allPro
       setQty(1);
       onClose();
       setTimeout(() => document.dispatchEvent(new CustomEvent("open-cart")), 350);
-      toast.success("Produto pronto para finalizar!", { description: `${qty}x ${produto.nome}` });
+      showCartAddedToast(`${qty}x ${produto.nome}`);
     }
   };
 
