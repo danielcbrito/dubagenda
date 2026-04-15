@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from "react";
-import { MaintenanceScreen } from "@/components/MaintenanceScreen";
+
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -11,7 +11,6 @@ import { ProductDetailSheet } from "@/components/loja/ProductDetailSheet";
 import { CartSheet } from "@/components/loja/CartSheet";
 import { CheckoutSheet } from "@/components/loja/CheckoutSheet";
 import { useCart } from "@/hooks/useCart";
-import { toast } from "sonner";
 import { CartAddedOverlay, showCartAddedToast } from "@/components/loja/CartAddedOverlay";
 
 interface Produto {

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Package, Star, Minus, Plus, ThumbsUp } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { toast } from "sonner";
+import { showCartAddedToast } from "@/components/loja/CartAddedOverlay";
 
 interface Produto {
   id: string;
