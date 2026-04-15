@@ -372,12 +372,14 @@ export function ProductDetailSheet({ produto, open, onClose, onAddToCart, allPro
 
                 {/* Ver mais link */}
                 {reviewsToShow < FAKE_REVIEWS.length && (
-                  <button
-                    onClick={handleSeeMoreReviews}
-                    className="text-xs font-medium text-primary cursor-pointer"
-                  >
-                    Ver mais avaliações
-                  </button>
+                  <div className="flex justify-center">
+                    <button
+                      onClick={handleSeeMoreReviews}
+                      className="text-xs font-medium text-primary cursor-pointer"
+                    >
+                      Ver mais avaliações
+                    </button>
+                  </div>
                 )}
               </div>
 
@@ -438,19 +440,19 @@ export function ProductDetailSheet({ produto, open, onClose, onAddToCart, allPro
             transition={{ type: "spring", damping: 30, stiffness: 320 }}
             className="fixed inset-0 z-[60] bg-background flex flex-col"
           >
-            <div className="flex-shrink-0 flex items-center justify-between px-5 pt-5 pb-3 border-b border-border/20">
+            <div className="flex-shrink-0 flex items-center gap-3 px-5 pt-5 pb-3 border-b border-border/20">
+              <motion.button
+                whileTap={{ scale: 0.9 }}
+                onClick={() => setShowAllReviews(false)}
+                className="w-9 h-9 flex items-center justify-center rounded-full bg-background/60 backdrop-blur-md shadow-md cursor-pointer"
+              >
+                <ArrowLeft className="w-5 h-5 text-foreground" />
+              </motion.button>
               <div className="flex items-center gap-2">
                 <span className="text-xl font-bold text-foreground tabular-nums">{avgRating}</span>
                 <Star className="w-5 h-5 text-amber-400" fill="currentColor" />
                 <span className="text-sm text-muted-foreground">Todas as avaliações ({FAKE_REVIEWS.length})</span>
               </div>
-              <motion.button
-                whileTap={{ scale: 0.9 }}
-                onClick={() => setShowAllReviews(false)}
-                className="w-8 h-8 flex items-center justify-center rounded-full bg-muted/50 cursor-pointer"
-              >
-                <X className="w-4 h-4 text-foreground" />
-              </motion.button>
             </div>
             <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-5 py-4">
               <div className="space-y-5">
