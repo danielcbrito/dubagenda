@@ -22,10 +22,9 @@ interface ProductDetailSheetProps {
   open: boolean;
   onClose: () => void;
   onAddToCart?: (produto: Produto) => void;
-  onBuyNow?: (produto: Produto, qty: number) => void;
 }
 
-export function ProductDetailSheet({ produto, open, onClose, onAddToCart, onBuyNow }: ProductDetailSheetProps) {
+export function ProductDetailSheet({ produto, open, onClose, onAddToCart }: ProductDetailSheetProps) {
   const [qty, setQty] = useState(1);
   const [addedFeedback, setAddedFeedback] = useState(false);
 
