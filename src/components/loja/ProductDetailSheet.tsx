@@ -57,21 +57,14 @@ export function ProductDetailSheet({ produto, open, onClose, onAddToCart }: Prod
           transition={{ type: "spring", damping: 30, stiffness: 320 }}
           className="fixed inset-0 z-50 bg-background flex flex-col"
         >
-          {/* Header */}
-          <div className="flex items-center gap-3 px-4 pt-4 pb-3 flex-shrink-0">
-            <motion.button
-              whileTap={{ scale: 0.9 }}
-              onClick={onClose}
-              className="w-8 h-8 flex items-center justify-center cursor-pointer"
-            >
-              <ArrowLeft className="w-5 h-5 text-foreground" />
-            </motion.button>
-            <h2 className="text-base font-bold text-foreground tracking-tight flex-1 truncate">
-              Detalhes
-            </h2>
-          </div>
-
-          <div className="h-px bg-border/30" />
+          {/* Back button floating over image */}
+          <motion.button
+            whileTap={{ scale: 0.9 }}
+            onClick={onClose}
+            className="absolute top-4 left-4 z-10 w-9 h-9 flex items-center justify-center cursor-pointer rounded-full bg-background/60 backdrop-blur-md shadow-md"
+          >
+            <ArrowLeft className="w-5 h-5 text-foreground" />
+          </motion.button>
 
           {/* Scrollable content */}
           <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain pb-8">
