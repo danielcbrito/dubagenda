@@ -128,35 +128,69 @@ export function ProductDetailSheet({ produto, open, onClose, onAddToCart }: Prod
                 </p>
               )}
 
-              {/* Action buttons */}
-              <div className="flex gap-3 pt-1">
+              {/* Quantity selector */}
+              <div className="flex items-center gap-4 pt-1">
+                <span className="text-[11px] font-semibold text-muted-foreground/50 uppercase tracking-widest">
+                  Quantidade
+                </span>
+                <div className="flex items-center gap-0 rounded-lg border border-border/40 overflow-hidden">
+                  <motion.button
+                    whileTap={{ scale: 0.85 }}
+                    onClick={() => setQty((q) => Math.max(1, q - 1))}
+                    disabled={qty <= 1}
+                    className={cn(
+                      "w-8 h-8 flex items-center justify-center cursor-pointer bg-card transition-colors",
+                      qty <= 1 && "opacity-30 pointer-events-none"
+                    )}
+                  >
+                    <Minus className="w-3.5 h-3.5 text-muted-foreground" />
+                  </motion.button>
+                  <span className="text-sm font-bold text-foreground tabular-nums w-8 text-center bg-card">
+                    {qty}
+                  </span>
+                  <motion.button
+                    whileTap={{ scale: 0.85 }}
+                    onClick={() => setQty((q) => Math.min(produto.estoque, q + 1))}
+                    disabled={qty >= produto.estoque}
+                    className={cn(
+                      "w-8 h-8 flex items-center justify-center cursor-pointer bg-card transition-colors",
+                      qty >= produto.estoque && "opacity-30 pointer-events-none"
+                    )}
+                  >
+                    <Plus className="w-3.5 h-3.5 text-muted-foreground" />
+                  </motion.button>
+                </div>
+              </div>
+
+              {/* Action buttons — stacked, slim */}
+              <div className="flex flex-col gap-2.5 pt-2">
                 <motion.button
-                  whileTap={{ scale: 0.95 }}
+                  whileTap={{ scale: 0.97 }}
+                  disabled={outOfStock}
+                  onClick={handleBuyNow}
+                  className={cn(
+                    "w-full py-3 rounded-xl text-sm font-semibold transition-all cursor-pointer",
+                    outOfStock
+                      ? "bg-muted text-muted-foreground pointer-events-none"
+                      : "bg-foreground text-background active:scale-[0.98]"
+                  )}
+                >
+                  {outOfStock ? "Esgotado" : "Comprar Agora"}
+                </motion.button>
+
+                <motion.button
+                  whileTap={{ scale: 0.97 }}
                   disabled={outOfStock}
                   onClick={handleAddToCart}
                   className={cn(
-                    "flex-1 py-3 rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-2 cursor-pointer",
+                    "w-full py-3 rounded-xl text-sm font-semibold transition-all cursor-pointer flex items-center justify-center gap-2",
                     outOfStock
                       ? "bg-muted text-muted-foreground pointer-events-none"
-                      : "bg-card border border-border/50 text-foreground active:scale-[0.97]"
+                      : "bg-card border border-border/50 text-foreground active:scale-[0.98]"
                   )}
                 >
                   <ShoppingCart className="w-4 h-4" />
                   {outOfStock ? "Indisponível" : "Adicionar ao Carrinho"}
-                </motion.button>
-
-                <motion.button
-                  whileTap={{ scale: 0.95 }}
-                  disabled={outOfStock}
-                  onClick={handleAddToCart}
-                  className={cn(
-                    "flex-1 py-3 rounded-xl text-sm font-semibold transition-all cursor-pointer",
-                    outOfStock
-                      ? "bg-muted text-muted-foreground pointer-events-none"
-                      : "bg-foreground text-background active:scale-[0.97]"
-                  )}
-                >
-                  {outOfStock ? "Esgotado" : "Comprar Agora"}
                 </motion.button>
               </div>
 
