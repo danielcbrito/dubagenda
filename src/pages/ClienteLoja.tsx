@@ -56,6 +56,11 @@ export default function ClienteLoja() {
   const slideIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const categorySentinelRef = useRef<HTMLDivElement>(null);
+  const {
+    isStoreMaintenanceMode,
+    maintenanceMessage,
+    isLoading: isStoreMaintenanceLoading,
+  } = useStoreMaintenanceMode();
 
   const { data: userTenant } = useQuery({
     queryKey: ["user-tenant-loja"],
