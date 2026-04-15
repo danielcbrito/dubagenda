@@ -2,7 +2,7 @@ import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, ShoppingBag, ShoppingCart, Package, X, Plus } from "lucide-react";
+import { Search, ShoppingBag, ShoppingCart, Package, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { BottomNavigation } from "@/components/BottomNavigation";
@@ -579,9 +579,10 @@ function FeaturedCard({ produto, index, discount, onClick }: { produto: Produto;
 }
 
 /* ─── Product Card ─── */
-function ProductCard({ produto, index, discount, onClick }: { produto: Produto; index: number; discount: number; onClick: () => void }) {
+function ProductCard({ produto, index, discount, onClick, onQuickAdd }: { produto: Produto; index: number; discount: number; onClick: () => void; onQuickAdd?: (e: React.MouseEvent) => void }) {
   const hasPromo = discount > 0;
   const outOfStock = produto.estoque <= 0;
+  const finalPrice = hasPromo ? produto.preco_promocional! : produto.preco;
 
   return (
     <motion.div
@@ -613,6 +614,16 @@ function ProductCard({ produto, index, discount, onClick }: { produto: Produto; 
           <div className="absolute top-2 left-2 px-2 py-0.5 bg-primary text-primary-foreground text-[10px] font-bold rounded-full">
             -{discount}%
           </div>
+        )}
+        {/* Quick add button */}
+        {!outOfStock && onQuickAdd && (
+          <motion.button
+            whileTap={{ scale: 0.8 }}
+            onClick={onQuickAdd}
+            className="absolute bottom-2 right-2 w-8 h-8 rounded-full bg-foreground text-background flex items-center justify-center shadow-lg cursor-pointer active:scale-90 transition-transform"
+          >
+            <ShoppingCart className="w-3.5 h-3.5" />
+          </motion.button>
         )}
       </div>
       <div className="p-3 space-y-1.5">
