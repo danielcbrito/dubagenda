@@ -310,7 +310,7 @@ export default function ClienteLoja() {
       </div>
 
       {/* ─── Banner Carousel ─── */}
-      <div className="flex-shrink-0 px-4 pb-2.5">
+      <div className="flex-shrink-0 px-4 pb-3 pt-1">
         <div className="relative rounded-2xl overflow-hidden bg-muted/20" style={{ aspectRatio: "16/8" }}>
           <AnimatePresence mode="wait">
             <motion.div
