@@ -7,6 +7,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, useNavigate, useLocation } from "react-router-dom";
 import { useMaintenanceMode } from "@/hooks/useMaintenanceMode";
+import { useStoreMaintenanceMode } from "@/hooks/useStoreMaintenanceMode";
 import { MaintenanceScreen } from "@/components/MaintenanceScreen";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -151,6 +152,32 @@ function MaintenanceWrapper({ children }: { children: React.ReactNode }) {
       </div>
     </div>
   );
+}
+
+function StoreMaintenanceGate({ children }: { children: React.ReactNode }) {
+  const navigate = useNavigate();
+  const { isStoreMaintenanceMode, maintenanceMessage, isLoading } = useStoreMaintenanceMode();
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-dvh bg-background">
+        <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (isStoreMaintenanceMode) {
+    return (
+      <MaintenanceScreen
+        message={maintenanceMessage || undefined}
+        onExit={() => {
+          navigate("/cliente");
+        }}
+      />
+    );
+  }
+
+  return <>{children}</>;
 }
 
 /**
@@ -338,7 +365,7 @@ function AppRoutes() {
               <Route path="/cliente/dados-pessoais" element={<ClienteDadosPessoais />} />
               <Route path="/cliente/seguranca" element={<ClienteSeguranca />} />
               <Route path="/cliente/barbearia" element={<ClienteBarbearia />} />
-              <Route path="/cliente/loja" element={<ClienteLoja />} />
+              <Route path="/cliente/loja" element={<StoreMaintenanceGate><ClienteLoja /></StoreMaintenanceGate>} />
               <Route path="/cliente/barbeiro/:barberId/avaliacoes" element={<BarberReviews />} />
               <Route path="/suporte" element={<SupportChat />} />
               <Route path="/escolher-barbearia" element={<EscolherBarbearia />} />
