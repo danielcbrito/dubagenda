@@ -1,9 +1,10 @@
 import { useState, useMemo } from "react";
 import { motion } from "framer-motion";
-import { ArrowLeft, Check, Package } from "lucide-react";
+import { ArrowLeft, Check, Package, Store, CreditCard } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import pixIconCheckout from "@/assets/pix-icon-checkout.png";
 import type { CartItem } from "@/hooks/useCart";
 
 interface CheckoutSheetProps {
