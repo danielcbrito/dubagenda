@@ -58,7 +58,7 @@ export function ProductDetailSheet({ produto, open, onClose }: ProductDetailShee
             animate={{ y: 0 }}
             exit={{ y: "100%" }}
             transition={{ type: "spring", damping: 28, stiffness: 300 }}
-            className="fixed bottom-0 left-0 right-0 z-50 max-h-[92dvh] rounded-t-2xl bg-background border-t border-border/40 overflow-hidden flex flex-col"
+            className="fixed bottom-0 left-0 right-0 z-50 max-h-[85dvh] rounded-t-2xl bg-background border-t border-border/40 overflow-hidden flex flex-col"
           >
             {/* Drag handle */}
             <div className="flex justify-center pt-3 pb-1 flex-shrink-0">
@@ -105,11 +105,6 @@ export function ProductDetailSheet({ produto, open, onClose }: ProductDetailShee
 
               {/* Product info */}
               <div className="px-5 pt-4 space-y-4">
-                {/* Category */}
-                <span className="text-[10px] font-semibold text-muted-foreground/50 uppercase tracking-widest">
-                  {categoryLabels[produto.categoria] || produto.categoria}
-                </span>
-
                 {/* Name */}
                 <h2 className="text-lg font-bold text-foreground leading-tight">
                   {produto.nome}

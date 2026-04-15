@@ -246,10 +246,12 @@ export default function ClienteLoja() {
         onClose={() => setSelectedProduct(null)}
       />
 
-      <BottomNavigation
-        onProfileClick={() => navigate("/cliente/perfil")}
-        onPlansClick={() => navigate("/cliente/assinar")}
-      />
+      {!selectedProduct && (
+        <BottomNavigation
+          onProfileClick={() => navigate("/cliente/perfil")}
+          onPlansClick={() => navigate("/cliente/assinar")}
+        />
+      )}
     </div>
   );
 }
