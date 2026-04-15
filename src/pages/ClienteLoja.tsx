@@ -2,13 +2,14 @@ import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, ShoppingBag, ShoppingCart, Package, X, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search, ShoppingBag, ShoppingCart, Package, X, Plus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { BottomNavigation } from "@/components/BottomNavigation";
 import { ProductDetailSheet } from "@/components/loja/ProductDetailSheet";
 import { CartSheet } from "@/components/loja/CartSheet";
 import { useCart } from "@/hooks/useCart";
+import { toast } from "sonner";
 
 interface Produto {
   id: string;
