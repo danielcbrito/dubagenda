@@ -435,8 +435,8 @@ export default function ClienteLoja() {
             />
           ) : filtered.length === 0 && !searchQuery && produtos.length === 0 ? (
             <EmptyState
-              title="Nenhum produto disponível"
-              description="A barbearia ainda não cadastrou produtos."
+              title="Loja indisponível"
+              description={`${userTenant?.nome ?? "Esta barbearia"} ainda não tem uma loja ativa.`}
             />
           ) : (
             <>
