@@ -165,7 +165,7 @@ const fetchLoyaltyData = async (userId: string, tenantId: string | null) => {
           .eq("tenant_id", tenantId)
           .limit(1)
           .maybeSingle()
-      : Promise.resolve({ data: null, error: null }),
+      : Promise.resolve({ data: null, error: null } as any),
     // Fetch active subscription in same parallel batch
     supabase
       .from("assinaturas")
@@ -195,6 +195,7 @@ const fetchLoyaltyData = async (userId: string, tenantId: string | null) => {
     availableRedemptions = redemptionsResult.data?.length || 0;
   }
 
+  const loyaltyEnabled = !!tenantId && !!pontosNecessariosResult.data;
   const pontosNecessarios = (pontosNecessariosResult.data?.pontos_necessarios && pontosNecessariosResult.data.pontos_necessarios >= 2)
     ? pontosNecessariosResult.data.pontos_necessarios
     : 8;
@@ -292,6 +293,7 @@ const fetchLoyaltyData = async (userId: string, tenantId: string | null) => {
     expiredSubscription,
     planUsageCount,
     pontosNecessarios,
+    loyaltyEnabled,
   };
 };
 
@@ -358,6 +360,7 @@ const Cliente = () => {
   const planUsageCount = loyaltyQueryData?.planUsageCount ?? 0;
   const redemptions = loyaltyQueryData?.redemptions ?? 0;
   const pontosNecessarios = loyaltyQueryData?.pontosNecessarios ?? 8;
+  const loyaltyEnabled = loyaltyQueryData?.loyaltyEnabled ?? false;
 
   // ─── Shop via useQuery (Layer 4) ───
   const {
@@ -1009,12 +1012,14 @@ const Cliente = () => {
                       }}
                     />
                   )}
-                  <LoyaltyCard
-                    points={points}
-                    redemptions={redemptions}
-                    pontosNecessarios={pontosNecessarios}
-                    onViewDetails={() => setPointsModalOpen(true)}
-                  />
+                  {loyaltyEnabled && (
+                    <LoyaltyCard
+                      points={points}
+                      redemptions={redemptions}
+                      pontosNecessarios={pontosNecessarios}
+                      onViewDetails={() => setPointsModalOpen(true)}
+                    />
+                  )}
                 </div>
               ) : expiredSubscription ? (
                 <div className="space-y-4">
@@ -1022,21 +1027,23 @@ const Cliente = () => {
                     planName={(expiredSubscription as any).plano?.nome || "Plano"}
                     onRenew={() => navigate("/cliente/assinar")}
                   />
-                  <LoyaltyCard
-                    points={points}
-                    redemptions={redemptions}
-                    pontosNecessarios={pontosNecessarios}
-                    onViewDetails={() => setPointsModalOpen(true)}
-                  />
+                  {loyaltyEnabled && (
+                    <LoyaltyCard
+                      points={points}
+                      redemptions={redemptions}
+                      pontosNecessarios={pontosNecessarios}
+                      onViewDetails={() => setPointsModalOpen(true)}
+                    />
+                  )}
                 </div>
-              ) : (
+              ) : loyaltyEnabled ? (
                 <LoyaltyCard
                   points={points}
                   redemptions={redemptions}
                   pontosNecessarios={pontosNecessarios}
                   onViewDetails={() => setPointsModalOpen(true)}
                 />
-              )}
+              ) : null}
             </div>
 
             {/* Schedule Button */}
@@ -1199,14 +1206,16 @@ const Cliente = () => {
       />
 
       {/* Points Detail Modal */}
-      <PointsDetailModal
-        open={pointsModalOpen}
-        onOpenChange={setPointsModalOpen}
-        points={points}
-        completedAppointments={completedAppointments}
-        redemptions={redemptions}
-        pontosNecessarios={pontosNecessarios}
-      />
+      {loyaltyEnabled && (
+        <PointsDetailModal
+          open={pointsModalOpen}
+          onOpenChange={setPointsModalOpen}
+          points={points}
+          completedAppointments={completedAppointments}
+          redemptions={redemptions}
+          pontosNecessarios={pontosNecessarios}
+        />
+      )}
 
       {/* Wallet Sheet */}
       <WalletSheet
