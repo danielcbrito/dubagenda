@@ -293,6 +293,7 @@ const fetchLoyaltyData = async (userId: string, tenantId: string | null) => {
     expiredSubscription,
     planUsageCount,
     pontosNecessarios,
+    loyaltyEnabled,
   };
 };
 
