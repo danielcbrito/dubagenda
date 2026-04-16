@@ -47,8 +47,11 @@ function saveCart(userId: string | null, tenantId: string | null, items: CartIte
 export function useCart(tenantId: string | null = null) {
   const [userId, setUserId] = useState<string | null>(null);
   const [items, setItems] = useState<CartItem[]>([]);
-  const initializedRef = useRef(false);
   const userReadyRef = useRef(false);
+  // Track which (user, tenant) pair the current `items` state belongs to.
+  // We only persist when the loaded key matches the current key — this
+  // prevents wiping a tenant's cart while we're still resolving its id.
+  const loadedKeyRef = useRef<string | null>(null);
 
   // Get current user ID
   useEffect(() => {
@@ -56,33 +59,37 @@ export function useCart(tenantId: string | null = null) {
       const id = user?.id ?? null;
       setUserId(id);
       userReadyRef.current = true;
-      setItems(loadCart(id, tenantId));
-      initializedRef.current = true;
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       const id = session?.user?.id ?? null;
       setUserId(id);
       userReadyRef.current = true;
-      setItems(loadCart(id, tenantId));
     });
 
     return () => subscription.unsubscribe();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Reload items whenever tenant changes (after user is ready)
+  // Load cart whenever user or tenant changes. We require BOTH user and a
+  // resolved tenantId before touching storage — while tenantId is null we
+  // simply hold an empty in-memory cart and never persist it.
   useEffect(() => {
-    if (userReadyRef.current) {
-      setItems(loadCart(userId, tenantId));
+    if (!userReadyRef.current || !userId || !tenantId) {
+      loadedKeyRef.current = null;
+      setItems([]);
+      return;
     }
+    const key = getCartKey(userId, tenantId);
+    setItems(loadCart(userId, tenantId));
+    loadedKeyRef.current = key;
   }, [tenantId, userId]);
 
-  // Persist whenever items change (after initial load)
+  // Persist only when items belong to the currently loaded (user, tenant) key.
   useEffect(() => {
-    if (initializedRef.current) {
-      saveCart(userId, tenantId, items);
-    }
+    if (!userId || !tenantId) return;
+    const currentKey = getCartKey(userId, tenantId);
+    if (loadedKeyRef.current !== currentKey) return;
+    saveCart(userId, tenantId, items);
   }, [items, userId, tenantId]);
 
   const addItem = useCallback((produto: {
