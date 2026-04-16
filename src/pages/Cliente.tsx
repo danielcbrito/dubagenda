@@ -165,7 +165,7 @@ const fetchLoyaltyData = async (userId: string, tenantId: string | null) => {
           .eq("tenant_id", tenantId)
           .limit(1)
           .maybeSingle()
-      : Promise.resolve({ data: null, error: null }),
+      : Promise.resolve({ data: null, error: null } as any),
     // Fetch active subscription in same parallel batch
     supabase
       .from("assinaturas")
