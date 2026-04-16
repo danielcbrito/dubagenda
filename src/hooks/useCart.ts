@@ -13,14 +13,15 @@ export interface CartItem {
 
 const CART_KEY_PREFIX = "dub_cart_";
 
-function getCartKey(userId: string) {
-  return `${CART_KEY_PREFIX}${userId}`;
+function getCartKey(userId: string, tenantId: string | null) {
+  // Tenant-scoped key. Falls back to "_no-tenant" when no tenant is set.
+  return `${CART_KEY_PREFIX}${userId}__${tenantId ?? "no-tenant"}`;
 }
 
-function loadCart(userId: string | null): CartItem[] {
+function loadCart(userId: string | null, tenantId: string | null): CartItem[] {
   if (!userId) return [];
   try {
-    const raw = localStorage.getItem(getCartKey(userId));
+    const raw = localStorage.getItem(getCartKey(userId, tenantId));
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed) ? parsed : [];
@@ -29,48 +30,60 @@ function loadCart(userId: string | null): CartItem[] {
   }
 }
 
-function saveCart(userId: string | null, items: CartItem[]) {
+function saveCart(userId: string | null, tenantId: string | null, items: CartItem[]) {
   if (!userId) return;
   try {
+    const key = getCartKey(userId, tenantId);
     if (items.length === 0) {
-      localStorage.removeItem(getCartKey(userId));
+      localStorage.removeItem(key);
     } else {
-      localStorage.setItem(getCartKey(userId), JSON.stringify(items));
+      localStorage.setItem(key, JSON.stringify(items));
     }
   } catch {
     // storage full or unavailable — silent fail
   }
 }
 
-export function useCart() {
+export function useCart(tenantId: string | null = null) {
   const [userId, setUserId] = useState<string | null>(null);
   const [items, setItems] = useState<CartItem[]>([]);
   const initializedRef = useRef(false);
+  const userReadyRef = useRef(false);
 
   // Get current user ID
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
       const id = user?.id ?? null;
       setUserId(id);
-      setItems(loadCart(id));
+      userReadyRef.current = true;
+      setItems(loadCart(id, tenantId));
       initializedRef.current = true;
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       const id = session?.user?.id ?? null;
       setUserId(id);
-      setItems(loadCart(id));
+      userReadyRef.current = true;
+      setItems(loadCart(id, tenantId));
     });
 
     return () => subscription.unsubscribe();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Reload items whenever tenant changes (after user is ready)
+  useEffect(() => {
+    if (userReadyRef.current) {
+      setItems(loadCart(userId, tenantId));
+    }
+  }, [tenantId, userId]);
 
   // Persist whenever items change (after initial load)
   useEffect(() => {
     if (initializedRef.current) {
-      saveCart(userId, items);
+      saveCart(userId, tenantId, items);
     }
-  }, [items, userId]);
+  }, [items, userId, tenantId]);
 
   const addItem = useCallback((produto: {
     id: string;
