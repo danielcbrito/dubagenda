@@ -1005,7 +1005,10 @@ export type Database = {
         Row: {
           apelido: string | null
           barbeiro_id: string | null
-          chave: string
+          chave: string | null
+          chave_auth_tag: string | null
+          chave_encrypted: string | null
+          chave_iv: string | null
           created_at: string
           id: string
           instituicao: string | null
@@ -1018,7 +1021,10 @@ export type Database = {
         Insert: {
           apelido?: string | null
           barbeiro_id?: string | null
-          chave: string
+          chave?: string | null
+          chave_auth_tag?: string | null
+          chave_encrypted?: string | null
+          chave_iv?: string | null
           created_at?: string
           id?: string
           instituicao?: string | null
@@ -1031,7 +1037,10 @@ export type Database = {
         Update: {
           apelido?: string | null
           barbeiro_id?: string | null
-          chave?: string
+          chave?: string | null
+          chave_auth_tag?: string | null
+          chave_encrypted?: string | null
+          chave_iv?: string | null
           created_at?: string
           id?: string
           instituicao?: string | null
@@ -2338,6 +2347,213 @@ export type Database = {
           },
         ]
       }
+      payment_events: {
+        Row: {
+          created_at: string
+          details: Json
+          event_type: string
+          from_status: string | null
+          id: string
+          payment_id: string
+          to_status: string | null
+          triggered_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          details?: Json
+          event_type: string
+          from_status?: string | null
+          id?: string
+          payment_id: string
+          to_status?: string | null
+          triggered_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          details?: Json
+          event_type?: string
+          from_status?: string | null
+          id?: string
+          payment_id?: string
+          to_status?: string | null
+          triggered_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_events_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "payments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payment_receipts: {
+        Row: {
+          created_at: string
+          file_type: string | null
+          file_url: string
+          id: string
+          ocr_extracted: Json | null
+          ocr_failure_reason: string | null
+          ocr_processed_at: string | null
+          ocr_score: number | null
+          ocr_status: string
+          ocr_validated: boolean | null
+          payment_id: string
+          uploaded_by: string
+        }
+        Insert: {
+          created_at?: string
+          file_type?: string | null
+          file_url: string
+          id?: string
+          ocr_extracted?: Json | null
+          ocr_failure_reason?: string | null
+          ocr_processed_at?: string | null
+          ocr_score?: number | null
+          ocr_status?: string
+          ocr_validated?: boolean | null
+          payment_id: string
+          uploaded_by: string
+        }
+        Update: {
+          created_at?: string
+          file_type?: string | null
+          file_url?: string
+          id?: string
+          ocr_extracted?: Json | null
+          ocr_failure_reason?: string | null
+          ocr_processed_at?: string | null
+          ocr_score?: number | null
+          ocr_status?: string
+          ocr_validated?: boolean | null
+          payment_id?: string
+          uploaded_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_receipts_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "payments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payments: {
+        Row: {
+          agendamento_id: string | null
+          amount: number
+          barbeiro_id: string
+          confirmation_method: string | null
+          confirmed_at: string | null
+          confirmed_by: string | null
+          created_at: string
+          currency: string
+          expires_at: string
+          failed_at: string | null
+          id: string
+          marked_probably_paid_at: string | null
+          metadata: Json
+          pix_key_used_hash: string | null
+          pix_payload: string | null
+          pix_qr_code: string | null
+          provider: string
+          provider_payment_id: string | null
+          qr_generated_at: string
+          status: string
+          tenant_id: string | null
+          txid_internal: string
+          txid_pix: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          agendamento_id?: string | null
+          amount: number
+          barbeiro_id: string
+          confirmation_method?: string | null
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          created_at?: string
+          currency?: string
+          expires_at?: string
+          failed_at?: string | null
+          id?: string
+          marked_probably_paid_at?: string | null
+          metadata?: Json
+          pix_key_used_hash?: string | null
+          pix_payload?: string | null
+          pix_qr_code?: string | null
+          provider?: string
+          provider_payment_id?: string | null
+          qr_generated_at?: string
+          status?: string
+          tenant_id?: string | null
+          txid_internal: string
+          txid_pix?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          agendamento_id?: string | null
+          amount?: number
+          barbeiro_id?: string
+          confirmation_method?: string | null
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          created_at?: string
+          currency?: string
+          expires_at?: string
+          failed_at?: string | null
+          id?: string
+          marked_probably_paid_at?: string | null
+          metadata?: Json
+          pix_key_used_hash?: string | null
+          pix_payload?: string | null
+          pix_qr_code?: string | null
+          provider?: string
+          provider_payment_id?: string | null
+          qr_generated_at?: string
+          status?: string
+          tenant_id?: string | null
+          txid_internal?: string
+          txid_pix?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payments_agendamento_id_fkey"
+            columns: ["agendamento_id"]
+            isOneToOne: false
+            referencedRelation: "agendamentos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_barbeiro_id_fkey"
+            columns: ["barbeiro_id"]
+            isOneToOne: false
+            referencedRelation: "barbeiros"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_barbeiro_id_fkey"
+            columns: ["barbeiro_id"]
+            isOneToOne: false
+            referencedRelation: "barbeiros_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pedido_itens: {
         Row: {
           created_at: string
@@ -2667,6 +2883,151 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      pix_charge_audit: {
+        Row: {
+          charge_id: string
+          created_at: string
+          decided_by: string
+          decision_reason: string
+          heuristic_signals: Json | null
+          id: string
+          new_status: string
+          previous_status: string | null
+          txid: string | null
+        }
+        Insert: {
+          charge_id: string
+          created_at?: string
+          decided_by?: string
+          decision_reason: string
+          heuristic_signals?: Json | null
+          id?: string
+          new_status: string
+          previous_status?: string | null
+          txid?: string | null
+        }
+        Update: {
+          charge_id?: string
+          created_at?: string
+          decided_by?: string
+          decision_reason?: string
+          heuristic_signals?: Json | null
+          id?: string
+          new_status?: string
+          previous_status?: string | null
+          txid?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pix_charge_audit_charge_id_fkey"
+            columns: ["charge_id"]
+            isOneToOne: false
+            referencedRelation: "pix_charges"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pix_charges: {
+        Row: {
+          agendamento_id: string | null
+          auto_confirmation_reason: string | null
+          barbeiro_id: string | null
+          br_code: string
+          chave_pix_id: string | null
+          client_opened_bank_at: string | null
+          client_returned_at: string | null
+          confidence_score: number | null
+          created_at: string
+          descricao: string | null
+          expires_at: string
+          id: string
+          late_payment: boolean | null
+          likely_paid_at: string | null
+          metadata: Json | null
+          paid_at: string | null
+          status: string
+          txid: string
+          updated_at: string
+          user_id: string
+          valor: number
+        }
+        Insert: {
+          agendamento_id?: string | null
+          auto_confirmation_reason?: string | null
+          barbeiro_id?: string | null
+          br_code: string
+          chave_pix_id?: string | null
+          client_opened_bank_at?: string | null
+          client_returned_at?: string | null
+          confidence_score?: number | null
+          created_at?: string
+          descricao?: string | null
+          expires_at: string
+          id?: string
+          late_payment?: boolean | null
+          likely_paid_at?: string | null
+          metadata?: Json | null
+          paid_at?: string | null
+          status?: string
+          txid: string
+          updated_at?: string
+          user_id: string
+          valor: number
+        }
+        Update: {
+          agendamento_id?: string | null
+          auto_confirmation_reason?: string | null
+          barbeiro_id?: string | null
+          br_code?: string
+          chave_pix_id?: string | null
+          client_opened_bank_at?: string | null
+          client_returned_at?: string | null
+          confidence_score?: number | null
+          created_at?: string
+          descricao?: string | null
+          expires_at?: string
+          id?: string
+          late_payment?: boolean | null
+          likely_paid_at?: string | null
+          metadata?: Json | null
+          paid_at?: string | null
+          status?: string
+          txid?: string
+          updated_at?: string
+          user_id?: string
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pix_charges_agendamento_id_fkey"
+            columns: ["agendamento_id"]
+            isOneToOne: false
+            referencedRelation: "agendamentos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pix_charges_barbeiro_id_fkey"
+            columns: ["barbeiro_id"]
+            isOneToOne: false
+            referencedRelation: "barbeiros"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pix_charges_barbeiro_id_fkey"
+            columns: ["barbeiro_id"]
+            isOneToOne: false
+            referencedRelation: "barbeiros_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pix_charges_chave_pix_id_fkey"
+            columns: ["chave_pix_id"]
+            isOneToOne: false
+            referencedRelation: "chaves_pix"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       plano_agendamentos_usos: {
         Row: {
@@ -5195,6 +5556,14 @@ export type Database = {
       is_tenant_owner_by_tenant: {
         Args: { p_tenant_id: string }
         Returns: boolean
+      }
+      pix_signal_bank_opened: {
+        Args: { p_charge_id: string }
+        Returns: undefined
+      }
+      pix_signal_returned_to_app: {
+        Args: { p_charge_id: string }
+        Returns: undefined
       }
       renovar_plano_cliente: {
         Args: { p_assinatura_id: string; p_forma_pagamento: string }
