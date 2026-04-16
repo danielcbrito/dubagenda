@@ -1012,12 +1012,14 @@ const Cliente = () => {
                       }}
                     />
                   )}
-                  <LoyaltyCard
-                    points={points}
-                    redemptions={redemptions}
-                    pontosNecessarios={pontosNecessarios}
-                    onViewDetails={() => setPointsModalOpen(true)}
-                  />
+                  {loyaltyEnabled && (
+                    <LoyaltyCard
+                      points={points}
+                      redemptions={redemptions}
+                      pontosNecessarios={pontosNecessarios}
+                      onViewDetails={() => setPointsModalOpen(true)}
+                    />
+                  )}
                 </div>
               ) : expiredSubscription ? (
                 <div className="space-y-4">
@@ -1025,21 +1027,23 @@ const Cliente = () => {
                     planName={(expiredSubscription as any).plano?.nome || "Plano"}
                     onRenew={() => navigate("/cliente/assinar")}
                   />
-                  <LoyaltyCard
-                    points={points}
-                    redemptions={redemptions}
-                    pontosNecessarios={pontosNecessarios}
-                    onViewDetails={() => setPointsModalOpen(true)}
-                  />
+                  {loyaltyEnabled && (
+                    <LoyaltyCard
+                      points={points}
+                      redemptions={redemptions}
+                      pontosNecessarios={pontosNecessarios}
+                      onViewDetails={() => setPointsModalOpen(true)}
+                    />
+                  )}
                 </div>
-              ) : (
+              ) : loyaltyEnabled ? (
                 <LoyaltyCard
                   points={points}
                   redemptions={redemptions}
                   pontosNecessarios={pontosNecessarios}
                   onViewDetails={() => setPointsModalOpen(true)}
                 />
-              )}
+              ) : null}
             </div>
 
             {/* Schedule Button */}
