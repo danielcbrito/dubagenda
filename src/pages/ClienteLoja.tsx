@@ -42,6 +42,7 @@ interface BannerSlide {
 
 export default function ClienteLoja() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -80,8 +81,46 @@ export default function ClienteLoja() {
         .single();
       return tenant as TenantInfo | null;
     },
-    staleTime: 5 * 60 * 1000,
+    staleTime: 30 * 1000,
+    refetchOnWindowFocus: true,
   });
+
+  // Sincroniza loja quando o cliente troca de barbearia preferida
+  useEffect(() => {
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+    let userId: string | null = null;
+
+    const subscribe = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      userId = user.id;
+
+      channel = supabase
+        .channel(`profile-preferred-shop-${userId}`)
+        .on(
+          "postgres_changes",
+          {
+            event: "UPDATE",
+            schema: "public",
+            table: "profiles",
+            filter: `id=eq.${userId}`,
+          },
+          () => {
+            queryClient.invalidateQueries({ queryKey: ["user-tenant-loja"] });
+            queryClient.invalidateQueries({ queryKey: ["produtos-loja"] });
+            queryClient.invalidateQueries({ queryKey: ["tenant-banner-loja"] });
+          }
+        )
+        .subscribe();
+    };
+
+    void subscribe();
+
+    return () => {
+      if (channel) supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
+
 
   const { data: bannerUrl } = useQuery({
     queryKey: ["tenant-banner-loja", userTenant?.id],
