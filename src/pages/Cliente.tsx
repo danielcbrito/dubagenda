@@ -1206,14 +1206,16 @@ const Cliente = () => {
       />
 
       {/* Points Detail Modal */}
-      <PointsDetailModal
-        open={pointsModalOpen}
-        onOpenChange={setPointsModalOpen}
-        points={points}
-        completedAppointments={completedAppointments}
-        redemptions={redemptions}
-        pontosNecessarios={pontosNecessarios}
-      />
+      {loyaltyEnabled && (
+        <PointsDetailModal
+          open={pointsModalOpen}
+          onOpenChange={setPointsModalOpen}
+          points={points}
+          completedAppointments={completedAppointments}
+          redemptions={redemptions}
+          pontosNecessarios={pontosNecessarios}
+        />
+      )}
 
       {/* Wallet Sheet */}
       <WalletSheet
