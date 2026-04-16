@@ -74,6 +74,30 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_passwords: {
+        Row: {
+          category: string
+          id: string
+          label: string
+          password: string
+          updated_at: string
+        }
+        Insert: {
+          category: string
+          id?: string
+          label?: string
+          password?: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          id?: string
+          label?: string
+          password?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       agendamento_lembretes_log: {
         Row: {
           agendamento_id: string
@@ -4354,6 +4378,48 @@ export type Database = {
           tipo?: string
           titulo?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      ti_password_change: {
+        Row: {
+          created_at: string
+          must_change: boolean
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          must_change?: boolean
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          must_change?: boolean
+          user_id?: string
+        }
+        Relationships: []
+      }
+      ti_permissions: {
+        Row: {
+          created_at: string
+          enabled: boolean
+          id: string
+          permission: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          permission: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          permission?: string
+          user_id?: string
         }
         Relationships: []
       }
