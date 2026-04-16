@@ -309,7 +309,9 @@ const Cliente = () => {
     queryKey: ['cliente', 'profile', user?.id],
     queryFn: () => fetchProfileData(user!.id),
     enabled: !!user?.id,
-    staleTime: 60 * 60 * 1000, // 60 min — profile changes rarely
+    staleTime: 10 * 1000, // 10s — preferred shop can change in other routes
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
   });
 
   // Aliases to maintain compatibility with existing prop interfaces
