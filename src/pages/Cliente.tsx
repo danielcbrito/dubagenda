@@ -195,6 +195,7 @@ const fetchLoyaltyData = async (userId: string, tenantId: string | null) => {
     availableRedemptions = redemptionsResult.data?.length || 0;
   }
 
+  const loyaltyEnabled = !!tenantId && !!pontosNecessariosResult.data;
   const pontosNecessarios = (pontosNecessariosResult.data?.pontos_necessarios && pontosNecessariosResult.data.pontos_necessarios >= 2)
     ? pontosNecessariosResult.data.pontos_necessarios
     : 8;
