@@ -52,7 +52,7 @@ export default function ClienteLoja() {
   const [checkoutSelectedIds, setCheckoutSelectedIds] = useState<Set<string>>(new Set());
   const [currentSlide, setCurrentSlide] = useState(0);
   const [scrolled, setScrolled] = useState(false);
-  const cart = useCart();
+  // Cart is scoped per tenant — declared after userTenant query below via wrapper.
   const searchInputRef = useRef<HTMLInputElement>(null);
   const slideIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
