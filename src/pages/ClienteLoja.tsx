@@ -52,7 +52,7 @@ export default function ClienteLoja() {
   const [checkoutSelectedIds, setCheckoutSelectedIds] = useState<Set<string>>(new Set());
   const [currentSlide, setCurrentSlide] = useState(0);
   const [scrolled, setScrolled] = useState(false);
-  // Cart is scoped per tenant — declared after userTenant query below via wrapper.
+  
   const searchInputRef = useRef<HTMLInputElement>(null);
   const slideIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -84,6 +84,9 @@ export default function ClienteLoja() {
     staleTime: 30 * 1000,
     refetchOnWindowFocus: true,
   });
+
+  // Cart isolated per tenant (barbearia). Switching shops swaps the cart.
+  const cart = useCart(userTenant?.id ?? null);
 
   // Sincroniza loja quando o cliente troca de barbearia preferida
   useEffect(() => {
