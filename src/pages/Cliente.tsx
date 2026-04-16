@@ -656,6 +656,22 @@ const Cliente = () => {
             queryClient.invalidateQueries({ queryKey: ['notifications'] });
           }
         )
+        .on(
+          'postgres_changes',
+          { event: 'UPDATE', schema: 'public', table: 'profiles', filter: `id=eq.${userId}` },
+          (payload) => {
+            const newPref = (payload.new as any)?.barbearia_preferida_id;
+            const oldPref = (payload.old as any)?.barbearia_preferida_id;
+            // Always refresh profile so header (preferredShop name) updates instantly
+            queryClient.invalidateQueries({ queryKey: ['cliente', 'profile', userId] });
+            if (newPref !== oldPref) {
+              // Tenant changed → refetch shop, loyalty, appointments and assinatura
+              invalidateShop();
+              invalidateLoyalty();
+              invalidateAppointments();
+            }
+          }
+        )
         .subscribe((status) => handleChannelStatus('agendamentos', status, () => {
           initializeChannels();
           queryClient.invalidateQueries({ queryKey: ['cliente', 'profile', userId] });
