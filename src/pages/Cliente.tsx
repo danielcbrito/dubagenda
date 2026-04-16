@@ -360,6 +360,7 @@ const Cliente = () => {
   const planUsageCount = loyaltyQueryData?.planUsageCount ?? 0;
   const redemptions = loyaltyQueryData?.redemptions ?? 0;
   const pontosNecessarios = loyaltyQueryData?.pontosNecessarios ?? 8;
+  const loyaltyEnabled = loyaltyQueryData?.loyaltyEnabled ?? false;
 
   // ─── Shop via useQuery (Layer 4) ───
   const {
