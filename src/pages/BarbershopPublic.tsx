@@ -16,7 +16,7 @@ import {
   shouldPreferGeocodedCoordinates,
 } from "@/lib/geocoding";
 import logoDub from "@/assets/logo-dub.png";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { BarberProfileSheet } from "@/components/discover/BarberProfileSheet";
 import { PortfolioGallery } from "@/components/portfolio/PortfolioGallery";
 import googleMapsIcon from "@/assets/google-maps-icon.png";
@@ -131,6 +131,7 @@ function applyTenantFallbacks(tenant: TenantInfo, currentSlug?: string): TenantI
 const BarbershopPublic = () => {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
 
   const fromContext = searchParams.get("from"); // "discover" | "change" | null
@@ -540,6 +541,29 @@ const BarbershopPublic = () => {
         .eq("id", session.user.id);
 
       if (error) throw error;
+
+      setCurrentPreferred(tenant.id);
+      queryClient.setQueryData(["user-tenant-loja"], { id: tenant.id, nome: tenant.nome });
+      queryClient.setQueryData(["cliente", "profile", session.user.id], (old: any) => {
+        if (!old) return old;
+        return {
+          ...old,
+          profile: {
+            ...old.profile,
+            barbearia_preferida_id: tenant.id,
+          },
+          preferredShop: {
+            id: tenant.id,
+            nome: tenant.nome,
+          },
+        };
+      });
+      queryClient.removeQueries({ queryKey: ["produtos-loja"] });
+      queryClient.removeQueries({ queryKey: ["tenant-banner-loja"] });
+      queryClient.invalidateQueries({ queryKey: ["user-tenant-loja"] });
+      queryClient.invalidateQueries({ queryKey: ["cliente", "profile", session.user.id] });
+      queryClient.invalidateQueries({ queryKey: ["cliente", "shop"] });
+      queryClient.invalidateQueries({ queryKey: ["cliente", "loyalty", session.user.id] });
 
       // Persist device-level signal for smart landing page
       localStorage.setItem('dub_has_barbershop', 'true');

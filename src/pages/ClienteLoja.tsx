@@ -63,7 +63,7 @@ export default function ClienteLoja() {
     isLoading: isStoreMaintenanceLoading,
   } = useStoreMaintenanceMode();
 
-  const { data: userTenant } = useQuery({
+  const { data: userTenant, isLoading: isTenantLoading } = useQuery({
     queryKey: ["user-tenant-loja"],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -81,7 +81,8 @@ export default function ClienteLoja() {
         .single();
       return tenant as TenantInfo | null;
     },
-    staleTime: 30 * 1000,
+    staleTime: 0,
+    refetchOnMount: "always",
     refetchOnWindowFocus: true,
   });
 
@@ -98,6 +99,26 @@ export default function ClienteLoja() {
       if (!user) return;
       userId = user.id;
 
+      const syncTenant = async (nextTenantId: string | null) => {
+        if (!nextTenantId) {
+          queryClient.setQueryData(["user-tenant-loja"], null);
+          queryClient.removeQueries({ queryKey: ["produtos-loja"] });
+          queryClient.removeQueries({ queryKey: ["tenant-banner-loja"] });
+          return;
+        }
+
+        const { data: tenant } = await supabase
+          .from("tenants")
+          .select("id, nome")
+          .eq("id", nextTenantId)
+          .single();
+
+        queryClient.setQueryData(["user-tenant-loja"], (tenant as TenantInfo | null) ?? null);
+        queryClient.invalidateQueries({ queryKey: ["user-tenant-loja"] });
+        queryClient.invalidateQueries({ queryKey: ["produtos-loja"] });
+        queryClient.invalidateQueries({ queryKey: ["tenant-banner-loja"] });
+      };
+
       channel = supabase
         .channel(`profile-preferred-shop-${userId}`)
         .on(
@@ -108,10 +129,9 @@ export default function ClienteLoja() {
             table: "profiles",
             filter: `id=eq.${userId}`,
           },
-          () => {
-            queryClient.invalidateQueries({ queryKey: ["user-tenant-loja"] });
-            queryClient.invalidateQueries({ queryKey: ["produtos-loja"] });
-            queryClient.invalidateQueries({ queryKey: ["tenant-banner-loja"] });
+          (payload) => {
+            const nextTenantId = (payload.new as { barbearia_preferida_id?: string | null })?.barbearia_preferida_id ?? null;
+            void syncTenant(nextTenantId);
           }
         )
         .subscribe();
@@ -138,7 +158,7 @@ export default function ClienteLoja() {
     staleTime: 10 * 60 * 1000,
   });
 
-  const { data: produtos = [], isLoading } = useQuery({
+  const { data: produtos = [], isLoading: isProductsLoading } = useQuery({
     queryKey: ["produtos-loja", userTenant?.id],
     queryFn: async () => {
       if (!userTenant?.id) return [];
@@ -417,7 +437,7 @@ export default function ClienteLoja() {
       {/* ─── Scrollable Content (banner + categories + products) ─── */}
       <div className="flex-1 min-h-0 relative">
         <div ref={scrollRef} className="h-full overflow-y-auto overscroll-contain pb-24">
-          {isLoading ? (
+          {isTenantLoading || isProductsLoading ? (
             <div className="flex flex-col items-center justify-center py-20 gap-3">
               <div className="w-7 h-7 border-2 border-primary border-t-transparent rounded-full animate-spin" />
               <span className="text-xs text-muted-foreground">Carregando...</span>
