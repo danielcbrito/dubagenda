@@ -174,6 +174,18 @@ const ClienteAgendar = () => {
 
   // Fonte única do barbeiro selecionado (fallback para assinatura vinculada)
   const selectedBarberId = selectedBarber?.id || activeSubscription?.barbeiro_id || null;
+
+  // Status da carteira do barbeiro: define se podemos oferecer PIX (e Carteira do app)
+  const { canReceivePix } = useWalletStatus(selectedBarberId);
+
+  // Fallback: se o método selecionado deixou de estar disponível (ex.: usuário trocou
+  // para um barbeiro sem chave PIX validada), volta para "pagar na barbearia".
+  useEffect(() => {
+    if (!canReceivePix && (paymentMethod === 'pix' || paymentMethod === 'wallet')) {
+      setPaymentMethod('cash');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canReceivePix, selectedBarberId]);
   const availabilityTenantId = selectedBarber?.tenant_id ?? (preferredShop?.id ?? null);
 
   const { 
