@@ -6118,6 +6118,10 @@ export type Database = {
           saldo_atual: number
         }[]
       }
+      validate_barber_can_receive_pix: {
+        Args: { p_barbeiro_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       app_role:
