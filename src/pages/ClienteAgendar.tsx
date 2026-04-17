@@ -610,6 +610,7 @@ const ClienteAgendar = () => {
           ciclo_inicio,
           ciclo_fim,
           status,
+          usos_ciclo_atual,
           barbeiro_id,
           barbeiro:barbeiros(id, apelido, foto_url, tenant_id),
           plano:planos(
@@ -675,7 +676,8 @@ const ClienteAgendar = () => {
           : supabase.from("barbeiros").select("id, apelido, foto_url, tenant_id").eq("id", subscription.barbeiro_id).single(),
       ]);
 
-      const usedCount = usageRes.error ? 0 : Number(usageRes.data || 0);
+      const rpcUsedCount = usageRes.error ? 0 : Number(usageRes.data || 0);
+      const usedCount = Math.max(Number((subscription as any).usos_ciclo_atual || 0), rpcUsedCount);
 
       const activeSubscriptionData: ActiveSubscription = {
         id: subscription.id,

@@ -169,7 +169,7 @@ const fetchLoyaltyData = async (userId: string, tenantId: string | null) => {
     // Fetch active subscription in same parallel batch
     supabase
       .from("assinaturas")
-      .select("id, status, next_billing_date, plano_id, barbeiro_id, payment_method, cash_payment_confirmed, ciclo_inicio, ciclo_fim, plano:planos(nome, limite_agendamentos_mes, preco_mensal, servico:servicos(nome))")
+      .select("id, status, next_billing_date, plano_id, barbeiro_id, payment_method, cash_payment_confirmed, ciclo_inicio, ciclo_fim, usos_ciclo_atual, plano:planos(nome, limite_agendamentos_mes, preco_mensal, servico:servicos(nome))")
       .eq("user_id", userId)
       .eq("status", "active")
       .order("created_at", { ascending: false })
@@ -229,7 +229,8 @@ const fetchLoyaltyData = async (userId: string, tenantId: string | null) => {
       p_cycle_start: cycleStartDate,
       p_cycle_end: cycleEndDate,
     });
-    planUsageCount = usageError ? 0 : Number(usageCount || 0);
+    const rpcUsageCount = usageError ? 0 : Number(usageCount || 0);
+    planUsageCount = Math.max(Number(activeSubData.usos_ciclo_atual || 0), rpcUsageCount);
   } else {
     const pendingSub = pendingSubResult.data;
     pendingSubscription = pendingSub;
@@ -247,7 +248,7 @@ const fetchLoyaltyData = async (userId: string, tenantId: string | null) => {
         // Re-fetch active sub after renewal
         const { data: recoveredSub } = await supabase
           .from("assinaturas")
-          .select("id, status, next_billing_date, plano_id, barbeiro_id, payment_method, cash_payment_confirmed, ciclo_inicio, ciclo_fim, plano:planos(nome, limite_agendamentos_mes, preco_mensal, servico:servicos(nome))")
+          .select("id, status, next_billing_date, plano_id, barbeiro_id, payment_method, cash_payment_confirmed, ciclo_inicio, ciclo_fim, usos_ciclo_atual, plano:planos(nome, limite_agendamentos_mes, preco_mensal, servico:servicos(nome))")
           .eq("user_id", userId)
           .eq("status", "active")
           .order("created_at", { ascending: false })
@@ -274,7 +275,8 @@ const fetchLoyaltyData = async (userId: string, tenantId: string | null) => {
             p_cycle_start: rCycleStart,
             p_cycle_end: rCycleEnd,
           });
-          planUsageCount = usageError ? 0 : Number(usageCount || 0);
+          const rpcUsageCount = usageError ? 0 : Number(usageCount || 0);
+          planUsageCount = Math.max(Number(recoveredSub.usos_ciclo_atual || 0), rpcUsageCount);
         }
       }
     }
