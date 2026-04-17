@@ -210,15 +210,24 @@ const fetchLoyaltyData = async (userId: string, tenantId: string | null) => {
   if (activeSubData) {
     activeSubscription = activeSubData;
 
-    // Only sequential query needed: count usage in cycle
-    const cycleStart = new Date(`${activeSubData.next_billing_date}T12:00:00`);
-    cycleStart.setMonth(cycleStart.getMonth() - 1);
-    const cycleStartDate = cycleStart.toISOString().split('T')[0];
+    // Source of truth: ciclo_inicio/ciclo_fim from the subscription itself.
+    // Fallback: derive from next_billing_date (legacy rows without ciclo_inicio).
+    let cycleStartDate: string;
+    let cycleEndDate: string;
+    if (activeSubData.ciclo_inicio && activeSubData.ciclo_fim) {
+      cycleStartDate = activeSubData.ciclo_inicio;
+      cycleEndDate = activeSubData.ciclo_fim;
+    } else {
+      const cs = new Date(`${activeSubData.next_billing_date}T12:00:00`);
+      cs.setMonth(cs.getMonth() - 1);
+      cycleStartDate = cs.toISOString().split('T')[0];
+      cycleEndDate = activeSubData.next_billing_date;
+    }
 
     const { data: usageCount, error: usageError } = await supabase.rpc('count_subscription_uses_in_cycle', {
       p_assinatura_id: activeSubData.id,
       p_cycle_start: cycleStartDate,
-      p_cycle_end: activeSubData.next_billing_date,
+      p_cycle_end: cycleEndDate,
     });
     planUsageCount = usageError ? 0 : Number(usageCount || 0);
   } else {
