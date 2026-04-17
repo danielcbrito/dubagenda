@@ -247,7 +247,7 @@ const fetchLoyaltyData = async (userId: string, tenantId: string | null) => {
         // Re-fetch active sub after renewal
         const { data: recoveredSub } = await supabase
           .from("assinaturas")
-          .select("id, status, next_billing_date, plano_id, barbeiro_id, payment_method, cash_payment_confirmed, ciclo_fim, plano:planos(nome, limite_agendamentos_mes, preco_mensal, servico:servicos(nome))")
+          .select("id, status, next_billing_date, plano_id, barbeiro_id, payment_method, cash_payment_confirmed, ciclo_inicio, ciclo_fim, plano:planos(nome, limite_agendamentos_mes, preco_mensal, servico:servicos(nome))")
           .eq("user_id", userId)
           .eq("status", "active")
           .order("created_at", { ascending: false })
@@ -258,12 +258,21 @@ const fetchLoyaltyData = async (userId: string, tenantId: string | null) => {
           activeSubscription = recoveredSub;
           pendingSubscription = null;
 
-          const cycleStart = new Date(`${recoveredSub.next_billing_date}T12:00:00`);
-          cycleStart.setMonth(cycleStart.getMonth() - 1);
+          let rCycleStart: string;
+          let rCycleEnd: string;
+          if (recoveredSub.ciclo_inicio && recoveredSub.ciclo_fim) {
+            rCycleStart = recoveredSub.ciclo_inicio;
+            rCycleEnd = recoveredSub.ciclo_fim;
+          } else {
+            const cs = new Date(`${recoveredSub.next_billing_date}T12:00:00`);
+            cs.setMonth(cs.getMonth() - 1);
+            rCycleStart = cs.toISOString().split('T')[0];
+            rCycleEnd = recoveredSub.next_billing_date;
+          }
           const { data: usageCount, error: usageError } = await supabase.rpc('count_subscription_uses_in_cycle', {
             p_assinatura_id: recoveredSub.id,
-            p_cycle_start: cycleStart.toISOString().split('T')[0],
-            p_cycle_end: recoveredSub.next_billing_date,
+            p_cycle_start: rCycleStart,
+            p_cycle_end: rCycleEnd,
           });
           planUsageCount = usageError ? 0 : Number(usageCount || 0);
         }
