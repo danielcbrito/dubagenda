@@ -607,6 +607,8 @@ const ClienteAgendar = () => {
           id,
           plano_id,
           next_billing_date,
+          ciclo_inicio,
+          ciclo_fim,
           status,
           barbeiro_id,
           barbeiro:barbeiros(id, apelido, foto_url, tenant_id),
@@ -649,17 +651,21 @@ const ClienteAgendar = () => {
         ? (subscription as any).barbeiro[0] ?? null
         : (subscription as any).barbeiro ?? null;
 
-      // Calcular início do ciclo atual (next_billing_date - 1 mês)
-      const cycleStart = new Date(`${subscription.next_billing_date}T12:00:00`);
-      cycleStart.setMonth(cycleStart.getMonth() - 1);
-      const cycleStartDate = cycleStart.toISOString().split('T')[0];
+      const cycleStartDate = subscription.ciclo_inicio
+        ? subscription.ciclo_inicio
+        : (() => {
+            const cycleStart = new Date(`${subscription.next_billing_date}T12:00:00`);
+            cycleStart.setMonth(cycleStart.getMonth() - 1);
+            return cycleStart.toISOString().split('T')[0];
+          })();
+      const cycleEndDate = subscription.ciclo_fim || subscription.next_billing_date;
 
       // Fonte de verdade do consumo: mesma regra do banco/trigger
       const [usageRes, servicoRes, barbeiroRes] = await Promise.all([
         supabase.rpc('count_subscription_uses_in_cycle', {
           p_assinatura_id: subscription.id,
           p_cycle_start: cycleStartDate,
-          p_cycle_end: subscription.next_billing_date,
+          p_cycle_end: cycleEndDate,
         }),
         joinedService || !planoData.servico_id
           ? Promise.resolve({ data: joinedService })
