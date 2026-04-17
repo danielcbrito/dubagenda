@@ -28,6 +28,7 @@ import { FloatingActionBar } from "@/components/booking/FloatingActionBar";
 import { UnitSelector } from "@/components/booking/UnitSelector";
 import { NextAvailableDateButton } from "@/components/booking/NextAvailableDateButton";
 import { useBlockedBarbers } from "@/hooks/useBlockedBarbers";
+import { useWalletStatus } from "@/hooks/useWalletStatus";
 
 interface TenantUnit {
   id: string;
