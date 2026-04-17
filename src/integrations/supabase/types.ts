@@ -806,6 +806,8 @@ export type Database = {
           asaas_wallet_id: string | null
           ativo: boolean | null
           comissao_pct: number | null
+          conta_configurada: boolean
+          conta_financeira_id: string | null
           created_at: string | null
           deleted_at: string | null
           foto_url: string | null
@@ -823,6 +825,8 @@ export type Database = {
           asaas_wallet_id?: string | null
           ativo?: boolean | null
           comissao_pct?: number | null
+          conta_configurada?: boolean
+          conta_financeira_id?: string | null
           created_at?: string | null
           deleted_at?: string | null
           foto_url?: string | null
@@ -840,6 +844,8 @@ export type Database = {
           asaas_wallet_id?: string | null
           ativo?: boolean | null
           comissao_pct?: number | null
+          conta_configurada?: boolean
+          conta_financeira_id?: string | null
           created_at?: string | null
           deleted_at?: string | null
           foto_url?: string | null
@@ -852,6 +858,13 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "barbeiros_conta_financeira_id_fkey"
+            columns: ["conta_financeira_id"]
+            isOneToOne: false
+            referencedRelation: "contas_financeiras"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "barbeiros_tenant_id_fkey"
             columns: ["tenant_id"]
@@ -966,6 +979,63 @@ export type Database = {
             foreignKeyName: "bloqueios_cliente_barbeiro_barbeiro_id_fkey"
             columns: ["barbeiro_id"]
             isOneToOne: false
+            referencedRelation: "barbeiros_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      carteiras: {
+        Row: {
+          barbeiro_id: string
+          chave_pix: string | null
+          chave_pix_titular: string | null
+          chave_pix_validada: boolean
+          chave_pix_validada_em: string | null
+          created_at: string
+          id: string
+          pix_automatico_ativo: boolean
+          saldo_disponivel: number
+          tipo_chave_pix: string | null
+          updated_at: string
+        }
+        Insert: {
+          barbeiro_id: string
+          chave_pix?: string | null
+          chave_pix_titular?: string | null
+          chave_pix_validada?: boolean
+          chave_pix_validada_em?: string | null
+          created_at?: string
+          id?: string
+          pix_automatico_ativo?: boolean
+          saldo_disponivel?: number
+          tipo_chave_pix?: string | null
+          updated_at?: string
+        }
+        Update: {
+          barbeiro_id?: string
+          chave_pix?: string | null
+          chave_pix_titular?: string | null
+          chave_pix_validada?: boolean
+          chave_pix_validada_em?: string | null
+          created_at?: string
+          id?: string
+          pix_automatico_ativo?: boolean
+          saldo_disponivel?: number
+          tipo_chave_pix?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "carteiras_barbeiro_id_fkey"
+            columns: ["barbeiro_id"]
+            isOneToOne: true
+            referencedRelation: "barbeiros"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "carteiras_barbeiro_id_fkey"
+            columns: ["barbeiro_id"]
+            isOneToOne: true
             referencedRelation: "barbeiros_public"
             referencedColumns: ["id"]
           },
@@ -1340,6 +1410,66 @@ export type Database = {
           {
             foreignKeyName: "contas_bancarias_barbeiro_id_fkey"
             columns: ["barbeiro_id"]
+            isOneToOne: false
+            referencedRelation: "barbeiros_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contas_financeiras: {
+        Row: {
+          asaas_account_id: string | null
+          asaas_wallet_id: string | null
+          ativo: boolean
+          created_at: string
+          created_by: string | null
+          efi_account_id: string | null
+          id: string
+          observacoes: string | null
+          responsavel_barbeiro_id: string | null
+          responsavel_nome: string
+          tipo_conta: string
+          updated_at: string
+        }
+        Insert: {
+          asaas_account_id?: string | null
+          asaas_wallet_id?: string | null
+          ativo?: boolean
+          created_at?: string
+          created_by?: string | null
+          efi_account_id?: string | null
+          id?: string
+          observacoes?: string | null
+          responsavel_barbeiro_id?: string | null
+          responsavel_nome: string
+          tipo_conta?: string
+          updated_at?: string
+        }
+        Update: {
+          asaas_account_id?: string | null
+          asaas_wallet_id?: string | null
+          ativo?: boolean
+          created_at?: string
+          created_by?: string | null
+          efi_account_id?: string | null
+          id?: string
+          observacoes?: string | null
+          responsavel_barbeiro_id?: string | null
+          responsavel_nome?: string
+          tipo_conta?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contas_financeiras_responsavel_barbeiro_id_fkey"
+            columns: ["responsavel_barbeiro_id"]
+            isOneToOne: false
+            referencedRelation: "barbeiros"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contas_financeiras_responsavel_barbeiro_id_fkey"
+            columns: ["responsavel_barbeiro_id"]
             isOneToOne: false
             referencedRelation: "barbeiros_public"
             referencedColumns: ["id"]
@@ -1797,6 +1927,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      efi_saldo_alertas: {
+        Row: {
+          ambiente: string
+          created_at: string
+          detalhes: Json | null
+          id: string
+          limite_minimo: number
+          resolvido: boolean
+          resolvido_em: string | null
+          saldo_atual: number
+        }
+        Insert: {
+          ambiente: string
+          created_at?: string
+          detalhes?: Json | null
+          id?: string
+          limite_minimo?: number
+          resolvido?: boolean
+          resolvido_em?: string | null
+          saldo_atual: number
+        }
+        Update: {
+          ambiente?: string
+          created_at?: string
+          detalhes?: Json | null
+          id?: string
+          limite_minimo?: number
+          resolvido?: boolean
+          resolvido_em?: string | null
+          saldo_atual?: number
+        }
+        Relationships: []
       }
       efi_webhook_events: {
         Row: {
@@ -5089,6 +5252,102 @@ export type Database = {
         }
         Relationships: []
       }
+      transacoes_financeiras: {
+        Row: {
+          barbeiro_id: string
+          carteira_id: string
+          chave_pix_destino: string | null
+          completed_at: string | null
+          created_at: string
+          descricao: string | null
+          efi_charge_id: string | null
+          efi_e2e_id: string | null
+          erro_mensagem: string | null
+          id: string
+          metadata: Json | null
+          saldo_anterior: number | null
+          saldo_posterior: number | null
+          status: Database["public"]["Enums"]["transacao_status"]
+          tipo: Database["public"]["Enums"]["transacao_tipo"]
+          updated_at: string
+          valor: number
+        }
+        Insert: {
+          barbeiro_id: string
+          carteira_id: string
+          chave_pix_destino?: string | null
+          completed_at?: string | null
+          created_at?: string
+          descricao?: string | null
+          efi_charge_id?: string | null
+          efi_e2e_id?: string | null
+          erro_mensagem?: string | null
+          id?: string
+          metadata?: Json | null
+          saldo_anterior?: number | null
+          saldo_posterior?: number | null
+          status?: Database["public"]["Enums"]["transacao_status"]
+          tipo: Database["public"]["Enums"]["transacao_tipo"]
+          updated_at?: string
+          valor: number
+        }
+        Update: {
+          barbeiro_id?: string
+          carteira_id?: string
+          chave_pix_destino?: string | null
+          completed_at?: string | null
+          created_at?: string
+          descricao?: string | null
+          efi_charge_id?: string | null
+          efi_e2e_id?: string | null
+          erro_mensagem?: string | null
+          id?: string
+          metadata?: Json | null
+          saldo_anterior?: number | null
+          saldo_posterior?: number | null
+          status?: Database["public"]["Enums"]["transacao_status"]
+          tipo?: Database["public"]["Enums"]["transacao_tipo"]
+          updated_at?: string
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transacoes_financeiras_barbeiro_id_fkey"
+            columns: ["barbeiro_id"]
+            isOneToOne: false
+            referencedRelation: "barbeiros"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transacoes_financeiras_barbeiro_id_fkey"
+            columns: ["barbeiro_id"]
+            isOneToOne: false
+            referencedRelation: "barbeiros_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transacoes_financeiras_carteira_id_fkey"
+            columns: ["carteira_id"]
+            isOneToOne: false
+            referencedRelation: "carteiras"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transacoes_financeiras_efi_charge_id_fkey"
+            columns: ["efi_charge_id"]
+            isOneToOne: false
+            referencedRelation: "efi_barbeiro_extrato"
+            referencedColumns: ["charge_id"]
+          },
+          {
+            foreignKeyName: "transacoes_financeiras_efi_charge_id_fkey"
+            columns: ["efi_charge_id"]
+            isOneToOne: false
+            referencedRelation: "efi_pix_charges"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string | null
@@ -5566,6 +5825,10 @@ export type Database = {
       clean_expired_pending_bookings: { Args: never; Returns: undefined }
       clean_expired_reservas_loja: { Args: never; Returns: undefined }
       clean_expired_verification_codes: { Args: never; Returns: undefined }
+      confirmar_transacao: {
+        Args: { p_efi_e2e_id: string; p_transacao_id: string }
+        Returns: undefined
+      }
       count_subscription_uses_in_cycle: {
         Args: {
           p_assinatura_id: string
@@ -5594,6 +5857,36 @@ export type Database = {
           p_telefone: string
         }
         Returns: Json
+      }
+      creditar_carteira: {
+        Args: {
+          p_barbeiro_id: string
+          p_charge_id?: string
+          p_descricao?: string
+          p_valor: number
+        }
+        Returns: {
+          carteira_id: string
+          chave_pix: string
+          pix_automatico_ativo: boolean
+          saldo_anterior: number
+          saldo_novo: number
+          transacao_id: string
+        }[]
+      }
+      debitar_carteira: {
+        Args: {
+          p_barbeiro_id: string
+          p_chave_pix_destino: string
+          p_descricao?: string
+          p_tipo: Database["public"]["Enums"]["transacao_tipo"]
+          p_valor: number
+        }
+        Returns: {
+          saldo_anterior: number
+          saldo_novo: number
+          transacao_id: string
+        }[]
       }
       ensure_default_loyalty_promotion: {
         Args: { p_tenant_id: string }
@@ -5784,6 +6077,10 @@ export type Database = {
         Args: { p_assinatura_id: string; p_forma_pagamento: string }
         Returns: Json
       }
+      reverter_transacao_falha: {
+        Args: { p_erro_mensagem: string; p_transacao_id: string }
+        Returns: undefined
+      }
       store_create_order_with_reservations: {
         Args: {
           p_items: Json
@@ -5854,6 +6151,17 @@ export type Database = {
         | "expired"
         | "cancelled"
         | "past_due"
+      transacao_status:
+        | "pendente"
+        | "processando"
+        | "concluida"
+        | "falhou"
+        | "estornada"
+      transacao_tipo:
+        | "entrada"
+        | "saque_manual"
+        | "saque_automatico"
+        | "estorno"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -6015,6 +6323,19 @@ export const Constants = {
         "expired",
         "cancelled",
         "past_due",
+      ],
+      transacao_status: [
+        "pendente",
+        "processando",
+        "concluida",
+        "falhou",
+        "estornada",
+      ],
+      transacao_tipo: [
+        "entrada",
+        "saque_manual",
+        "saque_automatico",
+        "estorno",
       ],
     },
   },
