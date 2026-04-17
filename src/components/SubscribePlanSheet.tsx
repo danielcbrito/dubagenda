@@ -320,16 +320,14 @@ export function SubscribePlanSheet({ open, onOpenChange, userId }: SubscribePlan
       if (checkError) { toast.error("Erro ao verificar assinaturas existentes"); setSubscribing(null); return; }
       if (existing) { toast.error("Você já possui um plano ativo"); setSubscribing(null); return; }
 
-      const nextBillingDate = new Date();
-      nextBillingDate.setMonth(nextBillingDate.getMonth() + 1);
-      const { error: insertError } = await supabase.from("assinaturas").insert([{
-        user_id: userId, plano_id: planId, status: "active",
-        next_billing_date: format(nextBillingDate, 'yyyy-MM-dd')
-      }]);
-      if (insertError) { toast.error("Erro ao criar assinatura. Tente novamente."); }
-      else { toast.success("Assinatura efetuada com sucesso!"); setTimeout(() => onOpenChange(false), 1000); }
-    } catch (err) { toast.error("Erro inesperado ao criar assinatura"); }
-    finally { setSubscribing(null); }
+      // Redireciona para o fluxo completo de assinatura (com seleção obrigatória de barbeiro + pagamento)
+      onOpenChange(false);
+      window.location.href = `/cliente/assinar?planoId=${planId}`;
+    } catch (err) {
+      toast.error("Erro inesperado ao iniciar assinatura");
+    } finally {
+      setSubscribing(null);
+    }
   };
 
   const goToSelect = useCallback(() => {
