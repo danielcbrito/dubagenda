@@ -1643,6 +1643,188 @@ export type Database = {
         }
         Relationships: []
       }
+      efi_pix_charges: {
+        Row: {
+          barbeiro_id: string
+          br_code: string | null
+          chave_pix_destino: string
+          created_at: string
+          descricao: string | null
+          e2e_id: string | null
+          expires_at: string | null
+          id: string
+          loc_id: number | null
+          paid_at: string | null
+          qr_code_image: string | null
+          raw_charge: Json | null
+          status: string
+          txid: string
+          updated_at: string
+          user_id: string
+          valor: number
+        }
+        Insert: {
+          barbeiro_id: string
+          br_code?: string | null
+          chave_pix_destino: string
+          created_at?: string
+          descricao?: string | null
+          e2e_id?: string | null
+          expires_at?: string | null
+          id?: string
+          loc_id?: number | null
+          paid_at?: string | null
+          qr_code_image?: string | null
+          raw_charge?: Json | null
+          status?: string
+          txid: string
+          updated_at?: string
+          user_id: string
+          valor: number
+        }
+        Update: {
+          barbeiro_id?: string
+          br_code?: string | null
+          chave_pix_destino?: string
+          created_at?: string
+          descricao?: string | null
+          e2e_id?: string | null
+          expires_at?: string | null
+          id?: string
+          loc_id?: number | null
+          paid_at?: string | null
+          qr_code_image?: string | null
+          raw_charge?: Json | null
+          status?: string
+          txid?: string
+          updated_at?: string
+          user_id?: string
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "efi_pix_charges_barbeiro_id_fkey"
+            columns: ["barbeiro_id"]
+            isOneToOne: false
+            referencedRelation: "barbeiros"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "efi_pix_charges_barbeiro_id_fkey"
+            columns: ["barbeiro_id"]
+            isOneToOne: false
+            referencedRelation: "barbeiros_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      efi_pix_payouts: {
+        Row: {
+          barbeiro_id: string
+          charge_id: string
+          chave_pix_destino: string
+          completed_at: string | null
+          created_at: string
+          e2e_id: string | null
+          efi_id_envio: string | null
+          error_message: string | null
+          id: string
+          idempotency_key: string
+          raw_response: Json | null
+          status: string
+          updated_at: string
+          valor: number
+        }
+        Insert: {
+          barbeiro_id: string
+          charge_id: string
+          chave_pix_destino: string
+          completed_at?: string | null
+          created_at?: string
+          e2e_id?: string | null
+          efi_id_envio?: string | null
+          error_message?: string | null
+          id?: string
+          idempotency_key: string
+          raw_response?: Json | null
+          status?: string
+          updated_at?: string
+          valor: number
+        }
+        Update: {
+          barbeiro_id?: string
+          charge_id?: string
+          chave_pix_destino?: string
+          completed_at?: string | null
+          created_at?: string
+          e2e_id?: string | null
+          efi_id_envio?: string | null
+          error_message?: string | null
+          id?: string
+          idempotency_key?: string
+          raw_response?: Json | null
+          status?: string
+          updated_at?: string
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "efi_pix_payouts_barbeiro_id_fkey"
+            columns: ["barbeiro_id"]
+            isOneToOne: false
+            referencedRelation: "barbeiros"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "efi_pix_payouts_barbeiro_id_fkey"
+            columns: ["barbeiro_id"]
+            isOneToOne: false
+            referencedRelation: "barbeiros_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "efi_pix_payouts_charge_id_fkey"
+            columns: ["charge_id"]
+            isOneToOne: false
+            referencedRelation: "efi_barbeiro_extrato"
+            referencedColumns: ["charge_id"]
+          },
+          {
+            foreignKeyName: "efi_pix_payouts_charge_id_fkey"
+            columns: ["charge_id"]
+            isOneToOne: false
+            referencedRelation: "efi_pix_charges"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      efi_webhook_events: {
+        Row: {
+          e2e_id: string | null
+          event_signature: string
+          id: string
+          payload: Json
+          processed_at: string
+          txid: string | null
+        }
+        Insert: {
+          e2e_id?: string | null
+          event_signature: string
+          id?: string
+          payload: Json
+          processed_at?: string
+          txid?: string | null
+        }
+        Update: {
+          e2e_id?: string | null
+          event_signature?: string
+          id?: string
+          payload?: Json
+          processed_at?: string
+          txid?: string | null
+        }
+        Relationships: []
+      }
       email_confirmation_tokens: {
         Row: {
           created_at: string
@@ -5314,6 +5496,39 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      efi_barbeiro_extrato: {
+        Row: {
+          barbeiro_id: string | null
+          charge_id: string | null
+          charge_status: string | null
+          descricao: string | null
+          paid_at: string | null
+          payout_erro: string | null
+          payout_id: string | null
+          payout_status: string | null
+          recebido_em: string | null
+          repassado_em: string | null
+          txid: string | null
+          valor_recebido: number | null
+          valor_repassado: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "efi_pix_charges_barbeiro_id_fkey"
+            columns: ["barbeiro_id"]
+            isOneToOne: false
+            referencedRelation: "barbeiros"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "efi_pix_charges_barbeiro_id_fkey"
+            columns: ["barbeiro_id"]
+            isOneToOne: false
+            referencedRelation: "barbeiros_public"
             referencedColumns: ["id"]
           },
         ]
