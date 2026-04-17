@@ -28,6 +28,7 @@ import { FloatingActionBar } from "@/components/booking/FloatingActionBar";
 import { UnitSelector } from "@/components/booking/UnitSelector";
 import { NextAvailableDateButton } from "@/components/booking/NextAvailableDateButton";
 import { useBlockedBarbers } from "@/hooks/useBlockedBarbers";
+import { useWalletStatus } from "@/hooks/useWalletStatus";
 
 interface TenantUnit {
   id: string;
@@ -173,6 +174,18 @@ const ClienteAgendar = () => {
 
   // Fonte única do barbeiro selecionado (fallback para assinatura vinculada)
   const selectedBarberId = selectedBarber?.id || activeSubscription?.barbeiro_id || null;
+
+  // Status da carteira do barbeiro: define se podemos oferecer PIX (e Carteira do app)
+  const { canReceivePix } = useWalletStatus(selectedBarberId);
+
+  // Fallback: se o método selecionado deixou de estar disponível (ex.: usuário trocou
+  // para um barbeiro sem chave PIX validada), volta para "pagar na barbearia".
+  useEffect(() => {
+    if (!canReceivePix && (paymentMethod === 'pix' || paymentMethod === 'wallet')) {
+      setPaymentMethod('cash');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canReceivePix, selectedBarberId]);
   const availabilityTenantId = selectedBarber?.tenant_id ?? (preferredShop?.id ?? null);
 
   const { 
@@ -2290,8 +2303,45 @@ const ClienteAgendar = () => {
                 </div>
               </motion.button>
 
-              {/* Pagar com Saldo da Carteira */}
-              {walletBalance > 0 && (() => {
+              {/* Pagar via PIX — só aparece quando o barbeiro tem chave PIX validada (carteira Efí ativa) */}
+              {canReceivePix && (
+                <motion.button
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => { setPaymentMethod('pix'); setUseRedemption(false); }}
+                  className={cn(
+                    "w-full rounded-xl border p-4 text-left transition-all mt-3",
+                    paymentMethod === 'pix' && !useRedemption
+                      ? "border-primary/50 bg-primary/5 ring-1 ring-primary/20"
+                      : "border-border/20 bg-card/50 hover:border-border/40"
+                  )}
+                >
+                  <div className="flex items-center gap-3.5">
+                    <div className={cn(
+                      "w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0",
+                      paymentMethod === 'pix' && !useRedemption ? "bg-primary/10" : "bg-muted/20"
+                    )}>
+                      <img src={pixIcon} alt="PIX" className="w-5 h-5 object-contain" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[13px] font-semibold text-foreground/70">Pagar via PIX</p>
+                      <p className="text-[11px] text-muted-foreground/50 mt-0.5">
+                        Confirmação instantânea
+                      </p>
+                    </div>
+                    <div className={cn(
+                      "w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all",
+                      paymentMethod === 'pix' && !useRedemption
+                        ? "bg-primary border-primary"
+                        : "border-muted-foreground/20"
+                    )}>
+                      {paymentMethod === 'pix' && !useRedemption && <Check className="w-3 h-3 text-primary-foreground" strokeWidth={3} />}
+                    </div>
+                  </div>
+                </motion.button>
+              )}
+
+              {/* Pagar com Saldo da Carteira — exige barbeiro com chave PIX validada (mesma regra do PIX) */}
+              {canReceivePix && walletBalance > 0 && (() => {
                 const totalPrice = getTotalPrice();
                 const coversAll = walletBalance >= totalPrice;
                 const remainder = Math.max(0, totalPrice - walletBalance);
