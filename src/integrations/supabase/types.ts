@@ -1775,12 +1775,17 @@ export type Database = {
       }
       efi_credenciais: {
         Row: {
+          activated_at: string | null
+          activated_by: string | null
           ambiente: string
           ativo: boolean
           barbeiro_id: string
           cert_p12_auth_tag: string
           cert_p12_encrypted: string
           cert_p12_iv: string
+          cert_password_auth_tag: string | null
+          cert_password_encrypted: string | null
+          cert_password_iv: string | null
           client_id_auth_tag: string
           client_id_encrypted: string
           client_id_iv: string
@@ -1790,15 +1795,25 @@ export type Database = {
           created_at: string
           id: string
           pix_key: string
+          test_connection_at: string | null
+          test_connection_ok: boolean | null
+          test_pix_at: string | null
+          test_pix_e2e_id: string | null
+          test_pix_ok: boolean | null
           updated_at: string
         }
         Insert: {
+          activated_at?: string | null
+          activated_by?: string | null
           ambiente?: string
           ativo?: boolean
           barbeiro_id: string
           cert_p12_auth_tag: string
           cert_p12_encrypted: string
           cert_p12_iv: string
+          cert_password_auth_tag?: string | null
+          cert_password_encrypted?: string | null
+          cert_password_iv?: string | null
           client_id_auth_tag: string
           client_id_encrypted: string
           client_id_iv: string
@@ -1808,15 +1823,25 @@ export type Database = {
           created_at?: string
           id?: string
           pix_key: string
+          test_connection_at?: string | null
+          test_connection_ok?: boolean | null
+          test_pix_at?: string | null
+          test_pix_e2e_id?: string | null
+          test_pix_ok?: boolean | null
           updated_at?: string
         }
         Update: {
+          activated_at?: string | null
+          activated_by?: string | null
           ambiente?: string
           ativo?: boolean
           barbeiro_id?: string
           cert_p12_auth_tag?: string
           cert_p12_encrypted?: string
           cert_p12_iv?: string
+          cert_password_auth_tag?: string | null
+          cert_password_encrypted?: string | null
+          cert_password_iv?: string | null
           client_id_auth_tag?: string
           client_id_encrypted?: string
           client_id_iv?: string
@@ -1826,6 +1851,11 @@ export type Database = {
           created_at?: string
           id?: string
           pix_key?: string
+          test_connection_at?: string | null
+          test_connection_ok?: boolean | null
+          test_pix_at?: string | null
+          test_pix_e2e_id?: string | null
+          test_pix_ok?: boolean | null
           updated_at?: string
         }
         Relationships: [

@@ -41,6 +41,7 @@ const NotFound = lazy(() => import("./pages/NotFound"));
 const BarberReviews = lazy(() => import("./pages/BarberReviews"));
 const EscolherBarbearia = lazy(() => import("./pages/EscolherBarbearia"));
 const AdminFixCoordinates = lazy(() => import("./pages/AdminFixCoordinates"));
+const AdminEfiCredenciais = lazy(() => import("./pages/AdminEfiCredenciais"));
 const BarbershopPublic = lazy(() => import("./pages/BarbershopPublic"));
 const BarbershopUnidades = lazy(() => import("./pages/BarbershopUnidades"));
 const Flowchart = lazy(() => import("./pages/Flowchart"));
@@ -370,6 +371,7 @@ function AppRoutes() {
               <Route path="/suporte" element={<SupportChat />} />
               <Route path="/escolher-barbearia" element={<EscolherBarbearia />} />
               <Route path="/admin/fix-coordinates" element={<AdminFixCoordinates />} />
+              <Route path="/admin/efi-credenciais" element={<AdminEfiCredenciais />} />
               <Route path="/b/:slug/unidades" element={<BarbershopUnidades />} />
               <Route path="/b/:slug" element={<BarbershopPublic />} />
               <Route path="/:slug" element={<BarbershopPublic />} />
