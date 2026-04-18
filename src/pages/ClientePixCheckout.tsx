@@ -20,6 +20,8 @@ interface PixCheckoutData {
   barberName?: string;
   bookingDate?: string;
   bookingTime?: string;
+  provider?: 'asaas' | 'efi';
+  txid?: string;
 }
 
 const ClientePixCheckout = () => {
