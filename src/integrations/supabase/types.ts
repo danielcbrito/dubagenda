@@ -2287,6 +2287,7 @@ export type Database = {
           hora_fechamento: string | null
           id: string
           motivo: string | null
+          unidade_id: string | null
           updated_at: string | null
         }
         Insert: {
@@ -2299,6 +2300,7 @@ export type Database = {
           hora_fechamento?: string | null
           id?: string
           motivo?: string | null
+          unidade_id?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -2311,9 +2313,18 @@ export type Database = {
           hora_fechamento?: string | null
           id?: string
           motivo?: string | null
+          unidade_id?: string | null
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "horarios_excepcionais_unidade_id_fkey"
+            columns: ["unidade_id"]
+            isOneToOne: false
+            referencedRelation: "tenant_unidades"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       horarios_excepcionais_barbeiro: {
         Row: {
