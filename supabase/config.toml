@@ -56,3 +56,6 @@ verify_jwt = false
 
 [functions.geocode-address]
 verify_jwt = false
+
+[functions.efi-webhook]
+verify_jwt = false

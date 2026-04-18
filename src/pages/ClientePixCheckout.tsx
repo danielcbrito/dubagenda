@@ -20,6 +20,8 @@ interface PixCheckoutData {
   barberName?: string;
   bookingDate?: string;
   bookingTime?: string;
+  provider?: 'asaas' | 'efi';
+  txid?: string;
 }
 
 const ClientePixCheckout = () => {
@@ -63,9 +65,36 @@ const ClientePixCheckout = () => {
     return () => clearInterval(interval);
   }, [pixData?.expiresAt]);
 
-  // Polling automático — verifica pagamento a cada 5s
+  // Polling automático — verifica pagamento a cada 4s
   useEffect(() => {
-    if (!pixData?.pendingBookingId || paid || expired) return;
+    if (!pixData || paid || expired) return;
+
+    // Provider Efí: consulta direta na tabela efi_pix_charges (Realtime habilitado)
+    if (pixData.provider === 'efi' && pixData.txid) {
+      const checkEfi = async () => {
+        const { data } = await supabase
+          .from('efi_pix_charges')
+          .select('status')
+          .eq('txid', pixData.txid!)
+          .maybeSingle();
+        if (data?.status === 'PAID') {
+          setPaid(true);
+          sessionStorage.removeItem('pix_checkout_data');
+          return true;
+        }
+        if (data?.status === 'EXPIRED' || data?.status === 'CANCELLED') {
+          setExpired(true);
+          sessionStorage.removeItem('pix_checkout_data');
+          return true;
+        }
+        return false;
+      };
+      const interval = setInterval(() => { checkEfi(); }, 4000);
+      checkEfi();
+      return () => clearInterval(interval);
+    }
+
+    // Fallback Asaas (legado)
     const poll = setInterval(async () => {
       try {
         const { data, error } = await supabase.functions.invoke("asaas-webhook", {
@@ -85,7 +114,7 @@ const ClientePixCheckout = () => {
       } catch { /* silent */ }
     }, 5000);
     return () => clearInterval(poll);
-  }, [pixData?.pendingBookingId, paid, expired]);
+  }, [pixData, paid, expired]);
 
   // Barra de progresso + redirecionamento após pagamento confirmado
   useEffect(() => {

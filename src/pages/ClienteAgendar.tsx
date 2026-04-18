@@ -1152,6 +1152,40 @@ const ClienteAgendar = () => {
         throw new Error("Não foi possível iniciar o pagamento.");
       }
 
+      // === PIX automático via Efí Bank ===
+      if (paymentMethod === 'pix') {
+        const { data, error } = await supabase.functions.invoke('efi-create-pix-charge', {
+          body: {
+            barbeiro_id: bookingData.barbeiro_id,
+            valor: finalPrice,
+            descricao: `Agendamento - ${serviceNames}`,
+            servico_id: bookingData.servico_id,
+            data: bookingData.data,
+            hora: bookingData.hora,
+            duracao: bookingData.duracao,
+          },
+        });
+        if (error) throw error;
+        if (data?.error) throw new Error(data.error);
+
+        sessionStorage.setItem('pix_checkout_data', JSON.stringify({
+          pixQrCode: data.qr_code_image?.replace(/^data:image\/png;base64,/, '') ?? '',
+          pixPayload: data.br_code,
+          pendingBookingId: data.pending_booking_id,
+          asaasPaymentId: data.txid, // reutilizamos o campo (UI agnóstica)
+          provider: 'efi',
+          txid: data.txid,
+          expiresAt: data.expires_at,
+          value: finalPrice,
+          serviceName: serviceNames,
+          barberName: barbers.find(b => b.id === selectedBarberId)?.apelido,
+          bookingDate: format(selectedDate, "dd/MM/yyyy"),
+          bookingTime: bookingTime,
+        }));
+        navigate('/cliente/pix-checkout');
+        return;
+      }
+
       // === Pagamento via Carteira (wallet) — suporta pagamento parcial ===
       if (paymentMethod === 'wallet') {
         const walletDebit = Math.min(walletBalance, finalPrice);
