@@ -371,6 +371,7 @@ function AppRoutes() {
               <Route path="/suporte" element={<SupportChat />} />
               <Route path="/escolher-barbearia" element={<EscolherBarbearia />} />
               <Route path="/admin/fix-coordinates" element={<AdminFixCoordinates />} />
+              <Route path="/admin/efi-credenciais" element={<AdminEfiCredenciais />} />
               <Route path="/b/:slug/unidades" element={<BarbershopUnidades />} />
               <Route path="/b/:slug" element={<BarbershopPublic />} />
               <Route path="/:slug" element={<BarbershopPublic />} />
