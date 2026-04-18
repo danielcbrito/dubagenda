@@ -1773,6 +1773,78 @@ export type Database = {
         }
         Relationships: []
       }
+      efi_credenciais: {
+        Row: {
+          ambiente: string
+          ativo: boolean
+          barbeiro_id: string
+          cert_p12_auth_tag: string
+          cert_p12_encrypted: string
+          cert_p12_iv: string
+          client_id_auth_tag: string
+          client_id_encrypted: string
+          client_id_iv: string
+          client_secret_auth_tag: string
+          client_secret_encrypted: string
+          client_secret_iv: string
+          created_at: string
+          id: string
+          pix_key: string
+          updated_at: string
+        }
+        Insert: {
+          ambiente?: string
+          ativo?: boolean
+          barbeiro_id: string
+          cert_p12_auth_tag: string
+          cert_p12_encrypted: string
+          cert_p12_iv: string
+          client_id_auth_tag: string
+          client_id_encrypted: string
+          client_id_iv: string
+          client_secret_auth_tag: string
+          client_secret_encrypted: string
+          client_secret_iv: string
+          created_at?: string
+          id?: string
+          pix_key: string
+          updated_at?: string
+        }
+        Update: {
+          ambiente?: string
+          ativo?: boolean
+          barbeiro_id?: string
+          cert_p12_auth_tag?: string
+          cert_p12_encrypted?: string
+          cert_p12_iv?: string
+          client_id_auth_tag?: string
+          client_id_encrypted?: string
+          client_id_iv?: string
+          client_secret_auth_tag?: string
+          client_secret_encrypted?: string
+          client_secret_iv?: string
+          created_at?: string
+          id?: string
+          pix_key?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "efi_credenciais_barbeiro_id_fkey"
+            columns: ["barbeiro_id"]
+            isOneToOne: true
+            referencedRelation: "barbeiros"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "efi_credenciais_barbeiro_id_fkey"
+            columns: ["barbeiro_id"]
+            isOneToOne: true
+            referencedRelation: "barbeiros_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       efi_pix_charges: {
         Row: {
           barbeiro_id: string
@@ -1785,6 +1857,7 @@ export type Database = {
           id: string
           loc_id: number | null
           paid_at: string | null
+          pending_booking_id: string | null
           qr_code_image: string | null
           raw_charge: Json | null
           status: string
@@ -1804,6 +1877,7 @@ export type Database = {
           id?: string
           loc_id?: number | null
           paid_at?: string | null
+          pending_booking_id?: string | null
           qr_code_image?: string | null
           raw_charge?: Json | null
           status?: string
@@ -1823,6 +1897,7 @@ export type Database = {
           id?: string
           loc_id?: number | null
           paid_at?: string | null
+          pending_booking_id?: string | null
           qr_code_image?: string | null
           raw_charge?: Json | null
           status?: string
@@ -1844,6 +1919,13 @@ export type Database = {
             columns: ["barbeiro_id"]
             isOneToOne: false
             referencedRelation: "barbeiros_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "efi_pix_charges_pending_booking_id_fkey"
+            columns: ["pending_booking_id"]
+            isOneToOne: false
+            referencedRelation: "pending_bookings"
             referencedColumns: ["id"]
           },
         ]
