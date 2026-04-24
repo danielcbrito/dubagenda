@@ -169,7 +169,7 @@ const fetchLoyaltyData = async (userId: string, tenantId: string | null) => {
     // Fetch active subscription in same parallel batch
     supabase
       .from("assinaturas")
-      .select("id, status, next_billing_date, plano_id, barbeiro_id, payment_method, cash_payment_confirmed, ciclo_inicio, ciclo_fim, usos_ciclo_atual, plano:planos(nome, limite_agendamentos_mes, preco_mensal, servico:servicos(nome))")
+      .select("id, status, next_billing_date, plano_id, barbeiro_id, payment_method, cash_payment_confirmed, ciclo_inicio, ciclo_fim, usos_ciclo_atual, plano:planos(nome, limite_agendamentos_mes, preco_mensal, servico:servicos!planos_servico_id_fkey(nome))")
       .eq("user_id", userId)
       .eq("status", "active")
       .order("created_at", { ascending: false })
@@ -248,7 +248,7 @@ const fetchLoyaltyData = async (userId: string, tenantId: string | null) => {
         // Re-fetch active sub after renewal
         const { data: recoveredSub } = await supabase
           .from("assinaturas")
-          .select("id, status, next_billing_date, plano_id, barbeiro_id, payment_method, cash_payment_confirmed, ciclo_inicio, ciclo_fim, usos_ciclo_atual, plano:planos(nome, limite_agendamentos_mes, preco_mensal, servico:servicos(nome))")
+          .select("id, status, next_billing_date, plano_id, barbeiro_id, payment_method, cash_payment_confirmed, ciclo_inicio, ciclo_fim, usos_ciclo_atual, plano:planos(nome, limite_agendamentos_mes, preco_mensal, servico:servicos!planos_servico_id_fkey(nome))")
           .eq("user_id", userId)
           .eq("status", "active")
           .order("created_at", { ascending: false })

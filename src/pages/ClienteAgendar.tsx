@@ -643,7 +643,7 @@ const ClienteAgendar = () => {
             nome,
             limite_agendamentos_mes,
             servico_id,
-            servico:servicos(id, nome, descricao, duracao_minutos, preco)
+            servico:servicos!planos_servico_id_fkey(id, nome, descricao, duracao_minutos, preco)
           )
         `)
         .eq("user_id", uid)
