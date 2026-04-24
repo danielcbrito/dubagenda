@@ -5,7 +5,9 @@ import {
   ArrowRight,
   Calendar,
   Check,
+  Lock,
   MapPin,
+  Scissors,
   Shield,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -18,6 +20,15 @@ interface Plan {
   beneficios_json: any;
   limite_agendamentos_mes: number;
   tenant_id: string | null;
+  // Disponibilidade (opcionais — backward compatible)
+  ativo?: boolean;
+  controle_vagas_ativo?: boolean;
+  vagas?: number | null;
+  vagas_restantes?: number | null;
+  esgotado?: boolean;
+  inativo?: boolean;
+  indisponivel?: boolean;
+  servicos?: { id: string; nome: string }[];
 }
 
 interface PlanCarouselProps {
