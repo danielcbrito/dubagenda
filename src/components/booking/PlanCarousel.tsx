@@ -123,6 +123,16 @@ export function PlanCarousel({
                 .toFixed(2)
                 .slice(2);
               const isActive = progress > 0.7;
+              const indisponivel = !!plan.indisponivel;
+              const inativo = !!plan.inativo;
+              const esgotado = !!plan.esgotado;
+              const restantes = plan.vagas_restantes;
+              const lowStock =
+                !indisponivel &&
+                plan.controle_vagas_ativo &&
+                typeof restantes === "number" &&
+                restantes > 0 &&
+                restantes <= 3;
 
               return (
                 <div
@@ -137,13 +147,35 @@ export function PlanCarousel({
                 >
                   <div
                     className={cn(
-                      "rounded-2xl p-5 h-full flex flex-col",
-                      "border",
+                      "rounded-2xl p-5 h-full flex flex-col relative",
+                      "border transition-opacity duration-300",
                       isActive
                         ? "bg-card border-border/60 shadow-[0_2px_16px_rgba(0,0,0,0.05)]"
-                        : "bg-card/60 border-border/20"
+                        : "bg-card/60 border-border/20",
+                      indisponivel && "opacity-30 pointer-events-none"
                     )}
                   >
+                    {/* Status badge — top right */}
+                    {(indisponivel || lowStock) && (
+                      <div className="absolute top-3 right-3 z-10">
+                        {inativo && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-muted text-muted-foreground text-[9px] font-bold uppercase tracking-wider">
+                            <Lock className="w-2.5 h-2.5" />
+                            Indisponível
+                          </span>
+                        )}
+                        {!inativo && esgotado && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-muted text-muted-foreground text-[9px] font-bold uppercase tracking-wider">
+                            Esgotado
+                          </span>
+                        )}
+                        {lowStock && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-orange-500/15 text-orange-600 dark:text-orange-400 text-[9px] font-bold uppercase tracking-wider">
+                            Últimas {restantes} {restantes === 1 ? "vaga" : "vagas"}
+                          </span>
+                        )}
+                      </div>
+                    )}
                     {/* Plan name */}
                     <div className="mb-1">
                       <p
