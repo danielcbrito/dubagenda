@@ -3527,10 +3527,44 @@ export type Database = {
         }
         Relationships: []
       }
+      plano_servicos: {
+        Row: {
+          created_at: string
+          plano_id: string
+          servico_id: string
+        }
+        Insert: {
+          created_at?: string
+          plano_id: string
+          servico_id: string
+        }
+        Update: {
+          created_at?: string
+          plano_id?: string
+          servico_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plano_servicos_plano_id_fkey"
+            columns: ["plano_id"]
+            isOneToOne: false
+            referencedRelation: "planos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "plano_servicos_servico_id_fkey"
+            columns: ["servico_id"]
+            isOneToOne: false
+            referencedRelation: "servicos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       planos: {
         Row: {
           ativo: boolean | null
           beneficios_json: Json | null
+          controle_vagas_ativo: boolean
           created_at: string | null
           descricao: string | null
           id: string
@@ -3542,10 +3576,12 @@ export type Database = {
           stripe_price_id: string | null
           tenant_id: string | null
           updated_at: string | null
+          vagas: number | null
         }
         Insert: {
           ativo?: boolean | null
           beneficios_json?: Json | null
+          controle_vagas_ativo?: boolean
           created_at?: string | null
           descricao?: string | null
           id?: string
@@ -3557,10 +3593,12 @@ export type Database = {
           stripe_price_id?: string | null
           tenant_id?: string | null
           updated_at?: string | null
+          vagas?: number | null
         }
         Update: {
           ativo?: boolean | null
           beneficios_json?: Json | null
+          controle_vagas_ativo?: boolean
           created_at?: string | null
           descricao?: string | null
           id?: string
@@ -3572,6 +3610,7 @@ export type Database = {
           stripe_price_id?: string | null
           tenant_id?: string | null
           updated_at?: string | null
+          vagas?: number | null
         }
         Relationships: [
           {
@@ -4979,6 +5018,9 @@ export type Database = {
           is_test: boolean | null
           latitude: number | null
           logo_url: string | null
+          loja_ativa: boolean
+          loja_manutencao_ativa: boolean
+          loja_manutencao_mensagem: string | null
           longitude: number | null
           nome: string
           numero: string | null
@@ -5008,6 +5050,9 @@ export type Database = {
           is_test?: boolean | null
           latitude?: number | null
           logo_url?: string | null
+          loja_ativa?: boolean
+          loja_manutencao_ativa?: boolean
+          loja_manutencao_mensagem?: string | null
           longitude?: number | null
           nome: string
           numero?: string | null
@@ -5037,6 +5082,9 @@ export type Database = {
           is_test?: boolean | null
           latitude?: number | null
           logo_url?: string | null
+          loja_ativa?: boolean
+          loja_manutencao_ativa?: boolean
+          loja_manutencao_mensagem?: string | null
           longitude?: number | null
           nome?: string
           numero?: string | null
