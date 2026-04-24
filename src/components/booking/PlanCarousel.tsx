@@ -7,7 +7,6 @@ import {
   Check,
   Lock,
   MapPin,
-  Scissors,
   Shield,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
