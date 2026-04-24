@@ -705,19 +705,29 @@ const Cliente = () => {
           invalidateShop();
         }));
 
-      // ─── Canal 2: Fidelidade ───
+      // ─── Canal 2: Fidelidade + Assinatura (sync global) ───
       let fidelidadeBuilder = supabase
         .channel('canal-fidelidade')
-        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'assinaturas', filter: `user_id=eq.${userId}` }, (payload) => {
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'assinaturas', filter: `user_id=eq.${userId}` }, (payload) => {
+          // Sempre revalida loyalty (que recarrega activeSubscription/pending/expired no dashboard)
           invalidateLoyalty();
+
           const newStatus = (payload.new as any)?.status;
           const oldStatus = (payload.old as any)?.status;
-          if (newStatus === 'active' && oldStatus === 'pending_renewal') {
-            toast.success('Plano renovado com sucesso! 🎉');
+          const eventType = payload.eventType;
+
+          // Toasts contextuais — apenas visuais, sem som
+          if (eventType === 'INSERT' && newStatus === 'active') {
+            toast.success('Plano carregado 🎉');
+          } else if (eventType === 'UPDATE') {
+            if (oldStatus === 'pending_renewal' && newStatus === 'active') {
+              toast.success('Plano renovado 🎉');
+            } else if (newStatus === 'cancelled' && oldStatus !== 'cancelled') {
+              toast.error('Seu plano foi cancelado');
+            } else if (newStatus === 'active' && oldStatus !== 'active') {
+              toast.success('Plano ativado 🎉');
+            }
           }
-        })
-        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'assinaturas', filter: `user_id=eq.${userId}` }, () => {
-          invalidateLoyalty();
         })
         .on('postgres_changes', { event: '*', schema: 'public', table: 'pontos', filter: `user_id=eq.${userId}` }, () => {
           invalidateLoyalty();

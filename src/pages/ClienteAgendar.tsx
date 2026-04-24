@@ -928,7 +928,7 @@ const ClienteAgendar = () => {
     };
   }, [isInitializing, selectedBarberId, refreshSlots]);
 
-  // ─── Canal Realtime: Assinatura do usuário (ativação em tempo real) ───
+  // ─── Canal Realtime: Assinatura do usuário (sync em tempo real) ───
   useEffect(() => {
     if (!userId) return;
 
@@ -937,22 +937,35 @@ const ClienteAgendar = () => {
       .on(
         'postgres_changes',
         {
-          event: 'UPDATE',
+          event: '*',
           schema: 'public',
           table: 'assinaturas',
           filter: `user_id=eq.${userId}`,
         },
         async (payload) => {
-          const updated = payload.new as any;
-          console.log('[ClienteAgendar] Assinatura atualizada:', updated.status);
+          const newRow = payload.new as any;
+          const oldRow = payload.old as any;
+          const newStatus = newRow?.status;
+          const oldStatus = oldRow?.status;
 
-          if (updated.status === 'active') {
-            toast.success('🎉 Seu plano foi ativado! A opção de pagamento via plano já está disponível.');
-            const sub = await loadActiveSubscriptionOptimized(userId);
-            if (sub) {
-              setSubscriptionBlocked(false);
-              setSubscriptionLimitReached(false);
+          // Sempre recarrega a assinatura ativa (fonte de verdade)
+          const sub = await loadActiveSubscriptionOptimized(userId);
+
+          if (sub && newStatus === 'active') {
+            // Plano ficou ativo durante a sessão → entra no modo plano automaticamente
+            setSubscriptionBlocked(false);
+            setSubscriptionLimitReached(false);
+
+            if (payload.eventType === 'INSERT' || (oldStatus && oldStatus !== 'active')) {
+              const barberName = sub.barbeiro?.apelido;
+              toast.success(
+                barberName
+                  ? `🎉 Plano ativo com ${barberName}! Pronto para agendar.`
+                  : '🎉 Seu plano foi ativado!'
+              );
             }
+          } else if (newStatus === 'cancelled' && oldStatus !== 'cancelled') {
+            toast.error('Seu plano foi cancelado');
           }
         }
       )
