@@ -28,16 +28,9 @@ import scissorsDecor from "@/assets/scissors-decorative.png";
 import { BarberCard } from "@/components/booking/BarberCard";
 import { useBarberRatings } from "@/hooks/useBarberRatings";
 import { PlanCarousel } from "@/components/booking/PlanCarousel";
+import { enrichPlansWithAvailability, type PlanWithAvailability } from "@/hooks/usePlansAvailability";
 
-interface Plan {
-  id: string;
-  nome: string;
-  descricao: string;
-  preco_mensal: number;
-  beneficios_json: any;
-  limite_agendamentos_mes: number;
-  tenant_id: string | null;
-}
+type Plan = PlanWithAvailability;
 
 interface Barber {
   id: string;
@@ -210,7 +203,8 @@ const ClienteAssinar = () => {
       const tenantId = activeSub.plano.tenant_id;
       const key = tenantId || "dub";
       setSelectedTenantId(key);
-      setSelectedPlan(activeSub.plano as Plan);
+      const [enrichedActive] = await enrichPlansWithAvailability([activeSub.plano]);
+      setSelectedPlan(enrichedActive ?? null);
       await loadPlansForTenant(tenantId);
       await loadBarbersForTenant(tenantId);
       setStep(3); // Go straight to barber selection
@@ -253,11 +247,12 @@ const ClienteAssinar = () => {
 
   const loadAllPlansForResume = async (planId: string) => {
     const { data } = await supabase
-      .from('planos').select('*').eq('ativo', true).eq('id', planId).single();
+      .from('planos').select('*').eq('id', planId).single();
     if (data) {
       const tenantId = data.tenant_id;
       setSelectedTenantId(tenantId || "dub");
-      setSelectedPlan(data as Plan);
+      const [enriched] = await enrichPlansWithAvailability([data]);
+      setSelectedPlan(enriched ?? null);
       await loadPlansForTenant(tenantId);
       await loadBarbersForTenant(tenantId);
       setStep(3);
@@ -282,11 +277,13 @@ const ClienteAssinar = () => {
   };
 
   const loadPlansForTenant = async (tenantId: string | null) => {
-    let query = supabase.from('planos').select('*').eq('ativo', true).order('preco_mensal');
+    // Inclui planos inativos — UI exibe como "Indisponível" (opacity-30)
+    let query = supabase.from('planos').select('*').order('preco_mensal');
     if (tenantId) { query = query.eq('tenant_id', tenantId); }
     else { query = query.is('tenant_id', null); }
     const { data } = await query;
-    setPlans(data || []);
+    const enriched = await enrichPlansWithAvailability(data || []);
+    setPlans(enriched);
   };
 
   const loadBarbersForTenant = async (tenantId: string | null) => {
@@ -303,7 +300,7 @@ const ClienteAssinar = () => {
 
     const syncTenantData = async () => {
       try {
-        let plansQuery = supabase.from('planos').select('*').eq('ativo', true).order('preco_mensal');
+        let plansQuery = supabase.from('planos').select('*').order('preco_mensal');
         let barbersQuery = supabase.from('barbeiros').select('id, apelido, foto_url, tenant_id').eq('ativo', true).order('apelido');
         if (tenantId) {
           plansQuery = plansQuery.eq('tenant_id', tenantId);
@@ -313,9 +310,10 @@ const ClienteAssinar = () => {
           barbersQuery = barbersQuery.is('tenant_id', null);
         }
         const [{ data: nextPlans }, { data: nextBarbers }] = await Promise.all([plansQuery, barbersQuery]);
-        setPlans(nextPlans || []);
+        const enriched = await enrichPlansWithAvailability(nextPlans || []);
+        setPlans(enriched);
         setBarbers(nextBarbers || []);
-        setSelectedPlan((prev) => prev ? (nextPlans || []).find((p) => p.id === prev.id) || null : null);
+        setSelectedPlan((prev) => prev ? enriched.find((p) => p.id === prev.id) || null : null);
         setSelectedBarber((prev) => prev ? (nextBarbers || []).find((b) => b.id === prev.id) || null : null);
       } catch (error) {
         console.error('Erro ao sincronizar dados:', error);
@@ -326,6 +324,8 @@ const ClienteAssinar = () => {
       .channel(`cliente-assinar-sync-${tenantId ?? 'dub'}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'planos' }, syncTenantData)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'barbeiros' }, syncTenantData)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'assinaturas' }, syncTenantData)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'plano_servicos' }, syncTenantData)
       .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, [selectedTenantId]);

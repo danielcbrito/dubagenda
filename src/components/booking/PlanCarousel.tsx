@@ -5,6 +5,7 @@ import {
   ArrowRight,
   Calendar,
   Check,
+  Lock,
   MapPin,
   Shield,
 } from "lucide-react";
@@ -18,6 +19,15 @@ interface Plan {
   beneficios_json: any;
   limite_agendamentos_mes: number;
   tenant_id: string | null;
+  // Disponibilidade (opcionais — backward compatible)
+  ativo?: boolean;
+  controle_vagas_ativo?: boolean;
+  vagas?: number | null;
+  vagas_restantes?: number | null;
+  esgotado?: boolean;
+  inativo?: boolean;
+  indisponivel?: boolean;
+  servicos?: { id: string; nome: string }[];
 }
 
 interface PlanCarouselProps {
@@ -112,6 +122,16 @@ export function PlanCarousel({
                 .toFixed(2)
                 .slice(2);
               const isActive = progress > 0.7;
+              const indisponivel = !!plan.indisponivel;
+              const inativo = !!plan.inativo;
+              const esgotado = !!plan.esgotado;
+              const restantes = plan.vagas_restantes;
+              const lowStock =
+                !indisponivel &&
+                plan.controle_vagas_ativo &&
+                typeof restantes === "number" &&
+                restantes > 0 &&
+                restantes <= 3;
 
               return (
                 <div
@@ -126,13 +146,35 @@ export function PlanCarousel({
                 >
                   <div
                     className={cn(
-                      "rounded-2xl p-5 h-full flex flex-col",
-                      "border",
+                      "rounded-2xl p-5 h-full flex flex-col relative",
+                      "border transition-opacity duration-300",
                       isActive
                         ? "bg-card border-border/60 shadow-[0_2px_16px_rgba(0,0,0,0.05)]"
-                        : "bg-card/60 border-border/20"
+                        : "bg-card/60 border-border/20",
+                      indisponivel && "opacity-30 pointer-events-none"
                     )}
                   >
+                    {/* Status badge — top right */}
+                    {(indisponivel || lowStock) && (
+                      <div className="absolute top-3 right-3 z-10">
+                        {inativo && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-muted text-muted-foreground text-[9px] font-bold uppercase tracking-wider">
+                            <Lock className="w-2.5 h-2.5" />
+                            Indisponível
+                          </span>
+                        )}
+                        {!inativo && esgotado && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-muted text-muted-foreground text-[9px] font-bold uppercase tracking-wider">
+                            Esgotado
+                          </span>
+                        )}
+                        {lowStock && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-orange-500/15 text-orange-600 dark:text-orange-400 text-[9px] font-bold uppercase tracking-wider">
+                            Últimas {restantes} {restantes === 1 ? "vaga" : "vagas"}
+                          </span>
+                        )}
+                      </div>
+                    )}
                     {/* Plan name */}
                     <div className="mb-1">
                       <p
@@ -292,6 +334,28 @@ export function PlanCarousel({
                         ))}
                       </div>
                     )}
+
+                    {/* Serviços incluídos no plano (plano_servicos) */}
+                    {plan.servicos && plan.servicos.length > 0 && (
+                      <div className="mt-3 pt-3 border-t border-border/30">
+                        <p
+                          className="text-muted-foreground/50 uppercase mb-1.5"
+                          style={{
+                            fontSize: "9px",
+                            fontWeight: 700,
+                            letterSpacing: "1.2px",
+                          }}
+                        >
+                          Inclui
+                        </p>
+                        <p
+                          className="text-foreground/70"
+                          style={{ fontSize: "11px", fontWeight: 500, lineHeight: 1.45 }}
+                        >
+                          {plan.servicos.map((s) => s.nome).join(" • ")}
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
               );
@@ -329,29 +393,36 @@ export function PlanCarousel({
         }}
       >
         <div className="max-w-md mx-auto">
-          <motion.button
-            whileTap={{ scale: 0.97 }}
-            onClick={() =>
-              !hasActiveSubscription &&
-              activePlan &&
-              onSelectPlan(activePlan)
-            }
-            disabled={hasActiveSubscription}
-            className={cn(
-              "w-full flex items-center justify-center gap-2 transition-all",
-              "bg-foreground text-background active:scale-[0.97]",
-              hasActiveSubscription && "opacity-50 cursor-not-allowed"
-            )}
-            style={{
-              borderRadius: "14px",
-              padding: "14px",
-              fontSize: "13px",
-              fontWeight: 700,
-            }}
-          >
-            <span>Assinar este plano</span>
-            <ArrowRight className="w-4 h-4" />
-          </motion.button>
+          {(() => {
+            const planoIndisponivel = !!activePlan?.indisponivel;
+            const disabled = hasActiveSubscription || planoIndisponivel;
+            const ctaLabel = activePlan?.inativo
+              ? "Plano indisponível"
+              : activePlan?.esgotado
+                ? "Vagas esgotadas"
+                : "Assinar este plano";
+            return (
+              <motion.button
+                whileTap={{ scale: disabled ? 1 : 0.97 }}
+                onClick={() => !disabled && activePlan && onSelectPlan(activePlan)}
+                disabled={disabled}
+                className={cn(
+                  "w-full flex items-center justify-center gap-2 transition-all",
+                  "bg-foreground text-background active:scale-[0.97]",
+                  disabled && "opacity-50 cursor-not-allowed"
+                )}
+                style={{
+                  borderRadius: "14px",
+                  padding: "14px",
+                  fontSize: "13px",
+                  fontWeight: 700,
+                }}
+              >
+                <span>{ctaLabel}</span>
+                {!planoIndisponivel && <ArrowRight className="w-4 h-4" />}
+              </motion.button>
+            );
+          })()}
 
           <div className="flex items-center justify-center gap-3 mt-2">
             <div className="flex items-center gap-1">

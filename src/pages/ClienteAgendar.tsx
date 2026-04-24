@@ -542,7 +542,6 @@ const ClienteAgendar = () => {
   }, []);
 
   const loadServices = async (tenantId?: string | null) => {
-    // Buscar serviços e IDs vinculados a planos em paralelo
     let query = supabase
       .from("servicos")
       .select("*")
@@ -556,10 +555,24 @@ const ClienteAgendar = () => {
     }
 
     const { data: allServices } = await query;
+    let finalServices = allServices || [];
 
-    // Todos os serviços ativos do tenant são exibidos — serviços vinculados a planos
-    // também ficam disponíveis para agendamento avulso
-    setServices(allServices || []);
+    // Se cliente tem plano ativo e está em fluxo de plano, restringir aos serviços vinculados
+    if (isPlanFlow && activeSubscription?.plano_id) {
+      const { data: vinculos } = await supabase
+        .from("plano_servicos" as any)
+        .select("servico_id")
+        .eq("plano_id", activeSubscription.plano_id);
+      const vinculadosIds = (vinculos || []).map((v: any) => v.servico_id);
+      if (vinculadosIds.length > 0) {
+        finalServices = finalServices.filter((s) => vinculadosIds.includes(s.id));
+      } else if (activeSubscription.servico_id) {
+        // Fallback retrocompatível: usa servico_id legado do plano
+        finalServices = finalServices.filter((s) => s.id === activeSubscription.servico_id);
+      }
+    }
+
+    setServices(finalServices);
   };
 
   const loadUserCreditsOptimized = async (uid: string | null) => {
