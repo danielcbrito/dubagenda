@@ -203,7 +203,8 @@ const ClienteAssinar = () => {
       const tenantId = activeSub.plano.tenant_id;
       const key = tenantId || "dub";
       setSelectedTenantId(key);
-      setSelectedPlan(activeSub.plano as Plan);
+      const [enrichedActive] = await enrichPlansWithAvailability([activeSub.plano]);
+      setSelectedPlan(enrichedActive ?? null);
       await loadPlansForTenant(tenantId);
       await loadBarbersForTenant(tenantId);
       setStep(3); // Go straight to barber selection
