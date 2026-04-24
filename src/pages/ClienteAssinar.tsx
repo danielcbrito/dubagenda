@@ -300,7 +300,7 @@ const ClienteAssinar = () => {
 
     const syncTenantData = async () => {
       try {
-        let plansQuery = supabase.from('planos').select('*').eq('ativo', true).order('preco_mensal');
+        let plansQuery = supabase.from('planos').select('*').order('preco_mensal');
         let barbersQuery = supabase.from('barbeiros').select('id, apelido, foto_url, tenant_id').eq('ativo', true).order('apelido');
         if (tenantId) {
           plansQuery = plansQuery.eq('tenant_id', tenantId);
@@ -310,9 +310,10 @@ const ClienteAssinar = () => {
           barbersQuery = barbersQuery.is('tenant_id', null);
         }
         const [{ data: nextPlans }, { data: nextBarbers }] = await Promise.all([plansQuery, barbersQuery]);
-        setPlans(nextPlans || []);
+        const enriched = await enrichPlansWithAvailability(nextPlans || []);
+        setPlans(enriched);
         setBarbers(nextBarbers || []);
-        setSelectedPlan((prev) => prev ? (nextPlans || []).find((p) => p.id === prev.id) || null : null);
+        setSelectedPlan((prev) => prev ? enriched.find((p) => p.id === prev.id) || null : null);
         setSelectedBarber((prev) => prev ? (nextBarbers || []).find((b) => b.id === prev.id) || null : null);
       } catch (error) {
         console.error('Erro ao sincronizar dados:', error);
@@ -323,6 +324,8 @@ const ClienteAssinar = () => {
       .channel(`cliente-assinar-sync-${tenantId ?? 'dub'}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'planos' }, syncTenantData)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'barbeiros' }, syncTenantData)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'assinaturas' }, syncTenantData)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'plano_servicos' }, syncTenantData)
       .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, [selectedTenantId]);
