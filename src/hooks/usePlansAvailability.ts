@@ -32,6 +32,71 @@ export interface PlanWithAvailability {
 const STATUS_OCUPAM_VAGA = ["active", "trialing", "past_due"];
 
 /**
+ * Enriquece uma lista de planos com vagas restantes e serviços vinculados.
+ * Pode ser usada fora do hook (ex: no carregamento manual de ClienteAssinar).
+ */
+export async function enrichPlansWithAvailability(
+  planos: any[],
+): Promise<PlanWithAvailability[]> {
+  if (!planos || planos.length === 0) return [];
+  const planoIds = planos.map((p) => p.id);
+
+  const [vinculosRes, assinaturasRes] = await Promise.all([
+    supabase
+      .from("plano_servicos" as any)
+      .select("plano_id, servico_id, servicos:servicos(id, nome, duracao_minutos)")
+      .in("plano_id", planoIds),
+    supabase
+      .from("assinaturas")
+      .select("plano_id, status")
+      .in("plano_id", planoIds)
+      .in("status", STATUS_OCUPAM_VAGA as any),
+  ]);
+
+  const ocupadasPorPlano = new Map<string, number>();
+  (assinaturasRes.data || []).forEach((row: any) => {
+    ocupadasPorPlano.set(row.plano_id, (ocupadasPorPlano.get(row.plano_id) || 0) + 1);
+  });
+
+  const servicosPorPlano = new Map<string, PlanServiceLink[]>();
+  (vinculosRes.data || []).forEach((row: any) => {
+    const s = row.servicos;
+    if (!s) return;
+    const arr = servicosPorPlano.get(row.plano_id) || [];
+    arr.push({ id: s.id, nome: s.nome, duracao_minutos: s.duracao_minutos });
+    servicosPorPlano.set(row.plano_id, arr);
+  });
+
+  return planos.map((p: any) => {
+    const ocupadas = ocupadasPorPlano.get(p.id) || 0;
+    const controle = !!p.controle_vagas_ativo;
+    const vagas = typeof p.vagas === "number" ? p.vagas : null;
+    const restantes = controle && vagas !== null ? Math.max(0, vagas - ocupadas) : null;
+    const esgotado = controle && vagas !== null && restantes === 0;
+    const inativo = p.ativo === false;
+    return {
+      id: p.id,
+      nome: p.nome,
+      descricao: p.descricao || "",
+      preco_mensal: Number(p.preco_mensal),
+      beneficios_json: p.beneficios_json,
+      limite_agendamentos_mes: p.limite_agendamentos_mes,
+      tenant_id: p.tenant_id,
+      ativo: p.ativo !== false,
+      controle_vagas_ativo: controle,
+      vagas,
+      vagas_ocupadas: ocupadas,
+      vagas_restantes: restantes,
+      esgotado,
+      inativo,
+      indisponivel: inativo || esgotado,
+      servicos: servicosPorPlano.get(p.id) || [],
+      servico_id_legacy: p.servico_id || null,
+    };
+  });
+}
+
+/**
  * Carrega planos de um tenant com cálculo dinâmico de vagas restantes,
  * lista de serviços vinculados (plano_servicos) e Realtime nas assinaturas.
  *
