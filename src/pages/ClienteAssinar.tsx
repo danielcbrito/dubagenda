@@ -28,16 +28,9 @@ import scissorsDecor from "@/assets/scissors-decorative.png";
 import { BarberCard } from "@/components/booking/BarberCard";
 import { useBarberRatings } from "@/hooks/useBarberRatings";
 import { PlanCarousel } from "@/components/booking/PlanCarousel";
+import { usePlansAvailability, type PlanWithAvailability } from "@/hooks/usePlansAvailability";
 
-interface Plan {
-  id: string;
-  nome: string;
-  descricao: string;
-  preco_mensal: number;
-  beneficios_json: any;
-  limite_agendamentos_mes: number;
-  tenant_id: string | null;
-}
+type Plan = PlanWithAvailability;
 
 interface Barber {
   id: string;
