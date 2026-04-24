@@ -247,11 +247,12 @@ const ClienteAssinar = () => {
 
   const loadAllPlansForResume = async (planId: string) => {
     const { data } = await supabase
-      .from('planos').select('*').eq('ativo', true).eq('id', planId).single();
+      .from('planos').select('*').eq('id', planId).single();
     if (data) {
       const tenantId = data.tenant_id;
       setSelectedTenantId(tenantId || "dub");
-      setSelectedPlan(data as Plan);
+      const [enriched] = await enrichPlansWithAvailability([data]);
+      setSelectedPlan(enriched ?? null);
       await loadPlansForTenant(tenantId);
       await loadBarbersForTenant(tenantId);
       setStep(3);
@@ -276,11 +277,13 @@ const ClienteAssinar = () => {
   };
 
   const loadPlansForTenant = async (tenantId: string | null) => {
-    let query = supabase.from('planos').select('*').eq('ativo', true).order('preco_mensal');
+    // Inclui planos inativos — UI exibe como "Indisponível" (opacity-30)
+    let query = supabase.from('planos').select('*').order('preco_mensal');
     if (tenantId) { query = query.eq('tenant_id', tenantId); }
     else { query = query.is('tenant_id', null); }
     const { data } = await query;
-    setPlans(data || []);
+    const enriched = await enrichPlansWithAvailability(data || []);
+    setPlans(enriched);
   };
 
   const loadBarbersForTenant = async (tenantId: string | null) => {
