@@ -393,29 +393,36 @@ export function PlanCarousel({
         }}
       >
         <div className="max-w-md mx-auto">
-          <motion.button
-            whileTap={{ scale: 0.97 }}
-            onClick={() =>
-              !hasActiveSubscription &&
-              activePlan &&
-              onSelectPlan(activePlan)
-            }
-            disabled={hasActiveSubscription}
-            className={cn(
-              "w-full flex items-center justify-center gap-2 transition-all",
-              "bg-foreground text-background active:scale-[0.97]",
-              hasActiveSubscription && "opacity-50 cursor-not-allowed"
-            )}
-            style={{
-              borderRadius: "14px",
-              padding: "14px",
-              fontSize: "13px",
-              fontWeight: 700,
-            }}
-          >
-            <span>Assinar este plano</span>
-            <ArrowRight className="w-4 h-4" />
-          </motion.button>
+          {(() => {
+            const planoIndisponivel = !!activePlan?.indisponivel;
+            const disabled = hasActiveSubscription || planoIndisponivel;
+            const ctaLabel = activePlan?.inativo
+              ? "Plano indisponível"
+              : activePlan?.esgotado
+                ? "Vagas esgotadas"
+                : "Assinar este plano";
+            return (
+              <motion.button
+                whileTap={{ scale: disabled ? 1 : 0.97 }}
+                onClick={() => !disabled && activePlan && onSelectPlan(activePlan)}
+                disabled={disabled}
+                className={cn(
+                  "w-full flex items-center justify-center gap-2 transition-all",
+                  "bg-foreground text-background active:scale-[0.97]",
+                  disabled && "opacity-50 cursor-not-allowed"
+                )}
+                style={{
+                  borderRadius: "14px",
+                  padding: "14px",
+                  fontSize: "13px",
+                  fontWeight: 700,
+                }}
+              >
+                <span>{ctaLabel}</span>
+                {!planoIndisponivel && <ArrowRight className="w-4 h-4" />}
+              </motion.button>
+            );
+          })()}
 
           <div className="flex items-center justify-center gap-3 mt-2">
             <div className="flex items-center gap-1">
