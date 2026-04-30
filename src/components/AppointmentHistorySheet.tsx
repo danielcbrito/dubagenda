@@ -26,6 +26,10 @@ interface HistoryAppointment {
   servico: { nome: string };
   status: string;
   preco?: number;
+  cupom_id?: string | null;
+  desconto_aplicado?: number | null;
+  preco_final?: number | null;
+  cupom?: { codigo: string } | null;
 }
 
 export function AppointmentHistorySheet({ 
