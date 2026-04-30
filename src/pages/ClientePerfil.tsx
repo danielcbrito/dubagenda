@@ -437,6 +437,7 @@ export default function ClientePerfil() {
       </AlertDialog>
 
       <MyReviewsSheet open={reviewsOpen} onOpenChange={setReviewsOpen} userId={userId} />
+      <MyCouponsSheet open={couponsOpen} onOpenChange={setCouponsOpen} userId={userId} />
 
       {/* Barbershop Details Sheet */}
       <BarbershopDetailsSheet
