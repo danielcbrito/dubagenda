@@ -1895,17 +1895,6 @@ const ClienteAgendar = () => {
     return corteService.preco;
   };
 
-  const getTotalPrice = () => {
-    const baseTotal = selectedServices.reduce((sum, s) => sum + s.preco * (serviceQuantities[s.id] || 1), 0);
-    const redemptionDiscount = getRedemptionDiscount();
-    const afterRedemption = Math.max(0, baseTotal - redemptionDiscount);
-    // Aplica cupom de desconto sobre o valor restante
-    if (appliedCoupon) {
-      return Math.max(0, afterRedemption * (1 - appliedCoupon.percent / 100));
-    }
-    return afterRedemption;
-  };
-
   /** Retorna o valor base SEM cupom (para exibição) */
   const getBaseTotalBeforeCoupon = () => {
     const baseTotal = selectedServices.reduce((sum, s) => sum + s.preco * (serviceQuantities[s.id] || 1), 0);
@@ -1913,11 +1902,20 @@ const ClienteAgendar = () => {
     return Math.max(0, baseTotal - redemptionDiscount);
   };
 
-  /** Retorna o valor do desconto do cupom */
+  /** Retorna o valor do desconto do cupom (recalculado a partir do valor base atual) */
   const getCouponDiscount = () => {
     if (!appliedCoupon) return 0;
     const base = getBaseTotalBeforeCoupon();
-    return base * (appliedCoupon.percent / 100);
+    if (appliedCoupon.tipo_desconto === "percentual") {
+      return Math.max(0, base * (appliedCoupon.valor_desconto / 100));
+    }
+    // fixo
+    return Math.min(base, appliedCoupon.valor_desconto);
+  };
+
+  const getTotalPrice = () => {
+    const afterRedemption = getBaseTotalBeforeCoupon();
+    return Math.max(0, afterRedemption - getCouponDiscount());
   };
 
   const canUseRedemption = availableRedemptions.length > 0 && !!getCorteService();
