@@ -130,10 +130,21 @@ const ClienteAgendar = () => {
   const [closedDates, setClosedDates] = useState<Date[]>([]);
   const [closedDatesLoading, setClosedDatesLoading] = useState(false);
   
-  // Estados para cupom de desconto
+  // Estados para cupom de desconto (sistema novo: tabela `cupons` + RPCs)
   const [couponCode, setCouponCode] = useState("");
-  const [appliedCoupon, setAppliedCoupon] = useState<{ id: string; code: string; percent: number } | null>(null);
+  const [appliedCoupon, setAppliedCoupon] = useState<{
+    id: string;
+    code: string;
+    tipo_desconto: "percentual" | "fixo";
+    valor_desconto: number;
+    valor_descontado: number; // já calculado pelo RPC sobre o valor base atual
+    obrigatorio?: boolean;
+  } | null>(null);
   const [validatingCoupon, setValidatingCoupon] = useState(false);
+  const [pendingMandatoryCoupon, setPendingMandatoryCoupon] = useState<{
+    id: string;
+    code: string;
+  } | null>(null);
   
   // Indica se o usuário está usando fluxo de plano (serviço pré-selecionado)
   const [isPlanFlow, setIsPlanFlow] = useState(false);
