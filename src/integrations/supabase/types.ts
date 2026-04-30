@@ -154,7 +154,9 @@ export type Database = {
           cliente_confirmou: boolean | null
           created_at: string | null
           criado_por: string | null
+          cupom_id: string | null
           data: string
+          desconto_aplicado: number | null
           duracao: number
           google_event_id: string | null
           hora: string
@@ -165,6 +167,7 @@ export type Database = {
           payment_method: string | null
           ponto_liberado: boolean | null
           preco: number
+          preco_final: number | null
           remarcacao_solicitada: boolean | null
           remarcado_de: string | null
           servico_id: string
@@ -183,7 +186,9 @@ export type Database = {
           cliente_confirmou?: boolean | null
           created_at?: string | null
           criado_por?: string | null
+          cupom_id?: string | null
           data: string
+          desconto_aplicado?: number | null
           duracao: number
           google_event_id?: string | null
           hora: string
@@ -194,6 +199,7 @@ export type Database = {
           payment_method?: string | null
           ponto_liberado?: boolean | null
           preco: number
+          preco_final?: number | null
           remarcacao_solicitada?: boolean | null
           remarcado_de?: string | null
           servico_id: string
@@ -212,7 +218,9 @@ export type Database = {
           cliente_confirmou?: boolean | null
           created_at?: string | null
           criado_por?: string | null
+          cupom_id?: string | null
           data?: string
+          desconto_aplicado?: number | null
           duracao?: number
           google_event_id?: string | null
           hora?: string
@@ -223,6 +231,7 @@ export type Database = {
           payment_method?: string | null
           ponto_liberado?: boolean | null
           preco?: number
+          preco_final?: number | null
           remarcacao_solicitada?: boolean | null
           remarcado_de?: string | null
           servico_id?: string
@@ -247,6 +256,13 @@ export type Database = {
             columns: ["barbeiro_id"]
             isOneToOne: false
             referencedRelation: "barbeiros_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agendamentos_cupom_id_fkey"
+            columns: ["cupom_id"]
+            isOneToOne: false
+            referencedRelation: "cupons"
             referencedColumns: ["id"]
           },
           {
