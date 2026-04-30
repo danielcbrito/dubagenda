@@ -984,6 +984,20 @@ const ClienteAgendar = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId, selectedBarber?.tenant_id, preferredShop?.id]);
 
+  // ─── Pré-aplicação de cupom vindo de "Usar agora" (Meus Cupons) ───
+  useEffect(() => {
+    if (!userId) return;
+    if (appliedCoupon) return;
+    const code = sessionStorage.getItem("preApplyCoupon");
+    if (!code) return;
+    const tenantId = selectedBarber?.tenant_id ?? preferredShop?.id ?? null;
+    if (!tenantId) return;
+    sessionStorage.removeItem("preApplyCoupon");
+    setCouponCode(code);
+    validateCoupon(code);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId, selectedBarber?.tenant_id, preferredShop?.id]);
+
   // ─── Canal Realtime: Assinatura do usuário (sync em tempo real) ───
   useEffect(() => {
     if (!userId) return;
