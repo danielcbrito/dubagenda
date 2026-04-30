@@ -1663,47 +1663,64 @@ const ClienteAgendar = () => {
     }
   };
 
-  /** Valida cupom de desconto no banco de dados */
-  const validateCoupon = async (codeOverride?: string) => {
+  /** Resolve o tenant_id alvo para o agendamento atual */
+  const getCouponTenantId = useCallback((): string | null => {
+    return selectedBarber?.tenant_id ?? preferredShop?.id ?? null;
+  }, [selectedBarber, preferredShop]);
+
+  /** Valor base para validação de cupom (após resgate, antes de cupom) */
+  const getCouponBaseValue = useCallback(() => {
+    return getBaseTotalBeforeCoupon();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedServices, serviceQuantities, useRedemption, availableRedemptions]);
+
+  /** Valida cupom de desconto via RPC validate_cupom */
+  const validateCoupon = async (codeOverride?: string, opts?: { silent?: boolean }) => {
     const code = (codeOverride ?? couponCode).trim().toUpperCase();
-    if (!code || code.length < 3) return;
+    if (!code || code.length < 2) return;
+
+    const tenantId = getCouponTenantId();
+    if (!tenantId || !userId) {
+      if (!opts?.silent) toast.error("Selecione a barbearia antes de aplicar o cupom");
+      return;
+    }
+
+    const valorBase = getCouponBaseValue();
 
     setValidatingCoupon(true);
     try {
-      const { data, error } = await supabase
-        .from("discount_coupons")
-        .select("id, code, percent, starts_at, expires_at, active")
-        .ilike("code", code)
-        .maybeSingle();
+      const { data, error } = await supabase.rpc("validate_cupom", {
+        p_tenant_id: tenantId,
+        p_codigo: code,
+        p_user_id: userId,
+        p_valor_base: valorBase,
+      });
 
       if (error) throw error;
 
-      if (!data) {
-        toast.error("Cupom inválido");
+      const row = Array.isArray(data) ? data[0] : (data as any);
+      if (!row || !row.valido) {
+        if (!opts?.silent) toast.error(row?.motivo || "Cupom inválido");
         return;
       }
 
-      if (!data.active) {
-        toast.error("Este cupom está inativo");
-        return;
-      }
+      setAppliedCoupon({
+        id: row.cupom_id,
+        code,
+        tipo_desconto: (row.tipo_desconto === "fixo" ? "fixo" : "percentual"),
+        valor_desconto: Number(row.valor_desconto || 0),
+        valor_descontado: Number(row.valor_descontado || 0),
+      });
 
-      const now = new Date();
-      if (data.starts_at && new Date(data.starts_at) > now) {
-        toast.error("Este cupom ainda não está válido");
-        return;
+      if (!opts?.silent) {
+        const desc = row.tipo_desconto === "percentual"
+          ? `${Number(row.valor_desconto)}% de desconto`
+          : `R$ ${Number(row.valor_desconto).toFixed(2).replace(".", ",")} de desconto`;
+        toast.success(`Cupom aplicado: ${desc}`);
       }
-
-      if (data.expires_at && new Date(data.expires_at) < now) {
-        toast.error("Este cupom expirou");
-        return;
-      }
-
-      setAppliedCoupon({ id: data.id, code: data.code, percent: data.percent });
-      toast.success(`Cupom aplicado! ${data.percent}% de desconto`);
     } catch (err: any) {
       console.error("Error validating coupon:", err);
-      toast.error("Erro ao validar cupom");
+      if (!opts?.silent) toast.error(err?.message || "Erro ao validar cupom");
     } finally {
       setValidatingCoupon(false);
     }
@@ -1711,21 +1728,48 @@ const ClienteAgendar = () => {
 
   /** Remove cupom aplicado */
   const removeCoupon = () => {
+    if (appliedCoupon?.obrigatorio) {
+      toast.error("Este cupom é obrigatório e não pode ser removido");
+      return;
+    }
     setAppliedCoupon(null);
     setCouponCode("");
   };
 
-  /** Registra o uso do cupom após confirmação do agendamento */
+  /** Registra o uso do cupom após confirmação do agendamento (RPC apply_cupom) */
   const registerCouponUsage = async (appointmentId: string) => {
     if (!appliedCoupon || !userId) return;
+    const tenantId = getCouponTenantId();
+    if (!tenantId) return;
+
     try {
+      const valorBase = getCouponBaseValue();
+      const { data, error } = await supabase.rpc("apply_cupom", {
+        p_tenant_id: tenantId,
+        p_codigo: appliedCoupon.code,
+        p_user_id: userId,
+        p_agendamento_id: appointmentId,
+        p_valor_base: valorBase,
+      });
+
+      const row = Array.isArray(data) ? data[0] : (data as any);
+      if (error || !row?.ok) {
+        console.error("apply_cupom falhou:", error || row?.motivo);
+        toast.error(row?.motivo || "Não foi possível registrar o cupom (suporte avisado)");
+        return;
+      }
+
+      const valorDescontado = Number(row.valor_descontado || appliedCoupon.valor_descontado || 0);
+      const precoFinal = Math.max(0, valorBase - valorDescontado);
+
       await supabase
-        .from("discount_coupon_redemptions")
-        .insert({
-          coupon_id: appliedCoupon.id,
-          user_id: userId,
-          appointment_id: appointmentId,
-        });
+        .from("agendamentos")
+        .update({
+          cupom_id: appliedCoupon.id,
+          desconto_aplicado: valorDescontado,
+          preco_final: precoFinal,
+        })
+        .eq("id", appointmentId);
     } catch (err) {
       console.error("Error registering coupon usage:", err);
     }
