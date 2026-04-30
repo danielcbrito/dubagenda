@@ -122,6 +122,14 @@ export function AppointmentHistorySheet({
                           {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(apt.preco))}
                         </p>
                       )}
+                      {apt.cupom_id && apt.cupom?.codigo && (
+                        <p className="text-[11px] text-emerald-500 font-medium mt-1">
+                          Cupom {apt.cupom.codigo} usado
+                          {apt.desconto_aplicado
+                            ? ` — economia de ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(apt.desconto_aplicado))}`
+                            : ""}
+                        </p>
+                      )}
                     </div>
                     <Badge 
                       variant="outline" 
