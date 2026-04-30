@@ -2792,7 +2792,12 @@ const ClienteAgendar = () => {
                   <>
                     <div className="border-t border-border" />
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-emerald-400 font-medium">Cupom {appliedCoupon.code} ({appliedCoupon.percent}%)</span>
+                      <span className="text-sm text-emerald-400 font-medium">
+                        Cupom {appliedCoupon.code}
+                        {appliedCoupon.tipo_desconto === "percentual"
+                          ? ` (${appliedCoupon.valor_desconto}%)`
+                          : ""}
+                      </span>
                       <span className="text-sm font-semibold text-emerald-400">-R$ {getCouponDiscount().toFixed(2).replace('.', ',')}</span>
                     </div>
                   </>
