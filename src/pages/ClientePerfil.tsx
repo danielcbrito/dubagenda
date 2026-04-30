@@ -163,6 +163,7 @@ export default function ClientePerfil() {
   const [shopDetails, setShopDetails] = useState<any>(null);
   const [isDubExclusive, setIsDubExclusive] = useState(false);
   const [reviewsOpen, setReviewsOpen] = useState(false);
+  const [couponsOpen, setCouponsOpen] = useState(false);
 
   useEffect(() => {
     loadProfile();
