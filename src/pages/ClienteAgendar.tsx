@@ -2594,7 +2594,11 @@ const ClienteAgendar = () => {
                       </div>
                       <div>
                         <span className="text-[12px] font-semibold text-foreground">{appliedCoupon.code}</span>
-                        <span className="text-[10px] text-emerald-400/80 ml-1.5">-{appliedCoupon.percent}%</span>
+                        <span className="text-[10px] text-emerald-400/80 ml-1.5">
+                          {appliedCoupon.tipo_desconto === "percentual"
+                            ? `-${appliedCoupon.valor_desconto}%`
+                            : `-R$ ${appliedCoupon.valor_desconto.toFixed(2).replace(".", ",")}`}
+                        </span>
                       </div>
                     </div>
                     <button
