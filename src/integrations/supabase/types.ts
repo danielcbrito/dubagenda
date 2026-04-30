@@ -1512,6 +1512,104 @@ export type Database = {
         }
         Relationships: []
       }
+      cupom_usos: {
+        Row: {
+          agendamento_id: string | null
+          cupom_id: string
+          id: string
+          used_at: string
+          user_id: string
+          valor_descontado: number | null
+        }
+        Insert: {
+          agendamento_id?: string | null
+          cupom_id: string
+          id?: string
+          used_at?: string
+          user_id: string
+          valor_descontado?: number | null
+        }
+        Update: {
+          agendamento_id?: string | null
+          cupom_id?: string
+          id?: string
+          used_at?: string
+          user_id?: string
+          valor_descontado?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cupom_usos_cupom_id_fkey"
+            columns: ["cupom_id"]
+            isOneToOne: false
+            referencedRelation: "cupons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cupons: {
+        Row: {
+          ativo: boolean
+          auto_aplicar: boolean
+          cliente_user_id: string | null
+          codigo: string
+          created_at: string
+          created_by: string | null
+          descricao: string | null
+          escopo: string
+          id: string
+          max_usos_por_cliente: number | null
+          max_usos_total: number | null
+          tenant_id: string
+          tipo_desconto: string
+          updated_at: string
+          uso_obrigatorio: boolean
+          valido_ate: string | null
+          valido_de: string
+          valor_desconto: number
+        }
+        Insert: {
+          ativo?: boolean
+          auto_aplicar?: boolean
+          cliente_user_id?: string | null
+          codigo: string
+          created_at?: string
+          created_by?: string | null
+          descricao?: string | null
+          escopo?: string
+          id?: string
+          max_usos_por_cliente?: number | null
+          max_usos_total?: number | null
+          tenant_id: string
+          tipo_desconto: string
+          updated_at?: string
+          uso_obrigatorio?: boolean
+          valido_ate?: string | null
+          valido_de?: string
+          valor_desconto: number
+        }
+        Update: {
+          ativo?: boolean
+          auto_aplicar?: boolean
+          cliente_user_id?: string | null
+          codigo?: string
+          created_at?: string
+          created_by?: string | null
+          descricao?: string | null
+          escopo?: string
+          id?: string
+          max_usos_por_cliente?: number | null
+          max_usos_total?: number | null
+          tenant_id?: string
+          tipo_desconto?: string
+          updated_at?: string
+          uso_obrigatorio?: boolean
+          valido_ate?: string | null
+          valido_de?: string
+          valor_desconto?: number
+        }
+        Relationships: []
+      }
       depositos: {
         Row: {
           barbeiro_id: string | null
@@ -5969,6 +6067,21 @@ export type Database = {
         Args: { p_amount: number; p_description?: string; p_user_id: string }
         Returns: number
       }
+      apply_cupom: {
+        Args: {
+          p_agendamento_id: string
+          p_codigo: string
+          p_tenant_id: string
+          p_user_id: string
+          p_valor_base: number
+        }
+        Returns: {
+          cupom_id: string
+          motivo: string
+          ok: boolean
+          valor_descontado: number
+        }[]
+      }
       assign_tenant_admin_role: {
         Args: { p_user_id: string }
         Returns: undefined
@@ -6079,6 +6192,19 @@ export type Database = {
       get_client_loyalty_required_points: {
         Args: { p_user_id: string }
         Returns: number
+      }
+      get_cupom_pendente_obrigatorio: {
+        Args: { p_tenant_id: string; p_user_id: string }
+        Returns: {
+          auto_aplicar: boolean
+          codigo: string
+          descricao: string
+          id: string
+          tipo_desconto: string
+          uso_obrigatorio: boolean
+          valido_ate: string
+          valor_desconto: number
+        }[]
       }
       get_loja_stats_admin: { Args: { p_tenant_id: string }; Returns: Json }
       get_maintenance_status: {
@@ -6292,6 +6418,23 @@ export type Database = {
       validate_barber_can_receive_pix: {
         Args: { p_barbeiro_id: string }
         Returns: boolean
+      }
+      validate_cupom: {
+        Args: {
+          p_codigo: string
+          p_tenant_id: string
+          p_user_id: string
+          p_valor_base?: number
+        }
+        Returns: {
+          cupom_id: string
+          motivo: string
+          tipo_desconto: string
+          valido: boolean
+          valor_descontado: number
+          valor_desconto: number
+          valor_final: number
+        }[]
       }
     }
     Enums: {
