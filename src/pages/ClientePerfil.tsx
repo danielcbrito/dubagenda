@@ -19,6 +19,7 @@ import {
   Bell,
   Star,
   Tag,
+} from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useTheme } from "next-themes";
