@@ -939,6 +939,51 @@ const ClienteAgendar = () => {
     };
   }, [isInitializing, selectedBarberId, refreshSlots]);
 
+  // ─── Cupom pendente / obrigatório para este cliente neste tenant ───
+  useEffect(() => {
+    if (!userId) return;
+    const tenantId = selectedBarber?.tenant_id ?? preferredShop?.id ?? null;
+    if (!tenantId) return;
+    // Não sobrescrever um cupom já aplicado manualmente
+    if (appliedCoupon) return;
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data, error } = await supabase.rpc("get_cupom_pendente_obrigatorio", {
+          p_tenant_id: tenantId,
+          p_user_id: userId,
+        });
+        if (cancelled || error) return;
+        const row = Array.isArray(data) ? data[0] : (data as any);
+        if (!row) {
+          setPendingMandatoryCoupon(null);
+          return;
+        }
+
+        if (row.uso_obrigatorio) {
+          setPendingMandatoryCoupon({ id: row.id, code: row.codigo });
+        }
+
+        if (row.auto_aplicar) {
+          // Aplica em background usando o valor base atual (pode ser 0 se ainda sem serviço)
+          await validateCoupon(row.codigo, { silent: false });
+          // Marca como obrigatório se for o caso
+          if (row.uso_obrigatorio) {
+            setAppliedCoupon((prev) => (prev ? { ...prev, obrigatorio: true } : prev));
+          }
+        }
+      } catch (err) {
+        console.error("Erro ao buscar cupom pendente:", err);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId, selectedBarber?.tenant_id, preferredShop?.id]);
+
   // ─── Canal Realtime: Assinatura do usuário (sync em tempo real) ───
   useEffect(() => {
     if (!userId) return;
