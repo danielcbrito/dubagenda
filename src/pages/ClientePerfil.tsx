@@ -40,6 +40,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { BarbershopDetailsSheet } from "@/components/client/BarbershopDetailsSheet";
 import { MyReviewsSheet } from "@/components/MyReviewsSheet";
+import { MyCouponsSheet } from "@/components/MyCouponsSheet";
 
 /* ─── Reusable sub-components ─── */
 
