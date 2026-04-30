@@ -18,6 +18,7 @@ import {
   MapPin,
   Bell,
   Star,
+  Tag,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -40,6 +41,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { BarbershopDetailsSheet } from "@/components/client/BarbershopDetailsSheet";
 import { MyReviewsSheet } from "@/components/MyReviewsSheet";
+import { MyCouponsSheet } from "@/components/MyCouponsSheet";
 
 /* ─── Reusable sub-components ─── */
 
@@ -161,6 +163,7 @@ export default function ClientePerfil() {
   const [shopDetails, setShopDetails] = useState<any>(null);
   const [isDubExclusive, setIsDubExclusive] = useState(false);
   const [reviewsOpen, setReviewsOpen] = useState(false);
+  const [couponsOpen, setCouponsOpen] = useState(false);
 
   useEffect(() => {
     loadProfile();
@@ -296,6 +299,11 @@ export default function ClientePerfil() {
                 onClick={() => setPlansOpen(true)}
               />
               <ProfileItem
+                icon={Tag}
+                label="Meus Cupons"
+                onClick={() => setCouponsOpen(true)}
+              />
+              <ProfileItem
                 icon={User}
                 label="Meus Dados"
                 onClick={() => navigate("/cliente/dados-pessoais")}
@@ -429,6 +437,7 @@ export default function ClientePerfil() {
       </AlertDialog>
 
       <MyReviewsSheet open={reviewsOpen} onOpenChange={setReviewsOpen} userId={userId} />
+      <MyCouponsSheet open={couponsOpen} onOpenChange={setCouponsOpen} userId={userId} />
 
       {/* Barbershop Details Sheet */}
       <BarbershopDetailsSheet

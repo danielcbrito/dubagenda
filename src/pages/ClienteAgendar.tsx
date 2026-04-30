@@ -130,10 +130,21 @@ const ClienteAgendar = () => {
   const [closedDates, setClosedDates] = useState<Date[]>([]);
   const [closedDatesLoading, setClosedDatesLoading] = useState(false);
   
-  // Estados para cupom de desconto
+  // Estados para cupom de desconto (sistema novo: tabela `cupons` + RPCs)
   const [couponCode, setCouponCode] = useState("");
-  const [appliedCoupon, setAppliedCoupon] = useState<{ id: string; code: string; percent: number } | null>(null);
+  const [appliedCoupon, setAppliedCoupon] = useState<{
+    id: string;
+    code: string;
+    tipo_desconto: "percentual" | "fixo";
+    valor_desconto: number;
+    valor_descontado: number; // já calculado pelo RPC sobre o valor base atual
+    obrigatorio?: boolean;
+  } | null>(null);
   const [validatingCoupon, setValidatingCoupon] = useState(false);
+  const [pendingMandatoryCoupon, setPendingMandatoryCoupon] = useState<{
+    id: string;
+    code: string;
+  } | null>(null);
   
   // Indica se o usuário está usando fluxo de plano (serviço pré-selecionado)
   const [isPlanFlow, setIsPlanFlow] = useState(false);
@@ -928,6 +939,65 @@ const ClienteAgendar = () => {
     };
   }, [isInitializing, selectedBarberId, refreshSlots]);
 
+  // ─── Cupom pendente / obrigatório para este cliente neste tenant ───
+  useEffect(() => {
+    if (!userId) return;
+    const tenantId = selectedBarber?.tenant_id ?? preferredShop?.id ?? null;
+    if (!tenantId) return;
+    // Não sobrescrever um cupom já aplicado manualmente
+    if (appliedCoupon) return;
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data, error } = await supabase.rpc("get_cupom_pendente_obrigatorio", {
+          p_tenant_id: tenantId,
+          p_user_id: userId,
+        });
+        if (cancelled || error) return;
+        const row = Array.isArray(data) ? data[0] : (data as any);
+        if (!row) {
+          setPendingMandatoryCoupon(null);
+          return;
+        }
+
+        if (row.uso_obrigatorio) {
+          setPendingMandatoryCoupon({ id: row.id, code: row.codigo });
+        }
+
+        if (row.auto_aplicar) {
+          // Aplica em background usando o valor base atual (pode ser 0 se ainda sem serviço)
+          await validateCoupon(row.codigo, { silent: false });
+          // Marca como obrigatório se for o caso
+          if (row.uso_obrigatorio) {
+            setAppliedCoupon((prev) => (prev ? { ...prev, obrigatorio: true } : prev));
+          }
+        }
+      } catch (err) {
+        console.error("Erro ao buscar cupom pendente:", err);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId, selectedBarber?.tenant_id, preferredShop?.id]);
+
+  // ─── Pré-aplicação de cupom vindo de "Usar agora" (Meus Cupons) ───
+  useEffect(() => {
+    if (!userId) return;
+    if (appliedCoupon) return;
+    const code = sessionStorage.getItem("preApplyCoupon");
+    if (!code) return;
+    const tenantId = selectedBarber?.tenant_id ?? preferredShop?.id ?? null;
+    if (!tenantId) return;
+    sessionStorage.removeItem("preApplyCoupon");
+    setCouponCode(code);
+    validateCoupon(code);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId, selectedBarber?.tenant_id, preferredShop?.id]);
+
   // ─── Canal Realtime: Assinatura do usuário (sync em tempo real) ───
   useEffect(() => {
     if (!userId) return;
@@ -1105,6 +1175,12 @@ const ClienteAgendar = () => {
   const handlePayment = async () => {
     if (!selectedDate || !selectedTime || selectedServices.length === 0) {
       toast.error("Dados do agendamento inválidos");
+      return;
+    }
+
+    // Bloqueio: cupom obrigatório pendente e ainda não aplicado
+    if (pendingMandatoryCoupon && (!appliedCoupon || appliedCoupon.id !== pendingMandatoryCoupon.id)) {
+      toast.error(`Você tem um cupom pendente: ${pendingMandatoryCoupon.code}`);
       return;
     }
 
@@ -1652,47 +1728,64 @@ const ClienteAgendar = () => {
     }
   };
 
-  /** Valida cupom de desconto no banco de dados */
-  const validateCoupon = async (codeOverride?: string) => {
+  /** Resolve o tenant_id alvo para o agendamento atual */
+  const getCouponTenantId = useCallback((): string | null => {
+    return selectedBarber?.tenant_id ?? preferredShop?.id ?? null;
+  }, [selectedBarber, preferredShop]);
+
+  /** Valor base para validação de cupom (após resgate, antes de cupom) */
+  const getCouponBaseValue = useCallback(() => {
+    return getBaseTotalBeforeCoupon();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedServices, serviceQuantities, useRedemption, availableRedemptions]);
+
+  /** Valida cupom de desconto via RPC validate_cupom */
+  const validateCoupon = async (codeOverride?: string, opts?: { silent?: boolean }) => {
     const code = (codeOverride ?? couponCode).trim().toUpperCase();
-    if (!code || code.length < 3) return;
+    if (!code || code.length < 2) return;
+
+    const tenantId = getCouponTenantId();
+    if (!tenantId || !userId) {
+      if (!opts?.silent) toast.error("Selecione a barbearia antes de aplicar o cupom");
+      return;
+    }
+
+    const valorBase = getCouponBaseValue();
 
     setValidatingCoupon(true);
     try {
-      const { data, error } = await supabase
-        .from("discount_coupons")
-        .select("id, code, percent, starts_at, expires_at, active")
-        .ilike("code", code)
-        .maybeSingle();
+      const { data, error } = await supabase.rpc("validate_cupom", {
+        p_tenant_id: tenantId,
+        p_codigo: code,
+        p_user_id: userId,
+        p_valor_base: valorBase,
+      });
 
       if (error) throw error;
 
-      if (!data) {
-        toast.error("Cupom inválido");
+      const row = Array.isArray(data) ? data[0] : (data as any);
+      if (!row || !row.valido) {
+        if (!opts?.silent) toast.error(row?.motivo || "Cupom inválido");
         return;
       }
 
-      if (!data.active) {
-        toast.error("Este cupom está inativo");
-        return;
-      }
+      setAppliedCoupon({
+        id: row.cupom_id,
+        code,
+        tipo_desconto: (row.tipo_desconto === "fixo" ? "fixo" : "percentual"),
+        valor_desconto: Number(row.valor_desconto || 0),
+        valor_descontado: Number(row.valor_descontado || 0),
+      });
 
-      const now = new Date();
-      if (data.starts_at && new Date(data.starts_at) > now) {
-        toast.error("Este cupom ainda não está válido");
-        return;
+      if (!opts?.silent) {
+        const desc = row.tipo_desconto === "percentual"
+          ? `${Number(row.valor_desconto)}% de desconto`
+          : `R$ ${Number(row.valor_desconto).toFixed(2).replace(".", ",")} de desconto`;
+        toast.success(`Cupom aplicado: ${desc}`);
       }
-
-      if (data.expires_at && new Date(data.expires_at) < now) {
-        toast.error("Este cupom expirou");
-        return;
-      }
-
-      setAppliedCoupon({ id: data.id, code: data.code, percent: data.percent });
-      toast.success(`Cupom aplicado! ${data.percent}% de desconto`);
     } catch (err: any) {
       console.error("Error validating coupon:", err);
-      toast.error("Erro ao validar cupom");
+      if (!opts?.silent) toast.error(err?.message || "Erro ao validar cupom");
     } finally {
       setValidatingCoupon(false);
     }
@@ -1700,21 +1793,48 @@ const ClienteAgendar = () => {
 
   /** Remove cupom aplicado */
   const removeCoupon = () => {
+    if (appliedCoupon?.obrigatorio) {
+      toast.error("Este cupom é obrigatório e não pode ser removido");
+      return;
+    }
     setAppliedCoupon(null);
     setCouponCode("");
   };
 
-  /** Registra o uso do cupom após confirmação do agendamento */
+  /** Registra o uso do cupom após confirmação do agendamento (RPC apply_cupom) */
   const registerCouponUsage = async (appointmentId: string) => {
     if (!appliedCoupon || !userId) return;
+    const tenantId = getCouponTenantId();
+    if (!tenantId) return;
+
     try {
+      const valorBase = getCouponBaseValue();
+      const { data, error } = await supabase.rpc("apply_cupom", {
+        p_tenant_id: tenantId,
+        p_codigo: appliedCoupon.code,
+        p_user_id: userId,
+        p_agendamento_id: appointmentId,
+        p_valor_base: valorBase,
+      });
+
+      const row = Array.isArray(data) ? data[0] : (data as any);
+      if (error || !row?.ok) {
+        console.error("apply_cupom falhou:", error || row?.motivo);
+        toast.error(row?.motivo || "Não foi possível registrar o cupom (suporte avisado)");
+        return;
+      }
+
+      const valorDescontado = Number(row.valor_descontado || appliedCoupon.valor_descontado || 0);
+      const precoFinal = Math.max(0, valorBase - valorDescontado);
+
       await supabase
-        .from("discount_coupon_redemptions")
-        .insert({
-          coupon_id: appliedCoupon.id,
-          user_id: userId,
-          appointment_id: appointmentId,
-        });
+        .from("agendamentos")
+        .update({
+          cupom_id: appliedCoupon.id,
+          desconto_aplicado: valorDescontado,
+          preco_final: precoFinal,
+        })
+        .eq("id", appointmentId);
     } catch (err) {
       console.error("Error registering coupon usage:", err);
     }
@@ -1840,17 +1960,6 @@ const ClienteAgendar = () => {
     return corteService.preco;
   };
 
-  const getTotalPrice = () => {
-    const baseTotal = selectedServices.reduce((sum, s) => sum + s.preco * (serviceQuantities[s.id] || 1), 0);
-    const redemptionDiscount = getRedemptionDiscount();
-    const afterRedemption = Math.max(0, baseTotal - redemptionDiscount);
-    // Aplica cupom de desconto sobre o valor restante
-    if (appliedCoupon) {
-      return Math.max(0, afterRedemption * (1 - appliedCoupon.percent / 100));
-    }
-    return afterRedemption;
-  };
-
   /** Retorna o valor base SEM cupom (para exibição) */
   const getBaseTotalBeforeCoupon = () => {
     const baseTotal = selectedServices.reduce((sum, s) => sum + s.preco * (serviceQuantities[s.id] || 1), 0);
@@ -1858,11 +1967,20 @@ const ClienteAgendar = () => {
     return Math.max(0, baseTotal - redemptionDiscount);
   };
 
-  /** Retorna o valor do desconto do cupom */
+  /** Retorna o valor do desconto do cupom (recalculado a partir do valor base atual) */
   const getCouponDiscount = () => {
     if (!appliedCoupon) return 0;
     const base = getBaseTotalBeforeCoupon();
-    return base * (appliedCoupon.percent / 100);
+    if (appliedCoupon.tipo_desconto === "percentual") {
+      return Math.max(0, base * (appliedCoupon.valor_desconto / 100));
+    }
+    // fixo
+    return Math.min(base, appliedCoupon.valor_desconto);
+  };
+
+  const getTotalPrice = () => {
+    const afterRedemption = getBaseTotalBeforeCoupon();
+    return Math.max(0, afterRedemption - getCouponDiscount());
   };
 
   const canUseRedemption = availableRedemptions.length > 0 && !!getCorteService();
@@ -2541,7 +2659,11 @@ const ClienteAgendar = () => {
                       </div>
                       <div>
                         <span className="text-[12px] font-semibold text-foreground">{appliedCoupon.code}</span>
-                        <span className="text-[10px] text-emerald-400/80 ml-1.5">-{appliedCoupon.percent}%</span>
+                        <span className="text-[10px] text-emerald-400/80 ml-1.5">
+                          {appliedCoupon.tipo_desconto === "percentual"
+                            ? `-${appliedCoupon.valor_desconto}%`
+                            : `-R$ ${appliedCoupon.valor_desconto.toFixed(2).replace(".", ",")}`}
+                        </span>
                       </div>
                     </div>
                     <button
@@ -2735,7 +2857,12 @@ const ClienteAgendar = () => {
                   <>
                     <div className="border-t border-border" />
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-emerald-400 font-medium">Cupom {appliedCoupon.code} ({appliedCoupon.percent}%)</span>
+                      <span className="text-sm text-emerald-400 font-medium">
+                        Cupom {appliedCoupon.code}
+                        {appliedCoupon.tipo_desconto === "percentual"
+                          ? ` (${appliedCoupon.valor_desconto}%)`
+                          : ""}
+                      </span>
                       <span className="text-sm font-semibold text-emerald-400">-R$ {getCouponDiscount().toFixed(2).replace('.', ',')}</span>
                     </div>
                   </>

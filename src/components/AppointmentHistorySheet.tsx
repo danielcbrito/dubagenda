@@ -26,6 +26,10 @@ interface HistoryAppointment {
   servico: { nome: string };
   status: string;
   preco?: number;
+  cupom_id?: string | null;
+  desconto_aplicado?: number | null;
+  preco_final?: number | null;
+  cupom?: { codigo: string } | null;
 }
 
 export function AppointmentHistorySheet({ 
@@ -54,7 +58,11 @@ export function AppointmentHistorySheet({
         hora,
         status,
         preco,
-        servico:servicos(nome)
+        cupom_id,
+        desconto_aplicado,
+        preco_final,
+        servico:servicos(nome),
+        cupom:cupons(codigo)
       `)
       .eq("user_id", userId)
       .in("status", ["completed", "cancelled_by_admin", "cancelled_by_user", "no_show"])
@@ -116,6 +124,14 @@ export function AppointmentHistorySheet({
                       {apt.preco && (
                         <p className="text-xs text-muted-foreground mt-1">
                           {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(apt.preco))}
+                        </p>
+                      )}
+                      {apt.cupom_id && apt.cupom?.codigo && (
+                        <p className="text-[11px] text-emerald-500 font-medium mt-1">
+                          Cupom {apt.cupom.codigo} usado
+                          {apt.desconto_aplicado
+                            ? ` — economia de ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(apt.desconto_aplicado))}`
+                            : ""}
                         </p>
                       )}
                     </div>
