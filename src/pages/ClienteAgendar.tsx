@@ -1164,6 +1164,12 @@ const ClienteAgendar = () => {
       return;
     }
 
+    // Bloqueio: cupom obrigatório pendente e ainda não aplicado
+    if (pendingMandatoryCoupon && (!appliedCoupon || appliedCoupon.id !== pendingMandatoryCoupon.id)) {
+      toast.error(`Você tem um cupom pendente: ${pendingMandatoryCoupon.code}`);
+      return;
+    }
+
     if (isPlanEligible) {
       await createAppointmentWithPlan();
       return;
