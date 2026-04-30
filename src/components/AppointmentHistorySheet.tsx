@@ -54,7 +54,11 @@ export function AppointmentHistorySheet({
         hora,
         status,
         preco,
-        servico:servicos(nome)
+        cupom_id,
+        desconto_aplicado,
+        preco_final,
+        servico:servicos(nome),
+        cupom:cupons(codigo)
       `)
       .eq("user_id", userId)
       .in("status", ["completed", "cancelled_by_admin", "cancelled_by_user", "no_show"])
