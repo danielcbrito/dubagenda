@@ -299,6 +299,11 @@ export default function ClientePerfil() {
                 onClick={() => setPlansOpen(true)}
               />
               <ProfileItem
+                icon={Tag}
+                label="Meus Cupons"
+                onClick={() => setCouponsOpen(true)}
+              />
+              <ProfileItem
                 icon={User}
                 label="Meus Dados"
                 onClick={() => navigate("/cliente/dados-pessoais")}
