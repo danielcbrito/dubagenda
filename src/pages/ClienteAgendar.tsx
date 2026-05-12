@@ -2325,12 +2325,11 @@ const ClienteAgendar = () => {
               ) : availableSlots.filter(slot => slot.available).length === 0 ? (
                 <div className="bg-card border border-border rounded-2xl p-8 text-center">
                   {(() => {
-                    // Detectar motivo: dia fechado (closedDates ou sem slots gerados) vs agenda cheia
+                    // Detectar motivo real do bloqueio
                     const isClosedDay = selectedDate && closedDates.some(
                       d => format(d, 'yyyy-MM-dd') === format(selectedDate, 'yyyy-MM-dd')
                     );
                     const noSlotsGenerated = availableSlots.length === 0;
-                    const allOccupied = availableSlots.length > 0 && availableSlots.every(s => !s.available);
 
                     if (isClosedDay || noSlotsGenerated) {
                       return (
@@ -2339,16 +2338,37 @@ const ClienteAgendar = () => {
                         </p>
                       );
                     }
-                    if (allOccupied) {
+
+                    // Analisar razões do bloqueio dos slots
+                    const reasons = availableSlots
+                      .filter(s => !s.available)
+                      .map(s => s.blockedReason || 'occupied');
+                    const total = reasons.length;
+                    const countOccupied = reasons.filter(r => r === 'occupied').length;
+                    const countMinAdvance = reasons.filter(r => r === 'minimum_advance').length;
+                    const countLunch = reasons.filter(r => r === 'lunch' || (r as string) === 'lunch_buffer').length;
+
+                    // Se todos os bloqueios forem por antecedência mínima → expediente acabando
+                    if (countMinAdvance > 0 && (countMinAdvance + countLunch) === total) {
                       return (
                         <p className="text-muted-foreground font-medium mb-4">
-                          Agenda cheia neste dia. Tente outro horário ou profissional.
+                          Sem horários disponíveis hoje para {selectedBarber?.apelido}. O expediente está encerrando — tente outra data.
                         </p>
                       );
                     }
+
+                    // Se há ocupação real, é agenda cheia
+                    if (countOccupied > 0) {
+                      return (
+                        <p className="text-muted-foreground font-medium mb-4">
+                          {selectedBarber?.apelido} está com agenda cheia neste dia.
+                        </p>
+                      );
+                    }
+
                     return (
                       <p className="text-muted-foreground font-medium mb-4">
-                        {selectedBarber?.apelido} está com agenda cheia neste dia.
+                        Sem horários disponíveis para {selectedBarber?.apelido} neste dia.
                       </p>
                     );
                   })()}
