@@ -2476,7 +2476,7 @@ const ClienteAgendar = () => {
               {/* Pagar na Barbearia */}
               <motion.button
                 whileTap={{ scale: 0.98 }}
-                onClick={() => { setPaymentMethod('cash'); setUseRedemption(false); }}
+                onClick={() => { setPaymentMethod('cash'); if (!canUseRedemption) setUseRedemption(false); }}
                 className={cn(
                   "w-full rounded-xl border p-4 text-left transition-all",
                   paymentMethod === 'cash' && !useRedemption
