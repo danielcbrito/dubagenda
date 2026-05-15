@@ -2639,16 +2639,14 @@ const ClienteAgendar = () => {
                 );
               })()}
 
-              {/* Resgate Grátis */}
+              {/* Resgate Grátis — OBRIGATÓRIO quando disponível */}
               {canUseRedemption && (
                 <div className="mt-5">
-                  <button
-                    onClick={() => setUseRedemption(!useRedemption)}
+                  <div
+                    aria-disabled
                     className={cn(
-                      "w-full text-left rounded-xl p-4 transition-all border",
-                      useRedemption 
-                        ? "bg-emerald-500/5 border-emerald-500/30 ring-1 ring-emerald-500/10" 
-                        : "bg-card/50 border-secondary/20 hover:border-secondary/40"
+                      "w-full text-left rounded-xl p-4 border",
+                      "bg-emerald-500/5 border-emerald-500/30 ring-1 ring-emerald-500/10 cursor-not-allowed"
                     )}
                   >
                     <div className="flex items-center gap-3.5">
@@ -2656,26 +2654,21 @@ const ClienteAgendar = () => {
                         <Star className="w-5 h-5 text-secondary" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <p className="text-[13px] font-semibold text-foreground">Corte Grátis</p>
-                          <span className="text-[9px] font-bold uppercase tracking-wider bg-secondary/10 text-secondary px-1.5 py-px rounded">
-                            Disponível
+                          <span className="text-[9px] font-bold uppercase tracking-wider bg-emerald-500/15 text-emerald-500 px-1.5 py-px rounded">
+                            Obrigatório
                           </span>
                         </div>
-                        <p className="text-[11px] text-muted-foreground/60 mt-0.5">
-                          {availableRedemptions.length} resgate{availableRedemptions.length > 1 ? 's' : ''} de fidelidade
+                        <p className="text-[11px] text-muted-foreground/70 mt-0.5">
+                          Aplicado automaticamente — não é possível acumular cortes grátis.
                         </p>
                       </div>
-                      <div className={cn(
-                        "w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all",
-                        useRedemption 
-                          ? "bg-emerald-500 border-emerald-500"
-                          : "border-secondary/30"
-                      )}>
-                        {useRedemption && <Check className="w-3 h-3 text-primary-foreground" strokeWidth={3} />}
+                      <div className="w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 bg-emerald-500 border-emerald-500">
+                        <Check className="w-3 h-3 text-primary-foreground" strokeWidth={3} />
                       </div>
                     </div>
-                  </button>
+                  </div>
                 </div>
               )}
 
