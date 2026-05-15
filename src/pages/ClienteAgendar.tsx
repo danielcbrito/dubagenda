@@ -1984,6 +1984,16 @@ const ClienteAgendar = () => {
   };
 
   const canUseRedemption = availableRedemptions.length > 0 && !!getCorteService();
+  // Resgate é OBRIGATÓRIO: sempre que houver resgate disponível e um corte selecionado, força o uso.
+  // O cliente não pode acumular cortes grátis nem optar por pagar quando tem um disponível.
+  useEffect(() => {
+    if (canUseRedemption && !useRedemption) {
+      setUseRedemption(true);
+    }
+    if (!canUseRedemption && useRedemption) {
+      setUseRedemption(false);
+    }
+  }, [canUseRedemption]);
 
   const handleBack = () => {
     // Step 1 (Barbeiro) — volta para home
@@ -2466,7 +2476,7 @@ const ClienteAgendar = () => {
               {/* Pagar na Barbearia */}
               <motion.button
                 whileTap={{ scale: 0.98 }}
-                onClick={() => { setPaymentMethod('cash'); setUseRedemption(false); }}
+                onClick={() => { setPaymentMethod('cash'); if (!canUseRedemption) setUseRedemption(false); }}
                 className={cn(
                   "w-full rounded-xl border p-4 text-left transition-all",
                   paymentMethod === 'cash' && !useRedemption
@@ -2505,7 +2515,7 @@ const ClienteAgendar = () => {
               {canReceivePix && (
                 <motion.button
                   whileTap={{ scale: 0.98 }}
-                  onClick={() => { setPaymentMethod('pix'); setUseRedemption(false); }}
+                  onClick={() => { setPaymentMethod('pix'); if (!canUseRedemption) setUseRedemption(false); }}
                   className={cn(
                     "w-full rounded-xl border p-4 text-left transition-all mt-3",
                     paymentMethod === 'pix' && !useRedemption
@@ -2550,7 +2560,7 @@ const ClienteAgendar = () => {
                   <>
                     <motion.button
                       whileTap={{ scale: 0.98 }}
-                      onClick={() => { setPaymentMethod('wallet'); setUseRedemption(false); }}
+                      onClick={() => { setPaymentMethod('wallet'); if (!canUseRedemption) setUseRedemption(false); }}
                       className={cn(
                         "w-full rounded-xl border p-4 text-left transition-all mt-3",
                         isSelected
@@ -2629,16 +2639,14 @@ const ClienteAgendar = () => {
                 );
               })()}
 
-              {/* Resgate Grátis */}
+              {/* Resgate Grátis — OBRIGATÓRIO quando disponível */}
               {canUseRedemption && (
                 <div className="mt-5">
-                  <button
-                    onClick={() => setUseRedemption(!useRedemption)}
+                  <div
+                    aria-disabled
                     className={cn(
-                      "w-full text-left rounded-xl p-4 transition-all border",
-                      useRedemption 
-                        ? "bg-emerald-500/5 border-emerald-500/30 ring-1 ring-emerald-500/10" 
-                        : "bg-card/50 border-secondary/20 hover:border-secondary/40"
+                      "w-full text-left rounded-xl p-4 border",
+                      "bg-emerald-500/5 border-emerald-500/30 ring-1 ring-emerald-500/10 cursor-not-allowed"
                     )}
                   >
                     <div className="flex items-center gap-3.5">
@@ -2646,26 +2654,21 @@ const ClienteAgendar = () => {
                         <Star className="w-5 h-5 text-secondary" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <p className="text-[13px] font-semibold text-foreground">Corte Grátis</p>
-                          <span className="text-[9px] font-bold uppercase tracking-wider bg-secondary/10 text-secondary px-1.5 py-px rounded">
-                            Disponível
+                          <span className="text-[9px] font-bold uppercase tracking-wider bg-emerald-500/15 text-emerald-500 px-1.5 py-px rounded">
+                            Obrigatório
                           </span>
                         </div>
-                        <p className="text-[11px] text-muted-foreground/60 mt-0.5">
-                          {availableRedemptions.length} resgate{availableRedemptions.length > 1 ? 's' : ''} de fidelidade
+                        <p className="text-[11px] text-muted-foreground/70 mt-0.5">
+                          Aplicado automaticamente — não é possível acumular cortes grátis.
                         </p>
                       </div>
-                      <div className={cn(
-                        "w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all",
-                        useRedemption 
-                          ? "bg-emerald-500 border-emerald-500"
-                          : "border-secondary/30"
-                      )}>
-                        {useRedemption && <Check className="w-3 h-3 text-primary-foreground" strokeWidth={3} />}
+                      <div className="w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 bg-emerald-500 border-emerald-500">
+                        <Check className="w-3 h-3 text-primary-foreground" strokeWidth={3} />
                       </div>
                     </div>
-                  </button>
+                  </div>
                 </div>
               )}
 

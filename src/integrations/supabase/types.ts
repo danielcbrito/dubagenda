@@ -6155,6 +6155,10 @@ export type Database = {
         Args: never
         Returns: undefined
       }
+      blank_barber_hours_if_untouched: {
+        Args: { p_barbeiro_id: string }
+        Returns: undefined
+      }
       calcular_saldo_barbeiro: {
         Args: { p_barbeiro_id?: string; p_user_id: string }
         Returns: {
