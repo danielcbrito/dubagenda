@@ -2515,7 +2515,7 @@ const ClienteAgendar = () => {
               {canReceivePix && (
                 <motion.button
                   whileTap={{ scale: 0.98 }}
-                  onClick={() => { setPaymentMethod('pix'); setUseRedemption(false); }}
+                  onClick={() => { setPaymentMethod('pix'); if (!canUseRedemption) setUseRedemption(false); }}
                   className={cn(
                     "w-full rounded-xl border p-4 text-left transition-all mt-3",
                     paymentMethod === 'pix' && !useRedemption
