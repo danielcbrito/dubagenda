@@ -1984,6 +1984,16 @@ const ClienteAgendar = () => {
   };
 
   const canUseRedemption = availableRedemptions.length > 0 && !!getCorteService();
+  // Resgate é OBRIGATÓRIO: sempre que houver resgate disponível e um corte selecionado, força o uso.
+  // O cliente não pode acumular cortes grátis nem optar por pagar quando tem um disponível.
+  useEffect(() => {
+    if (canUseRedemption && !useRedemption) {
+      setUseRedemption(true);
+    }
+    if (!canUseRedemption && useRedemption) {
+      setUseRedemption(false);
+    }
+  }, [canUseRedemption]);
 
   const handleBack = () => {
     // Step 1 (Barbeiro) — volta para home
