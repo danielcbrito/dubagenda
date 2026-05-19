@@ -3139,6 +3139,30 @@ const ClienteAgendar = () => {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Diálogo: perder corte grátis ao seguir sem aplicar */}
+      <AlertDialog open={showLoseRedemptionDialog} onOpenChange={setShowLoseRedemptionDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Perder Corte Grátis?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Se você finalizar este agendamento sem aplicar seu Corte Grátis, perderá essa promoção
+              e precisará acumular pontos novamente para conquistá-la.
+              {selectedServices.length > 1 && " Você pode aplicá-lo apenas no corte e seguir pagando os demais serviços normalmente."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={consumingRedemption}>Voltar e aplicar</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={consumingRedemption}
+              onClick={(e) => { e.preventDefault(); handleConfirmLoseRedemption(); }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {consumingRedemption ? "Processando..." : "Perder e continuar"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
