@@ -12,6 +12,16 @@ import { cn } from "@/lib/utils";
 import { useSlotAvailability } from "@/hooks/useSlotAvailability";
 import { sendRemarcacaoConcluidaEvent } from "@/lib/webhookService";
 import { motion, AnimatePresence } from "framer-motion";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 // Premium Components
 import { ServiceCard } from "@/components/booking/ServiceCard";
@@ -121,6 +131,8 @@ const ClienteAgendar = () => {
   const [subscriptionLimitReached, setSubscriptionLimitReached] = useState(false);
   const [availableRedemptions, setAvailableRedemptions] = useState<{ id: string; promocao_id: string }[]>([]);
   const [useRedemption, setUseRedemption] = useState(false);
+  const [showLoseRedemptionDialog, setShowLoseRedemptionDialog] = useState(false);
+  const [consumingRedemption, setConsumingRedemption] = useState(false);
   const [serviceQuantities, setServiceQuantities] = useState<Record<string, number>>({});
   
   // Durações personalizadas do barbeiro selecionado (servico_id → duracao)
@@ -1984,16 +1996,62 @@ const ClienteAgendar = () => {
   };
 
   const canUseRedemption = availableRedemptions.length > 0 && !!getCorteService();
-  // Resgate é OBRIGATÓRIO: sempre que houver resgate disponível e um corte selecionado, força o uso.
-  // O cliente não pode acumular cortes grátis nem optar por pagar quando tem um disponível.
+  // Pré-seleciona o corte grátis quando disponível, mas o cliente PODE optar por não usar.
+  // Se ele seguir sem aplicar, será avisado e perderá a promoção (resgate consumido).
+  const prevCanUseRedemptionRef = useRef(false);
   useEffect(() => {
-    if (canUseRedemption && !useRedemption) {
+    const prev = prevCanUseRedemptionRef.current;
+    if (canUseRedemption && !prev) {
+      // acabou de ficar elegível → pré-seleciona
       setUseRedemption(true);
     }
     if (!canUseRedemption && useRedemption) {
       setUseRedemption(false);
     }
+    prevCanUseRedemptionRef.current = canUseRedemption;
   }, [canUseRedemption]);
+
+  /** Marca todos os resgates disponíveis como expirados (cliente abriu mão do corte grátis). */
+  const consumeRedemptionsAsLost = async () => {
+    if (!userId || availableRedemptions.length === 0) return;
+    const ids = availableRedemptions.map(r => r.id);
+    try {
+      await supabase
+        .from("resgates")
+        .update({ status: "expired", expired_at: new Date().toISOString() })
+        .in("id", ids);
+      setAvailableRedemptions([]);
+    } catch (err) {
+      console.error("Erro ao expirar resgates:", err);
+    }
+  };
+
+  /** Ação do botão "Continuar" do passo 5 (pagamento). */
+  const handleProceedFromPayment = async () => {
+    // Se há corte grátis disponível e o cliente optou por NÃO usar → confirmar perda
+    if (canUseRedemption && !useRedemption) {
+      setShowLoseRedemptionDialog(true);
+      return;
+    }
+    if (paymentMethod === 'pix' || paymentMethod === 'card') {
+      handlePayment();
+    } else {
+      setStep(6);
+    }
+  };
+
+  const handleConfirmLoseRedemption = async () => {
+    setConsumingRedemption(true);
+    await consumeRedemptionsAsLost();
+    setConsumingRedemption(false);
+    setShowLoseRedemptionDialog(false);
+    if (paymentMethod === 'pix' || paymentMethod === 'card') {
+      handlePayment();
+    } else {
+      setStep(6);
+    }
+  };
+
 
   const handleBack = () => {
     // Step 1 (Barbeiro) — volta para home
@@ -2639,36 +2697,53 @@ const ClienteAgendar = () => {
                 );
               })()}
 
-              {/* Resgate Grátis — OBRIGATÓRIO quando disponível */}
+              {/* Resgate Grátis — pré-selecionado, mas opcional. Se removido, será perdido. */}
               {canUseRedemption && (
                 <div className="mt-5">
-                  <div
-                    aria-disabled
+                  <button
+                    type="button"
+                    onClick={() => setUseRedemption(v => !v)}
                     className={cn(
-                      "w-full text-left rounded-xl p-4 border",
-                      "bg-emerald-500/5 border-emerald-500/30 ring-1 ring-emerald-500/10 cursor-not-allowed"
+                      "w-full text-left rounded-xl p-4 border transition-all",
+                      useRedemption
+                        ? "bg-emerald-500/5 border-emerald-500/30 ring-1 ring-emerald-500/10"
+                        : "bg-card border-border hover:border-border/80"
                     )}
                   >
                     <div className="flex items-center gap-3.5">
-                      <div className="w-10 h-10 rounded-xl bg-secondary/10 flex items-center justify-center flex-shrink-0">
-                        <Star className="w-5 h-5 text-secondary" />
+                      <div className={cn(
+                        "w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0",
+                        useRedemption ? "bg-secondary/10" : "bg-muted/30"
+                      )}>
+                        <Star className={cn("w-5 h-5", useRedemption ? "text-secondary" : "text-muted-foreground")} />
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <p className="text-[13px] font-semibold text-foreground">Corte Grátis</p>
-                          <span className="text-[9px] font-bold uppercase tracking-wider bg-emerald-500/15 text-emerald-500 px-1.5 py-px rounded">
-                            Obrigatório
-                          </span>
+                          {useRedemption ? (
+                            <span className="text-[9px] font-bold uppercase tracking-wider bg-emerald-500/15 text-emerald-500 px-1.5 py-px rounded">
+                              Aplicado
+                            </span>
+                          ) : (
+                            <span className="text-[9px] font-bold uppercase tracking-wider bg-amber-500/15 text-amber-500 px-1.5 py-px rounded">
+                              Recomendado
+                            </span>
+                          )}
                         </div>
                         <p className="text-[11px] text-muted-foreground/70 mt-0.5">
-                          Aplicado automaticamente — não é possível acumular cortes grátis.
+                          {useRedemption
+                            ? "Seu corte sai grátis. Outros serviços continuam sendo cobrados."
+                            : "Toque para aplicar. Se seguir sem usar, a promoção será perdida."}
                         </p>
                       </div>
-                      <div className="w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 bg-emerald-500 border-emerald-500">
-                        <Check className="w-3 h-3 text-primary-foreground" strokeWidth={3} />
+                      <div className={cn(
+                        "w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0",
+                        useRedemption ? "bg-emerald-500 border-emerald-500" : "border-muted-foreground/40"
+                      )}>
+                        {useRedemption && <Check className="w-3 h-3 text-primary-foreground" strokeWidth={3} />}
                       </div>
                     </div>
-                  </div>
+                  </button>
                 </div>
               )}
 
@@ -3028,13 +3103,7 @@ const ClienteAgendar = () => {
 
                 {/* Full-width CTA */}
                 <motion.button
-                  onClick={() => {
-                    if (paymentMethod === 'pix' || paymentMethod === 'card') {
-                      handlePayment();
-                    } else {
-                      setStep(6);
-                    }
-                  }}
+                  onClick={handleProceedFromPayment}
                   disabled={processingPayment}
                   whileTap={{ scale: processingPayment ? 1 : 0.985 }}
                   className={cn(
@@ -3070,6 +3139,30 @@ const ClienteAgendar = () => {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Diálogo: perder corte grátis ao seguir sem aplicar */}
+      <AlertDialog open={showLoseRedemptionDialog} onOpenChange={setShowLoseRedemptionDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Perder Corte Grátis?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Se você finalizar este agendamento sem aplicar seu Corte Grátis, perderá essa promoção
+              e precisará acumular pontos novamente para conquistá-la.
+              {selectedServices.length > 1 && " Você pode aplicá-lo apenas no corte e seguir pagando os demais serviços normalmente."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={consumingRedemption}>Voltar e aplicar</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={consumingRedemption}
+              onClick={(e) => { e.preventDefault(); handleConfirmLoseRedemption(); }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {consumingRedemption ? "Processando..." : "Perder e continuar"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
