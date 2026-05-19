@@ -3103,13 +3103,7 @@ const ClienteAgendar = () => {
 
                 {/* Full-width CTA */}
                 <motion.button
-                  onClick={() => {
-                    if (paymentMethod === 'pix' || paymentMethod === 'card') {
-                      handlePayment();
-                    } else {
-                      setStep(6);
-                    }
-                  }}
+                  onClick={handleProceedFromPayment}
                   disabled={processingPayment}
                   whileTap={{ scale: processingPayment ? 1 : 0.985 }}
                   className={cn(
