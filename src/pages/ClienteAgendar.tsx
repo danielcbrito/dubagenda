@@ -1996,16 +1996,62 @@ const ClienteAgendar = () => {
   };
 
   const canUseRedemption = availableRedemptions.length > 0 && !!getCorteService();
-  // Resgate é OBRIGATÓRIO: sempre que houver resgate disponível e um corte selecionado, força o uso.
-  // O cliente não pode acumular cortes grátis nem optar por pagar quando tem um disponível.
+  // Pré-seleciona o corte grátis quando disponível, mas o cliente PODE optar por não usar.
+  // Se ele seguir sem aplicar, será avisado e perderá a promoção (resgate consumido).
+  const prevCanUseRedemptionRef = useRef(false);
   useEffect(() => {
-    if (canUseRedemption && !useRedemption) {
+    const prev = prevCanUseRedemptionRef.current;
+    if (canUseRedemption && !prev) {
+      // acabou de ficar elegível → pré-seleciona
       setUseRedemption(true);
     }
     if (!canUseRedemption && useRedemption) {
       setUseRedemption(false);
     }
+    prevCanUseRedemptionRef.current = canUseRedemption;
   }, [canUseRedemption]);
+
+  /** Marca todos os resgates disponíveis como expirados (cliente abriu mão do corte grátis). */
+  const consumeRedemptionsAsLost = async () => {
+    if (!userId || availableRedemptions.length === 0) return;
+    const ids = availableRedemptions.map(r => r.id);
+    try {
+      await supabase
+        .from("resgates")
+        .update({ status: "expired", expired_at: new Date().toISOString() })
+        .in("id", ids);
+      setAvailableRedemptions([]);
+    } catch (err) {
+      console.error("Erro ao expirar resgates:", err);
+    }
+  };
+
+  /** Ação do botão "Continuar" do passo 5 (pagamento). */
+  const handleProceedFromPayment = async () => {
+    // Se há corte grátis disponível e o cliente optou por NÃO usar → confirmar perda
+    if (canUseRedemption && !useRedemption) {
+      setShowLoseRedemptionDialog(true);
+      return;
+    }
+    if (paymentMethod === 'pix' || paymentMethod === 'card') {
+      handlePayment();
+    } else {
+      setStep(6);
+    }
+  };
+
+  const handleConfirmLoseRedemption = async () => {
+    setConsumingRedemption(true);
+    await consumeRedemptionsAsLost();
+    setConsumingRedemption(false);
+    setShowLoseRedemptionDialog(false);
+    if (paymentMethod === 'pix' || paymentMethod === 'card') {
+      handlePayment();
+    } else {
+      setStep(6);
+    }
+  };
+
 
   const handleBack = () => {
     // Step 1 (Barbeiro) — volta para home
