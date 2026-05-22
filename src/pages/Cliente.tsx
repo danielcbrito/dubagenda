@@ -180,7 +180,7 @@ const fetchLoyaltyData = async (userId: string, tenantId: string | null) => {
       .from("assinaturas")
       .select("id, status, plano_id, created_at, payment_method, pix_qr_code, pix_payload, asaas_payment_id, pix_expires_at, plano:planos(nome, preco_mensal)")
       .eq("user_id", userId)
-      .in("status", ["suspended", "pending", "pending_cash", "pending_renewal"] as any)
+      .in("status", ["suspended", "pending_cash", "pending_renewal", "pending"] as any)
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle(),
@@ -416,6 +416,7 @@ const Cliente = () => {
   const [pendingDrawerOpen, setPendingDrawerOpen] = useState(false);
   const hasAutoOpenedPendingRef = useRef<string | null>(null);
   const { cancelSubscription, cancelling: isCancelingSubscription } = useCancelSubscriptionMutation();
+  const [hasAutoOpenedThisSession, setHasAutoOpenedThisSession] = useState(false);
 
 
 
@@ -447,11 +448,12 @@ const Cliente = () => {
 
   // Auto-show pending subscription drawer
   useEffect(() => {
-    if (pendingSubscription && dataLoaded && hasAutoOpenedPendingRef.current !== (pendingSubscription as any).id) {
+    if (pendingSubscription && dataLoaded && !hasAutoOpenedThisSession && hasAutoOpenedPendingRef.current !== (pendingSubscription as any).id) {
       hasAutoOpenedPendingRef.current = (pendingSubscription as any).id;
+      setHasAutoOpenedThisSession(true);
       setPendingDrawerOpen(true);
     }
-  }, [pendingSubscription, dataLoaded]);
+  }, [pendingSubscription, dataLoaded, hasAutoOpenedThisSession]);
 
   const handleCancelSubscription = async () => {
     cancelSubscription(() => {
@@ -1013,13 +1015,16 @@ const Cliente = () => {
                           Assinatura em andamento
                         </p>
                         <p className="text-[11px] text-muted-foreground line-clamp-1">
-                          Toque para finalizar seu plano {(pendingSubscription as any).plano?.nome}
-                          </p>
-                        </div>
-                        <ChevronRight className="w-4 h-4 text-muted-foreground/50 group-hover:translate-x-0.5 transition-transform" />
+                          {pendingSubscription.status === 'pending_renewal' 
+                            ? `Renovação pendente: ${(pendingSubscription as any).plano?.nome}`
+                            : `Toque para finalizar seu plano ${(pendingSubscription as any).plano?.nome}`
+                          }
+                        </p>
                       </div>
-                    </motion.div>
-                  )}
+                      <ChevronRight className="w-4 h-4 text-muted-foreground/50 group-hover:translate-x-0.5 transition-transform" />
+                    </div>
+                  </motion.div>
+                )}
 
                   {/* Card do Plano Ativo */}
                   {activeSubscription && (!pendingSubscription || pendingSubscription.status === 'pending_renewal') ? (
