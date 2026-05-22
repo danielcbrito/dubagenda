@@ -1068,6 +1068,7 @@ const Cliente = () => {
                   )}
                 </div>
               )}
+            </div>
 
             {/* Schedule Button */}
             <div className="mb-6">
