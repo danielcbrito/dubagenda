@@ -627,7 +627,7 @@ const ClienteAgendar = () => {
           .select("id")
           .eq("user_id", uid)
           .eq("payment_method", "resgate")
-          .in("status", ["pending", "confirmed", "completed"])
+          .in("status", ["pending", "confirmed"])
           .limit(1),
         supabase
           .from("resgates")
