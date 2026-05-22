@@ -2033,6 +2033,13 @@ const ClienteAgendar = () => {
       setShowLoseRedemptionDialog(true);
       return;
     }
+    
+    // Se o cliente tem um corte grátis mas o serviço de corte NÃO está selecionado,
+    // ele também deve ser avisado que perderá o benefício se prosseguir sem ele?
+    // O usuário disse: "quando ele tem a opção ali de corte grátis... tem que aparecer essa opção... 
+    // mas também se o cliente ele selecionar pagar na barbearia... e não selecionar o corte grátis, 
+    // vai aparecer uma tela... falando pra ele... ele vai perder a promoção"
+    
     if (paymentMethod === 'pix' || paymentMethod === 'card') {
       handlePayment();
     } else {
@@ -3142,25 +3149,48 @@ const ClienteAgendar = () => {
 
       {/* Diálogo: perder corte grátis ao seguir sem aplicar */}
       <AlertDialog open={showLoseRedemptionDialog} onOpenChange={setShowLoseRedemptionDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Perder Corte Grátis?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Se você finalizar este agendamento sem aplicar seu Corte Grátis, perderá essa promoção
-              e precisará acumular pontos novamente para conquistá-la.
-              {selectedServices.length > 1 && " Você pode aplicá-lo apenas no corte e seguir pagando os demais serviços normalmente."}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={consumingRedemption}>Voltar e aplicar</AlertDialogCancel>
-            <AlertDialogAction
-              disabled={consumingRedemption}
-              onClick={(e) => { e.preventDefault(); handleConfirmLoseRedemption(); }}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {consumingRedemption ? "Processando..." : "Perder e continuar"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
+        <AlertDialogContent className="max-w-[90vw] md:max-w-lg rounded-3xl border-border/40 overflow-hidden p-0">
+          <div className="relative pt-12 pb-8 px-6 text-center">
+            {/* Background pattern decorativo */}
+            <div className="absolute top-0 left-0 right-0 h-32 bg-gradient-to-b from-destructive/10 to-transparent pointer-events-none" />
+            
+            <div className="relative inline-flex items-center justify-center w-20 h-20 rounded-full bg-destructive/10 mb-6">
+              <Star className="w-10 h-10 text-destructive animate-pulse" />
+            </div>
+            
+            <AlertDialogHeader className="space-y-3">
+              <AlertDialogTitle className="text-2xl font-bold tracking-tight text-foreground">
+                Atenção, Promoção em Risco!
+              </AlertDialogTitle>
+              <AlertDialogDescription className="text-[15px] leading-relaxed text-muted-foreground/80">
+                Você conquistou um <span className="font-bold text-foreground">Corte Grátis</span>, mas não o selecionou para este agendamento.
+                <br /><br />
+                Se você continuar agora, <span className="font-bold text-destructive">perderá este benefício definitivamente</span> e seus pontos serão resetados após o corte.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            
+            <div className="mt-8 flex flex-col gap-3">
+              <AlertDialogAction
+                disabled={consumingRedemption}
+                onClick={(e) => { e.preventDefault(); handleConfirmLoseRedemption(); }}
+                className="h-14 rounded-2xl bg-destructive text-destructive-foreground font-bold text-base hover:bg-destructive/90 active:scale-[0.98] transition-all shadow-lg shadow-destructive/20 border-none"
+              >
+                {consumingRedemption ? (
+                  <div className="flex items-center gap-2">
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    <span>Processando...</span>
+                  </div>
+                ) : "Sim, desejo perder o benefício"}
+              </AlertDialogAction>
+              
+              <AlertDialogCancel 
+                disabled={consumingRedemption}
+                className="h-14 rounded-2xl border-border/40 bg-card hover:bg-secondary font-semibold text-foreground/70 border-none"
+              >
+                Voltar e aplicar meu Corte Grátis
+              </AlertDialogCancel>
+            </div>
+          </div>
         </AlertDialogContent>
       </AlertDialog>
     </div>
