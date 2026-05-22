@@ -64,7 +64,7 @@ export function BottomNavigation({
 
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 z-50 border-t border-border/50 bg-background/80 backdrop-blur-xl"
+      className="fixed bottom-0 left-0 right-0 z-50 border-t border-border/50 bg-background/80 backdrop-blur-xl shadow-[0_-8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_-8px_30px_rgb(0,0,0,0.2)]"
       style={{
         paddingBottom: "env(safe-area-inset-bottom, 0px)",
       }}
