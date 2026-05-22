@@ -15,26 +15,33 @@ function NavItem({ icon: Icon, label, isActive, showBadge, onClick }: NavItemPro
     <motion.button
       whileTap={{ scale: 0.9 }}
       onClick={onClick}
-      className="flex flex-col items-center justify-center gap-[2px] px-4 py-1.5 relative"
+      className="flex flex-col items-center justify-center gap-1.5 px-4 py-2 relative min-w-[72px]"
     >
       <div className="relative">
         <Icon
-          className={`w-[18px] h-[18px] transition-colors duration-200 ${
-            isActive ? "text-primary" : "text-muted-foreground/70"
+          className={`w-6 h-6 transition-all duration-300 ${
+            isActive ? "text-primary scale-110" : "text-muted-foreground/70"
           }`}
-          strokeWidth={isActive ? 2.2 : 1.8}
+          strokeWidth={isActive ? 2.5 : 2}
         />
         {showBadge && (
-          <span className="absolute -top-0.5 -right-1 w-2 h-2 rounded-full bg-destructive" />
+          <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-destructive border-2 border-background animate-pulse" />
         )}
       </div>
       <span
-        className={`text-[9px] tracking-wide transition-colors duration-200 ${
-          isActive ? "text-primary font-semibold" : "text-muted-foreground/60 font-medium"
+        className={`text-xs tracking-tight transition-all duration-300 ${
+          isActive ? "text-primary font-bold" : "text-muted-foreground/60 font-medium"
         }`}
       >
         {label}
       </span>
+      {isActive && (
+        <motion.div
+          layoutId="nav-active"
+          className="absolute -top-2 inset-x-4 h-1 bg-primary rounded-full"
+          transition={{ type: "spring", stiffness: 300, damping: 30 }}
+        />
+      )}
     </motion.button>
   );
 }
@@ -57,12 +64,12 @@ export function BottomNavigation({
 
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-background"
+      className="fixed bottom-0 left-0 right-0 z-50 border-t border-border/50 bg-background/80 backdrop-blur-xl"
       style={{
         paddingBottom: "env(safe-area-inset-bottom, 0px)",
       }}
     >
-      <div className="flex items-center justify-around h-12 max-w-lg mx-auto">
+      <div className="flex items-center justify-around h-[72px] max-w-lg mx-auto px-4">
         <NavItem
           icon={Home}
           label="Início"
