@@ -35,6 +35,7 @@ import { PendingReviewBanner } from "@/components/client/PendingReviewBanner";
 import { usePendingReviews } from "@/hooks/usePendingReviews";
 import { useNotificationManager } from "@/hooks/useNotificationManager";
 import { useCancelarReservaPendente, useCancelSubscriptionMutation } from "@/hooks/useClientMutations";
+import { usePendingSubscription } from "@/hooks/usePendingSubscription";
 
 interface Appointment {
   id: string;
@@ -376,7 +377,8 @@ const Cliente = () => {
   const completedAppointments = loyaltyQueryData?.completedAppointments ?? 0;
   const availableCredits = loyaltyQueryData?.credits ?? 0;
   const activeSubscription = loyaltyQueryData?.activeSubscription ?? null;
-  const pendingSubscription = loyaltyQueryData?.pendingSubscription ?? null;
+  const { data: directPendingSubscription } = usePendingSubscription(user?.id);
+  const pendingSubscription = loyaltyQueryData?.pendingSubscription ?? directPendingSubscription ?? null;
   const expiredSubscription = loyaltyQueryData?.expiredSubscription ?? null;
   const planUsageCount = loyaltyQueryData?.planUsageCount ?? 0;
   const redemptions = loyaltyQueryData?.redemptions ?? 0;
