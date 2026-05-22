@@ -24,7 +24,7 @@ export function PendingSubscriptionDrawer({
   isCanceling = false,
 }: PendingSubscriptionDrawerProps) {
   return (
-    <Drawer open={open} onOpenChange={onOpenChange} dismissible={false}>
+    <Drawer open={open} onOpenChange={onOpenChange} dismissible={true}>
       <DrawerContent className="px-4 pb-6 outline-none border-none bg-background shadow-2xl max-w-sm mx-auto rounded-t-3xl">
         <div className="mx-auto w-10 h-1 rounded-full bg-muted-foreground/15 mt-3 mb-1" />
         

@@ -1307,6 +1307,7 @@ const Cliente = () => {
         planName={(pendingSubscription as any)?.plano?.nome || "Plano"}
         onFinalize={() => {
           const ps = pendingSubscription as any;
+          // Se for Pix e o QR Code ainda estiver válido
           if (ps.payment_method === "pix" && ps.pix_qr_code && ps.pix_expires_at) {
             const pixExpiresAt = new Date(ps.pix_expires_at).getTime();
             if (pixExpiresAt > Date.now()) {
@@ -1324,6 +1325,7 @@ const Cliente = () => {
               return;
             }
           }
+          // Se não for Pix ou o Pix expirou, direciona para a página de assinar original para escolher novamente
           navigate("/cliente/assinar", { 
             state: { resumePlanId: ps.plano_id }
           });
