@@ -1170,6 +1170,14 @@ const ClienteAgendar = () => {
 
       // Normal flow: check if credits cover total
       const totalPrice = getTotalPrice();
+      
+      // Se tem resgate disponível, SEMPRE passa pelo passo 5 (Pagamento)
+      // para que o cliente veja as opções e o aviso de perda de promoção se não usar.
+      if (canUseRedemption) {
+        setStep(5);
+        return;
+      }
+
       if (availableCredits >= totalPrice) {
         setPaymentMethod('cash');
         setStep(6); // Skip payment, go to confirmation
