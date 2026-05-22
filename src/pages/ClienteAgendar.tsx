@@ -192,6 +192,9 @@ const ClienteAgendar = () => {
   const { blockedIds: blockedBarberIds } = useBlockedBarbers();
 
   const { data: pendingSubscription, refetch: refetchPending } = usePendingSubscription(userId);
+  const [pendingDrawerOpen, setPendingDrawerOpen] = useState(false);
+  const hasAutoOpenedPendingRef = useRef<string | null>(null);
+  const [isCancelingSubscription, setIsCancelingSubscription] = useState(false);
 
   // Auto-show pending subscription drawer
   useEffect(() => {
