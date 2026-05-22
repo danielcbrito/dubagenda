@@ -14,6 +14,8 @@ import { CheckoutSheet } from "@/components/loja/CheckoutSheet";
 import { useCart } from "@/hooks/useCart";
 import { useStoreMaintenanceMode } from "@/hooks/useStoreMaintenanceMode";
 import { CartAddedOverlay, showCartAddedToast } from "@/components/loja/CartAddedOverlay";
+import { usePendingSubscription } from "@/hooks/usePendingSubscription";
+
 
 interface Produto {
   id: string;
@@ -52,6 +54,8 @@ export default function ClienteLoja() {
   const [checkoutSelectedIds, setCheckoutSelectedIds] = useState<Set<string>>(new Set());
   const [currentSlide, setCurrentSlide] = useState(0);
   const [scrolled, setScrolled] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
+
   
   const searchInputRef = useRef<HTMLInputElement>(null);
   const slideIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -208,6 +212,13 @@ export default function ClienteLoja() {
     }
     return slides;
   }, [bannerUrl, produtos, userTenant]);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => setUserId(data.user?.id || null));
+  }, []);
+
+  const { data: pendingSubscription } = usePendingSubscription(userId);
+
 
   useEffect(() => {
     if (bannerSlides.length <= 1) return;
@@ -620,6 +631,7 @@ export default function ClienteLoja() {
         <BottomNavigation
           onProfileClick={() => navigate("/cliente/perfil")}
           onPlansClick={() => navigate("/cliente/assinar")}
+          hasPendingSubscription={!!pendingSubscription}
         />
       )}
     </div>
