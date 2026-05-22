@@ -481,7 +481,7 @@ const ClienteAssinar = () => {
           {/* ═══ Step 1: Barbearia ═══ */}
           {step === 1 && (
             <motion.div key="step1" initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 16 }}
-              className="h-full overflow-y-auto overscroll-contain px-4 pb-20">
+              className="h-full overflow-y-auto overscroll-contain px-4 pb-20 pt-16 md:pt-20">
               <div className="max-w-2xl mx-auto space-y-2.5">
                 <div className="mb-4">
                   <h2 className="text-xl font-semibold text-foreground">Sua Barbearia</h2>
@@ -552,7 +552,7 @@ const ClienteAssinar = () => {
           {/* ═══ Step 3: Barbeiro ═══ */}
           {step === 3 && (
             <motion.div key="step3" initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -16 }}
-              className="h-full overflow-y-auto overscroll-contain px-4 pb-28">
+              className="h-full overflow-y-auto overscroll-contain px-4 pb-28 pt-16 md:pt-20">
               <div className="max-w-2xl mx-auto">
                 <div className="mb-5 pt-1">
                   <h2 className="text-xl font-semibold text-foreground">Seu Barbeiro</h2>
@@ -580,7 +580,7 @@ const ClienteAssinar = () => {
           {/* ═══ Step 4: Pagamento ═══ */}
           {step === 4 && selectedPlan && (
             <motion.div key="step4" initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -16 }}
-              className="h-full overflow-y-auto overscroll-contain px-4 pb-28">
+              className="h-full overflow-y-auto overscroll-contain px-4 pb-28 pt-16 md:pt-20">
               <div className="max-w-2xl mx-auto">
                 <div className="mb-6 pt-1">
                   <h2 className="text-xl font-semibold text-foreground">Pagamento</h2>
