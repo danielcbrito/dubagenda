@@ -27,7 +27,7 @@ import { LoyaltyCard } from "@/components/client/LoyaltyCard";
 import { PlanTrackerCard } from "@/components/client/PlanTrackerCard";
 import { PlanExpiredBanner } from "@/components/client/PlanExpiredBanner";
 import { PlanRenewalDrawer } from "@/components/client/PlanRenewalDrawer";
-import { PendingSubscriptionBanner } from "@/components/client/PendingSubscriptionBanner";
+import { PendingSubscriptionDrawer } from "@/components/client/PendingSubscriptionDrawer";
 import { ScheduleButton } from "@/components/client/ScheduleButton";
 import { AppointmentCardPremium } from "@/components/client/AppointmentCardPremium";
 import { BarberReviewModal } from "@/components/client/BarberReviewModal";
