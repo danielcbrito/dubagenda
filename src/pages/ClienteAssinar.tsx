@@ -701,13 +701,19 @@ const ClienteAssinar = () => {
                         {selectedBarber?.apelido?.charAt(0)}
                       </div>
                     )}
-                    <span className="text-[12px] text-muted-foreground/70">
-                      Barbeiro selecionado
-                    </span>
+                    <div className="flex flex-col">
+                      <span className="text-[10px] text-muted-foreground/60 leading-none mb-0.5">
+                        {selectedPlan?.nome}
+                      </span>
+                      <span className="text-[13px] font-semibold text-foreground leading-none">
+                        {selectedBarber?.apelido}
+                      </span>
+                    </div>
                   </div>
                   <div className="flex items-baseline gap-1">
-                    <span className="text-[13px] font-semibold text-foreground">
-                      {selectedBarber.apelido}
+                    <span className="text-[10px] text-muted-foreground/50 font-medium">R$</span>
+                    <span className="text-[17px] font-bold text-foreground tabular-nums tracking-tight">
+                      {selectedPlan?.preco_mensal.toFixed(2).replace('.', ',')}
                     </span>
                   </div>
                 </div>
@@ -765,7 +771,7 @@ const ClienteAssinar = () => {
                     )}
                     <div className="flex flex-col">
                       <span className="text-[10px] text-muted-foreground/60 leading-none mb-0.5">
-                        {selectedPaymentMethod === "pix" ? "Pagar via Pix" : selectedPaymentMethod === "cash" ? "Pagar em Dinheiro" : "Pagar via Cartão"}
+                        {selectedPlan?.nome}
                       </span>
                       <span className="text-[13px] font-semibold text-foreground leading-none">
                         {selectedBarber?.apelido}
