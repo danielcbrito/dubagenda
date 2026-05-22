@@ -1383,6 +1383,12 @@ const ClienteAgendar = () => {
 
       if (useRedemption && data.appointmentId) {
         await markRedemptionAsUsed(data.appointmentId);
+        
+        // Atualiza o agendamento para refletir que o pagamento foi via resgate
+        await supabase
+          .from("agendamentos")
+          .update({ payment_method: 'resgate' } as any)
+          .eq("id", data.appointmentId);
       }
 
       if (appliedCoupon && data.appointmentId) {
@@ -1455,7 +1461,7 @@ const ClienteAgendar = () => {
           preco: 0,
           status: "confirmed",
           observacoes: `Corte grátis - Resgate do programa de fidelidade. ${selectedServices.length > 1 ? 'Serviços: ' + serviceNames : ''}`,
-          payment_method: 'resgate',
+          payment_method: 'cash', // Alterado de 'resgate' para 'cash' para o markRedemptionAsUsed cuidar disso manualmente
           is_free: true,
           barbeiro_confirmou: true,
           cliente_confirmou: true,
@@ -1467,6 +1473,13 @@ const ClienteAgendar = () => {
       if (aptError) throw aptError;
 
       await markRedemptionAsUsed(appointment.id);
+      
+      // Atualiza o agendamento para refletir que o pagamento foi via resgate
+      // Fazemos isso após o markRedemptionAsUsed para garantir que o resgate foi vinculado corretamente
+      await supabase
+        .from("agendamentos")
+        .update({ payment_method: 'resgate' } as any)
+        .eq("id", appointment.id);
 
       // Webhook de confirmação é enviado automaticamente pelo trigger do banco de dados
 
@@ -1577,6 +1590,12 @@ const ClienteAgendar = () => {
 
       if (useRedemption) {
         await markRedemptionAsUsed(appointment.id);
+        
+        // Atualiza o agendamento para refletir que o pagamento foi via resgate
+        await supabase
+          .from("agendamentos")
+          .update({ payment_method: 'resgate' } as any)
+          .eq("id", appointment.id);
       }
 
       // Registra uso do cupom se aplicado
