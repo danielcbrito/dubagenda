@@ -34,7 +34,7 @@ import { BarberReviewModal } from "@/components/client/BarberReviewModal";
 import { PendingReviewBanner } from "@/components/client/PendingReviewBanner";
 import { usePendingReviews } from "@/hooks/usePendingReviews";
 import { useNotificationManager } from "@/hooks/useNotificationManager";
-import { useCancelarReservaPendente } from "@/hooks/useClientMutations";
+import { useCancelarReservaPendente, useCancelSubscriptionMutation } from "@/hooks/useClientMutations";
 
 interface Appointment {
   id: string;
@@ -415,7 +415,7 @@ const Cliente = () => {
 
   const [pendingDrawerOpen, setPendingDrawerOpen] = useState(false);
   const hasAutoOpenedPendingRef = useRef<string | null>(null);
-  const [isCancelingSubscription, setIsCancelingSubscription] = useState(false);
+  const { cancelSubscription, cancelling: isCancelingSubscription } = useCancelSubscriptionMutation();
 
 
 
@@ -454,19 +454,10 @@ const Cliente = () => {
   }, [pendingSubscription, dataLoaded]);
 
   const handleCancelSubscription = async () => {
-    setIsCancelingSubscription(true);
-    try {
-      const { error } = await supabase.functions.invoke("cancel-subscription");
-      if (error) throw error;
-      toast.success("Assinatura cancelada com sucesso");
+    cancelSubscription(() => {
       setPendingDrawerOpen(false);
       invalidateLoyalty();
-    } catch (error: any) {
-      console.error("Cancel subscription error:", error);
-      toast.error("Erro ao cancelar assinatura: " + error.message);
-    } finally {
-      setIsCancelingSubscription(false);
-    }
+    });
   };
 
 
