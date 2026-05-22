@@ -413,7 +413,9 @@ const Cliente = () => {
   } | null>(null);
 
   const [pendingDrawerOpen, setPendingDrawerOpen] = useState(false);
+  const hasAutoOpenedPendingRef = useRef<string | null>(null);
   const [isCancelingSubscription, setIsCancelingSubscription] = useState(false);
+
 
 
   // Realtime connection status
@@ -444,7 +446,8 @@ const Cliente = () => {
 
   // Auto-show pending subscription drawer
   useEffect(() => {
-    if (pendingSubscription && dataLoaded) {
+    if (pendingSubscription && dataLoaded && hasAutoOpenedPendingRef.current !== (pendingSubscription as any).id) {
+      hasAutoOpenedPendingRef.current = (pendingSubscription as any).id;
       setPendingDrawerOpen(true);
     }
   }, [pendingSubscription, dataLoaded]);
