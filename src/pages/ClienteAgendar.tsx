@@ -2563,6 +2563,66 @@ const ClienteAgendar = () => {
                 </div>
               </div>
 
+              {/* Resgate Grátis — pré-selecionado, mas opcional. Se removido, será perdido. */}
+              {canUseRedemption && (
+                <motion.div 
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="mb-6"
+                >
+                  <button
+                    type="button"
+                    onClick={() => setUseRedemption(v => !v)}
+                    className={cn(
+                      "w-full text-left rounded-2xl p-5 border-2 transition-all shadow-sm relative overflow-hidden",
+                      useRedemption
+                        ? "bg-emerald-500/10 border-emerald-500 ring-2 ring-emerald-500/10"
+                        : "bg-card border-border/40 hover:border-border/60"
+                    )}
+                  >
+                    {useRedemption && (
+                      <div className="absolute top-0 right-0 p-2">
+                        <div className="bg-emerald-500 text-white p-1 rounded-bl-xl rounded-tr-sm">
+                          <Check className="w-4 h-4" strokeWidth={3} />
+                        </div>
+                      </div>
+                    )}
+                    
+                    <div className="flex items-center gap-4">
+                      <div className={cn(
+                        "w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0 transition-all shadow-inner",
+                        useRedemption ? "bg-emerald-500 text-white" : "bg-muted/30 text-muted-foreground/40"
+                      )}>
+                        <Star className={cn("w-7 h-7", useRedemption ? "fill-white" : "")} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap mb-1">
+                          <p className={cn(
+                            "text-[15px] font-bold tracking-tight",
+                            useRedemption ? "text-emerald-600" : "text-foreground/70"
+                          )}>
+                            Corte Grátis Disponível!
+                          </p>
+                          {useRedemption && (
+                            <span className="text-[10px] font-black uppercase tracking-widest bg-emerald-500 text-white px-2 py-0.5 rounded-full shadow-sm">
+                              Ativado
+                            </span>
+                          )}
+                        </div>
+                        <p className={cn(
+                          "text-[12px] leading-snug",
+                          useRedemption ? "text-emerald-600/80" : "text-muted-foreground/60"
+                        )}>
+                          {useRedemption
+                            ? "Parabéns! O valor do seu corte será totalmente descontado."
+                            : "Toque para aplicar seu benefício. Se não usar agora, você perderá esta promoção."}
+                        </p>
+                      </div>
+                    </div>
+                  </button>
+                </motion.div>
+              )}
+
               {/* Pagar na Barbearia */}
               <motion.button
                 whileTap={{ scale: 0.98 }}
