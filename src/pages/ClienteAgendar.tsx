@@ -2644,18 +2644,20 @@ const ClienteAgendar = () => {
                     <div className="w-9 h-9 rounded-xl bg-primary/20 flex items-center justify-center flex-shrink-0">
                       <Clock className="w-4 h-4 text-primary" />
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[12px] font-bold text-foreground">
-                        Assinatura pendente detectada
-                      </p>
-                      <p className="text-[10px] text-muted-foreground line-clamp-1">
-                        Finalize o pagamento para liberar seu agendamento
-                      </p>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[12px] font-bold text-foreground">
+                          {pendingSubscription.status === 'pending_renewal' 
+                            ? "Renovação de plano pendente" 
+                            : "Assinatura pendente detectada"}
+                        </p>
+                        <p className="text-[10px] text-muted-foreground line-clamp-1">
+                          Finalize o pagamento para liberar seu agendamento
+                        </p>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-muted-foreground/30 group-hover:translate-x-0.5 transition-transform" />
                     </div>
-                    <ChevronRight className="w-4 h-4 text-muted-foreground/30 group-hover:translate-x-0.5 transition-transform" />
-                  </div>
-                </motion.div>
-              )}
+                  </motion.div>
+                )}
 
               {/* Resumo do serviço */}
               <div className="bg-card border border-border/40 rounded-xl p-4 mb-6">
