@@ -366,7 +366,7 @@ const Cliente = () => {
   } = useQuery({
     queryKey: ['cliente', 'loyalty', user?.id, tenantId],
     queryFn: () => fetchLoyaltyData(user!.id, tenantId),
-    enabled: !!user?.id && !!tenantId,
+    enabled: !!user?.id,
     staleTime: 30 * 1000, // 30s — responsive to plan/points changes
     refetchOnWindowFocus: true,
   });
