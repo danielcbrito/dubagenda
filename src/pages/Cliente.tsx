@@ -34,7 +34,7 @@ import { BarberReviewModal } from "@/components/client/BarberReviewModal";
 import { PendingReviewBanner } from "@/components/client/PendingReviewBanner";
 import { usePendingReviews } from "@/hooks/usePendingReviews";
 import { useNotificationManager } from "@/hooks/useNotificationManager";
-import { useCancelarReservaPendente } from "@/hooks/useClientMutations";
+import { useCancelarReservaPendente, useCancelSubscriptionMutation } from "@/hooks/useClientMutations";
 
 interface Appointment {
   id: string;
@@ -415,7 +415,7 @@ const Cliente = () => {
 
   const [pendingDrawerOpen, setPendingDrawerOpen] = useState(false);
   const hasAutoOpenedPendingRef = useRef<string | null>(null);
-  const [isCancelingSubscription, setIsCancelingSubscription] = useState(false);
+  const { cancelSubscription, cancelling: isCancelingSubscription } = useCancelSubscriptionMutation();
 
 
 
@@ -454,19 +454,10 @@ const Cliente = () => {
   }, [pendingSubscription, dataLoaded]);
 
   const handleCancelSubscription = async () => {
-    setIsCancelingSubscription(true);
-    try {
-      const { error } = await supabase.functions.invoke("cancel-subscription");
-      if (error) throw error;
-      toast.success("Assinatura cancelada com sucesso");
+    cancelSubscription(() => {
       setPendingDrawerOpen(false);
       invalidateLoyalty();
-    } catch (error: any) {
-      console.error("Cancel subscription error:", error);
-      toast.error("Erro ao cancelar assinatura: " + error.message);
-    } finally {
-      setIsCancelingSubscription(false);
-    }
+    });
   };
 
 
@@ -1017,12 +1008,12 @@ const Cliente = () => {
                         <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center flex-shrink-0">
                           <Clock className="w-5 h-5 text-primary" />
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-[13px] font-bold text-foreground">
-                            Pagamento Pendente
-                          </p>
-                          <p className="text-[11px] text-muted-foreground line-clamp-1">
-                            Toque para finalizar seu plano {(pendingSubscription as any).plano?.nome}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[13px] font-bold text-foreground">
+                          Assinatura em andamento
+                        </p>
+                        <p className="text-[11px] text-muted-foreground line-clamp-1">
+                          Toque para finalizar seu plano {(pendingSubscription as any).plano?.nome}
                           </p>
                         </div>
                         <ChevronRight className="w-4 h-4 text-muted-foreground/50 group-hover:translate-x-0.5 transition-transform" />
@@ -1031,7 +1022,7 @@ const Cliente = () => {
                   )}
 
                   {/* Card do Plano Ativo */}
-                  {activeSubscription ? (
+                  {activeSubscription && (!pendingSubscription || pendingSubscription.status === 'pending_renewal') ? (
                     <PlanTrackerCard
                       planName={(activeSubscription as any).plano?.nome || "Meu Plano"}
                       usedAppointments={planUsageCount}

@@ -39,6 +39,8 @@ import { useBlockedBarbers } from "@/hooks/useBlockedBarbers";
 import { useWalletStatus } from "@/hooks/useWalletStatus";
 import { PendingSubscriptionDrawer } from "@/components/client/PendingSubscriptionDrawer";
 import { usePendingSubscription } from "@/hooks/usePendingSubscription";
+import { useCancelSubscriptionMutation } from "@/hooks/useClientMutations";
+import { BottomNavigation } from "@/components/BottomNavigation";
 
 
 interface TenantUnit {
@@ -124,7 +126,7 @@ const ClienteAgendar = () => {
   const [userId, setUserId] = useState<string | null>(null);
   const [pendingDrawerOpen, setPendingDrawerOpen] = useState(false);
   const hasAutoOpenedPendingRef = useRef<string | null>(null);
-  const [isCancelingSubscription, setIsCancelingSubscription] = useState(false);
+  const { cancelSubscription, cancelling: isCancelingSubscription } = useCancelSubscriptionMutation();
 
   const [isRescheduling, setIsRescheduling] = useState(false);
   const [rescheduleAppointmentId, setRescheduleAppointmentId] = useState<string | null>(null);
@@ -202,19 +204,10 @@ const ClienteAgendar = () => {
   }, [pendingSubscription]);
 
   const handleCancelSubscription = async () => {
-    setIsCancelingSubscription(true);
-    try {
-      const { error } = await supabase.functions.invoke("cancel-subscription");
-      if (error) throw error;
-      toast.success("Assinatura cancelada com sucesso");
+    cancelSubscription(() => {
       setPendingDrawerOpen(false);
       refetchPending();
-    } catch (error: any) {
-      console.error("Cancel subscription error:", error);
-      toast.error("Erro ao cancelar assinatura: " + error.message);
-    } finally {
-      setIsCancelingSubscription(false);
-    }
+    });
   };
 
 
@@ -3326,6 +3319,11 @@ const ClienteAgendar = () => {
         }}
         onCancel={handleCancelSubscription}
         isCanceling={isCancelingSubscription}
+      />
+      <BottomNavigation
+        onProfileClick={() => {}}
+        onPlansClick={() => {}}
+        hasPendingSubscription={!!pendingSubscription}
       />
     </div>
   );
