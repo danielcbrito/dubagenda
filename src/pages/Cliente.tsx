@@ -882,7 +882,7 @@ const Cliente = () => {
   };
 
   return (
-    <div className="flex flex-col" style={{ height: "calc(100dvh - 56px)" }}>
+    <div className="flex flex-col h-[100dvh]">
       
 
       {/* Scrollable Content */}
