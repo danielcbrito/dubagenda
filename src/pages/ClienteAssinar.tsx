@@ -17,6 +17,8 @@ import {
   Shield,
   Star,
   User,
+  Wallet,
+  Landmark,
 } from "lucide-react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
