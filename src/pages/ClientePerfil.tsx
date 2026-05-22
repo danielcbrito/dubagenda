@@ -253,7 +253,7 @@ export default function ClientePerfil() {
           className="absolute top-0 left-0 right-0 h-4 z-10 pointer-events-none"
           style={{ background: "linear-gradient(to bottom, hsl(var(--background)), transparent)" }}
         />
-        <div className="h-full overflow-y-auto overscroll-contain pb-24">
+        <div className="h-full overflow-y-auto overscroll-contain pb-16">
           <div className="px-4 pt-8 pb-4 space-y-6">
 
             {/* Identity */}
