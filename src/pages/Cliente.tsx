@@ -1240,9 +1240,6 @@ const Cliente = () => {
           pontosNecessarios={pontosNecessarios}
         />
       )}
-          </div>
-        </div>
-      </div>
 
       {/* Wallet Sheet */}
       <WalletSheet
