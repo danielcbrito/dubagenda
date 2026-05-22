@@ -231,76 +231,77 @@ const fetchLoyaltyData = async (userId: string, tenantId: string | null) => {
     });
     const rpcUsageCount = usageError ? 0 : Number(usageCount || 0);
     planUsageCount = Math.max(Number(activeSubData.usos_ciclo_atual || 0), rpcUsageCount);
-  } else {
-    const pendingSub = pendingSubResult.data;
-    pendingSubscription = pendingSub;
+  }
+  
+  // Independent handling of pending subscription
+  const pendingSub = pendingSubResult.data;
+  pendingSubscription = pendingSub;
 
-    if (pendingSub?.status === "pending_renewal") {
-      const { data: renewalCheck } = await supabase.functions.invoke("check-subscription-pix", {
-        body: { subscriptionId: pendingSub.id },
-      });
+  if (pendingSub?.status === "pending_renewal") {
+    const { data: renewalCheck } = await supabase.functions.invoke("check-subscription-pix", {
+      body: { subscriptionId: pendingSub.id },
+    });
 
-      if (
-        renewalCheck?.status === "paid" ||
-        renewalCheck?.status === "expired" ||
-        renewalCheck?.status === "already_processed"
-      ) {
-        // Re-fetch active sub after renewal
-        const { data: recoveredSub } = await supabase
-          .from("assinaturas")
-          .select("id, status, next_billing_date, plano_id, barbeiro_id, payment_method, cash_payment_confirmed, ciclo_inicio, ciclo_fim, usos_ciclo_atual, plano:planos(nome, limite_agendamentos_mes, preco_mensal, servico:servicos!planos_servico_id_fkey(nome))")
-          .eq("user_id", userId)
-          .eq("status", "active")
-          .order("created_at", { ascending: false })
-          .limit(1)
-          .maybeSingle();
-
-        if (recoveredSub) {
-          activeSubscription = recoveredSub;
-          pendingSubscription = null;
-
-          let rCycleStart: string;
-          let rCycleEnd: string;
-          if (recoveredSub.ciclo_inicio && recoveredSub.ciclo_fim) {
-            rCycleStart = recoveredSub.ciclo_inicio;
-            rCycleEnd = recoveredSub.ciclo_fim;
-          } else {
-            const cs = new Date(`${recoveredSub.next_billing_date}T12:00:00`);
-            cs.setMonth(cs.getMonth() - 1);
-            rCycleStart = cs.toISOString().split('T')[0];
-            rCycleEnd = recoveredSub.next_billing_date;
-          }
-          const { data: usageCount, error: usageError } = await supabase.rpc('count_subscription_uses_in_cycle', {
-            p_assinatura_id: recoveredSub.id,
-            p_cycle_start: rCycleStart,
-            p_cycle_end: rCycleEnd,
-          });
-          const rpcUsageCount = usageError ? 0 : Number(usageCount || 0);
-          planUsageCount = Math.max(Number(recoveredSub.usos_ciclo_atual || 0), rpcUsageCount);
-        }
-      }
-    }
-
-    if (!pendingSub) {
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
-      const { data: expiredSub } = await supabase
+    if (
+      renewalCheck?.status === "paid" ||
+      renewalCheck?.status === "expired" ||
+      renewalCheck?.status === "already_processed"
+    ) {
+      // Re-fetch active sub after renewal
+      const { data: recoveredSub } = await supabase
         .from("assinaturas")
-        .select("id, status, plano_id, updated_at, next_billing_date, plano:planos(nome)")
+        .select("id, status, next_billing_date, plano_id, barbeiro_id, payment_method, cash_payment_confirmed, ciclo_inicio, ciclo_fim, usos_ciclo_atual, plano:planos(nome, limite_agendamentos_mes, preco_mensal, servico:servicos!planos_servico_id_fkey(nome))")
         .eq("user_id", userId)
-        .eq("status", "cancelled")
-        .not("next_billing_date", "is", null)
-        .gte("updated_at", thirtyDaysAgo.toISOString())
-        .order("updated_at", { ascending: false })
+        .eq("status", "active")
+        .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();
 
-      const isRealExpired = expiredSub?.next_billing_date &&
-        new Date(expiredSub.next_billing_date + "T00:00:00") < new Date();
+      if (recoveredSub) {
+        activeSubscription = recoveredSub;
+        pendingSubscription = null;
 
-      expiredSubscription = isRealExpired ? expiredSub : null;
+        let rCycleStart: string;
+        let rCycleEnd: string;
+        if (recoveredSub.ciclo_inicio && recoveredSub.ciclo_fim) {
+          rCycleStart = recoveredSub.ciclo_inicio;
+          rCycleEnd = recoveredSub.ciclo_fim;
+        } else {
+          const cs = new Date(`${recoveredSub.next_billing_date}T12:00:00`);
+          cs.setMonth(cs.getMonth() - 1);
+          rCycleStart = cs.toISOString().split('T')[0];
+          rCycleEnd = recoveredSub.next_billing_date;
+        }
+        const { data: usageCount, error: usageError } = await supabase.rpc('count_subscription_uses_in_cycle', {
+          p_assinatura_id: recoveredSub.id,
+          p_cycle_start: rCycleStart,
+          p_cycle_end: rCycleEnd,
+        });
+        const rpcUsageCount = usageError ? 0 : Number(usageCount || 0);
+        planUsageCount = Math.max(Number(recoveredSub.usos_ciclo_atual || 0), rpcUsageCount);
+      }
     }
+  }
+
+  if (!activeSubscription && !pendingSubscription) {
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    const { data: expiredSub } = await supabase
+      .from("assinaturas")
+      .select("id, status, plano_id, updated_at, next_billing_date, plano:planos(nome)")
+      .eq("user_id", userId)
+      .eq("status", "cancelled")
+      .not("next_billing_date", "is", null)
+      .gte("updated_at", thirtyDaysAgo.toISOString())
+      .order("updated_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    const isRealExpired = expiredSub?.next_billing_date &&
+      new Date(expiredSub.next_billing_date + "T00:00:00") < new Date();
+
+    expiredSubscription = isRealExpired ? expiredSub : null;
   }
 
   return {
