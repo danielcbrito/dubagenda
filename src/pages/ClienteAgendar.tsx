@@ -39,6 +39,7 @@ import { useBlockedBarbers } from "@/hooks/useBlockedBarbers";
 import { useWalletStatus } from "@/hooks/useWalletStatus";
 import { PendingSubscriptionDrawer } from "@/components/client/PendingSubscriptionDrawer";
 import { usePendingSubscription } from "@/hooks/usePendingSubscription";
+import { BottomNavigation } from "@/components/BottomNavigation";
 
 
 interface TenantUnit {
