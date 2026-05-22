@@ -3174,7 +3174,8 @@ const ClienteAgendar = () => {
                       <span>
                         {paymentMethod === 'pix' ? 'Gerar PIX' :
                          paymentMethod === 'card' ? 'Pagar' :
-                         'Finalizar'}
+                         paymentMethod === 'cash' ? 'Finalizar' :
+                         'Continuar'}
                       </span>
                       <ArrowRight className="w-4 h-4" />
                     </>
