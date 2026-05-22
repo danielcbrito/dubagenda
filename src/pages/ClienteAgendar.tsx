@@ -1170,6 +1170,14 @@ const ClienteAgendar = () => {
 
       // Normal flow: check if credits cover total
       const totalPrice = getTotalPrice();
+      
+      // Se tem resgate disponível, SEMPRE passa pelo passo 5 (Pagamento)
+      // para que o cliente veja as opções e o aviso de perda de promoção se não usar.
+      if (canUseRedemption) {
+        setStep(5);
+        return;
+      }
+
       if (availableCredits >= totalPrice) {
         setPaymentMethod('cash');
         setStep(6); // Skip payment, go to confirmation
@@ -2555,6 +2563,66 @@ const ClienteAgendar = () => {
                 </div>
               </div>
 
+              {/* Resgate Grátis — pré-selecionado, mas opcional. Se removido, será perdido. */}
+              {canUseRedemption && (
+                <motion.div 
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="mb-6"
+                >
+                  <button
+                    type="button"
+                    onClick={() => setUseRedemption(v => !v)}
+                    className={cn(
+                      "w-full text-left rounded-2xl p-5 border-2 transition-all shadow-sm relative overflow-hidden",
+                      useRedemption
+                        ? "bg-emerald-500/10 border-emerald-500 ring-2 ring-emerald-500/10"
+                        : "bg-card border-border/40 hover:border-border/60"
+                    )}
+                  >
+                    {useRedemption && (
+                      <div className="absolute top-0 right-0 p-2">
+                        <div className="bg-emerald-500 text-white p-1 rounded-bl-xl rounded-tr-sm">
+                          <Check className="w-4 h-4" strokeWidth={3} />
+                        </div>
+                      </div>
+                    )}
+                    
+                    <div className="flex items-center gap-4">
+                      <div className={cn(
+                        "w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0 transition-all shadow-inner",
+                        useRedemption ? "bg-emerald-500 text-white" : "bg-muted/30 text-muted-foreground/40"
+                      )}>
+                        <Star className={cn("w-7 h-7", useRedemption ? "fill-white" : "")} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap mb-1">
+                          <p className={cn(
+                            "text-[15px] font-bold tracking-tight",
+                            useRedemption ? "text-emerald-600" : "text-foreground/70"
+                          )}>
+                            Corte Grátis Disponível!
+                          </p>
+                          {useRedemption && (
+                            <span className="text-[10px] font-black uppercase tracking-widest bg-emerald-500 text-white px-2 py-0.5 rounded-full shadow-sm">
+                              Ativado
+                            </span>
+                          )}
+                        </div>
+                        <p className={cn(
+                          "text-[12px] leading-snug",
+                          useRedemption ? "text-emerald-600/80" : "text-muted-foreground/60"
+                        )}>
+                          {useRedemption
+                            ? "Parabéns! O valor do seu corte será totalmente descontado."
+                            : "Toque para aplicar seu benefício. Se não usar agora, você perderá esta promoção."}
+                        </p>
+                      </div>
+                    </div>
+                  </button>
+                </motion.div>
+              )}
+
               {/* Pagar na Barbearia */}
               <motion.button
                 whileTap={{ scale: 0.98 }}
@@ -2721,55 +2789,6 @@ const ClienteAgendar = () => {
                 );
               })()}
 
-              {/* Resgate Grátis — pré-selecionado, mas opcional. Se removido, será perdido. */}
-              {canUseRedemption && (
-                <div className="mt-5">
-                  <button
-                    type="button"
-                    onClick={() => setUseRedemption(v => !v)}
-                    className={cn(
-                      "w-full text-left rounded-xl p-4 border transition-all",
-                      useRedemption
-                        ? "bg-emerald-500/5 border-emerald-500/30 ring-1 ring-emerald-500/10"
-                        : "bg-card border-border hover:border-border/80"
-                    )}
-                  >
-                    <div className="flex items-center gap-3.5">
-                      <div className={cn(
-                        "w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0",
-                        useRedemption ? "bg-secondary/10" : "bg-muted/30"
-                      )}>
-                        <Star className={cn("w-5 h-5", useRedemption ? "text-secondary" : "text-muted-foreground")} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <p className="text-[13px] font-semibold text-foreground">Corte Grátis</p>
-                          {useRedemption ? (
-                            <span className="text-[9px] font-bold uppercase tracking-wider bg-emerald-500/15 text-emerald-500 px-1.5 py-px rounded">
-                              Aplicado
-                            </span>
-                          ) : (
-                            <span className="text-[9px] font-bold uppercase tracking-wider bg-amber-500/15 text-amber-500 px-1.5 py-px rounded">
-                              Recomendado
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-[11px] text-muted-foreground/70 mt-0.5">
-                          {useRedemption
-                            ? "Seu corte sai grátis. Outros serviços continuam sendo cobrados."
-                            : "Toque para aplicar. Se seguir sem usar, a promoção será perdida."}
-                        </p>
-                      </div>
-                      <div className={cn(
-                        "w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0",
-                        useRedemption ? "bg-emerald-500 border-emerald-500" : "border-muted-foreground/40"
-                      )}>
-                        {useRedemption && <Check className="w-3 h-3 text-primary-foreground" strokeWidth={3} />}
-                      </div>
-                    </div>
-                  </button>
-                </div>
-              )}
 
               {/* Cupom de Desconto */}
               <div className="mt-5">
