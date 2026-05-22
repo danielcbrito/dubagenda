@@ -13,11 +13,11 @@ interface NavItemProps {
 function NavItem({ icon: Icon, label, isActive, showBadge, onClick }: NavItemProps) {
   return (
     <motion.button
-      whileTap={{ scale: 0.9 }}
+      whileTap={{ scale: 0.95 }}
       onClick={onClick}
-      className="flex flex-col items-center justify-center gap-1.5 px-4 py-2 relative min-w-[72px]"
+      className="flex flex-col items-center justify-center gap-1.5 px-2 py-2 relative min-w-[72px] h-full"
     >
-      <div className="relative">
+      <div className="relative z-10">
         <Icon
           className={`w-6 h-6 transition-all duration-300 ${
             isActive ? "text-primary scale-110" : "text-muted-foreground/70"
@@ -25,21 +25,22 @@ function NavItem({ icon: Icon, label, isActive, showBadge, onClick }: NavItemPro
           strokeWidth={isActive ? 2.5 : 2}
         />
         {showBadge && (
-          <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-destructive border-2 border-background animate-pulse" />
+          <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-destructive border-2 border-background animate-pulse shadow-sm" />
         )}
       </div>
       <span
-        className={`text-xs tracking-tight transition-all duration-300 ${
+        className={`text-[11px] tracking-tight transition-all duration-300 z-10 ${
           isActive ? "text-primary font-bold" : "text-muted-foreground/60 font-medium"
         }`}
       >
         {label}
       </span>
+      
       {isActive && (
         <motion.div
-          layoutId="nav-active"
-          className="absolute -top-2 inset-x-4 h-1 bg-primary rounded-full"
-          transition={{ type: "spring", stiffness: 300, damping: 30 }}
+          layoutId="nav-active-pill"
+          className="absolute inset-x-1 inset-y-2 bg-primary/10 rounded-2xl"
+          transition={{ type: "spring", stiffness: 400, damping: 30 }}
         />
       )}
     </motion.button>
