@@ -3164,35 +3164,31 @@ const ClienteAgendar = () => {
 
       {/* Diálogo: perder corte grátis ao seguir sem aplicar */}
       <AlertDialog open={showLoseRedemptionDialog} onOpenChange={setShowLoseRedemptionDialog}>
-        <AlertDialogContent className="max-w-[85vw] md:max-w-md rounded-[28px] border border-border/40 bg-white/95 backdrop-blur-xl p-0 overflow-hidden shadow-2xl">
-          <div className="p-8 text-center">
-            <div className="mx-auto w-14 h-14 rounded-full bg-destructive/10 flex items-center justify-center mb-5">
-              <Star className="w-7 h-7 text-destructive fill-destructive/10" />
-            </div>
-            
-            <AlertDialogHeader className="space-y-2">
-              <AlertDialogTitle className="text-xl font-bold text-foreground tracking-tight">
-                Perder benefício?
+        <AlertDialogContent className="max-w-[80vw] md:max-w-[340px] rounded-[32px] border border-white/40 bg-white/80 backdrop-blur-2xl p-0 overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.1)] focus:outline-none">
+          <div className="p-7 text-center">
+            <AlertDialogHeader className="space-y-3">
+              <AlertDialogTitle className="text-[19px] font-bold text-zinc-900 tracking-tight leading-tight">
+                Você tem um benefício pendente
               </AlertDialogTitle>
-              <AlertDialogDescription className="text-sm leading-relaxed text-muted-foreground">
-                Você tem um <span className="text-foreground font-semibold">Corte Grátis</span> disponível. Se continuar sem selecioná-lo, você <span className="text-destructive font-bold">perderá esta promoção</span> definitivamente.
+              <AlertDialogDescription className="text-[14px] leading-relaxed text-zinc-600 px-1">
+                Se você continuar sem selecionar o <span className="text-zinc-900 font-semibold">Corte Grátis</span>, você perderá essa promoção definitivamente. Deseja prosseguir mesmo assim?
               </AlertDialogDescription>
             </AlertDialogHeader>
             
-            <div className="mt-8 flex flex-col gap-2.5">
+            <div className="mt-8 flex flex-col gap-2">
               <AlertDialogAction
                 disabled={consumingRedemption}
                 onClick={(e) => { e.preventDefault(); handleConfirmLoseRedemption(); }}
-                className="w-full h-12 rounded-xl bg-destructive hover:bg-destructive/90 text-white font-bold text-sm transition-all border-none shadow-lg shadow-destructive/10"
+                className="w-full h-[52px] rounded-2xl bg-zinc-900 hover:bg-zinc-800 text-white font-bold text-[15px] transition-all border-none active:scale-[0.98]"
               >
                 {consumingRedemption ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : "Sim, perder benefício"}
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : "Sim, desejo perder"}
               </AlertDialogAction>
               
               <AlertDialogCancel 
                 disabled={consumingRedemption}
-                className="w-full h-12 rounded-xl bg-secondary/50 hover:bg-secondary text-muted-foreground font-semibold text-sm border-none transition-all"
+                className="w-full h-[52px] rounded-2xl bg-zinc-100 hover:bg-zinc-200 text-zinc-600 font-bold text-[15px] border-none transition-all active:scale-[0.98]"
               >
                 Voltar e aplicar
               </AlertDialogCancel>
