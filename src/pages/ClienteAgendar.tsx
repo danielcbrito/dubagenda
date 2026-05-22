@@ -1455,7 +1455,7 @@ const ClienteAgendar = () => {
           preco: 0,
           status: "confirmed",
           observacoes: `Corte grátis - Resgate do programa de fidelidade. ${selectedServices.length > 1 ? 'Serviços: ' + serviceNames : ''}`,
-          payment_method: 'resgate',
+          payment_method: 'cash', // Alterado de 'resgate' para 'cash' para o markRedemptionAsUsed cuidar disso manualmente
           is_free: true,
           barbeiro_confirmou: true,
           cliente_confirmou: true,
