@@ -1577,6 +1577,12 @@ const ClienteAgendar = () => {
 
       if (useRedemption) {
         await markRedemptionAsUsed(appointment.id);
+        
+        // Atualiza o agendamento para refletir que o pagamento foi via resgate
+        await supabase
+          .from("agendamentos")
+          .update({ payment_method: 'resgate' } as any)
+          .eq("id", appointment.id);
       }
 
       // Registra uso do cupom se aplicado
