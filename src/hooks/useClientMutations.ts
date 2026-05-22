@@ -104,3 +104,24 @@ export function useCancelarReservaPendente() {
 
   return { cancelarReserva, cancelling };
 }
+
+export function useCancelSubscriptionMutation() {
+  const [cancelling, setCancelling] = useState(false);
+
+  const cancelSubscription = useCallback(async (onSuccess?: () => void) => {
+    setCancelling(true);
+    try {
+      const { error } = await supabase.functions.invoke("cancel-subscription");
+      if (error) throw error;
+      toast.success("Assinatura cancelada com sucesso");
+      onSuccess?.();
+    } catch (error: any) {
+      console.error("Cancel subscription error:", error);
+      toast.error("Erro ao cancelar assinatura: " + error.message);
+    } finally {
+      setCancelling(false);
+    }
+  }, []);
+
+  return { cancelSubscription, cancelling };
+}
