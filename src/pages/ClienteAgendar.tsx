@@ -2621,7 +2621,7 @@ const ClienteAgendar = () => {
                         ? "Parabéns! O valor do seu corte será totalmente descontado." 
                         : "Toque para aplicar seu benefício. Se não usar agora, você perderá esta promoção."}
                       highlight={true}
-                      icon={<Star className={cn("w-5 h-5", useRedemption ? "fill-primary text-primary" : "text-muted-foreground/40")} />}
+                      icon={<Star className={cn("w-5 h-5", useRedemption ? "fill-gold text-gold" : "text-muted-foreground/40")} />}
                     />
                   </motion.div>
                 )}
