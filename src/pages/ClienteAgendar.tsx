@@ -1951,9 +1951,9 @@ const ClienteAgendar = () => {
   };
 
   const getCorteService = () => {
-    return selectedServices.find(s => 
-      s.nome.toLowerCase().includes('corte') && 
-      !s.nome.toLowerCase().includes('barba')
+    // Procura qualquer serviço que contenha "corte" no nome
+    return (selectedServices || []).find(s => 
+      s.nome.toLowerCase().includes('corte')
     );
   };
 
@@ -1969,6 +1969,23 @@ const ClienteAgendar = () => {
     if (!useRedemption || availableRedemptions.length === 0) return 0;
     const corteService = getCorteService();
     if (!corteService) return 0;
+    
+    // Se for um combo, tenta aplicar o desconto apenas do valor de um "Corte" simples
+    const isCombo = corteService.nome.toLowerCase().includes('barba') || 
+                    corteService.nome.toLowerCase().includes('+') || 
+                    corteService.nome.toLowerCase().includes('mais');
+                    
+    if (isCombo) {
+      const simpleCorte = services.find(s => 
+        s.nome.toLowerCase().includes('corte') && 
+        !s.nome.toLowerCase().includes('barba') && 
+        !s.nome.toLowerCase().includes('+') && 
+        !s.nome.toLowerCase().includes('mais')
+      );
+      // Se encontrar um corte simples, desconta apenas o valor dele. Caso contrário, desconta o valor total do combo.
+      if (simpleCorte) return simpleCorte.preco;
+    }
+    
     return corteService.preco;
   };
 
