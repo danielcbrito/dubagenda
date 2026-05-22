@@ -180,7 +180,7 @@ const fetchLoyaltyData = async (userId: string, tenantId: string | null) => {
       .from("assinaturas")
       .select("id, status, plano_id, created_at, payment_method, pix_qr_code, pix_payload, asaas_payment_id, pix_expires_at, plano:planos(nome, preco_mensal)")
       .eq("user_id", userId)
-      .in("status", ["suspended", "pending", "pending_cash", "pending_renewal", "pending"] as any)
+      .in("status", ["suspended", "pending_cash", "pending_renewal", "pending"] as any)
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle(),
