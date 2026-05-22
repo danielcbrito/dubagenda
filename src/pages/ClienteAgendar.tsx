@@ -37,6 +37,9 @@ import { UnitSelector } from "@/components/booking/UnitSelector";
 import { NextAvailableDateButton } from "@/components/booking/NextAvailableDateButton";
 import { useBlockedBarbers } from "@/hooks/useBlockedBarbers";
 import { useWalletStatus } from "@/hooks/useWalletStatus";
+import { PendingSubscriptionDrawer } from "@/components/client/PendingSubscriptionDrawer";
+import { usePendingSubscription } from "@/hooks/usePendingSubscription";
+
 
 interface TenantUnit {
   id: string;
@@ -119,8 +122,11 @@ const ClienteAgendar = () => {
   const [processingPayment, setProcessingPayment] = useState(false);
   const [availableCredits, setAvailableCredits] = useState(0);
   const [userId, setUserId] = useState<string | null>(null);
+  const [pendingDrawerOpen, setPendingDrawerOpen] = useState(false);
+  const [isCancelingSubscription, setIsCancelingSubscription] = useState(false);
   const [isRescheduling, setIsRescheduling] = useState(false);
   const [rescheduleAppointmentId, setRescheduleAppointmentId] = useState<string | null>(null);
+
   const [unavailableMessage, setUnavailableMessage] = useState<string | null>(null);
   const servicesListRef = useRef<HTMLDivElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -182,6 +188,32 @@ const ClienteAgendar = () => {
 
   // Barbeiros bloqueados para este cliente
   const { blockedIds: blockedBarberIds } = useBlockedBarbers();
+
+  const { data: pendingSubscription, refetch: refetchPending } = usePendingSubscription(userId);
+
+  // Auto-show pending subscription drawer
+  useEffect(() => {
+    if (pendingSubscription) {
+      setPendingDrawerOpen(true);
+    }
+  }, [pendingSubscription]);
+
+  const handleCancelSubscription = async () => {
+    setIsCancelingSubscription(true);
+    try {
+      const { error } = await supabase.functions.invoke("cancel-subscription");
+      if (error) throw error;
+      toast.success("Assinatura cancelada com sucesso");
+      setPendingDrawerOpen(false);
+      refetchPending();
+    } catch (error: any) {
+      console.error("Cancel subscription error:", error);
+      toast.error("Erro ao cancelar assinatura: " + error.message);
+    } finally {
+      setIsCancelingSubscription(false);
+    }
+  };
+
 
   // Avaliações dos barbeiros
   const { ratings: barberRatings } = useBarberRatings(barbers.map(b => b.id));
@@ -3236,6 +3268,37 @@ const ClienteAgendar = () => {
           </div>
         </DialogContent>
       </Dialog>
+      {/* Pending Subscription Drawer */}
+      <PendingSubscriptionDrawer
+        open={pendingDrawerOpen}
+        onOpenChange={setPendingDrawerOpen}
+        planName={(pendingSubscription as any)?.plano?.nome || "Plano"}
+        onFinalize={() => {
+          const ps = pendingSubscription as any;
+          if (ps.payment_method === "pix" && ps.pix_qr_code && ps.pix_expires_at) {
+            const pixExpiresAt = new Date(ps.pix_expires_at).getTime();
+            if (pixExpiresAt > Date.now()) {
+              const pixCheckoutData = {
+                pixQrCode: ps.pix_qr_code,
+                pixPayload: ps.pix_payload,
+                subscriptionId: ps.id,
+                asaasPaymentId: ps.asaas_payment_id,
+                expiresAt: ps.pix_expires_at,
+                value: ps.plano?.preco_mensal || 0,
+                planName: ps.plano?.nome || "Plano",
+              };
+              sessionStorage.setItem("subscription_pix_checkout_data", JSON.stringify(pixCheckoutData));
+              navigate("/cliente/assinatura-pix");
+              return;
+            }
+          }
+          navigate("/cliente/assinar", { 
+            state: { resumePlanId: ps.plano_id }
+          });
+        }}
+        onCancel={handleCancelSubscription}
+        isCanceling={isCancelingSubscription}
+      />
     </div>
   );
 };

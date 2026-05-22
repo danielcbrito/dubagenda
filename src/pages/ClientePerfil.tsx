@@ -42,6 +42,8 @@ import {
 import { BarbershopDetailsSheet } from "@/components/client/BarbershopDetailsSheet";
 import { MyReviewsSheet } from "@/components/MyReviewsSheet";
 import { MyCouponsSheet } from "@/components/MyCouponsSheet";
+import { usePendingSubscription } from "@/hooks/usePendingSubscription";
+
 
 /* ─── Reusable sub-components ─── */
 
@@ -164,6 +166,8 @@ export default function ClientePerfil() {
   const [isDubExclusive, setIsDubExclusive] = useState(false);
   const [reviewsOpen, setReviewsOpen] = useState(false);
   const [couponsOpen, setCouponsOpen] = useState(false);
+  const { data: pendingSubscription } = usePendingSubscription(userId);
+
 
   useEffect(() => {
     loadProfile();
@@ -399,6 +403,7 @@ export default function ClientePerfil() {
       <BottomNavigation
         onProfileClick={() => {}}
         onPlansClick={() => navigate("/cliente/assinar")}
+        hasPendingSubscription={!!pendingSubscription}
       />
 
       {/* Sub-sheets */}
