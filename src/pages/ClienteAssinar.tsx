@@ -694,13 +694,13 @@ const ClienteAssinar = () => {
                 {/* Info row */}
                 <div className="flex items-center justify-between px-0.5">
                   <div className="flex items-center gap-2.5">
-                    <div className="w-5 h-5 rounded-full overflow-hidden bg-muted/20 flex items-center justify-center flex-shrink-0">
-                      {selectedBarber.foto_url ? (
-                        <img src={selectedBarber.foto_url} alt={selectedBarber.apelido} className="w-full h-full object-cover" />
-                      ) : (
-                        <User className="w-3 h-3 text-muted-foreground/40" />
-                      )}
-                    </div>
+                    {selectedBarber?.foto_url ? (
+                      <img src={selectedBarber.foto_url} alt="" className="w-7 h-7 rounded-full object-cover" />
+                    ) : (
+                      <div className="w-7 h-7 rounded-full bg-primary/30 flex items-center justify-center text-[11px] font-bold text-primary">
+                        {selectedBarber?.apelido?.charAt(0)}
+                      </div>
+                    )}
                     <span className="text-[12px] text-muted-foreground/70">
                       Barbeiro selecionado
                     </span>
