@@ -3196,8 +3196,6 @@ const ClienteAgendar = () => {
           </div>
         </AlertDialogContent>
       </AlertDialog>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 };
