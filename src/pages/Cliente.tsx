@@ -1020,32 +1020,63 @@ const Cliente = () => {
                 />
               ) : pendingSubscription ? (
                 <div className="space-y-4">
-                  {/* "Quadradinho" estratégico que abre a gaveta */}
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={() => setPendingDrawerOpen(true)}
-                    className="bg-primary/10 border border-primary/20 rounded-2xl p-4 cursor-pointer relative overflow-hidden group"
-                  >
-                    <div className="absolute top-0 right-0 p-1 opacity-20">
-                      <Crown className="w-12 h-12 text-primary rotate-12" />
-                    </div>
-                    <div className="flex items-center gap-3 relative z-10">
-                      <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center flex-shrink-0">
-                        <Clock className="w-5 h-5 text-primary" />
+                  {/* Banner de Assinatura Pendente (sempre que existir) */}
+                  {pendingSubscription && (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => setPendingDrawerOpen(true)}
+                      className="bg-primary/10 border border-primary/20 rounded-2xl p-4 cursor-pointer relative overflow-hidden group shadow-sm"
+                    >
+                      <div className="absolute top-0 right-0 p-1 opacity-10">
+                        <Crown className="w-12 h-12 text-primary rotate-12" />
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[13px] font-bold text-foreground">
-                          Assinatura em andamento
-                        </p>
-                        <p className="text-[11px] text-muted-foreground line-clamp-1">
-                          Toque para finalizar seu plano {(pendingSubscription as any).plano?.nome}
-                        </p>
+                      <div className="flex items-center gap-3 relative z-10">
+                        <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center flex-shrink-0">
+                          <Clock className="w-5 h-5 text-primary" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[13px] font-bold text-foreground">
+                            Pagamento Pendente
+                          </p>
+                          <p className="text-[11px] text-muted-foreground line-clamp-1">
+                            Toque para finalizar seu plano {(pendingSubscription as any).plano?.nome}
+                          </p>
+                        </div>
+                        <ChevronRight className="w-4 h-4 text-muted-foreground/50 group-hover:translate-x-0.5 transition-transform" />
                       </div>
-                      <ChevronRight className="w-4 h-4 text-muted-foreground/50 group-hover:translate-x-0.5 transition-transform" />
-                    </div>
-                  </motion.div>
+                    </motion.div>
+                  )}
+
+                  {/* Card do Plano Ativo */}
+                  {activeSubscription ? (
+                    <PlanTrackerCard
+                      planName={(activeSubscription as any).plano?.nome || "Meu Plano"}
+                      usedAppointments={planUsageCount}
+                      totalAppointments={(activeSubscription as any).plano?.limite_agendamentos_mes || 4}
+                      nextBillingDate={activeSubscription.next_billing_date || ""}
+                      paymentMethod={activeSubscription.payment_method}
+                      onViewDetails={() => setPlansSheetOpen(true)}
+                      assinaturaId={activeSubscription.id}
+                      planoPreco={(activeSubscription as any).plano?.preco_mensal}
+                      servicoNome={(activeSubscription as any).plano?.servico?.nome}
+                      diasRestantes={activeSubscription.ciclo_fim ? Math.max(0, Math.ceil((new Date(activeSubscription.ciclo_fim + "T00:00:00").getTime() - Date.now()) / 86400000)) : undefined}
+                      userId={user?.id}
+                      cashPending={activeSubscription.payment_method === 'cash' && activeSubscription.cash_payment_confirmed === false}
+                      onRenovado={() => {
+                        invalidateLoyalty();
+                        invalidateAppointments();
+                      }}
+                    />
+                  ) : !pendingSubscription && expiredSubscription ? (
+                    <PlanExpiredBanner
+                      planName={(expiredSubscription as any).plano?.nome || "Plano"}
+                      onRenew={() => setPlansSheetOpen(true)}
+                    />
+                  ) : null}
+
+                  {/* Card de Fidelidade */}
                   {loyaltyEnabled && (
                     <LoyaltyCard
                       points={points}
