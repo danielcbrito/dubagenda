@@ -2136,7 +2136,7 @@ const ClienteAgendar = () => {
     await consumeRedemptionsAsLost();
     setConsumingRedemption(false);
     setShowLoseRedemptionDialog(false);
-    if (paymentMethod === 'pix' || paymentMethod === 'card') {
+    if (paymentMethod === 'pix' || paymentMethod === 'card' || paymentMethod === 'cash') {
       handlePayment();
     } else {
       setStep(6);
