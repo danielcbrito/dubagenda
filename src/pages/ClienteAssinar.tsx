@@ -676,82 +676,141 @@ const ClienteAssinar = () => {
       {/* ═══ Floating Bottom Bars (Steps 3 & 4) ═══ */}
       <AnimatePresence>
         {step === 3 && selectedBarber && (!hasActiveSubscription || isRenewalMode || isChangeMode) && (
-          <motion.div key="bar-step3" initial={{ y: 80, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 80, opacity: 0 }}
-            transition={{ type: "spring", stiffness: 500, damping: 40 }}
-            className="fixed bottom-0 left-0 right-0 z-40">
-            <div className="relative px-4 pb-safe">
-              <div className="absolute -top-10 left-0 right-0 h-10 bg-gradient-to-t from-background to-transparent pointer-events-none" />
-              <div className="relative mx-auto max-w-md rounded-[14px] bg-card/95 backdrop-blur-xl border border-border/30 shadow-lg">
-                <div className="flex items-center justify-between px-3.5 py-2.5">
+          <motion.div
+            key="bar-step3"
+            initial={{ y: 40, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 40, opacity: 0 }}
+            transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+            className="fixed bottom-0 left-0 right-0 z-40"
+          >
+            {/* Subtle top fade */}
+            <div 
+              className="h-16 pointer-events-none"
+              style={{ background: "linear-gradient(to bottom, transparent, hsl(var(--background)))" }}
+            />
+
+            {/* Bar content */}
+            <div className="bg-background border-t border-border/40 px-5 pb-safe">
+              <div className="pt-3.5 pb-4 space-y-3">
+                {/* Info row */}
+                <div className="flex items-center justify-between px-0.5">
                   <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-full overflow-hidden bg-muted/20 flex items-center justify-center flex-shrink-0">
+                    <div className="w-5 h-5 rounded-full overflow-hidden bg-muted/20 flex items-center justify-center flex-shrink-0">
                       {selectedBarber.foto_url ? (
                         <img src={selectedBarber.foto_url} alt={selectedBarber.apelido} className="w-full h-full object-cover" />
                       ) : (
-                        <User className="w-4 h-4 text-muted-foreground/40" />
+                        <User className="w-3 h-3 text-muted-foreground/40" />
                       )}
                     </div>
-                    <div>
-                      <div className="text-[10px] text-muted-foreground/60">Barbeiro</div>
-                      <div className="text-sm font-semibold text-foreground">{selectedBarber.apelido}</div>
-                    </div>
+                    <span className="text-[12px] text-muted-foreground/70">
+                      Barbeiro selecionado
+                    </span>
                   </div>
-                  <motion.button onClick={handleProceedToPayment} whileTap={{ scale: 0.96 }}
-                    className="group flex items-center gap-1.5 px-4 py-2 rounded-lg font-medium text-xs text-primary-foreground bg-primary hover:bg-primary/90 transition-colors">
-                    <span>Continuar</span>
-                    <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" />
-                  </motion.button>
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-[13px] font-semibold text-foreground">
+                      {selectedBarber.apelido}
+                    </span>
+                  </div>
                 </div>
+
+                {/* Full-width CTA */}
+                <motion.button
+                  onClick={handleProceedToPayment}
+                  whileTap={{ scale: 0.985 }}
+                  className={cn(
+                    "w-full flex items-center justify-center gap-2",
+                    "h-[50px] rounded-xl",
+                    "font-semibold text-[14px] text-primary-foreground",
+                    "bg-primary",
+                    "active:brightness-90 transition-all duration-150"
+                  )}
+                  style={{
+                    boxShadow: "0 4px 16px hsl(var(--primary) / 0.25)"
+                  }}
+                >
+                  <span>Continuar</span>
+                  <ArrowRight className="w-4 h-4" />
+                </motion.button>
               </div>
-              <div className="h-3" />
             </div>
           </motion.div>
         )}
 
         {step === 4 && selectedPaymentMethod && (!hasActiveSubscription || isRenewalMode || isChangeMode) && (
-          <motion.div key="bar-step4" initial={{ y: 80, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 80, opacity: 0 }}
-            transition={{ type: "spring", stiffness: 500, damping: 40 }}
-            className="fixed bottom-0 left-0 right-0 z-40">
-            <div className="relative px-4 pb-safe">
-              <div className="absolute -top-10 left-0 right-0 h-10 bg-gradient-to-t from-background to-transparent pointer-events-none" />
-              <div className="relative mx-auto max-w-md rounded-[14px] bg-card/95 backdrop-blur-xl border border-border/30 shadow-lg">
-                <div className="flex items-center justify-between px-3.5 py-2.5">
+          <motion.div
+            key="bar-step4"
+            initial={{ y: 40, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 40, opacity: 0 }}
+            transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+            className="fixed bottom-0 left-0 right-0 z-40"
+          >
+            {/* Subtle top fade */}
+            <div 
+              className="h-16 pointer-events-none"
+              style={{ background: "linear-gradient(to bottom, transparent, hsl(var(--background)))" }}
+            />
+
+            {/* Bar content */}
+            <div className="bg-background border-t border-border/40 px-5 pb-safe">
+              <div className="pt-3.5 pb-4 space-y-3">
+                {/* Info row */}
+                <div className="flex items-center justify-between px-0.5">
                   <div className="flex items-center gap-2.5">
-                    <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary/10">
-                      {selectedPaymentMethod === "pix" ? (
-                        <img src={pixIcon} alt="PIX" className="w-3.5 h-3.5" />
-                      ) : selectedPaymentMethod === "cash" ? (
-                        <Banknote className="w-3.5 h-3.5 text-primary" />
-                      ) : (
-                        <CreditCard className="w-3.5 h-3.5 text-primary" />
-                      )}
-                    </div>
-                    <div>
-                      <div className="text-[10px] text-muted-foreground/60">
-                        {selectedPaymentMethod === "pix" ? "Pagar via Pix" : selectedPaymentMethod === "cash" ? "Pagar em Dinheiro" : "Pagar via Cartão"}
-                      </div>
-                      <div className="flex items-baseline gap-0.5 mt-0.5">
-                        <span className="text-[10px] text-muted-foreground/50">R$</span>
-                        <span className="text-sm font-semibold text-foreground tabular-nums">
-                          {selectedPlan?.preco_mensal.toFixed(2).replace('.', ',')}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                  <motion.button onClick={handlePayment} disabled={loading} whileTap={{ scale: 0.96 }}
-                    className="group flex items-center gap-1.5 px-4 py-2 rounded-lg font-medium text-xs text-primary-foreground bg-primary hover:bg-primary/90 transition-colors disabled:opacity-50">
-                    {loading ? (
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    {selectedPaymentMethod === "pix" ? (
+                      <img src={pixIcon} alt="PIX" className="w-5 h-5 object-contain" />
+                    ) : selectedPaymentMethod === "cash" ? (
+                      <Banknote className="w-5 h-5 text-primary" />
                     ) : (
-                      <>
-                        <span>Assinar</span>
-                        <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" />
-                      </>
+                      <CreditCard className="w-5 h-5 text-primary" />
                     )}
-                  </motion.button>
+                    <span className="text-[12px] text-muted-foreground/70">
+                      {selectedPaymentMethod === "pix" ? "Pagar via Pix" : selectedPaymentMethod === "cash" ? "Pagar em Dinheiro" : "Pagar via Cartão"}
+                    </span>
+                  </div>
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-[10px] text-muted-foreground/50 font-medium">R$</span>
+                    <span className="text-[17px] font-bold text-foreground tabular-nums tracking-tight">
+                      {selectedPlan?.preco_mensal.toFixed(2).replace('.', ',')}
+                    </span>
+                  </div>
                 </div>
+
+                {/* Full-width CTA */}
+                <motion.button
+                  onClick={handlePayment}
+                  disabled={loading}
+                  whileTap={{ scale: loading ? 1 : 0.985 }}
+                  className={cn(
+                    "w-full flex items-center justify-center gap-2",
+                    "h-[50px] rounded-xl",
+                    "font-semibold text-[14px] text-primary-foreground",
+                    "bg-primary",
+                    "active:brightness-90 transition-all duration-150",
+                    loading && "opacity-70 cursor-wait"
+                  )}
+                  style={{
+                    boxShadow: "0 4px 16px hsl(var(--primary) / 0.25)"
+                  }}
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Processando...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>
+                        {selectedPaymentMethod === 'pix' ? 'Gerar PIX' :
+                         selectedPaymentMethod === 'card' ? 'Pagar' :
+                         'Assinar'}
+                      </span>
+                      <ArrowRight className="w-4 h-4" />
+                    </>
+                  )}
+                </motion.button>
               </div>
-              <div className="h-3" />
             </div>
           </motion.div>
         )}
