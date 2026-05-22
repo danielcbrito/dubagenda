@@ -2603,23 +2603,36 @@ const ClienteAgendar = () => {
               </div>
 
               {/* Resumo do serviço */}
-              <div className="bg-card border border-border/30 rounded-xl p-4 mb-6">
+              <div className="bg-card border border-border/40 rounded-xl p-4 mb-6">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-[13px] font-medium text-foreground">
                       {getFormattedServiceNames()}
                     </p>
-                    <p className="text-[11px] text-muted-foreground/50 mt-0.5">
-                      {getTotalDuration()} min • {selectedBarber?.apelido} • {selectedDate ? format(selectedDate, "dd/MM", { locale: ptBR }) : ""} às {selectedTime} → {getEndTime()}
+                    <p className="text-[11px] text-muted-foreground mt-0.5">
+                      {selectedBarber?.apelido} • {getTotalDuration()} min • Renovação automática
                     </p>
                   </div>
-                  <div className="flex items-baseline gap-0.5">
-                    <span className="text-[10px] text-muted-foreground/40">R$</span>
-                    <span className="text-[15px] font-bold text-foreground tabular-nums">
-                      {selectedServices.reduce((sum, s) => sum + s.preco * (serviceQuantities[s.id] || 1), 0).toFixed(2).replace('.', ',')}
-                    </span>
-                  </div>
+                  <p className="text-base font-bold text-foreground tabular-nums">
+                    R$ {selectedServices.reduce((sum, s) => sum + s.preco * (serviceQuantities[s.id] || 1), 0).toFixed(2).replace('.', ',')}
+                  </p>
                 </div>
+                {selectedBarber && (
+                  <div className="flex items-center gap-2 mt-3 pt-3 border-t border-border/30">
+                    <div className="w-6 h-6 rounded-full overflow-hidden bg-muted/20 flex items-center justify-center flex-shrink-0">
+                      {selectedBarber.foto_url ? (
+                        <img src={selectedBarber.foto_url} alt={selectedBarber.apelido} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full bg-primary/30 flex items-center justify-center text-[10px] font-bold text-primary">
+                          {selectedBarber.apelido.charAt(0)}
+                        </div>
+                      )}
+                    </div>
+                    <p className="text-[12px] text-muted-foreground">
+                      Barbeiro: <span className="font-medium text-foreground">{selectedBarber.apelido}</span>
+                    </p>
+                  </div>
+                )}
               </div>
 
               {/* Opções de Pagamento */}
