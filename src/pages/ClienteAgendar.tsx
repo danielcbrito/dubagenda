@@ -2124,7 +2124,7 @@ const ClienteAgendar = () => {
     // mas também se o cliente ele selecionar pagar na barbearia... e não selecionar o corte grátis, 
     // vai aparecer uma tela... falando pra ele... ele vai perder a promoção"
     
-    if (paymentMethod === 'pix' || paymentMethod === 'card') {
+    if (paymentMethod === 'pix' || paymentMethod === 'card' || paymentMethod === 'cash') {
       handlePayment();
     } else {
       setStep(6);
