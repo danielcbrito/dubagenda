@@ -2124,7 +2124,7 @@ const ClienteAgendar = () => {
     // mas também se o cliente ele selecionar pagar na barbearia... e não selecionar o corte grátis, 
     // vai aparecer uma tela... falando pra ele... ele vai perder a promoção"
     
-    if (paymentMethod === 'pix' || paymentMethod === 'card') {
+    if (paymentMethod === 'pix' || paymentMethod === 'card' || paymentMethod === 'cash') {
       handlePayment();
     } else {
       setStep(6);
@@ -2136,7 +2136,7 @@ const ClienteAgendar = () => {
     await consumeRedemptionsAsLost();
     setConsumingRedemption(false);
     setShowLoseRedemptionDialog(false);
-    if (paymentMethod === 'pix' || paymentMethod === 'card') {
+    if (paymentMethod === 'pix' || paymentMethod === 'card' || paymentMethod === 'cash') {
       handlePayment();
     } else {
       setStep(6);
@@ -3174,7 +3174,8 @@ const ClienteAgendar = () => {
                       <span>
                         {paymentMethod === 'pix' ? 'Gerar PIX' :
                          paymentMethod === 'card' ? 'Pagar' :
-                         'Finalizar'}
+                         paymentMethod === 'cash' ? 'Finalizar' :
+                         'Continuar'}
                       </span>
                       <ArrowRight className="w-4 h-4" />
                     </>
