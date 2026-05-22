@@ -17,6 +17,8 @@ import {
   Shield,
   Star,
   User,
+  Wallet,
+  Landmark,
 } from "lucide-react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
@@ -28,6 +30,8 @@ import scissorsDecor from "@/assets/scissors-decorative.png";
 import { BarberCard } from "@/components/booking/BarberCard";
 import { useBarberRatings } from "@/hooks/useBarberRatings";
 import { PlanCarousel } from "@/components/booking/PlanCarousel";
+import { SummaryRow } from "@/components/booking/SummaryRow";
+import { PaymentOption } from "@/components/booking/PaymentOption";
 import { enrichPlansWithAvailability, type PlanWithAvailability } from "@/hooks/usePlansAvailability";
 
 type Plan = PlanWithAvailability;
@@ -588,75 +592,71 @@ const ClienteAssinar = () => {
                 </div>
 
                 {/* Summary */}
-                <div className="bg-card border border-border/40 rounded-xl p-4 mb-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-[13px] font-medium text-foreground">{selectedPlan.nome}</p>
-                      <p className="text-[11px] text-muted-foreground mt-0.5">{selectedShopName} • Renovação automática</p>
-                    </div>
-                    <p className="text-base font-bold text-foreground tabular-nums">
-                      R$ {selectedPlan.preco_mensal.toFixed(2).replace('.', ',')}
-                    </p>
-                  </div>
+                <div className="bg-card border border-border rounded-2xl p-5 space-y-4 mb-6">
+                  <SummaryRow 
+                    label="Plano"
+                    value={selectedPlan.nome}
+                  />
+                  
+                  <div className="border-t border-border" />
+                  
+                  <SummaryRow 
+                    label="Barbearia"
+                    value={selectedShopName}
+                  />
+
                   {selectedBarber && (
-                    <div className="flex items-center gap-2 mt-3 pt-3 border-t border-border/30">
-                      <div className="w-6 h-6 rounded-full overflow-hidden bg-muted/20 flex items-center justify-center flex-shrink-0">
-                        {selectedBarber.foto_url ? (
-                          <img src={selectedBarber.foto_url} alt={selectedBarber.apelido} className="w-full h-full object-cover" />
-                        ) : (
-                          <User className="w-3.5 h-3.5 text-muted-foreground/40" />
-                        )}
-                      </div>
-                      <p className="text-[12px] text-muted-foreground">
-                        Barbeiro: <span className="font-medium text-foreground">{selectedBarber.apelido}</span>
-                      </p>
-                    </div>
+                    <>
+                      <div className="border-t border-border" />
+                      <SummaryRow 
+                        label="Barbeiro"
+                        value={selectedBarber.apelido}
+                      />
+                    </>
                   )}
+                  
+                  <div className="border-t border-border" />
+                  
+                  <div className="flex items-center justify-between">
+                    <span className="text-[13px] font-medium text-muted-foreground">Valor Mensal</span>
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-[11px] text-muted-foreground/50">R$</span>
+                      <span className="text-lg font-bold text-foreground tabular-nums">
+                        {selectedPlan.preco_mensal.toFixed(2).replace('.', ',')}
+                      </span>
+                    </div>
+                  </div>
                 </div>
 
                 {/* Payment methods */}
                 <div className="space-y-3 mb-4">
-                  {([
-                    { key: "pix" as const, icon: <img src={pixIcon} alt="PIX" className="w-5 h-5 object-contain" />, title: "Pix", desc: "Confirmação instantânea • Sem taxa", badge: "Recomendado", highlight: true },
-                    { key: "card" as const, icon: <CreditCard className="w-5 h-5 text-muted-foreground/50" />, title: "Cartão", desc: "Crédito ou débito • Checkout seguro" },
-                    { key: "cash" as const, icon: <Banknote className="w-5 h-5 text-muted-foreground/50" />, title: "Dinheiro", desc: "Pague presencialmente • Barbeiro confirma" },
-                  ]).map(method => (
-                    <button
-                      key={method.key}
-                      onClick={() => setSelectedPaymentMethod(method.key)}
-                      className={cn(
-                        "w-full rounded-xl border p-4 text-left transition-all active:scale-[0.99]",
-                        selectedPaymentMethod === method.key
-                          ? "border-primary/60 bg-primary/5"
-                          : "border-border/50 bg-card"
-                      )}
-                    >
-                      <div className="flex items-center gap-3.5">
-                        <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0",
-                          method.highlight ? "bg-primary/10" : "bg-muted/30"
-                        )}>
-                          {method.icon}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <p className="text-[13px] font-semibold text-foreground">{method.title}</p>
-                            {method.badge && (
-                              <span className="text-[9px] font-bold uppercase tracking-wider bg-primary/10 text-primary px-1.5 py-px rounded">
-                                {method.badge}
-                              </span>
-                            )}
-                          </div>
-                          <p className="text-[11px] text-muted-foreground mt-0.5">{method.desc}</p>
-                        </div>
-                        <div className={cn(
-                          "w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all",
-                          selectedPaymentMethod === method.key ? "bg-primary border-primary" : "border-muted-foreground/30"
-                        )}>
-                          {selectedPaymentMethod === method.key && <Check className="w-3 h-3 text-primary-foreground" strokeWidth={3} />}
-                        </div>
-                      </div>
-                    </button>
-                  ))}
+                  <PaymentOption
+                    value="pix"
+                    selected={selectedPaymentMethod === "pix"}
+                    onSelect={() => setSelectedPaymentMethod("pix")}
+                    title="Pix"
+                    description="Confirmação instantânea • Sem taxa"
+                    highlight={true}
+                    icon={<img src={pixIcon} alt="PIX" className={cn("w-5 h-5 object-contain", selectedPaymentMethod === "pix" ? "" : "grayscale opacity-50")} />}
+                  />
+
+                  <PaymentOption
+                    value="card"
+                    selected={selectedPaymentMethod === "card"}
+                    onSelect={() => setSelectedPaymentMethod("card")}
+                    title="Cartão"
+                    description="Crédito ou débito • Checkout seguro"
+                    icon={<CreditCard className={cn("w-5 h-5", selectedPaymentMethod === "card" ? "text-primary" : "text-muted-foreground/40")} />}
+                  />
+
+                  <PaymentOption
+                    value="cash"
+                    selected={selectedPaymentMethod === "cash"}
+                    onSelect={() => setSelectedPaymentMethod("cash")}
+                    title="Dinheiro"
+                    description="Pague presencialmente • Barbeiro confirma"
+                    icon={<Banknote className={cn("w-5 h-5", selectedPaymentMethod === "cash" ? "text-primary" : "text-muted-foreground/40")} />}
+                  />
                 </div>
 
                 <div className="flex items-center justify-center gap-1.5 mt-6">
@@ -674,82 +674,141 @@ const ClienteAssinar = () => {
       {/* ═══ Floating Bottom Bars (Steps 3 & 4) ═══ */}
       <AnimatePresence>
         {step === 3 && selectedBarber && (!hasActiveSubscription || isRenewalMode || isChangeMode) && (
-          <motion.div key="bar-step3" initial={{ y: 80, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 80, opacity: 0 }}
-            transition={{ type: "spring", stiffness: 500, damping: 40 }}
-            className="fixed bottom-0 left-0 right-0 z-40">
-            <div className="relative px-4 pb-safe">
-              <div className="absolute -top-10 left-0 right-0 h-10 bg-gradient-to-t from-background to-transparent pointer-events-none" />
-              <div className="relative mx-auto max-w-md rounded-[14px] bg-card/95 backdrop-blur-xl border border-border/30 shadow-lg">
-                <div className="flex items-center justify-between px-3.5 py-2.5">
+          <motion.div
+            key="bar-step3"
+            initial={{ y: 40, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 40, opacity: 0 }}
+            transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+            className="fixed bottom-0 left-0 right-0 z-40"
+          >
+            {/* Subtle top fade */}
+            <div 
+              className="h-16 pointer-events-none"
+              style={{ background: "linear-gradient(to bottom, transparent, hsl(var(--background)))" }}
+            />
+
+            {/* Bar content */}
+            <div className="bg-background border-t border-border/40 px-5 pb-safe">
+              <div className="pt-3.5 pb-4 space-y-3">
+                {/* Info row */}
+                <div className="flex items-center justify-between px-0.5">
                   <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-full overflow-hidden bg-muted/20 flex items-center justify-center flex-shrink-0">
+                    <div className="w-5 h-5 rounded-full overflow-hidden bg-muted/20 flex items-center justify-center flex-shrink-0">
                       {selectedBarber.foto_url ? (
                         <img src={selectedBarber.foto_url} alt={selectedBarber.apelido} className="w-full h-full object-cover" />
                       ) : (
-                        <User className="w-4 h-4 text-muted-foreground/40" />
+                        <User className="w-3 h-3 text-muted-foreground/40" />
                       )}
                     </div>
-                    <div>
-                      <div className="text-[10px] text-muted-foreground/60">Barbeiro</div>
-                      <div className="text-sm font-semibold text-foreground">{selectedBarber.apelido}</div>
-                    </div>
+                    <span className="text-[12px] text-muted-foreground/70">
+                      Barbeiro selecionado
+                    </span>
                   </div>
-                  <motion.button onClick={handleProceedToPayment} whileTap={{ scale: 0.96 }}
-                    className="group flex items-center gap-1.5 px-4 py-2 rounded-lg font-medium text-xs text-primary-foreground bg-primary hover:bg-primary/90 transition-colors">
-                    <span>Continuar</span>
-                    <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" />
-                  </motion.button>
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-[13px] font-semibold text-foreground">
+                      {selectedBarber.apelido}
+                    </span>
+                  </div>
                 </div>
+
+                {/* Full-width CTA */}
+                <motion.button
+                  onClick={handleProceedToPayment}
+                  whileTap={{ scale: 0.985 }}
+                  className={cn(
+                    "w-full flex items-center justify-center gap-2",
+                    "h-[50px] rounded-xl",
+                    "font-semibold text-[14px] text-primary-foreground",
+                    "bg-primary",
+                    "active:brightness-90 transition-all duration-150"
+                  )}
+                  style={{
+                    boxShadow: "0 4px 16px hsl(var(--primary) / 0.25)"
+                  }}
+                >
+                  <span>Continuar</span>
+                  <ArrowRight className="w-4 h-4" />
+                </motion.button>
               </div>
-              <div className="h-3" />
             </div>
           </motion.div>
         )}
 
         {step === 4 && selectedPaymentMethod && (!hasActiveSubscription || isRenewalMode || isChangeMode) && (
-          <motion.div key="bar-step4" initial={{ y: 80, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 80, opacity: 0 }}
-            transition={{ type: "spring", stiffness: 500, damping: 40 }}
-            className="fixed bottom-0 left-0 right-0 z-40">
-            <div className="relative px-4 pb-safe">
-              <div className="absolute -top-10 left-0 right-0 h-10 bg-gradient-to-t from-background to-transparent pointer-events-none" />
-              <div className="relative mx-auto max-w-md rounded-[14px] bg-card/95 backdrop-blur-xl border border-border/30 shadow-lg">
-                <div className="flex items-center justify-between px-3.5 py-2.5">
+          <motion.div
+            key="bar-step4"
+            initial={{ y: 40, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 40, opacity: 0 }}
+            transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+            className="fixed bottom-0 left-0 right-0 z-40"
+          >
+            {/* Subtle top fade */}
+            <div 
+              className="h-16 pointer-events-none"
+              style={{ background: "linear-gradient(to bottom, transparent, hsl(var(--background)))" }}
+            />
+
+            {/* Bar content */}
+            <div className="bg-background border-t border-border/40 px-5 pb-safe">
+              <div className="pt-3.5 pb-4 space-y-3">
+                {/* Info row */}
+                <div className="flex items-center justify-between px-0.5">
                   <div className="flex items-center gap-2.5">
-                    <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary/10">
-                      {selectedPaymentMethod === "pix" ? (
-                        <img src={pixIcon} alt="PIX" className="w-3.5 h-3.5" />
-                      ) : selectedPaymentMethod === "cash" ? (
-                        <Banknote className="w-3.5 h-3.5 text-primary" />
-                      ) : (
-                        <CreditCard className="w-3.5 h-3.5 text-primary" />
-                      )}
-                    </div>
-                    <div>
-                      <div className="text-[10px] text-muted-foreground/60">
-                        {selectedPaymentMethod === "pix" ? "Pagar via Pix" : selectedPaymentMethod === "cash" ? "Pagar em Dinheiro" : "Pagar via Cartão"}
-                      </div>
-                      <div className="flex items-baseline gap-0.5 mt-0.5">
-                        <span className="text-[10px] text-muted-foreground/50">R$</span>
-                        <span className="text-sm font-semibold text-foreground tabular-nums">
-                          {selectedPlan?.preco_mensal.toFixed(2).replace('.', ',')}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                  <motion.button onClick={handlePayment} disabled={loading} whileTap={{ scale: 0.96 }}
-                    className="group flex items-center gap-1.5 px-4 py-2 rounded-lg font-medium text-xs text-primary-foreground bg-primary hover:bg-primary/90 transition-colors disabled:opacity-50">
-                    {loading ? (
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    {selectedPaymentMethod === "pix" ? (
+                      <img src={pixIcon} alt="PIX" className="w-5 h-5 object-contain" />
+                    ) : selectedPaymentMethod === "cash" ? (
+                      <Banknote className="w-5 h-5 text-primary" />
                     ) : (
-                      <>
-                        <span>Assinar</span>
-                        <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" />
-                      </>
+                      <CreditCard className="w-5 h-5 text-primary" />
                     )}
-                  </motion.button>
+                    <span className="text-[12px] text-muted-foreground/70">
+                      {selectedPaymentMethod === "pix" ? "Pagar via Pix" : selectedPaymentMethod === "cash" ? "Pagar em Dinheiro" : "Pagar via Cartão"}
+                    </span>
+                  </div>
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-[10px] text-muted-foreground/50 font-medium">R$</span>
+                    <span className="text-[17px] font-bold text-foreground tabular-nums tracking-tight">
+                      {selectedPlan?.preco_mensal.toFixed(2).replace('.', ',')}
+                    </span>
+                  </div>
                 </div>
+
+                {/* Full-width CTA */}
+                <motion.button
+                  onClick={handlePayment}
+                  disabled={loading}
+                  whileTap={{ scale: loading ? 1 : 0.985 }}
+                  className={cn(
+                    "w-full flex items-center justify-center gap-2",
+                    "h-[50px] rounded-xl",
+                    "font-semibold text-[14px] text-primary-foreground",
+                    "bg-primary",
+                    "active:brightness-90 transition-all duration-150",
+                    loading && "opacity-70 cursor-wait"
+                  )}
+                  style={{
+                    boxShadow: "0 4px 16px hsl(var(--primary) / 0.25)"
+                  }}
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Processando...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>
+                        {selectedPaymentMethod === 'pix' ? 'Gerar PIX' :
+                         selectedPaymentMethod === 'card' ? 'Pagar' :
+                         'Assinar'}
+                      </span>
+                      <ArrowRight className="w-4 h-4" />
+                    </>
+                  )}
+                </motion.button>
               </div>
-              <div className="h-3" />
             </div>
           </motion.div>
         )}
