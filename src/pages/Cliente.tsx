@@ -1009,8 +1009,8 @@ const Cliente = () => {
                         <Crown className="w-12 h-12 text-primary rotate-12" />
                       </div>
                       <div className="flex items-center gap-3 relative z-10">
-                        <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center flex-shrink-0">
-                          <Clock className="w-5 h-5 text-primary" />
+                        <div className="flex-shrink-0">
+                          <Clock className="w-6 h-6 text-primary" />
                         </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-[13px] font-bold text-foreground">
