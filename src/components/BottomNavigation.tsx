@@ -43,12 +43,14 @@ interface BottomNavigationProps {
   onProfileClick: () => void;
   onPlansClick: () => void;
   planExhausted?: boolean;
+  hasPendingSubscription?: boolean;
 }
 
 export function BottomNavigation({
   onProfileClick,
   onPlansClick,
   planExhausted,
+  hasPendingSubscription,
 }: BottomNavigationProps) {
   const location = useLocation();
   const navigate = useNavigate();
@@ -78,7 +80,7 @@ export function BottomNavigation({
         <NavItem
           icon={Crown}
           label="Planos"
-          showBadge={planExhausted}
+          showBadge={planExhausted || hasPendingSubscription}
           onClick={onPlansClick}
         />
         <NavItem
