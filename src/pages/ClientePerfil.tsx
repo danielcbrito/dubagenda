@@ -246,14 +246,14 @@ export default function ClientePerfil() {
     : null;
 
   return (
-    <div className="flex flex-col" style={{ height: "calc(100dvh - 56px)" }}>
+    <div className="flex flex-col h-[100dvh]">
       {/* Scrollable area */}
       <div className="flex-1 min-h-0 relative">
         <div
           className="absolute top-0 left-0 right-0 h-4 z-10 pointer-events-none"
           style={{ background: "linear-gradient(to bottom, hsl(var(--background)), transparent)" }}
         />
-        <div className="h-full overflow-y-auto overscroll-contain pb-8">
+        <div className="h-full overflow-y-auto overscroll-contain pb-24">
           <div className="px-4 pt-8 pb-4 space-y-6">
 
             {/* Identity */}

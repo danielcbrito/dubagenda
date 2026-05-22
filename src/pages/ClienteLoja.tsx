@@ -436,7 +436,7 @@ export default function ClienteLoja() {
 
       {/* ─── Scrollable Content (banner + categories + products) ─── */}
       <div className="flex-1 min-h-0 relative">
-        <div ref={scrollRef} className="h-full overflow-y-auto overscroll-contain pb-24">
+        <div ref={scrollRef} className="h-full overflow-y-auto overscroll-contain pb-32">
           {isTenantLoading || isProductsLoading ? (
             <div className="flex flex-col items-center justify-center py-20 gap-3">
               <div className="w-7 h-7 border-2 border-primary border-t-transparent rounded-full animate-spin" />
