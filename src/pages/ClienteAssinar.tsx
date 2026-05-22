@@ -771,7 +771,7 @@ const ClienteAssinar = () => {
                     )}
                     <div className="flex flex-col">
                       <span className="text-[10px] text-muted-foreground/60 leading-none mb-0.5">
-                        {selectedPaymentMethod === "pix" ? "Pagar via Pix" : selectedPaymentMethod === "cash" ? "Pagar em Dinheiro" : "Pagar via Cartão"}
+                        {selectedPlan?.nome}
                       </span>
                       <span className="text-[13px] font-semibold text-foreground leading-none">
                         {selectedBarber?.apelido}
