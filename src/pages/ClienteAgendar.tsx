@@ -1467,6 +1467,13 @@ const ClienteAgendar = () => {
       if (aptError) throw aptError;
 
       await markRedemptionAsUsed(appointment.id);
+      
+      // Atualiza o agendamento para refletir que o pagamento foi via resgate
+      // Fazemos isso após o markRedemptionAsUsed para garantir que o resgate foi vinculado corretamente
+      await supabase
+        .from("agendamentos")
+        .update({ payment_method: 'resgate' } as any)
+        .eq("id", appointment.id);
 
       // Webhook de confirmação é enviado automaticamente pelo trigger do banco de dados
 
