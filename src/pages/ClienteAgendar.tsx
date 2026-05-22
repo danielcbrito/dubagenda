@@ -2637,6 +2637,31 @@ const ClienteAgendar = () => {
                 </p>
               </div>
 
+              {/* Alerta de Assinatura Pendente no Agendamento */}
+              {pendingSubscription && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  onClick={() => setPendingDrawerOpen(true)}
+                  className="mb-6 bg-primary/10 border border-primary/20 rounded-2xl p-4 cursor-pointer relative overflow-hidden group"
+                >
+                  <div className="flex items-center gap-3 relative z-10">
+                    <div className="w-9 h-9 rounded-xl bg-primary/20 flex items-center justify-center flex-shrink-0">
+                      <Clock className="w-4 h-4 text-primary" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[12px] font-bold text-foreground">
+                        Assinatura pendente detectada
+                      </p>
+                      <p className="text-[10px] text-muted-foreground line-clamp-1">
+                        Finalize o pagamento para liberar seu agendamento
+                      </p>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-muted-foreground/30 group-hover:translate-x-0.5 transition-transform" />
+                  </div>
+                </motion.div>
+              )}
+
               {/* Resumo do serviço */}
               <div className="bg-card border border-border/40 rounded-xl p-4 mb-6">
                 <div className="flex items-center justify-between">
