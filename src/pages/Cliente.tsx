@@ -1031,7 +1031,7 @@ const Cliente = () => {
                   )}
 
                   {/* Card do Plano Ativo */}
-                  {activeSubscription ? (
+                  {activeSubscription && !pendingSubscription ? (
                     <PlanTrackerCard
                       planName={(activeSubscription as any).plano?.nome || "Meu Plano"}
                       usedAppointments={planUsageCount}
