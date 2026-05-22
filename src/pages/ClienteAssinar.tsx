@@ -630,47 +630,33 @@ const ClienteAssinar = () => {
 
                 {/* Payment methods */}
                 <div className="space-y-3 mb-4">
-                  {([
-                    { key: "pix" as const, icon: <img src={pixIcon} alt="PIX" className="w-5 h-5 object-contain" />, title: "Pix", desc: "Confirmação instantânea • Sem taxa", badge: "Recomendado", highlight: true },
-                    { key: "card" as const, icon: <CreditCard className="w-5 h-5 text-muted-foreground/50" />, title: "Cartão", desc: "Crédito ou débito • Checkout seguro" },
-                    { key: "cash" as const, icon: <Banknote className="w-5 h-5 text-muted-foreground/50" />, title: "Dinheiro", desc: "Pague presencialmente • Barbeiro confirma" },
-                  ]).map(method => (
-                    <button
-                      key={method.key}
-                      onClick={() => setSelectedPaymentMethod(method.key)}
-                      className={cn(
-                        "w-full rounded-xl border p-4 text-left transition-all active:scale-[0.99]",
-                        selectedPaymentMethod === method.key
-                          ? "border-primary/60 bg-primary/5"
-                          : "border-border/50 bg-card"
-                      )}
-                    >
-                      <div className="flex items-center gap-3.5">
-                        <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0",
-                          method.highlight ? "bg-primary/10" : "bg-muted/30"
-                        )}>
-                          {method.icon}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <p className="text-[13px] font-semibold text-foreground">{method.title}</p>
-                            {method.badge && (
-                              <span className="text-[9px] font-bold uppercase tracking-wider bg-primary/10 text-primary px-1.5 py-px rounded">
-                                {method.badge}
-                              </span>
-                            )}
-                          </div>
-                          <p className="text-[11px] text-muted-foreground mt-0.5">{method.desc}</p>
-                        </div>
-                        <div className={cn(
-                          "w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all",
-                          selectedPaymentMethod === method.key ? "bg-primary border-primary" : "border-muted-foreground/30"
-                        )}>
-                          {selectedPaymentMethod === method.key && <Check className="w-3 h-3 text-primary-foreground" strokeWidth={3} />}
-                        </div>
-                      </div>
-                    </button>
-                  ))}
+                  <PaymentOption
+                    value="pix"
+                    selected={selectedPaymentMethod === "pix"}
+                    onSelect={() => setSelectedPaymentMethod("pix")}
+                    title="Pix"
+                    description="Confirmação instantânea • Sem taxa"
+                    highlight={true}
+                    icon={<img src={pixIcon} alt="PIX" className={cn("w-5 h-5 object-contain", selectedPaymentMethod === "pix" ? "" : "grayscale opacity-50")} />}
+                  />
+
+                  <PaymentOption
+                    value="card"
+                    selected={selectedPaymentMethod === "card"}
+                    onSelect={() => setSelectedPaymentMethod("card")}
+                    title="Cartão"
+                    description="Crédito ou débito • Checkout seguro"
+                    icon={<CreditCard className={cn("w-5 h-5", selectedPaymentMethod === "card" ? "text-primary" : "text-muted-foreground/40")} />}
+                  />
+
+                  <PaymentOption
+                    value="cash"
+                    selected={selectedPaymentMethod === "cash"}
+                    onSelect={() => setSelectedPaymentMethod("cash")}
+                    title="Dinheiro"
+                    description="Pague presencialmente • Barbeiro confirma"
+                    icon={<Banknote className={cn("w-5 h-5", selectedPaymentMethod === "cash" ? "text-primary" : "text-muted-foreground/40")} />}
+                  />
                 </div>
 
                 <div className="flex items-center justify-center gap-1.5 mt-6">
