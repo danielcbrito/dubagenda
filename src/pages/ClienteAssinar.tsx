@@ -756,16 +756,21 @@ const ClienteAssinar = () => {
                 {/* Info row */}
                 <div className="flex items-center justify-between px-0.5">
                   <div className="flex items-center gap-2.5">
-                    {selectedPaymentMethod === "pix" ? (
-                      <img src={pixIcon} alt="PIX" className="w-5 h-5 object-contain" />
-                    ) : selectedPaymentMethod === "cash" ? (
-                      <Banknote className="w-5 h-5 text-primary" />
+                    {selectedBarber?.foto_url ? (
+                      <img src={selectedBarber.foto_url} alt="" className="w-7 h-7 rounded-full object-cover" />
                     ) : (
-                      <CreditCard className="w-5 h-5 text-primary" />
+                      <div className="w-7 h-7 rounded-full bg-primary/30 flex items-center justify-center text-[11px] font-bold text-primary">
+                        {selectedBarber?.apelido?.charAt(0)}
+                      </div>
                     )}
-                    <span className="text-[12px] text-muted-foreground/70">
-                      {selectedPaymentMethod === "pix" ? "Pagar via Pix" : selectedPaymentMethod === "cash" ? "Pagar em Dinheiro" : "Pagar via Cartão"}
-                    </span>
+                    <div className="flex flex-col">
+                      <span className="text-[10px] text-muted-foreground/60 leading-none mb-0.5">
+                        {selectedPaymentMethod === "pix" ? "Pagar via Pix" : selectedPaymentMethod === "cash" ? "Pagar em Dinheiro" : "Pagar via Cartão"}
+                      </span>
+                      <span className="text-[13px] font-semibold text-foreground leading-none">
+                        {selectedBarber?.apelido}
+                      </span>
+                    </div>
                   </div>
                   <div className="flex items-baseline gap-1">
                     <span className="text-[10px] text-muted-foreground/50 font-medium">R$</span>

@@ -3120,29 +3120,32 @@ const ClienteAgendar = () => {
             {/* Bar content */}
             <div className="bg-background border-t border-border/40 px-5 pb-safe">
               <div className="pt-3.5 pb-4 space-y-3">
-                {/* Info row */}
-                <div className="flex items-center justify-between px-0.5">
-                  <div className="flex items-center gap-2.5">
-                    {paymentMethod === "pix" ? (
-                      <img src={pixIcon} alt="PIX" className="w-5 h-5 object-contain" />
-                    ) : paymentMethod === "card" ? (
-                      <CreditCard className="w-5 h-5 text-primary" />
-                    ) : paymentMethod === "wallet" ? (
-                      <Wallet className="w-5 h-5 text-emerald-500" />
-                    ) : (
-                      <Landmark className="w-5 h-5 text-primary" />
-                    )}
-                    <span className="text-[12px] text-muted-foreground/70">
+              {/* Info row */}
+              <div className="flex items-center justify-between px-0.5">
+                <div className="flex items-center gap-2.5">
+                  {selectedBarber?.foto_url ? (
+                    <img src={selectedBarber.foto_url} alt="" className="w-7 h-7 rounded-full object-cover" />
+                  ) : (
+                    <div className="w-7 h-7 rounded-full bg-primary/30 flex items-center justify-center text-[11px] font-bold text-primary">
+                      {selectedBarber?.apelido?.charAt(0)}
+                    </div>
+                  )}
+                  <div className="flex flex-col">
+                    <span className="text-[10px] text-muted-foreground/60 leading-none mb-0.5">
                       {paymentMethod === "pix" ? "Pagar via Pix" : paymentMethod === "card" ? "Pagar via Cartão" : paymentMethod === "wallet" ? "Pagar via Carteira" : "Pagar na Barbearia"}
                     </span>
-                  </div>
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-[10px] text-muted-foreground/50 font-medium">R$</span>
-                    <span className="text-[17px] font-bold text-foreground tabular-nums tracking-tight">
-                      {Math.max(0, getTotalPrice() - availableCredits).toFixed(2).replace('.', ',')}
+                    <span className="text-[13px] font-semibold text-foreground leading-none">
+                      {selectedBarber?.apelido}
                     </span>
                   </div>
                 </div>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-[10px] text-muted-foreground/50 font-medium">R$</span>
+                  <span className="text-[17px] font-bold text-foreground tabular-nums tracking-tight">
+                    {Math.max(0, getTotalPrice() - availableCredits).toFixed(2).replace('.', ',')}
+                  </span>
+                </div>
+              </div>
 
                 {/* Full-width CTA */}
                 <motion.button
