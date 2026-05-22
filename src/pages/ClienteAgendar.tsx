@@ -2789,55 +2789,6 @@ const ClienteAgendar = () => {
                 );
               })()}
 
-              {/* Resgate Grátis — pré-selecionado, mas opcional. Se removido, será perdido. */}
-              {canUseRedemption && (
-                <div className="mt-5">
-                  <button
-                    type="button"
-                    onClick={() => setUseRedemption(v => !v)}
-                    className={cn(
-                      "w-full text-left rounded-xl p-4 border transition-all",
-                      useRedemption
-                        ? "bg-emerald-500/5 border-emerald-500/30 ring-1 ring-emerald-500/10"
-                        : "bg-card border-border hover:border-border/80"
-                    )}
-                  >
-                    <div className="flex items-center gap-3.5">
-                      <div className={cn(
-                        "w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0",
-                        useRedemption ? "bg-secondary/10" : "bg-muted/30"
-                      )}>
-                        <Star className={cn("w-5 h-5", useRedemption ? "text-secondary" : "text-muted-foreground")} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <p className="text-[13px] font-semibold text-foreground">Corte Grátis</p>
-                          {useRedemption ? (
-                            <span className="text-[9px] font-bold uppercase tracking-wider bg-emerald-500/15 text-emerald-500 px-1.5 py-px rounded">
-                              Aplicado
-                            </span>
-                          ) : (
-                            <span className="text-[9px] font-bold uppercase tracking-wider bg-amber-500/15 text-amber-500 px-1.5 py-px rounded">
-                              Recomendado
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-[11px] text-muted-foreground/70 mt-0.5">
-                          {useRedemption
-                            ? "Seu corte sai grátis. Outros serviços continuam sendo cobrados."
-                            : "Toque para aplicar. Se seguir sem usar, a promoção será perdida."}
-                        </p>
-                      </div>
-                      <div className={cn(
-                        "w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0",
-                        useRedemption ? "bg-emerald-500 border-emerald-500" : "border-muted-foreground/40"
-                      )}>
-                        {useRedemption && <Check className="w-3 h-3 text-primary-foreground" strokeWidth={3} />}
-                      </div>
-                    </div>
-                  </button>
-                </div>
-              )}
 
               {/* Cupom de Desconto */}
               <div className="mt-5">
