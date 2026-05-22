@@ -291,7 +291,7 @@ export default function ClienteLoja() {
   }, [cart]);
 
   return (
-    <div className="flex flex-col bg-background" style={{ height: "100dvh" }}>
+    <div className="flex flex-col bg-background pt-16 md:pt-20" style={{ height: "100dvh" }}>
       {/* ─── Search Overlay ─── */}
       <AnimatePresence>
         {searchOpen && (
