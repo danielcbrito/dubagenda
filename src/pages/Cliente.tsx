@@ -412,6 +412,10 @@ const Cliente = () => {
     barberPhoto: string | null;
   } | null>(null);
 
+  const [pendingDrawerOpen, setPendingDrawerOpen] = useState(false);
+  const [isCancelingSubscription, setIsCancelingSubscription] = useState(false);
+
+
   // Realtime connection status
   const [realtimeConnected, setRealtimeConnected] = useState(true);
   const channelStatusRef = useRef<Record<string, boolean>>({});
@@ -437,6 +441,30 @@ const Cliente = () => {
       return () => clearTimeout(timer);
     }
   }, [planExhausted, dataLoaded]);
+
+  // Auto-show pending subscription drawer
+  useEffect(() => {
+    if (pendingSubscription && dataLoaded) {
+      setPendingDrawerOpen(true);
+    }
+  }, [pendingSubscription, dataLoaded]);
+
+  const handleCancelSubscription = async () => {
+    setIsCancelingSubscription(true);
+    try {
+      const { error } = await supabase.functions.invoke("cancel-subscription");
+      if (error) throw error;
+      toast.success("Assinatura cancelada com sucesso");
+      setPendingDrawerOpen(false);
+      invalidateLoyalty();
+    } catch (error: any) {
+      console.error("Cancel subscription error:", error);
+      toast.error("Erro ao cancelar assinatura: " + error.message);
+    } finally {
+      setIsCancelingSubscription(false);
+    }
+  };
+
 
   // Centralized data error handling
   const { hasError, errors, clearErrors } = useDataError();
@@ -988,60 +1016,32 @@ const Cliente = () => {
                 />
               ) : pendingSubscription ? (
                 <div className="space-y-4">
-                  {(pendingSubscription as any).status === 'pending_cash' ? (
-                    <motion.div
-                      initial={{ opacity: 0, y: 8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4"
-                    >
-                      <div className="flex items-start gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-amber-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
-                          <Crown className="w-4 h-4 text-amber-500" />
-                        </div>
-                        <div className="flex-1">
-                          <p className="text-[13px] font-semibold text-foreground">
-                            {(pendingSubscription as any).plano?.nome || "Plano"} — Aguardando pagamento
-                          </p>
-                          <p className="text-[11px] text-muted-foreground mt-1">
-                            Apresente o pagamento em dinheiro ao barbeiro. Após a confirmação, seus cortes serão liberados.
-                          </p>
-                          <button
-                            onClick={() => setPlansSheetOpen(true)}
-                            className="text-[11px] text-primary font-semibold mt-2 hover:underline"
-                          >
-                            Ver detalhes / Cancelar
-                          </button>
-                        </div>
+                  {/* "Quadradinho" estratégico que abre a gaveta */}
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => setPendingDrawerOpen(true)}
+                    className="bg-primary/10 border border-primary/20 rounded-2xl p-4 cursor-pointer relative overflow-hidden group"
+                  >
+                    <div className="absolute top-0 right-0 p-1 opacity-20">
+                      <Crown className="w-12 h-12 text-primary rotate-12" />
+                    </div>
+                    <div className="flex items-center gap-3 relative z-10">
+                      <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center flex-shrink-0">
+                        <Clock className="w-5 h-5 text-primary" />
                       </div>
-                    </motion.div>
-                  ) : (
-                    <PendingSubscriptionBanner
-                      planName={(pendingSubscription as any).plano?.nome || "Plano"}
-                      onFinalize={() => {
-                        const ps = pendingSubscription as any;
-                        if (ps.payment_method === "pix" && ps.pix_qr_code && ps.pix_expires_at) {
-                          const pixExpiresAt = new Date(ps.pix_expires_at).getTime();
-                          if (pixExpiresAt > Date.now()) {
-                            const pixCheckoutData = {
-                              pixQrCode: ps.pix_qr_code,
-                              pixPayload: ps.pix_payload,
-                              subscriptionId: ps.id,
-                              asaasPaymentId: ps.asaas_payment_id,
-                              expiresAt: ps.pix_expires_at,
-                              value: ps.plano?.preco_mensal || 0,
-                              planName: ps.plano?.nome || "Plano",
-                            };
-                            sessionStorage.setItem("subscription_pix_checkout_data", JSON.stringify(pixCheckoutData));
-                            navigate("/cliente/assinatura-pix");
-                            return;
-                          }
-                        }
-                        navigate("/cliente/assinar", { 
-                          state: { resumePlanId: ps.plano_id }
-                        });
-                      }}
-                    />
-                  )}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[13px] font-bold text-foreground">
+                          Assinatura em andamento
+                        </p>
+                        <p className="text-[11px] text-muted-foreground line-clamp-1">
+                          Toque para finalizar seu plano {(pendingSubscription as any).plano?.nome}
+                        </p>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-muted-foreground/50 group-hover:translate-x-0.5 transition-transform" />
+                    </div>
+                  </motion.div>
                   {loyaltyEnabled && (
                     <LoyaltyCard
                       points={points}
@@ -1300,11 +1300,44 @@ const Cliente = () => {
         serviceName={(activeSubscription as any)?.plano?.servico?.nome}
       />
 
+      {/* Pending Subscription Drawer */}
+      <PendingSubscriptionDrawer
+        open={pendingDrawerOpen}
+        onOpenChange={setPendingDrawerOpen}
+        planName={(pendingSubscription as any)?.plano?.nome || "Plano"}
+        onFinalize={() => {
+          const ps = pendingSubscription as any;
+          if (ps.payment_method === "pix" && ps.pix_qr_code && ps.pix_expires_at) {
+            const pixExpiresAt = new Date(ps.pix_expires_at).getTime();
+            if (pixExpiresAt > Date.now()) {
+              const pixCheckoutData = {
+                pixQrCode: ps.pix_qr_code,
+                pixPayload: ps.pix_payload,
+                subscriptionId: ps.id,
+                asaasPaymentId: ps.asaas_payment_id,
+                expiresAt: ps.pix_expires_at,
+                value: ps.plano?.preco_mensal || 0,
+                planName: ps.plano?.nome || "Plano",
+              };
+              sessionStorage.setItem("subscription_pix_checkout_data", JSON.stringify(pixCheckoutData));
+              navigate("/cliente/assinatura-pix");
+              return;
+            }
+          }
+          navigate("/cliente/assinar", { 
+            state: { resumePlanId: ps.plano_id }
+          });
+        }}
+        onCancel={handleCancelSubscription}
+        isCanceling={isCancelingSubscription}
+      />
+
       {/* Bottom Navigation */}
       <BottomNavigation
         onProfileClick={() => setProfileSheetOpen(true)}
         onPlansClick={() => setPlansSheetOpen(true)}
         planExhausted={planExhausted}
+        hasPendingSubscription={!!pendingSubscription}
       />
     </div>
   );
