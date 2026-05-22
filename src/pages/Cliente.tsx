@@ -1015,13 +1015,16 @@ const Cliente = () => {
                           Assinatura em andamento
                         </p>
                         <p className="text-[11px] text-muted-foreground line-clamp-1">
-                          Toque para finalizar seu plano {(pendingSubscription as any).plano?.nome}
-                          </p>
-                        </div>
-                        <ChevronRight className="w-4 h-4 text-muted-foreground/50 group-hover:translate-x-0.5 transition-transform" />
+                          {pendingSubscription.status === 'pending_renewal' 
+                            ? `Renovação pendente: ${(pendingSubscription as any).plano?.nome}`
+                            : `Toque para finalizar seu plano ${(pendingSubscription as any).plano?.nome}`
+                          }
+                        </p>
                       </div>
-                    </motion.div>
-                  )}
+                      <ChevronRight className="w-4 h-4 text-muted-foreground/50 group-hover:translate-x-0.5 transition-transform" />
+                    </div>
+                  </motion.div>
+                )}
 
                   {/* Card do Plano Ativo */}
                   {activeSubscription && (!pendingSubscription || pendingSubscription.status === 'pending_renewal') ? (
