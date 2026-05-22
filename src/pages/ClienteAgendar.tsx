@@ -634,7 +634,8 @@ const ClienteAgendar = () => {
           .select("id, promocao_id")
           .eq("user_id", uid)
           .eq("status", "available")
-          .is("used_at", null),
+          .is("used_at", null)
+          .order("created_at", { ascending: true }),
       ]);
 
       if (activeRes.data && activeRes.data.length > 0) {
@@ -1728,23 +1729,41 @@ const ClienteAgendar = () => {
   const markRedemptionAsUsed = async (appointmentId: string) => {
     if (!useRedemption || availableRedemptions.length === 0) return;
     
+    setConsumingRedemption(true);
+    // Usar o mesmo critério do trigger (mais antigo primeiro)
     const redemptionToUse = availableRedemptions[0];
+    
     try {
-      const { error } = await supabase
+      // Primeiro verifica se o gatilho já não o marcou como usado
+      const { data: currentResgate } = await supabase
         .from("resgates")
-        .update({
-          status: "used",
-          used_at: new Date().toISOString(),
-          appointment_id: appointmentId
-        })
-        .eq("id", redemptionToUse.id);
+        .select("status, appointment_id")
+        .eq("id", redemptionToUse.id)
+        .single();
 
-      if (error) throw error;
-      
+      if (currentResgate?.status === 'used' && currentResgate?.appointment_id === appointmentId) {
+        console.log("Resgate já processado pelo gatilho do banco.");
+      } else {
+        const { error } = await supabase
+          .from("resgates")
+          .update({
+            status: "used",
+            used_at: new Date().toISOString(),
+            appointment_id: appointmentId
+          })
+          .eq("id", redemptionToUse.id);
+
+        if (error) throw error;
+      }
+
       setAvailableRedemptions(prev => prev.filter(r => r.id !== redemptionToUse.id));
       setUseRedemption(false);
-    } catch (error) {
-      console.error("Error marking redemption as used:", error);
+    } catch (err) {
+      console.error("Erro ao marcar resgate como usado:", err);
+      // Não bloqueia o fluxo se o agendamento já foi criado
+      toast.error("Houve um pequeno erro ao validar seu corte grátis, mas seu agendamento está garantido!");
+    } finally {
+      setConsumingRedemption(false);
     }
   };
 
