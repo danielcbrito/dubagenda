@@ -180,7 +180,7 @@ const fetchLoyaltyData = async (userId: string, tenantId: string | null) => {
       .from("assinaturas")
       .select("id, status, plano_id, created_at, payment_method, pix_qr_code, pix_payload, asaas_payment_id, pix_expires_at, plano:planos(nome, preco_mensal)")
       .eq("user_id", userId)
-      .in("status", ["suspended", "pending_cash", "pending_renewal"] as any)
+      .in("status", ["suspended", "pending", "pending_cash", "pending_renewal"] as any)
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle(),
@@ -366,7 +366,7 @@ const Cliente = () => {
   } = useQuery({
     queryKey: ['cliente', 'loyalty', user?.id, tenantId],
     queryFn: () => fetchLoyaltyData(user!.id, tenantId),
-    enabled: !!user?.id && !!tenantId,
+    enabled: !!user?.id,
     staleTime: 30 * 1000, // 30s — responsive to plan/points changes
     refetchOnWindowFocus: true,
   });
@@ -425,7 +425,7 @@ const Cliente = () => {
   const channelsCreatedAtRef = useRef<number>(Date.now());
 
   // Derived dataLoaded — true when all layers have loaded at least once
-  const dataLoaded = !profileLoading && !appointmentsLoading && !loyaltyLoading && !shopLoading;
+  const dataLoaded = !profileLoading && !appointmentsLoading && !loyaltyLoading;
 
   // Plan exhausted detection
   const planExhausted = useMemo(() => {
