@@ -3164,45 +3164,37 @@ const ClienteAgendar = () => {
 
       {/* Diálogo: perder corte grátis ao seguir sem aplicar */}
       <AlertDialog open={showLoseRedemptionDialog} onOpenChange={setShowLoseRedemptionDialog}>
-        <AlertDialogContent className="max-w-[90vw] md:max-w-lg rounded-3xl border-border/40 overflow-hidden p-0">
-          <div className="relative pt-12 pb-8 px-6 text-center">
-            {/* Background pattern decorativo */}
-            <div className="absolute top-0 left-0 right-0 h-32 bg-gradient-to-b from-destructive/10 to-transparent pointer-events-none" />
-            
-            <div className="relative inline-flex items-center justify-center w-20 h-20 rounded-full bg-destructive/10 mb-6">
-              <Star className="w-10 h-10 text-destructive animate-pulse" />
+        <AlertDialogContent className="max-w-[85vw] md:max-w-md rounded-[24px] border border-white/10 bg-black/40 backdrop-blur-xl p-0 overflow-hidden shadow-2xl">
+          <div className="p-6 text-center">
+            <div className="mx-auto w-12 h-12 rounded-full bg-destructive/20 flex items-center justify-center mb-4">
+              <Star className="w-6 h-6 text-destructive fill-destructive/20" />
             </div>
             
-            <AlertDialogHeader className="space-y-3">
-              <AlertDialogTitle className="text-2xl font-bold tracking-tight text-foreground">
-                Atenção, Promoção em Risco!
+            <AlertDialogHeader className="space-y-2">
+              <AlertDialogTitle className="text-xl font-bold text-white tracking-tight">
+                Perder benefício?
               </AlertDialogTitle>
-              <AlertDialogDescription className="text-[15px] leading-relaxed text-muted-foreground/80">
-                Você conquistou um <span className="font-bold text-foreground">Corte Grátis</span>, mas não o selecionou para este agendamento.
-                <br /><br />
-                Se você continuar agora, <span className="font-bold text-destructive">perderá este benefício definitivamente</span> e seus pontos serão resetados após o corte.
+              <AlertDialogDescription className="text-sm leading-relaxed text-zinc-400">
+                Você tem um <span className="text-white font-medium">Corte Grátis</span> disponível. Se continuar sem selecioná-lo, você <span className="text-destructive font-medium">perderá esta promoção</span> definitivamente.
               </AlertDialogDescription>
             </AlertDialogHeader>
             
-            <div className="mt-8 flex flex-col gap-3">
+            <div className="mt-6 flex flex-col gap-2">
               <AlertDialogAction
                 disabled={consumingRedemption}
                 onClick={(e) => { e.preventDefault(); handleConfirmLoseRedemption(); }}
-                className="h-14 rounded-2xl bg-destructive text-destructive-foreground font-bold text-base hover:bg-destructive/90 active:scale-[0.98] transition-all shadow-lg shadow-destructive/20 border-none"
+                className="w-full h-11 rounded-xl bg-destructive hover:bg-destructive/90 text-white font-bold text-sm transition-all border-none"
               >
                 {consumingRedemption ? (
-                  <div className="flex items-center gap-2">
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    <span>Processando...</span>
-                  </div>
-                ) : "Sim, desejo perder o benefício"}
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : "Sim, perder benefício"}
               </AlertDialogAction>
               
               <AlertDialogCancel 
                 disabled={consumingRedemption}
-                className="h-14 rounded-2xl border-border/40 bg-card hover:bg-secondary font-semibold text-foreground/70 border-none"
+                className="w-full h-11 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-300 font-semibold text-sm border-none transition-all"
               >
-                Voltar e aplicar meu Corte Grátis
+                Voltar e aplicar
               </AlertDialogCancel>
             </div>
           </div>
