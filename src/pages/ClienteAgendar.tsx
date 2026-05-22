@@ -13,15 +13,13 @@ import { useSlotAvailability } from "@/hooks/useSlotAvailability";
 import { sendRemarcacaoConcluidaEvent } from "@/lib/webhookService";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 
 // Premium Components
 import { ServiceCard } from "@/components/booking/ServiceCard";
@@ -3163,20 +3161,20 @@ const ClienteAgendar = () => {
       </AnimatePresence>
 
       {/* Diálogo: perder corte grátis ao seguir sem aplicar */}
-      <AlertDialog open={showLoseRedemptionDialog} onOpenChange={setShowLoseRedemptionDialog}>
-        <AlertDialogContent className="max-w-[80vw] md:max-w-[340px] rounded-[32px] border border-white/40 bg-white/80 backdrop-blur-2xl p-0 overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.1)] focus:outline-none">
+      <Dialog open={showLoseRedemptionDialog} onOpenChange={setShowLoseRedemptionDialog}>
+        <DialogContent className="max-w-[80vw] md:max-w-[340px] rounded-[32px] border border-white/40 bg-white/90 backdrop-blur-2xl p-0 overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.1)] focus:outline-none [&>button]:hidden">
           <div className="p-7 text-center">
-            <AlertDialogHeader className="space-y-3">
-              <AlertDialogTitle className="text-[19px] font-bold text-zinc-900 tracking-tight leading-tight">
+            <DialogHeader className="space-y-3">
+              <DialogTitle className="text-[19px] font-bold text-zinc-900 tracking-tight leading-tight">
                 Você tem um benefício pendente
-              </AlertDialogTitle>
-              <AlertDialogDescription className="text-[14px] leading-relaxed text-zinc-600 px-1">
+              </DialogTitle>
+              <DialogDescription className="text-[14px] leading-relaxed text-zinc-600 px-1">
                 Se você continuar sem selecionar o <span className="text-zinc-900 font-semibold">Corte Grátis</span>, você perderá essa promoção definitivamente. Deseja prosseguir mesmo assim?
-              </AlertDialogDescription>
-            </AlertDialogHeader>
+              </DialogDescription>
+            </DialogHeader>
             
             <div className="mt-8 flex flex-col gap-2">
-              <AlertDialogAction
+              <Button
                 disabled={consumingRedemption}
                 onClick={(e) => { e.preventDefault(); handleConfirmLoseRedemption(); }}
                 className="w-full h-[52px] rounded-2xl bg-zinc-900 hover:bg-zinc-800 text-white font-bold text-[15px] transition-all border-none active:scale-[0.98]"
@@ -3184,18 +3182,20 @@ const ClienteAgendar = () => {
                 {consumingRedemption ? (
                   <Loader2 className="w-5 h-5 animate-spin" />
                 ) : "Sim, desejo perder"}
-              </AlertDialogAction>
+              </Button>
               
-              <AlertDialogCancel 
+              <Button 
                 disabled={consumingRedemption}
+                onClick={() => setShowLoseRedemptionDialog(false)}
                 className="w-full h-[52px] rounded-2xl bg-zinc-100 hover:bg-zinc-200 text-zinc-600 font-bold text-[15px] border-none transition-all active:scale-[0.98]"
+                variant="ghost"
               >
                 Voltar e aplicar
-              </AlertDialogCancel>
+              </Button>
             </div>
           </div>
-        </AlertDialogContent>
-      </AlertDialog>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
