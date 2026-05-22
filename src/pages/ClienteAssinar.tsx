@@ -592,40 +592,30 @@ const ClienteAssinar = () => {
                 </div>
 
                 {/* Summary */}
-                <div className="bg-card border border-border rounded-2xl p-5 space-y-4 mb-6">
-                  <SummaryRow 
-                    label="Plano"
-                    value={selectedPlan.nome}
-                  />
-                  
-                  <div className="border-t border-border" />
-                  
-                  <SummaryRow 
-                    label="Barbearia"
-                    value={selectedShopName}
-                  />
-
-                  {selectedBarber && (
-                    <>
-                      <div className="border-t border-border" />
-                      <SummaryRow 
-                        label="Barbeiro"
-                        value={selectedBarber.apelido}
-                      />
-                    </>
-                  )}
-                  
-                  <div className="border-t border-border" />
-                  
+                <div className="bg-card border border-border/40 rounded-xl p-4 mb-6">
                   <div className="flex items-center justify-between">
-                    <span className="text-[13px] font-medium text-muted-foreground">Valor Mensal</span>
-                    <div className="flex items-baseline gap-1">
-                      <span className="text-[11px] text-muted-foreground/50">R$</span>
-                      <span className="text-lg font-bold text-foreground tabular-nums">
-                        {selectedPlan.preco_mensal.toFixed(2).replace('.', ',')}
-                      </span>
+                    <div>
+                      <p className="text-[13px] font-medium text-foreground">{selectedPlan.nome}</p>
+                      <p className="text-[11px] text-muted-foreground mt-0.5">{selectedShopName} • Renovação automática</p>
                     </div>
+                    <p className="text-base font-bold text-foreground tabular-nums">
+                      R$ {selectedPlan.preco_mensal.toFixed(2).replace('.', ',')}
+                    </p>
                   </div>
+                  {selectedBarber && (
+                    <div className="flex items-center gap-2 mt-3 pt-3 border-t border-border/30">
+                      <div className="w-6 h-6 rounded-full overflow-hidden bg-muted/20 flex items-center justify-center flex-shrink-0">
+                        {selectedBarber.foto_url ? (
+                          <img src={selectedBarber.foto_url} alt={selectedBarber.apelido} className="w-full h-full object-cover" />
+                        ) : (
+                          <User className="w-3.5 h-3.5 text-muted-foreground/40" />
+                        )}
+                      </div>
+                      <p className="text-[12px] text-muted-foreground">
+                        Barbeiro: <span className="font-medium text-foreground">{selectedBarber.apelido}</span>
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 {/* Payment methods */}
