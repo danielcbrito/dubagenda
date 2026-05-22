@@ -122,8 +122,11 @@ const ClienteAgendar = () => {
   const [processingPayment, setProcessingPayment] = useState(false);
   const [availableCredits, setAvailableCredits] = useState(0);
   const [userId, setUserId] = useState<string | null>(null);
+  const [pendingDrawerOpen, setPendingDrawerOpen] = useState(false);
+  const [isCancelingSubscription, setIsCancelingSubscription] = useState(false);
   const [isRescheduling, setIsRescheduling] = useState(false);
   const [rescheduleAppointmentId, setRescheduleAppointmentId] = useState<string | null>(null);
+
   const [unavailableMessage, setUnavailableMessage] = useState<string | null>(null);
   const servicesListRef = useRef<HTMLDivElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -185,6 +188,32 @@ const ClienteAgendar = () => {
 
   // Barbeiros bloqueados para este cliente
   const { blockedIds: blockedBarberIds } = useBlockedBarbers();
+
+  const { data: pendingSubscription, refetch: refetchPending } = usePendingSubscription(userId);
+
+  // Auto-show pending subscription drawer
+  useEffect(() => {
+    if (pendingSubscription) {
+      setPendingDrawerOpen(true);
+    }
+  }, [pendingSubscription]);
+
+  const handleCancelSubscription = async () => {
+    setIsCancelingSubscription(true);
+    try {
+      const { error } = await supabase.functions.invoke("cancel-subscription");
+      if (error) throw error;
+      toast.success("Assinatura cancelada com sucesso");
+      setPendingDrawerOpen(false);
+      refetchPending();
+    } catch (error: any) {
+      console.error("Cancel subscription error:", error);
+      toast.error("Erro ao cancelar assinatura: " + error.message);
+    } finally {
+      setIsCancelingSubscription(false);
+    }
+  };
+
 
   // Avaliações dos barbeiros
   const { ratings: barberRatings } = useBarberRatings(barbers.map(b => b.id));
