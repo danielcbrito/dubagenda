@@ -1402,13 +1402,36 @@ const ClienteAgendar = () => {
       navigate("/cliente");
     } catch (error: any) {
       console.error('Payment error:', error);
-      
-      if (error.message?.includes('TIME_SLOT_UNAVAILABLE') || error.message?.includes('indisponível') || error.message?.includes('Horário')) {
-        toast.error(error.message || "Horário indisponível. Escolha outro horário.");
+
+      // Extrai mensagem real do corpo de resposta da edge function (FunctionsHttpError)
+      let errorMessage = error?.message || "";
+      let errorCode = "";
+      try {
+        if (error?.context && typeof error.context.json === 'function') {
+          const body = await error.context.json();
+          if (body?.error) errorMessage = body.error;
+          if (body?.code) errorCode = body.code;
+        } else if (error?.context && typeof error.context.text === 'function') {
+          const text = await error.context.text();
+          try {
+            const body = JSON.parse(text);
+            if (body?.error) errorMessage = body.error;
+            if (body?.code) errorCode = body.code;
+          } catch {}
+        }
+      } catch {}
+
+      if (
+        errorCode === 'TIME_SLOT_UNAVAILABLE' ||
+        errorMessage.includes('indisponível') ||
+        errorMessage.includes('Horário') ||
+        errorMessage.includes('expediente')
+      ) {
+        toast.error(errorMessage || "Horário indisponível. Escolha outro horário.");
         setStep(4);
         refreshSlots();
       } else {
-        toast.error("Erro ao processar pagamento: " + (error.message || "Erro desconhecido"));
+        toast.error("Erro ao processar pagamento: " + (errorMessage || "Erro desconhecido"));
       }
     } finally {
       setProcessingPayment(false);
