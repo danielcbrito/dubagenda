@@ -3327,6 +3327,11 @@ const ClienteAgendar = () => {
         onCancel={handleCancelSubscription}
         isCanceling={isCancelingSubscription}
       />
+      <BottomNavigation
+        onProfileClick={() => {}}
+        onPlansClick={() => {}}
+        hasPendingSubscription={!!pendingSubscription}
+      />
     </div>
   );
 };
