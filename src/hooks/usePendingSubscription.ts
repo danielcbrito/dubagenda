@@ -16,10 +16,16 @@ export function usePendingSubscription(userId: string | null | undefined) {
         .select(`
           id,
           status,
-          plano:planos(nome)
+          plano_id,
+          payment_method,
+          pix_qr_code,
+          pix_payload,
+          asaas_payment_id,
+          pix_expires_at,
+          plano:planos(nome, preco_mensal)
         `)
         .eq("user_id", userId)
-        .in("status", ["suspended", "pending_cash"])
+        .in("status", ["suspended", "pending_cash", "pending_renewal"])
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();
