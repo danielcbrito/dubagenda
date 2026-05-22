@@ -1017,12 +1017,12 @@ const Cliente = () => {
                         <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center flex-shrink-0">
                           <Clock className="w-5 h-5 text-primary" />
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-[13px] font-bold text-foreground">
-                            Pagamento Pendente
-                          </p>
-                          <p className="text-[11px] text-muted-foreground line-clamp-1">
-                            Toque para finalizar seu plano {(pendingSubscription as any).plano?.nome}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[13px] font-bold text-foreground">
+                          Assinatura em andamento
+                        </p>
+                        <p className="text-[11px] text-muted-foreground line-clamp-1">
+                          Toque para finalizar seu plano {(pendingSubscription as any).plano?.nome}
                           </p>
                         </div>
                         <ChevronRight className="w-4 h-4 text-muted-foreground/50 group-hover:translate-x-0.5 transition-transform" />
