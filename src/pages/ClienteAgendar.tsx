@@ -127,6 +127,7 @@ const ClienteAgendar = () => {
   const [pendingDrawerOpen, setPendingDrawerOpen] = useState(false);
   const hasAutoOpenedPendingRef = useRef<string | null>(null);
   const { cancelSubscription, cancelling: isCancelingSubscription } = useCancelSubscriptionMutation();
+  const [hasAutoOpenedThisSession, setHasAutoOpenedThisSession] = useState(false);
 
   const [isRescheduling, setIsRescheduling] = useState(false);
   const [rescheduleAppointmentId, setRescheduleAppointmentId] = useState<string | null>(null);
@@ -197,11 +198,12 @@ const ClienteAgendar = () => {
 
   // Auto-show pending subscription drawer
   useEffect(() => {
-    if (pendingSubscription && hasAutoOpenedPendingRef.current !== (pendingSubscription as any).id) {
+    if (pendingSubscription && !hasAutoOpenedThisSession && hasAutoOpenedPendingRef.current !== (pendingSubscription as any).id) {
       hasAutoOpenedPendingRef.current = (pendingSubscription as any).id;
+      setHasAutoOpenedThisSession(true);
       setPendingDrawerOpen(true);
     }
-  }, [pendingSubscription]);
+  }, [pendingSubscription, hasAutoOpenedThisSession]);
 
   const handleCancelSubscription = async () => {
     cancelSubscription(() => {
