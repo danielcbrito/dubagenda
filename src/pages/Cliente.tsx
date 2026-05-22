@@ -425,7 +425,7 @@ const Cliente = () => {
   const channelsCreatedAtRef = useRef<number>(Date.now());
 
   // Derived dataLoaded — true when all layers have loaded at least once
-  const dataLoaded = !profileLoading && !appointmentsLoading && !loyaltyLoading && !shopLoading;
+  const dataLoaded = !profileLoading && !appointmentsLoading && !loyaltyLoading;
 
   // Plan exhausted detection
   const planExhausted = useMemo(() => {
