@@ -3162,7 +3162,7 @@ const ClienteAgendar = () => {
 
       {/* Diálogo: perder corte grátis ao seguir sem aplicar */}
       <Dialog open={showLoseRedemptionDialog} onOpenChange={setShowLoseRedemptionDialog}>
-        <DialogContent className="max-w-[80vw] md:max-w-[340px] rounded-[32px] border border-white/40 bg-white/85 backdrop-blur-lg p-0 overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.1)] focus:outline-none [&>button]:hidden">
+        <DialogContent className="max-w-[80vw] md:max-w-[340px] rounded-[32px] border border-white/20 bg-white/95 backdrop-blur-sm p-0 overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.15)] focus:outline-none [&>button]:hidden">
           <div className="p-7 text-center">
             <DialogHeader className="space-y-3">
               <DialogTitle className="text-[19px] font-bold text-zinc-900 tracking-tight leading-tight">
