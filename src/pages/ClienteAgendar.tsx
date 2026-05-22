@@ -634,7 +634,8 @@ const ClienteAgendar = () => {
           .select("id, promocao_id")
           .eq("user_id", uid)
           .eq("status", "available")
-          .is("used_at", null),
+          .is("used_at", null)
+          .order("created_at", { ascending: true }),
       ]);
 
       if (activeRes.data && activeRes.data.length > 0) {
