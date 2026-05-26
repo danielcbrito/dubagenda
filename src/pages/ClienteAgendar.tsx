@@ -40,7 +40,7 @@ import { useWalletStatus } from "@/hooks/useWalletStatus";
 import { PendingSubscriptionDrawer } from "@/components/client/PendingSubscriptionDrawer";
 import { usePendingSubscription } from "@/hooks/usePendingSubscription";
 import { useCancelSubscriptionMutation } from "@/hooks/useClientMutations";
-import { BottomNavigation } from "@/components/BottomNavigation";
+
 
 
 interface TenantUnit {
@@ -3323,11 +3323,6 @@ const ClienteAgendar = () => {
         }}
         onCancel={handleCancelSubscription}
         isCanceling={isCancelingSubscription}
-      />
-      <BottomNavigation
-        onProfileClick={() => {}}
-        onPlansClick={() => {}}
-        hasPendingSubscription={!!pendingSubscription}
       />
     </div>
   );

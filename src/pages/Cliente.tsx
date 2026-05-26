@@ -1327,12 +1327,14 @@ const Cliente = () => {
       />
 
       {/* Bottom Navigation */}
-      <BottomNavigation
-        onProfileClick={() => setProfileSheetOpen(true)}
-        onPlansClick={() => setPlansSheetOpen(true)}
-        planExhausted={planExhausted}
-        hasPendingSubscription={!!pendingSubscription}
-      />
+      {!plansSheetOpen && !subscribeSheetOpen && !profileSheetOpen && !walletSheetOpen && !historySheetOpen && !pointsModalOpen && (
+        <BottomNavigation
+          onProfileClick={() => setProfileSheetOpen(true)}
+          onPlansClick={() => setPlansSheetOpen(true)}
+          planExhausted={planExhausted}
+          hasPendingSubscription={!!pendingSubscription}
+        />
+      )}
     </div>
   );
 };
