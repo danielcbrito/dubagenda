@@ -94,12 +94,7 @@ function resolveWebhookUrl(
   },
   evento: string,
 ): string | null {
-  const isConfirmationEvent = evento === 'agendamento_confirmado';
   const isReminderEvent = evento === 'lembrete_agendamento' || evento.startsWith('reminder_') || evento.includes('lembrete');
-
-  if (isConfirmationEvent && config.confirmacao_ativo && config.confirmacao_webhook_url) {
-    return config.confirmacao_webhook_url;
-  }
 
   if (isReminderEvent && config.lembrete_ativo && config.lembrete_webhook_url) {
     return config.lembrete_webhook_url;
@@ -107,6 +102,10 @@ function resolveWebhookUrl(
 
   if (config.ativo && config.webhook_url) {
     return config.webhook_url;
+  }
+
+  if (evento === 'agendamento_confirmado' && config.confirmacao_ativo && config.confirmacao_webhook_url) {
+    return config.confirmacao_webhook_url;
   }
 
   return null;
