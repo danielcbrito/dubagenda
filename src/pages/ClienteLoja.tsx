@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Search, ShoppingBag, ShoppingCart, Package, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 import { BackArrow } from "@/components/ui/back-arrow";
 import { MaintenanceScreen } from "@/components/MaintenanceScreen";
 import { ProductDetailSheet } from "@/components/loja/ProductDetailSheet";
@@ -623,14 +624,14 @@ export default function ClienteLoja() {
 
       <CheckoutSheet
         open={checkoutOpen}
-        onOpenChange={setCheckoutOpen}
-        items={cart.items.filter(item => checkoutSelectedIds.has(item.id))}
+        onClose={() => setCheckoutOpen(false)}
+        items={cart.items}
+        selectedIds={checkoutSelectedIds}
         tenantId={userTenant?.id ?? ""}
-        userId={userId ?? ""}
-        onSuccess={() => {
+        tenantNome={userTenant?.nome ?? "Loja"}
+        onOrderPlaced={() => {
           setCheckoutOpen(false);
           cart.clearCart();
-          toast.success("Pedido realizado com sucesso!");
         }}
       />
 

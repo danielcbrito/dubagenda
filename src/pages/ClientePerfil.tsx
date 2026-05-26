@@ -43,7 +43,7 @@ import { BarbershopDetailsSheet } from "@/components/client/BarbershopDetailsShe
 import { MyReviewsSheet } from "@/components/MyReviewsSheet";
 import { MyCouponsSheet } from "@/components/MyCouponsSheet";
 import { usePendingSubscription } from "@/hooks/usePendingSubscription";
-
+import { BarberReviewModal } from "@/components/client/BarberReviewModal";
 
 /* ─── Reusable sub-components ─── */
 
