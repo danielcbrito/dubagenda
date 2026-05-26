@@ -24,7 +24,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useTheme } from "next-themes";
 import { cn } from "@/lib/utils";
-import { BottomNavigation } from "@/components/BottomNavigation";
+import { BackArrow } from "@/components/ui/back-arrow";
 import { MyPlansSheet } from "@/components/MyPlansSheet";
 import { NotificationsSheet } from "@/components/NotificationsSheet";
 import { AppointmentHistorySheet } from "@/components/AppointmentHistorySheet";
@@ -167,7 +167,7 @@ export default function ClientePerfil() {
   const [reviewsOpen, setReviewsOpen] = useState(false);
   const [couponsOpen, setCouponsOpen] = useState(false);
   const { data: pendingSubscription } = usePendingSubscription(userId);
-
+  const [reviewModalData, setReviewModalData] = useState<any>(null);
 
   useEffect(() => {
     loadProfile();
@@ -257,8 +257,20 @@ export default function ClientePerfil() {
           className="absolute top-0 left-0 right-0 h-4 z-10 pointer-events-none"
           style={{ background: "linear-gradient(to bottom, hsl(var(--background)), transparent)" }}
         />
+        
+        {/* Back Button */}
+        <div className="absolute top-4 left-4 z-20">
+          <motion.button
+            whileTap={{ scale: 0.9 }}
+            onClick={() => navigate(-1)}
+            className="w-9 h-9 flex items-center justify-center rounded-xl bg-card border border-border/40 hover:bg-muted shadow-sm transition-colors active:scale-95"
+          >
+            <BackArrow size={20} className="text-foreground" />
+          </motion.button>
+        </div>
+
         <div className="h-full overflow-y-auto overscroll-contain pb-16">
-          <div className="px-4 pt-8 pb-4 space-y-6">
+          <div className="px-4 pt-12 pb-4 space-y-6">
 
             {/* Identity */}
             <motion.div
@@ -450,6 +462,20 @@ export default function ClientePerfil() {
         onOpenChange={setShopDetailsOpen}
         barbershop={shopDetails}
         isDub={isDubExclusive}
+      />
+
+      {/* Barber Review Modal */}
+      <BarberReviewModal
+        appointmentId={reviewModalData?.appointmentId || ""}
+        barberId={reviewModalData?.barberId || ""}
+        barberName={reviewModalData?.barberName || ""}
+        barberPhoto={reviewModalData?.barberPhoto || null}
+        open={!!reviewModalData}
+        onOpenChange={(open) => !open && setReviewModalData(null)}
+        onSuccess={() => {
+          setReviewModalData(null);
+          loadProfile();
+        }}
       />
     </div>
   );

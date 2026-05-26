@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Search, ShoppingBag, ShoppingCart, Package, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
-import { BottomNavigation } from "@/components/BottomNavigation";
+import { BackArrow } from "@/components/ui/back-arrow";
 import { MaintenanceScreen } from "@/components/MaintenanceScreen";
 import { ProductDetailSheet } from "@/components/loja/ProductDetailSheet";
 import { CartSheet } from "@/components/loja/CartSheet";
@@ -394,9 +394,18 @@ export default function ClienteLoja() {
         "flex-shrink-0 flex items-center justify-between px-4 pt-4 pb-3 z-20 transition-shadow duration-200",
         scrolled && "shadow-sm shadow-foreground/5"
       )}>
-        <p className="text-sm font-bold text-foreground truncate flex-1 mr-3">
-          {userTenant?.nome || "Loja"}
-        </p>
+        <div className="flex items-center gap-2 flex-1 min-w-0 mr-3">
+          <motion.button
+            whileTap={{ scale: 0.9 }}
+            onClick={() => navigate(-1)}
+            className="w-8 h-8 flex items-center justify-center rounded-lg bg-card/60 hover:bg-card transition-all active:scale-90"
+          >
+            <BackArrow size={18} className="text-foreground/70" />
+          </motion.button>
+          <p className="text-sm font-bold text-foreground truncate">
+            {userTenant?.nome || "Loja"}
+          </p>
+        </div>
         <div className="flex items-center gap-3">
           <motion.button
             whileTap={{ scale: 0.9 }}
@@ -614,15 +623,15 @@ export default function ClienteLoja() {
 
       <CheckoutSheet
         open={checkoutOpen}
-        onClose={() => setCheckoutOpen(false)}
-        items={cart.items}
-        selectedIds={checkoutSelectedIds}
-        onOrderPlaced={() => {
-          cart.clearCart();
+        onOpenChange={setCheckoutOpen}
+        items={cart.items.filter(item => checkoutSelectedIds.has(item.id))}
+        tenantId={userTenant?.id ?? ""}
+        userId={userId ?? ""}
+        onSuccess={() => {
           setCheckoutOpen(false);
+          cart.clearCart();
+          toast.success("Pedido realizado com sucesso!");
         }}
-        tenantId={userTenant?.id || ""}
-        tenantNome={userTenant?.nome || "Loja"}
       />
 
       <CartAddedOverlay />
