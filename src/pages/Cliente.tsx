@@ -1002,13 +1002,10 @@ const Cliente = () => {
                       initial={{ opacity: 0, scale: 0.95 }}
                       animate={{ opacity: 1, scale: 1 }}
                       whileTap={{ scale: 0.98 }}
-                      onClick={() => setPendingDrawerOpen(true)}
-                      className="bg-primary/10 border border-primary/20 rounded-2xl p-4 cursor-pointer relative overflow-hidden group shadow-sm"
-                    >
-                      <div className="absolute top-0 right-0 p-1 opacity-10">
-                        <Crown className="w-12 h-12 text-primary rotate-12" />
-                      </div>
-                      <div className="flex items-center gap-3 relative z-10">
+                       onClick={() => setPendingDrawerOpen(true)}
+                       className="bg-primary/10 border border-primary/20 rounded-2xl p-4 cursor-pointer relative overflow-hidden group shadow-sm"
+                     >
+                       <div className="flex items-center gap-3 relative z-10">
                         <div className="flex-shrink-0">
                           <Clock className="w-6 h-6 text-primary" />
                         </div>
@@ -1327,7 +1324,7 @@ const Cliente = () => {
       />
 
       {/* Bottom Navigation */}
-      {!plansSheetOpen && !subscribeSheetOpen && !profileSheetOpen && !walletSheetOpen && !historySheetOpen && !pointsModalOpen && (
+      {!plansSheetOpen && !subscribeSheetOpen && !profileSheetOpen && !walletSheetOpen && !historySheetOpen && !pointsModalOpen && !pendingDrawerOpen && (
         <BottomNavigation
           onProfileClick={() => setProfileSheetOpen(true)}
           onPlansClick={() => setPlansSheetOpen(true)}
