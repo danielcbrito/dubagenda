@@ -412,11 +412,6 @@ export default function ClientePerfil() {
         </div>
       </div>
 
-      <BottomNavigation
-        onProfileClick={() => {}}
-        onPlansClick={() => navigate("/cliente/assinar")}
-        hasPendingSubscription={!!pendingSubscription}
-      />
 
       {/* Sub-sheets */}
       <MyPlansSheet open={plansOpen} onOpenChange={setPlansOpen} userId={userId} />
@@ -470,6 +465,8 @@ export default function ClientePerfil() {
         barberId={reviewModalData?.barberId || ""}
         barberName={reviewModalData?.barberName || ""}
         barberPhoto={reviewModalData?.barberPhoto || null}
+        userId={userId || ""}
+        userName={profile?.nome || "Cliente"}
         open={!!reviewModalData}
         onOpenChange={(open) => !open && setReviewModalData(null)}
         onSuccess={() => {
