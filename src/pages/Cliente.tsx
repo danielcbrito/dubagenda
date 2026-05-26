@@ -1324,7 +1324,7 @@ const Cliente = () => {
       />
 
       {/* Bottom Navigation */}
-      {!plansSheetOpen && !subscribeSheetOpen && !profileSheetOpen && !walletSheetOpen && !historySheetOpen && !pointsModalOpen && (
+      {!plansSheetOpen && !subscribeSheetOpen && !profileSheetOpen && !walletSheetOpen && !historySheetOpen && !pointsModalOpen && !pendingDrawerOpen && (
         <BottomNavigation
           onProfileClick={() => setProfileSheetOpen(true)}
           onPlansClick={() => setPlansSheetOpen(true)}
