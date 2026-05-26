@@ -2785,6 +2785,42 @@ export type Database = {
           },
         ]
       }
+      loyalty_audit_logs: {
+        Row: {
+          action: string
+          appointment_id: string | null
+          created_at: string | null
+          id: string
+          metadata: Json | null
+          points_after: number | null
+          points_before: number | null
+          reason: string | null
+          user_id: string
+        }
+        Insert: {
+          action: string
+          appointment_id?: string | null
+          created_at?: string | null
+          id?: string
+          metadata?: Json | null
+          points_after?: number | null
+          points_before?: number | null
+          reason?: string | null
+          user_id: string
+        }
+        Update: {
+          action?: string
+          appointment_id?: string | null
+          created_at?: string | null
+          id?: string
+          metadata?: Json | null
+          points_after?: number | null
+          points_before?: number | null
+          reason?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       manutencao_emails_permitidos: {
         Row: {
           created_at: string
