@@ -32,7 +32,7 @@ function ProgressStep({ filled, index }: { filled: boolean; index: number }) {
   );
 }
 
-export function LoyaltyCard({ points, redemptions, pontosNecessarios = 5, onViewDetails }: LoyaltyCardProps) {
+export function LoyaltyCard({ points, redemptions, pontosNecessarios = 8, onViewDetails }: LoyaltyCardProps) {
   // Se os pontos forem exatamente o necessário, mostramos todos preenchidos
   const currentCycleProgress = points === pontosNecessarios ? pontosNecessarios : (points % pontosNecessarios);
   const cutsUntilFree = Math.max(0, pontosNecessarios - currentCycleProgress);
