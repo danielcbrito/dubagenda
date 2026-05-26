@@ -1413,7 +1413,7 @@ const ClienteAgendar = () => {
       // === Pagamento na Barbearia (cash) ===
       const payload: any = {
         bookingData,
-        metodo: 'cash',
+        metodo: useRedemption ? 'resgate' : 'cash',
         creditsUsed: Math.min(availableCredits, totalPrice),
         rescheduleFromId: isRescheduling ? rescheduleAppointmentId : undefined,
       };
@@ -1431,12 +1431,6 @@ const ClienteAgendar = () => {
 
       if (useRedemption && data.appointmentId) {
         await markRedemptionAsUsed(data.appointmentId);
-        
-        // Atualiza o agendamento para refletir que o pagamento foi via resgate
-        await supabase
-          .from("agendamentos")
-          .update({ payment_method: 'resgate' } as any)
-          .eq("id", data.appointmentId);
       }
 
       if (appliedCoupon && data.appointmentId) {
