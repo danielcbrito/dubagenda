@@ -180,7 +180,7 @@ function gerarMensagemPersonalizada(evento: string, payload: WebhookEventPayload
       return `Olá ${nome}! ✅\n\nSeu agendamento para ${data} às ${hora} foi confirmado pelo barbeiro.\n\nNos vemos em breve!`;
     
     case 'agendamento_cancelado':
-      return `Olá ${nome}!\n\nSeu agendamento para ${data} às ${hora} foi cancelado.\n\nSe precisar remarcar, acesse nosso app ou entre em contato.`;
+      return `❌ *Agendamento Cancelado*\n\nOlá ${nome}, seu agendamento para o dia ${data} às ${hora} foi cancelado.\n\nSe desejar, você pode agendar um novo horário pelo nosso app! 📱`;
     
     case 'remarcacao_solicitada':
       return `Olá ${nome}!\n\nPrecisamos remarcar seu agendamento de ${data} às ${hora}.\n\nMotivo: ${payload.motivo || 'Imprevisto'}\n\nPor favor, acesse o app para escolher um novo horário.`;
