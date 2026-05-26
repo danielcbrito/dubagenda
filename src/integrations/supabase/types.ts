@@ -6509,6 +6509,10 @@ export type Database = {
         Args: { p_erro_mensagem: string; p_transacao_id: string }
         Returns: undefined
       }
+      send_agendamento_whatsapp_webhook: {
+        Args: { p_agendamento_id: string; p_kind: string; p_msg: string }
+        Returns: number
+      }
       store_create_order_with_reservations: {
         Args: {
           p_items: Json
