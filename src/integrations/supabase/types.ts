@@ -112,7 +112,7 @@ export type Database = {
           sent_at: string | null
           status: string
           updated_at: string
-          user_id: string
+          user_id: string | null
         }
         Insert: {
           agendamento_id: string
@@ -127,7 +127,7 @@ export type Database = {
           sent_at?: string | null
           status?: string
           updated_at?: string
-          user_id: string
+          user_id?: string | null
         }
         Update: {
           agendamento_id?: string
@@ -142,7 +142,7 @@ export type Database = {
           sent_at?: string | null
           status?: string
           updated_at?: string
-          user_id?: string
+          user_id?: string | null
         }
         Relationships: []
       }
