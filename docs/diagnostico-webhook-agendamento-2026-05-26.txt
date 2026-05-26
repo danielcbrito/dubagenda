@@ -1,0 +1,81 @@
+DIAGNÓSTICO — WEBHOOK DE CONFIRMAÇÃO DE AGENDAMENTO
+Data: 2026-05-26
+
+Resumo executivo
+- Problema reportado: agendamentos confirmados eram criados, mas a mensagem de WhatsApp não chegava ao cliente.
+- Sintoma confirmado no banco: novos agendamentos após 20:00 não geravam registros em agendamento_lembretes_log.
+- Causa principal: a função SQL send_agendamento_whatsapp_webhook inseria logs sem preencher scheduled_for, coluna obrigatória em agendamento_lembretes_log. Isso fazia a transação interna falhar e podia desfazer o enfileiramento do net.http_post.
+- Causa secundária: a Edge Function send-webhook-event ainda priorizava confirmacao_webhook_url para agendamento_confirmado, divergindo da regra operacional atual de enviar confirmações pelo webhook principal.
+
+Camada User
+- O cliente agenda e recebe status confirmado no app.
+- O comportamento esperado é receber a mensagem de confirmação via WhatsApp logo após o agendamento.
+- O app não deve mostrar erro de webhook ao usuário final; falhas de mensageria devem ser registradas e tratadas fora do fluxo do cliente.
+
+Camada Frontend
+- Fluxo principal identificado: src/pages/ClienteAgendar.tsx chama a Edge Function create-payment para pagamento em dinheiro/carteira.
+- create-payment insere em public.agendamentos com status confirmed, barbeiro_confirmou=true e cliente_confirmou=true.
+- O envio da mensagem depende dos triggers SQL em public.agendamentos e/ou da Edge Function send-webhook-event usada por serviços auxiliares.
+
+Camada Backend N8N
+- Webhook principal testado diretamente:
+  URL terminando em: 03b5d2076ea1
+  Resultado do teste direto: HTTP 200
+  Resposta: {"message":"Workflow was started"}
+- Isso confirma que o webhook principal está ativo e aceita payloads válidos.
+
+Camada Database Supabase
+- Tabela de configuração: public.webhook_config.
+- Webhook principal ativo: true.
+- Instância WhatsApp resolvida para o agendamento de teste:
+  instance_name: barbearia_dub_tulio_santos
+  status: connected
+  barbeiro: Tulio
+- Agendamento usado no diagnóstico:
+  id: aa32e32e-dddf-4346-b3db-79b7691711be
+  cliente: Daniel Brito
+  telefone WhatsApp: 5511952160719@s.whatsapp.net
+  serviço: Corte
+  status: confirmed
+- Correção aplicada na função public.send_agendamento_whatsapp_webhook:
+  1. scheduled_for agora é preenchido em todos os INSERTs de log.
+  2. sent_at é preenchido no sucesso/enfileiramento.
+  3. o webhook principal tem prioridade para confirmações e novos agendamentos.
+  4. a chamada net.http_post fica isolada do INSERT de log para reduzir risco de rollback silencioso.
+  5. logs de erro agora indicam fase e webhook_type.
+
+Camada External Services
+- Supabase pg_net enfileira HTTP via net.http_post.
+- O webhook principal N8N respondeu 200 no teste externo.
+- A Edge Function send-webhook-event foi ajustada e redeployada.
+- Teste via Edge Function send-webhook-event retornou success=true e gravou system_logs com:
+  evento: agendamento_confirmado
+  whatsapp_instance_name: barbearia_dub_tulio_santos
+  telefone: 5511952160719@s.whatsapp.net
+
+Fluxo crítico Booking → Mensagem
+1. Cliente conclui agendamento no app.
+2. Frontend chama create-payment.
+3. create-payment valida disponibilidade e insere public.agendamentos como confirmed.
+4. Trigger trg_send_confirm_message_on_barber_confirm dispara.
+5. Trigger chama public.send_agendamento_whatsapp_webhook.
+6. Função resolve cliente, serviço, barbeiro, tenant, instância WhatsApp e webhook principal.
+7. Função enfileira HTTP para N8N via net.http_post.
+8. N8N recebe payload e executa envio WhatsApp.
+9. Banco registra log em agendamento_lembretes_log.
+
+Fluxo de erro esperado
+- Sem telefone: grava log com reason=missing_phone e não bloqueia agendamento.
+- Sem instância WhatsApp: grava log com reason=missing_instance e não bloqueia agendamento.
+- Sem webhook: grava log com reason=missing_webhook e não bloqueia agendamento.
+- Falha HTTP: grava log com phase=http_post_attempt_v4 e não bloqueia agendamento.
+- Falha no log depois do HTTP: mantém o request_id enfileirado e apenas gera WARNING.
+
+Validações feitas
+- Webhook principal testado diretamente: HTTP 200, workflow started.
+- Edge Function send-webhook-event testada: HTTP 200, success=true.
+- system_logs confirmou envio do evento agendamento_confirmado.
+- Função SQL atual conferida no banco e contém scheduled_for + prioridade generic_main.
+
+Observação importante
+- A ferramenta read_query do Supabase roda em transação read-only, então chamadas diretas a net.http_post por SELECT nela retornam erro read-only. Por isso o teste real do webhook principal foi feito via HTTP direto e via Edge Function.
