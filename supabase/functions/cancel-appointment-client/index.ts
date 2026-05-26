@@ -175,63 +175,10 @@ serve(async (req) => {
       agendamento_id: appointmentId,
     });
 
-    // 6. Fire-and-forget: dispatch webhook via send-webhook-event
-    try {
-      // Fetch enrichment data: service name, client name, tenant_id
-      const { data: servicoData } = await supabase
-        .from("servicos")
-        .select("nome")
-        .eq("id", appointment.servico_id)
-        .single();
-
-      const { data: profileData } = await supabase
-        .from("profiles")
-        .select("nome, telefone")
-        .eq("id", callerUserId)
-        .single();
-
-      const { data: barbeiroData } = await supabase
-        .from("barbeiros")
-        .select("tenant_id, apelido")
-        .eq("id", appointment.barbeiro_id)
-        .single();
-
-      const webhookPayload = {
-        evento: "agendamento_cancelado",
-        descricao: "Agendamento cancelado pelo cliente",
-        status: "cancelado",
-        agendamento_id: appointmentId,
-        data: appointment.data,
-        hora: appointment.hora,
-        servico: servicoData?.nome || "Serviço",
-        valor_total: appointment.preco,
-        preco: appointment.preco,
-        cliente_id: callerUserId,
-        cliente_nome: profileData?.nome || "Cliente",
-        cliente_telefone: profileData?.telefone || null,
-        barbeiro_id: appointment.barbeiro_id,
-        barbeiro_nome: barbeiroData?.apelido || null,
-        detalhes: {
-          cancelado_por: "cliente",
-          credito_gerado: refundedAmount,
-          tenant_id: barbeiroData?.tenant_id || null,
-        },
-      };
-
-      // Call the existing send-webhook-event function internally
-      const functionUrl = `${supabaseUrl}/functions/v1/send-webhook-event`;
-      fetch(functionUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${serviceKey}`,
-        },
-        body: JSON.stringify(webhookPayload),
-      }).catch((e) => console.error("Webhook dispatch failed (fire-and-forget):", e));
-    } catch (webhookErr) {
-      // Never block the cancellation response
-      console.error("Webhook enrichment error (non-blocking):", webhookErr);
-    }
+    // 6. Notificações automáticas via triggers de banco de dados
+    // O trigger trg_notify_appointment_cancelled_whatsapp enviará o WhatsApp automaticamente
+    // ao detectar a mudança de status para 'cancelled_by_user'.
+    // Removemos a chamada manual para evitar duplicidade de mensagens.
 
     return new Response(
       JSON.stringify({
