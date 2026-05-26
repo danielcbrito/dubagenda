@@ -20,9 +20,9 @@ export function PointsDetailModal({
   redemptions,
   pontosNecessarios = 5
 }: PointsDetailModalProps) {
-  const currentCycleProgress = points % pontosNecessarios;
-  const cutsUntilFree = pontosNecessarios - currentCycleProgress;
-  const progressPercent = (currentCycleProgress / pontosNecessarios) * 100;
+  const currentCycleProgress = points === pontosNecessarios ? pontosNecessarios : (points % pontosNecessarios);
+  const cutsUntilFree = Math.max(0, pontosNecessarios - currentCycleProgress);
+  const progressPercent = Math.min(100, (currentCycleProgress / pontosNecessarios) * 100);
 
   return (
     <AnimatePresence>
@@ -141,27 +141,27 @@ export function PointsDetailModal({
                   {[
                     {
                       num: "01",
-                      text: "Cada serviço concluído e pago soma 1 ponto automaticamente.",
+                      text: "Cada serviço de CORTE concluído e pago soma 1 ponto automaticamente.",
                     },
                     {
                       num: "02",
-                      text: `Ao completar ${pontosNecessarios} pontos, você recebe 1 corte grátis.`,
+                      text: `Ao completar exatamente ${pontosNecessarios} pontos, você recebe 1 corte grátis.`,
                     },
                     {
                       num: "03",
-                      text: "Na hora de agendar, selecione o resgate disponível para aplicar o corte grátis.",
+                      text: "O benefício do corte grátis é exclusivo para o serviço de CORTE simples.",
                     },
                     {
                       num: "04",
-                      text: "Pontos só são acumulados em barbearias que possuem o programa de fidelidade ativo.",
+                      text: "Na hora de agendar, selecione o resgate disponível para aplicar o corte grátis.",
                     },
                     {
                       num: "05",
-                      text: "Se a barbearia que você escolheu não participa do programa, nenhum ponto será contabilizado.",
+                      text: "Pontos só são acumulados em barbearias que possuem o programa de fidelidade ativo.",
                     },
                     {
                       num: "06",
-                      text: "Após cada resgate, o contador reinicia e você pode acumular novamente.",
+                      text: "Após o uso do corte grátis, seus pontos serão resetados para 0.",
                     },
                   ].map((rule, i) => (
                     <div key={i} className="flex items-start gap-3.5 px-4 py-3.5">

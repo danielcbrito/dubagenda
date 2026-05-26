@@ -33,10 +33,11 @@ function ProgressStep({ filled, index }: { filled: boolean; index: number }) {
 }
 
 export function LoyaltyCard({ points, redemptions, pontosNecessarios = 5, onViewDetails }: LoyaltyCardProps) {
-  const currentCycleProgress = points % pontosNecessarios;
-  const cutsUntilFree = pontosNecessarios - currentCycleProgress;
+  // Se os pontos forem exatamente o necessário, mostramos todos preenchidos
+  const currentCycleProgress = points === pontosNecessarios ? pontosNecessarios : (points % pontosNecessarios);
+  const cutsUntilFree = Math.max(0, pontosNecessarios - currentCycleProgress);
   const steps = Array.from({ length: pontosNecessarios }, (_, i) => i < currentCycleProgress);
-  const progressPercent = (currentCycleProgress / pontosNecessarios) * 100;
+  const progressPercent = Math.min(100, (currentCycleProgress / pontosNecessarios) * 100);
 
   return (
     <motion.div
