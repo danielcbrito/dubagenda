@@ -174,10 +174,10 @@ function gerarMensagemPersonalizada(evento: string, payload: WebhookEventPayload
 
   switch (evento) {
     case 'agendamento_criado':
-      return `Olá ${nome}! 🎉\n\nSeu agendamento foi confirmado!\n\n📅 ${data}\n⏰ ${hora}\n✂️ ${servico}\n💰 ${preco}\n\nAguardamos você! Qualquer dúvida, estamos à disposição.`;
+      return `📋 *Novo agendamento recebido!*\n\nOlá ${nome}! Recebemos seu pedido para o dia ${data} às ${hora}.\n\nAguarde a confirmação do barbeiro. 🔔`;
     
     case 'agendamento_confirmado':
-      return `Olá ${nome}! ✅\n\nSeu agendamento para ${data} às ${hora} foi confirmado pelo barbeiro.\n\nNos vemos em breve!`;
+      return `✅ *Agendamento Confirmado!*\n\nOlá ${nome}! Seu horário para o dia ${data} às ${hora} está confirmado.\n\nNos vemos em breve! 💈`;
     
     case 'agendamento_cancelado':
       return `❌ *Agendamento Cancelado*\n\nOlá ${nome}, seu agendamento para o dia ${data} às ${hora} foi cancelado.\n\nSe desejar, você pode agendar um novo horário pelo nosso app! 📱`;
