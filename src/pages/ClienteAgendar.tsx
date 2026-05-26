@@ -1270,6 +1270,28 @@ const ClienteAgendar = () => {
 
       const bookingTime = normalizeTimeValue(selectedTime);
       const mainService = selectedServices[0];
+      
+      // Construir observações detalhadas para o webhook/notificação
+      let finalObservacoes = selectedServices.length > 1 
+        ? `Serviços: ${serviceNames}` 
+        : "";
+        
+      if (useRedemption) {
+        finalObservacoes = finalObservacoes 
+          ? `${finalObservacoes} (Inclui Corte Grátis)`
+          : "Resgate de Corte Grátis";
+      }
+      
+      if (availableCredits > 0) {
+        const creditsApplied = Math.min(availableCredits, totalPrice);
+        if (creditsApplied > 0) {
+          const creditMsg = `Créditos aplicados: R$ ${creditsApplied.toFixed(2)}`;
+          finalObservacoes = finalObservacoes 
+            ? `${finalObservacoes} | ${creditMsg}`
+            : creditMsg;
+        }
+      }
+
       const bookingData = {
         servico_id: mainService.id,
         barbeiro_id: selectedBarberId || null,
@@ -1278,9 +1300,7 @@ const ClienteAgendar = () => {
         duracao: totalDuration,
         preco: finalPrice,
         serviceName: serviceNames,
-        observacoes: selectedServices.length > 1 
-          ? `Serviços: ${serviceNames}` 
-          : undefined,
+        observacoes: finalObservacoes || undefined,
         unidade_id: selectedUnit?.id || null,
       };
 
