@@ -1,26 +1,30 @@
-## Problemas Identificados
-1. **Confusão no Sistema de Pontos (Fidelidade):** O componente visual `LoyaltyCard` possui um valor padrão de 5 pontos, enquanto a regra do banco de dados é 8. Isso faz com que usuários com 5, 6 ou 7 pontos vejam a mensagem "Resgate disponível", causando a impressão de que ganharam cortes grátis indevidamente.
-2. **Erro na Confirmação de Agendamento:** Existem gatilhos (triggers) duplicados na tabela de agendamentos que podem estar causando conflitos ou erros de chave duplicada durante a inserção/atualização, resultando em falhas na confirmação para o cliente.
-3. **Webhook de Confirmação:** A função de webhook precisa ser validada para garantir que está enviando os dados para a URL correta (webhook principal vs confirmação) e que falhas externas não interrompam o processo de agendamento.
+## Diagnosis
+The user is receiving two WhatsApp messages when an appointment is cancelled. The first message contains a red X and the cancellation header, while the second message starts with "Olá, [Name]".
 
-## Plano de Ação
+Based on the investigation:
+1. The database trigger `trg_notify_appointment_cancelled_whatsapp` generates a message starting with `❌ *Agendamento Cancelado*\n\nOlá...`.
+2. The Edge Function `send-webhook-event` also generates a similar message using `\n\n`.
+3. Some WhatsApp integrations (like Evolution API or N8N workflows) automatically split messages into multiple parts when they encounter a double newline (`\n\n`).
+4. This results in the client receiving the header as one message and the greeting/body as a second message.
 
-### 1. Ajuste no Frontend (Fidelidade)
-- Alterar o valor padrão de `pontosNecessarios` no componente `LoyaltyCard.tsx` de 5 para 8.
-- Garantir que `Cliente.tsx` e `ClientePerfil.tsx` passem o valor correto da promoção ativa para o componente.
+## Proposed Changes
 
-### 2. Limpeza do Banco de Dados (Triggers)
-- Remover gatilhos duplicados na tabela `agendamentos` (`log_appointment_changes`, `set_cancelado_em_trigger`, `trg_enforce_barbeiro_id_required_agendamentos`) mantendo as versões mais recentes e padronizadas (`trg_agendamentos_...`).
+### 1. Database Migrations
+- Update `send_agendamento_whatsapp_webhook` to include the message at the root of the JSON payload (`'mensagem', p_msg`) to ensure Edge Functions can find it easily.
+- Update `trg_notify_appointment_cancelled_whatsapp`, `trg_notify_new_appointment_whatsapp`, and `trg_send_confirm_message_on_barber_confirm` to use a single newline (`E'\n'`) instead of a double newline (`E'\n\n'`) after the header.
 
-### 3. Melhoria e Teste do Webhook
-- Atualizar a função `send_agendamento_whatsapp_webhook` para registrar explicitamente qual URL de webhook foi utilizada em cada tentativa.
-- Unificar o envio para o "Webhook Principal" se o usuário assim desejar, ou garantir a prioridade correta.
+### 2. Edge Function Update
+- Modify `supabase/functions/send-webhook-event/index.ts`:
+  - Update `gerarMensagemPersonalizada` to use single newlines instead of double newlines for all message types to prevent splitting.
+  - Update the payload processing logic to check for a message in `payload.contatos[0].mensagem` if `payload.mensagem` is missing at the root.
+  - Prevent generating a new message if one is already provided in the payload (avoiding redundant work and potential duplicates).
 
-### 4. Auditoria de Pontos
-- Verificar se houve alguma alteração em massa nos pontos além da "capagem" em 8 (que foi solicitada anteriormente para evitar abusos).
-- Como não houve criação de novos resgates (`resgates`) nas últimas 24 horas, o sistema de pontos em si não "deu" cortes grátis, apenas a interface exibiu incorretamente.
+### 3. Verification
+- Verify that the triggers are correctly updated in the database.
+- Deploy the updated Edge Function.
+- Monitor `system_logs` to ensure messages are being processed as expected.
 
-## Detalhes Técnicos
-- Migração SQL para remover triggers obsoletos.
-- Edição do arquivo `src/components/client/LoyaltyCard.tsx`.
-- Edição do arquivo `src/pages/Cliente.tsx`.
+## Technical Details
+- Use `regexp_replace` or simply change `E'\n\n'` to `E'\n'` in SQL.
+- In TypeScript, change `\n\n` to `\n`.
+- Ensure `v_payload` in SQL includes `'mensagem', p_msg` at the root.
