@@ -172,24 +172,25 @@ function gerarMensagemPersonalizada(evento: string, payload: WebhookEventPayload
   const servico = payload.servico || 'seu serviço';
   const preco = payload.preco ? `R$ ${payload.preco.toFixed(2)}` : '';
 
+  // Single \n separators to avoid being split into multiple WhatsApp messages
   switch (evento) {
     case 'agendamento_criado':
-      return `📋 *Novo agendamento recebido!*\n\nOlá ${nome}! Recebemos seu pedido para o dia ${data} às ${hora}.\n\nAguarde a confirmação do barbeiro. 🔔`;
+      return `📋 *Novo agendamento recebido!*\nOlá ${nome}! Recebemos seu pedido para o dia ${data} às ${hora}.\nAguarde a confirmação do barbeiro. 🔔`;
     
     case 'agendamento_confirmado':
-      return `✅ *Agendamento Confirmado!*\n\nOlá ${nome}! Seu horário para o dia ${data} às ${hora} está confirmado.\n\nNos vemos em breve! 💈`;
+      return `✅ *Agendamento Confirmado!*\nOlá ${nome}! Seu horário para o dia ${data} às ${hora} está confirmado.\nNos vemos em breve! 💈`;
     
     case 'agendamento_cancelado':
-      return `❌ *Agendamento Cancelado*\n\nOlá ${nome}, seu agendamento para o dia ${data} às ${hora} foi cancelado.\n\nSe desejar, você pode agendar um novo horário pelo nosso app! 📱`;
+      return `❌ *Agendamento Cancelado*\nOlá ${nome}, seu agendamento para o dia ${data} às ${hora} foi cancelado.\nSe desejar, você pode agendar um novo horário pelo nosso app! 📱`;
     
     case 'remarcacao_solicitada':
-      return `Olá ${nome}!\n\nPrecisamos remarcar seu agendamento de ${data} às ${hora}.\n\nMotivo: ${payload.motivo || 'Imprevisto'}\n\nPor favor, acesse o app para escolher um novo horário.`;
+      return `Olá ${nome}!\nPrecisamos remarcar seu agendamento de ${data} às ${hora}.\nMotivo: ${payload.motivo || 'Imprevisto'}\nPor favor, acesse o app para escolher um novo horário.`;
     
     case 'lembrete_agendamento':
-      return `Olá ${nome}! 📢\n\nLembrete: Seu agendamento é amanhã!\n\n📅 ${data}\n⏰ ${hora}\n✂️ ${servico}\n\nTe esperamos!`;
+      return `Olá ${nome}! 📢\nLembrete: Seu agendamento é amanhã!\n📅 ${data} ⏰ ${hora} ✂️ ${servico}\nTe esperamos!`;
     
     case 'atendimento_finalizado':
-      return `Olá ${nome}! 💈\n\nObrigado pela visita! Esperamos que tenha gostado do ${servico}.\n\nVolte sempre! ⭐`;
+      return `Olá ${nome}! 💈 Obrigado pela visita! Esperamos que tenha gostado do ${servico}.\nVolte sempre! ⭐`;
     
     default:
       return `Olá ${nome}! Temos uma atualização sobre seu agendamento. Acesse o app para mais detalhes.`;
