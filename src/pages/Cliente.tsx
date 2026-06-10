@@ -2,7 +2,7 @@ import { useEffect, useState, useRef, useMemo, useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Calendar, Crown, Store, ChevronRight, Scissors, MapPin, Search, Clock } from "lucide-react";
+import { Calendar, Crown, Store, ChevronRight, Scissors, MapPin, Search, Clock, Star } from "lucide-react";
 import { toast } from "sonner";
 import { useDataError } from "@/hooks/useDataError";
 import { useBlockedBarbers } from "@/hooks/useBlockedBarbers";
@@ -424,6 +424,50 @@ const Cliente = () => {
 
   // Realtime connection status
   const [realtimeConnected, setRealtimeConnected] = useState(true);
+
+  // Realtime Subscriptions for assinaturas
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const channel = supabase
+      .channel(`public:assinaturas:user_id=eq.${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'assinaturas',
+          filter: `user_id=eq.${user.id}`,
+        },
+        (payload) => {
+          console.log('Assinatura change received!', payload);
+          queryClient.invalidateQueries({ queryKey: ['cliente', 'loyalty', user.id] });
+          queryClient.invalidateQueries({ queryKey: ['assinatura-status'] });
+          queryClient.invalidateQueries({ queryKey: ['client-active-subscription'] });
+          
+          if (payload.eventType === 'INSERT') {
+            toast.success("Plano ativado com sucesso!");
+          } else if (payload.eventType === 'UPDATE') {
+            const oldStatus = (payload.old as any)?.status;
+            const newStatus = (payload.new as any)?.status;
+            if (oldStatus !== 'active' && newStatus === 'active') {
+              toast.success("Sua assinatura agora está ativa!");
+            }
+          }
+        }
+      )
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          setRealtimeConnected(true);
+        } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
+          setRealtimeConnected(false);
+        }
+      });
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id, queryClient]);
   const channelStatusRef = useRef<Record<string, boolean>>({});
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const channelsCreatedAtRef = useRef<number>(Date.now());
@@ -996,71 +1040,78 @@ const Cliente = () => {
                 <div className="rounded-xl h-[140px] bg-muted/10 animate-pulse" />
               ) : (
                 <div className="space-y-4">
-                  {/* Banner de Assinatura Pendente (sempre que existir) */}
-                  {pendingSubscription && (
-                    <motion.div
-                      initial={{ opacity: 0, scale: 0.95 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      whileTap={{ scale: 0.98 }}
-                       onClick={() => setPendingDrawerOpen(true)}
-                       className="bg-primary/10 border border-primary/20 rounded-2xl p-4 cursor-pointer relative overflow-hidden group shadow-sm"
-                     >
-                       <div className="flex items-center gap-3 relative z-10">
-                        <div className="flex-shrink-0">
-                          <Clock className="w-6 h-6 text-primary" />
+                  <AnimatePresence mode="wait">
+                    {/* Banner de Assinatura Pendente (sempre que existir) */}
+                    {pendingSubscription && (
+                      <motion.div
+                        key="pending-sub"
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.95 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => setPendingDrawerOpen(true)}
+                        className="bg-primary/10 border border-primary/20 rounded-2xl p-4 cursor-pointer relative overflow-hidden group shadow-sm"
+                      >
+                        <div className="flex items-center gap-3 relative z-10">
+                          <div className="flex-shrink-0">
+                            <Clock className="w-6 h-6 text-primary" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[13px] font-bold text-foreground">
+                              Assinatura em andamento
+                            </p>
+                            <p className="text-[11px] text-muted-foreground line-clamp-1">
+                              {pendingSubscription.status === 'pending_renewal' 
+                                ? `Renovação pendente: ${(pendingSubscription as any).plano?.nome}`
+                                : `Toque para finalizar seu plano ${(pendingSubscription as any).plano?.nome}`
+                              }
+                            </p>
+                          </div>
+                          <ChevronRight className="w-4 h-4 text-muted-foreground/50 group-hover:translate-x-0.5 transition-transform" />
                         </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[13px] font-bold text-foreground">
-                          Assinatura em andamento
-                        </p>
-                        <p className="text-[11px] text-muted-foreground line-clamp-1">
-                          {pendingSubscription.status === 'pending_renewal' 
-                            ? `Renovação pendente: ${(pendingSubscription as any).plano?.nome}`
-                            : `Toque para finalizar seu plano ${(pendingSubscription as any).plano?.nome}`
-                          }
-                        </p>
-                      </div>
-                      <ChevronRight className="w-4 h-4 text-muted-foreground/50 group-hover:translate-x-0.5 transition-transform" />
-                    </div>
-                  </motion.div>
-                )}
+                      </motion.div>
+                    )}
 
-                  {/* Card do Plano Ativo */}
-                  {activeSubscription && (!pendingSubscription || pendingSubscription.status === 'pending_renewal') ? (
-                    <PlanTrackerCard
-                      planName={(activeSubscription as any).plano?.nome || "Meu Plano"}
-                      usedAppointments={planUsageCount}
-                      totalAppointments={(activeSubscription as any).plano?.limite_agendamentos_mes || 4}
-                      nextBillingDate={activeSubscription.next_billing_date || ""}
-                      paymentMethod={activeSubscription.payment_method}
-                      onViewDetails={() => setPlansSheetOpen(true)}
-                      assinaturaId={activeSubscription.id}
-                      planoPreco={(activeSubscription as any).plano?.preco_mensal}
-                      servicoNome={(activeSubscription as any).plano?.servico?.nome}
-                      diasRestantes={activeSubscription.ciclo_fim ? Math.max(0, Math.ceil((new Date(activeSubscription.ciclo_fim + "T00:00:00").getTime() - Date.now()) / 86400000)) : undefined}
-                      userId={user?.id}
-                      cashPending={activeSubscription.payment_method === 'cash' && activeSubscription.cash_payment_confirmed === false}
-                      onRenovado={() => {
-                        invalidateLoyalty();
-                        invalidateAppointments();
-                      }}
-                    />
-                  ) : !pendingSubscription && expiredSubscription ? (
-                    <PlanExpiredBanner
-                      planName={(expiredSubscription as any).plano?.nome || "Plano"}
-                      onRenew={() => setPlansSheetOpen(true)}
-                    />
-                  ) : null}
-
-                  {/* Card de Fidelidade */}
-                  {loyaltyEnabled && (
-                    <LoyaltyCard
-                      points={points}
-                      redemptions={redemptions}
-                      pontosNecessarios={pontosNecessarios}
-                      onViewDetails={() => setPointsModalOpen(true)}
-                    />
-                  )}
+                    {/* Card do Plano Ativo ou Banner de Expirado ou Card de Fidelidade */}
+                    {activeSubscription && (!pendingSubscription || pendingSubscription.status === 'pending_renewal') ? (
+                      <PlanTrackerCard
+                        key="active-sub"
+                        planName={(activeSubscription as any).plano?.nome || "Meu Plano"}
+                        usedAppointments={planUsageCount}
+                        totalAppointments={(activeSubscription as any).plano?.limite_agendamentos_mes || 4}
+                        nextBillingDate={activeSubscription.next_billing_date || ""}
+                        paymentMethod={activeSubscription.payment_method}
+                        onViewDetails={() => setPlansSheetOpen(true)}
+                        assinaturaId={activeSubscription.id}
+                        planoPreco={(activeSubscription as any).plano?.preco_mensal}
+                        servicoNome={(activeSubscription as any).plano?.servico?.nome}
+                        diasRestantes={activeSubscription.ciclo_fim ? Math.max(0, Math.ceil((new Date(activeSubscription.ciclo_fim + "T00:00:00").getTime() - Date.now()) / 86400000)) : undefined}
+                        userId={user?.id}
+                        cashPending={activeSubscription.payment_method === 'cash' && activeSubscription.cash_payment_confirmed === false}
+                        onRenovado={() => {
+                          queryClient.invalidateQueries({ queryKey: ['cliente', 'loyalty', user?.id] });
+                          queryClient.invalidateQueries({ queryKey: ['cliente', 'appointments', user?.id] });
+                        }}
+                      />
+                    ) : !pendingSubscription && expiredSubscription ? (
+                      <PlanExpiredBanner
+                        key="expired-sub"
+                        planName={(expiredSubscription as any).plano?.nome || "Plano"}
+                        onRenew={() => setPlansSheetOpen(true)}
+                      />
+                    ) : (
+                      /* Lógica de Exibição Única: LoyaltyCard apenas se não houver plano ativo/expirado */
+                      loyaltyEnabled && (
+                        <LoyaltyCard
+                          key="loyalty-card"
+                          points={points}
+                          redemptions={redemptions}
+                          pontosNecessarios={pontosNecessarios}
+                          onViewDetails={() => setPointsModalOpen(true)}
+                        />
+                      )
+                    )}
+                  </AnimatePresence>
                 </div>
               )}
             </div>

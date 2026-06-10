@@ -3724,7 +3724,7 @@ export type Database = {
       }
       plano_agendamentos_usos: {
         Row: {
-          agendamento_id: string
+          agendamento_id: string | null
           assinatura_id: string
           competencia: string
           created_at: string
@@ -3733,7 +3733,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
-          agendamento_id: string
+          agendamento_id?: string | null
           assinatura_id: string
           competencia: string
           created_at?: string
@@ -3742,7 +3742,7 @@ export type Database = {
           user_id: string
         }
         Update: {
-          agendamento_id?: string
+          agendamento_id?: string | null
           assinatura_id?: string
           competencia?: string
           created_at?: string
@@ -6589,7 +6589,7 @@ export type Database = {
         | "no_show"
         | "excluido"
       financial_entry_type: "income" | "expense"
-      payment_method: "card" | "pix" | "cash"
+      payment_method: "card" | "pix" | "cash" | "plano" | "fidelidade"
       payment_status: "pending" | "paid" | "failed" | "refunded" | "overdue"
       subscription_status:
         | "active"
@@ -6760,7 +6760,7 @@ export const Constants = {
         "excluido",
       ],
       financial_entry_type: ["income", "expense"],
-      payment_method: ["card", "pix", "cash"],
+      payment_method: ["card", "pix", "cash", "plano", "fidelidade"],
       payment_status: ["pending", "paid", "failed", "refunded", "overdue"],
       subscription_status: [
         "active",

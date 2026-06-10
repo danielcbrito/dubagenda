@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Calendar, Clock, Check, AlertCircle, X, Crown, Gift, Scissors, Store } from "lucide-react";
+import { Calendar, Clock, Check, AlertCircle, X, Crown, Gift, Scissors, Store, Star } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { motion } from "framer-motion";
@@ -188,9 +188,9 @@ export function AppointmentCardPremium({
             <span className="text-border">·</span>
 
             {isPlanAppointment ? (
-              <div className="flex items-center gap-1">
-                <Crown className="w-3 h-3 text-primary" />
-                <span className="text-[10px] font-bold text-primary">Plano</span>
+              <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-primary border border-primary/20 shadow-sm">
+                <Star className="w-3 h-3 text-primary-foreground fill-primary-foreground" />
+                <span className="text-[10px] font-bold text-primary-foreground uppercase tracking-wider">Plano</span>
               </div>
             ) : isFreeAppointment ? (
               <div className="flex items-center gap-1">
