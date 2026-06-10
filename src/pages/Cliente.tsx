@@ -2,7 +2,7 @@ import { useEffect, useState, useRef, useMemo, useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Calendar, Crown, Store, ChevronRight, Scissors, MapPin, Search, Clock } from "lucide-react";
+import { Calendar, Crown, Store, ChevronRight, Scissors, MapPin, Search, Clock, Star } from "lucide-react";
 import { toast } from "sonner";
 import { useDataError } from "@/hooks/useDataError";
 import { useBlockedBarbers } from "@/hooks/useBlockedBarbers";
@@ -424,6 +424,50 @@ const Cliente = () => {
 
   // Realtime connection status
   const [realtimeConnected, setRealtimeConnected] = useState(true);
+
+  // Realtime Subscriptions for assinaturas
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const channel = supabase
+      .channel(`public:assinaturas:user_id=eq.${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'assinaturas',
+          filter: `user_id=eq.${user.id}`,
+        },
+        (payload) => {
+          console.log('Assinatura change received!', payload);
+          queryClient.invalidateQueries({ queryKey: ['cliente', 'loyalty', user.id] });
+          queryClient.invalidateQueries({ queryKey: ['assinatura-status'] });
+          queryClient.invalidateQueries({ queryKey: ['client-active-subscription'] });
+          
+          if (payload.eventType === 'INSERT') {
+            toast.success("Plano ativado com sucesso!");
+          } else if (payload.eventType === 'UPDATE') {
+            const oldStatus = (payload.old as any)?.status;
+            const newStatus = (payload.new as any)?.status;
+            if (oldStatus !== 'active' && newStatus === 'active') {
+              toast.success("Sua assinatura agora está ativa!");
+            }
+          }
+        }
+      )
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          setRealtimeConnected(true);
+        } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
+          setRealtimeConnected(false);
+        }
+      });
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id, queryClient]);
   const channelStatusRef = useRef<Record<string, boolean>>({});
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const channelsCreatedAtRef = useRef<number>(Date.now());
