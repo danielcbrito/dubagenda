@@ -5922,6 +5922,8 @@ export type Database = {
           manutencao_inicio_programada: string | null
           manutencao_ips_permitidos: string[] | null
           manutencao_mensagem: string | null
+          refresh_barber_required_at: string | null
+          refresh_client_required_at: string | null
           ticket_ativo: boolean
           ticket_webhook_url: string | null
           updated_at: string | null
@@ -5953,6 +5955,8 @@ export type Database = {
           manutencao_inicio_programada?: string | null
           manutencao_ips_permitidos?: string[] | null
           manutencao_mensagem?: string | null
+          refresh_barber_required_at?: string | null
+          refresh_client_required_at?: string | null
           ticket_ativo?: boolean
           ticket_webhook_url?: string | null
           updated_at?: string | null
@@ -5984,6 +5988,8 @@ export type Database = {
           manutencao_inicio_programada?: string | null
           manutencao_ips_permitidos?: string[] | null
           manutencao_mensagem?: string | null
+          refresh_barber_required_at?: string | null
+          refresh_client_required_at?: string | null
           ticket_ativo?: boolean
           ticket_webhook_url?: string | null
           updated_at?: string | null
