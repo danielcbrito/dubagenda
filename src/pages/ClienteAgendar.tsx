@@ -637,6 +637,20 @@ const ClienteAgendar = () => {
   const loadAvailableRedemptionsOptimized = async (uid: string | null) => {
     if (!uid) return;
     try {
+      // Se o usuário tem um plano ativo, não carregar resgates para evitar confusão
+      // Buscamos a assinatura de forma rápida
+      const { data: subscription } = await supabase
+        .from("assinaturas")
+        .select("id")
+        .eq("user_id", uid)
+        .eq("status", "active")
+        .maybeSingle();
+
+      if (subscription) {
+        setAvailableRedemptions([]);
+        return;
+      }
+
       // Parallel: check active resgate appointments + available redemptions
       const [activeRes, redemptionsRes] = await Promise.all([
         supabase
