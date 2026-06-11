@@ -745,6 +745,21 @@ const ClienteAgendar = () => {
       const rpcUsedCount = usageRes.error ? 0 : Number(usageRes.data || 0);
       const usedCount = Math.max(Number((subscription as any).usos_ciclo_atual || 0), rpcUsedCount);
 
+      // Extrair serviços da tabela associativa
+      let servicosDoPlano: Service[] = (planoData?.plano_servicos || [])
+        .map((v: any) => v.servicos)
+        .filter(Boolean);
+
+      // Fallback para servico_id legado se a tabela associativa estiver vazia
+      if (servicosDoPlano.length === 0 && planoData?.servico_id) {
+        const { data: legacyService } = await supabase
+          .from("servicos")
+          .select("id, nome, descricao, duracao_minutos, preco")
+          .eq("id", planoData.servico_id)
+          .maybeSingle();
+        if (legacyService) servicosDoPlano = [legacyService as Service];
+      }
+
       const activeSubscriptionData: ActiveSubscription = {
         id: subscription.id,
         plano_id: subscription.plano_id,
@@ -754,10 +769,12 @@ const ClienteAgendar = () => {
         next_billing_date: subscription.next_billing_date,
         status: subscription.status,
         servico_id: planoData.servico_id || null,
-        servico: servicoRes.data as Service | null,
+        servico: servicosDoPlano[0] || null,
+        servicos: servicosDoPlano,
         barbeiro_id: subscription.barbeiro_id || null,
         barbeiro: barbeiroRes.data as Barber | null,
       };
+
 
       setActiveSubscription(activeSubscriptionData);
       return activeSubscriptionData;
