@@ -680,12 +680,11 @@ const ClienteAgendar = () => {
           barbeiro_id,
           barbeiro:barbeiros(id, apelido, foto_url, tenant_id),
           plano:planos(
-            nome,
-            limite_agendamentos_mes,
-            servico_id,
-            servico:servicos!planos_servico_id_fkey(id, nome, descricao, duracao_minutos, preco)
+            *,
+            plano_servicos(servico_id, servicos:servicos(*))
           )
         `)
+
         .eq("user_id", uid)
         .eq("status", "active")
         .order("created_at", { ascending: false })
