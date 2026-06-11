@@ -2142,7 +2142,7 @@ const ClienteAgendar = () => {
     return Math.max(0, afterRedemption - getCouponDiscount());
   };
 
-  const canUseRedemption = availableRedemptions.length > 0 && !!getCorteService();
+  const canUseRedemption = availableRedemptions.length > 0 && !!getCorteService() && !isPlanFlow;
   // Pré-seleciona o corte grátis quando disponível, mas o cliente PODE optar por não usar.
   // Se ele seguir sem aplicar, será avisado e perderá a promoção (resgate consumido).
   const prevCanUseRedemptionRef = useRef(false);
