@@ -83,7 +83,7 @@ export function AppointmentCardPremium({
         };
       case "cancelled_by_admin":
         return { 
-          label: "Cancelado pela barbearia", 
+          label: "Cancelado", 
           color: "hsl(var(--destructive))",
           bgColor: "hsl(var(--destructive) / 0.06)",
           borderColor: "hsl(var(--destructive) / 0.12)",
@@ -234,16 +234,6 @@ export function AppointmentCardPremium({
             </div>
           </div>
 
-          {isCancelledByAdmin && (
-            <div className="mt-2.5 rounded-lg border border-destructive/10 bg-destructive/5 px-3 py-2 transition-opacity duration-300">
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-destructive/80">
-                A barbearia cancelou este horário
-              </p>
-              <p className="mt-0.5 text-[10px] text-muted-foreground/70 leading-snug">
-                Ele fica visível aqui por 48h para acompanhamento.
-              </p>
-            </div>
-          )}
         </div>
 
         {/* Action sections */}
