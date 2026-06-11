@@ -80,7 +80,9 @@ interface ActiveSubscription {
   servico: Service | null;
   barbeiro_id: string | null;
   barbeiro: Barber | null;
+  servicos: Service[]; // Adicionado: lista de serviços permitidos pelo plano
 }
+
 
 interface AppointmentValidationPayload {
   valid?: boolean;
@@ -186,10 +188,12 @@ const ClienteAgendar = () => {
   const isPlanEligible =
     !isRescheduling &&
     isPlanFlow &&
-    !!activeSubscription?.servico_id &&
+    activeSubscription &&
     (selectedServices?.length ?? 0) === 1 &&
-    selectedServices?.[0]?.id === activeSubscription.servico_id &&
+    // O serviço selecionado deve estar na lista de serviços do plano
+    activeSubscription.servicos.some(s => s.id === selectedServices?.[0]?.id) &&
     activeSubscription.agendamentos_usados < activeSubscription.limite_agendamentos_mes;
+
 
   // Barbeiros bloqueados para este cliente
   const { blockedIds: blockedBarberIds } = useBlockedBarbers();
@@ -408,18 +412,7 @@ const ClienteAgendar = () => {
               void loadBarberCustomDurations(subscription.barbeiro.id);
             }
 
-            let includedService: Service | null = subscription.servico;
-
-            if (!includedService && subscription.servico_id) {
-              const { data: fallbackServico } = await supabase
-                .from("servicos")
-                .select("id, nome, descricao, duracao_minutos, preco")
-                .eq("id", subscription.servico_id)
-                .maybeSingle();
-              includedService = fallbackServico || null;
-            }
-
-            if (!includedService) {
+            if (subscription.servicos.length === 0) {
               setSubscriptionBlocked(true);
               toast.error("Seu plano não possui um serviço válido vinculado. Fale com o suporte da barbearia.");
               setIsInitializing(false);
@@ -427,20 +420,23 @@ const ClienteAgendar = () => {
             }
 
             setIsPlanFlow(true);
-            setSelectedServices([includedService]);
             
-            if (subscription.barbeiro) {
-              // ✅ Plan user with barber → DIRECTLY to date (step 3)
-              // Skip loading barbers list, services list, credits, redemptions
+            // Se tiver APENAS UM serviço, pré-seleciona e vai para o passo da data
+            if (subscription.servicos.length === 1 && subscription.barbeiro) {
+              setSelectedServices([subscription.servicos[0]]);
               setStep(3);
+            } else if (subscription.servicos.length > 1 && subscription.barbeiro) {
+              // Se tiver múltiplos serviços, precisa escolher um (Step 2)
+              setStep(2);
             } else {
-              // Plan without barber → need barber selection
+              // Sem barbeiro, precisa escolher barbeiro (Step 1)
               await loadBarbers(tenantId, null);
               setStep(1);
             }
             setIsInitializing(false);
             return;
           }
+
 
           setSubscriptionLimitReached(true);
           setIsInitializing(false);

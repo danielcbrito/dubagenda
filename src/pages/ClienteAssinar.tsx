@@ -304,7 +304,7 @@ const ClienteAssinar = () => {
 
     const syncTenantData = async () => {
       try {
-        let plansQuery = supabase.from('planos').select('*').order('preco_mensal');
+        let plansQuery = supabase.from('planos').select('*').order('ativo', { ascending: false }).order('preco_mensal');
         let barbersQuery = supabase.from('barbeiros').select('id, apelido, foto_url, tenant_id').eq('ativo', true).order('apelido');
         if (tenantId) {
           plansQuery = plansQuery.eq('tenant_id', tenantId);
