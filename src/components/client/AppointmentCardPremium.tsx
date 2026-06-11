@@ -81,10 +81,17 @@ export function AppointmentCardPremium({
           borderColor: "rgba(22, 163, 74, 0.25)",
           icon: Check,
         };
-      case "cancelled_by_user":
       case "cancelled_by_admin":
         return { 
-          label: "Cancelado", 
+          label: "Cancelado pela barbearia", 
+          color: "hsl(var(--destructive))",
+          bgColor: "hsl(var(--destructive) / 0.06)",
+          borderColor: "hsl(var(--destructive) / 0.12)",
+          icon: X,
+        };
+      case "cancelled_by_user":
+        return { 
+          label: "Cancelado por você", 
           color: "hsl(var(--destructive))",
           bgColor: "hsl(var(--destructive) / 0.06)",
           borderColor: "hsl(var(--destructive) / 0.12)",
@@ -112,6 +119,7 @@ export function AppointmentCardPremium({
   const statusConfig = getStatusConfig(appointment.status, appointment.barbeiro_confirmou);
   const StatusIcon = statusConfig.icon;
   const isCancelled = appointment.status === "cancelled_by_user" || appointment.status === "cancelled_by_admin";
+  const isCancelledByAdmin = appointment.status === "cancelled_by_admin";
   const isAwaitingBarberApproval = appointment.status === "pending" && !appointment.barbeiro_confirmou;
   const rescheduleRequested = appointment.remarcacao_solicitada === true;
   const canCancel = (appointment.status === "pending" || appointment.status === "confirmed") && !isAwaitingBarberApproval && !rescheduleRequested;
@@ -214,7 +222,7 @@ export function AppointmentCardPremium({
 
             {/* Status badge — bottom right */}
             <div
-              className="flex items-center gap-1 px-2 py-[3px] rounded-md text-[9px] font-bold uppercase tracking-wider flex-shrink-0"
+              className="flex items-center gap-1 px-2 py-[3px] rounded-md text-[8px] font-bold uppercase tracking-wider flex-shrink-0 max-w-[138px] justify-center text-center leading-tight"
               style={{
                 background: statusConfig.bgColor,
                 color: statusConfig.color,
@@ -225,6 +233,17 @@ export function AppointmentCardPremium({
               {statusConfig.label}
             </div>
           </div>
+
+          {isCancelledByAdmin && (
+            <div className="mt-2.5 rounded-lg border border-destructive/10 bg-destructive/5 px-3 py-2 transition-opacity duration-300">
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-destructive/80">
+                A barbearia cancelou este horário
+              </p>
+              <p className="mt-0.5 text-[10px] text-muted-foreground/70 leading-snug">
+                Ele fica visível aqui por 48h para acompanhamento.
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Action sections */}
