@@ -465,8 +465,7 @@ const ClienteAgendar = () => {
       const [barbersList] = await Promise.all([
         loadBarbers(tenantId, effectiveUnitId),
         loadUserCreditsOptimized(uid),
-        // Não carregar resgates se o usuário for assinante (evita confusão "corte grátis" vs plano)
-        !subscription ? loadAvailableRedemptionsOptimized(uid) : Promise.resolve(),
+        loadAvailableRedemptionsOptimized(uid),
       ]);
 
       // Auto-select barber from query param
@@ -637,20 +636,6 @@ const ClienteAgendar = () => {
   const loadAvailableRedemptionsOptimized = async (uid: string | null) => {
     if (!uid) return;
     try {
-      // Se o usuário tem um plano ativo, não carregar resgates para evitar confusão
-      // Buscamos a assinatura de forma rápida
-      const { data: subscription } = await supabase
-        .from("assinaturas")
-        .select("id")
-        .eq("user_id", uid)
-        .eq("status", "active")
-        .maybeSingle();
-
-      if (subscription) {
-        setAvailableRedemptions([]);
-        return;
-      }
-
       // Parallel: check active resgate appointments + available redemptions
       const [activeRes, redemptionsRes] = await Promise.all([
         supabase
@@ -2142,7 +2127,7 @@ const ClienteAgendar = () => {
     return Math.max(0, afterRedemption - getCouponDiscount());
   };
 
-  const canUseRedemption = availableRedemptions.length > 0 && !!getCorteService() && !isPlanFlow;
+  const canUseRedemption = availableRedemptions.length > 0 && !!getCorteService();
   // Pré-seleciona o corte grátis quando disponível, mas o cliente PODE optar por não usar.
   // Se ele seguir sem aplicar, será avisado e perderá a promoção (resgate consumido).
   const prevCanUseRedemptionRef = useRef(false);
