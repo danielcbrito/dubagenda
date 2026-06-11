@@ -113,8 +113,8 @@ const fetchAppointmentsData = async (userId: string) => {
   const [appointmentsResult, paymentsResult, pendingBookingsResult, cancellationsResult] = await Promise.all([
     supabase.from("agendamentos").select(appointmentSelect)
       .eq("user_id", userId)
-      .eq("visivel_para_usuario", true)
       .in("status", ["pending", "confirmed", "completed", "no_show"])
+      .or(`visivel_para_usuario.eq.true,payment_method.eq.plano`)
       .order("data", { ascending: false })
       .limit(20),
     supabase.from("pagamentos").select("id, metodo, status, agendamento_id").eq("user_id", userId).order("created_at", { ascending: false }).limit(50),
