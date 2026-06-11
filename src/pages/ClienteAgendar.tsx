@@ -80,7 +80,9 @@ interface ActiveSubscription {
   servico: Service | null;
   barbeiro_id: string | null;
   barbeiro: Barber | null;
+  servicos: Service[]; // Adicionado: lista de serviços permitidos pelo plano
 }
+
 
 interface AppointmentValidationPayload {
   valid?: boolean;
@@ -186,10 +188,12 @@ const ClienteAgendar = () => {
   const isPlanEligible =
     !isRescheduling &&
     isPlanFlow &&
-    !!activeSubscription?.servico_id &&
+    activeSubscription &&
     (selectedServices?.length ?? 0) === 1 &&
-    selectedServices?.[0]?.id === activeSubscription.servico_id &&
+    // O serviço selecionado deve estar na lista de serviços do plano
+    activeSubscription.servicos.some(s => s.id === selectedServices?.[0]?.id) &&
     activeSubscription.agendamentos_usados < activeSubscription.limite_agendamentos_mes;
+
 
   // Barbeiros bloqueados para este cliente
   const { blockedIds: blockedBarberIds } = useBlockedBarbers();
@@ -408,18 +412,7 @@ const ClienteAgendar = () => {
               void loadBarberCustomDurations(subscription.barbeiro.id);
             }
 
-            let includedService: Service | null = subscription.servico;
-
-            if (!includedService && subscription.servico_id) {
-              const { data: fallbackServico } = await supabase
-                .from("servicos")
-                .select("id, nome, descricao, duracao_minutos, preco")
-                .eq("id", subscription.servico_id)
-                .maybeSingle();
-              includedService = fallbackServico || null;
-            }
-
-            if (!includedService) {
+            if (subscription.servicos.length === 0) {
               setSubscriptionBlocked(true);
               toast.error("Seu plano não possui um serviço válido vinculado. Fale com o suporte da barbearia.");
               setIsInitializing(false);
@@ -427,20 +420,23 @@ const ClienteAgendar = () => {
             }
 
             setIsPlanFlow(true);
-            setSelectedServices([includedService]);
             
-            if (subscription.barbeiro) {
-              // ✅ Plan user with barber → DIRECTLY to date (step 3)
-              // Skip loading barbers list, services list, credits, redemptions
+            // Se tiver APENAS UM serviço, pré-seleciona e vai para o passo da data
+            if (subscription.servicos.length === 1 && subscription.barbeiro) {
+              setSelectedServices([subscription.servicos[0]]);
               setStep(3);
+            } else if (subscription.servicos.length > 1 && subscription.barbeiro) {
+              // Se tiver múltiplos serviços, precisa escolher um (Step 2)
+              setStep(2);
             } else {
-              // Plan without barber → need barber selection
+              // Sem barbeiro, precisa escolher barbeiro (Step 1)
               await loadBarbers(tenantId, null);
               setStep(1);
             }
             setIsInitializing(false);
             return;
           }
+
 
           setSubscriptionLimitReached(true);
           setIsInitializing(false);
@@ -609,19 +605,11 @@ const ClienteAgendar = () => {
     let finalServices = allServices || [];
 
     // Se cliente tem plano ativo e está em fluxo de plano, restringir aos serviços vinculados
-    if (isPlanFlow && activeSubscription?.plano_id) {
-      const { data: vinculos } = await supabase
-        .from("plano_servicos" as any)
-        .select("servico_id")
-        .eq("plano_id", activeSubscription.plano_id);
-      const vinculadosIds = (vinculos || []).map((v: any) => v.servico_id);
-      if (vinculadosIds.length > 0) {
-        finalServices = finalServices.filter((s) => vinculadosIds.includes(s.id));
-      } else if (activeSubscription.servico_id) {
-        // Fallback retrocompatível: usa servico_id legado do plano
-        finalServices = finalServices.filter((s) => s.id === activeSubscription.servico_id);
-      }
+    if (isPlanFlow && activeSubscription?.servicos && activeSubscription.servicos.length > 0) {
+      const permittedIds = activeSubscription.servicos.map(s => s.id);
+      finalServices = finalServices.filter((s) => permittedIds.includes(s.id));
     }
+
 
     setServices(finalServices);
   };
@@ -692,12 +680,11 @@ const ClienteAgendar = () => {
           barbeiro_id,
           barbeiro:barbeiros(id, apelido, foto_url, tenant_id),
           plano:planos(
-            nome,
-            limite_agendamentos_mes,
-            servico_id,
-            servico:servicos!planos_servico_id_fkey(id, nome, descricao, duracao_minutos, preco)
+            *,
+            plano_servicos(servico_id, servicos:servicos(*))
           )
         `)
+
         .eq("user_id", uid)
         .eq("status", "active")
         .order("created_at", { ascending: false })
@@ -757,6 +744,21 @@ const ClienteAgendar = () => {
       const rpcUsedCount = usageRes.error ? 0 : Number(usageRes.data || 0);
       const usedCount = Math.max(Number((subscription as any).usos_ciclo_atual || 0), rpcUsedCount);
 
+      // Extrair serviços da tabela associativa
+      let servicosDoPlano: Service[] = (planoData?.plano_servicos || [])
+        .map((v: any) => v.servicos)
+        .filter(Boolean);
+
+      // Fallback para servico_id legado se a tabela associativa estiver vazia
+      if (servicosDoPlano.length === 0 && planoData?.servico_id) {
+        const { data: legacyService } = await supabase
+          .from("servicos")
+          .select("id, nome, descricao, duracao_minutos, preco")
+          .eq("id", planoData.servico_id)
+          .maybeSingle();
+        if (legacyService) servicosDoPlano = [legacyService as Service];
+      }
+
       const activeSubscriptionData: ActiveSubscription = {
         id: subscription.id,
         plano_id: subscription.plano_id,
@@ -766,10 +768,12 @@ const ClienteAgendar = () => {
         next_billing_date: subscription.next_billing_date,
         status: subscription.status,
         servico_id: planoData.servico_id || null,
-        servico: servicoRes.data as Service | null,
+        servico: servicosDoPlano[0] || null,
+        servicos: servicosDoPlano,
         barbeiro_id: subscription.barbeiro_id || null,
         barbeiro: barbeiroRes.data as Barber | null,
       };
+
 
       setActiveSubscription(activeSubscriptionData);
       return activeSubscriptionData;

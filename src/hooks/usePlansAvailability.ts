@@ -31,6 +31,7 @@ export interface PlanWithAvailability {
 // Status de assinatura que ocupam vaga (cancelled libera a vaga)
 const STATUS_OCUPAM_VAGA = ["active", "trialing", "past_due"];
 
+
 /**
  * Enriquece uma lista de planos com vagas restantes e serviços vinculados.
  * Pode ser usada fora do hook (ex: no carregamento manual de ClienteAssinar).
@@ -110,7 +111,7 @@ export function usePlansAvailability(tenantId: string | null | undefined) {
     setLoading(true);
     try {
       // 1) Planos do tenant (inclui inativos para exibir como "Indisponível")
-      let q = supabase.from("planos").select("*").order("preco_mensal");
+      let q = supabase.from("planos").select("*").order("ativo", { ascending: false }).order("preco_mensal");
       if (tenantId) q = q.eq("tenant_id", tenantId);
       else q = q.is("tenant_id", null);
       const { data: planosData } = await q;
