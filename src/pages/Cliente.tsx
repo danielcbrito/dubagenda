@@ -101,15 +101,17 @@ const fetchProfileData = async (userId: string) => {
 
 // ─── Appointments query function (extracted for reuse) ───
 const fetchAppointmentsData = async (userId: string) => {
+  const appointmentSelect = `
+    id, data, hora, status, preco, observacoes,
+    cliente_confirmou, barbeiro_confirmou,
+    remarcacao_solicitada, motivo_remarcacao, payment_method, tipo_agendamento, is_free,
+    servico:servicos(nome),
+    barbeiro:barbeiros(apelido, tenant:tenants(nome)),
+    pagamentos(metodo, status)
+  `;
+
   const [appointmentsResult, paymentsResult, pendingBookingsResult, cancellationsResult] = await Promise.all([
-    supabase.from("agendamentos").select(`
-      id, data, hora, status, preco, observacoes,
-      cliente_confirmou, barbeiro_confirmou,
-      remarcacao_solicitada, motivo_remarcacao, payment_method, tipo_agendamento, is_free,
-      servico:servicos(nome),
-      barbeiro:barbeiros(apelido, tenant:tenants(nome)),
-      pagamentos(metodo, status)
-    `)
+    supabase.from("agendamentos").select(appointmentSelect)
       .eq("user_id", userId)
       .eq("visivel_para_usuario", true)
       .in("status", ["pending", "confirmed", "completed"])
@@ -121,9 +123,10 @@ const fetchAppointmentsData = async (userId: string) => {
       pix_qr_code, pix_payload, asaas_payment_id, expires_at, barbeiro_id,
       servico:servicos(nome)
     `).eq("user_id", userId).gt("expires_at", new Date().toISOString()).order("created_at", { ascending: false }),
-    supabase.from("agendamentos").select("id, data, hora, status, observacoes, cancelado_em, servico:servicos(nome)")
+    supabase.from("agendamentos").select(appointmentSelect)
       .eq("user_id", userId)
       .eq("status", "cancelled_by_admin")
+      .eq("visivel_para_usuario", true)
       .gte("cancelado_em", new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString())
       .limit(5),
   ]);
@@ -131,9 +134,18 @@ const fetchAppointmentsData = async (userId: string) => {
   const recentlyCancelled = (cancellationsResult.data || []).filter((apt: any) =>
     apt.observacoes?.includes("Cancelado em massa:")
   );
+  const recentCancelledAppointments = (cancellationsResult.data || []) as Appointment[];
+  const activeAppointments = (appointmentsResult.data || []) as Appointment[];
+  const appointmentMap = new Map<string, Appointment>();
+
+  [...recentCancelledAppointments, ...activeAppointments].forEach((apt) => {
+    appointmentMap.set(apt.id, apt);
+  });
 
   return {
-    appointments: (appointmentsResult.data || []) as Appointment[],
+    appointments: Array.from(appointmentMap.values()).sort((a, b) =>
+      `${b.data}T${b.hora}`.localeCompare(`${a.data}T${a.hora}`)
+    ),
     payments: paymentsResult.data || [],
     pendingBookings: pendingBookingsResult.data || [],
     recentCancellations: recentlyCancelled as Appointment[],
