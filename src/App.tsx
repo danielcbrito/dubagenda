@@ -8,7 +8,10 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, useNavigate, useLocation } from "react-router-dom";
 import { useMaintenanceMode } from "@/hooks/useMaintenanceMode";
 import { useStoreMaintenanceMode } from "@/hooks/useStoreMaintenanceMode";
+import { useRefreshRequired } from "@/hooks/useRefreshRequired";
 import { MaintenanceScreen } from "@/components/MaintenanceScreen";
+import { RefreshRequiredScreen } from "@/components/RefreshRequiredScreen";
+
 
 import { supabase } from "@/integrations/supabase/client";
 import { lazy, Suspense } from "react";
@@ -339,11 +342,15 @@ function ScrollLockGuard() {
 }
 
 function AppRoutes() {
+  const { showRefreshOverlay, handleRefresh } = useRefreshRequired();
+
   return (
     <AuthSessionGuard>
+      {showRefreshOverlay && <RefreshRequiredScreen onRefresh={handleRefresh} />}
       <AuthRedirectGuard>
         <ScrollLockGuard />
         <MaintenanceWrapper>
+
           <Suspense fallback={<PageLoader />}>
             <Routes>
               <Route path="/" element={<Index />} />
