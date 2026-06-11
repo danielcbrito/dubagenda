@@ -465,7 +465,8 @@ const ClienteAgendar = () => {
       const [barbersList] = await Promise.all([
         loadBarbers(tenantId, effectiveUnitId),
         loadUserCreditsOptimized(uid),
-        loadAvailableRedemptionsOptimized(uid),
+        // Não carregar resgates se o usuário for assinante (evita confusão "corte grátis" vs plano)
+        !subscription ? loadAvailableRedemptionsOptimized(uid) : Promise.resolve(),
       ]);
 
       // Auto-select barber from query param
