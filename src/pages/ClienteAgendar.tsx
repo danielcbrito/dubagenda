@@ -605,19 +605,11 @@ const ClienteAgendar = () => {
     let finalServices = allServices || [];
 
     // Se cliente tem plano ativo e está em fluxo de plano, restringir aos serviços vinculados
-    if (isPlanFlow && activeSubscription?.plano_id) {
-      const { data: vinculos } = await supabase
-        .from("plano_servicos" as any)
-        .select("servico_id")
-        .eq("plano_id", activeSubscription.plano_id);
-      const vinculadosIds = (vinculos || []).map((v: any) => v.servico_id);
-      if (vinculadosIds.length > 0) {
-        finalServices = finalServices.filter((s) => vinculadosIds.includes(s.id));
-      } else if (activeSubscription.servico_id) {
-        // Fallback retrocompatível: usa servico_id legado do plano
-        finalServices = finalServices.filter((s) => s.id === activeSubscription.servico_id);
-      }
+    if (isPlanFlow && activeSubscription?.servicos && activeSubscription.servicos.length > 0) {
+      const permittedIds = activeSubscription.servicos.map(s => s.id);
+      finalServices = finalServices.filter((s) => permittedIds.includes(s.id));
     }
+
 
     setServices(finalServices);
   };
