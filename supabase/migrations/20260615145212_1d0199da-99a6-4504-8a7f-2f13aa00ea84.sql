@@ -1,0 +1,2 @@
+ALTER FUNCTION public.consume_plan_use_on_appointment_insert() SECURITY DEFINER SET search_path = public;
+ALTER FUNCTION public.auto_convert_encaixe_to_plano() SECURITY DEFINER SET search_path = public;
