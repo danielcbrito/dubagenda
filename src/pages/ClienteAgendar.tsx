@@ -2490,6 +2490,7 @@ const ClienteAgendar = () => {
                 selectedDate={selectedDate}
                 onSelectDate={(date) => { setSelectedDate(date); syncBookingData(); }}
                 closedDates={closedDates}
+                closedWeekdays={closedWeekdays}
                 onMonthChange={loadClosedDates}
                 loading={closedDatesLoading}
               />
