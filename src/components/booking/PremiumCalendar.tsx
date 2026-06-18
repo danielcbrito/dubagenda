@@ -10,12 +10,13 @@ interface PremiumCalendarProps {
   onSelectDate: (date: Date) => void;
   disabledDates?: Date[];
   closedDates?: Date[];
+  closedWeekdays?: number[];
   minDate?: Date;
   onMonthChange?: (monthStart: Date, monthEnd: Date) => void;
   loading?: boolean;
 }
 
-export function PremiumCalendar({ selectedDate, onSelectDate, disabledDates = [], closedDates = [], minDate, onMonthChange, loading = false }: PremiumCalendarProps) {
+export function PremiumCalendar({ selectedDate, onSelectDate, disabledDates = [], closedDates = [], closedWeekdays = [], minDate, onMonthChange, loading = false }: PremiumCalendarProps) {
   const [currentMonth, setCurrentMonth] = useState(startOfMonth(selectedDate || new Date()));
   const [direction, setDirection] = useState(0);
 
@@ -42,9 +43,10 @@ export function PremiumCalendar({ selectedDate, onSelectDate, disabledDates = []
     const today = startOfDay(new Date());
     if (isBefore(date, today)) return true;
     if (minDate && isBefore(date, startOfDay(minDate))) return true;
+    if (closedWeekdays.includes(date.getDay())) return true;
     if (isDateClosed(date)) return true;
     return disabledDates.some(d => isSameDay(d, date));
-  }, [currentMonth, disabledDates, closedDates, minDate]);
+  }, [currentMonth, disabledDates, closedDates, closedWeekdays, minDate, isDateClosed]);
 
   const handlePrevMonth = () => {
     setDirection(-1);

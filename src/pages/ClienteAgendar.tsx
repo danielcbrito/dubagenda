@@ -151,6 +151,7 @@ const ClienteAgendar = () => {
   
   // Dias fechados no calendário (barbearia/barbeiro não trabalha)
   const [closedDates, setClosedDates] = useState<Date[]>([]);
+  const [closedWeekdays, setClosedWeekdays] = useState<number[]>([]);
   const [closedDatesLoading, setClosedDatesLoading] = useState(false);
   
   // Estados para cupom de desconto (sistema novo: tabela `cupons` + RPCs)
@@ -864,28 +865,31 @@ const ClienteAgendar = () => {
       const endStr = format(monthEnd, 'yyyy-MM-dd');
       const allDays = eachDayOfInterval({ start: monthStart, end: monthEnd });
 
-      // Parallelizar TODAS as queries de configuração + exceções
-      const [configResult, globalExcResult, barberExcResult] = await Promise.all([
+      // Parallelizar TODAS as queries: SEMPRE buscar config global + (config barbeiro) + exceções.
+      // Config do barbeiro tem prioridade dia-a-dia, mas dias não configurados pelo barbeiro
+      // usam o global (assim domingo fechado no global é respeitado mesmo sem linha do barbeiro).
+      const [globalConfigResult, barberConfigResult, globalExcResult, barberExcResult] = await Promise.all([
+        supabase.from('configuracoes_horario').select('dia_semana, aberto'),
         barbeiroId
           ? supabase.from('configuracoes_horario_barbeiro').select('dia_semana, aberto').eq('barbeiro_id', barbeiroId)
-          : supabase.from('configuracoes_horario').select('dia_semana, aberto'),
+          : Promise.resolve({ data: null as { dia_semana: number; aberto: boolean }[] | null }),
         supabase.from('horarios_excepcionais').select('data, aberto').gte('data', startStr).lte('data', endStr),
         barbeiroId
           ? supabase.from('horarios_excepcionais_barbeiro').select('data, aberto').eq('barbeiro_id', barbeiroId).gte('data', startStr).lte('data', endStr)
-          : Promise.resolve({ data: null }),
+          : Promise.resolve({ data: null as { data: string; aberto: boolean }[] | null }),
       ]);
 
-      let weeklyClosedDays: number[] = [];
-      
-      if (barbeiroId && configResult.data && configResult.data.length > 0) {
-        weeklyClosedDays = configResult.data.filter(c => c.aberto === false).map(c => c.dia_semana);
-      } else if (!barbeiroId && configResult.data) {
-        weeklyClosedDays = configResult.data.filter(c => !c.aberto).map(c => c.dia_semana);
-      } else if (barbeiroId) {
-        // Fallback: barber has no config, fetch global
-        const { data: globalConfig } = await supabase.from('configuracoes_horario').select('dia_semana, aberto');
-        weeklyClosedDays = (globalConfig || []).filter(c => !c.aberto).map(c => c.dia_semana);
+      // Construir mapa weekday → aberto começando pelo global e sobrescrevendo com o do barbeiro
+      const weekdayOpenMap: Record<number, boolean> = {};
+      for (const c of globalConfigResult.data || []) {
+        weekdayOpenMap[c.dia_semana] = c.aberto !== false;
       }
+      for (const c of (barberConfigResult.data || [])) {
+        weekdayOpenMap[c.dia_semana] = c.aberto !== false;
+      }
+      const weeklyClosedDays: number[] = Object.entries(weekdayOpenMap)
+        .filter(([, open]) => !open)
+        .map(([dow]) => Number(dow));
 
       const exceptionMap: Record<string, boolean> = {};
       for (const exc of globalExcResult.data || []) {
@@ -908,6 +912,7 @@ const ClienteAgendar = () => {
         }
       }
 
+      setClosedWeekdays(weeklyClosedDays);
       setClosedDates(closed);
     } catch (error) {
       console.error('[loadClosedDates] Erro:', error);
@@ -2485,6 +2490,7 @@ const ClienteAgendar = () => {
                 selectedDate={selectedDate}
                 onSelectDate={(date) => { setSelectedDate(date); syncBookingData(); }}
                 closedDates={closedDates}
+                closedWeekdays={closedWeekdays}
                 onMonthChange={loadClosedDates}
                 loading={closedDatesLoading}
               />
