@@ -215,12 +215,21 @@ export function useSlotAvailability(
     console.log('[useSlotAvailability] Buscando slots...', isInitialLoadRef.current ? '(inicial)' : '(update parcial)', barbeiroId ? `barbeiro: ${barbeiroId}` : `tenant: ${tenantId === null ? 'DUB' : (tenantId || 'N/A')}`);
 
     try {
+      // Garantir headers de auth (apikey + Authorization) para evitar 401
+      // quando verify_jwt está habilitado na Edge Function.
+      const { data: { session } } = await supabase.auth.getSession();
+      const accessToken = session?.access_token;
+      const SUPABASE_ANON_KEY = (supabase as any).supabaseKey
+        || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRqdHB6dnVqem1ycnNsaXJ6d3VuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI2OTUwMTcsImV4cCI6MjA3ODI3MTAxN30.7rWUhWV7d5pdvEjTrnddBzo8gsRZBFrO6JtvDDpksb8';
+
       const response = await fetch(
         `${SUPABASE_URL}/functions/v1/check-availability`,
         {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${accessToken || SUPABASE_ANON_KEY}`,
           },
           body: JSON.stringify({
             date: dateStr,
