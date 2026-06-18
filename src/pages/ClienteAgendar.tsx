@@ -151,6 +151,7 @@ const ClienteAgendar = () => {
   
   // Dias fechados no calendário (barbearia/barbeiro não trabalha)
   const [closedDates, setClosedDates] = useState<Date[]>([]);
+  const [closedWeekdays, setClosedWeekdays] = useState<number[]>([]);
   const [closedDatesLoading, setClosedDatesLoading] = useState(false);
   
   // Estados para cupom de desconto (sistema novo: tabela `cupons` + RPCs)
