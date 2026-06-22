@@ -1268,6 +1268,8 @@ const ClienteAgendar = () => {
 
     const totalPrice = getTotalPrice();
     const finalPrice = Math.max(0, totalPrice - availableCredits);
+    const serviceFee = getServiceFee(paymentMethod);
+    const chargeAmount = finalPrice + serviceFee;
 
     if (totalPrice === 0 && useRedemption) {
       await createAppointmentWithRedemption();
