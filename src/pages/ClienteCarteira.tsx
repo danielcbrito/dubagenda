@@ -373,7 +373,8 @@ export default function ClienteCarteira() {
 
               <section className="mt-6">
                 <h2 className="text-[11px] uppercase tracking-widest font-bold text-muted-foreground mb-2 px-1">Extrato</h2>
-                <div className="rounded-lg bg-card border border-border overflow-hidden">
+                  <div className="divide-y divide-border/40">
+
                   {loading ? (
                     <div className="flex items-center justify-center py-10">
                       <Loader2 className="w-5 h-5 animate-spin text-primary" />
