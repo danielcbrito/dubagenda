@@ -196,24 +196,24 @@ export default function ClienteCarteira() {
         return;
       }
 
-      const [profileRes, balanceRes, previewRes, txRes] = await Promise.all([
+      const [profileRes, balanceRes, txRes] = await Promise.all([
         supabase.from("profiles").select("nome, avatar_url").eq("id", user.id).maybeSingle(),
         supabase.functions.invoke("wallet-operations", { body: { action: "get_balance" } }),
-        supabase.functions.invoke("wallet-operations", { body: { action: "withdraw", confirmed: false } }),
         supabase.functions.invoke("wallet-operations", { body: { action: "get_transactions" } }),
       ]);
 
+      const loadedTransactions = Array.isArray(txRes.data?.transactions) ? txRes.data.transactions : [];
       setProfile(profileRes.data || null);
       setBalance(Number(balanceRes.data?.balance || 0));
-      setPreview(normalizePreview(previewRes.data));
-      setTransactions(Array.isArray(txRes.data?.transactions) ? txRes.data.transactions : []);
+      setTransactions(loadedTransactions);
+      setPreview(buildPreviewFromTransactions(loadedTransactions));
     } catch (error) {
       console.error("Erro ao carregar carteira:", error);
       toast.error("Não foi possível carregar sua carteira.");
     } finally {
       setLoading(false);
     }
-  }, [navigate, pixKey]);
+  }, [navigate]);
 
   useEffect(() => {
     loadData();
