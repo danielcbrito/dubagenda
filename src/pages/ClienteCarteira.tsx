@@ -342,7 +342,7 @@ export default function ClienteCarteira() {
                     <p className="text-xs text-muted-foreground mt-1">Cancelamentos Pix aparecem aqui com crédito integral.</p>
                   </div>
                 ) : (
-                  <div className="rounded-lg bg-card border border-border overflow-hidden">
+                  <div>
                     {preview!.credits.map((credit, index) => (
                       <motion.div
                         key={credit.id}
