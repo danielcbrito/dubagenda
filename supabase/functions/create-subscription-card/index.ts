@@ -181,6 +181,8 @@ serve(async (req) => {
 
     // Data de início: hoje
     const nextDueDate = new Date().toISOString().split("T")[0];
+    const SERVICE_FEE = 0.9; // Taxa de serviço cobrada do cliente em pagamentos online
+    const chargeValue = Number(plano.preco_mensal) + SERVICE_FEE;
 
     // Criar ASSINATURA RECORRENTE no Asaas via /v3/subscriptions
     const subscriptionRes = await fetch(`${ASAAS_BASE_URL}/subscriptions`, {
@@ -192,10 +194,10 @@ serve(async (req) => {
       body: JSON.stringify({
         customer: customerId,
         billingType: "CREDIT_CARD",
-        value: plano.preco_mensal,
+        value: chargeValue,
         nextDueDate: nextDueDate,
         cycle: "MONTHLY",
-        description: `Assinatura: ${plano.nome}`,
+        description: `Assinatura: ${plano.nome} (inclui R$ ${SERVICE_FEE.toFixed(2)} taxa de serviço)`,
         externalReference: `sub_${user.id}_${planoId}`,
       }),
     });
