@@ -6149,6 +6149,7 @@ export type Database = {
           paid_at: string | null
           qr_code_image: string | null
           raw_response: Json | null
+          refunded_at: string | null
           released_at: string | null
           status: string
           updated_at: string
@@ -6166,6 +6167,7 @@ export type Database = {
           paid_at?: string | null
           qr_code_image?: string | null
           raw_response?: Json | null
+          refunded_at?: string | null
           released_at?: string | null
           status?: string
           updated_at?: string
@@ -6183,6 +6185,7 @@ export type Database = {
           paid_at?: string | null
           qr_code_image?: string | null
           raw_response?: Json | null
+          refunded_at?: string | null
           released_at?: string | null
           status?: string
           updated_at?: string
@@ -6671,6 +6674,7 @@ export type Database = {
           valor_final: number
         }[]
       }
+      woovi_blocked_centavos: { Args: { p_barbeiro: string }; Returns: number }
     }
     Enums: {
       app_role:
