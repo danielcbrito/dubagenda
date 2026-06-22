@@ -191,11 +191,9 @@ serve(async (req) => {
       user_id: callerUserId,
       tipo: "cancelamento",
       titulo: "Agendamento cancelado",
-      mensagem: bankRefunded
-        ? `Seu agendamento foi cancelado. R$ ${refundedAmount.toFixed(2)} foi estornado para a sua conta bancária (PIX).`
-        : refundedAmount > 0
-          ? `Seu agendamento foi cancelado. R$ ${refundedAmount.toFixed(2)} foi adicionado à sua carteira.`
-          : "Seu agendamento foi cancelado com sucesso.",
+      mensagem: creditedToWallet
+        ? `Seu agendamento foi cancelado. R$ ${refundedAmount.toFixed(2)} foi creditado na sua carteira.`
+        : "Seu agendamento foi cancelado com sucesso.",
       agendamento_id: appointmentId,
     });
 
