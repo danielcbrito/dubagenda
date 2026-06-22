@@ -644,31 +644,35 @@ const ClienteAssinar = () => {
 
                 {/* Payment methods */}
                 <div className="space-y-3 mb-4">
-                  <PaymentOption
-                    value="pix"
-                    selected={selectedPaymentMethod === "pix"}
-                    onSelect={() => setSelectedPaymentMethod("pix")}
-                    title="Pix"
-                    description="Confirmação instantânea • Sem taxa"
-                    highlight={true}
-                    icon={<img src={pixIcon} alt="PIX" className={cn("w-5 h-5 object-contain", selectedPaymentMethod === "pix" ? "" : "grayscale opacity-50")} />}
-                  />
+                  {canPayOnline && (
+                    <>
+                      <PaymentOption
+                        value="pix"
+                        selected={selectedPaymentMethod === "pix"}
+                        onSelect={() => setSelectedPaymentMethod("pix")}
+                        title="Pix"
+                        description="Confirmação instantânea • Sem taxa"
+                        highlight={true}
+                        icon={<img src={pixIcon} alt="PIX" className={cn("w-5 h-5 object-contain", selectedPaymentMethod === "pix" ? "" : "grayscale opacity-50")} />}
+                      />
 
-                  <PaymentOption
-                    value="card"
-                    selected={selectedPaymentMethod === "card"}
-                    onSelect={() => setSelectedPaymentMethod("card")}
-                    title="Cartão"
-                    description="Crédito ou débito • Checkout seguro"
-                    icon={<CreditCard className={cn("w-5 h-5", selectedPaymentMethod === "card" ? "text-primary" : "text-muted-foreground/40")} />}
-                  />
+                      <PaymentOption
+                        value="card"
+                        selected={selectedPaymentMethod === "card"}
+                        onSelect={() => setSelectedPaymentMethod("card")}
+                        title="Cartão"
+                        description="Crédito ou débito • Checkout seguro"
+                        icon={<CreditCard className={cn("w-5 h-5", selectedPaymentMethod === "card" ? "text-primary" : "text-muted-foreground/40")} />}
+                      />
+                    </>
+                  )}
 
                   <PaymentOption
                     value="cash"
                     selected={selectedPaymentMethod === "cash"}
                     onSelect={() => setSelectedPaymentMethod("cash")}
                     title="Dinheiro"
-                    description="Pague presencialmente • Barbeiro confirma"
+                    description={canPayOnline ? "Pague presencialmente • Barbeiro confirma" : "Este barbeiro só aceita pagamento na barbearia"}
                     icon={<Banknote className={cn("w-5 h-5", selectedPaymentMethod === "cash" ? "text-primary" : "text-muted-foreground/40")} />}
                   />
                 </div>
