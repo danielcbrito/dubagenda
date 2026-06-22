@@ -131,15 +131,10 @@ export function WalletSheet({ open, onOpenChange, userId, profile }: WalletSheet
   };
 
   const confirmRefund = async () => {
-    if (!pixKey.trim() || pixKey.trim().length < 5) {
-      toast.error("Informe uma chave Pix válida.");
-      return;
-    }
     setSubmitting(true);
     try {
       const { data, error } = await supabase.functions.invoke("wallet-operations", {
-        body: { action: "withdraw", confirmed: true, pixKey: pixKey.trim() },
-
+        body: { action: "withdraw", confirmed: true },
       });
       if (error || data?.error || data?.fallback || !data?.success) {
         toast.error(data?.message || data?.error || "Falha ao processar reembolso.");
@@ -154,6 +149,7 @@ export function WalletSheet({ open, onOpenChange, userId, profile }: WalletSheet
       setSubmitting(false);
     }
   };
+
 
 
   const hasCredits = (preview?.creditsCount || 0) > 0;
@@ -411,27 +407,14 @@ export function WalletSheet({ open, onOpenChange, userId, profile }: WalletSheet
                   ))}
                 </div>
 
-                {/* Chave Pix */}
-                <div className="mt-4 rounded-2xl p-5" style={{ background: "white" }}>
-                  <h4 className="text-sm font-semibold mb-2" style={{ color: COLORS.ink }}>
-                    Chave Pix para receber
-                  </h4>
-                  <input
-                    value={pixKey}
-                    onChange={(e) => setPixKey(e.target.value)}
-                    placeholder="CPF, e-mail, telefone ou chave aleatória"
-                    className="w-full rounded-xl px-4 py-3 text-sm outline-none border"
-                    style={{
-                      background: COLORS.surface,
-                      borderColor: COLORS.divider,
-                      color: COLORS.ink,
-                    }}
-                  />
-                  <p className="text-[11px] mt-2" style={{ color: COLORS.inkSoft }}>
-                    O reembolso será enviado para esta chave Pix. Verifique se está correta antes
-                    de confirmar.
+                {/* Info: reembolso automático para a origem */}
+                <div className="mt-4 rounded-2xl p-4" style={{ background: "white" }}>
+                  <p className="text-[12px] leading-relaxed" style={{ color: COLORS.inkSoft }}>
+                    O reembolso será devolvido automaticamente para a mesma conta usada no
+                    pagamento original via Pix. Não é necessário informar chave.
                   </p>
                 </div>
+
 
                 <button
                   onClick={confirmRefund}
