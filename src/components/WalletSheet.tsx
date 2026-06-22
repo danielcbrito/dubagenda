@@ -71,6 +71,35 @@ type View = "home" | "confirm" | "success";
 const brl = (v: number) => `R$ ${v.toFixed(2).replace(".", ",")}`;
 const firstName = (n?: string | null) => (n || "").trim().split(/\s+/)[0] || "Cliente";
 
+function buildPreviewFromTransactions(transactions: any[]): PreviewData | null {
+  const feePerCredit = 0.5;
+  const credits = transactions
+    .filter((tx) => tx.type === "refund" && tx.status === "completed" && Boolean(tx.metadata?.woovi_endToEndId))
+    .map((tx) => ({
+      id: tx.id,
+      description: tx.description || "Cancelamento PIX",
+      amount: Number(tx.amount || 0),
+      fee: feePerCredit,
+      net: Number((Number(tx.amount || 0) - feePerCredit).toFixed(2)),
+      created_at: tx.created_at,
+    }));
+
+  if (credits.length === 0) return null;
+  const grossAmount = Number(credits.reduce((sum, credit) => sum + credit.amount, 0).toFixed(2));
+  const totalFee = Number((credits.length * feePerCredit).toFixed(2));
+  const netAmount = Number(Math.max(0, grossAmount - totalFee).toFixed(2));
+
+  return {
+    credits,
+    grossAmount,
+    feePerCredit,
+    creditsCount: credits.length,
+    totalFee,
+    netAmount,
+    message: "",
+  };
+}
+
 export function WalletSheet({ open, onOpenChange, userId, profile }: WalletSheetProps) {
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -93,13 +122,12 @@ export function WalletSheet({ open, onOpenChange, userId, profile }: WalletSheet
   const load = async () => {
     setLoading(true);
     try {
-      const [bal, prev] = await Promise.all([
+      const [bal, txRes] = await Promise.all([
         supabase.rpc("get_or_create_wallet_balance", { p_user_id: userId! }),
-        supabase.functions.invoke("wallet-operations", { body: { action: "withdraw" } }),
+        supabase.functions.invoke("wallet-operations", { body: { action: "get_transactions" } }),
       ]);
       setBalance(Number(bal.data || 0));
-      if (prev.data?.preview) setPreview(prev.data as PreviewData);
-      else setPreview(null);
+      setPreview(buildPreviewFromTransactions(txRes.data?.transactions || []));
     } catch (e) {
       console.error(e);
     } finally {
