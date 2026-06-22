@@ -226,8 +226,9 @@ export default function ClienteCarteira() {
 
     setSubmitting(true);
     try {
-      const { data, error } = await supabase.functions.invoke("woovi-client-refund", {
-        body: { action: "execute", pixKey: pixKey.trim() },
+      const { data, error } = await supabase.functions.invoke("wallet-operations", {
+        body: { action: "withdraw", confirmed: true, pixKey: pixKey.trim() },
+
       });
 
       if (error || data?.error || data?.fallback || !data?.success) {
