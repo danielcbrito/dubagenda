@@ -288,37 +288,54 @@ serve(async (req) => {
       );
     }
 
-    // ─── WITHDRAW (PIX via Woovi, com taxa fixa) ───
+    // ─── WITHDRAW (PIX via Woovi, R$ 0,50 por crédito) ───
     if (action === "withdraw") {
-      const { amount, pixKey, confirmed } = body;
-      const WITHDRAW_FEE = 0.50; // taxa fixa de processamento Woovi
+      const { pixKey, confirmed } = body;
+      const FEE_PER_CREDIT = 0.50; // taxa fixa POR cancelamento processado
 
-      if (!amount || amount < 1) {
-        return new Response(
-          JSON.stringify({ error: "Valor mínimo para saque é R$ 1,00" }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
+      // Lista TODOS os créditos PIX pendentes (cada cancelamento = 1 crédito)
+      const { data: pixCredits } = await supabase
+        .from("wallet_transactions")
+        .select("id, metadata, amount, description, created_at")
+        .eq("user_id", user.id)
+        .eq("type", "refund")
+        .eq("status", "completed")
+        .not("metadata->>woovi_endToEndId", "is", null)
+        .order("created_at", { ascending: true });
 
-      const netAmount = Number((amount - WITHDRAW_FEE).toFixed(2));
-      if (netAmount <= 0) {
-        return new Response(
-          JSON.stringify({ error: `Valor deve ser maior que a taxa de R$ ${WITHDRAW_FEE.toFixed(2)}` }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
+      const credits = pixCredits || [];
+      const grossAmount = credits.reduce((s, c) => s + Number(c.amount), 0);
+      const totalFee = Number((credits.length * FEE_PER_CREDIT).toFixed(2));
+      const netAmount = Number((grossAmount - totalFee).toFixed(2));
 
-      // Preview: avisa o cliente sobre a taxa antes de confirmar
+      // Preview: cliente vê detalhamento antes de confirmar
       if (!confirmed) {
         return new Response(
           JSON.stringify({
             preview: true,
-            grossAmount: amount,
-            fee: WITHDRAW_FEE,
+            credits: credits.map((c) => ({
+              id: c.id,
+              description: c.description,
+              amount: Number(c.amount),
+              fee: FEE_PER_CREDIT,
+              net: Number((Number(c.amount) - FEE_PER_CREDIT).toFixed(2)),
+              created_at: c.created_at,
+            })),
+            grossAmount,
+            feePerCredit: FEE_PER_CREDIT,
+            creditsCount: credits.length,
+            totalFee,
             netAmount,
-            message: `Você vai receber R$ ${netAmount.toFixed(2)} via Pix. Será descontada uma taxa de processamento de R$ ${WITHDRAW_FEE.toFixed(2)}.`,
+            message: `Você vai receber R$ ${netAmount.toFixed(2)} via Pix. Serão descontados ${credits.length} × R$ 0,50 = R$ ${totalFee.toFixed(2)} de taxa de processamento.`,
           }),
           { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      if (credits.length === 0 || netAmount <= 0) {
+        return new Response(
+          JSON.stringify({ error: "Sem saldo de cancelamento PIX disponível para reembolso." }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
@@ -329,104 +346,113 @@ serve(async (req) => {
         );
       }
 
-      const { data: currentBalance } = await supabase
-        .rpc("get_or_create_wallet_balance", { p_user_id: user.id });
-
-      if (!currentBalance || currentBalance < amount) {
-        return new Response(
-          JSON.stringify({ error: "Saldo insuficiente" }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-
-      // Localiza um crédito PIX disponível com endToEndId para usar no /refund da Woovi.
-      // O endToEndId vincula o refund à transação original que custeou o crédito.
-      const { data: pixCredits } = await supabase
-        .from("wallet_transactions")
-        .select("id, metadata, amount")
-        .eq("user_id", user.id)
-        .eq("type", "refund")
-        .eq("status", "completed")
-        .not("metadata->>woovi_endToEndId", "is", null)
-        .order("created_at", { ascending: true });
-
-      const sourceCredit = (pixCredits || []).find(
-        (c) => Number(c.metadata?.woovi_value_centavos || 0) >= Math.round(amount * 100)
-      );
-
       const wooviAppId = Deno.env.get("ID_DO_APLICATIVO_WOOVI");
-      if (!sourceCredit || !wooviAppId) {
+      if (!wooviAppId) {
         return new Response(
-          JSON.stringify({
-            error: "Nenhum crédito PIX disponível para saque via Woovi. Tente um valor menor ou contate o suporte.",
-          }),
-          { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          JSON.stringify({ error: "Gateway Woovi não configurado." }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
-      const meta = sourceCredit.metadata as any;
-      const netCents = Math.round(netAmount * 100);
+      const dest = pixKey.trim();
+      const results: any[] = [];
+      const consumedIds: string[] = [];
 
-      const refundBody: Record<string, unknown> = {
-        correlationID: `withdraw-${user.id}-${Date.now()}`,
-        transactionEndToEndId: meta.woovi_endToEndId,
-        value: netCents,
-        pixKey: pixKey.trim(), // chave informada pelo cliente
-      };
+      // Processa cada crédito individualmente (R$ valor - R$ 0,50)
+      for (const credit of credits) {
+        const meta = credit.metadata as any;
+        const valueCents = Number(meta?.woovi_value_centavos || Math.round(Number(credit.amount) * 100));
+        const netCents = valueCents - Math.round(FEE_PER_CREDIT * 100);
+        if (netCents <= 0) continue;
 
-      const refundResp = await fetch("https://api.woovi.com/api/v1/refund", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: wooviAppId,
-        },
-        body: JSON.stringify(refundBody),
-      });
+        const correlationID = `withdraw-${credit.id}-${Date.now()}`;
+        const refundBody = {
+          correlationID,
+          transactionEndToEndId: meta.woovi_endToEndId,
+          value: netCents,
+          pixKey: dest,
+        };
 
-      const refundData = await refundResp.json().catch(() => ({}));
+        const resp = await fetch("https://api.woovi.com/api/v1/refund", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: wooviAppId },
+          body: JSON.stringify(refundBody),
+        });
+        const data = await resp.json().catch(() => ({}));
 
-      if (!refundResp.ok) {
-        console.error("[wallet-operations:withdraw] Falha Woovi:", refundData);
+        if (!resp.ok) {
+          console.error(`[wallet-operations:withdraw] Falha Woovi credit=${credit.id}:`, data);
+          results.push({ creditId: credit.id, ok: false, error: data });
+          break; // para no primeiro erro; cliente pode reprocessar
+        }
+
+        results.push({ creditId: credit.id, ok: true, correlationID, netCents });
+        consumedIds.push(credit.id);
+
+        // Marca crédito como consumido imediatamente
+        await supabase
+          .from("wallet_transactions")
+          .update({ status: "consumed" })
+          .eq("id", credit.id);
+      }
+
+      const succeeded = results.filter((r) => r.ok);
+      const failed = results.filter((r) => !r.ok);
+
+      if (succeeded.length === 0) {
         return new Response(
-          JSON.stringify({ error: "Falha ao processar saque via Pix.", details: refundData }),
+          JSON.stringify({ error: "Falha ao processar reembolso via Pix.", details: failed }),
           { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
-      // Debita o valor BRUTO da carteira (cliente arca com a taxa)
+      // Debita do saldo APENAS o valor bruto dos créditos que foram reembolsados
+      const debitedGross = succeeded
+        .map((r) => {
+          const c = credits.find((x) => x.id === r.creditId)!;
+          return Number(c.amount);
+        })
+        .reduce((s, v) => s + v, 0);
+
+      const { data: currentBalance } = await supabase
+        .rpc("get_or_create_wallet_balance", { p_user_id: user.id });
+
       await supabase
         .from("wallet_balances")
-        .update({ balance: currentBalance - amount })
+        .update({ balance: Math.max(0, Number((Number(currentBalance || 0) - debitedGross).toFixed(2))) })
         .eq("user_id", user.id);
 
-      // Marca o crédito de origem como consumido para evitar reuso
-      await supabase
-        .from("wallet_transactions")
-        .update({ status: "consumed" })
-        .eq("id", sourceCredit.id);
+      const debitedFee = Number((succeeded.length * FEE_PER_CREDIT).toFixed(2));
+      const debitedNet = Number((debitedGross - debitedFee).toFixed(2));
 
       await supabase.from("wallet_transactions").insert({
         user_id: user.id,
         type: "withdraw",
-        amount,
-        status: "completed",
-        description: `Saque via PIX - líquido R$ ${netAmount.toFixed(2)} (taxa R$ ${WITHDRAW_FEE.toFixed(2)})`,
-        destination_pix_key: pixKey.trim(),
+        amount: debitedGross,
+        status: failed.length > 0 ? "partial" : "completed",
+        description: `Reembolso PIX - ${succeeded.length} cancelamento(s), líquido R$ ${debitedNet.toFixed(2)} (taxa R$ ${debitedFee.toFixed(2)})`,
+        destination_pix_key: dest,
         metadata: {
-          fee: WITHDRAW_FEE,
-          net_amount: netAmount,
-          woovi_correlation_id: refundBody.correlationID,
-          source_transaction_id: sourceCredit.id,
+          fee_per_credit: FEE_PER_CREDIT,
+          credits_count: succeeded.length,
+          total_fee: debitedFee,
+          net_amount: debitedNet,
+          source_credit_ids: consumedIds,
+          partial_failures: failed,
         },
       });
 
       return new Response(
         JSON.stringify({
           success: true,
-          grossAmount: amount,
-          fee: WITHDRAW_FEE,
-          netAmount,
-          message: `Saque de R$ ${netAmount.toFixed(2)} enviado para a sua chave Pix.`,
+          creditsProcessed: succeeded.length,
+          creditsFailed: failed.length,
+          grossAmount: debitedGross,
+          totalFee: debitedFee,
+          netAmount: debitedNet,
+          message: failed.length > 0
+            ? `Reembolso parcial: ${succeeded.length} de ${credits.length} processado(s). R$ ${debitedNet.toFixed(2)} enviado(s) via Pix.`
+            : `Reembolso de R$ ${debitedNet.toFixed(2)} enviado para a sua chave Pix.`,
         }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
