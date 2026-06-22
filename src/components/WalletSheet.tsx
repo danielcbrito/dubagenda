@@ -39,12 +39,13 @@ interface PreviewCredit {
 interface PreviewData {
   credits: PreviewCredit[];
   grossAmount: number;
-  feePerCredit: number;
+  feePerCredit?: number;
   creditsCount: number;
   totalFee: number;
   netAmount: number;
   message: string;
 }
+
 
 interface RefundResult {
   creditsProcessed: number;
@@ -71,34 +72,20 @@ type View = "home" | "confirm" | "success";
 const brl = (v: number) => `R$ ${v.toFixed(2).replace(".", ",")}`;
 const firstName = (n?: string | null) => (n || "").trim().split(/\s+/)[0] || "Cliente";
 
-function buildPreviewFromTransactions(transactions: any[]): PreviewData | null {
-  const feePerCredit = 0.5;
-  const credits = transactions
-    .filter((tx) => tx.type === "refund" && tx.status === "completed" && Boolean(tx.metadata?.woovi_endToEndId))
-    .map((tx) => ({
-      id: tx.id,
-      description: tx.description || "Cancelamento PIX",
-      amount: Number(tx.amount || 0),
-      fee: feePerCredit,
-      net: Number((Number(tx.amount || 0) - feePerCredit).toFixed(2)),
-      created_at: tx.created_at,
-    }));
-
+function normalizePreview(payload: any): PreviewData | null {
+  if (!payload || payload.error) return null;
+  const credits = Array.isArray(payload.credits) ? payload.credits : [];
   if (credits.length === 0) return null;
-  const grossAmount = Number(credits.reduce((sum, credit) => sum + credit.amount, 0).toFixed(2));
-  const totalFee = Number((credits.length * feePerCredit).toFixed(2));
-  const netAmount = Number(Math.max(0, grossAmount - totalFee).toFixed(2));
-
   return {
     credits,
-    grossAmount,
-    feePerCredit,
-    creditsCount: credits.length,
-    totalFee,
-    netAmount,
-    message: "",
+    grossAmount: Number(payload.grossAmount || 0),
+    creditsCount: Number(payload.creditsCount ?? credits.length),
+    totalFee: Number(payload.totalFee || 0),
+    netAmount: Number(payload.netAmount || 0),
+    message: payload.message || "",
   };
 }
+
 
 export function WalletSheet({ open, onOpenChange, userId, profile }: WalletSheetProps) {
   const [loading, setLoading] = useState(false);
@@ -122,12 +109,12 @@ export function WalletSheet({ open, onOpenChange, userId, profile }: WalletSheet
   const load = async () => {
     setLoading(true);
     try {
-      const [bal, txRes] = await Promise.all([
+      const [bal, previewRes] = await Promise.all([
         supabase.rpc("get_or_create_wallet_balance", { p_user_id: userId! }),
-        supabase.functions.invoke("wallet-operations", { body: { action: "get_transactions" } }),
+        supabase.functions.invoke("woovi-client-refund", { body: { action: "preview" } }),
       ]);
       setBalance(Number(bal.data || 0));
-      setPreview(buildPreviewFromTransactions(txRes.data?.transactions || []));
+      setPreview(normalizePreview(previewRes.data));
     } catch (e) {
       console.error(e);
     } finally {
@@ -150,11 +137,11 @@ export function WalletSheet({ open, onOpenChange, userId, profile }: WalletSheet
     }
     setSubmitting(true);
     try {
-      const { data, error } = await supabase.functions.invoke("wallet-operations", {
-        body: { action: "withdraw", confirmed: true, pixKey: pixKey.trim() },
+      const { data, error } = await supabase.functions.invoke("woovi-client-refund", {
+        body: { action: "execute", pixKey: pixKey.trim() },
       });
-      if (error || !data?.success) {
-        toast.error(data?.error || "Falha ao processar reembolso.");
+      if (error || data?.error || data?.fallback || !data?.success) {
+        toast.error(data?.message || data?.error || "Falha ao processar reembolso.");
         return;
       }
       setResult(data as RefundResult);
@@ -166,6 +153,7 @@ export function WalletSheet({ open, onOpenChange, userId, profile }: WalletSheet
       setSubmitting(false);
     }
   };
+
 
   const hasCredits = (preview?.creditsCount || 0) > 0;
   const displayBalance = balance;
@@ -382,11 +370,8 @@ export function WalletSheet({ open, onOpenChange, userId, profile }: WalletSheet
                     label="Nº de cancelamentos"
                     value={`${preview.creditsCount}`}
                   />
-                  <Row
-                    label="Taxa por cancelamento"
-                    value={`- ${brl(preview.feePerCredit)}`}
-                  />
-                  <Row label="Total de taxas" value={`- ${brl(preview.totalFee)}`} />
+                  <Row label="Taxa real Woovi" value={`- ${brl(preview.totalFee)}`} />
+
                   <div className="h-px my-3" style={{ background: COLORS.divider }} />
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-semibold" style={{ color: COLORS.ink }}>
