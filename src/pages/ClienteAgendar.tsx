@@ -254,9 +254,11 @@ const ClienteAgendar = () => {
   // PIX disponível se o barbeiro tem chave Woovi (novo) ou carteira Efí ativa (legado)
   const canReceivePix = !!barberWooviKey || canReceivePixWallet;
 
-  // Fallback: se o método selecionado deixou de estar disponível, volta para "pagar na barbearia".
+  // Auto-seleciona método de pagamento: PIX se o barbeiro aceitar, senão "pagar na barbearia".
   useEffect(() => {
-    if (!canReceivePix && (paymentMethod === 'pix' || paymentMethod === 'wallet')) {
+    if (canReceivePix) {
+      if (paymentMethod === 'cash') setPaymentMethod('pix');
+    } else if (paymentMethod === 'pix' || paymentMethod === 'wallet') {
       setPaymentMethod('cash');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
