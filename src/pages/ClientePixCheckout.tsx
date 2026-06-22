@@ -71,6 +71,53 @@ const ClientePixCheckout = () => {
   useEffect(() => {
     if (!pixData || paid || expired) return;
 
+    // Provider Woovi: Realtime + polling de fallback em woovi_charges
+    if (pixData.provider === 'woovi' && pixData.correlationId) {
+      const correlationId = pixData.correlationId;
+
+      const handleStatus = (status?: string | null) => {
+        if (status === 'PAID' || status === 'COMPLETED') {
+          setPaid(true);
+          sessionStorage.removeItem('pix_checkout_data');
+          return true;
+        }
+        if (status === 'EXPIRED' || status === 'CANCELLED') {
+          setExpired(true);
+          sessionStorage.removeItem('pix_checkout_data');
+          return true;
+        }
+        return false;
+      };
+
+      const channel = supabase
+        .channel(`woovi-charge-${correlationId}`)
+        .on('postgres_changes', {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'woovi_charges',
+          filter: `correlation_id=eq.${correlationId}`,
+        }, (payload) => {
+          handleStatus((payload.new as any)?.status);
+        })
+        .subscribe();
+
+      const checkWoovi = async () => {
+        const { data } = await supabase
+          .from('woovi_charges')
+          .select('status')
+          .eq('correlation_id', correlationId)
+          .maybeSingle();
+        handleStatus(data?.status);
+      };
+      const interval = setInterval(checkWoovi, 5000);
+      checkWoovi();
+
+      return () => {
+        clearInterval(interval);
+        supabase.removeChannel(channel);
+      };
+    }
+
     // Provider Efí: consulta direta na tabela efi_pix_charges (Realtime habilitado)
     if (pixData.provider === 'efi' && pixData.txid) {
       const checkEfi = async () => {
