@@ -1366,14 +1366,17 @@ const Cliente = () => {
               const pixCheckoutData = {
                 pixQrCode: ps.pix_qr_code,
                 pixPayload: ps.pix_payload,
-                subscriptionId: ps.id,
+                pendingBookingId: ps.id,
                 asaasPaymentId: ps.asaas_payment_id,
                 expiresAt: ps.pix_expires_at,
                 value: ps.plano?.preco_mensal || 0,
-                planName: ps.plano?.nome || "Plano",
+                serviceName: ps.plano?.nome || "Plano",
+                barberName: ps.barbeiro?.apelido,
+                provider: 'woovi' as const,
+                correlationId: ps.asaas_payment_id,
               };
-              sessionStorage.setItem("subscription_pix_checkout_data", JSON.stringify(pixCheckoutData));
-              navigate("/cliente/assinatura-pix");
+              sessionStorage.setItem("pix_checkout_data", JSON.stringify(pixCheckoutData));
+              navigate("/cliente/pix-checkout");
               return;
             }
           }
