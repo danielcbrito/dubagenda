@@ -137,7 +137,8 @@ Deno.serve(async (req) => {
     }
 
     const correlationID = `sub-${subscription.id}`;
-    const valueCentavos = Math.round(Number(plano.preco_mensal) * 100);
+    const chargeAmount = Number(plano.preco_mensal) + SERVICE_FEE;
+    const valueCentavos = Math.round(chargeAmount * 100);
 
     // 6. Criar cobrança na Woovi
     const wooviResp = await fetch(`${WOOVI_API}/api/v1/charge`, {
