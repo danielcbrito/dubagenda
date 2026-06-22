@@ -319,17 +319,29 @@ serve(async (req) => {
         for (const ch of charges || []) chargesByCorr[ch.correlation_id] = ch;
       }
 
+      // Saldo real disponível na carteira limita o reembolso máximo
+      const { data: balRowPreview } = await supabase
+        .from("wallet_balances")
+        .select("balance")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      let remainingBalanceCents = Math.max(0, Math.round(Number(balRowPreview?.balance || 0) * 100));
+
       const enriched = baseCredits.map((c: any) => {
         const meta = c.metadata || {};
         const charge = chargesByCorr[meta.woovi_correlation_id] || null;
         const raw = charge?.raw_response || null;
         const endToEndId =
           raw?.pix?.endToEndId ?? raw?.endToEndId ?? raw?.charge?.endToEndId ?? meta.woovi_endToEndId ?? null;
-        const paidCents = Number(charge?.value_centavos ?? meta.woovi_value_centavos ?? Math.round(Number(c.amount) * 100));
+        const originalPaidCents = Number(charge?.value_centavos ?? meta.woovi_value_centavos ?? Math.round(Number(c.amount) * 100));
         const feeCents = Number(raw?.pix?.charge?.fee ?? raw?.charge?.fee ?? raw?.fee ?? 0);
+
+        // Limita o valor refundável ao saldo restante da carteira
+        const paidCents = Math.min(originalPaidCents, remainingBalanceCents);
+        remainingBalanceCents = Math.max(0, remainingBalanceCents - paidCents);
         const netCents = Math.max(0, paidCents - feeCents);
-        return { credit: c, endToEndId, paidCents, feeCents, netCents };
-      });
+        return { credit: c, endToEndId, paidCents, feeCents, netCents, originalPaidCents };
+      }).filter((e: any) => e.paidCents > 0 && e.netCents > 0);
 
       const grossCents = enriched.reduce((s, e) => s + e.paidCents, 0);
       const feeCents = enriched.reduce((s, e) => s + e.feeCents, 0);
