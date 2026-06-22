@@ -293,17 +293,33 @@ serve(async (req) => {
       const { pixKey, confirmed } = body;
       const isPreview = confirmed !== true;
 
-      // Créditos pendentes de cancelamento Pix
+      const { data: completedWithdraws } = await supabase
+        .from("wallet_transactions")
+        .select("metadata")
+        .eq("user_id", user.id)
+        .eq("type", "withdraw")
+        .eq("status", "completed");
+
+      const alreadyWithdrawnCreditIds = new Set<string>();
+      for (const tx of completedWithdraws || []) {
+        const ids = Array.isArray(tx.metadata?.source_credit_ids) ? tx.metadata.source_credit_ids : [];
+        for (const id of ids) {
+          if (typeof id === "string") alreadyWithdrawnCreditIds.add(id);
+        }
+      }
+
+      // Créditos pendentes de cancelamento Pix. O metadata antigo pode não ter endToEndId;
+      // nesses casos a cobrança local da Woovi é a fonte da verdade pelo correlation_id.
       const { data: rawCredits } = await supabase
         .from("wallet_transactions")
         .select("id, amount, description, created_at, metadata")
         .eq("user_id", user.id)
         .eq("type", "refund")
         .eq("status", "completed")
-        .not("metadata->>woovi_endToEndId", "is", null)
+        .not("metadata->>woovi_correlation_id", "is", null)
         .order("created_at", { ascending: true });
 
-      const baseCredits = rawCredits || [];
+      const baseCredits = (rawCredits || []).filter((c: any) => !alreadyWithdrawnCreditIds.has(c.id));
 
       // Enriquecimento: busca taxa REAL Woovi (raw_response.pix.charge.fee)
       const correlationIds = baseCredits
