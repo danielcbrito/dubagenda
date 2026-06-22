@@ -254,7 +254,11 @@ export default function ClienteCarteira() {
           <div className="flex items-center justify-between mb-7">
             <motion.button
               whileTap={{ scale: 0.9 }}
-              onClick={() => navigate(-1)}
+              onClick={() => {
+                if (window.history.length > 1) navigate(-1);
+                else navigate("/cliente");
+              }}
+
               className="w-9 h-9 flex items-center justify-center rounded-lg bg-primary-foreground/10 border border-primary-foreground/15 active:scale-95 transition-transform"
               aria-label="Voltar"
             >
