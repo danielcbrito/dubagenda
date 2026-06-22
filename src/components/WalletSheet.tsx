@@ -94,7 +94,6 @@ export function WalletSheet({ open, onOpenChange, userId, profile }: WalletSheet
   const [preview, setPreview] = useState<PreviewData | null>(null);
   const [balanceVisible, setBalanceVisible] = useState(true);
   const [view, setView] = useState<View>("home");
-  const [pixKey, setPixKey] = useState("");
   const [result, setResult] = useState<RefundResult | null>(null);
 
   useEffect(() => {
@@ -102,7 +101,6 @@ export function WalletSheet({ open, onOpenChange, userId, profile }: WalletSheet
     if (!open) {
       setView("home");
       setResult(null);
-      setPixKey("");
     }
   }, [open, userId]);
 
@@ -453,7 +451,7 @@ export function WalletSheet({ open, onOpenChange, userId, profile }: WalletSheet
                   {brl(result.netAmount)}
                 </p>
                 <p className="text-sm" style={{ color: COLORS.inkSoft }}>
-                  O valor será transferido para a sua chave Pix em até 1 hora.
+                  O valor será devolvido automaticamente para a conta de origem do Pix.
                 </p>
                 <p className="text-xs mt-2" style={{ color: COLORS.inkSoft }}>
                   Taxa descontada: {brl(result.totalFee)} ({result.creditsProcessed}
