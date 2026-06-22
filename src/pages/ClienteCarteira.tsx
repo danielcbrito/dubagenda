@@ -409,18 +409,9 @@ export default function ClienteCarteira() {
                   <SummaryRow label="Valor líquido" value={brl(preview.netAmount)} strong />
                 </div>
 
-                <label className="text-[10px] uppercase tracking-widest font-bold text-muted-foreground mb-2 block">
-                  Chave Pix para receber
-                </label>
-                <Input
-                  value={pixKey}
-                  onChange={(event) => setPixKey(event.target.value)}
-                  placeholder="CPF, e-mail, telefone ou chave aleatória"
-                  className="h-11 rounded-lg mb-3"
-                />
                 <div className="flex items-start gap-2 text-xs text-muted-foreground mb-5">
                   <ShieldCheck className="w-4 h-4 mt-0.5 text-success shrink-0" />
-                  <span>O valor líquido será enviado via Pix após a confirmação.</span>
+                  <span>O reembolso será devolvido automaticamente para a mesma conta usada no pagamento original via Pix.</span>
                 </div>
 
                 <Button onClick={confirmRefund} disabled={submitting} className="w-full h-11 rounded-lg font-bold">
