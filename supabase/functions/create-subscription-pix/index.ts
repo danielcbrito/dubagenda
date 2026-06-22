@@ -1,268 +1,218 @@
-import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient } from "npm:@supabase/supabase-js@2.57.2";
+// Edge Function: create-subscription-pix
+// Gera cobrança PIX (Woovi) para assinatura de plano, direcionando para a subconta do barbeiro.
+// Requer que o barbeiro possua woovi_pix_key cadastrada; caso contrário, retorna erro.
+
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+    "authorization, x-client-info, apikey, content-type",
 };
 
-// URL base é resolvida dinamicamente por resolveAsaasConfig
+const WOOVI_API = "https://api.woovi.com";
+const EXPIRES_SECONDS = 30 * 60;
 
-/**
- * Resolve a API key do Asaas para o barbeiro selecionado.
- * Se o barbeiro tiver sub-conta (asaas_api_key em barbeiros_private), usa ela.
- * Senão, usa a chave principal (ASAAS_API_KEY do env).
- */
-async function resolveAsaasConfig(
-  supabaseAdmin: any,
-  barbeiroId: string,
-  fallbackKey: string
-): Promise<{ apiKey: string; baseUrl: string; isSubAccount: boolean }> {
-  const { data: barberPrivate } = await supabaseAdmin
-    .from("barbeiros_private")
-    .select("asaas_api_key")
-    .eq("barbeiro_id", barbeiroId)
-    .maybeSingle();
-
-  let apiKey = fallbackKey;
-  let isSubAccount = false;
-
-  if (barberPrivate?.asaas_api_key) {
-    console.log("[create-subscription-pix] Usando sub-conta do barbeiro:", barbeiroId);
-    apiKey = barberPrivate.asaas_api_key;
-    isSubAccount = true;
-  } else {
-    console.log("[create-subscription-pix] Usando conta principal (sem sub-conta para barbeiro:", barbeiroId, ")");
-  }
-
-  const isSandbox = apiKey.includes("hmlg");
-  const baseUrl = isSandbox ? "https://api-sandbox.asaas.com/v3" : "https://api.asaas.com/v3";
-  if (isSandbox) console.log("[create-subscription-pix] 🧪 Modo SANDBOX detectado");
-
-  return { apiKey, baseUrl, isSubAccount };
-}
-
-/**
- * Busca ou cria customer no Asaas, sincronizando dados do profile
- */
-async function getOrCreateAsaasCustomer(
-  apiKey: string,
-  baseUrl: string,
-  user: { id: string; email: string; user_metadata?: any },
-  supabaseAdmin: any
-): Promise<string> {
-  const headers = {
-    "Content-Type": "application/json",
-    access_token: apiKey,
-  };
-
-  const { data: profile } = await supabaseAdmin
-    .from("profiles")
-    .select("nome, cpf, telefone")
-    .eq("id", user.id)
-    .maybeSingle();
-
-  const name = profile?.nome || user.user_metadata?.nome || user.user_metadata?.full_name || user.email.split("@")[0];
-  const cpf = profile?.cpf?.replace(/\D/g, "") || user.user_metadata?.cpf || undefined;
-
-  const searchRes = await fetch(
-    `${baseUrl}/customers?email=${encodeURIComponent(user.email)}`,
-    { headers }
-  );
-  const searchData = await searchRes.json();
-
-  if (searchData.data?.length > 0) {
-    const existingCustomer = searchData.data[0];
-
-    if (cpf && (!existingCustomer.cpfCnpj || existingCustomer.cpfCnpj !== cpf || existingCustomer.name !== name)) {
-      console.log("[create-subscription-pix] Atualizando customer no Asaas:", existingCustomer.id);
-      await fetch(`${baseUrl}/customers/${existingCustomer.id}`, {
-        method: "PUT",
-        headers,
-        body: JSON.stringify({ name, cpfCnpj: cpf }),
-      });
-    }
-
-    return existingCustomer.id;
-  }
-
-  const createRes = await fetch(`${baseUrl}/customers`, {
-    method: "POST",
-    headers,
-    body: JSON.stringify({
-      name,
-      email: user.email,
-      cpfCnpj: cpf,
-      externalReference: user.id,
-    }),
-  });
-
-  const createData = await createRes.json();
-  if (createData.errors) {
-    throw new Error("Erro ao criar cliente no Asaas: " + JSON.stringify(createData.errors));
-  }
-
-  return createData.id;
-}
-
-/**
- * Gera cobrança PIX no Asaas para assinatura de plano.
- * Usa a sub-conta do barbeiro quando disponível.
- */
-serve(async (req) => {
+Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const globalAsaasKey = Deno.env.get("ASAAS_API_KEY");
-    if (!globalAsaasKey) throw new Error("ASAAS_API_KEY não configurada");
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+    const wooviAppId = Deno.env.get("ID_DO_APLICATIVO_WOOVI");
 
-    const supabaseClient = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_ANON_KEY") ?? ""
-    );
+    if (!wooviAppId) {
+      return new Response(
+        JSON.stringify({ error: "ID_DO_APLICATIVO_WOOVI não configurado" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
 
-    const supabaseAdmin = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
-    );
-
-    // Autenticar usuário
-    const authHeader = req.headers.get("Authorization")!;
-    const token = authHeader.replace("Bearer ", "");
-    const { data } = await supabaseClient.auth.getUser(token);
-    const user = data.user;
-    if (!user?.email) throw new Error("Usuário não autenticado");
+    // Autenticar cliente
+    const authHeader = req.headers.get("Authorization") ?? "";
+    const userClient = createClient(supabaseUrl, anonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const { data: userData, error: userErr } = await userClient.auth.getUser();
+    if (userErr || !userData?.user) {
+      return new Response(JSON.stringify({ error: "Não autenticado" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const userId = userData.user.id;
 
     const body = await req.json();
-    const { planoId, barbeiroId } = body;
+    const { planoId, barbeiroId } = body ?? {};
     if (!planoId) throw new Error("planoId é obrigatório");
     if (!barbeiroId) throw new Error("barbeiroId é obrigatório");
 
-    console.log("[create-subscription-pix] Iniciando PIX para plano:", planoId, "barbeiro:", barbeiroId);
+    const admin = createClient(supabaseUrl, serviceKey);
 
-    // Resolver API key + URL base (sub-conta do barbeiro ou principal)
-    const { apiKey: asaasApiKey, baseUrl: ASAAS_BASE_URL, isSubAccount } = await resolveAsaasConfig(supabaseAdmin, barbeiroId, globalAsaasKey);
+    // 1. Buscar barbeiro + chave Woovi
+    const { data: barber, error: barberErr } = await admin
+      .from("barbeiros")
+      .select("id, apelido, woovi_pix_key")
+      .eq("id", barbeiroId)
+      .maybeSingle();
 
-    // Buscar dados do plano
-    const { data: plano, error: planoError } = await supabaseAdmin
+    if (barberErr || !barber?.woovi_pix_key) {
+      return new Response(
+        JSON.stringify({ error: "Este profissional não aceita PIX no momento. Pague na barbearia." }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
+    // 2. Buscar plano
+    const { data: plano, error: planoError } = await admin
       .from("planos")
       .select("id, nome, preco_mensal")
       .eq("id", planoId)
       .eq("ativo", true)
       .single();
-
     if (planoError || !plano) throw new Error("Plano não encontrado ou inativo");
 
-    // Verificar se já tem assinatura ativa
-    const { data: existingSub } = await supabaseAdmin
+    // 3. Garantir que não há assinatura ativa
+    const { data: existingSub } = await admin
       .from("assinaturas")
       .select("id")
-      .eq("user_id", user.id)
+      .eq("user_id", userId)
       .eq("status", "active")
       .maybeSingle();
-
     if (existingSub) throw new Error("Você já possui uma assinatura ativa");
 
-    // Deletar assinaturas "suspended" anteriores
-    await supabaseAdmin
+    // Limpar suspended anteriores
+    await admin
       .from("assinaturas")
       .delete()
-      .eq("user_id", user.id)
+      .eq("user_id", userId)
       .eq("status", "suspended");
 
-    // Buscar/criar customer no Asaas (usando a key resolvida)
-    const customerId = await getOrCreateAsaasCustomer(asaasApiKey, ASAAS_BASE_URL, user, supabaseAdmin);
-    console.log("[create-subscription-pix] Asaas customer:", customerId, "isSubAccount:", isSubAccount);
-
-    // Criar cobrança PIX no Asaas
-    const expiresAt = new Date();
-    expiresAt.setMinutes(expiresAt.getMinutes() + 30);
-    const dueDateStr = expiresAt.toISOString().split("T")[0];
-
-    const paymentRes = await fetch(`${ASAAS_BASE_URL}/payments`, {
+    // 4. Garantir subconta Woovi (idempotente)
+    const subaccountPixKey = barber.woovi_pix_key as string;
+    const ensureResp = await fetch(`${WOOVI_API}/api/v1/subaccount`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        access_token: asaasApiKey,
-      },
+      headers: { Authorization: wooviAppId, "Content-Type": "application/json" },
       body: JSON.stringify({
-        customer: customerId,
-        billingType: "PIX",
-        value: plano.preco_mensal,
-        dueDate: dueDateStr,
-        description: `Assinatura: ${plano.nome} (1º mês)`,
-        externalReference: `sub_${user.id}_${planoId}`,
+        name: barber.apelido ?? `Barbeiro ${barbeiroId.slice(0, 8)}`,
+        pixKey: subaccountPixKey,
       }),
     });
-
-    const paymentData = await paymentRes.json();
-    if (paymentData.errors) {
-      throw new Error("Erro ao gerar cobrança PIX: " + JSON.stringify(paymentData.errors));
-    }
-
-    console.log("[create-subscription-pix] Payment created:", paymentData.id);
-
-    // Buscar QR Code PIX
-    const qrRes = await fetch(
-      `${ASAAS_BASE_URL}/payments/${paymentData.id}/pixQrCode`,
-      {
-        headers: {
-          "Content-Type": "application/json",
-          access_token: asaasApiKey,
-        },
+    if (!ensureResp.ok) {
+      const ensureJson = await ensureResp.json().catch(() => ({}));
+      const msg = String(ensureJson?.error ?? ensureJson?.message ?? "");
+      const alreadyExists = /exist|already|cadastrad/i.test(msg);
+      if (!alreadyExists) {
+        console.error("[create-subscription-pix] subaccount error:", ensureResp.status, ensureJson);
+        return new Response(
+          JSON.stringify({ error: "Falha ao registrar subconta do barbeiro na Woovi", details: msg || ensureJson }),
+          { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
       }
-    );
-
-    const qrData = await qrRes.json();
-    if (!qrData.encodedImage || !qrData.payload) {
-      throw new Error("Erro ao gerar QR Code PIX");
+    } else {
+      await ensureResp.text().catch(() => undefined);
     }
 
-    console.log("[create-subscription-pix] QR Code gerado com sucesso");
-
-    // Criar assinatura com status "suspended" e dados do PIX
-    const { data: subscription, error: subError } = await supabaseAdmin
+    // 5. Criar assinatura suspended (pega o id antes p/ correlationID)
+    const expiresAt = new Date(Date.now() + EXPIRES_SECONDS * 1000);
+    const { data: subscription, error: subError } = await admin
       .from("assinaturas")
       .insert({
-        user_id: user.id,
+        user_id: userId,
         plano_id: planoId,
         barbeiro_id: barbeiroId,
         status: "suspended",
         payment_method: "pix",
-        asaas_payment_id: paymentData.id,
-        pix_qr_code: qrData.encodedImage,
-        pix_payload: qrData.payload,
         pix_expires_at: expiresAt.toISOString(),
       })
-      .select()
+      .select("id")
       .single();
-
-    if (subError) {
-      console.error("[create-subscription-pix] Subscription insert error:", subError);
+    if (subError || !subscription) {
+      console.error("[create-subscription-pix] insert error:", subError);
       throw new Error("Erro ao criar assinatura pendente");
     }
+
+    const correlationID = `sub-${subscription.id}`;
+    const valueCentavos = Math.round(Number(plano.preco_mensal) * 100);
+
+    // 6. Criar cobrança na Woovi
+    const wooviResp = await fetch(`${WOOVI_API}/api/v1/charge`, {
+      method: "POST",
+      headers: { Authorization: wooviAppId, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        correlationID,
+        value: valueCentavos,
+        comment: `Assinatura: ${plano.nome}`.slice(0, 140),
+        expiresIn: EXPIRES_SECONDS,
+        subaccount: subaccountPixKey,
+        additionalInfo: [
+          { key: "Plano", value: plano.nome },
+          { key: "Barbeiro", value: barber.apelido ?? "" },
+        ],
+      }),
+    });
+
+    const wooviJson = await wooviResp.json().catch(() => ({}));
+    if (!wooviResp.ok) {
+      console.error("[create-subscription-pix] Woovi charge error:", wooviResp.status, wooviJson);
+      await admin.from("assinaturas").delete().eq("id", subscription.id);
+      return new Response(
+        JSON.stringify({ error: "Falha ao criar cobrança Woovi", details: wooviJson?.error ?? wooviJson }),
+        { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
+    const charge = wooviJson.charge ?? wooviJson;
+    const brCode: string = charge.brCode ?? charge.paymentLinkUrl ?? "";
+    const qrImage: string = (charge.qrCodeImage ?? "").replace(/^data:image\/png;base64,/, "");
+    const chargeId: string = charge.identifier ?? charge.transactionID ?? correlationID;
+
+    // 7. Persistir woovi_charges
+    await admin.from("woovi_charges").insert({
+      agendamento_id: null,
+      barbeiro_id: barbeiroId,
+      user_id: userId,
+      correlation_id: correlationID,
+      charge_id: chargeId,
+      br_code: brCode,
+      qr_code_image: qrImage,
+      value_centavos: valueCentavos,
+      status: "PENDING",
+      raw_response: wooviJson,
+    });
+
+    // 8. Atualizar assinatura com dados do PIX (asaas_payment_id reaproveitado p/ correlation)
+    await admin
+      .from("assinaturas")
+      .update({
+        asaas_payment_id: correlationID,
+        pix_qr_code: qrImage,
+        pix_payload: brCode,
+        pix_expires_at: expiresAt.toISOString(),
+      })
+      .eq("id", subscription.id);
 
     return new Response(
       JSON.stringify({
         success: true,
         subscriptionId: subscription.id,
-        asaasPaymentId: paymentData.id,
-        pixQrCode: qrData.encodedImage,
-        pixPayload: qrData.payload,
+        asaasPaymentId: correlationID,
+        pixQrCode: qrImage,
+        pixPayload: brCode,
         expiresAt: expiresAt.toISOString(),
         value: plano.preco_mensal,
         planName: plano.nome,
       }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
+      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 },
     );
   } catch (error) {
     console.error("[create-subscription-pix] Error:", error);
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : "Erro desconhecido" }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
+      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 },
     );
   }
 });

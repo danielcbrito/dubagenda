@@ -73,10 +73,9 @@ Deno.serve(async (req) => {
       );
     }
 
-    // 2. Buscar pending_booking pelo correlation (prefix book-<id>)
-    const pbId = correlationID.startsWith("book-")
-      ? correlationID.slice(5)
-      : null;
+    // 2. Resolver alvo do correlation: book-<pendingBookingId> ou sub-<assinaturaId>
+    const pbId = correlationID.startsWith("book-") ? correlationID.slice(5) : null;
+    const subId = correlationID.startsWith("sub-") ? correlationID.slice(4) : null;
 
     let agendamentoId: string | null = localCharge.agendamento_id ?? null;
 
@@ -113,6 +112,45 @@ Deno.serve(async (req) => {
         }
       }
     }
+
+    if (subId) {
+      const { data: sub } = await admin
+        .from("assinaturas")
+        .select("id, user_id, status, total_renovacoes")
+        .eq("id", subId)
+        .maybeSingle();
+      if (sub && sub.status !== "active") {
+        const nextBilling = new Date();
+        nextBilling.setMonth(nextBilling.getMonth() + 1);
+        const updates: Record<string, unknown> = {
+          status: "active",
+          next_billing_date: nextBilling.toISOString().split("T")[0],
+          pix_qr_code: null,
+          pix_payload: null,
+          pix_expires_at: null,
+          asaas_payment_id: null,
+          updated_at: new Date().toISOString(),
+        };
+        if (sub.status === "pending_renewal") {
+          updates.ciclo_inicio = new Date().toISOString().split("T")[0];
+          updates.ciclo_fim = nextBilling.toISOString().split("T")[0];
+          updates.usos_ciclo_atual = 0;
+          updates.total_renovacoes = (sub.total_renovacoes || 0) + 1;
+          updates.renovada_antecipadamente = true;
+          updates.cash_payment_confirmed = null;
+        }
+        await admin.from("assinaturas").update(updates).eq("id", subId);
+        await admin.from("pagamentos").insert({
+          user_id: sub.user_id,
+          assinatura_id: subId,
+          metodo: "pix",
+          gateway_payment_id: correlationID,
+          status: "paid",
+          data_pagamento: new Date().toISOString(),
+        });
+      }
+    }
+
 
     // 3. Atualizar cobrança
     await admin

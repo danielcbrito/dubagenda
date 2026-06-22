@@ -167,6 +167,30 @@ const ClienteAssinar = () => {
 
   const { ratings } = useBarberRatings(barbers.map(b => b.id));
 
+  // Woovi: barbeiro tem subconta cadastrada? Se não, só permite pagamento na barbearia.
+  const [barberWooviKey, setBarberWooviKey] = useState<string | null>(null);
+  useEffect(() => {
+    if (!selectedBarber?.id) { setBarberWooviKey(null); return; }
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from('barbeiros')
+        .select('woovi_pix_key')
+        .eq('id', selectedBarber.id)
+        .maybeSingle();
+      if (!cancelled) setBarberWooviKey((data?.woovi_pix_key as string | null) ?? null);
+    })();
+    return () => { cancelled = true; };
+  }, [selectedBarber?.id]);
+  const canPayOnline = !!barberWooviKey;
+
+  // Se método selecionado deixou de estar disponível, força "cash"
+  useEffect(() => {
+    if (!canPayOnline && (selectedPaymentMethod === 'pix' || selectedPaymentMethod === 'card')) {
+      setSelectedPaymentMethod('cash');
+    }
+  }, [canPayOnline, selectedPaymentMethod]);
+
   // ─── Init ─────────────────────────────────
   useEffect(() => {
     loadTenants();
@@ -620,31 +644,35 @@ const ClienteAssinar = () => {
 
                 {/* Payment methods */}
                 <div className="space-y-3 mb-4">
-                  <PaymentOption
-                    value="pix"
-                    selected={selectedPaymentMethod === "pix"}
-                    onSelect={() => setSelectedPaymentMethod("pix")}
-                    title="Pix"
-                    description="Confirmação instantânea • Sem taxa"
-                    highlight={true}
-                    icon={<img src={pixIcon} alt="PIX" className={cn("w-5 h-5 object-contain", selectedPaymentMethod === "pix" ? "" : "grayscale opacity-50")} />}
-                  />
+                  {canPayOnline && (
+                    <>
+                      <PaymentOption
+                        value="pix"
+                        selected={selectedPaymentMethod === "pix"}
+                        onSelect={() => setSelectedPaymentMethod("pix")}
+                        title="Pix"
+                        description="Confirmação instantânea • Sem taxa"
+                        highlight={true}
+                        icon={<img src={pixIcon} alt="PIX" className={cn("w-5 h-5 object-contain", selectedPaymentMethod === "pix" ? "" : "grayscale opacity-50")} />}
+                      />
 
-                  <PaymentOption
-                    value="card"
-                    selected={selectedPaymentMethod === "card"}
-                    onSelect={() => setSelectedPaymentMethod("card")}
-                    title="Cartão"
-                    description="Crédito ou débito • Checkout seguro"
-                    icon={<CreditCard className={cn("w-5 h-5", selectedPaymentMethod === "card" ? "text-primary" : "text-muted-foreground/40")} />}
-                  />
+                      <PaymentOption
+                        value="card"
+                        selected={selectedPaymentMethod === "card"}
+                        onSelect={() => setSelectedPaymentMethod("card")}
+                        title="Cartão"
+                        description="Crédito ou débito • Checkout seguro"
+                        icon={<CreditCard className={cn("w-5 h-5", selectedPaymentMethod === "card" ? "text-primary" : "text-muted-foreground/40")} />}
+                      />
+                    </>
+                  )}
 
                   <PaymentOption
                     value="cash"
                     selected={selectedPaymentMethod === "cash"}
                     onSelect={() => setSelectedPaymentMethod("cash")}
                     title="Dinheiro"
-                    description="Pague presencialmente • Barbeiro confirma"
+                    description={canPayOnline ? "Pague presencialmente • Barbeiro confirma" : "Este barbeiro só aceita pagamento na barbearia"}
                     icon={<Banknote className={cn("w-5 h-5", selectedPaymentMethod === "cash" ? "text-primary" : "text-muted-foreground/40")} />}
                   />
                 </div>
