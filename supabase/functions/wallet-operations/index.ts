@@ -290,7 +290,7 @@ serve(async (req) => {
 
     // ─── WITHDRAW (Pix via Woovi, taxa REAL dinâmica por cancelamento) ───
     if (action === "withdraw") {
-      const { pixKey, confirmed } = body;
+      const { confirmed } = body;
       const isPreview = confirmed !== true;
 
       const { data: completedWithdraws } = await supabase
@@ -395,10 +395,6 @@ serve(async (req) => {
         });
       }
 
-      // Reembolso Woovi devolve automaticamente para a conta de origem (mesmo banco/conta do pagamento).
-      // Não é necessário informar chave Pix.
-      const dest = (pixKey || "").toString().trim();
-
       const missing = enriched.find((e) => !e.endToEndId);
       if (missing) {
         return new Response(JSON.stringify({ error: "Crédito sem dados Woovi para reembolso. Contate o suporte." }), {
@@ -469,7 +465,7 @@ serve(async (req) => {
         amount: grossReais,
         status: "completed",
         description: `Reembolso PIX - ${successes.length} cancelamento(s), líquido R$ ${(netCents / 100).toFixed(2)} (taxa R$ ${(feeCents / 100).toFixed(2)})`,
-        destination_pix_key: dest,
+        destination_pix_key: null,
         metadata: {
           credits_count: successes.length,
           gross_amount: grossReais,
@@ -487,7 +483,7 @@ serve(async (req) => {
           grossAmount: grossReais,
           totalFee: feeCents / 100,
           netAmount: netCents / 100,
-          message: `Reembolso de R$ ${(netCents / 100).toFixed(2)} enviado para a sua chave Pix.`,
+          message: `Reembolso de R$ ${(netCents / 100).toFixed(2)} devolvido para a conta de origem do Pix.`,
         }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
