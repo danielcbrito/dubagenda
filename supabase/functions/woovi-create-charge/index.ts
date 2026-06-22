@@ -109,7 +109,43 @@ Deno.serve(async (req) => {
       pendingBookingId = pb.id;
     }
 
-    // 3. Criar cobrança na Woovi
+    // 3. Garantir que a subconta Woovi existe (idempotente)
+    // Woovi exige que a pixKey esteja registrada como subaccount antes de cobrar.
+    const subaccountPixKey = barber.woovi_pix_key;
+    const ensureResp = await fetch(`${WOOVI_API}/api/v1/subaccount`, {
+      method: "POST",
+      headers: {
+        Authorization: wooviAppId,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        name: barber.apelido ?? `Barbeiro ${barbeiro_id.slice(0, 8)}`,
+        pixKey: subaccountPixKey,
+      }),
+    });
+    if (!ensureResp.ok) {
+      const ensureJson = await ensureResp.json().catch(() => ({}));
+      const msg = String(ensureJson?.error ?? ensureJson?.message ?? "");
+      // Ignora "já existe"; aborta em outros erros
+      const alreadyExists = /exist|already|cadastrad/i.test(msg);
+      if (!alreadyExists) {
+        console.error("Woovi subaccount create error:", ensureResp.status, ensureJson);
+        if (pendingBookingId) {
+          await admin.from("pending_bookings").delete().eq("id", pendingBookingId);
+        }
+        return new Response(
+          JSON.stringify({
+            error: "Falha ao registrar subconta do barbeiro na Woovi",
+            details: msg || ensureJson,
+          }),
+          { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+    } else {
+      await ensureResp.text().catch(() => undefined);
+    }
+
+    // 4. Criar cobrança na Woovi
     const correlationID = `book-${pendingBookingId ?? crypto.randomUUID()}`;
     const valueCentavos = Math.round(Number(valor) * 100);
 
@@ -118,10 +154,10 @@ Deno.serve(async (req) => {
       value: valueCentavos,
       comment: (descricao || "Agendamento").slice(0, 140),
       expiresIn: EXPIRES_SECONDS,
-      subaccount: barber.woovi_pix_key,
+      subaccount: subaccountPixKey,
       additionalInfo: [
         { key: "Barbeiro", value: barber.apelido ?? "" },
-        { key: "PixDestino", value: barber.woovi_pix_key },
+        { key: "PixDestino", value: subaccountPixKey },
       ],
     };
 
