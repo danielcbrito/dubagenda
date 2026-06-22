@@ -111,7 +111,7 @@ export function WalletSheet({ open, onOpenChange, userId, profile }: WalletSheet
     try {
       const [bal, previewRes] = await Promise.all([
         supabase.rpc("get_or_create_wallet_balance", { p_user_id: userId! }),
-        supabase.functions.invoke("woovi-client-refund", { body: { action: "preview" } }),
+        supabase.functions.invoke("wallet-operations", { body: { action: "withdraw" } }),
       ]);
       setBalance(Number(bal.data || 0));
       setPreview(normalizePreview(previewRes.data));

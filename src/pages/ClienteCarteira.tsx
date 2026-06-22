@@ -178,7 +178,7 @@ export default function ClienteCarteira() {
         supabase.from("profiles").select("nome, avatar_url").eq("id", user.id).maybeSingle(),
         supabase.functions.invoke("wallet-operations", { body: { action: "get_balance" } }),
         supabase.functions.invoke("wallet-operations", { body: { action: "get_transactions" } }),
-        supabase.functions.invoke("woovi-client-refund", { body: { action: "preview" } }),
+        supabase.functions.invoke("wallet-operations", { body: { action: "withdraw" } }),
       ]);
 
       const loadedTransactions = Array.isArray(txRes.data?.transactions) ? txRes.data.transactions : [];
