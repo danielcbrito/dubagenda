@@ -315,17 +315,6 @@ export default function ClienteCarteira() {
                   </button>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2.5 mb-4">
-                  <div className="rounded-lg bg-muted/60 border border-border/60 p-3">
-                    <p className="text-[9px] uppercase tracking-widest text-muted-foreground font-bold mb-1">Você recebe</p>
-                    <p className="text-base font-bold tabular-nums text-success">{brl(preview?.netAmount || 0)}</p>
-                  </div>
-                  <div className="rounded-lg bg-muted/60 border border-border/60 p-3">
-                    <p className="text-[9px] uppercase tracking-widest text-muted-foreground font-bold mb-1">Taxas</p>
-                    <p className="text-base font-bold tabular-nums text-foreground">{brl(preview?.totalFee || 0)}</p>
-                  </div>
-                </div>
-
                 <Button
                   onClick={() => setView("confirm")}
                   disabled={!hasRefundCredits || loading}
@@ -335,22 +324,6 @@ export default function ClienteCarteira() {
                 </Button>
               </section>
 
-              <div className="grid grid-cols-2 gap-2.5 mt-3">
-                <div className="rounded-lg bg-card border border-border p-3.5">
-                  <div className="flex items-center gap-2 mb-1">
-                    <ArrowDownLeft className="w-3.5 h-3.5 text-success" />
-                    <span className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold">Entradas</span>
-                  </div>
-                  <p className="text-sm font-bold tabular-nums text-foreground">{brl(totals.in)}</p>
-                </div>
-                <div className="rounded-lg bg-card border border-border p-3.5">
-                  <div className="flex items-center gap-2 mb-1">
-                    <ArrowUpRight className="w-3.5 h-3.5 text-muted-foreground" />
-                    <span className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold">Saídas</span>
-                  </div>
-                  <p className="text-sm font-bold tabular-nums text-foreground">{brl(totals.out)}</p>
-                </div>
-              </div>
 
               <section className="mt-6">
                 <div className="flex items-center justify-between mb-2 px-1">
@@ -369,14 +342,14 @@ export default function ClienteCarteira() {
                     <p className="text-xs text-muted-foreground mt-1">Cancelamentos Pix aparecem aqui com crédito integral.</p>
                   </div>
                 ) : (
-                  <div className="rounded-lg bg-card border border-border overflow-hidden">
+                  <div>
                     {preview!.credits.map((credit, index) => (
                       <motion.div
                         key={credit.id}
                         initial={{ opacity: 0, y: 6 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: index * 0.03 }}
-                        className={cn("p-3.5", index > 0 && "border-t border-border/50")}
+                        className="py-3.5"
                       >
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0">
@@ -400,7 +373,8 @@ export default function ClienteCarteira() {
 
               <section className="mt-6">
                 <h2 className="text-[11px] uppercase tracking-widest font-bold text-muted-foreground mb-2 px-1">Extrato</h2>
-                <div className="rounded-lg bg-card border border-border overflow-hidden">
+                  <div className="divide-y divide-border/40">
+
                   {loading ? (
                     <div className="flex items-center justify-center py-10">
                       <Loader2 className="w-5 h-5 animate-spin text-primary" />
