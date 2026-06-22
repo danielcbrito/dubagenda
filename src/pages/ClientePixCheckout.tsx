@@ -1,13 +1,12 @@
 import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Copy, Check, Loader2, Clock, AlertCircle, CheckCircle2, ShieldCheck, Scissors, User, CalendarDays } from "lucide-react";
-import { BackArrow } from "@/components/ui/back-arrow";
+import { Copy, Check, Loader2, AlertCircle, CheckCircle2, ChevronLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
-import pixIcon from "@/assets/pix-icon.png";
 import logo from "@/assets/logo-dub.png";
+import pixWaitingIllustration from "@/assets/pix-waiting-illustration.png";
 
 interface PixCheckoutData {
   pixQrCode: string;
@@ -35,6 +34,8 @@ const ClientePixCheckout = () => {
   const [expired, setExpired] = useState(false);
   const [paid, setPaid] = useState(false);
   const [progressPct, setProgressPct] = useState(0);
+  const [timerPct, setTimerPct] = useState(100);
+  const [createdAt] = useState<number>(() => Date.now());
 
   // Recuperar dados do sessionStorage
   useEffect(() => {
@@ -47,25 +48,28 @@ const ClientePixCheckout = () => {
     setPixData(JSON.parse(stored));
   }, [navigate]);
 
-  // Timer de expiração
+  // Timer de expiração + barra de progresso
   useEffect(() => {
     if (!pixData?.expiresAt) return;
+    const expires = new Date(pixData.expiresAt).getTime();
+    const totalMs = Math.max(1, expires - createdAt);
     const interval = setInterval(() => {
       const now = Date.now();
-      const expires = new Date(pixData.expiresAt).getTime();
       const diff = expires - now;
       if (diff <= 0) {
         setExpired(true);
         setTimeLeft("00:00");
+        setTimerPct(0);
         clearInterval(interval);
         return;
       }
       const mins = Math.floor(diff / 60000);
       const secs = Math.floor((diff % 60000) / 1000);
       setTimeLeft(`${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`);
-    }, 1000);
+      setTimerPct(Math.max(0, Math.min(100, (diff / totalMs) * 100)));
+    }, 500);
     return () => clearInterval(interval);
-  }, [pixData?.expiresAt]);
+  }, [pixData?.expiresAt, createdAt]);
 
   // Polling automático — verifica pagamento a cada 4s
   useEffect(() => {
@@ -268,34 +272,39 @@ const ClientePixCheckout = () => {
     );
   }
 
+  // Truncate code for visual preview
+  const codePreview = pixData.pixPayload
+    ? pixData.pixPayload.length > 28
+      ? `${pixData.pixPayload.slice(0, 28)}...`
+      : pixData.pixPayload
+    : "";
+
   return (
-    <div className="min-h-screen bg-background relative overflow-y-auto">
-      {/* Glow vermelho ambiente */}
-      <div className="fixed inset-0 pointer-events-none z-0" style={{
-        background: "radial-gradient(ellipse 80% 50% at 50% 0%, hsl(0 78% 55% / 0.07) 0%, transparent 55%), radial-gradient(ellipse 60% 40% at 80% 100%, hsl(0 78% 55% / 0.04) 0%, transparent 50%)"
-      }} />
-
-      <div className="relative z-10 flex flex-col min-h-screen">
-        {/* Header */}
-        <div className="px-5 pt-[max(env(safe-area-inset-top),1rem)] pb-3">
-          <div className="max-w-md mx-auto flex items-center justify-between">
-            <button
-              onClick={goBack}
-              className="w-8 h-8 flex items-center justify-center rounded-full text-muted-foreground hover:text-foreground transition-colors"
-              aria-label="Voltar"
-            >
-              <BackArrow size={18} />
-            </button>
-            <div className="flex items-center gap-2.5">
-              <img src={logo} alt="Logo" className="w-6 h-6 rounded-full object-cover" />
-              <div className="w-px h-4 bg-border/40" />
-              <img src={pixIcon} alt="PIX" className="w-4 h-4" />
-            </div>
-          </div>
+    <div className="min-h-screen bg-background flex flex-col">
+      {/* Header */}
+      <header className="flex-shrink-0 px-4 pt-[max(env(safe-area-inset-top),0.75rem)] pb-3">
+        <div className="max-w-md mx-auto grid grid-cols-[auto_1fr_auto] items-center gap-2">
+          <button
+            onClick={goBack}
+            className="w-8 h-8 -ml-1 flex items-center justify-center text-primary active:scale-95 transition-transform"
+            aria-label="Voltar"
+          >
+            <ChevronLeft className="w-6 h-6" strokeWidth={2.5} />
+          </button>
+          <h1 className="text-center text-[13px] font-bold tracking-[0.18em] text-foreground uppercase">
+            Pagamento
+          </h1>
+          <button
+            onClick={goBack}
+            className="text-primary text-sm font-medium px-1 active:opacity-70 transition-opacity"
+          >
+            Ajuda
+          </button>
         </div>
+      </header>
 
-        {/* Conteúdo */}
-        <div className="flex-1 flex flex-col items-center px-5 pb-8 max-w-md mx-auto w-full">
+      <div className="flex-1 overflow-y-auto pb-32">
+        <div className="max-w-md mx-auto w-full px-5">
           <AnimatePresence mode="wait">
             {expired ? (
               <motion.div
@@ -303,13 +312,13 @@ const ClientePixCheckout = () => {
                 initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0 }}
-                className="text-center space-y-5 w-full mt-16"
+                className="text-center space-y-5 mt-16"
               >
                 <div className="w-14 h-14 rounded-full bg-destructive/10 border border-destructive/20 flex items-center justify-center mx-auto">
                   <AlertCircle className="w-6 h-6 text-destructive" />
                 </div>
                 <div>
-                  <h2 className="text-base font-bold text-foreground">QR Code expirado</h2>
+                  <h2 className="text-base font-bold text-foreground">Tempo expirado</h2>
                   <p className="text-sm text-muted-foreground mt-1">
                     O tempo para pagamento se encerrou.
                   </p>
@@ -324,146 +333,126 @@ const ClientePixCheckout = () => {
             ) : (
               <motion.div
                 key="active"
-                initial={{ opacity: 0, y: 16 }}
+                initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0 }}
-                className="w-full space-y-4"
+                className="w-full"
               >
-                {/* Valor centralizado */}
-                <div className="text-center pt-1">
-                  <p className="text-[9px] uppercase tracking-[0.15em] text-muted-foreground/70 font-medium">Total</p>
-                  <p className="text-xl font-bold text-foreground tracking-tight mt-0.5">
-                    R$ {pixData.value.toFixed(2).replace(".", ",")}
-                  </p>
+                {/* Illustration */}
+                <div className="flex justify-center pt-2 pb-4">
+                  <img
+                    src={pixWaitingIllustration}
+                    alt="Aguardando pagamento PIX"
+                    width={220}
+                    height={220}
+                    loading="lazy"
+                    className="w-[220px] h-[220px] object-contain"
+                  />
                 </div>
 
-                {/* QR Code Card — compacto */}
-                <div className="rounded-xl border border-border/40 bg-card/70 backdrop-blur-sm overflow-hidden">
-                  {/* QR Code */}
-                  <div className="p-4 flex flex-col items-center gap-2">
-                    <p className="text-[9px] uppercase tracking-[0.12em] text-muted-foreground/60 font-medium">
-                      Escaneie com seu banco
-                    </p>
-                    <div className="relative">
-                      <div className="absolute -top-1 -left-1 w-3 h-3 border-t-2 border-l-2 border-primary/40 rounded-tl-sm" />
-                      <div className="absolute -top-1 -right-1 w-3 h-3 border-t-2 border-r-2 border-primary/40 rounded-tr-sm" />
-                      <div className="absolute -bottom-1 -left-1 w-3 h-3 border-b-2 border-l-2 border-primary/40 rounded-bl-sm" />
-                      <div className="absolute -bottom-1 -right-1 w-3 h-3 border-b-2 border-r-2 border-primary/40 rounded-br-sm" />
-                      <div className="rounded-md p-2" style={{ background: "hsl(0 0% 95%)" }}>
-                        <img src={`data:image/png;base64,${pixData.pixQrCode}`} alt="QR Code PIX" className="w-32 h-32" />
-                      </div>
-                    </div>
-                    {/* Timer abaixo do QR */}
-                    <div className="flex items-center gap-1.5 bg-muted/30 px-2.5 py-1 rounded-full">
-                      <Clock className="w-2.5 h-2.5 text-muted-foreground/70" />
-                      <span className="text-[9px] text-muted-foreground/80">Expira em</span>
-                      <span className="text-[10px] text-foreground font-bold tabular-nums">{timeLeft}</span>
-                    </div>
-                  </div>
+                {/* Title */}
+                <h2 className="text-center text-[17px] font-medium text-foreground">
+                  Pedido aguardando pagamento
+                </h2>
+                <p className="text-center text-[13px] text-muted-foreground mt-2 leading-snug px-2">
+                  Copie o código abaixo e utilize o Pix Copia e Cola no aplicativo que você vai fazer o pagamento:
+                </p>
 
-                  {/* Separador ticket */}
-                  <div className="relative h-px">
-                    <div className="absolute inset-0 bg-border/20" style={{ backgroundImage: "repeating-linear-gradient(90deg, transparent, transparent 4px, hsl(var(--background)) 4px, hsl(var(--background)) 8px)" }} />
-                    <div className="absolute -left-2.5 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-background" />
-                    <div className="absolute -right-2.5 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-background" />
-                  </div>
-
-                  {/* Detalhes do pedido abaixo do QR */}
-                  <div className="px-3.5 py-2.5 space-y-1.5">
-                    {pixData.serviceName && (
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-1.5">
-                          <Scissors className="w-2.5 h-2.5 text-muted-foreground/60" />
-                          <span className="text-[10px] text-muted-foreground/80">Serviço</span>
-                        </div>
-                        <span className="text-[10px] font-medium text-foreground">{pixData.serviceName}</span>
-                      </div>
-                    )}
-                    {pixData.barberName && (
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-1.5">
-                          <User className="w-2.5 h-2.5 text-muted-foreground/60" />
-                          <span className="text-[10px] text-muted-foreground/80">Profissional</span>
-                        </div>
-                        <span className="text-[10px] font-medium text-foreground">{pixData.barberName}</span>
-                      </div>
-                    )}
-                    {pixData.bookingDate && pixData.bookingTime && (
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-1.5">
-                          <CalendarDays className="w-2.5 h-2.5 text-muted-foreground/60" />
-                          <span className="text-[10px] text-muted-foreground/80">Data</span>
-                        </div>
-                        <span className="text-[10px] font-medium text-foreground">
-                          {pixData.bookingDate} • {pixData.bookingTime}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Código PIX inline — clicável para copiar */}
-                <motion.button
+                {/* Código copia e cola */}
+                <button
                   onClick={handleCopy}
-                  whileTap={{ scale: 0.98 }}
-                  className={cn(
-                    "w-full rounded-lg border px-3 py-2.5 flex items-center gap-2 transition-all duration-200 group",
-                    copied
-                      ? "border-emerald-500/30 bg-emerald-500/5"
-                      : "border-border/30 bg-card/40 hover:bg-card/60"
-                  )}
+                  className="mt-5 w-full rounded-xl border border-dashed border-border bg-background px-4 py-4 flex items-center gap-3 active:scale-[0.99] transition-transform"
                 >
-                  <div className="flex-1 min-w-0 text-left">
-                    <p className="text-[9px] uppercase tracking-wider text-muted-foreground/60 font-medium mb-0.5">
-                      Código Pix Copia e Cola
-                    </p>
-                    <p className="text-[11px] font-mono text-muted-foreground truncate">
-                      {pixData.pixPayload}
-                    </p>
-                  </div>
-                  <div className={cn(
-                    "flex-shrink-0 w-7 h-7 rounded-md flex items-center justify-center transition-colors",
-                    copied
-                      ? "bg-emerald-500/15 text-emerald-500"
-                      : "bg-muted/40 text-muted-foreground/70 group-hover:text-foreground"
-                  )}>
-                    {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                  </div>
-                </motion.button>
+                  <span className="flex-1 text-left text-[15px] font-bold text-foreground truncate font-mono">
+                    {codePreview}
+                  </span>
+                  {copied ? (
+                    <Check className="w-5 h-5 text-emerald-500 flex-shrink-0" />
+                  ) : (
+                    <Copy className="w-5 h-5 text-primary flex-shrink-0" />
+                  )}
+                </button>
 
-                {/* Status aguardando */}
-                <div className="flex items-center gap-2 px-3 py-2">
+                {/* Timer */}
+                <div className="mt-6">
+                  <p className="text-[13px] text-muted-foreground">O tempo para você pagar acaba em:</p>
+                  <p className="text-[28px] font-bold text-foreground tabular-nums mt-1 leading-none">
+                    {timeLeft}
+                  </p>
+                  <div className="mt-2 h-[3px] w-full bg-muted rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-primary rounded-full transition-[width] duration-500 ease-linear"
+                      style={{ width: `${timerPct}%` }}
+                    />
+                  </div>
+                </div>
+
+                {/* Como funciona */}
+                <button className="mt-5 text-[14px] text-foreground/80 font-normal active:opacity-60">
+                  Como funciona
+                </button>
+
+                {/* Card do pedido */}
+                <div className="mt-5 rounded-xl border border-border bg-card px-4 py-4">
+                  <div className="flex items-start gap-3">
+                    <img
+                      src={logo}
+                      alt="Barbearia"
+                      className="w-11 h-11 rounded-full object-cover flex-shrink-0"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[15px] font-bold text-foreground truncate">
+                        {pixData.barberName ? `Barbeiro ${pixData.barberName}` : "Barbearia DUB"}
+                      </p>
+                      <p className="text-[13px] text-muted-foreground mt-0.5 truncate">
+                        {pixData.serviceName ?? "Agendamento"}
+                        {pixData.bookingDate && pixData.bookingTime
+                          ? ` • ${pixData.bookingDate} ${pixData.bookingTime}`
+                          : ""}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="h-px bg-border/60 my-3" />
+                  <div className="flex items-center justify-between">
+                    <span className="text-[14px] text-foreground">Total</span>
+                    <span className="text-[15px] font-bold text-foreground tabular-nums">
+                      R$ {pixData.value.toFixed(2).replace(".", ",")}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Status discreto */}
+                <div className="flex items-center justify-center gap-2 mt-4">
                   <div className="relative flex-shrink-0">
                     <div className="w-1.5 h-1.5 rounded-full bg-amber-400" />
                     <div className="absolute inset-0 w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping opacity-40" />
                   </div>
-                  <p className="text-[9px] text-muted-foreground/70">Aguardando confirmação do pagamento</p>
-                </div>
-
-                {/* Segurança compacta */}
-                <div className="rounded-lg border border-border/20 bg-card/25 px-3 py-2.5 space-y-2">
-                  <div className="flex items-center gap-1.5">
-                    <ShieldCheck className="w-3 h-3 text-primary/50" />
-                    <span className="text-[9px] font-semibold text-muted-foreground/70 uppercase tracking-wider">Pagamento Seguro</span>
-                  </div>
-                  <p className="text-[9px] text-muted-foreground/50 leading-relaxed">
-                    Pix — Banco Central do Brasil • Criptografia E2E • Gateway <span className="text-muted-foreground/70 font-medium">PCI-DSS</span> • Dados bancários nunca armazenados.
-                  </p>
-                  <div className="h-px bg-border/15" />
-                  <div className="flex items-center gap-1.5">
-                    <img src={logo} alt="Logo" className="w-3.5 h-3.5 rounded-full object-cover opacity-50" />
-                    <span className="text-[9px] text-muted-foreground/60 font-medium">Barbearia DUB</span>
-                    <span className="text-[8px] text-muted-foreground/40 ml-auto">CNPJ 00.000.000/0001-00</span>
-                  </div>
-                  <p className="text-[8px] text-muted-foreground/35 pl-5">
-                    Rua Ferrador, 108 — São Paulo – SP • barbeariasdub@gmail.com • (11) 95226-3002
-                  </p>
+                  <p className="text-[11px] text-muted-foreground">Aguardando confirmação do pagamento</p>
                 </div>
               </motion.div>
             )}
           </AnimatePresence>
         </div>
       </div>
+
+      {/* Botão fixo inferior */}
+      {!expired && (
+        <div className="fixed bottom-0 left-0 right-0 px-4 pt-3 pb-[max(env(safe-area-inset-bottom),1rem)] bg-gradient-to-t from-background via-background to-transparent">
+          <div className="max-w-md mx-auto">
+            <button
+              onClick={handleCopy}
+              className={cn(
+                "w-full h-12 rounded-full font-semibold text-[15px] transition-all active:scale-[0.98]",
+                copied
+                  ? "bg-emerald-500 text-white"
+                  : "bg-primary text-primary-foreground hover:bg-primary/90"
+              )}
+            >
+              {copied ? "Código copiado!" : "Copiar código"}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
