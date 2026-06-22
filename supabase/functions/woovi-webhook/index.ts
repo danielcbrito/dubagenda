@@ -54,9 +54,23 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (!localCharge) {
+      console.log(
+        `[woovi-webhook] charge ${correlationID} não encontrada localmente (provavelmente tratada pelo Painel Admin), ignorando.`,
+      );
       return new Response(JSON.stringify({ ok: true, missing: true }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    }
+
+    // Idempotência: se já processada, ignora silenciosamente
+    if (localCharge.status === "PAID" || localCharge.agendamento_id) {
+      console.log(
+        `[woovi-webhook] charge ${correlationID} já processada (status=${localCharge.status}, agendamento_id=${localCharge.agendamento_id}), ignorando.`,
+      );
+      return new Response(
+        JSON.stringify({ ok: true, duplicate: true, agendamentoId: localCharge.agendamento_id }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
     }
 
     // 2. Buscar pending_booking pelo correlation (prefix book-<id>)
