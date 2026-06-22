@@ -32,6 +32,7 @@ interface WalletTransaction {
   status: string;
   description: string | null;
   created_at: string;
+  metadata?: Record<string, unknown> | null;
 }
 
 interface PreviewCredit {
@@ -81,6 +82,27 @@ function normalizePreview(payload: any): PreviewData | null {
   const netAmount = Number(payload.netAmount ?? Math.max(0, grossAmount - totalFee));
 
   return { credits, grossAmount, feePerCredit, creditsCount, totalFee, netAmount, message: payload.message };
+}
+
+function buildPreviewFromTransactions(transactions: WalletTransaction[]): PreviewData | null {
+  const feePerCredit = 0.5;
+  const credits = transactions
+    .filter((tx) => tx.type === "refund" && tx.status === "completed" && Boolean(tx.metadata?.woovi_endToEndId))
+    .map((tx) => ({
+      id: tx.id,
+      description: tx.description || "Cancelamento PIX",
+      amount: Number(tx.amount || 0),
+      fee: feePerCredit,
+      net: Number((Number(tx.amount || 0) - feePerCredit).toFixed(2)),
+      created_at: tx.created_at,
+    }));
+
+  if (credits.length === 0) return null;
+  const grossAmount = Number(credits.reduce((sum, credit) => sum + credit.amount, 0).toFixed(2));
+  const totalFee = Number((credits.length * feePerCredit).toFixed(2));
+  const netAmount = Number(Math.max(0, grossAmount - totalFee).toFixed(2));
+
+  return { credits, grossAmount, feePerCredit, creditsCount: credits.length, totalFee, netAmount };
 }
 
 function getTransactionLabel(type: string, description: string | null) {
@@ -174,24 +196,24 @@ export default function ClienteCarteira() {
         return;
       }
 
-      const [profileRes, balanceRes, previewRes, txRes] = await Promise.all([
+      const [profileRes, balanceRes, txRes] = await Promise.all([
         supabase.from("profiles").select("nome, avatar_url").eq("id", user.id).maybeSingle(),
         supabase.functions.invoke("wallet-operations", { body: { action: "get_balance" } }),
-        supabase.functions.invoke("wallet-operations", { body: { action: "withdraw", confirmed: false } }),
         supabase.functions.invoke("wallet-operations", { body: { action: "get_transactions" } }),
       ]);
 
+      const loadedTransactions = Array.isArray(txRes.data?.transactions) ? txRes.data.transactions : [];
       setProfile(profileRes.data || null);
       setBalance(Number(balanceRes.data?.balance || 0));
-      setPreview(normalizePreview(previewRes.data));
-      setTransactions(Array.isArray(txRes.data?.transactions) ? txRes.data.transactions : []);
+      setTransactions(loadedTransactions);
+      setPreview(buildPreviewFromTransactions(loadedTransactions));
     } catch (error) {
       console.error("Erro ao carregar carteira:", error);
       toast.error("Não foi possível carregar sua carteira.");
     } finally {
       setLoading(false);
     }
-  }, [navigate, pixKey]);
+  }, [navigate]);
 
   useEffect(() => {
     loadData();

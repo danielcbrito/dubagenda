@@ -291,6 +291,7 @@ serve(async (req) => {
     // ─── WITHDRAW (PIX via Woovi, R$ 0,50 por crédito) ───
     if (action === "withdraw") {
       const { pixKey, confirmed } = body;
+      const isPreview = confirmed !== true;
       const FEE_PER_CREDIT = 0.50; // taxa fixa POR cancelamento processado
 
       // Lista TODOS os créditos PIX pendentes (cada cancelamento = 1 crédito)
@@ -309,7 +310,7 @@ serve(async (req) => {
       const netAmount = Number((grossAmount - totalFee).toFixed(2));
 
       // Preview: cliente vê detalhamento antes de confirmar
-      if (!confirmed) {
+      if (isPreview) {
         return new Response(
           JSON.stringify({
             preview: true,
