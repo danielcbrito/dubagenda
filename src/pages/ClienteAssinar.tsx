@@ -445,6 +445,7 @@ const ClienteAssinar = () => {
             asaasPaymentId: data.asaasPaymentId,
             expiresAt: data.expiresAt,
             value: data.value,
+            serviceFee: data.serviceFee ?? 0.9,
             serviceName: data.planName,
             barberName: selectedBarber.apelido,
             provider: 'woovi',
