@@ -15,6 +15,7 @@ interface PixCheckoutData {
   asaasPaymentId: string;
   expiresAt: string;
   value: number;
+  serviceFee?: number;
   serviceName?: string;
   barberName?: string;
   bookingDate?: string;
