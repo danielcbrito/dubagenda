@@ -352,7 +352,7 @@ const ClientePixCheckout = () => {
 
                 {/* Title */}
                 <h2 className="text-center text-[18px] font-medium text-foreground tracking-tight">
-                  Pedido aguardando pagamento
+                  Aguardando pagamento
                 </h2>
                 <p className="text-center text-[13px] text-muted-foreground mt-2 leading-snug px-3">
                   Copie o código abaixo e utilize o Pix Copia e Cola no aplicativo que você vai fazer o pagamento:
