@@ -338,23 +338,23 @@ const ClientePixCheckout = () => {
                 exit={{ opacity: 0 }}
                 className="w-full"
               >
-                {/* Illustration */}
-                <div className="flex justify-center pt-2 pb-4">
+                {/* Illustration — mãos segurando celular PIX + relógio */}
+                <div className="flex justify-center pt-4 pb-6">
                   <img
-                    src={pixWaitingIllustration}
+                    src={pixWaitingAsset.url}
                     alt="Aguardando pagamento PIX"
-                    width={220}
-                    height={220}
+                    width={240}
+                    height={240}
                     loading="lazy"
-                    className="w-[220px] h-[220px] object-contain"
+                    className="w-[240px] h-[240px] object-contain"
                   />
                 </div>
 
                 {/* Title */}
-                <h2 className="text-center text-[17px] font-medium text-foreground">
+                <h2 className="text-center text-[18px] font-medium text-foreground tracking-tight">
                   Pedido aguardando pagamento
                 </h2>
-                <p className="text-center text-[13px] text-muted-foreground mt-2 leading-snug px-2">
+                <p className="text-center text-[13px] text-muted-foreground mt-2 leading-snug px-3">
                   Copie o código abaixo e utilize o Pix Copia e Cola no aplicativo que você vai fazer o pagamento:
                 </p>
 
@@ -373,10 +373,12 @@ const ClientePixCheckout = () => {
                   )}
                 </button>
 
-                {/* Timer */}
+                {/* Timer — sério, minimalista, fonte menor */}
                 <div className="mt-6">
-                  <p className="text-[13px] text-muted-foreground">O tempo para você pagar acaba em:</p>
-                  <p className="text-[28px] font-bold text-foreground tabular-nums mt-1 leading-none">
+                  <p className="text-[11px] text-muted-foreground tracking-tight">
+                    O tempo para você pagar acaba em:
+                  </p>
+                  <p className="text-[22px] font-semibold text-foreground tabular-nums mt-1 leading-none">
                     {timeLeft}
                   </p>
                   <div className="mt-2 h-[3px] w-full bg-muted rounded-full overflow-hidden">
@@ -387,42 +389,53 @@ const ClientePixCheckout = () => {
                   </div>
                 </div>
 
-                {/* Como funciona */}
-                <button className="mt-5 text-[14px] text-foreground/80 font-normal active:opacity-60">
-                  Como funciona
-                </button>
-
-                {/* Card do pedido */}
-                <div className="mt-5 rounded-xl border border-border bg-card px-4 py-4">
-                  <div className="flex items-start gap-3">
-                    <img
-                      src={logo}
-                      alt="Barbearia"
-                      className="w-11 h-11 rounded-full object-cover flex-shrink-0"
-                    />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[15px] font-bold text-foreground truncate">
-                        {pixData.barberName ? `Barbeiro ${pixData.barberName}` : "Barbearia DUB"}
-                      </p>
-                      <p className="text-[13px] text-muted-foreground mt-0.5 truncate">
-                        {pixData.serviceName ?? "Agendamento"}
-                        {pixData.bookingDate && pixData.bookingTime
-                          ? ` • ${pixData.bookingDate} ${pixData.bookingTime}`
-                          : ""}
-                      </p>
+                {/* Recibo cinza com borda serrilhada superior */}
+                <div className="mt-7 relative">
+                  <div
+                    className="h-2.5 w-full"
+                    style={{
+                      backgroundColor: "hsl(var(--muted))",
+                      WebkitMaskImage:
+                        "radial-gradient(circle at 6px 0, transparent 5px, black 5.5px)",
+                      maskImage:
+                        "radial-gradient(circle at 6px 0, transparent 5px, black 5.5px)",
+                      WebkitMaskSize: "12px 10px",
+                      maskSize: "12px 10px",
+                      WebkitMaskRepeat: "repeat-x",
+                      maskRepeat: "repeat-x",
+                    }}
+                  />
+                  <div className="bg-muted px-4 py-4 rounded-b-xl">
+                    <div className="flex items-start gap-3">
+                      <img
+                        src={logo}
+                        alt="Barbearia"
+                        className="w-11 h-11 rounded-full object-cover flex-shrink-0"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[15px] font-semibold text-foreground truncate">
+                          {pixData.barberName ? `Barbeiro ${pixData.barberName}` : "Barbearia DUB"}
+                        </p>
+                        <p className="text-[13px] text-muted-foreground mt-0.5 truncate">
+                          {pixData.serviceName ?? "Agendamento"}
+                          {pixData.bookingDate && pixData.bookingTime
+                            ? ` • ${pixData.bookingDate} ${pixData.bookingTime}`
+                            : ""}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                  <div className="h-px bg-border/60 my-3" />
-                  <div className="flex items-center justify-between">
-                    <span className="text-[14px] text-foreground">Total</span>
-                    <span className="text-[15px] font-bold text-foreground tabular-nums">
-                      R$ {pixData.value.toFixed(2).replace(".", ",")}
-                    </span>
+                    <div className="h-px bg-border/50 my-3" />
+                    <div className="flex items-center justify-between">
+                      <span className="text-[14px] text-foreground">Total</span>
+                      <span className="text-[15px] font-bold text-foreground tabular-nums">
+                        R$ {pixData.value.toFixed(2).replace(".", ",")}
+                      </span>
+                    </div>
                   </div>
                 </div>
 
                 {/* Status discreto */}
-                <div className="flex items-center justify-center gap-2 mt-4">
+                <div className="flex items-center justify-center gap-2 mt-5">
                   <div className="relative flex-shrink-0">
                     <div className="w-1.5 h-1.5 rounded-full bg-amber-400" />
                     <div className="absolute inset-0 w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping opacity-40" />
