@@ -109,12 +109,12 @@ export function WalletSheet({ open, onOpenChange, userId, profile }: WalletSheet
   const load = async () => {
     setLoading(true);
     try {
-      const [bal, txRes] = await Promise.all([
+      const [bal, previewRes] = await Promise.all([
         supabase.rpc("get_or_create_wallet_balance", { p_user_id: userId! }),
-        supabase.functions.invoke("wallet-operations", { body: { action: "get_transactions" } }),
+        supabase.functions.invoke("woovi-client-refund", { body: { action: "preview" } }),
       ]);
       setBalance(Number(bal.data || 0));
-      setPreview(buildPreviewFromTransactions(txRes.data?.transactions || []));
+      setPreview(normalizePreview(previewRes.data));
     } catch (e) {
       console.error(e);
     } finally {
@@ -137,11 +137,11 @@ export function WalletSheet({ open, onOpenChange, userId, profile }: WalletSheet
     }
     setSubmitting(true);
     try {
-      const { data, error } = await supabase.functions.invoke("wallet-operations", {
-        body: { action: "withdraw", confirmed: true, pixKey: pixKey.trim() },
+      const { data, error } = await supabase.functions.invoke("woovi-client-refund", {
+        body: { action: "execute", pixKey: pixKey.trim() },
       });
-      if (error || !data?.success) {
-        toast.error(data?.error || "Falha ao processar reembolso.");
+      if (error || data?.error || data?.fallback || !data?.success) {
+        toast.error(data?.message || data?.error || "Falha ao processar reembolso.");
         return;
       }
       setResult(data as RefundResult);
@@ -153,6 +153,7 @@ export function WalletSheet({ open, onOpenChange, userId, profile }: WalletSheet
       setSubmitting(false);
     }
   };
+
 
   const hasCredits = (preview?.creditsCount || 0) > 0;
   const displayBalance = balance;
