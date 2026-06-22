@@ -449,7 +449,7 @@ const ClientePixCheckout = () => {
             <button
               onClick={handleCopy}
               className={cn(
-                "w-full h-12 rounded-full font-semibold text-[15px] transition-all active:scale-[0.98]",
+                "w-full h-12 rounded-md font-semibold text-[15px] transition-all active:scale-[0.98]",
                 copied
                   ? "bg-emerald-500 text-white"
                   : "bg-primary text-primary-foreground hover:bg-primary/90"
