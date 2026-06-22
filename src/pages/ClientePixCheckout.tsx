@@ -434,14 +434,8 @@ const ClientePixCheckout = () => {
                   </div>
                 </div>
 
-                {/* Status discreto */}
-                <div className="flex items-center justify-center gap-2 mt-5">
-                  <div className="relative flex-shrink-0">
-                    <div className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-                    <div className="absolute inset-0 w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping opacity-40" />
-                  </div>
-                  <p className="text-[11px] text-muted-foreground">Aguardando confirmação do pagamento</p>
-                </div>
+
+
               </motion.div>
             )}
           </AnimatePresence>
