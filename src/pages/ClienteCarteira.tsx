@@ -349,7 +349,7 @@ export default function ClienteCarteira() {
                         initial={{ opacity: 0, y: 6 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: index * 0.03 }}
-                        className={cn("p-3.5", index > 0 && "border-t border-border/50")}
+                        className="py-3.5"
                       >
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0">
