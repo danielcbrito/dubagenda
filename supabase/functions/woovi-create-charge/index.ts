@@ -84,6 +84,49 @@ Deno.serve(async (req) => {
     // 2. Criar pending_booking
     let pendingBookingId: string | null = null;
     if (servico_id && bookingDate && bookingHora) {
+      // 2.0 Validar que o slot ainda está livre em agendamentos (status ativos)
+      const { data: slotConflict } = await admin
+        .from("agendamentos")
+        .select("id")
+        .eq("barbeiro_id", barbeiro_id)
+        .eq("data", bookingDate)
+        .eq("hora", bookingHora)
+        .in("status", ["pending", "confirmed"])
+        .limit(1)
+        .maybeSingle();
+
+      if (slotConflict) {
+        return new Response(
+          JSON.stringify({
+            error: "Horário indisponível",
+            details: "Este horário acabou de ser reservado por outro cliente. Escolha outro horário.",
+          }),
+          { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+
+      // 2.1 Validar contra outros pending_bookings ativos do mesmo slot (de outros usuários)
+      const { data: pbConflict } = await admin
+        .from("pending_bookings")
+        .select("id, user_id")
+        .eq("barbeiro_id", barbeiro_id)
+        .eq("data", bookingDate)
+        .eq("hora", bookingHora)
+        .gt("expires_at", new Date().toISOString())
+        .neq("user_id", userId)
+        .limit(1)
+        .maybeSingle();
+
+      if (pbConflict) {
+        return new Response(
+          JSON.stringify({
+            error: "Horário indisponível",
+            details: "Outro cliente está finalizando o pagamento deste horário. Tente novamente em alguns minutos.",
+          }),
+          { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+
       const expiresAt = new Date(Date.now() + EXPIRES_SECONDS * 1000).toISOString();
       const { data: pb, error: pbErr } = await admin
         .from("pending_bookings")
