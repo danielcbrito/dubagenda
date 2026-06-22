@@ -542,6 +542,7 @@ export function MyProfileSheet({
         open={walletOpen} 
         onOpenChange={setWalletOpen}
         userId={userId}
+        profile={profile}
       />
       <MyPlansSheet 
         open={plansOpen} 
