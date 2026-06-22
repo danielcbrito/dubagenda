@@ -20,6 +20,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { getServiceFee } from "@/lib/payment-fees";
 
 // Premium Components
 import { ServiceCard } from "@/components/booking/ServiceCard";
