@@ -12,6 +12,7 @@ const corsHeaders = {
 
 const WOOVI_API = "https://api.woovi.com";
 const EXPIRES_SECONDS = 30 * 60;
+const SERVICE_FEE = 0.9; // Taxa de serviço cobrada do cliente em pagamentos online (PIX/Cartão)
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
