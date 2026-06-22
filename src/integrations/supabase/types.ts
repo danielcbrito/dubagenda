@@ -834,6 +834,7 @@ export type Database = {
           unidade_id: string | null
           updated_at: string | null
           user_id: string | null
+          woovi_pix_key: string | null
         }
         Insert: {
           apelido: string
@@ -853,6 +854,7 @@ export type Database = {
           unidade_id?: string | null
           updated_at?: string | null
           user_id?: string | null
+          woovi_pix_key?: string | null
         }
         Update: {
           apelido?: string
@@ -872,6 +874,7 @@ export type Database = {
           unidade_id?: string | null
           updated_at?: string | null
           user_id?: string | null
+          woovi_pix_key?: string | null
         }
         Relationships: [
           {
@@ -6118,6 +6121,76 @@ export type Database = {
           verified_at?: string | null
         }
         Relationships: []
+      }
+      woovi_charges: {
+        Row: {
+          agendamento_id: string | null
+          barbeiro_id: string | null
+          br_code: string | null
+          charge_id: string | null
+          correlation_id: string
+          created_at: string
+          id: string
+          paid_at: string | null
+          qr_code_image: string | null
+          raw_response: Json | null
+          status: string
+          updated_at: string
+          value_centavos: number
+        }
+        Insert: {
+          agendamento_id?: string | null
+          barbeiro_id?: string | null
+          br_code?: string | null
+          charge_id?: string | null
+          correlation_id: string
+          created_at?: string
+          id?: string
+          paid_at?: string | null
+          qr_code_image?: string | null
+          raw_response?: Json | null
+          status?: string
+          updated_at?: string
+          value_centavos: number
+        }
+        Update: {
+          agendamento_id?: string | null
+          barbeiro_id?: string | null
+          br_code?: string | null
+          charge_id?: string | null
+          correlation_id?: string
+          created_at?: string
+          id?: string
+          paid_at?: string | null
+          qr_code_image?: string | null
+          raw_response?: Json | null
+          status?: string
+          updated_at?: string
+          value_centavos?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "woovi_charges_agendamento_id_fkey"
+            columns: ["agendamento_id"]
+            isOneToOne: false
+            referencedRelation: "agendamentos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "woovi_charges_barbeiro_id_fkey"
+            columns: ["barbeiro_id"]
+            isOneToOne: false
+            referencedRelation: "barbeiros"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "woovi_charges_barbeiro_id_fkey"
+            columns: ["barbeiro_id"]
+            isOneToOne: false
+            referencedRelation: "barbeiros_public"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
