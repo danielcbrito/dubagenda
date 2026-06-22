@@ -293,8 +293,8 @@ export default function ClienteCarteira() {
               <section className="rounded-lg bg-card border border-border shadow-premium p-4 active:scale-[0.99] transition-transform">
                 <div className="flex items-start justify-between gap-3 mb-3">
                   <div>
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1">Saldo na carteira</p>
-                    <div className="text-3xl font-bold tabular-nums text-foreground">
+                    <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-1">Saldo na carteira</p>
+                    <div className="text-3xl font-semibold tabular-nums text-foreground tracking-tight">
                       {loading ? "—" : balanceVisible ? brl(balance) : "R$ ••••"}
                     </div>
                   </div>
@@ -310,11 +310,12 @@ export default function ClienteCarteira() {
                 <Button
                   onClick={() => setView("confirm")}
                   disabled={!hasRefundCredits || loading}
-                  className="w-full h-11 rounded-lg font-bold"
+                  className="w-full h-11 rounded-lg font-medium tracking-tight"
                 >
                   Solicitar reembolso
                 </Button>
               </section>
+
 
 
               <section className="mt-6">
