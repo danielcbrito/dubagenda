@@ -160,6 +160,7 @@ Deno.serve(async (req) => {
     const { error: insErr } = await admin.from("woovi_charges").insert({
       agendamento_id: null,
       barbeiro_id,
+      user_id: userId,
       correlation_id: correlationID,
       charge_id: chargeId,
       br_code: brCode,

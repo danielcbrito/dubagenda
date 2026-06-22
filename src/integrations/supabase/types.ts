@@ -6136,6 +6136,7 @@ export type Database = {
           raw_response: Json | null
           status: string
           updated_at: string
+          user_id: string | null
           value_centavos: number
         }
         Insert: {
@@ -6151,6 +6152,7 @@ export type Database = {
           raw_response?: Json | null
           status?: string
           updated_at?: string
+          user_id?: string | null
           value_centavos: number
         }
         Update: {
@@ -6166,6 +6168,7 @@ export type Database = {
           raw_response?: Json | null
           status?: string
           updated_at?: string
+          user_id?: string | null
           value_centavos?: number
         }
         Relationships: [
