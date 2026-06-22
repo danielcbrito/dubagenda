@@ -97,9 +97,8 @@ Deno.serve(async (req) => {
             hora: pb.hora,
             duracao: pb.duracao,
             preco: pb.preco,
-            metodo_pagamento: "pix",
+            payment_method: "pix",
             status: "confirmed",
-            pago: true,
           })
           .select("id")
           .single();
