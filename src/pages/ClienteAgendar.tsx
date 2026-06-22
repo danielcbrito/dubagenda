@@ -231,11 +231,29 @@ const ClienteAgendar = () => {
   // Fonte única do barbeiro selecionado (fallback para assinatura vinculada)
   const selectedBarberId = selectedBarber?.id || activeSubscription?.barbeiro_id || null;
 
-  // Status da carteira do barbeiro: define se podemos oferecer PIX (e Carteira do app)
-  const { canReceivePix } = useWalletStatus(selectedBarberId);
+  // Status da carteira do barbeiro (legado Efí): define se podemos oferecer Carteira do app
+  const { canReceivePix: canReceivePixWallet } = useWalletStatus(selectedBarberId);
 
-  // Fallback: se o método selecionado deixou de estar disponível (ex.: usuário trocou
-  // para um barbeiro sem chave PIX validada), volta para "pagar na barbearia".
+  // Woovi: verifica se o barbeiro selecionado tem chave Pix Woovi cadastrada
+  const [barberWooviKey, setBarberWooviKey] = useState<string | null>(null);
+  useEffect(() => {
+    if (!selectedBarberId) { setBarberWooviKey(null); return; }
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from('barbeiros')
+        .select('woovi_pix_key')
+        .eq('id', selectedBarberId)
+        .maybeSingle();
+      if (!cancelled) setBarberWooviKey((data?.woovi_pix_key as string | null) ?? null);
+    })();
+    return () => { cancelled = true; };
+  }, [selectedBarberId]);
+
+  // PIX disponível se o barbeiro tem chave Woovi (novo) ou carteira Efí ativa (legado)
+  const canReceivePix = !!barberWooviKey || canReceivePixWallet;
+
+  // Fallback: se o método selecionado deixou de estar disponível, volta para "pagar na barbearia".
   useEffect(() => {
     if (!canReceivePix && (paymentMethod === 'pix' || paymentMethod === 'wallet')) {
       setPaymentMethod('cash');
