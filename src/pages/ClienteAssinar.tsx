@@ -167,6 +167,30 @@ const ClienteAssinar = () => {
 
   const { ratings } = useBarberRatings(barbers.map(b => b.id));
 
+  // Woovi: barbeiro tem subconta cadastrada? Se não, só permite pagamento na barbearia.
+  const [barberWooviKey, setBarberWooviKey] = useState<string | null>(null);
+  useEffect(() => {
+    if (!selectedBarber?.id) { setBarberWooviKey(null); return; }
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from('barbeiros')
+        .select('woovi_pix_key')
+        .eq('id', selectedBarber.id)
+        .maybeSingle();
+      if (!cancelled) setBarberWooviKey((data?.woovi_pix_key as string | null) ?? null);
+    })();
+    return () => { cancelled = true; };
+  }, [selectedBarber?.id]);
+  const canPayOnline = !!barberWooviKey;
+
+  // Se método selecionado deixou de estar disponível, força "cash"
+  useEffect(() => {
+    if (!canPayOnline && (selectedPaymentMethod === 'pix' || selectedPaymentMethod === 'card')) {
+      setSelectedPaymentMethod('cash');
+    }
+  }, [canPayOnline, selectedPaymentMethod]);
+
   // ─── Init ─────────────────────────────────
   useEffect(() => {
     loadTenants();
