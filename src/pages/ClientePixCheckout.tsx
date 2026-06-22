@@ -352,7 +352,7 @@ const ClientePixCheckout = () => {
 
                 {/* Title */}
                 <h2 className="text-center text-[18px] font-medium text-foreground tracking-tight">
-                  Pedido aguardando pagamento
+                  Aguardando pagamento
                 </h2>
                 <p className="text-center text-[13px] text-muted-foreground mt-2 leading-snug px-3">
                   Copie o código abaixo e utilize o Pix Copia e Cola no aplicativo que você vai fazer o pagamento:
@@ -434,14 +434,8 @@ const ClientePixCheckout = () => {
                   </div>
                 </div>
 
-                {/* Status discreto */}
-                <div className="flex items-center justify-center gap-2 mt-5">
-                  <div className="relative flex-shrink-0">
-                    <div className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-                    <div className="absolute inset-0 w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping opacity-40" />
-                  </div>
-                  <p className="text-[11px] text-muted-foreground">Aguardando confirmação do pagamento</p>
-                </div>
+
+
               </motion.div>
             )}
           </AnimatePresence>
@@ -455,7 +449,7 @@ const ClientePixCheckout = () => {
             <button
               onClick={handleCopy}
               className={cn(
-                "w-full h-12 rounded-full font-semibold text-[15px] transition-all active:scale-[0.98]",
+                "w-full h-12 rounded-md font-semibold text-[15px] transition-all active:scale-[0.98]",
                 copied
                   ? "bg-emerald-500 text-white"
                   : "bg-primary text-primary-foreground hover:bg-primary/90"
