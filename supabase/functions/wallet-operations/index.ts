@@ -427,7 +427,6 @@ serve(async (req) => {
               correlationID,
               transactionEndToEndId: e.endToEndId,
               value: e.netCents,
-              pixKey: dest,
             }),
           });
         } catch (err) {
