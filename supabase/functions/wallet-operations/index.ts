@@ -288,14 +288,37 @@ serve(async (req) => {
       );
     }
 
-    // ─── WITHDRAW ───
+    // ─── WITHDRAW (PIX via Woovi, com taxa fixa) ───
     if (action === "withdraw") {
-      const { amount, pixKey } = body;
+      const { amount, pixKey, confirmed } = body;
+      const WITHDRAW_FEE = 0.50; // taxa fixa de processamento Woovi
 
-      if (!amount || amount < 5) {
+      if (!amount || amount < 1) {
         return new Response(
-          JSON.stringify({ error: "Valor mínimo para retirada é R$ 5,00" }),
+          JSON.stringify({ error: "Valor mínimo para saque é R$ 1,00" }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const netAmount = Number((amount - WITHDRAW_FEE).toFixed(2));
+      if (netAmount <= 0) {
+        return new Response(
+          JSON.stringify({ error: `Valor deve ser maior que a taxa de R$ ${WITHDRAW_FEE.toFixed(2)}` }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Preview: avisa o cliente sobre a taxa antes de confirmar
+      if (!confirmed) {
+        return new Response(
+          JSON.stringify({
+            preview: true,
+            grossAmount: amount,
+            fee: WITHDRAW_FEE,
+            netAmount,
+            message: `Você vai receber R$ ${netAmount.toFixed(2)} via Pix. Será descontada uma taxa de processamento de R$ ${WITHDRAW_FEE.toFixed(2)}.`,
+          }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
@@ -316,28 +339,94 @@ serve(async (req) => {
         );
       }
 
-      // Debit from wallet
+      // Localiza um crédito PIX disponível com endToEndId para usar no /refund da Woovi.
+      // O endToEndId vincula o refund à transação original que custeou o crédito.
+      const { data: pixCredits } = await supabase
+        .from("wallet_transactions")
+        .select("id, metadata, amount")
+        .eq("user_id", user.id)
+        .eq("type", "refund")
+        .eq("status", "completed")
+        .not("metadata->>woovi_endToEndId", "is", null)
+        .order("created_at", { ascending: true });
+
+      const sourceCredit = (pixCredits || []).find(
+        (c) => Number(c.metadata?.woovi_value_centavos || 0) >= Math.round(amount * 100)
+      );
+
+      const wooviAppId = Deno.env.get("ID_DO_APLICATIVO_WOOVI");
+      if (!sourceCredit || !wooviAppId) {
+        return new Response(
+          JSON.stringify({
+            error: "Nenhum crédito PIX disponível para saque via Woovi. Tente um valor menor ou contate o suporte.",
+          }),
+          { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const meta = sourceCredit.metadata as any;
+      const netCents = Math.round(netAmount * 100);
+
+      const refundBody: Record<string, unknown> = {
+        correlationID: `withdraw-${user.id}-${Date.now()}`,
+        transactionEndToEndId: meta.woovi_endToEndId,
+        value: netCents,
+        pixKey: pixKey.trim(), // chave informada pelo cliente
+      };
+
+      const refundResp = await fetch("https://api.woovi.com/api/v1/refund", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: wooviAppId,
+        },
+        body: JSON.stringify(refundBody),
+      });
+
+      const refundData = await refundResp.json().catch(() => ({}));
+
+      if (!refundResp.ok) {
+        console.error("[wallet-operations:withdraw] Falha Woovi:", refundData);
+        return new Response(
+          JSON.stringify({ error: "Falha ao processar saque via Pix.", details: refundData }),
+          { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Debita o valor BRUTO da carteira (cliente arca com a taxa)
       await supabase
         .from("wallet_balances")
         .update({ balance: currentBalance - amount })
         .eq("user_id", user.id);
 
-      // Create pending transaction (admin will process manually or via Asaas transfer API)
+      // Marca o crédito de origem como consumido para evitar reuso
       await supabase
         .from("wallet_transactions")
-        .insert({
-          user_id: user.id,
-          type: "withdraw",
-          amount,
-          status: "pending",
-          description: `Retirada via PIX`,
-          destination_pix_key: pixKey.trim(),
-        });
+        .update({ status: "consumed" })
+        .eq("id", sourceCredit.id);
+
+      await supabase.from("wallet_transactions").insert({
+        user_id: user.id,
+        type: "withdraw",
+        amount,
+        status: "completed",
+        description: `Saque via PIX - líquido R$ ${netAmount.toFixed(2)} (taxa R$ ${WITHDRAW_FEE.toFixed(2)})`,
+        destination_pix_key: pixKey.trim(),
+        metadata: {
+          fee: WITHDRAW_FEE,
+          net_amount: netAmount,
+          woovi_correlation_id: refundBody.correlationID,
+          source_transaction_id: sourceCredit.id,
+        },
+      });
 
       return new Response(
         JSON.stringify({
           success: true,
-          message: "Retirada solicitada com sucesso. O valor será transferido em até 24h.",
+          grossAmount: amount,
+          fee: WITHDRAW_FEE,
+          netAmount,
+          message: `Saque de R$ ${netAmount.toFixed(2)} enviado para a sua chave Pix.`,
         }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
