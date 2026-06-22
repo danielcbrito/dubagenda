@@ -145,7 +145,11 @@ Deno.serve(async (req) => {
       await ensureResp.text().catch(() => undefined);
     }
 
-    // 4. Criar cobrança na Woovi
+    // 4. Criar cobrança na Woovi via SUBACCOUNT do barbeiro
+    // O valor cai direto na subconta do barbeiro (CNPJ/CPF dele) — Receita Federal
+    // reconhece a receita como sendo do barbeiro, não da plataforma.
+    // O estorno em caso de cancelamento é feito via /api/v1/refund informando o pixKey
+    // da subconta, que debita o saldo do próprio barbeiro.
     const correlationID = `book-${pendingBookingId ?? crypto.randomUUID()}`;
     const valueCentavos = Math.round(Number(valor) * 100);
 
@@ -157,9 +161,10 @@ Deno.serve(async (req) => {
       subaccount: subaccountPixKey,
       additionalInfo: [
         { key: "Barbeiro", value: barber.apelido ?? "" },
-        { key: "PixDestino", value: subaccountPixKey },
+        { key: "BarbeiroPixKey", value: subaccountPixKey },
       ],
     };
+
 
     const wooviResp = await fetch(`${WOOVI_API}/api/v1/charge`, {
       method: "POST",
