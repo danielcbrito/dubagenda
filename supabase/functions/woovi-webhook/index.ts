@@ -107,7 +107,55 @@ Deno.serve(async (req) => {
           agendamentoId = appt.id;
           await admin.from("pending_bookings").delete().eq("id", pb.id);
         } else {
-          console.error("Erro ao criar agendamento:", apptErr);
+          // Detecta conflito de slot (unique constraint) → faz refund automático para a carteira do cliente
+          const isConflict =
+            apptErr?.code === "23505" ||
+            /duplicate key|unique constraint/i.test(apptErr?.message ?? "");
+
+          if (isConflict) {
+            console.warn(
+              `[woovi-webhook] Slot conflict para pending_booking ${pb.id}. Creditando carteira do usuário ${pb.user_id}.`,
+            );
+
+            const valor = Number(pb.preco) || (localCharge.value_centavos ? localCharge.value_centavos / 100 : 0);
+
+            // Credita carteira (cria saldo se não existir)
+            const { data: currentBalance } = await admin.rpc(
+              "get_or_create_wallet_balance",
+              { p_user_id: pb.user_id },
+            );
+            const newBalance = (Number(currentBalance) || 0) + valor;
+            await admin
+              .from("wallet_balances")
+              .update({ balance: newBalance })
+              .eq("user_id", pb.user_id);
+
+            await admin.from("wallet_transactions").insert({
+              user_id: pb.user_id,
+              type: "refund",
+              amount: valor,
+              status: "completed",
+              description: `Estorno automático - horário ${pb.data} ${pb.hora} indisponível no momento da confirmação`,
+              metadata: {
+                source: "slot_conflict_auto_refund",
+                woovi_correlation_id: correlationID,
+                pending_booking_id: pb.id,
+              },
+            });
+
+            // Notifica o cliente
+            await admin.from("notificacoes").insert({
+              user_id: pb.user_id,
+              tipo: "pagamento",
+              titulo: "Reembolso automático",
+              mensagem: `O horário ${pb.hora.slice(0, 5)} foi reservado antes da confirmação do seu pagamento. Creditamos R$ ${valor.toFixed(2).replace(".", ",")} na sua carteira.`,
+              lida: false,
+            }).then(() => {}, () => {});
+
+            await admin.from("pending_bookings").delete().eq("id", pb.id);
+          } else {
+            console.error("Erro ao criar agendamento:", apptErr);
+          }
         }
       }
     }
