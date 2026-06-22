@@ -146,7 +146,7 @@ Deno.serve(async (req) => {
             // Notifica o cliente
             await admin.from("notificacoes").insert({
               user_id: pb.user_id,
-              tipo: "pagamento",
+              tipo: "cancelamento",
               titulo: "Reembolso automático",
               mensagem: `O horário ${pb.hora.slice(0, 5)} foi reservado antes da confirmação do seu pagamento. Creditamos R$ ${valor.toFixed(2).replace(".", ",")} na sua carteira.`,
               lida: false,
