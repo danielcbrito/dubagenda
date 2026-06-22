@@ -175,7 +175,7 @@ export default function ClienteCarteira() {
       }
 
       const [profileRes, balanceRes, previewRes, txRes] = await Promise.all([
-        supabase.from("profiles").select("nome, avatar_url, wallet_pix_key").eq("id", user.id).maybeSingle(),
+        supabase.from("profiles").select("nome, avatar_url").eq("id", user.id).maybeSingle(),
         supabase.functions.invoke("wallet-operations", { body: { action: "get_balance" } }),
         supabase.functions.invoke("wallet-operations", { body: { action: "withdraw", confirmed: false } }),
         supabase.functions.invoke("wallet-operations", { body: { action: "get_transactions" } }),
@@ -185,7 +185,6 @@ export default function ClienteCarteira() {
       setBalance(Number(balanceRes.data?.balance || 0));
       setPreview(normalizePreview(previewRes.data));
       setTransactions(Array.isArray(txRes.data?.transactions) ? txRes.data.transactions : []);
-      if (profileRes.data?.wallet_pix_key && !pixKey) setPixKey(profileRes.data.wallet_pix_key);
     } catch (error) {
       console.error("Erro ao carregar carteira:", error);
       toast.error("Não foi possível carregar sua carteira.");
