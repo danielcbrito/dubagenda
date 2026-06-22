@@ -1338,7 +1338,8 @@ const ClienteAgendar = () => {
       if (paymentMethod === 'card') {
         const { data, error } = await supabase.functions.invoke('create-asaas-card', {
           body: {
-            bookingData,
+            bookingData: { ...bookingData, preco: chargeAmount },
+            serviceFee,
             rescheduleFromId: isRescheduling ? rescheduleAppointmentId : undefined,
           },
         });
