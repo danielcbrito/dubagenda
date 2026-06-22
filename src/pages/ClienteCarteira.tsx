@@ -272,22 +272,14 @@ export default function ClienteCarteira() {
           </div>
 
           <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-lg bg-primary-foreground text-primary flex items-center justify-center shadow-soft overflow-hidden">
-              {profile?.avatar_url ? (
-                <img
-                  src={supabase.storage.from("avatars").getPublicUrl(profile.avatar_url).data.publicUrl}
-                  alt="Foto do cliente"
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <UserIcon className="w-5 h-5" />
-              )}
+            <div className="w-11 h-11 rounded-full bg-primary-foreground/10 border border-primary-foreground/20 text-primary-foreground flex items-center justify-center">
+              <UserIcon className="w-5 h-5" strokeWidth={1.75} />
             </div>
-            <div className="min-w-0">
-              <p className="text-[11px] uppercase tracking-widest text-primary-foreground/70 font-semibold">Olá</p>
-              <p className="text-lg font-bold text-primary-foreground truncate">{firstName(profile?.nome)}</p>
-            </div>
+            <p className="text-base font-medium text-primary-foreground truncate">
+              Olá, <span className="font-semibold">{firstName(profile?.nome)}</span>
+            </p>
           </motion.div>
+
         </div>
         <svg className="absolute -bottom-px left-0 w-full h-16" viewBox="0 0 400 64" preserveAspectRatio="none" aria-hidden="true">
           <path d="M0 14 C95 62 295 62 400 14 L400 64 L0 64 Z" fill="hsl(var(--background))" />
@@ -301,8 +293,8 @@ export default function ClienteCarteira() {
               <section className="rounded-lg bg-card border border-border shadow-premium p-4 active:scale-[0.99] transition-transform">
                 <div className="flex items-start justify-between gap-3 mb-3">
                   <div>
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1">Saldo na carteira</p>
-                    <div className="text-3xl font-bold tabular-nums text-foreground">
+                    <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-1">Saldo na carteira</p>
+                    <div className="text-3xl font-semibold tabular-nums text-foreground tracking-tight">
                       {loading ? "—" : balanceVisible ? brl(balance) : "R$ ••••"}
                     </div>
                   </div>
@@ -318,11 +310,12 @@ export default function ClienteCarteira() {
                 <Button
                   onClick={() => setView("confirm")}
                   disabled={!hasRefundCredits || loading}
-                  className="w-full h-11 rounded-lg font-bold"
+                  className="w-full h-11 rounded-lg font-medium tracking-tight"
                 >
                   Solicitar reembolso
                 </Button>
               </section>
+
 
 
               <section className="mt-6">
