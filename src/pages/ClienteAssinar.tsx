@@ -184,12 +184,14 @@ const ClienteAssinar = () => {
   }, [selectedBarber?.id]);
   const canPayOnline = !!barberWooviKey;
 
-  // Se método selecionado deixou de estar disponível, força "cash"
+  // Auto-seleciona PIX quando barbeiro aceita pagamento online; senão força "cash".
   useEffect(() => {
-    if (!canPayOnline && (selectedPaymentMethod === 'pix' || selectedPaymentMethod === 'card')) {
+    if (canPayOnline) {
+      if (selectedPaymentMethod === 'cash') setSelectedPaymentMethod('pix');
+    } else if (selectedPaymentMethod === 'pix' || selectedPaymentMethod === 'card') {
       setSelectedPaymentMethod('cash');
     }
-  }, [canPayOnline, selectedPaymentMethod]);
+  }, [canPayOnline]);
 
   // ─── Init ─────────────────────────────────
   useEffect(() => {
