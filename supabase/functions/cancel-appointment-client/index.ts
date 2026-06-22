@@ -104,76 +104,7 @@ serve(async (req) => {
       paymentMethod === "" ||
       appointment.tipo_agendamento === "encaixe_manual";
 
-    // 4. PIX: ANTES de mudar status, estornar valor TOTAL via Woovi para a chave
-    //    Pix da subconta do barbeiro (o dinheiro está lá, não na conta-mãe).
-    let bankRefunded = false;
-    let refundedAmount = 0;
-
-    if (paymentMethod === "pix" && !appointment.is_free && amount > 0) {
-      const { data: charge } = await supabase
-        .from("woovi_charges")
-        .select("correlation_id, raw_response, value_centavos")
-        .eq("agendamento_id", appointmentId)
-        .eq("status", "PAID")
-        .maybeSingle();
-
-      const wooviAppId = Deno.env.get("ID_DO_APLICATIVO_WOOVI");
-
-      if (!charge || !wooviAppId) {
-        return new Response(
-          JSON.stringify({
-            error: "Cobrança PIX não encontrada para estorno. Cancelamento abortado.",
-          }),
-          { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-        );
-      }
-
-      const raw = charge.raw_response as any;
-      const endToEndId =
-        raw?.pix?.endToEndId ?? raw?.endToEndId ?? raw?.charge?.endToEndId;
-      const subPixKey =
-        raw?.charge?.subaccount?.pixKey ??
-        raw?.charge?.subaccount ??
-        raw?.subaccount?.pixKey ??
-        raw?.subaccount ??
-        raw?.pix?.charge?.subaccount?.pixKey;
-      const valueCents = charge.value_centavos ?? Math.round(amount * 100);
-
-      const refundBody: Record<string, unknown> = {
-        correlationID: `refund-${appointmentId}-${Date.now()}`,
-        transactionEndToEndId: endToEndId,
-        value: valueCents, // valor TOTAL pago pelo cliente
-      };
-      if (subPixKey) refundBody.pixKey = subPixKey;
-
-      const refundResp = await fetch("https://api.woovi.com/api/v1/refund", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: wooviAppId,
-        },
-        body: JSON.stringify(refundBody),
-      });
-
-      const refundData = await refundResp.json().catch(() => ({}));
-
-      if (!refundResp.ok) {
-        console.error("[cancel-appointment-client] Falha estorno Woovi:", refundData);
-        return new Response(
-          JSON.stringify({
-            error: "Falha ao estornar PIX na Woovi. Cancelamento abortado.",
-            details: refundData,
-          }),
-          { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-        );
-      }
-
-      bankRefunded = true;
-      refundedAmount = valueCents / 100;
-      console.log(`[cancel-appointment-client] PIX estornado R$ ${refundedAmount.toFixed(2)} para ${appointmentId}`);
-    }
-
-    // 5. Estorno confirmado (ou não aplicável) — agora cancela o agendamento
+    // 4. Cancela o agendamento
     const { error: updateError } = await supabase
       .from("agendamentos")
       .update({
@@ -184,33 +115,74 @@ serve(async (req) => {
 
     if (updateError) throw updateError;
 
-    if (bankRefunded) {
-      await supabase
-        .from("pagamentos")
-        .update({ status: "refunded" })
-        .eq("agendamento_id", appointmentId);
-    }
+    // 5. Crédito na carteira interna (PIX, cartão ou crédito do app)
+    //    Para PIX, guardamos os metadados Woovi para uso posterior no saque.
+    let refundedAmount = 0;
+    let creditedToWallet = false;
 
-    // 6. Crédito/wallet: devolve pra carteira; outros métodos não geram estorno
-    if (!bankRefunded && !isNeverRefundable && !appointment.is_free && amount > 0) {
-      if (isPaidWithCredit) {
-        refundedAmount = amount;
-        const { error: walletError } = await supabase.rpc("add_wallet_credits", {
-          p_user_id: callerUserId,
-          p_amount: refundedAmount,
-          p_description: `Estorno de cancelamento - R$ ${refundedAmount.toFixed(2)}`,
-        });
-        if (walletError) console.error("Wallet RPC error:", walletError);
-      } else if (isPaidViaGateway) {
-        // Cartão (não-PIX): fallback para carteira
-        refundedAmount = amount;
-        const { error: walletError } = await supabase.rpc("add_wallet_credits", {
-          p_user_id: callerUserId,
-          p_amount: refundedAmount,
-          p_description: `Estorno de cancelamento (Cartão) - R$ ${refundedAmount.toFixed(2)}`,
-        });
-        if (walletError) console.error("Wallet RPC error:", walletError);
+    if (!isNeverRefundable && !appointment.is_free && amount > 0 &&
+        (isPaidWithCredit || isPaidViaGateway)) {
+      refundedAmount = amount;
+
+      let wooviMeta: Record<string, unknown> | null = null;
+      let descSuffix = "";
+
+      if (paymentMethod === "pix") {
+        const { data: charge } = await supabase
+          .from("woovi_charges")
+          .select("correlation_id, raw_response, value_centavos")
+          .eq("agendamento_id", appointmentId)
+          .eq("status", "PAID")
+          .maybeSingle();
+
+        if (charge) {
+          const raw = charge.raw_response as any;
+          const endToEndId =
+            raw?.pix?.endToEndId ?? raw?.endToEndId ?? raw?.charge?.endToEndId;
+          const subPixKey =
+            raw?.charge?.subaccount?.pixKey ??
+            raw?.charge?.subaccount ??
+            raw?.subaccount?.pixKey ??
+            raw?.subaccount ??
+            raw?.pix?.charge?.subaccount?.pixKey;
+          wooviMeta = {
+            source: "pix_cancellation",
+            woovi_correlation_id: charge.correlation_id,
+            woovi_endToEndId: endToEndId,
+            woovi_subPixKey: subPixKey,
+            woovi_value_centavos: charge.value_centavos ?? Math.round(amount * 100),
+            agendamento_id: appointmentId,
+          };
+          descSuffix = " (PIX)";
+        }
+
+        await supabase
+          .from("pagamentos")
+          .update({ status: "refunded_to_wallet" })
+          .eq("agendamento_id", appointmentId);
+      } else if (paymentMethod === "card" || paymentMethod === "credit_card") {
+        descSuffix = " (Cartão)";
       }
+
+      // Credita no saldo da carteira
+      const { data: currentBalance } = await supabase
+        .rpc("get_or_create_wallet_balance", { p_user_id: callerUserId });
+
+      await supabase
+        .from("wallet_balances")
+        .update({ balance: (currentBalance || 0) + refundedAmount })
+        .eq("user_id", callerUserId);
+
+      await supabase.from("wallet_transactions").insert({
+        user_id: callerUserId,
+        type: "refund",
+        amount: refundedAmount,
+        status: "completed",
+        description: `Estorno de cancelamento${descSuffix} - R$ ${refundedAmount.toFixed(2)}`,
+        metadata: wooviMeta,
+      });
+
+      creditedToWallet = true;
     }
 
 
