@@ -74,36 +74,15 @@ const moneyOutTypes = new Set(["payment", "withdraw", "transfer", "wallet_debit"
 function normalizePreview(payload: any): PreviewData | null {
   if (!payload || payload.error) return null;
   const credits = Array.isArray(payload.credits) ? payload.credits : [];
-  if (!payload.preview && credits.length === 0) return null;
-
-  const grossAmount = Number(payload.grossAmount || credits.reduce((sum: number, c: PreviewCredit) => sum + Number(c.amount || 0), 0));
-  const feePerCredit = Number(payload.feePerCredit ?? 0.5);
-  const creditsCount = Number(payload.creditsCount ?? credits.length);
-  const totalFee = Number(payload.totalFee ?? creditsCount * feePerCredit);
-  const netAmount = Number(payload.netAmount ?? Math.max(0, grossAmount - totalFee));
-
-  return { credits, grossAmount, feePerCredit, creditsCount, totalFee, netAmount, message: payload.message };
-}
-
-function buildPreviewFromTransactions(transactions: WalletTransaction[]): PreviewData | null {
-  const feePerCredit = 0.5;
-  const credits = transactions
-    .filter((tx) => tx.type === "refund" && tx.status === "completed" && Boolean(tx.metadata?.woovi_endToEndId))
-    .map((tx) => ({
-      id: tx.id,
-      description: tx.description || "Cancelamento PIX",
-      amount: Number(tx.amount || 0),
-      fee: feePerCredit,
-      net: Number((Number(tx.amount || 0) - feePerCredit).toFixed(2)),
-      created_at: tx.created_at,
-    }));
-
   if (credits.length === 0) return null;
-  const grossAmount = Number(credits.reduce((sum, credit) => sum + credit.amount, 0).toFixed(2));
-  const totalFee = Number((credits.length * feePerCredit).toFixed(2));
-  const netAmount = Number(Math.max(0, grossAmount - totalFee).toFixed(2));
-
-  return { credits, grossAmount, feePerCredit, creditsCount: credits.length, totalFee, netAmount };
+  return {
+    credits,
+    grossAmount: Number(payload.grossAmount || 0),
+    creditsCount: Number(payload.creditsCount ?? credits.length),
+    totalFee: Number(payload.totalFee || 0),
+    netAmount: Number(payload.netAmount || 0),
+    message: payload.message,
+  };
 }
 
 function getTransactionLabel(type: string, description: string | null) {
@@ -116,11 +95,9 @@ function getTransactionLabel(type: string, description: string | null) {
 }
 
 function getRefundMessage(preview: PreviewData) {
-  if (preview.creditsCount <= 1) {
-    return `Você vai receber ${brl(preview.netAmount)} via Pix. Será descontada uma taxa de processamento de ${brl(preview.totalFee)}.`;
-  }
-  return `Você vai receber ${brl(preview.netAmount)} via Pix. Serão descontados ${preview.creditsCount} × ${brl(preview.feePerCredit)} = ${brl(preview.totalFee)} de taxa de processamento.`;
+  return `Você vai receber ${brl(preview.netAmount)} via Pix. Será descontada a taxa real da Woovi de ${brl(preview.totalFee)} (${preview.creditsCount} cancelamento${preview.creditsCount > 1 ? "s" : ""}).`;
 }
+
 
 function TransactionItem({ tx, index }: { tx: WalletTransaction; index: number }) {
   const isOut = moneyOutTypes.has(tx.type);
