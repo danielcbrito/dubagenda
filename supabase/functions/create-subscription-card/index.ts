@@ -264,7 +264,8 @@ serve(async (req) => {
         subscriptionId: subscription.id,
         asaasSubscriptionId: asaasSubscriptionId,
         asaasPaymentId: firstPayment.id,
-        value: plano.preco_mensal,
+        value: chargeValue,
+        serviceFee: SERVICE_FEE,
         planName: plano.nome,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
