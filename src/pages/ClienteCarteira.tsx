@@ -47,12 +47,13 @@ interface PreviewCredit {
 interface PreviewData {
   credits: PreviewCredit[];
   grossAmount: number;
-  feePerCredit: number;
+  feePerCredit?: number;
   creditsCount: number;
   totalFee: number;
   netAmount: number;
   message?: string;
 }
+
 
 interface RefundResult {
   creditsProcessed: number;
