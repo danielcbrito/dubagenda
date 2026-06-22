@@ -395,13 +395,9 @@ serve(async (req) => {
         });
       }
 
+      // Reembolso Woovi devolve automaticamente para a conta de origem (mesmo banco/conta do pagamento).
+      // Não é necessário informar chave Pix.
       const dest = (pixKey || "").toString().trim();
-      if (dest.length < 5) {
-        return new Response(JSON.stringify({ error: "Chave Pix inválida" }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
 
       const missing = enriched.find((e) => !e.endToEndId);
       if (missing) {
