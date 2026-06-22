@@ -160,7 +160,18 @@ serve(async (req) => {
           const raw = charge.raw_response as any;
           const endToEndId =
             raw?.pix?.endToEndId ?? raw?.endToEndId ?? raw?.charge?.endToEndId;
+          const subPixKey =
+            raw?.charge?.subaccount?.pixKey ??
+            raw?.subaccount?.pixKey ??
+            raw?.pix?.charge?.subaccount?.pixKey;
           const valueCents = charge.value_centavos ?? Math.round(refundedAmount * 100);
+
+          const refundBody: Record<string, unknown> = {
+            correlationID: `refund-${appointmentId}-${Date.now()}`,
+            transactionEndToEndId: endToEndId,
+            value: valueCents,
+          };
+          if (subPixKey) refundBody.pixKey = subPixKey;
 
           const refundResp = await fetch("https://api.woovi.com/api/v1/refund", {
             method: "POST",
@@ -168,11 +179,7 @@ serve(async (req) => {
               "Content-Type": "application/json",
               Authorization: wooviAppId,
             },
-            body: JSON.stringify({
-              correlationID: `refund-${appointmentId}-${Date.now()}`,
-              transactionEndToEndId: endToEndId,
-              value: valueCents,
-            }),
+            body: JSON.stringify(refundBody),
           });
 
           const refundData = await refundResp.json().catch(() => ({}));
