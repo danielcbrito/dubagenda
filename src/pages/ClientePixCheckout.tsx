@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import logo from "@/assets/logo-dub.png";
-import pixWaitingIllustration from "@/assets/pix-waiting-illustration.png";
+import pixWaitingAsset from "@/assets/pix-waiting.png.asset.json";
 
 interface PixCheckoutData {
   pixQrCode: string;
