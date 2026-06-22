@@ -257,7 +257,7 @@ const ClientePixCheckout = () => {
           <div>
             <h2 className="text-lg font-bold text-foreground">Pagamento confirmado</h2>
             <p className="text-sm text-muted-foreground mt-1">
-              Seu agendamento foi registrado com sucesso.
+              Seu pagamento foi registrado com sucesso.
             </p>
           </div>
           <div className="w-full h-1 bg-muted/50 rounded-full overflow-hidden">

@@ -438,11 +438,19 @@ const ClienteAssinar = () => {
         if (error) throw error;
         if (data?.success) {
           sessionStorage.setItem("subscription_barber_id", selectedBarber.id);
-          sessionStorage.setItem("subscription_pix_checkout_data", JSON.stringify({
-            pixQrCode: data.pixQrCode, pixPayload: data.pixPayload, subscriptionId: data.subscriptionId,
-            asaasPaymentId: data.asaasPaymentId, expiresAt: data.expiresAt, value: data.value, planName: data.planName,
+          sessionStorage.setItem("pix_checkout_data", JSON.stringify({
+            pixQrCode: data.pixQrCode,
+            pixPayload: data.pixPayload,
+            pendingBookingId: data.subscriptionId,
+            asaasPaymentId: data.asaasPaymentId,
+            expiresAt: data.expiresAt,
+            value: data.value,
+            serviceName: data.planName,
+            barberName: selectedBarber.apelido,
+            provider: 'woovi',
+            correlationId: data.asaasPaymentId,
           }));
-          navigate("/cliente/assinatura-pix");
+          navigate("/cliente/pix-checkout");
         }
       }
     } catch (error: any) {
