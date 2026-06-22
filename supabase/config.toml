@@ -47,3 +47,6 @@ verify_jwt = false
 
 [functions.efi-webhook]
 verify_jwt = false
+
+[functions.woovi-client-refund]
+verify_jwt = false
