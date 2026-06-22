@@ -92,7 +92,7 @@ Deno.serve(async (req) => {
         user_id: sub.user_id,
         assinatura_id: sub.id,
         metodo: "pix",
-        valor: sub.preco_mensal ?? null,
+        valor: (sub as any).plano?.preco_mensal ?? null,
         gateway_payment_id: correlationID,
         status: "paid",
         data_pagamento: new Date().toISOString(),
