@@ -834,7 +834,12 @@ export type Database = {
           unidade_id: string | null
           updated_at: string | null
           user_id: string | null
+          woovi_auto_withdraw_enabled: boolean
+          woovi_auto_withdraw_min_centavos: number
+          woovi_last_auto_withdraw_at: string | null
           woovi_pix_key: string | null
+          woovi_pix_key_type: string | null
+          woovi_subaccount_name: string | null
         }
         Insert: {
           apelido: string
@@ -854,7 +859,12 @@ export type Database = {
           unidade_id?: string | null
           updated_at?: string | null
           user_id?: string | null
+          woovi_auto_withdraw_enabled?: boolean
+          woovi_auto_withdraw_min_centavos?: number
+          woovi_last_auto_withdraw_at?: string | null
           woovi_pix_key?: string | null
+          woovi_pix_key_type?: string | null
+          woovi_subaccount_name?: string | null
         }
         Update: {
           apelido?: string
@@ -874,7 +884,12 @@ export type Database = {
           unidade_id?: string | null
           updated_at?: string | null
           user_id?: string | null
+          woovi_auto_withdraw_enabled?: boolean
+          woovi_auto_withdraw_min_centavos?: number
+          woovi_last_auto_withdraw_at?: string | null
           woovi_pix_key?: string | null
+          woovi_pix_key_type?: string | null
+          woovi_subaccount_name?: string | null
         }
         Relationships: [
           {
