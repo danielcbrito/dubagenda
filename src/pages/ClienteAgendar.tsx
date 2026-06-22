@@ -20,6 +20,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { getServiceFee } from "@/lib/payment-fees";
 
 // Premium Components
 import { ServiceCard } from "@/components/booking/ServiceCard";
@@ -1267,6 +1268,8 @@ const ClienteAgendar = () => {
 
     const totalPrice = getTotalPrice();
     const finalPrice = Math.max(0, totalPrice - availableCredits);
+    const serviceFee = getServiceFee(paymentMethod);
+    const chargeAmount = finalPrice + serviceFee;
 
     if (totalPrice === 0 && useRedemption) {
       await createAppointmentWithRedemption();
@@ -1335,7 +1338,8 @@ const ClienteAgendar = () => {
       if (paymentMethod === 'card') {
         const { data, error } = await supabase.functions.invoke('create-asaas-card', {
           body: {
-            bookingData,
+            bookingData: { ...bookingData, preco: chargeAmount },
+            serviceFee,
             rescheduleFromId: isRescheduling ? rescheduleAppointmentId : undefined,
           },
         });
@@ -1357,7 +1361,7 @@ const ClienteAgendar = () => {
         const { data, error } = await supabase.functions.invoke(fnName, {
           body: {
             barbeiro_id: bookingData.barbeiro_id,
-            valor: finalPrice,
+            valor: chargeAmount,
             descricao: `Agendamento - ${serviceNames}`,
             servico_id: bookingData.servico_id,
             data: bookingData.data,
@@ -1378,7 +1382,8 @@ const ClienteAgendar = () => {
           correlationId: data.correlation_id,
           chargeId: data.charge_id,
           expiresAt: data.expires_at,
-          value: finalPrice,
+          value: chargeAmount,
+          serviceFee,
           serviceName: serviceNames,
           barberName: barbers.find(b => b.id === selectedBarberId)?.apelido,
           bookingDate: format(selectedDate, "dd/MM/yyyy"),
@@ -3247,13 +3252,21 @@ const ClienteAgendar = () => {
                     </span>
                   </div>
                 </div>
-                <div className="flex items-baseline gap-1">
-                  <span className="text-[10px] text-muted-foreground/50 font-medium">R$</span>
-                  <span className="text-[17px] font-bold text-foreground tabular-nums tracking-tight">
-                    {Math.max(0, getTotalPrice() - availableCredits).toFixed(2).replace('.', ',')}
-                  </span>
+                <div className="flex flex-col items-end">
+                  {(paymentMethod === 'pix' || paymentMethod === 'card') && (
+                    <span className="text-[9px] text-muted-foreground/60 leading-none mb-1">
+                      + R$ 0,90 taxa de serviço
+                    </span>
+                  )}
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-[10px] text-muted-foreground/50 font-medium">R$</span>
+                    <span className="text-[17px] font-bold text-foreground tabular-nums tracking-tight">
+                      {(Math.max(0, getTotalPrice() - availableCredits) + getServiceFee(paymentMethod)).toFixed(2).replace('.', ',')}
+                    </span>
+                  </div>
                 </div>
               </div>
+
 
                 {/* Full-width CTA */}
                 <motion.button

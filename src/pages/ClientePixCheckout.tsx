@@ -15,6 +15,7 @@ interface PixCheckoutData {
   asaasPaymentId: string;
   expiresAt: string;
   value: number;
+  serviceFee?: number;
   serviceName?: string;
   barberName?: string;
   bookingDate?: string;
@@ -425,6 +426,14 @@ const ClientePixCheckout = () => {
                       </div>
                     </div>
                     <div className="h-px bg-border/50 my-3" />
+                    {pixData.serviceFee && pixData.serviceFee > 0 ? (
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="text-[12px] text-muted-foreground">Taxa de serviço</span>
+                        <span className="text-[12px] text-muted-foreground tabular-nums">
+                          R$ {pixData.serviceFee.toFixed(2).replace(".", ",")}
+                        </span>
+                      </div>
+                    ) : null}
                     <div className="flex items-center justify-between">
                       <span className="text-[14px] text-foreground">Total</span>
                       <span className="text-[15px] font-bold text-foreground tabular-nums">

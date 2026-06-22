@@ -12,6 +12,7 @@ const corsHeaders = {
 
 const WOOVI_API = "https://api.woovi.com";
 const EXPIRES_SECONDS = 30 * 60;
+const SERVICE_FEE = 0.9; // Taxa de serviço cobrada do cliente em pagamentos online (PIX/Cartão)
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -136,7 +137,8 @@ Deno.serve(async (req) => {
     }
 
     const correlationID = `sub-${subscription.id}`;
-    const valueCentavos = Math.round(Number(plano.preco_mensal) * 100);
+    const chargeAmount = Number(plano.preco_mensal) + SERVICE_FEE;
+    const valueCentavos = Math.round(chargeAmount * 100);
 
     // 6. Criar cobrança na Woovi
     const wooviResp = await fetch(`${WOOVI_API}/api/v1/charge`, {
@@ -203,7 +205,8 @@ Deno.serve(async (req) => {
         pixQrCode: qrImage,
         pixPayload: brCode,
         expiresAt: expiresAt.toISOString(),
-        value: plano.preco_mensal,
+        value: chargeAmount,
+        serviceFee: SERVICE_FEE,
         planName: plano.nome,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 },

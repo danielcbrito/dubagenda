@@ -445,6 +445,7 @@ const ClienteAssinar = () => {
             asaasPaymentId: data.asaasPaymentId,
             expiresAt: data.expiresAt,
             value: data.value,
+            serviceFee: data.serviceFee ?? 0.9,
             serviceName: data.planName,
             barberName: selectedBarber.apelido,
             provider: 'woovi',
@@ -804,12 +805,20 @@ const ClienteAssinar = () => {
                       </span>
                     </div>
                   </div>
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-[10px] text-muted-foreground/50 font-medium">R$</span>
-                    <span className="text-[17px] font-bold text-foreground tabular-nums tracking-tight">
-                      {selectedPlan?.preco_mensal.toFixed(2).replace('.', ',')}
-                    </span>
+                  <div className="flex flex-col items-end">
+                    {(selectedPaymentMethod === 'pix' || selectedPaymentMethod === 'card') && (
+                      <span className="text-[9px] text-muted-foreground/60 leading-none mb-1">
+                        + R$ 0,90 taxa de serviço
+                      </span>
+                    )}
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-[10px] text-muted-foreground/50 font-medium">R$</span>
+                      <span className="text-[17px] font-bold text-foreground tabular-nums tracking-tight">
+                        {((selectedPlan?.preco_mensal ?? 0) + ((selectedPaymentMethod === 'pix' || selectedPaymentMethod === 'card') ? 0.9 : 0)).toFixed(2).replace('.', ',')}
+                      </span>
+                    </div>
                   </div>
+
                 </div>
 
                 {/* Full-width CTA */}
