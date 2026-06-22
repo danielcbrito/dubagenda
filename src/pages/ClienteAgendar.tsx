@@ -2770,31 +2770,12 @@ const ClienteAgendar = () => {
                   </motion.div>
                 )}
 
-                {/* Pagar na Barbearia */}
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.05 }}
-                >
-                  <PaymentOption
-                    value="cash"
-                    selected={paymentMethod === 'cash' && !useRedemption}
-                    onSelect={() => {
-                      setPaymentMethod('cash');
-                      setUseRedemption(false);
-                    }}
-                    title="Pagar na Barbearia"
-                    description="Pagamento presencial no dia"
-                    icon={<Landmark className={cn("w-5 h-5", paymentMethod === 'cash' && !useRedemption ? "text-primary" : "text-muted-foreground/40")} />}
-                  />
-                </motion.div>
-
-                {/* Pagar via PIX — só aparece se o barbeiro tem subconta Woovi/Efí ativa */}
+                {/* Pagar via PIX — primeiro na ordem; só aparece se o barbeiro tem subconta Woovi/Efí ativa */}
                 {canReceivePix && (
                   <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.1 }}
+                    transition={{ delay: 0.05 }}
                   >
                     <PaymentOption
                       value="pix"
@@ -2810,12 +2791,12 @@ const ClienteAgendar = () => {
                   </motion.div>
                 )}
 
-                {/* Cartão de Crédito — só aparece se o barbeiro tem subconta (mesma regra do PIX) */}
+                {/* Cartão de Crédito — segundo na ordem */}
                 {canReceivePix && (
                   <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.15 }}
+                    transition={{ delay: 0.1 }}
                   >
                     <PaymentOption
                       value="card"
@@ -2828,6 +2809,26 @@ const ClienteAgendar = () => {
                     />
                   </motion.div>
                 )}
+
+                {/* Pagar na Barbearia — por último */}
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.15 }}
+                >
+                  <PaymentOption
+                    value="cash"
+                    selected={paymentMethod === 'cash' && !useRedemption}
+                    onSelect={() => {
+                      setPaymentMethod('cash');
+                      setUseRedemption(false);
+                    }}
+                    title="Pagar na Barbearia"
+                    description="Pagamento presencial no dia"
+                    icon={<Landmark className={cn("w-5 h-5", paymentMethod === 'cash' && !useRedemption ? "text-primary" : "text-muted-foreground/40")} />}
+                  />
+                </motion.div>
+
 
                 {/* Pagar com Saldo da Carteira */}
                 {canReceivePix && walletBalance > 0 && (() => {
