@@ -2782,13 +2782,13 @@ const ClienteAgendar = () => {
                   />
                 </motion.div>
 
-                {/* Pagar via PIX */}
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.1 }}
-                >
-                  {canReceivePix ? (
+                {/* Pagar via PIX — só aparece se o barbeiro tem subconta Woovi/Efí ativa */}
+                {canReceivePix && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.1 }}
+                  >
                     <PaymentOption
                       value="pix"
                       selected={paymentMethod === 'pix' && !useRedemption}
@@ -2800,35 +2800,27 @@ const ClienteAgendar = () => {
                       description="Confirmação instantânea e segura"
                       icon={<img src={pixIcon} alt="PIX" className={cn("w-5 h-5 object-contain", paymentMethod === 'pix' && !useRedemption ? "" : "grayscale opacity-50")} />}
                     />
-                  ) : (
+                  </motion.div>
+                )}
+
+                {/* Cartão de Crédito — só aparece se o barbeiro tem subconta (mesma regra do PIX) */}
+                {canReceivePix && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.15 }}
+                  >
                     <PaymentOption
-                      value="pix_disabled"
+                      value="card"
                       selected={false}
                       onSelect={() => {}}
                       disabled={true}
-                      title="Pagar via PIX"
-                      description="Pagamento online disponível em breve"
-                      icon={<img src={pixIcon} alt="PIX" className="w-5 h-5 object-contain grayscale opacity-30" />}
+                      title="Cartão de Crédito"
+                      description="Pague em até 12x pelo App"
+                      icon={<CreditCard className="w-5 h-5 text-muted-foreground/30" />}
                     />
-                  )}
-                </motion.div>
-
-                {/* Cartão de Crédito (Sempre desativado por enquanto) */}
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.15 }}
-                >
-                  <PaymentOption
-                    value="card"
-                    selected={false}
-                    onSelect={() => {}}
-                    disabled={true}
-                    title="Cartão de Crédito"
-                    description="Pague em até 12x pelo App"
-                    icon={<CreditCard className="w-5 h-5 text-muted-foreground/30" />}
-                  />
-                </motion.div>
+                  </motion.div>
+                )}
 
                 {/* Pagar com Saldo da Carteira */}
                 {canReceivePix && walletBalance > 0 && (() => {
