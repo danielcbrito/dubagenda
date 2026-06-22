@@ -146,6 +146,10 @@ Deno.serve(async (req) => {
     }
 
     // 4. Criar cobrança na Woovi
+    // ESCROW: cobrança vai pra conta-mãe (não usa subaccount).
+    // Isso garante que o valor fica retido até o agendamento ser concluído,
+    // permitindo estorno automático em caso de cancelamento.
+    // O repasse pro barbeiro é feito por release-barber-payment quando status='completed'.
     const correlationID = `book-${pendingBookingId ?? crypto.randomUUID()}`;
     const valueCentavos = Math.round(Number(valor) * 100);
 
@@ -154,10 +158,9 @@ Deno.serve(async (req) => {
       value: valueCentavos,
       comment: (descricao || "Agendamento").slice(0, 140),
       expiresIn: EXPIRES_SECONDS,
-      subaccount: subaccountPixKey,
       additionalInfo: [
         { key: "Barbeiro", value: barber.apelido ?? "" },
-        { key: "PixDestino", value: subaccountPixKey },
+        { key: "BarbeiroPixKey", value: subaccountPixKey },
       ],
     };
 
