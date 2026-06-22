@@ -1360,7 +1360,7 @@ const ClienteAgendar = () => {
         const { data, error } = await supabase.functions.invoke(fnName, {
           body: {
             barbeiro_id: bookingData.barbeiro_id,
-            valor: finalPrice,
+            valor: chargeAmount,
             descricao: `Agendamento - ${serviceNames}`,
             servico_id: bookingData.servico_id,
             data: bookingData.data,
@@ -1381,7 +1381,8 @@ const ClienteAgendar = () => {
           correlationId: data.correlation_id,
           chargeId: data.charge_id,
           expiresAt: data.expires_at,
-          value: finalPrice,
+          value: chargeAmount,
+          serviceFee,
           serviceName: serviceNames,
           barberName: barbers.find(b => b.id === selectedBarberId)?.apelido,
           bookingDate: format(selectedDate, "dd/MM/yyyy"),
