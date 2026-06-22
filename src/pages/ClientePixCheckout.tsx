@@ -35,6 +35,8 @@ const ClientePixCheckout = () => {
   const [expired, setExpired] = useState(false);
   const [paid, setPaid] = useState(false);
   const [progressPct, setProgressPct] = useState(0);
+  const [timerPct, setTimerPct] = useState(100);
+  const [createdAt] = useState<number>(() => Date.now());
 
   // Recuperar dados do sessionStorage
   useEffect(() => {
@@ -47,25 +49,28 @@ const ClientePixCheckout = () => {
     setPixData(JSON.parse(stored));
   }, [navigate]);
 
-  // Timer de expiração
+  // Timer de expiração + barra de progresso
   useEffect(() => {
     if (!pixData?.expiresAt) return;
+    const expires = new Date(pixData.expiresAt).getTime();
+    const totalMs = Math.max(1, expires - createdAt);
     const interval = setInterval(() => {
       const now = Date.now();
-      const expires = new Date(pixData.expiresAt).getTime();
       const diff = expires - now;
       if (diff <= 0) {
         setExpired(true);
         setTimeLeft("00:00");
+        setTimerPct(0);
         clearInterval(interval);
         return;
       }
       const mins = Math.floor(diff / 60000);
       const secs = Math.floor((diff % 60000) / 1000);
       setTimeLeft(`${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`);
-    }, 1000);
+      setTimerPct(Math.max(0, Math.min(100, (diff / totalMs) * 100)));
+    }, 500);
     return () => clearInterval(interval);
-  }, [pixData?.expiresAt]);
+  }, [pixData?.expiresAt, createdAt]);
 
   // Polling automático — verifica pagamento a cada 4s
   useEffect(() => {
