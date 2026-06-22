@@ -86,6 +86,28 @@ Deno.serve(async (req) => {
       throw new Error("Erro ao creditar carteira");
     }
 
+    // Captura metadados Woovi (PIX) para permitir reembolso pela carteira
+    let wooviMeta: Record<string, unknown> | null = null;
+    if (pagamento.metodo === "pix") {
+      const { data: charge } = await supabase
+        .from("woovi_charges")
+        .select("correlation_id, value_centavos, raw_response")
+        .eq("agendamento_id", agendamento_id)
+        .eq("status", "PAID")
+        .maybeSingle();
+      if (charge) {
+        const raw = charge.raw_response as any;
+        const endToEndId = raw?.pix?.endToEndId ?? raw?.endToEndId ?? raw?.charge?.endToEndId;
+        wooviMeta = {
+          source: "pix_cancellation",
+          woovi_correlation_id: charge.correlation_id,
+          woovi_endToEndId: endToEndId,
+          woovi_value_centavos: charge.value_centavos ?? Math.round(valor * 100),
+          agendamento_id,
+        };
+      }
+    }
+
     // Registrar transação
     await supabase.from("wallet_transactions").insert({
       user_id: user.id,
@@ -93,7 +115,9 @@ Deno.serve(async (req) => {
       amount: valor,
       status: "completed",
       description: `Estorno de cancelamento (${pagamento.metodo === 'pix' ? 'PIX' : pagamento.metodo === 'card' ? 'Cartão' : pagamento.metodo}) - R$ ${valor.toFixed(2)}`,
+      metadata: wooviMeta,
     });
+
 
     // Marcar pagamento como estornado
     await supabase
