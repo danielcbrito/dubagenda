@@ -25,7 +25,7 @@ Deno.serve(async (req) => {
 
     const { data: sub } = await admin
       .from("assinaturas")
-      .select("*")
+      .select("*, plano:planos(preco_mensal)")
       .eq("id", subscriptionId)
       .in("status", ["suspended", "pending_renewal"])
       .maybeSingle();
