@@ -370,11 +370,8 @@ export function WalletSheet({ open, onOpenChange, userId, profile }: WalletSheet
                     label="Nº de cancelamentos"
                     value={`${preview.creditsCount}`}
                   />
-                  <Row
-                    label="Taxa por cancelamento"
-                    value={`- ${brl(preview.feePerCredit)}`}
-                  />
-                  <Row label="Total de taxas" value={`- ${brl(preview.totalFee)}`} />
+                  <Row label="Taxa real Woovi" value={`- ${brl(preview.totalFee)}`} />
+
                   <div className="h-px my-3" style={{ background: COLORS.divider }} />
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-semibold" style={{ color: COLORS.ink }}>
