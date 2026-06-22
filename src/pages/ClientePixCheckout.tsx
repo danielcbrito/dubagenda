@@ -1,13 +1,12 @@
 import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Copy, Check, Loader2, Clock, AlertCircle, CheckCircle2, ShieldCheck, Scissors, User, CalendarDays } from "lucide-react";
-import { BackArrow } from "@/components/ui/back-arrow";
+import { Copy, Check, Loader2, AlertCircle, CheckCircle2, ChevronLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
-import pixIcon from "@/assets/pix-icon.png";
 import logo from "@/assets/logo-dub.png";
+import pixWaitingIllustration from "@/assets/pix-waiting-illustration.png";
 
 interface PixCheckoutData {
   pixQrCode: string;
