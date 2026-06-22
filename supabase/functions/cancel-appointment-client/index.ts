@@ -139,13 +139,61 @@ serve(async (req) => {
       if (payment) {
         refundedAmount = payment.valor || amount;
       } else {
-        // Pagamento pendente ou não encontrado — nada a reembolsar
-        refundedAmount = 0;
+        // Fallback: se não há registro em pagamentos, usar o preço do agendamento
+        refundedAmount = amount;
       }
     }
 
-    // Credit wallet atomically via RPC (prevents race conditions)
-    if (refundedAmount > 0) {
+    // 4a. PIX: tentar estorno direto na conta bancária via Woovi
+    let bankRefunded = false;
+    if (paymentMethod === "pix" && refundedAmount > 0) {
+      try {
+        const { data: charge } = await supabase
+          .from("woovi_charges")
+          .select("correlation_id, raw_response, value_centavos")
+          .eq("agendamento_id", appointmentId)
+          .eq("status", "PAID")
+          .maybeSingle();
+
+        const wooviAppId = Deno.env.get("ID_DO_APLICATIVO_WOOVI");
+        if (charge && wooviAppId) {
+          const raw = charge.raw_response as any;
+          const endToEndId =
+            raw?.pix?.endToEndId ?? raw?.endToEndId ?? raw?.charge?.endToEndId;
+          const valueCents = charge.value_centavos ?? Math.round(refundedAmount * 100);
+
+          const refundResp = await fetch("https://api.woovi.com/api/v1/refund", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: wooviAppId,
+            },
+            body: JSON.stringify({
+              correlationID: `refund-${appointmentId}-${Date.now()}`,
+              transactionEndToEndId: endToEndId,
+              value: valueCents,
+            }),
+          });
+
+          const refundData = await refundResp.json().catch(() => ({}));
+          if (refundResp.ok) {
+            bankRefunded = true;
+            console.log(`[cancel-appointment-client] PIX estornado via Woovi para ${appointmentId}`);
+            await supabase
+              .from("pagamentos")
+              .update({ status: "refunded" })
+              .eq("agendamento_id", appointmentId);
+          } else {
+            console.error("[cancel-appointment-client] Falha estorno Woovi:", refundData);
+          }
+        }
+      } catch (err) {
+        console.error("[cancel-appointment-client] Erro no estorno Woovi:", err);
+      }
+    }
+
+    // Credit wallet atomically via RPC (prevents race conditions) — fallback quando estorno bancário não foi feito
+    if (refundedAmount > 0 && !bankRefunded) {
       const description = isPaidWithCredit
         ? `Estorno de cancelamento - R$ ${refundedAmount.toFixed(2)}`
         : isPaidViaGateway
@@ -169,9 +217,11 @@ serve(async (req) => {
       user_id: callerUserId,
       tipo: "cancelamento",
       titulo: "Agendamento cancelado",
-      mensagem: refundedAmount > 0
-        ? `Seu agendamento foi cancelado. R$ ${refundedAmount.toFixed(2)} foi adicionado à sua carteira.`
-        : "Seu agendamento foi cancelado com sucesso.",
+      mensagem: bankRefunded
+        ? `Seu agendamento foi cancelado. R$ ${refundedAmount.toFixed(2)} foi estornado para a sua conta bancária (PIX).`
+        : refundedAmount > 0
+          ? `Seu agendamento foi cancelado. R$ ${refundedAmount.toFixed(2)} foi adicionado à sua carteira.`
+          : "Seu agendamento foi cancelado com sucesso.",
       agendamento_id: appointmentId,
     });
 
