@@ -7,10 +7,14 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+const FUNCTION_VERSION = "wallet-refund-origin-account-2026-06-22T2355Z";
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
+
+  console.log(`[wallet-operations] boot_version=${FUNCTION_VERSION}`);
 
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -44,7 +48,7 @@ serve(async (req) => {
     const body = await req.json();
     const { action } = body;
 
-    console.log(`[wallet-operations] action=${action} user=${user.id}`);
+    console.log(`[wallet-operations] version=${FUNCTION_VERSION} action=${action} user=${user.id}`);
 
     // ─── GET BALANCE ───
     if (action === "get_balance") {
@@ -290,6 +294,7 @@ serve(async (req) => {
 
     // ─── WITHDRAW (Pix via Woovi, taxa REAL dinâmica por cancelamento) ───
     if (action === "withdraw") {
+      console.log(`[wallet-operations] withdraw_refund_mode=origin_account_no_pix_key version=${FUNCTION_VERSION}`);
       const { confirmed } = body;
       const isPreview = confirmed !== true;
 
