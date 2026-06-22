@@ -231,11 +231,29 @@ const ClienteAgendar = () => {
   // Fonte única do barbeiro selecionado (fallback para assinatura vinculada)
   const selectedBarberId = selectedBarber?.id || activeSubscription?.barbeiro_id || null;
 
-  // Status da carteira do barbeiro: define se podemos oferecer PIX (e Carteira do app)
-  const { canReceivePix } = useWalletStatus(selectedBarberId);
+  // Status da carteira do barbeiro (legado Efí): define se podemos oferecer Carteira do app
+  const { canReceivePix: canReceivePixWallet } = useWalletStatus(selectedBarberId);
 
-  // Fallback: se o método selecionado deixou de estar disponível (ex.: usuário trocou
-  // para um barbeiro sem chave PIX validada), volta para "pagar na barbearia".
+  // Woovi: verifica se o barbeiro selecionado tem chave Pix Woovi cadastrada
+  const [barberWooviKey, setBarberWooviKey] = useState<string | null>(null);
+  useEffect(() => {
+    if (!selectedBarberId) { setBarberWooviKey(null); return; }
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from('barbeiros')
+        .select('woovi_pix_key')
+        .eq('id', selectedBarberId)
+        .maybeSingle();
+      if (!cancelled) setBarberWooviKey((data?.woovi_pix_key as string | null) ?? null);
+    })();
+    return () => { cancelled = true; };
+  }, [selectedBarberId]);
+
+  // PIX disponível se o barbeiro tem chave Woovi (novo) ou carteira Efí ativa (legado)
+  const canReceivePix = !!barberWooviKey || canReceivePixWallet;
+
+  // Fallback: se o método selecionado deixou de estar disponível, volta para "pagar na barbearia".
   useEffect(() => {
     if (!canReceivePix && (paymentMethod === 'pix' || paymentMethod === 'wallet')) {
       setPaymentMethod('cash');
@@ -1332,9 +1350,11 @@ const ClienteAgendar = () => {
         throw new Error("Não foi possível iniciar o pagamento.");
       }
 
-      // === PIX automático via Efí Bank ===
+      // === PIX automático ===
       if (paymentMethod === 'pix') {
-        const { data, error } = await supabase.functions.invoke('efi-create-pix-charge', {
+        const useWoovi = !!barberWooviKey;
+        const fnName = useWoovi ? 'woovi-create-charge' : 'efi-create-pix-charge';
+        const { data, error } = await supabase.functions.invoke(fnName, {
           body: {
             barbeiro_id: bookingData.barbeiro_id,
             valor: finalPrice,
@@ -1352,9 +1372,11 @@ const ClienteAgendar = () => {
           pixQrCode: data.qr_code_image?.replace(/^data:image\/png;base64,/, '') ?? '',
           pixPayload: data.br_code,
           pendingBookingId: data.pending_booking_id,
-          asaasPaymentId: data.txid, // reutilizamos o campo (UI agnóstica)
-          provider: 'efi',
+          asaasPaymentId: data.charge_id ?? data.txid,
+          provider: useWoovi ? 'woovi' : 'efi',
           txid: data.txid,
+          correlationId: data.correlation_id,
+          chargeId: data.charge_id,
           expiresAt: data.expires_at,
           value: finalPrice,
           serviceName: serviceNames,
