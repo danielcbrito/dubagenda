@@ -131,15 +131,10 @@ export function WalletSheet({ open, onOpenChange, userId, profile }: WalletSheet
   };
 
   const confirmRefund = async () => {
-    if (!pixKey.trim() || pixKey.trim().length < 5) {
-      toast.error("Informe uma chave Pix válida.");
-      return;
-    }
     setSubmitting(true);
     try {
       const { data, error } = await supabase.functions.invoke("wallet-operations", {
-        body: { action: "withdraw", confirmed: true, pixKey: pixKey.trim() },
-
+        body: { action: "withdraw", confirmed: true },
       });
       if (error || data?.error || data?.fallback || !data?.success) {
         toast.error(data?.message || data?.error || "Falha ao processar reembolso.");
@@ -154,6 +149,7 @@ export function WalletSheet({ open, onOpenChange, userId, profile }: WalletSheet
       setSubmitting(false);
     }
   };
+
 
 
   const hasCredits = (preview?.creditsCount || 0) > 0;
