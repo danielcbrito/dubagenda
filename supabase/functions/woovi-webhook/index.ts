@@ -130,6 +130,21 @@ Deno.serve(async (req) => {
               .update({ balance: newBalance })
               .eq("user_id", pb.user_id);
 
+            const endToEndId =
+              payload?.pix?.endToEndId ??
+              payload?.endToEndId ??
+              payload?.charge?.endToEndId ??
+              localCharge?.raw_response?.pix?.endToEndId ??
+              null;
+
+            const feeCents = Number(
+              payload?.pix?.charge?.fee ??
+                payload?.charge?.fee ??
+                localCharge?.raw_response?.pix?.charge?.fee ??
+                localCharge?.raw_response?.charge?.fee ??
+                0,
+            );
+
             await admin.from("wallet_transactions").insert({
               user_id: pb.user_id,
               type: "refund",
@@ -139,6 +154,9 @@ Deno.serve(async (req) => {
               metadata: {
                 source: "slot_conflict_auto_refund",
                 woovi_correlation_id: correlationID,
+                woovi_endToEndId: endToEndId,
+                woovi_value_centavos: Math.round(valor * 100),
+                woovi_fee_centavos: feeCents,
                 pending_booking_id: pb.id,
               },
             });
