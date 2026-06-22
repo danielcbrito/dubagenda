@@ -6149,6 +6149,7 @@ export type Database = {
           paid_at: string | null
           qr_code_image: string | null
           raw_response: Json | null
+          released_at: string | null
           status: string
           updated_at: string
           user_id: string | null
@@ -6165,6 +6166,7 @@ export type Database = {
           paid_at?: string | null
           qr_code_image?: string | null
           raw_response?: Json | null
+          released_at?: string | null
           status?: string
           updated_at?: string
           user_id?: string | null
@@ -6181,6 +6183,7 @@ export type Database = {
           paid_at?: string | null
           qr_code_image?: string | null
           raw_response?: Json | null
+          released_at?: string | null
           status?: string
           updated_at?: string
           user_id?: string | null
