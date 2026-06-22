@@ -1350,9 +1350,11 @@ const ClienteAgendar = () => {
         throw new Error("Não foi possível iniciar o pagamento.");
       }
 
-      // === PIX automático via Efí Bank ===
+      // === PIX automático ===
       if (paymentMethod === 'pix') {
-        const { data, error } = await supabase.functions.invoke('efi-create-pix-charge', {
+        const useWoovi = !!barberWooviKey;
+        const fnName = useWoovi ? 'woovi-create-charge' : 'efi-create-pix-charge';
+        const { data, error } = await supabase.functions.invoke(fnName, {
           body: {
             barbeiro_id: bookingData.barbeiro_id,
             valor: finalPrice,
@@ -1370,9 +1372,11 @@ const ClienteAgendar = () => {
           pixQrCode: data.qr_code_image?.replace(/^data:image\/png;base64,/, '') ?? '',
           pixPayload: data.br_code,
           pendingBookingId: data.pending_booking_id,
-          asaasPaymentId: data.txid, // reutilizamos o campo (UI agnóstica)
-          provider: 'efi',
+          asaasPaymentId: data.charge_id ?? data.txid,
+          provider: useWoovi ? 'woovi' : 'efi',
           txid: data.txid,
+          correlationId: data.correlation_id,
+          chargeId: data.charge_id,
           expiresAt: data.expires_at,
           value: finalPrice,
           serviceName: serviceNames,
