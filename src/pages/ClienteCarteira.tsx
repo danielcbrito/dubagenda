@@ -22,7 +22,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { BackArrow } from "@/components/ui/back-arrow";
 
 interface WalletTransaction {
@@ -161,7 +160,6 @@ export default function ClienteCarteira() {
   const [submitting, setSubmitting] = useState(false);
   const [balanceVisible, setBalanceVisible] = useState(true);
   const [view, setView] = useState<View>("home");
-  const [pixKey, setPixKey] = useState("");
   const [result, setResult] = useState<RefundResult | null>(null);
 
   const loadData = useCallback(async () => {
