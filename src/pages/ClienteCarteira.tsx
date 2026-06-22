@@ -271,8 +271,21 @@ export default function ClienteCarteira() {
           </div>
 
           <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-full bg-primary-foreground/10 border border-primary-foreground/20 text-primary-foreground flex items-center justify-center">
-              <UserIcon className="w-5 h-5" strokeWidth={1.75} />
+            <div className="w-11 h-11 rounded-full bg-primary-foreground/10 border border-primary-foreground/20 text-primary-foreground flex items-center justify-center overflow-hidden">
+              {profile?.avatar_url ? (
+                <img
+                  src={profile.avatar_url}
+                  alt={profile?.nome ?? "Cliente"}
+                  className="w-full h-full object-cover"
+                  onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+                />
+              ) : profile?.nome ? (
+                <span className="text-sm font-semibold uppercase">
+                  {profile.nome.trim().split(/\s+/).slice(0, 2).map((n: string) => n[0]).join("")}
+                </span>
+              ) : (
+                <UserIcon className="w-5 h-5" strokeWidth={1.75} />
+              )}
             </div>
             <p className="text-base font-medium text-primary-foreground truncate">
               Olá, <span className="font-semibold">{firstName(profile?.nome)}</span>
