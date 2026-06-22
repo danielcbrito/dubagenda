@@ -219,16 +219,11 @@ export default function ClienteCarteira() {
       toast.info("Você não tem créditos de cancelamento disponíveis.");
       return;
     }
-    if (!pixKey.trim() || pixKey.trim().length < 5) {
-      toast.error("Informe uma chave Pix válida.");
-      return;
-    }
 
     setSubmitting(true);
     try {
       const { data, error } = await supabase.functions.invoke("wallet-operations", {
-        body: { action: "withdraw", confirmed: true, pixKey: pixKey.trim() },
-
+        body: { action: "withdraw", confirmed: true },
       });
 
       if (error || data?.error || data?.fallback || !data?.success) {
