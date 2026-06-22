@@ -191,7 +191,7 @@ const fetchLoyaltyData = async (userId: string, tenantId: string | null) => {
     // Fetch pending subscription in same parallel batch
     supabase
       .from("assinaturas")
-      .select("id, status, plano_id, created_at, payment_method, pix_qr_code, pix_payload, asaas_payment_id, pix_expires_at, plano:planos(nome, preco_mensal)")
+      .select("id, status, plano_id, barbeiro_id, created_at, payment_method, pix_qr_code, pix_payload, asaas_payment_id, pix_expires_at, plano:planos(nome, preco_mensal), barbeiro:barbeiros(apelido)")
       .eq("user_id", userId)
       .in("status", ["suspended", "pending_cash", "pending_renewal"] as any)
       .order("created_at", { ascending: false })

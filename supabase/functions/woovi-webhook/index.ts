@@ -116,7 +116,7 @@ Deno.serve(async (req) => {
     if (subId) {
       const { data: sub } = await admin
         .from("assinaturas")
-        .select("id, user_id, status, total_renovacoes")
+        .select("id, user_id, status, total_renovacoes, plano:planos(preco_mensal)")
         .eq("id", subId)
         .maybeSingle();
       if (sub && sub.status !== "active") {
@@ -144,6 +144,7 @@ Deno.serve(async (req) => {
           user_id: sub.user_id,
           assinatura_id: subId,
           metodo: "pix",
+          valor: (sub as any).plano?.preco_mensal ?? (localCharge.value_centavos ? localCharge.value_centavos / 100 : null),
           gateway_payment_id: correlationID,
           status: "paid",
           data_pagamento: new Date().toISOString(),
