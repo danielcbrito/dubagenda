@@ -2163,8 +2163,10 @@ const ClienteAgendar = () => {
   useEffect(() => {
     const prev = prevCanUseRedemptionRef.current;
     if (canUseRedemption && !prev) {
-      // acabou de ficar elegível → pré-seleciona
+      // acabou de ficar elegível → pré-seleciona o corte grátis
+      // e alinha o método de pagamento (resgate → tile "cash" no UI, preço final R$ 0)
       setUseRedemption(true);
+      setPaymentMethod('cash');
     }
     if (!canUseRedemption && useRedemption) {
       setUseRedemption(false);
