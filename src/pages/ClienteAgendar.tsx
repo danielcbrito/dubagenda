@@ -2099,11 +2099,23 @@ const ClienteAgendar = () => {
     return `${String(endHours).padStart(2, "0")}:${String(endMins).padStart(2, "0")}`;
   };
 
+  /**
+   * Retorna o serviço de corte SIMPLES elegível para resgate de Corte Grátis.
+   * Regras (alinhadas ao trigger consume_redemption_on_appointment_insert no banco):
+   * - Carrinho com EXATAMENTE 1 serviço, quantidade 1.
+   * - Nome contém "corte" e NÃO é combo (barba, +, "e", mais, combo, pacote, duo, kit).
+   * Qualquer outra composição (combo, múltiplos serviços, qty>1) bloqueia o corte grátis.
+   */
   const getCorteService = () => {
-    // Procura qualquer serviço que contenha "corte" no nome
-    return (selectedServices || []).find(s => 
-      s.nome.toLowerCase().includes('corte')
-    );
+    if (!selectedServices || selectedServices.length !== 1) return undefined;
+    const svc = selectedServices[0];
+    const qty = serviceQuantities[svc.id] || 1;
+    if (qty !== 1) return undefined;
+    const name = (svc.nome || "").toLowerCase();
+    if (!name.includes("corte")) return undefined;
+    const comboKeywords = ["barba", "+", " e ", "mais", "combo", "pacote", "duo", "kit"];
+    if (comboKeywords.some(k => name.includes(k))) return undefined;
+    return svc;
   };
 
   // Helper para formatar nomes dos serviços com quantidade
@@ -2118,23 +2130,6 @@ const ClienteAgendar = () => {
     if (!useRedemption || availableRedemptions.length === 0) return 0;
     const corteService = getCorteService();
     if (!corteService) return 0;
-    
-    // Se for um combo, tenta aplicar o desconto apenas do valor de um "Corte" simples
-    const isCombo = corteService.nome.toLowerCase().includes('barba') || 
-                    corteService.nome.toLowerCase().includes('+') || 
-                    corteService.nome.toLowerCase().includes('mais');
-                    
-    if (isCombo) {
-      const simpleCorte = services.find(s => 
-        s.nome.toLowerCase().includes('corte') && 
-        !s.nome.toLowerCase().includes('barba') && 
-        !s.nome.toLowerCase().includes('+') && 
-        !s.nome.toLowerCase().includes('mais')
-      );
-      // Se encontrar um corte simples, desconta apenas o valor dele. Caso contrário, desconta o valor total do combo.
-      if (simpleCorte) return simpleCorte.preco;
-    }
-    
     return corteService.preco;
   };
 
