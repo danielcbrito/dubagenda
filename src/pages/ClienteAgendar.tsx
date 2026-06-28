@@ -2100,22 +2100,27 @@ const ClienteAgendar = () => {
   };
 
   /**
-   * Retorna o serviço de corte SIMPLES elegível para resgate de Corte Grátis.
-   * Regras (alinhadas ao trigger consume_redemption_on_appointment_insert no banco):
-   * - Carrinho com EXATAMENTE 1 serviço, quantidade 1.
-   * - Nome contém "corte" e NÃO é combo (barba, +, "e", mais, combo, pacote, duo, kit).
-   * Qualquer outra composição (combo, múltiplos serviços, qty>1) bloqueia o corte grátis.
+   * Retorna o serviço de CORTE SIMPLES elegível para resgate de Corte Grátis.
+   * Regras:
+   * - Procura no carrinho qualquer serviço cujo nome contenha "corte" e NÃO seja combo
+   *   (barba, +, " e ", mais, combo, pacote, duo, kit).
+   * - Se houver mais de um corte simples, escolhe o de MENOR preço (o cliente paga o mais caro).
+   * - Se o mesmo corte tiver qty > 1, ainda é válido: 1 unidade vira grátis e as demais são cobradas.
+   * - O cliente pode ter outros serviços junto (alisante, barba, etc.) — só o corte simples é descontado.
+   * O trigger no banco (consume_redemption_on_appointment_insert) garante que o servico_id resgatado
+   * é um corte simples, independente dos demais serviços do carrinho.
    */
   const getCorteService = () => {
-    if (!selectedServices || selectedServices.length !== 1) return undefined;
-    const svc = selectedServices[0];
-    const qty = serviceQuantities[svc.id] || 1;
-    if (qty !== 1) return undefined;
-    const name = (svc.nome || "").toLowerCase();
-    if (!name.includes("corte")) return undefined;
+    if (!selectedServices || selectedServices.length === 0) return undefined;
     const comboKeywords = ["barba", "+", " e ", "mais", "combo", "pacote", "duo", "kit"];
-    if (comboKeywords.some(k => name.includes(k))) return undefined;
-    return svc;
+    const cortes = selectedServices.filter(s => {
+      const name = (s.nome || "").toLowerCase();
+      if (!name.includes("corte")) return false;
+      return !comboKeywords.some(k => name.includes(k));
+    });
+    if (cortes.length === 0) return undefined;
+    // Escolhe o corte de MENOR preço (mais justo: cliente paga o item mais caro).
+    return cortes.reduce((min, s) => (s.preco < min.preco ? s : min), cortes[0]);
   };
 
   // Helper para formatar nomes dos serviços com quantidade
