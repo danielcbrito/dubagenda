@@ -2686,7 +2686,7 @@ const ClienteAgendar = () => {
             animate="animate"
             exit="exit"
             transition={{ duration: 0.3 }}
-            className="min-h-screen pt-16 pb-24 px-4"
+            className="min-h-screen pt-24 pb-24 px-4"
           >
             <div className="max-w-2xl mx-auto">
               {/* Header removido — informações do barbeiro sobem para o topo */}
