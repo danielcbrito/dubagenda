@@ -812,8 +812,34 @@ export function useSlotAvailability(
     }
   }, [selectedDate, serviceDuration, excludeAppointmentId, barbeiroId]);
 
+  // ============================================
+  // FILTRO CLIENT-SIDE DE ANTECEDÊNCIA MÍNIMA
+  // Re-renderiza a cada 30s para que horários passados sumam em tempo real
+  // (independente da latência do backend/polling).
+  // ============================================
+  const [nowTick, setNowTick] = useState(() => Date.now());
+  useEffect(() => {
+    const interval = setInterval(() => setNowTick(Date.now()), 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const enforcedSlots = (() => {
+    if (!selectedDate) return slots;
+    const dateStr = format(selectedDate, 'yyyy-MM-dd');
+    const brasilNow = new Date(new Date(nowTick).toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
+    const todayStr = `${brasilNow.getFullYear()}-${String(brasilNow.getMonth() + 1).padStart(2, '0')}-${String(brasilNow.getDate()).padStart(2, '0')}`;
+    if (dateStr !== todayStr) return slots;
+    const currentMinutes = brasilNow.getHours() * 60 + brasilNow.getMinutes();
+    const minMinutes = currentMinutes + MINIMUM_ADVANCE_MINUTES;
+    return slots.map(s =>
+      s.available && timeToMinutes(s.time) < minMinutes
+        ? { ...s, available: false, blockedReason: 'minimum_advance' as const }
+        : s
+    );
+  })();
+
   return {
-    slots,
+    slots: enforcedSlots,
     loading,
     error,
     occupiedSlots,
@@ -821,3 +847,4 @@ export function useSlotAvailability(
     verifySlotAvailability
   };
 }
+
