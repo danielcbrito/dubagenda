@@ -2978,6 +2978,7 @@ const ClienteAgendar = () => {
                       <input
                         type="text"
                         placeholder="Inserir código"
+                        aria-label="Inserir código do cupom"
                         value={couponCode}
                         onChange={(e) => {
                           const val = e.target.value.toUpperCase();
