@@ -2823,53 +2823,8 @@ const ClienteAgendar = () => {
                       )}
                     </AnimatePresence>
 
-                    {/* Subtipo de pagamento na barbearia: Dinheiro ou Cartão */}
-                    <AnimatePresence>
-                      {paymentMethod === 'cash' && !useRedemption && (
-                        <motion.div
-                          initial={{ opacity: 0, height: 0 }}
-                          animate={{ opacity: 1, height: 'auto' }}
-                          exit={{ opacity: 0, height: 0 }}
-                          className="overflow-hidden"
-                        >
-                          <div className="mt-2 rounded-xl border border-border bg-card p-3.5">
-                            <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2.5">
-                              Como você vai pagar
-                            </p>
-                            <div className="grid grid-cols-2 gap-2">
-                              <button
-                                onClick={() => setCashSubtype('dinheiro')}
-                                className={cn(
-                                  "flex flex-col items-center gap-1.5 rounded-lg border p-3 transition-all active:scale-[0.98]",
-                                  cashSubtype === 'dinheiro'
-                                    ? "border-primary/60 bg-primary/5"
-                                    : "border-border bg-background hover:bg-muted/30"
-                                )}
-                              >
-                                <Banknote className={cn("w-5 h-5", cashSubtype === 'dinheiro' ? "text-primary" : "text-muted-foreground/60")} />
-                                <span className={cn("text-[12px] font-semibold", cashSubtype === 'dinheiro' ? "text-foreground" : "text-muted-foreground")}>
-                                  Dinheiro
-                                </span>
-                              </button>
-                              <button
-                                onClick={() => setCashSubtype('cartao')}
-                                className={cn(
-                                  "flex flex-col items-center gap-1.5 rounded-lg border p-3 transition-all active:scale-[0.98]",
-                                  cashSubtype === 'cartao'
-                                    ? "border-primary/60 bg-primary/5"
-                                    : "border-border bg-background hover:bg-muted/30"
-                                )}
-                              >
-                                <CreditCard className={cn("w-5 h-5", cashSubtype === 'cartao' ? "text-primary" : "text-muted-foreground/60")} />
-                                <span className={cn("text-[12px] font-semibold", cashSubtype === 'cartao' ? "text-foreground" : "text-muted-foreground")}>
-                                  Cartão
-                                </span>
-                              </button>
-                            </div>
-                          </div>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
+
+
 
 
                     {/* Sheet com todas as opções */}
