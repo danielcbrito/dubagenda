@@ -1328,14 +1328,8 @@ const ClienteAgendar = () => {
         }
       }
 
-      // Pagamento na barbearia: indicar subtipo (dinheiro/cartão) para o barbeiro
-      if (paymentMethod === 'cash' && !useRedemption) {
-        const subtypeLabel = cashSubtype === 'dinheiro' ? 'Dinheiro' : 'Cartão';
-        const cashMsg = `Pagamento na barbearia: ${subtypeLabel}`;
-        finalObservacoes = finalObservacoes
-          ? `${cashMsg} | ${finalObservacoes}`
-          : cashMsg;
-      }
+
+
 
 
       const bookingData = {
