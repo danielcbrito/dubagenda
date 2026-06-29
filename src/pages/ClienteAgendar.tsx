@@ -3233,60 +3233,22 @@ const ClienteAgendar = () => {
               style={{ background: "linear-gradient(to bottom, transparent, hsl(var(--background)))" }}
             />
 
-            {/* Bar content */}
-            <div className="bg-background border-t border-border/40 px-5 pb-safe">
-              <div className="pt-3.5 pb-4 space-y-3">
-              {/* Info row */}
-              <div className="flex items-center justify-between px-0.5">
-                <div className="flex items-center gap-2.5">
-                  {selectedBarber?.foto_url ? (
-                    <img src={selectedBarber.foto_url} alt="" className="w-7 h-7 rounded-full object-cover" />
-                  ) : (
-                    <div className="w-7 h-7 rounded-full bg-primary/30 flex items-center justify-center text-[11px] font-bold text-primary">
-                      {selectedBarber?.apelido?.charAt(0)}
-                    </div>
-                  )}
-                  <div className="flex flex-col">
-                    <span className="text-[10px] text-muted-foreground/60 leading-none mb-0.5">
-                      {paymentMethod === "pix" ? "Pagar via Pix" : paymentMethod === "card" ? "Pagar via Cartão" : paymentMethod === "wallet" ? "Pagar via Carteira" : "Pagar na Barbearia"}
-                    </span>
-                    <span className="text-[13px] font-semibold text-foreground leading-none">
-                      {selectedBarber?.apelido}
-                    </span>
-                  </div>
-                </div>
-                <div className="flex flex-col items-end">
-                  {(paymentMethod === 'pix' || paymentMethod === 'card') && (
-                    <span className="text-[9px] text-muted-foreground/60 leading-none mb-1">
-                      + R$ 0,90 taxa de serviço
-                    </span>
-                  )}
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-[10px] text-muted-foreground/50 font-medium">R$</span>
-                    <span className="text-[17px] font-bold text-foreground tabular-nums tracking-tight">
-                      {(Math.max(0, getTotalPrice() - availableCredits) + getServiceFee(paymentMethod)).toFixed(2).replace('.', ',')}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-
-                {/* Full-width CTA */}
+            {/* Bar content - estilo Sacola: CTA único full-width */}
+            <div className="bg-background border-t border-border/40 px-4 pb-safe">
+              <div className="pt-3 pb-4">
                 <motion.button
                   onClick={handleProceedFromPayment}
                   disabled={processingPayment}
                   whileTap={{ scale: processingPayment ? 1 : 0.985 }}
                   className={cn(
                     "w-full flex items-center justify-center gap-2",
-                    "h-[50px] rounded-xl",
+                    "h-[52px] rounded-xl",
                     "font-semibold text-[14px] text-primary-foreground",
                     "bg-primary",
                     "active:brightness-90 transition-all duration-150",
                     processingPayment && "opacity-70 cursor-wait"
                   )}
-                  style={{
-                    boxShadow: "0 4px 16px hsl(var(--primary) / 0.25)"
-                  }}
+                  style={{ boxShadow: "0 4px 16px hsl(var(--primary) / 0.25)" }}
                 >
                   {processingPayment ? (
                     <>
@@ -3294,15 +3256,14 @@ const ClienteAgendar = () => {
                       <span>Processando...</span>
                     </>
                   ) : (
-                    <>
-                      <span>
-                        {paymentMethod === 'pix' ? 'Gerar PIX' :
-                         paymentMethod === 'card' ? 'Pagar' :
-                         paymentMethod === 'cash' ? 'Finalizar' :
-                         'Continuar'}
-                      </span>
-                      <ArrowRight className="w-4 h-4" />
-                    </>
+                    <span>
+                      {paymentMethod === 'pix' ? 'Gerar PIX' :
+                       paymentMethod === 'card' ? 'Pagar' :
+                       paymentMethod === 'cash' ? 'Finalizar' :
+                       'Revisar pedido'}
+                      {' • '}
+                      R$ {(Math.max(0, getTotalPrice() - availableCredits) + getServiceFee(paymentMethod)).toFixed(2).replace('.', ',')}
+                    </span>
                   )}
                 </motion.button>
               </div>
