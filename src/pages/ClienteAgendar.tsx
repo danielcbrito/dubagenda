@@ -2176,10 +2176,13 @@ const ClienteAgendar = () => {
   useEffect(() => {
     const prev = prevCanUseRedemptionRef.current;
     if (canUseRedemption && !prev) {
-      // acabou de ficar elegível → pré-seleciona o corte grátis
-      // e alinha o método de pagamento (resgate → tile "cash" no UI, preço final R$ 0)
+      // acabou de ficar elegível → pré-seleciona o corte grátis como desconto.
+      // Só força método 'cash' quando o resgate cobre 100% (carrinho com 1 corte simples).
       setUseRedemption(true);
-      setPaymentMethod('cash');
+      const baseTotal = selectedServices.reduce((sum, s) => sum + s.preco * (serviceQuantities[s.id] || 1), 0);
+      const corte = getCorteService();
+      const fullyCovered = corte ? baseTotal - corte.preco <= 0 : false;
+      if (fullyCovered) setPaymentMethod('cash');
     }
     if (!canUseRedemption && useRedemption) {
       setUseRedemption(false);
@@ -2746,8 +2749,11 @@ const ClienteAgendar = () => {
                 const walletDebit = Math.min(walletBalance, totalPrice);
                 const walletIsSelected = paymentMethod === 'wallet' && !useRedemption;
 
-                // Resumo da forma de pagamento selecionada
-                const selectedSummary = useRedemption
+                // Resumo da forma de pagamento selecionada.
+                // "Corte Grátis" só aparece como forma de pagamento quando cobre 100% do valor.
+                // Se houver remanescente (ex.: carrinho com 2 serviços), o cliente precisa escolher PIX/Carteira/Barbearia.
+                const redemptionCoversAll = useRedemption && totalPrice === 0;
+                const selectedSummary = redemptionCoversAll
                   ? { icon: <Star className="w-5 h-5 fill-gold text-gold" />, label: "Corte Grátis", sub: "Benefício aplicado" }
                   : paymentMethod === 'pix'
                     ? { icon: <img src={pixIcon} alt="PIX" className="w-5 h-5 object-contain" />, label: "PIX", sub: "Confirmação instantânea" }
@@ -2833,10 +2839,16 @@ const ClienteAgendar = () => {
                             <PaymentOption
                               value="redemption"
                               selected={useRedemption}
-                              onSelect={() => { setUseRedemption(true); setPaymentMethod('cash'); setPaymentSheetOpen(false); }}
+                              onSelect={() => {
+                                // Toggle: aplicar/remover o Corte Grátis como desconto.
+                                // NÃO altera a forma de pagamento — quando há mais de um serviço,
+                                // o cliente continua escolhendo PIX/Carteira/Barbearia para o restante.
+                                setUseRedemption(prev => !prev);
+                                setPaymentSheetOpen(false);
+                              }}
                               title="Corte Grátis Disponível!"
                               description={useRedemption
-                                ? "Parabéns! O valor do seu corte será totalmente descontado."
+                                ? "Benefício aplicado. Se houver outros serviços, escolha como pagar o restante."
                                 : "Toque para aplicar seu benefício. Se não usar agora, você perderá esta promoção."}
                               highlight={true}
                               icon={<Star className={cn("w-5 h-5", useRedemption ? "fill-gold text-gold" : "text-muted-foreground/40")} />}
@@ -2846,11 +2858,11 @@ const ClienteAgendar = () => {
                           {canReceivePix && (
                             <PaymentOption
                               value="pix"
-                              selected={paymentMethod === 'pix' && !useRedemption}
-                              onSelect={() => { setPaymentMethod('pix'); setUseRedemption(false); setPaymentSheetOpen(false); }}
+                              selected={paymentMethod === 'pix' && !redemptionCoversAll}
+                              onSelect={() => { setPaymentMethod('pix'); setPaymentSheetOpen(false); }}
                               title="Pagar via PIX"
                               description="Confirmação instantânea e segura"
-                              icon={<img src={pixIcon} alt="PIX" className={cn("w-5 h-5 object-contain", paymentMethod === 'pix' && !useRedemption ? "" : "grayscale opacity-50")} />}
+                              icon={<img src={pixIcon} alt="PIX" className={cn("w-5 h-5 object-contain", paymentMethod === 'pix' && !redemptionCoversAll ? "" : "grayscale opacity-50")} />}
                             />
                           )}
 
@@ -2868,21 +2880,21 @@ const ClienteAgendar = () => {
 
                           <PaymentOption
                             value="cash"
-                            selected={paymentMethod === 'cash' && !useRedemption}
-                            onSelect={() => { setPaymentMethod('cash'); setUseRedemption(false); setPaymentSheetOpen(false); }}
+                            selected={paymentMethod === 'cash' && !redemptionCoversAll}
+                            onSelect={() => { setPaymentMethod('cash'); setPaymentSheetOpen(false); }}
                             title="Pagar na Barbearia"
                             description="Pagamento presencial no dia"
-                            icon={<Landmark className={cn("w-5 h-5", paymentMethod === 'cash' && !useRedemption ? "text-primary" : "text-muted-foreground/40")} />}
+                            icon={<Landmark className={cn("w-5 h-5", paymentMethod === 'cash' && !redemptionCoversAll ? "text-primary" : "text-muted-foreground/40")} />}
                           />
 
                           {canReceivePix && walletBalance > 0 && (
                             <PaymentOption
                               value="wallet"
-                              selected={walletIsSelected}
-                              onSelect={() => { setPaymentMethod('wallet'); setUseRedemption(false); setPaymentSheetOpen(false); }}
+                              selected={paymentMethod === 'wallet' && !redemptionCoversAll}
+                              onSelect={() => { setPaymentMethod('wallet'); setPaymentSheetOpen(false); }}
                               title="Pagar com Carteira"
                               description={`Saldo: R$ ${walletBalance.toFixed(2).replace('.', ',')}`}
-                              icon={<Wallet className={cn("w-5 h-5", walletIsSelected ? "text-emerald-500" : "text-muted-foreground/40")} />}
+                              icon={<Wallet className={cn("w-5 h-5", paymentMethod === 'wallet' && !redemptionCoversAll ? "text-emerald-500" : "text-muted-foreground/40")} />}
                             />
                           )}
                         </div>
@@ -2959,20 +2971,27 @@ const ClienteAgendar = () => {
                   Resumo de valores
                 </h3>
                 <div className="space-y-2.5">
-                  {selectedServices.map((s) => {
-                    const qty = serviceQuantities[s.id] || 1;
-                    const lineTotal = s.preco * qty;
-                    return (
-                      <div key={s.id} className="flex items-center justify-between gap-3">
-                        <span className="text-[13px] text-muted-foreground truncate">
-                          {s.nome}{qty > 1 ? ` ×${qty}` : ""}
-                        </span>
-                        <span className="text-[13px] text-foreground tabular-nums flex-shrink-0">
-                          R$ {lineTotal.toFixed(2).replace('.', ',')}
-                        </span>
-                      </div>
-                    );
-                  })}
+                  {(() => {
+                    const redeemedCorte = useRedemption ? getCorteService() : undefined;
+                    let redemptionApplied = false;
+                    return selectedServices.map((s) => {
+                      const qty = serviceQuantities[s.id] || 1;
+                      // Aplica o desconto do Corte Grátis em 1 unidade do corte elegível.
+                      const isRedeemed = !!redeemedCorte && s.id === redeemedCorte.id && !redemptionApplied;
+                      if (isRedeemed) redemptionApplied = true;
+                      const lineTotal = isRedeemed ? s.preco * Math.max(0, qty - 1) : s.preco * qty;
+                      return (
+                        <div key={s.id} className="flex items-center justify-between gap-3">
+                          <span className="text-[13px] text-muted-foreground truncate">
+                            {s.nome}{qty > 1 ? ` ×${qty}` : ""}{isRedeemed ? " (Grátis)" : ""}
+                          </span>
+                          <span className={cn("text-[13px] tabular-nums flex-shrink-0", isRedeemed && lineTotal === 0 ? "text-emerald-500 font-medium" : "text-foreground")}>
+                            R$ {lineTotal.toFixed(2).replace('.', ',')}
+                          </span>
+                        </div>
+                      );
+                    });
+                  })()}
                   {availableCredits > 0 && (
                     <div className="flex items-center justify-between">
                       <span className="text-[13px] text-muted-foreground">Créditos do plano</span>
