@@ -2971,20 +2971,27 @@ const ClienteAgendar = () => {
                   Resumo de valores
                 </h3>
                 <div className="space-y-2.5">
-                  {selectedServices.map((s) => {
-                    const qty = serviceQuantities[s.id] || 1;
-                    const lineTotal = s.preco * qty;
-                    return (
-                      <div key={s.id} className="flex items-center justify-between gap-3">
-                        <span className="text-[13px] text-muted-foreground truncate">
-                          {s.nome}{qty > 1 ? ` ×${qty}` : ""}
-                        </span>
-                        <span className="text-[13px] text-foreground tabular-nums flex-shrink-0">
-                          R$ {lineTotal.toFixed(2).replace('.', ',')}
-                        </span>
-                      </div>
-                    );
-                  })}
+                  {(() => {
+                    const redeemedCorte = useRedemption ? getCorteService() : undefined;
+                    let redemptionApplied = false;
+                    return selectedServices.map((s) => {
+                      const qty = serviceQuantities[s.id] || 1;
+                      // Aplica o desconto do Corte Grátis em 1 unidade do corte elegível.
+                      const isRedeemed = !!redeemedCorte && s.id === redeemedCorte.id && !redemptionApplied;
+                      if (isRedeemed) redemptionApplied = true;
+                      const lineTotal = isRedeemed ? s.preco * Math.max(0, qty - 1) : s.preco * qty;
+                      return (
+                        <div key={s.id} className="flex items-center justify-between gap-3">
+                          <span className="text-[13px] text-muted-foreground truncate">
+                            {s.nome}{qty > 1 ? ` ×${qty}` : ""}{isRedeemed ? " (Grátis)" : ""}
+                          </span>
+                          <span className={cn("text-[13px] tabular-nums flex-shrink-0", isRedeemed && lineTotal === 0 ? "text-emerald-500 font-medium" : "text-foreground")}>
+                            R$ {lineTotal.toFixed(2).replace('.', ',')}
+                          </span>
+                        </div>
+                      );
+                    });
+                  })()}
                   {availableCredits > 0 && (
                     <div className="flex items-center justify-between">
                       <span className="text-[13px] text-muted-foreground">Créditos do plano</span>
