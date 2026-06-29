@@ -2839,10 +2839,16 @@ const ClienteAgendar = () => {
                             <PaymentOption
                               value="redemption"
                               selected={useRedemption}
-                              onSelect={() => { setUseRedemption(true); setPaymentMethod('cash'); setPaymentSheetOpen(false); }}
+                              onSelect={() => {
+                                // Toggle: aplicar/remover o Corte Grátis como desconto.
+                                // NÃO altera a forma de pagamento — quando há mais de um serviço,
+                                // o cliente continua escolhendo PIX/Carteira/Barbearia para o restante.
+                                setUseRedemption(prev => !prev);
+                                setPaymentSheetOpen(false);
+                              }}
                               title="Corte Grátis Disponível!"
                               description={useRedemption
-                                ? "Parabéns! O valor do seu corte será totalmente descontado."
+                                ? "Benefício aplicado. Se houver outros serviços, escolha como pagar o restante."
                                 : "Toque para aplicar seu benefício. Se não usar agora, você perderá esta promoção."}
                               highlight={true}
                               icon={<Star className={cn("w-5 h-5", useRedemption ? "fill-gold text-gold" : "text-muted-foreground/40")} />}
@@ -2852,11 +2858,11 @@ const ClienteAgendar = () => {
                           {canReceivePix && (
                             <PaymentOption
                               value="pix"
-                              selected={paymentMethod === 'pix' && !useRedemption}
-                              onSelect={() => { setPaymentMethod('pix'); setUseRedemption(false); setPaymentSheetOpen(false); }}
+                              selected={paymentMethod === 'pix' && !redemptionCoversAll}
+                              onSelect={() => { setPaymentMethod('pix'); setPaymentSheetOpen(false); }}
                               title="Pagar via PIX"
                               description="Confirmação instantânea e segura"
-                              icon={<img src={pixIcon} alt="PIX" className={cn("w-5 h-5 object-contain", paymentMethod === 'pix' && !useRedemption ? "" : "grayscale opacity-50")} />}
+                              icon={<img src={pixIcon} alt="PIX" className={cn("w-5 h-5 object-contain", paymentMethod === 'pix' && !redemptionCoversAll ? "" : "grayscale opacity-50")} />}
                             />
                           )}
 
@@ -2874,21 +2880,21 @@ const ClienteAgendar = () => {
 
                           <PaymentOption
                             value="cash"
-                            selected={paymentMethod === 'cash' && !useRedemption}
-                            onSelect={() => { setPaymentMethod('cash'); setUseRedemption(false); setPaymentSheetOpen(false); }}
+                            selected={paymentMethod === 'cash' && !redemptionCoversAll}
+                            onSelect={() => { setPaymentMethod('cash'); setPaymentSheetOpen(false); }}
                             title="Pagar na Barbearia"
                             description="Pagamento presencial no dia"
-                            icon={<Landmark className={cn("w-5 h-5", paymentMethod === 'cash' && !useRedemption ? "text-primary" : "text-muted-foreground/40")} />}
+                            icon={<Landmark className={cn("w-5 h-5", paymentMethod === 'cash' && !redemptionCoversAll ? "text-primary" : "text-muted-foreground/40")} />}
                           />
 
                           {canReceivePix && walletBalance > 0 && (
                             <PaymentOption
                               value="wallet"
-                              selected={walletIsSelected}
-                              onSelect={() => { setPaymentMethod('wallet'); setUseRedemption(false); setPaymentSheetOpen(false); }}
+                              selected={paymentMethod === 'wallet' && !redemptionCoversAll}
+                              onSelect={() => { setPaymentMethod('wallet'); setPaymentSheetOpen(false); }}
                               title="Pagar com Carteira"
                               description={`Saldo: R$ ${walletBalance.toFixed(2).replace('.', ',')}`}
-                              icon={<Wallet className={cn("w-5 h-5", walletIsSelected ? "text-emerald-500" : "text-muted-foreground/40")} />}
+                              icon={<Wallet className={cn("w-5 h-5", paymentMethod === 'wallet' && !redemptionCoversAll ? "text-emerald-500" : "text-muted-foreground/40")} />}
                             />
                           )}
                         </div>
