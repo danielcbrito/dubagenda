@@ -2977,7 +2977,7 @@ const ClienteAgendar = () => {
                     <div className="relative">
                       <input
                         type="text"
-                        placeholder="Inserir código"
+                        placeholder="INSERIR CÓDIGO"
                         value={couponCode}
                         onChange={(e) => {
                           const val = e.target.value.toUpperCase();
@@ -2989,7 +2989,7 @@ const ClienteAgendar = () => {
                             }, 600);
                           }
                         }}
-                        className="text-right bg-transparent border-none outline-none text-[13px] text-primary placeholder-primary/70 font-medium uppercase tracking-wider w-32"
+                        className="text-right bg-transparent border-none outline-none text-[13px] text-primary placeholder:text-primary/70 font-medium uppercase tracking-wider w-44"
                       />
                       {validatingCoupon && (
                         <div className="absolute right-0 top-1/2 -translate-y-1/2">
@@ -3010,12 +3010,20 @@ const ClienteAgendar = () => {
                   Resumo de valores
                 </h3>
                 <div className="space-y-2.5">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[13px] text-muted-foreground">Subtotal</span>
-                    <span className="text-[13px] text-foreground tabular-nums">
-                      R$ {getTotalPrice().toFixed(2).replace('.', ',')}
-                    </span>
-                  </div>
+                  {selectedServices.map((s) => {
+                    const qty = serviceQuantities[s.id] || 1;
+                    const lineTotal = s.preco * qty;
+                    return (
+                      <div key={s.id} className="flex items-center justify-between gap-3">
+                        <span className="text-[13px] text-muted-foreground truncate">
+                          {s.nome}{qty > 1 ? ` ×${qty}` : ""}
+                        </span>
+                        <span className="text-[13px] text-foreground tabular-nums flex-shrink-0">
+                          R$ {lineTotal.toFixed(2).replace('.', ',')}
+                        </span>
+                      </div>
+                    );
+                  })}
                   {availableCredits > 0 && (
                     <div className="flex items-center justify-between">
                       <span className="text-[13px] text-muted-foreground">Créditos do plano</span>
