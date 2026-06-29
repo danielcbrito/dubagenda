@@ -2183,6 +2183,7 @@ const ClienteAgendar = () => {
       const corte = getCorteService();
       const fullyCovered = corte ? baseTotal - corte.preco <= 0 : false;
       if (fullyCovered) setPaymentMethod('cash');
+      else setPaymentMethod('pix');
     }
     if (!canUseRedemption && useRedemption) {
       setUseRedemption(false);
