@@ -2749,7 +2749,7 @@ const ClienteAgendar = () => {
                     ? { icon: <img src={pixIcon} alt="PIX" className="w-5 h-5 object-contain" />, label: "PIX", sub: "Confirmação instantânea" }
                     : paymentMethod === 'wallet'
                       ? { icon: <Wallet className="w-5 h-5 text-emerald-500" />, label: "Carteira", sub: `Saldo R$ ${walletBalance.toFixed(2).replace('.', ',')}` }
-                      : { icon: <Landmark className="w-5 h-5 text-foreground" />, label: "Pagar na Barbearia", sub: "Presencial no dia" };
+                      : { icon: <Landmark className="w-5 h-5 text-foreground" />, label: "Pagar na Barbearia", sub: cashSubtype === 'dinheiro' ? "Dinheiro • Presencial no dia" : "Cartão • Presencial no dia" };
 
                 return (
                   <div className="mb-2">
