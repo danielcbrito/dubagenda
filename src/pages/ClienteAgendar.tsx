@@ -2677,248 +2677,203 @@ const ClienteAgendar = () => {
             className="min-h-screen pt-16 pb-24 px-4"
           >
             <div className="max-w-2xl mx-auto">
-              {/* Header */}
-              <div className="mb-6 pt-1">
-                <h2 className="text-xl font-semibold text-foreground">
-                  Como prefere pagar?
+              {/* Header estilo Sacola */}
+              <div className="mb-5 pt-1 text-center">
+                <h2 className="text-[13px] font-bold text-foreground uppercase tracking-[0.2em]">
+                  Agendamento
                 </h2>
-                <p className="text-[12px] text-muted-foreground/60 mt-1">
-                  Escolha a forma mais confortável
-                </p>
               </div>
 
-              {/* Alerta de Assinatura Pendente no Agendamento */}
+              {/* Brand / Barbeiro row */}
+              <div className="flex items-center gap-3 mb-6 px-1">
+                <div className="w-11 h-11 rounded-full overflow-hidden bg-muted/20 flex items-center justify-center flex-shrink-0">
+                  {selectedBarber?.foto_url ? (
+                    <img src={selectedBarber.foto_url} alt={selectedBarber.apelido} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full bg-primary/20 flex items-center justify-center text-[14px] font-bold text-primary">
+                      {selectedBarber?.apelido?.charAt(0)}
+                    </div>
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[15px] font-bold text-foreground leading-tight">
+                    {selectedBarber?.apelido}
+                  </p>
+                  <p className="text-[12px] text-primary/80 font-medium leading-tight mt-0.5">
+                    {getFormattedServiceNames()} • {getTotalDuration()} min
+                  </p>
+                </div>
+              </div>
+
+              {/* Alerta de Assinatura Pendente */}
               {pendingSubscription && (
                 <motion.div
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
                   onClick={() => setPendingDrawerOpen(true)}
-                  className="mb-6 bg-primary/10 border border-primary/20 rounded-2xl p-4 cursor-pointer relative overflow-hidden group"
+                  className="mb-6 bg-primary/10 border border-primary/20 rounded-xl p-4 cursor-pointer relative overflow-hidden group"
                 >
                   <div className="flex items-center gap-3 relative z-10">
-                    <div className="flex-shrink-0">
-                      <Clock className="w-5 h-5 text-primary" />
+                    <Clock className="w-5 h-5 text-primary flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[12px] font-bold text-foreground">
+                        {pendingSubscription.status === 'pending_renewal'
+                          ? "Renovação de plano pendente"
+                          : "Assinatura pendente detectada"}
+                      </p>
+                      <p className="text-[10px] text-muted-foreground line-clamp-1">
+                        Finalize o pagamento para liberar seu agendamento
+                      </p>
                     </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[12px] font-bold text-foreground">
-                          {pendingSubscription.status === 'pending_renewal' 
-                            ? "Renovação de plano pendente" 
-                            : "Assinatura pendente detectada"}
-                        </p>
-                        <p className="text-[10px] text-muted-foreground line-clamp-1">
-                          Finalize o pagamento para liberar seu agendamento
-                        </p>
-                      </div>
-                      <ChevronRight className="w-4 h-4 text-muted-foreground/30 group-hover:translate-x-0.5 transition-transform" />
-                    </div>
-                  </motion.div>
-                )}
-
-              {/* Resumo do serviço */}
-              <div className="bg-card border border-border/40 rounded-xl p-4 mb-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-[13px] font-medium text-foreground">
-                      {getFormattedServiceNames()}
-                    </p>
-                    <p className="text-[11px] text-muted-foreground mt-0.5">
-                      {selectedBarber?.apelido} • {getTotalDuration()} min • Renovação automática
-                    </p>
+                    <ChevronRight className="w-4 h-4 text-muted-foreground/30 group-hover:translate-x-0.5 transition-transform" />
                   </div>
-                  <p className="text-base font-bold text-foreground tabular-nums">
-                    R$ {selectedServices.reduce((sum, s) => sum + s.preco * (serviceQuantities[s.id] || 1), 0).toFixed(2).replace('.', ',')}
-                  </p>
-                </div>
-                {selectedBarber && (
-                  <div className="flex items-center gap-2 mt-3 pt-3 border-t border-border/30">
-                    <div className="w-6 h-6 rounded-full overflow-hidden bg-muted/20 flex items-center justify-center flex-shrink-0">
-                      {selectedBarber.foto_url ? (
-                        <img src={selectedBarber.foto_url} alt={selectedBarber.apelido} className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="w-full h-full bg-primary/30 flex items-center justify-center text-[10px] font-bold text-primary">
-                          {selectedBarber.apelido.charAt(0)}
-                        </div>
-                      )}
-                    </div>
-                    <p className="text-[12px] text-muted-foreground">
-                      Barbeiro: <span className="font-medium text-foreground">{selectedBarber.apelido}</span>
-                    </p>
-                  </div>
-                )}
-              </div>
-
-              {/* Opções de Pagamento */}
-              <div className="space-y-3">
-                {/* Resgate Grátis — Opção Premium */}
-                {canUseRedemption && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                  >
-                    <PaymentOption
-                      value="redemption"
-                      selected={useRedemption}
-                      onSelect={() => {
-                        setUseRedemption(true);
-                        setPaymentMethod('cash');
-                      }}
-                      title="Corte Grátis Disponível!"
-                      description={useRedemption 
-                        ? "Parabéns! O valor do seu corte será totalmente descontado." 
-                        : "Toque para aplicar seu benefício. Se não usar agora, você perderá esta promoção."}
-                      highlight={true}
-                      icon={<Star className={cn("w-5 h-5", useRedemption ? "fill-gold text-gold" : "text-muted-foreground/40")} />}
-                    />
-                  </motion.div>
-                )}
-
-                {/* Pagar via PIX — primeiro na ordem; só aparece se o barbeiro tem subconta Woovi/Efí ativa */}
-                {canReceivePix && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.05 }}
-                  >
-                    <PaymentOption
-                      value="pix"
-                      selected={paymentMethod === 'pix' && !useRedemption}
-                      onSelect={() => {
-                        setPaymentMethod('pix');
-                        setUseRedemption(false);
-                      }}
-                      title="Pagar via PIX"
-                      description="Confirmação instantânea e segura"
-                      icon={<img src={pixIcon} alt="PIX" className={cn("w-5 h-5 object-contain", paymentMethod === 'pix' && !useRedemption ? "" : "grayscale opacity-50")} />}
-                    />
-                  </motion.div>
-                )}
-
-                {/* Cartão de Crédito — segundo na ordem */}
-                {canReceivePix && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.1 }}
-                  >
-                    <PaymentOption
-                      value="card"
-                      selected={false}
-                      onSelect={() => {}}
-                      disabled={true}
-                      title="Cartão de Crédito"
-                      description="Pague em até 12x pelo App"
-                      icon={<CreditCard className="w-5 h-5 text-muted-foreground/30" />}
-                    />
-                  </motion.div>
-                )}
-
-                {/* Pagar na Barbearia — por último */}
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.15 }}
-                >
-                  <PaymentOption
-                    value="cash"
-                    selected={paymentMethod === 'cash' && !useRedemption}
-                    onSelect={() => {
-                      setPaymentMethod('cash');
-                      setUseRedemption(false);
-                    }}
-                    title="Pagar na Barbearia"
-                    description="Pagamento presencial no dia"
-                    icon={<Landmark className={cn("w-5 h-5", paymentMethod === 'cash' && !useRedemption ? "text-primary" : "text-muted-foreground/40")} />}
-                  />
                 </motion.div>
+              )}
 
-
-                {/* Pagar com Saldo da Carteira */}
-                {canReceivePix && walletBalance > 0 && (() => {
-                  const totalPrice = getTotalPrice();
-                  const coversAll = walletBalance >= totalPrice;
-                  const remainder = Math.max(0, totalPrice - walletBalance);
-                  const walletDebit = Math.min(walletBalance, totalPrice);
-                  const isSelected = paymentMethod === 'wallet' && !useRedemption;
-
-                  return (
-                    <motion.div
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.2 }}
-                      className="space-y-2"
-                    >
+              {/* Section: Forma de pagamento */}
+              <div className="mb-2">
+                <h3 className="text-[14px] font-semibold text-foreground mb-3">
+                  Forma de pagamento
+                </h3>
+                <div className="space-y-2.5">
+                  {/* Resgate Grátis */}
+                  {canUseRedemption && (
+                    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
                       <PaymentOption
-                        value="wallet"
-                        selected={isSelected}
-                        onSelect={() => {
-                          setPaymentMethod('wallet');
-                          setUseRedemption(false);
-                        }}
-                        title="Pagar com Carteira"
-                        description={`Saldo: R$ ${walletBalance.toFixed(2).replace('.', ',')}`}
-                        icon={<Wallet className={cn("w-5 h-5", isSelected ? "text-emerald-500" : "text-muted-foreground/40")} />}
+                        value="redemption"
+                        selected={useRedemption}
+                        onSelect={() => { setUseRedemption(true); setPaymentMethod('cash'); }}
+                        title="Corte Grátis Disponível!"
+                        description={useRedemption
+                          ? "Parabéns! O valor do seu corte será totalmente descontado."
+                          : "Toque para aplicar seu benefício. Se não usar agora, você perderá esta promoção."}
+                        highlight={true}
+                        icon={<Star className={cn("w-5 h-5", useRedemption ? "fill-gold text-gold" : "text-muted-foreground/40")} />}
                       />
+                    </motion.div>
+                  )}
 
-                      {/* Breakdown detalhado */}
-                      <AnimatePresence>
-                        {isSelected && (
-                          <motion.div
-                            initial={{ opacity: 0, height: 0 }}
-                            animate={{ opacity: 1, height: 'auto' }}
-                            exit={{ opacity: 0, height: 0 }}
-                            className="overflow-hidden"
-                          >
-                            <div className="mx-1 rounded-xl border border-emerald-500/15 bg-emerald-500/[0.03] p-3.5 space-y-2.5 mb-2">
-                              <div className="flex items-center justify-between">
-                                <span className="text-[11px] text-muted-foreground/60">Valor do serviço</span>
-                                <span className="text-[12px] font-medium text-foreground/70 tabular-nums">
-                                  R$ {totalPrice.toFixed(2).replace('.', ',')}
-                                </span>
-                              </div>
-                              <div className="flex items-center justify-between">
-                                <span className="text-[11px] text-emerald-500/80">Descontado da carteira</span>
-                                <span className="text-[12px] font-semibold text-emerald-500 tabular-nums">
-                                  − R$ {walletDebit.toFixed(2).replace('.', ',')}
-                                </span>
-                              </div>
-                              <div className="border-t border-border/30 pt-2">
+                  {canReceivePix && (
+                    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
+                      <PaymentOption
+                        value="pix"
+                        selected={paymentMethod === 'pix' && !useRedemption}
+                        onSelect={() => { setPaymentMethod('pix'); setUseRedemption(false); }}
+                        title="Pagar via PIX"
+                        description="Confirmação instantânea e segura"
+                        icon={<img src={pixIcon} alt="PIX" className={cn("w-5 h-5 object-contain", paymentMethod === 'pix' && !useRedemption ? "" : "grayscale opacity-50")} />}
+                      />
+                    </motion.div>
+                  )}
+
+                  {canReceivePix && (
+                    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+                      <PaymentOption
+                        value="card"
+                        selected={false}
+                        onSelect={() => {}}
+                        disabled={true}
+                        title="Cartão de Crédito"
+                        description="Pague em até 12x pelo App"
+                        icon={<CreditCard className="w-5 h-5 text-muted-foreground/30" />}
+                      />
+                    </motion.div>
+                  )}
+
+                  <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
+                    <PaymentOption
+                      value="cash"
+                      selected={paymentMethod === 'cash' && !useRedemption}
+                      onSelect={() => { setPaymentMethod('cash'); setUseRedemption(false); }}
+                      title="Pagar na Barbearia"
+                      description="Pagamento presencial no dia"
+                      icon={<Landmark className={cn("w-5 h-5", paymentMethod === 'cash' && !useRedemption ? "text-primary" : "text-muted-foreground/40")} />}
+                    />
+                  </motion.div>
+
+                  {canReceivePix && walletBalance > 0 && (() => {
+                    const totalPrice = getTotalPrice();
+                    const coversAll = walletBalance >= totalPrice;
+                    const remainder = Math.max(0, totalPrice - walletBalance);
+                    const walletDebit = Math.min(walletBalance, totalPrice);
+                    const isSelected = paymentMethod === 'wallet' && !useRedemption;
+
+                    return (
+                      <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.2 }}
+                        className="space-y-2"
+                      >
+                        <PaymentOption
+                          value="wallet"
+                          selected={isSelected}
+                          onSelect={() => { setPaymentMethod('wallet'); setUseRedemption(false); }}
+                          title="Pagar com Carteira"
+                          description={`Saldo: R$ ${walletBalance.toFixed(2).replace('.', ',')}`}
+                          icon={<Wallet className={cn("w-5 h-5", isSelected ? "text-emerald-500" : "text-muted-foreground/40")} />}
+                        />
+
+                        <AnimatePresence>
+                          {isSelected && (
+                            <motion.div
+                              initial={{ opacity: 0, height: 0 }}
+                              animate={{ opacity: 1, height: 'auto' }}
+                              exit={{ opacity: 0, height: 0 }}
+                              className="overflow-hidden"
+                            >
+                              <div className="mx-1 rounded-xl border border-emerald-500/15 bg-emerald-500/[0.03] p-3.5 space-y-2.5 mb-2">
                                 <div className="flex items-center justify-between">
-                                  {coversAll ? (
-                                    <>
-                                      <span className="text-[11px] font-medium text-emerald-500/90">✓ Coberto pela carteira</span>
-                                      <span className="text-[13px] font-bold text-emerald-500 tabular-nums">R$ 0,00</span>
-                                    </>
-                                  ) : (
-                                    <>
-                                      <span className="text-[11px] font-medium text-foreground/70">Pagar na barbearia</span>
-                                      <span className="text-[13px] font-bold text-foreground tabular-nums">
-                                        R$ {remainder.toFixed(2).replace('.', ',')}
-                                      </span>
-                                    </>
-                                  )}
+                                  <span className="text-[11px] text-muted-foreground/60">Valor do serviço</span>
+                                  <span className="text-[12px] font-medium text-foreground/70 tabular-nums">
+                                    R$ {totalPrice.toFixed(2).replace('.', ',')}
+                                  </span>
+                                </div>
+                                <div className="flex items-center justify-between">
+                                  <span className="text-[11px] text-emerald-500/80">Descontado da carteira</span>
+                                  <span className="text-[12px] font-semibold text-emerald-500 tabular-nums">
+                                    − R$ {walletDebit.toFixed(2).replace('.', ',')}
+                                  </span>
+                                </div>
+                                <div className="border-t border-border/30 pt-2">
+                                  <div className="flex items-center justify-between">
+                                    {coversAll ? (
+                                      <>
+                                        <span className="text-[11px] font-medium text-emerald-500/90">✓ Coberto pela carteira</span>
+                                        <span className="text-[13px] font-bold text-emerald-500 tabular-nums">R$ 0,00</span>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <span className="text-[11px] font-medium text-foreground/70">Pagar na barbearia</span>
+                                        <span className="text-[13px] font-bold text-foreground tabular-nums">
+                                          R$ {remainder.toFixed(2).replace('.', ',')}
+                                        </span>
+                                      </>
+                                    )}
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-                    </motion.div>
-                  );
-                })()}
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </motion.div>
+                    );
+                  })()}
+                </div>
               </div>
 
+              {/* Divider */}
+              <div className="border-t border-border/40 my-5" />
 
-              {/* Cupom de Desconto */}
-              <div className="mt-5">
+              {/* Cupom */}
+              <div className="mb-5">
                 {appliedCoupon ? (
-                  <div className="flex items-center justify-between bg-emerald-500/5 border border-emerald-500/20 rounded-xl px-4 py-3">
+                  <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2.5">
-                      <div className="w-7 h-7 rounded-lg bg-emerald-500/10 flex items-center justify-center">
-                        <Check className="w-3.5 h-3.5 text-emerald-500" />
-                      </div>
+                      <Tag className="w-4 h-4 text-foreground" />
                       <div>
-                        <span className="text-[12px] font-semibold text-foreground">{appliedCoupon.code}</span>
-                        <span className="text-[10px] text-emerald-400/80 ml-1.5">
+                        <span className="text-[14px] font-semibold text-foreground">{appliedCoupon.code}</span>
+                        <span className="text-[11px] text-emerald-500 ml-2 font-medium">
                           {appliedCoupon.tipo_desconto === "percentual"
                             ? `-${appliedCoupon.valor_desconto}%`
                             : `-R$ ${appliedCoupon.valor_desconto.toFixed(2).replace(".", ",")}`}
@@ -2927,37 +2882,80 @@ const ClienteAgendar = () => {
                     </div>
                     <button
                       onClick={removeCoupon}
-                      className="text-[11px] text-muted-foreground/50 hover:text-destructive transition-colors font-medium px-2 py-1"
+                      className="text-[12px] text-primary hover:text-primary/80 font-medium"
                     >
                       Remover
                     </button>
                   </div>
                 ) : (
-                  <div className="relative">
-                    <Tag className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground/30 pointer-events-none" />
-                    <input
-                      type="text"
-                      placeholder="Tem um cupom? Insira aqui"
-                      value={couponCode}
-                      onChange={(e) => {
-                        const val = e.target.value.toUpperCase();
-                        setCouponCode(val);
-                        if (val.trim().length >= 3) {
-                          clearTimeout((window as any).__couponDebounce);
-                          (window as any).__couponDebounce = setTimeout(() => {
-                            validateCoupon(val);
-                          }, 600);
-                        }
-                      }}
-                      className="w-full pl-10 pr-10 py-3 bg-card border border-border/30 rounded-xl text-foreground placeholder-muted-foreground/30 focus:outline-none focus:border-primary/40 text-[12px] uppercase tracking-wider transition-colors"
-                    />
-                    {validatingCoupon && (
-                      <div className="absolute right-3.5 top-1/2 -translate-y-1/2">
-                        <div className="w-3.5 h-3.5 border-2 border-primary/40 border-t-primary rounded-full animate-spin" />
-                      </div>
-                    )}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2.5">
+                      <Tag className="w-4 h-4 text-foreground" />
+                      <span className="text-[14px] font-semibold text-foreground">Cupom</span>
+                    </div>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        placeholder="Inserir código"
+                        value={couponCode}
+                        onChange={(e) => {
+                          const val = e.target.value.toUpperCase();
+                          setCouponCode(val);
+                          if (val.trim().length >= 3) {
+                            clearTimeout((window as any).__couponDebounce);
+                            (window as any).__couponDebounce = setTimeout(() => {
+                              validateCoupon(val);
+                            }, 600);
+                          }
+                        }}
+                        className="text-right bg-transparent border-none outline-none text-[13px] text-primary placeholder-primary/70 font-medium uppercase tracking-wider w-32"
+                      />
+                      {validatingCoupon && (
+                        <div className="absolute right-0 top-1/2 -translate-y-1/2">
+                          <div className="w-3 h-3 border-2 border-primary/40 border-t-primary rounded-full animate-spin" />
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
+              </div>
+
+              {/* Divider */}
+              <div className="border-t border-border/40 my-5" />
+
+              {/* Resumo de valores */}
+              <div className="mb-5">
+                <h3 className="text-[14px] font-semibold text-foreground mb-3">
+                  Resumo de valores
+                </h3>
+                <div className="space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[13px] text-muted-foreground">Subtotal</span>
+                    <span className="text-[13px] text-foreground tabular-nums">
+                      R$ {getTotalPrice().toFixed(2).replace('.', ',')}
+                    </span>
+                  </div>
+                  {availableCredits > 0 && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-[13px] text-muted-foreground">Créditos do plano</span>
+                      <span className="text-[13px] text-emerald-500 tabular-nums">
+                        − R$ {Math.min(availableCredits, getTotalPrice()).toFixed(2).replace('.', ',')}
+                      </span>
+                    </div>
+                  )}
+                  <div className="flex items-center justify-between">
+                    <span className="text-[13px] text-muted-foreground">Taxa de serviço</span>
+                    <span className="text-[13px] text-foreground tabular-nums">
+                      R$ {getServiceFee(paymentMethod).toFixed(2).replace('.', ',')}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between pt-2">
+                    <span className="text-[15px] font-bold text-foreground">Total</span>
+                    <span className="text-[15px] font-bold text-foreground tabular-nums">
+                      R$ {(Math.max(0, getTotalPrice() - availableCredits) + getServiceFee(paymentMethod)).toFixed(2).replace('.', ',')}
+                    </span>
+                  </div>
+                </div>
               </div>
 
             </div>
@@ -3235,60 +3233,22 @@ const ClienteAgendar = () => {
               style={{ background: "linear-gradient(to bottom, transparent, hsl(var(--background)))" }}
             />
 
-            {/* Bar content */}
-            <div className="bg-background border-t border-border/40 px-5 pb-safe">
-              <div className="pt-3.5 pb-4 space-y-3">
-              {/* Info row */}
-              <div className="flex items-center justify-between px-0.5">
-                <div className="flex items-center gap-2.5">
-                  {selectedBarber?.foto_url ? (
-                    <img src={selectedBarber.foto_url} alt="" className="w-7 h-7 rounded-full object-cover" />
-                  ) : (
-                    <div className="w-7 h-7 rounded-full bg-primary/30 flex items-center justify-center text-[11px] font-bold text-primary">
-                      {selectedBarber?.apelido?.charAt(0)}
-                    </div>
-                  )}
-                  <div className="flex flex-col">
-                    <span className="text-[10px] text-muted-foreground/60 leading-none mb-0.5">
-                      {paymentMethod === "pix" ? "Pagar via Pix" : paymentMethod === "card" ? "Pagar via Cartão" : paymentMethod === "wallet" ? "Pagar via Carteira" : "Pagar na Barbearia"}
-                    </span>
-                    <span className="text-[13px] font-semibold text-foreground leading-none">
-                      {selectedBarber?.apelido}
-                    </span>
-                  </div>
-                </div>
-                <div className="flex flex-col items-end">
-                  {(paymentMethod === 'pix' || paymentMethod === 'card') && (
-                    <span className="text-[9px] text-muted-foreground/60 leading-none mb-1">
-                      + R$ 0,90 taxa de serviço
-                    </span>
-                  )}
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-[10px] text-muted-foreground/50 font-medium">R$</span>
-                    <span className="text-[17px] font-bold text-foreground tabular-nums tracking-tight">
-                      {(Math.max(0, getTotalPrice() - availableCredits) + getServiceFee(paymentMethod)).toFixed(2).replace('.', ',')}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-
-                {/* Full-width CTA */}
+            {/* Bar content - estilo Sacola: CTA único full-width */}
+            <div className="bg-background border-t border-border/40 px-4 pb-safe">
+              <div className="pt-3 pb-4">
                 <motion.button
                   onClick={handleProceedFromPayment}
                   disabled={processingPayment}
                   whileTap={{ scale: processingPayment ? 1 : 0.985 }}
                   className={cn(
                     "w-full flex items-center justify-center gap-2",
-                    "h-[50px] rounded-xl",
+                    "h-[52px] rounded-xl",
                     "font-semibold text-[14px] text-primary-foreground",
                     "bg-primary",
                     "active:brightness-90 transition-all duration-150",
                     processingPayment && "opacity-70 cursor-wait"
                   )}
-                  style={{
-                    boxShadow: "0 4px 16px hsl(var(--primary) / 0.25)"
-                  }}
+                  style={{ boxShadow: "0 4px 16px hsl(var(--primary) / 0.25)" }}
                 >
                   {processingPayment ? (
                     <>
@@ -3296,15 +3256,14 @@ const ClienteAgendar = () => {
                       <span>Processando...</span>
                     </>
                   ) : (
-                    <>
-                      <span>
-                        {paymentMethod === 'pix' ? 'Gerar PIX' :
-                         paymentMethod === 'card' ? 'Pagar' :
-                         paymentMethod === 'cash' ? 'Finalizar' :
-                         'Continuar'}
-                      </span>
-                      <ArrowRight className="w-4 h-4" />
-                    </>
+                    <span>
+                      {paymentMethod === 'pix' ? 'Gerar PIX' :
+                       paymentMethod === 'card' ? 'Pagar' :
+                       paymentMethod === 'cash' ? 'Finalizar' :
+                       'Revisar pedido'}
+                      {' • '}
+                      R$ {(Math.max(0, getTotalPrice() - availableCredits) + getServiceFee(paymentMethod)).toFixed(2).replace('.', ',')}
+                    </span>
                   )}
                 </motion.button>
               </div>
