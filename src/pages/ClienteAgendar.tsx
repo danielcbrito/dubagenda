@@ -2749,8 +2749,11 @@ const ClienteAgendar = () => {
                 const walletDebit = Math.min(walletBalance, totalPrice);
                 const walletIsSelected = paymentMethod === 'wallet' && !useRedemption;
 
-                // Resumo da forma de pagamento selecionada
-                const selectedSummary = useRedemption
+                // Resumo da forma de pagamento selecionada.
+                // "Corte Grátis" só aparece como forma de pagamento quando cobre 100% do valor.
+                // Se houver remanescente (ex.: carrinho com 2 serviços), o cliente precisa escolher PIX/Carteira/Barbearia.
+                const redemptionCoversAll = useRedemption && totalPrice === 0;
+                const selectedSummary = redemptionCoversAll
                   ? { icon: <Star className="w-5 h-5 fill-gold text-gold" />, label: "Corte Grátis", sub: "Benefício aplicado" }
                   : paymentMethod === 'pix'
                     ? { icon: <img src={pixIcon} alt="PIX" className="w-5 h-5 object-contain" />, label: "PIX", sub: "Confirmação instantânea" }
