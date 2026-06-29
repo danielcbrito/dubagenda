@@ -2977,8 +2977,7 @@ const ClienteAgendar = () => {
                     <div className="relative">
                       <input
                         type="text"
-                        placeholder="Inserir código"
-                        aria-label="Inserir código do cupom"
+                        placeholder="INSERIR CÓDIGO"
                         value={couponCode}
                         onChange={(e) => {
                           const val = e.target.value.toUpperCase();
@@ -2990,7 +2989,7 @@ const ClienteAgendar = () => {
                             }, 600);
                           }
                         }}
-                        className="text-right bg-transparent border-none outline-none text-[13px] text-primary placeholder-primary/70 font-medium uppercase tracking-wider w-32"
+                        className="text-right bg-transparent border-none outline-none text-[13px] text-primary placeholder:text-primary/70 font-medium uppercase tracking-wider w-44"
                       />
                       {validatingCoupon && (
                         <div className="absolute right-0 top-1/2 -translate-y-1/2">
