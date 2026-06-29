@@ -124,7 +124,7 @@ const ClienteAgendar = () => {
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState(1);
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'pix' | 'wallet'>('cash');
-  const [cashSubtype, setCashSubtype] = useState<'dinheiro' | 'cartao'>('dinheiro');
+  
 
   const [walletBalance, setWalletBalance] = useState(0);
   const [processingPayment, setProcessingPayment] = useState(false);
