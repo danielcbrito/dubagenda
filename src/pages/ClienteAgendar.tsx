@@ -2813,7 +2813,7 @@ const ClienteAgendar = () => {
 
                     {/* Sheet com todas as opções */}
                     <Sheet open={paymentSheetOpen} onOpenChange={setPaymentSheetOpen}>
-                      <SheetContent side="bottom" className="rounded-t-2xl max-h-[85vh] overflow-y-auto">
+                      <SheetContent side="bottom" className="rounded-t-2xl max-h-[85vh] overflow-y-auto !bg-background from-background to-background" style={{ boxShadow: '0 -8px 32px hsl(var(--foreground) / 0.1)' }}>
                         <SheetHeader className="text-left mb-4">
                           <SheetTitle className="text-[16px] font-bold">Forma de pagamento</SheetTitle>
                         </SheetHeader>
