@@ -2176,10 +2176,13 @@ const ClienteAgendar = () => {
   useEffect(() => {
     const prev = prevCanUseRedemptionRef.current;
     if (canUseRedemption && !prev) {
-      // acabou de ficar elegível → pré-seleciona o corte grátis
-      // e alinha o método de pagamento (resgate → tile "cash" no UI, preço final R$ 0)
+      // acabou de ficar elegível → pré-seleciona o corte grátis como desconto.
+      // Só força método 'cash' quando o resgate cobre 100% (carrinho com 1 corte simples).
       setUseRedemption(true);
-      setPaymentMethod('cash');
+      const baseTotal = selectedServices.reduce((sum, s) => sum + s.preco * (serviceQuantities[s.id] || 1), 0);
+      const corte = getCorteService();
+      const fullyCovered = corte ? baseTotal - corte.preco <= 0 : false;
+      if (fullyCovered) setPaymentMethod('cash');
     }
     if (!canUseRedemption && useRedemption) {
       setUseRedemption(false);
