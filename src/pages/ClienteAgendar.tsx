@@ -2,7 +2,7 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { BackArrow } from "@/components/ui/back-arrow";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowLeft, ArrowRight, Clock, Check, Tag, CreditCard, Landmark, Loader2, Calendar as CalendarIcon, Shield, Zap, Star, Store, ChevronRight, Crown, Wallet, MapPin, Banknote } from "lucide-react";
+import { ArrowLeft, ArrowRight, Clock, Check, Tag, CreditCard, Landmark, Loader2, Calendar as CalendarIcon, Shield, Zap, Star, Store, ChevronRight, Crown, Wallet, MapPin } from "lucide-react";
 import logoDub from "@/assets/logo-dub.png";
 import pixIcon from "@/assets/pix-icon.png";
 import { toast } from "sonner";
@@ -124,7 +124,7 @@ const ClienteAgendar = () => {
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState(1);
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'pix' | 'wallet'>('cash');
-  const [cashSubtype, setCashSubtype] = useState<'dinheiro' | 'cartao'>('dinheiro');
+  
 
   const [walletBalance, setWalletBalance] = useState(0);
   const [processingPayment, setProcessingPayment] = useState(false);
@@ -1328,14 +1328,8 @@ const ClienteAgendar = () => {
         }
       }
 
-      // Pagamento na barbearia: indicar subtipo (dinheiro/cartão) para o barbeiro
-      if (paymentMethod === 'cash' && !useRedemption) {
-        const subtypeLabel = cashSubtype === 'dinheiro' ? 'Dinheiro' : 'Cartão';
-        const cashMsg = `Pagamento na barbearia: ${subtypeLabel}`;
-        finalObservacoes = finalObservacoes
-          ? `${cashMsg} | ${finalObservacoes}`
-          : cashMsg;
-      }
+
+
 
 
       const bookingData = {
@@ -2759,7 +2753,7 @@ const ClienteAgendar = () => {
                     ? { icon: <img src={pixIcon} alt="PIX" className="w-5 h-5 object-contain" />, label: "PIX", sub: "Confirmação instantânea" }
                     : paymentMethod === 'wallet'
                       ? { icon: <Wallet className="w-5 h-5 text-emerald-500" />, label: "Carteira", sub: `Saldo R$ ${walletBalance.toFixed(2).replace('.', ',')}` }
-                      : { icon: <Landmark className="w-5 h-5 text-foreground" />, label: "Pagar na Barbearia", sub: cashSubtype === 'dinheiro' ? "Dinheiro • Presencial no dia" : "Cartão • Presencial no dia" };
+                      : { icon: <Landmark className="w-5 h-5 text-foreground" />, label: "Pagar na Barbearia", sub: "Presencial no dia do atendimento" };
 
                 return (
                   <div className="mb-2">
@@ -2823,53 +2817,8 @@ const ClienteAgendar = () => {
                       )}
                     </AnimatePresence>
 
-                    {/* Subtipo de pagamento na barbearia: Dinheiro ou Cartão */}
-                    <AnimatePresence>
-                      {paymentMethod === 'cash' && !useRedemption && (
-                        <motion.div
-                          initial={{ opacity: 0, height: 0 }}
-                          animate={{ opacity: 1, height: 'auto' }}
-                          exit={{ opacity: 0, height: 0 }}
-                          className="overflow-hidden"
-                        >
-                          <div className="mt-2 rounded-xl border border-border bg-card p-3.5">
-                            <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2.5">
-                              Como você vai pagar
-                            </p>
-                            <div className="grid grid-cols-2 gap-2">
-                              <button
-                                onClick={() => setCashSubtype('dinheiro')}
-                                className={cn(
-                                  "flex flex-col items-center gap-1.5 rounded-lg border p-3 transition-all active:scale-[0.98]",
-                                  cashSubtype === 'dinheiro'
-                                    ? "border-primary/60 bg-primary/5"
-                                    : "border-border bg-background hover:bg-muted/30"
-                                )}
-                              >
-                                <Banknote className={cn("w-5 h-5", cashSubtype === 'dinheiro' ? "text-primary" : "text-muted-foreground/60")} />
-                                <span className={cn("text-[12px] font-semibold", cashSubtype === 'dinheiro' ? "text-foreground" : "text-muted-foreground")}>
-                                  Dinheiro
-                                </span>
-                              </button>
-                              <button
-                                onClick={() => setCashSubtype('cartao')}
-                                className={cn(
-                                  "flex flex-col items-center gap-1.5 rounded-lg border p-3 transition-all active:scale-[0.98]",
-                                  cashSubtype === 'cartao'
-                                    ? "border-primary/60 bg-primary/5"
-                                    : "border-border bg-background hover:bg-muted/30"
-                                )}
-                              >
-                                <CreditCard className={cn("w-5 h-5", cashSubtype === 'cartao' ? "text-primary" : "text-muted-foreground/60")} />
-                                <span className={cn("text-[12px] font-semibold", cashSubtype === 'cartao' ? "text-foreground" : "text-muted-foreground")}>
-                                  Cartão
-                                </span>
-                              </button>
-                            </div>
-                          </div>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
+
+
 
 
                     {/* Sheet com todas as opções */}
