@@ -144,6 +144,7 @@ const ClienteAgendar = () => {
   const [subscriptionLimitReached, setSubscriptionLimitReached] = useState(false);
   const [availableRedemptions, setAvailableRedemptions] = useState<{ id: string; promocao_id: string }[]>([]);
   const [useRedemption, setUseRedemption] = useState(false);
+  const [paymentSheetOpen, setPaymentSheetOpen] = useState(false);
   const [showLoseRedemptionDialog, setShowLoseRedemptionDialog] = useState(false);
   const [consumingRedemption, setConsumingRedemption] = useState(false);
   const [serviceQuantities, setServiceQuantities] = useState<Record<string, number>>({});
