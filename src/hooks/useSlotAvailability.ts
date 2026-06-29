@@ -823,12 +823,6 @@ export function useSlotAvailability(
   // Re-renderiza a cada 30s para que horários passados sumam em tempo real
   // (independente da latência do backend/polling).
   // ============================================
-  const [nowTick, setNowTick] = useState(() => Date.now());
-  useEffect(() => {
-    const interval = setInterval(() => setNowTick(Date.now()), 30000);
-    return () => clearInterval(interval);
-  }, []);
-
   const enforcedSlots = (() => {
     if (!selectedDate) return slots;
     const dateStr = format(selectedDate, 'yyyy-MM-dd');
