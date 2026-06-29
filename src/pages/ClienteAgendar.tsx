@@ -2688,12 +2688,8 @@ const ClienteAgendar = () => {
             className="min-h-screen pt-16 pb-24 px-4"
           >
             <div className="max-w-2xl mx-auto">
-              {/* Header estilo Sacola */}
-              <div className="mb-5 pt-1 text-center">
-                <h2 className="text-[13px] font-bold text-foreground uppercase tracking-[0.2em]">
-                  Agendamento
-                </h2>
-              </div>
+              {/* Header removido — informações do barbeiro sobem para o topo */}
+
 
               {/* Brand / Barbeiro row */}
               <div className="flex items-center gap-3 mb-6 px-1">
