@@ -248,7 +248,7 @@ function AuthRedirectGuard({ children }: { children: React.ReactNode }) {
     // Rotas de barbearia pública (/:slug — single segment, not a known route)
     const segments = location.pathname.split('/').filter(Boolean);
     const isBarbershopSlug = segments.length === 1 &&
-      !['cliente', 'suporte', 'admin', 'auth'].includes(segments[0]);
+      !['cliente', 'suporte', 'admin', 'auth', 'barbearias'].includes(segments[0]);
 
     if (isPublicRoute || isBarbershopSlug) {
       setReady(true);
