@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { JsonLd } from "@/components/seo/JsonLd";
+import { Helmet } from "react-helmet-async";
 
 interface Review {
   id: string;
@@ -103,8 +104,24 @@ const BarberReviews = () => {
     })),
   } : null;
 
+  const pageTitle = barber
+    ? `Avaliações de ${barber.apelido} — DUB Agenda`
+    : "Avaliações do barbeiro — DUB Agenda";
+  const pageDesc = barber
+    ? `Leia ${reviews.length} avaliações reais de clientes sobre ${barber.apelido}. Nota média ${averageRating || "—"}/5 na DUB Agenda.`
+    : "Leia avaliações reais de clientes sobre os barbeiros parceiros da DUB Agenda.";
+  const canonical = `https://dubagenda.lovable.app/cliente/barbeiro/${barberId}/avaliacoes`;
+
   return (
     <div className="fixed inset-0 z-[60] flex flex-col bg-background">
+      <Helmet>
+        <title>{pageTitle}</title>
+        <meta name="description" content={pageDesc} />
+        <link rel="canonical" href={canonical} />
+        <meta property="og:title" content={pageTitle} />
+        <meta property="og:description" content={pageDesc} />
+        <meta property="og:url" content={canonical} />
+      </Helmet>
       {reviewsLd && <JsonLd id="barber-reviews" data={reviewsLd} />}
       <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain pb-8">
 
