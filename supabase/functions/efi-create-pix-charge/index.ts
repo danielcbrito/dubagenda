@@ -178,6 +178,7 @@ Deno.serve(async (req) => {
       hora: bookingHora,
       duracao,
       observacoes,
+      consumeRedemptionOnPaidBooking,
     } = body;
 
     if (!barbeiro_id || !valor || valor <= 0) {
@@ -260,6 +261,18 @@ Deno.serve(async (req) => {
     let qr = { qrcode: "", imagemQrcode: "" };
     if (locId) {
       qr = await efiGetQrCode(baseUrl, accessToken, certPemB64, locId);
+    }
+
+    if (consumeRedemptionOnPaidBooking) {
+      const { error: consumeError } = await admin.rpc("consume_available_redemptions_as_lost", {
+        p_user_id: userId,
+        p_appointment_id: null,
+        p_reason: "pix_booking_without_redemption",
+      });
+
+      if (consumeError) {
+        console.error("Efí consume redemption error:", consumeError);
+      }
     }
 
     const expiresAt = new Date(Date.now() + 30 * 60 * 1000).toISOString();
