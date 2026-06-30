@@ -383,6 +383,8 @@ function AppRoutes() {
               <Route path="/admin/efi-credenciais" element={<AdminEfiCredenciais />} />
               <Route path="/b/:slug/unidades" element={<BarbershopUnidades />} />
               <Route path="/b/:slug" element={<BarbershopPublic />} />
+              <Route path="/barbearias" element={<BarbershopsCityGuide />} />
+              <Route path="/barbearias/:cidade" element={<BarbershopsCityGuide />} />
               <Route path="/:slug" element={<BarbershopPublic />} />
               <Route path="/flowchart" element={<Flowchart />} />
               <Route path="/responsive-preview" element={<ResponsivePreview />} />
