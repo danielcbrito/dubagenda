@@ -6657,6 +6657,10 @@ export type Database = {
         Args: { p_amount: number; p_appointment_id: string; p_user_id: string }
         Returns: Json
       }
+      user_has_active_redemption_appointment: {
+        Args: { p_exclude_appointment_id?: string; p_user_id: string }
+        Returns: boolean
+      }
       validar_saque: {
         Args: { p_barbeiro_id: string; p_user_id: string; p_valor: number }
         Returns: {
