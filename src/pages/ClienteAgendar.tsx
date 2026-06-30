@@ -2174,22 +2174,16 @@ const ClienteAgendar = () => {
   // Se ele seguir sem aplicar, será avisado e perderá a promoção (resgate consumido).
   const prevCanUseRedemptionRef = useRef(false);
   useEffect(() => {
-    const prev = prevCanUseRedemptionRef.current;
-    if (canUseRedemption && !prev) {
-      // acabou de ficar elegível → pré-seleciona o corte grátis como desconto.
-      // Só força método 'cash' quando o resgate cobre 100% (carrinho com 1 corte simples).
-      setUseRedemption(true);
-      const baseTotal = selectedServices.reduce((sum, s) => sum + s.preco * (serviceQuantities[s.id] || 1), 0);
-      const corte = getCorteService();
-      const fullyCovered = corte ? baseTotal - corte.preco <= 0 : false;
-      if (fullyCovered) setPaymentMethod('cash');
-      else setPaymentMethod('pix');
-    }
+    // Quando o resgate deixa de estar disponível, garantir que o estado é limpo.
+    // NÃO pré-selecionamos mais o corte grátis automaticamente — o cliente precisa
+    // tocar na opção "Corte Grátis Disponível" para aplicar o desconto.
+    // Se ele escolher PIX/Carteira/Barbearia sem aplicar, paga o valor cheio e
+    // o diálogo de confirmação avisa que perderá a promoção.
     if (!canUseRedemption && useRedemption) {
       setUseRedemption(false);
     }
     prevCanUseRedemptionRef.current = canUseRedemption;
-  }, [canUseRedemption]);
+  }, [canUseRedemption, useRedemption]);
 
   /** Marca todos os resgates disponíveis como expirados (cliente abriu mão do corte grátis). */
   const consumeRedemptionsAsLost = async () => {
