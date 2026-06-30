@@ -2247,8 +2247,19 @@ const ClienteAgendar = () => {
   const handleConfirmLoseRedemption = async () => {
     setConsumingRedemption(true);
     await consumeRedemptionsAsLost();
+    setUseRedemption(false);
+    redemptionAutoSelectedRef.current = true; // não re-selecionar automaticamente
     setConsumingRedemption(false);
     setShowLoseRedemptionDialog(false);
+
+    // Caso 1: usuário estava trocando a forma de pagamento (ainda no passo 5)
+    if (pendingPaymentMethod) {
+      setPaymentMethod(pendingPaymentMethod);
+      setPendingPaymentMethod(null);
+      return;
+    }
+
+    // Caso 2: usuário clicou em "Continuar" sem aplicar o corte → prosseguir pagamento
     if (paymentMethod === 'pix' || paymentMethod === 'card' || paymentMethod === 'cash') {
       handlePayment();
     } else {
