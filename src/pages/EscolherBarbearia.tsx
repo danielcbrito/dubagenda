@@ -564,12 +564,14 @@ const EscolherBarbearia = () => {
           right: 'calc(env(safe-area-inset-right, 0px) + 16px)',
         }}
       >
+        <h1 className="sr-only">Buscar e descobrir barbearias próximas</h1>
         <div className="relative">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/50" />
           <input
             ref={searchInputRef}
             type="text"
             placeholder="Buscar barbearias..."
+            aria-label="Buscar barbearias"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className={cn(
@@ -583,6 +585,7 @@ const EscolherBarbearia = () => {
           {search && (
             <button
               onClick={() => setSearch("")}
+              aria-label="Limpar busca"
               className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground/40 active:scale-90 transition-transform"
             >
               <X className="w-4 h-4" />
@@ -617,6 +620,7 @@ const EscolherBarbearia = () => {
         {userLocation && (
           <button
             onClick={handleRecenter}
+            aria-label="Centralizar mapa na minha localização"
             className="flex h-10 w-10 items-center justify-center rounded-full border border-border/60 bg-card/95 shadow-lg backdrop-blur-sm transition-transform active:scale-90"
           >
             <Locate className="h-[17px] w-[17px] text-foreground" />
@@ -624,6 +628,7 @@ const EscolherBarbearia = () => {
         )}
         <button
           onClick={() => setMapStyle((prev) => (prev === "satellite" ? "street" : "satellite"))}
+          aria-label={mapStyle === "satellite" ? "Mudar para vista de mapa" : "Mudar para vista de satélite"}
           className="flex h-10 w-10 items-center justify-center rounded-full border border-border/60 bg-card/95 shadow-lg backdrop-blur-sm transition-transform active:scale-90"
           title={mapStyle === "satellite" ? "Ver mapa" : "Ver satélite"}
         >
