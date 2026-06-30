@@ -1878,8 +1878,11 @@ const ClienteAgendar = () => {
     const redemptionToUse = availableRedemptions[0];
     
     try {
+      const resolvedUserId = userId ?? (await supabase.auth.getUser()).data.user?.id;
+      if (!resolvedUserId) throw new Error("Usuário não autenticado");
+
       const { error } = await (supabase as any).rpc("mark_available_redemption_as_used", {
-        p_user_id: userId,
+        p_user_id: resolvedUserId,
         p_appointment_id: appointmentId,
         p_reason: "free_haircut_used_from_booking_flow",
       });
@@ -2213,10 +2216,13 @@ const ClienteAgendar = () => {
 
   /** Marca todos os resgates disponíveis como expirados (cliente abriu mão do corte grátis). */
   const consumeRedemptionsAsLost = async (appointmentId?: string) => {
-    if (!userId || availableRedemptions.length === 0) return;
+    if (availableRedemptions.length === 0) return;
     try {
+      const resolvedUserId = userId ?? (await supabase.auth.getUser()).data.user?.id;
+      if (!resolvedUserId) throw new Error("Usuário não autenticado");
+
       const { error } = await (supabase as any).rpc("consume_available_redemptions_as_lost", {
-        p_user_id: userId,
+        p_user_id: resolvedUserId,
         p_appointment_id: appointmentId ?? null,
         p_reason: "paid_booking_without_redemption",
       });
