@@ -2810,17 +2810,6 @@ const ClienteAgendar = () => {
                         icon={<Landmark className={cn("w-5 h-5", paymentMethod === 'cash' && !redemptionCoversAll ? "text-primary" : "text-muted-foreground/40")} />}
                       />
 
-                      {canReceivePix && (
-                        <PaymentOption
-                          value="card"
-                          selected={false}
-                          onSelect={() => {}}
-                          disabled={true}
-                          title="Cartão de Crédito"
-                          description="Pague em até 12x pelo App"
-                          icon={<CreditCard className="w-5 h-5 text-muted-foreground/30" />}
-                        />
-                      )}
                     </div>
 
                     {/* Breakdown carteira quando selecionada */}
