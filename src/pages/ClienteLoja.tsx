@@ -333,7 +333,7 @@ export default function ClienteLoja() {
                   className={cn(
                     "w-full h-10 pl-9 pr-4 rounded-full",
                     "bg-card border border-border/50",
-                    "text-sm text-foreground placeholder:text-muted-foreground/40",
+                    "text-sm text-foreground placeholder:text-muted-foreground",
                     "focus:outline-none focus:ring-2 focus:ring-primary/20"
                   )}
                 />

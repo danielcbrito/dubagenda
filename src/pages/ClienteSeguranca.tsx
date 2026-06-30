@@ -67,7 +67,7 @@ function PinField({ label, value, onChange, placeholder, maxLength, isPassword =
           placeholder={placeholder}
           maxLength={maxLength}
           className={cn(
-            "w-full h-9 px-3 pr-10 bg-muted/30 border rounded-lg text-[13px] text-foreground placeholder:text-muted-foreground/40",
+            "w-full h-9 px-3 pr-10 bg-muted/30 border rounded-lg text-[13px] text-foreground placeholder:text-muted-foreground",
             "focus:outline-none focus:border-border/50 focus:ring-0 transition-colors",
             error ? "border-destructive/60" : "border-border/30"
           )}

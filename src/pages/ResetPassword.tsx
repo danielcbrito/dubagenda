@@ -99,7 +99,7 @@ const ResetPassword = () => {
     }
   };
 
-  const inputClasses = "h-12 pl-11 pr-11 bg-muted/50 border-border text-foreground placeholder:text-muted-foreground/50 rounded-xl focus:border-primary/50 focus:ring-1 focus:ring-primary/20 transition-all text-sm";
+  const inputClasses = "h-12 pl-11 pr-11 bg-muted/50 border-border text-foreground placeholder:text-muted-foreground rounded-xl focus:border-primary/50 focus:ring-1 focus:ring-primary/20 transition-all text-sm";
 
   // Loading
   if (hasValidToken === null) {

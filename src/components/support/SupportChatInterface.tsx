@@ -631,7 +631,7 @@ export function SupportChatInterface() {
               onKeyDown={handleKeyPress}
               placeholder="Mensagem..."
               disabled={isLoading}
-              className="flex-1 min-h-[40px] max-h-[120px] resize-none border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 px-0.5 py-2.5 text-[15px] text-foreground placeholder:text-muted-foreground/40 focus:outline-none leading-snug"
+              className="flex-1 min-h-[40px] max-h-[120px] resize-none border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 px-0.5 py-2.5 text-[15px] text-foreground placeholder:text-muted-foreground focus:outline-none leading-snug"
               rows={1}
             />
 
