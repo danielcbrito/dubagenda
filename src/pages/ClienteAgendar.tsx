@@ -2257,6 +2257,7 @@ const ClienteAgendar = () => {
   const handleProceedFromPayment = async () => {
     // Se há corte grátis disponível e o cliente optou por NÃO usar → confirmar perda (1x)
     if (canUseRedemption && !useRedemption && !loseWarningShownRef.current) {
+      setLoseDialogContext('continue');
       setShowLoseRedemptionDialog(true);
       return;
     }
@@ -2269,21 +2270,25 @@ const ClienteAgendar = () => {
   };
 
   const handleConfirmLoseRedemption = async () => {
-    // Não consome o resgate agora — apenas avisa uma vez.
-    // O benefício só é perdido de fato quando o pagamento for finalizado (em handlePayment).
     loseWarningShownRef.current = true;
     setUseRedemption(false);
-    redemptionAutoSelectedRef.current = true; // não re-selecionar automaticamente
+    redemptionAutoSelectedRef.current = true;
     setShowLoseRedemptionDialog(false);
 
-    // Caso 1: usuário estava trocando a forma de pagamento (ainda no passo 5)
-    if (pendingPaymentMethod) {
+    // Troca de método de pagamento
+    if (loseDialogContext === 'switch' && pendingPaymentMethod) {
       setPaymentMethod(pendingPaymentMethod);
       setPendingPaymentMethod(null);
       return;
     }
 
-    // Caso 2: usuário clicou em "Continuar" sem aplicar o corte → prosseguir pagamento
+    // Desmarcou o corte grátis manualmente — apenas mantém desmarcado
+    if (loseDialogContext === 'toggle') {
+      setPendingPaymentMethod(null);
+      return;
+    }
+
+    // Continuar sem aplicar o corte → prossegue para pagamento
     if (paymentMethod === 'pix' || paymentMethod === 'card' || paymentMethod === 'cash') {
       handlePayment();
     } else {
