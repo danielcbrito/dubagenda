@@ -1902,27 +1902,6 @@ const ClienteAgendar = () => {
     }
   };
 
-  const consumeRedemptionsAsLost = async (appointmentId: string | null) => {
-    if (!canUseRedemption || useRedemption || availableRedemptions.length === 0) return;
-
-    try {
-      const resolvedUserId = userId ?? (await supabase.auth.getUser()).data.user?.id;
-      if (!resolvedUserId) throw new Error("Usuário não autenticado");
-
-      const { error } = await (supabase as any).rpc("consume_available_redemptions_as_lost", {
-        p_user_id: resolvedUserId,
-        p_appointment_id: appointmentId,
-        p_reason: "paid_booking_without_redemption",
-      });
-
-      if (error) throw error;
-      setAvailableRedemptions([]);
-    } catch (err) {
-      console.error("Erro ao expirar corte grátis não usado:", err);
-      throw err;
-    }
-  };
-
   /** Resolve o tenant_id alvo para o agendamento atual */
   const getCouponTenantId = useCallback((): string | null => {
     return selectedBarber?.tenant_id ?? preferredShop?.id ?? null;
@@ -2254,7 +2233,7 @@ const ClienteAgendar = () => {
 
   /** Marca todos os resgates disponíveis como expirados (cliente abriu mão do corte grátis). */
   const consumeRedemptionsAsLost = async (appointmentId?: string) => {
-    if (availableRedemptions.length === 0) return;
+    if (!canUseRedemption || useRedemption || availableRedemptions.length === 0) return;
     try {
       const resolvedUserId = userId ?? (await supabase.auth.getUser()).data.user?.id;
       if (!resolvedUserId) throw new Error("Usuário não autenticado");
