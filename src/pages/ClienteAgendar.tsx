@@ -2,7 +2,7 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { BackArrow } from "@/components/ui/back-arrow";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowLeft, ArrowRight, Clock, Check, Tag, CreditCard, Landmark, Loader2, Calendar as CalendarIcon, Shield, Zap, Star, Store, ChevronRight, Crown, Wallet, MapPin } from "lucide-react";
+import { ArrowLeft, ArrowRight, Clock, Check, Tag, CreditCard, Landmark, Loader2, Calendar as CalendarIcon, Shield, Zap, Star, Store, ChevronRight, Crown, Wallet, MapPin, X } from "lucide-react";
 import logoDub from "@/assets/logo-dub.png";
 import pixIcon from "@/assets/pix-icon.png";
 import { toast } from "sonner";
@@ -3344,6 +3344,15 @@ const ClienteAgendar = () => {
         }
       }}>
         <DialogContent className="max-w-[80vw] md:max-w-[340px] rounded-[32px] border border-white/20 bg-white/95 backdrop-blur-sm p-0 overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.15)] focus:outline-none [&>button]:hidden">
+          <button
+            type="button"
+            aria-label="Fechar"
+            disabled={consumingRedemption}
+            onClick={() => { setShowLoseRedemptionDialog(false); setPendingPaymentMethod(null); }}
+            className="absolute top-3 right-3 w-8 h-8 rounded-full flex items-center justify-center text-zinc-400 hover:text-zinc-900 hover:bg-zinc-100 transition-colors disabled:opacity-50"
+          >
+            <X className="w-4 h-4" />
+          </button>
           <div className="p-7 text-center">
             <DialogHeader className="space-y-3">
               <DialogTitle className="text-[19px] font-bold text-zinc-900 tracking-tight leading-tight">
@@ -3353,25 +3362,16 @@ const ClienteAgendar = () => {
                 Se você continuar sem selecionar o <span className="text-zinc-900 font-semibold">Corte Grátis</span>, você perderá essa promoção definitivamente. Deseja prosseguir mesmo assim?
               </DialogDescription>
             </DialogHeader>
-            
-            <div className="mt-8 flex flex-col gap-2">
+
+            <div className="mt-7">
               <Button
                 disabled={consumingRedemption}
                 onClick={(e) => { e.preventDefault(); handleConfirmLoseRedemption(); }}
-                className="w-full h-[52px] rounded-2xl bg-zinc-900 hover:bg-zinc-800 text-white font-bold text-[15px] transition-all border-none active:scale-[0.98]"
+                className="w-full h-[44px] rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white font-semibold text-[14px] tracking-tight transition-all border-none active:scale-[0.98]"
               >
                 {consumingRedemption ? (
-                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <Loader2 className="w-4 h-4 animate-spin" />
                 ) : "Sim, desejo perder"}
-              </Button>
-              
-              <Button 
-                disabled={consumingRedemption}
-                onClick={() => { setShowLoseRedemptionDialog(false); setPendingPaymentMethod(null); }}
-                className="w-full h-[52px] rounded-2xl bg-zinc-100 hover:bg-zinc-200 text-zinc-600 font-bold text-[15px] border-none transition-all active:scale-[0.98]"
-                variant="ghost"
-              >
-                Voltar e aplicar
               </Button>
             </div>
           </div>
