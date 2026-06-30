@@ -407,6 +407,75 @@ export type Database = {
           },
         ]
       }
+      ai_monitor_state: {
+        Row: {
+          key: string
+          last_run_at: string
+          payload: Json
+          updated_at: string
+        }
+        Insert: {
+          key: string
+          last_run_at?: string
+          payload?: Json
+          updated_at?: string
+        }
+        Update: {
+          key?: string
+          last_run_at?: string
+          payload?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      ai_security_alerts: {
+        Row: {
+          categoria: string
+          cliente_id: string | null
+          cliente_nome: string | null
+          created_at: string
+          descricao: string
+          enviado: boolean
+          enviado_em: string | null
+          erro_envio: string | null
+          evidencias: Json
+          id: string
+          resumo_ia: string | null
+          severidade: string
+          titulo: string
+        }
+        Insert: {
+          categoria: string
+          cliente_id?: string | null
+          cliente_nome?: string | null
+          created_at?: string
+          descricao: string
+          enviado?: boolean
+          enviado_em?: string | null
+          erro_envio?: string | null
+          evidencias?: Json
+          id?: string
+          resumo_ia?: string | null
+          severidade: string
+          titulo: string
+        }
+        Update: {
+          categoria?: string
+          cliente_id?: string | null
+          cliente_nome?: string | null
+          created_at?: string
+          descricao?: string
+          enviado?: boolean
+          enviado_em?: string | null
+          erro_envio?: string | null
+          evidencias?: Json
+          id?: string
+          resumo_ia?: string | null
+          severidade?: string
+          titulo?: string
+        }
+        Relationships: []
+      }
       anuncios_app: {
         Row: {
           ativo: boolean
