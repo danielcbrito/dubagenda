@@ -54,7 +54,7 @@ serve(async (req) => {
     // 1. Fetch appointment and verify ownership
     const { data: appointment, error: fetchError } = await supabase
       .from("agendamentos")
-      .select("id, user_id, status, preco, servico_id, data, hora, barbeiro_id, payment_method, observacoes, is_free, tipo_agendamento")
+      .select("id, user_id, status, preco, servico_id, data, hora, barbeiro_id, payment_method, observacoes, is_free, tipo_agendamento, usado_redemption_id")
       .eq("id", appointmentId)
       .single();
 
@@ -114,6 +114,46 @@ serve(async (req) => {
       .eq("id", appointmentId);
 
     if (updateError) throw updateError;
+
+    // Se o agendamento foi feito realmente com Corte Grátis, cancelar deve liberar
+    // o mesmo benefício para o cliente remarcar. Agendamentos pagos que apenas
+    // perderam o benefício NÃO têm payment_method='resgate' e não entram aqui.
+    if (paymentMethod === "resgate") {
+      let redemptionId = appointment.usado_redemption_id as string | null;
+
+      if (!redemptionId) {
+        const { data: redemption } = await supabase
+          .from("resgates")
+          .select("id")
+          .eq("appointment_id", appointmentId)
+          .eq("user_id", callerUserId)
+          .eq("status", "used")
+          .maybeSingle();
+
+        redemptionId = redemption?.id ?? null;
+      }
+
+      if (redemptionId) {
+        await supabase
+          .from("resgates")
+          .update({
+            status: "available",
+            used_at: null,
+            appointment_id: null,
+            expired_at: null,
+          })
+          .eq("id", redemptionId)
+          .eq("user_id", callerUserId);
+
+        await supabase.from("loyalty_audit_logs").insert({
+          user_id: callerUserId,
+          action: "redemption_restored_after_free_cancel",
+          reason: "Agendamento com corte grátis cancelado pelo cliente; benefício liberado para remarcação",
+          appointment_id: appointmentId,
+          metadata: { redemption_id: redemptionId },
+        });
+      }
+    }
 
     // 5. Crédito na carteira interna (PIX, cartão ou crédito do app)
     //    Para PIX, guardamos os metadados Woovi para uso posterior no saque.
