@@ -1675,9 +1675,11 @@ const ClienteAgendar = () => {
       }
 
       const creditUsedAmount = Math.min(availableCredits, totalPrice);
-      const observacoesText = selectedServices.length > 1 
-        ? `Serviços: ${serviceNames}. Pago com crédito do app: R$ ${creditUsedAmount.toFixed(2)}`
-        : `Pago com crédito do app: R$ ${creditUsedAmount.toFixed(2)}`;
+      const observacoesText = [
+        selectedServices.length > 1 ? `Serviços: ${serviceNames}` : null,
+        useRedemption ? "Inclui Corte Grátis" : null,
+        `Pago com crédito do app: R$ ${creditUsedAmount.toFixed(2)}`,
+      ].filter(Boolean).join(". ");
 
       const { data: appointment, error: aptError } = await supabase
         .from("agendamentos")
@@ -1717,12 +1719,6 @@ const ClienteAgendar = () => {
 
       if (useRedemption) {
         await markRedemptionAsUsed(appointment.id);
-        
-        // Atualiza o agendamento para refletir que o pagamento foi via resgate
-        await supabase
-          .from("agendamentos")
-          .update({ payment_method: 'resgate' } as any)
-          .eq("id", appointment.id);
       } else if (canUseRedemption && availableRedemptions.length > 0) {
         await consumeRedemptionsAsLost(appointment.id);
       }
