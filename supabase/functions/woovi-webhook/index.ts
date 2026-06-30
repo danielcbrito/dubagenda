@@ -97,6 +97,7 @@ Deno.serve(async (req) => {
             hora: pb.hora,
             duracao: pb.duracao,
             preco: pb.preco,
+            observacoes: pb.observacoes,
             payment_method: "pix",
             status: "confirmed",
           })

@@ -54,6 +54,7 @@ Deno.serve(async (req) => {
       data: bookingDate,
       hora: bookingHora,
       duracao,
+      observacoes,
     } = body;
 
     if (!barbeiro_id || !valor || valor <= 0) {
@@ -138,6 +139,7 @@ Deno.serve(async (req) => {
           hora: bookingHora,
           duracao: duracao ?? 30,
           preco: valor,
+          observacoes: observacoes ?? null,
           payment_method: "pix",
           expires_at: expiresAt,
         })
