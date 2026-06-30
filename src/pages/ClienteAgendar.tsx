@@ -151,6 +151,7 @@ const ClienteAgendar = () => {
   const [consumingRedemption, setConsumingRedemption] = useState(false);
   const [pendingPaymentMethod, setPendingPaymentMethod] = useState<'cash' | 'pix' | 'wallet' | null>(null);
   const redemptionAutoSelectedRef = useRef(false);
+  const loseWarningShownRef = useRef(false);
   const [serviceQuantities, setServiceQuantities] = useState<Record<string, number>>({});
   
   // Durações personalizadas do barbeiro selecionado (servico_id → duracao)
