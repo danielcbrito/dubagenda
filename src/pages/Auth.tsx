@@ -320,7 +320,7 @@ const Auth = () => {
   };
 
   const inputClasses =
-    "h-14 bg-muted/40 border-border/60 text-foreground placeholder:text-muted-foreground/40 rounded-2xl focus:border-foreground/30 focus:ring-0 transition-all text-[15px] px-5";
+    "h-14 bg-muted/40 border-border/60 text-foreground placeholder:text-muted-foreground rounded-2xl focus:border-foreground/30 focus:ring-0 transition-all text-[15px] px-5";
 
   // ── Magic link sent screen ──
   if (step === "magic_sent") {

@@ -43,7 +43,7 @@ function CompactField({ label, value, onChange, placeholder, required, maxLength
         maxLength={maxLength}
         disabled={disabled}
         className={cn(
-          "w-full h-8 px-2.5 bg-muted/30 border rounded-lg text-[12px] text-foreground placeholder:text-muted-foreground/40",
+          "w-full h-8 px-2.5 bg-muted/30 border rounded-lg text-[12px] text-foreground placeholder:text-muted-foreground",
           "focus:outline-none focus:border-border/50 focus:ring-0 transition-colors",
           isEmpty && !error ? "border-destructive/40" : "border-border/30",
           error ? "border-destructive/60" : "",

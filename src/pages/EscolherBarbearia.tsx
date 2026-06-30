@@ -575,7 +575,7 @@ const EscolherBarbearia = () => {
             className={cn(
               "w-full h-12 pl-11 pr-10 rounded-full text-[14px]",
               "bg-card border border-border text-foreground",
-              "placeholder:text-muted-foreground/40",
+              "placeholder:text-muted-foreground",
               "focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30",
               "shadow-lg transition-all duration-150"
             )}
