@@ -2196,7 +2196,20 @@ const ClienteAgendar = () => {
 
   const handleToggleRedemption = () => {
     if (!canUseRedemption) return;
-    setUseRedemption(prev => !prev);
+    // Se está DESmarcando o corte grátis (estava ativo) → mesma regra anti-burla:
+    // avisar uma vez antes de abrir mão do benefício.
+    if (useRedemption) {
+      if (!loseWarningShownRef.current) {
+        setPendingPaymentMethod(null); // não é troca de método, é só desmarcar
+        setShowLoseRedemptionDialog(true);
+        return;
+      }
+      redemptionAutoSelectedRef.current = true;
+      setUseRedemption(false);
+      return;
+    }
+    // Marcando: comportamento normal
+    setUseRedemption(true);
   };
 
   const handleSelectPaymentMethod = (method: 'cash' | 'pix' | 'wallet') => {
