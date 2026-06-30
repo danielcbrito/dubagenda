@@ -1472,7 +1472,7 @@ const ClienteAgendar = () => {
       // === Pagamento na Barbearia (cash) ===
       const payload: any = {
         bookingData,
-        metodo: useRedemption ? 'resgate' : 'cash',
+        metodo: 'cash',
         creditsUsed: Math.min(availableCredits, totalPrice),
         rescheduleFromId: isRescheduling ? rescheduleAppointmentId : undefined,
         consumeRedemptionOnPaidBooking: canUseRedemption && !useRedemption && availableRedemptions.length > 0,
