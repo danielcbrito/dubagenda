@@ -1498,7 +1498,7 @@ const ClienteAgendar = () => {
       if (useRedemption && data.appointmentId) {
         await markRedemptionAsUsed(data.appointmentId);
       } else if (canUseRedemption && availableRedemptions.length > 0) {
-        setAvailableRedemptions([]);
+        await consumeRedemptionsAsLost(data.appointmentId);
       }
 
       if (appliedCoupon && data.appointmentId) {
@@ -1638,7 +1638,7 @@ const ClienteAgendar = () => {
         const qty = serviceQuantities[s.id] || 1;
         return qty > 1 ? `${s.nome} x${qty}` : s.nome;
       }).join(", ");
-      const mainService = selectedServices[0];
+      const mainService = useRedemption ? (getCorteService() || selectedServices[0]) : selectedServices[0];
       const dateStr = format(selectedDate!, 'yyyy-MM-dd');
       const bookingTime = normalizeTimeValue(selectedTime);
 
