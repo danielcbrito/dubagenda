@@ -1450,7 +1450,10 @@ const ClienteAgendar = () => {
           await registerCouponUsage(data.appointmentId);
         }
 
-        if (canUseRedemption && !useRedemption && availableRedemptions.length > 0) {
+        if (useRedemption && data.appointmentId) {
+          setAvailableRedemptions([]);
+          setUseRedemption(false);
+        } else if (canUseRedemption && availableRedemptions.length > 0) {
           setAvailableRedemptions([]);
         }
 
