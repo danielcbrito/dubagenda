@@ -50,6 +50,7 @@ const BarbershopPublic = lazy(() => import("./pages/BarbershopPublic"));
 const BarbershopUnidades = lazy(() => import("./pages/BarbershopUnidades"));
 const Flowchart = lazy(() => import("./pages/Flowchart"));
 const ResponsivePreview = lazy(() => import("./pages/ResponsivePreview"));
+const BarbershopsCityGuide = lazy(() => import("./pages/BarbershopsCityGuide"));
 
 /** Minimal loading fallback */
 function PageLoader() {
