@@ -1270,12 +1270,6 @@ const ClienteAgendar = () => {
       return;
     }
 
-    // Se o cliente tinha corte grátis disponível mas optou por NÃO usá-lo,
-    // o benefício é perdido AGORA (no momento de finalizar o pagamento).
-    if (canUseRedemption && !useRedemption && availableRedemptions.length > 0) {
-      await consumeRedemptionsAsLost();
-    }
-
     if (isPlanEligible) {
       await createAppointmentWithPlan();
       return;
@@ -1386,6 +1380,7 @@ const ClienteAgendar = () => {
             data: bookingData.data,
             hora: bookingData.hora,
             duracao: bookingData.duracao,
+            consumeRedemptionOnPaidBooking: canUseRedemption && !useRedemption && availableRedemptions.length > 0,
           },
         });
         if (error) throw error;
@@ -1425,6 +1420,7 @@ const ClienteAgendar = () => {
           metodo: remainderCash > 0 ? 'cash' : 'wallet',
           creditsUsed: 0,
           rescheduleFromId: isRescheduling ? rescheduleAppointmentId : undefined,
+          consumeRedemptionOnPaidBooking: canUseRedemption && !useRedemption && availableRedemptions.length > 0,
         };
 
         const { data, error } = await supabase.functions.invoke('create-payment', {
@@ -1453,6 +1449,10 @@ const ClienteAgendar = () => {
           await registerCouponUsage(data.appointmentId);
         }
 
+        if (canUseRedemption && !useRedemption && availableRedemptions.length > 0) {
+          setAvailableRedemptions([]);
+        }
+
         sessionStorage.removeItem('isRescheduling');
         sessionStorage.removeItem('rescheduleAppointmentId');
 
@@ -1471,6 +1471,7 @@ const ClienteAgendar = () => {
         metodo: useRedemption ? 'resgate' : 'cash',
         creditsUsed: Math.min(availableCredits, totalPrice),
         rescheduleFromId: isRescheduling ? rescheduleAppointmentId : undefined,
+        consumeRedemptionOnPaidBooking: canUseRedemption && !useRedemption && availableRedemptions.length > 0,
       };
 
       const { data, error } = await supabase.functions.invoke('create-payment', {
@@ -1486,6 +1487,8 @@ const ClienteAgendar = () => {
 
       if (useRedemption && data.appointmentId) {
         await markRedemptionAsUsed(data.appointmentId);
+      } else if (canUseRedemption && availableRedemptions.length > 0) {
+        setAvailableRedemptions([]);
       }
 
       if (appliedCoupon && data.appointmentId) {
@@ -1716,6 +1719,8 @@ const ClienteAgendar = () => {
           .from("agendamentos")
           .update({ payment_method: 'resgate' } as any)
           .eq("id", appointment.id);
+      } else if (canUseRedemption && availableRedemptions.length > 0) {
+        await consumeRedemptionsAsLost(appointment.id);
       }
 
       // Registra uso do cupom se aplicado
@@ -1873,27 +1878,13 @@ const ClienteAgendar = () => {
     const redemptionToUse = availableRedemptions[0];
     
     try {
-      // Primeiro verifica se o gatilho já não o marcou como usado
-      const { data: currentResgate } = await supabase
-        .from("resgates")
-        .select("status, appointment_id")
-        .eq("id", redemptionToUse.id)
-        .single();
+      const { error } = await (supabase as any).rpc("mark_available_redemption_as_used", {
+        p_user_id: userId,
+        p_appointment_id: appointmentId,
+        p_reason: "free_haircut_used_from_booking_flow",
+      });
 
-      if (currentResgate?.status === 'used' && currentResgate?.appointment_id === appointmentId) {
-        console.log("Resgate já processado pelo gatilho do banco.");
-      } else {
-        const { error } = await supabase
-          .from("resgates")
-          .update({
-            status: "used",
-            used_at: new Date().toISOString(),
-            appointment_id: appointmentId
-          })
-          .eq("id", redemptionToUse.id);
-
-        if (error) throw error;
-      }
+      if (error) throw error;
 
       setAvailableRedemptions(prev => prev.filter(r => r.id !== redemptionToUse.id));
       setUseRedemption(false);
@@ -2221,17 +2212,22 @@ const ClienteAgendar = () => {
   };
 
   /** Marca todos os resgates disponíveis como expirados (cliente abriu mão do corte grátis). */
-  const consumeRedemptionsAsLost = async () => {
+  const consumeRedemptionsAsLost = async (appointmentId?: string) => {
     if (!userId || availableRedemptions.length === 0) return;
-    const ids = availableRedemptions.map(r => r.id);
     try {
-      await supabase
-        .from("resgates")
-        .update({ status: "expired", expired_at: new Date().toISOString() })
-        .in("id", ids);
+      const { error } = await (supabase as any).rpc("consume_available_redemptions_as_lost", {
+        p_user_id: userId,
+        p_appointment_id: appointmentId ?? null,
+        p_reason: "paid_booking_without_redemption",
+      });
+
+      if (error) throw error;
+
       setAvailableRedemptions([]);
+      setUseRedemption(false);
     } catch (err) {
       console.error("Erro ao expirar resgates:", err);
+      throw err;
     }
   };
 

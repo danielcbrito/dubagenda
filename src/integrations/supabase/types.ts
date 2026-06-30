@@ -6347,6 +6347,14 @@ export type Database = {
         Args: { p_efi_e2e_id: string; p_transacao_id: string }
         Returns: undefined
       }
+      consume_available_redemptions_as_lost: {
+        Args: {
+          p_appointment_id?: string
+          p_reason?: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
       count_subscription_uses_in_cycle: {
         Args: {
           p_assinatura_id: string
@@ -6595,6 +6603,10 @@ export type Database = {
       is_tenant_owner_by_tenant: {
         Args: { p_tenant_id: string }
         Returns: boolean
+      }
+      mark_available_redemption_as_used: {
+        Args: { p_appointment_id: string; p_reason?: string; p_user_id: string }
+        Returns: Json
       }
       pix_signal_bank_opened: {
         Args: { p_charge_id: string }
