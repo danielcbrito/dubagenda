@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { JsonLd } from "@/components/seo/JsonLd";
 
 interface Review {
   id: string;
@@ -75,8 +76,36 @@ const BarberReviews = () => {
       : 0,
   }));
 
+  const reviewsLd = reviews.length > 0 && barber ? {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    name: `Avaliações de ${barber.apelido}`,
+    image: barber.foto_url || undefined,
+    aggregateRating: {
+      "@type": "AggregateRating",
+      ratingValue: averageRating,
+      reviewCount: reviews.length,
+      bestRating: 5,
+      worstRating: 1,
+    },
+    review: reviews.slice(0, 20).map((r) => ({
+      "@type": "Review",
+      author: { "@type": "Person", name: r.reviewer_first_name || "Cliente" },
+      datePublished: r.created_at,
+      reviewBody: r.comment || undefined,
+      reviewRating: {
+        "@type": "Rating",
+        ratingValue: r.rating,
+        bestRating: 5,
+        worstRating: 1,
+      },
+      itemReviewed: { "@type": "Person", name: barber.apelido },
+    })),
+  } : null;
+
   return (
     <div className="fixed inset-0 z-[60] flex flex-col bg-background">
+      {reviewsLd && <JsonLd id="barber-reviews" data={reviewsLd} />}
       <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain pb-8">
 
         {/* ── Hero Section ── */}

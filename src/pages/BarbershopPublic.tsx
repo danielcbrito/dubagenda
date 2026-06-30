@@ -20,6 +20,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { BarberProfileSheet } from "@/components/discover/BarberProfileSheet";
 import { PortfolioGallery } from "@/components/portfolio/PortfolioGallery";
 import googleMapsIcon from "@/assets/google-maps-icon.png";
+import { JsonLd } from "@/components/seo/JsonLd";
 
 interface Barber {
   id: string;
@@ -658,8 +659,37 @@ const BarbershopPublic = () => {
   }
 
   // ── Main ──
+  const localBusinessLd = {
+    "@context": "https://schema.org",
+    "@type": "HairSalon",
+    name: tenant.nome,
+    url: `https://dubagenda.lovable.app/${slug ?? ""}`,
+    image: bannerUrl || tenant.logo_url || undefined,
+    telephone: tenant.telefone || tenant.whatsapp || undefined,
+    address: {
+      "@type": "PostalAddress",
+      streetAddress: [tenant.rua, tenant.numero].filter(Boolean).join(", ") || undefined,
+      addressLocality: tenant.cidade || undefined,
+      addressRegion: tenant.estado || undefined,
+      addressCountry: "BR",
+    },
+    geo: tenant.latitude && tenant.longitude ? {
+      "@type": "GeoCoordinates",
+      latitude: tenant.latitude,
+      longitude: tenant.longitude,
+    } : undefined,
+    aggregateRating: totalReviews > 0 && avgRating ? {
+      "@type": "AggregateRating",
+      ratingValue: Number(avgRating.toFixed(2)),
+      reviewCount: totalReviews,
+      bestRating: 5,
+      worstRating: 1,
+    } : undefined,
+  };
+
   return (
     <div className="relative flex flex-col bg-background" style={{ height: "100dvh" }}>
+      <JsonLd id="localbusiness" data={localBusinessLd} />
       <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain pb-32">
 
         {/* ── Hero Banner ── */}
