@@ -3356,7 +3356,7 @@ const ClienteAgendar = () => {
               
               <Button 
                 disabled={consumingRedemption}
-                onClick={() => setShowLoseRedemptionDialog(false)}
+                onClick={() => { setShowLoseRedemptionDialog(false); setPendingPaymentMethod(null); }}
                 className="w-full h-[52px] rounded-2xl bg-zinc-100 hover:bg-zinc-200 text-zinc-600 font-bold text-[15px] border-none transition-all active:scale-[0.98]"
                 variant="ghost"
               >
