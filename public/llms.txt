@@ -1,0 +1,11 @@
+# DUB Agenda
+
+> Mobile-first platform for premium barbershop appointment booking, integrated payments, and loyalty rewards.
+
+DUB Agenda is a white-label scheduling and payment platform built for barbershops and their clients. It supports multi-tenant barbershop networks, real-time availability, PIX and wallet payments, subscription plans, and a points-based loyalty program.
+
+## Pages
+
+- [/](/): Landing page for returning clients and new visitors.
+- [/escolher-barbearia](/escolher-barbearia): Discover nearby barbershops and select a preferred unit.
+- [/b/:slug](/b/:slug): Public barbershop profile page with services, portfolio, and booking links.
