@@ -149,6 +149,8 @@ const ClienteAgendar = () => {
   const [paymentSheetOpen, setPaymentSheetOpen] = useState(false);
   const [showLoseRedemptionDialog, setShowLoseRedemptionDialog] = useState(false);
   const [consumingRedemption, setConsumingRedemption] = useState(false);
+  const [pendingPaymentMethod, setPendingPaymentMethod] = useState<'cash' | 'pix' | 'wallet' | null>(null);
+  const redemptionAutoSelectedRef = useRef(false);
   const [serviceQuantities, setServiceQuantities] = useState<Record<string, number>>({});
   
   // Durações personalizadas do barbeiro selecionado (servico_id → duracao)
@@ -2181,6 +2183,12 @@ const ClienteAgendar = () => {
     // o diálogo de confirmação avisa que perderá a promoção.
     if (!canUseRedemption && useRedemption) {
       setUseRedemption(false);
+      redemptionAutoSelectedRef.current = false;
+    }
+    // Pré-seleciona o Corte Grátis automaticamente quando ele se torna disponível.
+    if (canUseRedemption && !useRedemption && !redemptionAutoSelectedRef.current) {
+      setUseRedemption(true);
+      redemptionAutoSelectedRef.current = true;
     }
     prevCanUseRedemptionRef.current = canUseRedemption;
   }, [canUseRedemption, useRedemption]);
@@ -2191,12 +2199,13 @@ const ClienteAgendar = () => {
   };
 
   const handleSelectPaymentMethod = (method: 'cash' | 'pix' | 'wallet') => {
-    setPaymentMethod(method);
-    // Se o corte grátis já cobre tudo, escolher um método pago significa abrir mão do benefício.
-    // Se ainda há saldo de outros serviços, mantém o benefício e troca só a forma de pagar o restante.
-    if (useRedemption && getTotalPrice() === 0) {
-      setUseRedemption(false);
+    // Se há corte grátis ativo, avisar antes de trocar para método pago.
+    if (useRedemption && canUseRedemption) {
+      setPendingPaymentMethod(method);
+      setShowLoseRedemptionDialog(true);
+      return;
     }
+    setPaymentMethod(method);
   };
 
   /** Marca todos os resgates disponíveis como expirados (cliente abriu mão do corte grátis). */
@@ -2238,8 +2247,19 @@ const ClienteAgendar = () => {
   const handleConfirmLoseRedemption = async () => {
     setConsumingRedemption(true);
     await consumeRedemptionsAsLost();
+    setUseRedemption(false);
+    redemptionAutoSelectedRef.current = true; // não re-selecionar automaticamente
     setConsumingRedemption(false);
     setShowLoseRedemptionDialog(false);
+
+    // Caso 1: usuário estava trocando a forma de pagamento (ainda no passo 5)
+    if (pendingPaymentMethod) {
+      setPaymentMethod(pendingPaymentMethod);
+      setPendingPaymentMethod(null);
+      return;
+    }
+
+    // Caso 2: usuário clicou em "Continuar" sem aplicar o corte → prosseguir pagamento
     if (paymentMethod === 'pix' || paymentMethod === 'card' || paymentMethod === 'cash') {
       handlePayment();
     } else {
@@ -2961,18 +2981,29 @@ const ClienteAgendar = () => {
                       </span>
                     </div>
                   )}
-                  <div className="flex items-center justify-between">
-                    <span className="text-[13px] text-muted-foreground">Taxa de serviço</span>
-                    <span className="text-[13px] text-foreground tabular-nums">
-                      R$ {getServiceFee(paymentMethod).toFixed(2).replace('.', ',')}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between pt-2">
-                    <span className="text-[15px] font-bold text-foreground">Total</span>
-                    <span className="text-[15px] font-bold text-foreground tabular-nums">
-                      R$ {(Math.max(0, getTotalPrice() - availableCredits) + getServiceFee(paymentMethod)).toFixed(2).replace('.', ',')}
-                    </span>
-                  </div>
+                  {(() => {
+                    const redemptionCoversAll = useRedemption && getTotalPrice() === 0;
+                    const fee = redemptionCoversAll ? 0 : getServiceFee(paymentMethod);
+                    const total = redemptionCoversAll ? 0 : Math.max(0, getTotalPrice() - availableCredits) + fee;
+                    return (
+                      <>
+                        {!redemptionCoversAll && (
+                          <div className="flex items-center justify-between">
+                            <span className="text-[13px] text-muted-foreground">Taxa de serviço</span>
+                            <span className="text-[13px] text-foreground tabular-nums">
+                              R$ {fee.toFixed(2).replace('.', ',')}
+                            </span>
+                          </div>
+                        )}
+                        <div className="flex items-center justify-between pt-2">
+                          <span className="text-[15px] font-bold text-foreground">Total</span>
+                          <span className={cn("text-[15px] font-bold tabular-nums", redemptionCoversAll ? "text-emerald-500" : "text-foreground")}>
+                            R$ {total.toFixed(2).replace('.', ',')}
+                          </span>
+                        </div>
+                      </>
+                    );
+                  })()}
                 </div>
               </div>
 
@@ -3306,7 +3337,12 @@ const ClienteAgendar = () => {
       </AnimatePresence>
 
       {/* Diálogo: perder corte grátis ao seguir sem aplicar */}
-      <Dialog open={showLoseRedemptionDialog} onOpenChange={setShowLoseRedemptionDialog}>
+      <Dialog open={showLoseRedemptionDialog} onOpenChange={(open) => {
+        if (!open) {
+          setShowLoseRedemptionDialog(false);
+          setPendingPaymentMethod(null);
+        }
+      }}>
         <DialogContent className="max-w-[80vw] md:max-w-[340px] rounded-[32px] border border-white/20 bg-white/95 backdrop-blur-sm p-0 overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.15)] focus:outline-none [&>button]:hidden">
           <div className="p-7 text-center">
             <DialogHeader className="space-y-3">
@@ -3331,7 +3367,7 @@ const ClienteAgendar = () => {
               
               <Button 
                 disabled={consumingRedemption}
-                onClick={() => setShowLoseRedemptionDialog(false)}
+                onClick={() => { setShowLoseRedemptionDialog(false); setPendingPaymentMethod(null); }}
                 className="w-full h-[52px] rounded-2xl bg-zinc-100 hover:bg-zinc-200 text-zinc-600 font-bold text-[15px] border-none transition-all active:scale-[0.98]"
                 variant="ghost"
               >
