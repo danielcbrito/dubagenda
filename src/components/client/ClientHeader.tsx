@@ -29,10 +29,7 @@ export function ClientHeader({ profileName, userId }: ClientHeaderProps) {
           {dayOfWeek} · {formattedDate}
         </p>
         <h1 className="text-[15px] font-semibold text-foreground font-display tracking-tight leading-snug">
-          Painel do Cliente
-          {firstName && (
-            <span className="ml-1 font-normal text-muted-foreground">· Olá, {firstName}</span>
-          )}
+          {firstName ? `Olá, ${firstName}` : "Olá"}
         </h1>
       </div>
 
