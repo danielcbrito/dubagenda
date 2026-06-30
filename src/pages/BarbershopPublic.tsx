@@ -691,7 +691,9 @@ const BarbershopPublic = () => {
   const pageTitle = `${tenant.nome} — Agendar corte | DUB Agenda`;
   const cityBit = [tenant.bairro, tenant.cidade].filter(Boolean).join(", ");
   const pageDesc = `Agende seu horário na ${tenant.nome}${cityBit ? ` em ${cityBit}` : ""}. Reserve cortes, veja barbeiros e avaliações na DUB Agenda.`;
-  const canonical = `https://dubagenda.lovable.app/${tenant.slug || tenant.id}`;
+  const tenantSlug = (tenant as { slug?: string | null }).slug ?? null;
+  const tenantLogo = isPersonalImageUrl(tenant.logo_url) ? null : tenant.logo_url;
+  const canonical = `https://dubagenda.lovable.app/${tenantSlug || tenant.id}`;
 
   return (
     <div className="relative flex flex-col bg-background" style={{ height: "100dvh" }}>
@@ -702,7 +704,7 @@ const BarbershopPublic = () => {
         <meta property="og:title" content={pageTitle} />
         <meta property="og:description" content={pageDesc.slice(0, 160)} />
         <meta property="og:url" content={canonical} />
-        {safeLogoUrl && <meta property="og:image" content={safeLogoUrl} />}
+        {tenantLogo && <meta property="og:image" content={tenantLogo} />}
       </Helmet>
       <JsonLd id="localbusiness" data={localBusinessLd} />
       <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain pb-32">
