@@ -2185,6 +2185,20 @@ const ClienteAgendar = () => {
     prevCanUseRedemptionRef.current = canUseRedemption;
   }, [canUseRedemption, useRedemption]);
 
+  const handleToggleRedemption = () => {
+    if (!canUseRedemption) return;
+    setUseRedemption(prev => !prev);
+  };
+
+  const handleSelectPaymentMethod = (method: 'cash' | 'pix' | 'wallet') => {
+    setPaymentMethod(method);
+    // Se o corte grátis já cobre tudo, escolher um método pago significa abrir mão do benefício.
+    // Se ainda há saldo de outros serviços, mantém o benefício e troca só a forma de pagar o restante.
+    if (useRedemption && getTotalPrice() === 0) {
+      setUseRedemption(false);
+    }
+  };
+
   /** Marca todos os resgates disponíveis como expirados (cliente abriu mão do corte grátis). */
   const consumeRedemptionsAsLost = async () => {
     if (!userId || availableRedemptions.length === 0) return;
@@ -2763,7 +2777,7 @@ const ClienteAgendar = () => {
                         <PaymentOption
                           value="redemption"
                           selected={useRedemption}
-                          onSelect={() => setUseRedemption(prev => !prev)}
+                          onSelect={handleToggleRedemption}
                           title="Corte Grátis Disponível!"
                           description={useRedemption
                             ? "Benefício aplicado. Se houver outros serviços, escolha como pagar o restante."
@@ -2777,7 +2791,7 @@ const ClienteAgendar = () => {
                         <PaymentOption
                           value="pix"
                           selected={paymentMethod === 'pix' && !redemptionCoversAll}
-                          onSelect={() => setPaymentMethod('pix')}
+                          onSelect={() => handleSelectPaymentMethod('pix')}
                           title="Pagar via PIX"
                           description="Confirmação instantânea e segura"
                           icon={<img src={pixIcon} alt="PIX" className={cn("w-5 h-5 object-contain", paymentMethod === 'pix' && !redemptionCoversAll ? "" : "grayscale opacity-50")} />}
@@ -2788,7 +2802,7 @@ const ClienteAgendar = () => {
                         <PaymentOption
                           value="wallet"
                           selected={paymentMethod === 'wallet' && !redemptionCoversAll}
-                          onSelect={() => setPaymentMethod('wallet')}
+                          onSelect={() => handleSelectPaymentMethod('wallet')}
                           title="Pagar com Carteira"
                           description={`Saldo: R$ ${walletBalance.toFixed(2).replace('.', ',')}`}
                           icon={<Wallet className={cn("w-5 h-5", paymentMethod === 'wallet' && !redemptionCoversAll ? "text-emerald-500" : "text-muted-foreground/40")} />}
@@ -2798,7 +2812,7 @@ const ClienteAgendar = () => {
                       <PaymentOption
                         value="cash"
                         selected={paymentMethod === 'cash' && !redemptionCoversAll}
-                        onSelect={() => setPaymentMethod('cash')}
+                        onSelect={() => handleSelectPaymentMethod('cash')}
                         title="Pagar na Barbearia"
                         description="Pagamento presencial no dia"
                         icon={<Landmark className={cn("w-5 h-5", paymentMethod === 'cash' && !redemptionCoversAll ? "text-primary" : "text-muted-foreground/40")} />}
@@ -3223,6 +3237,22 @@ const ClienteAgendar = () => {
       {/* Floating Bottom Bar — Step 5 Pagamento */}
       <AnimatePresence>
         {step === 5 && !isRescheduling && !isPlanFlow && paymentMethod && (
+          (() => {
+            const redemptionCoversAll = useRedemption && getTotalPrice() === 0;
+            const actionTotal = redemptionCoversAll
+              ? 0
+              : Math.max(0, getTotalPrice() - availableCredits) + getServiceFee(paymentMethod);
+            const actionLabel = redemptionCoversAll
+              ? 'Confirmar'
+              : paymentMethod === 'pix'
+                ? 'Gerar PIX'
+                : paymentMethod === 'card'
+                  ? 'Pagar'
+                  : paymentMethod === 'cash'
+                    ? 'Finalizar'
+                    : 'Revisar pedido';
+
+            return (
           <motion.div
             key="bar-payment"
             initial={{ y: 40, opacity: 0 }}
@@ -3261,18 +3291,17 @@ const ClienteAgendar = () => {
                     </>
                   ) : (
                     <span>
-                      {paymentMethod === 'pix' ? 'Gerar PIX' :
-                       paymentMethod === 'card' ? 'Pagar' :
-                       paymentMethod === 'cash' ? 'Finalizar' :
-                       'Revisar pedido'}
+                      {actionLabel}
                       {' • '}
-                      R$ {(Math.max(0, getTotalPrice() - availableCredits) + getServiceFee(paymentMethod)).toFixed(2).replace('.', ',')}
+                      R$ {actionTotal.toFixed(2).replace('.', ',')}
                     </span>
                   )}
                 </motion.button>
               </div>
             </div>
           </motion.div>
+            );
+          })()
         )}
       </AnimatePresence>
 

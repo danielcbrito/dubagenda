@@ -26,6 +26,7 @@ export function PaymentOption({
 }: PaymentOptionProps) {
   return (
     <button
+      type="button"
       onClick={disabled ? undefined : onSelect}
       disabled={disabled}
       className={cn(
