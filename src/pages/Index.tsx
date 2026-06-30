@@ -44,6 +44,9 @@ const Index = () => {
               src={sceneClientSad}
               alt="Cliente triste"
               draggable={false}
+              fetchPriority="high"
+              width={440}
+              height={320}
               className="w-full h-full block dark:invert dark:brightness-90"
               style={{ objectFit: "contain", objectPosition: "left top" }}
             />
