@@ -2183,6 +2183,12 @@ const ClienteAgendar = () => {
     // o diálogo de confirmação avisa que perderá a promoção.
     if (!canUseRedemption && useRedemption) {
       setUseRedemption(false);
+      redemptionAutoSelectedRef.current = false;
+    }
+    // Pré-seleciona o Corte Grátis automaticamente quando ele se torna disponível.
+    if (canUseRedemption && !useRedemption && !redemptionAutoSelectedRef.current) {
+      setUseRedemption(true);
+      redemptionAutoSelectedRef.current = true;
     }
     prevCanUseRedemptionRef.current = canUseRedemption;
   }, [canUseRedemption, useRedemption]);
@@ -2193,12 +2199,13 @@ const ClienteAgendar = () => {
   };
 
   const handleSelectPaymentMethod = (method: 'cash' | 'pix' | 'wallet') => {
-    setPaymentMethod(method);
-    // Se o corte grátis já cobre tudo, escolher um método pago significa abrir mão do benefício.
-    // Se ainda há saldo de outros serviços, mantém o benefício e troca só a forma de pagar o restante.
-    if (useRedemption && getTotalPrice() === 0) {
-      setUseRedemption(false);
+    // Se há corte grátis ativo, avisar antes de trocar para método pago.
+    if (useRedemption && canUseRedemption) {
+      setPendingPaymentMethod(method);
+      setShowLoseRedemptionDialog(true);
+      return;
     }
+    setPaymentMethod(method);
   };
 
   /** Marca todos os resgates disponíveis como expirados (cliente abriu mão do corte grátis). */
