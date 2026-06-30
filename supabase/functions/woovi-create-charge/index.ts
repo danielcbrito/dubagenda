@@ -55,7 +55,6 @@ Deno.serve(async (req) => {
       hora: bookingHora,
       duracao,
       observacoes,
-      consumeRedemptionOnPaidBooking,
     } = body;
 
     if (!barbeiro_id || !valor || valor <= 0) {
@@ -240,17 +239,6 @@ Deno.serve(async (req) => {
     const charge = wooviJson.charge ?? wooviJson;
     const brCode: string = charge.brCode ?? charge.paymentLinkUrl ?? "";
 
-    if (consumeRedemptionOnPaidBooking) {
-      const { error: consumeError } = await admin.rpc("consume_available_redemptions_as_lost", {
-        p_user_id: userId,
-        p_appointment_id: null,
-        p_reason: "pix_booking_without_redemption",
-      });
-
-      if (consumeError) {
-        console.error("Woovi consume redemption error:", consumeError);
-      }
-    }
     const qrImage: string = charge.qrCodeImage ?? "";
     const chargeId: string = charge.identifier ?? charge.transactionID ?? correlationID;
     const expiresAt = new Date(Date.now() + EXPIRES_SECONDS * 1000).toISOString();

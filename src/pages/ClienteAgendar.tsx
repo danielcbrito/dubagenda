@@ -1359,6 +1359,7 @@ const ClienteAgendar = () => {
             bookingData: { ...bookingData, preco: chargeAmount },
             serviceFee,
             rescheduleFromId: isRescheduling ? rescheduleAppointmentId : undefined,
+            consumeRedemptionOnPaidBooking: canUseRedemption && !useRedemption && availableRedemptions.length > 0,
           },
         });
 
@@ -1458,8 +1459,8 @@ const ClienteAgendar = () => {
         if (useRedemption && data.appointmentId) {
           setAvailableRedemptions([]);
           setUseRedemption(false);
-        } else if (canUseRedemption && availableRedemptions.length > 0) {
-          setAvailableRedemptions([]);
+      } else if (canUseRedemption && availableRedemptions.length > 0) {
+          await consumeRedemptionsAsLost(data.appointmentId);
         }
 
         sessionStorage.removeItem('isRescheduling');
@@ -1497,7 +1498,7 @@ const ClienteAgendar = () => {
       if (useRedemption && data.appointmentId) {
         await markRedemptionAsUsed(data.appointmentId);
       } else if (canUseRedemption && availableRedemptions.length > 0) {
-        setAvailableRedemptions([]);
+        await consumeRedemptionsAsLost(data.appointmentId);
       }
 
       if (appliedCoupon && data.appointmentId) {
@@ -1564,7 +1565,7 @@ const ClienteAgendar = () => {
         const qty = serviceQuantities[s.id] || 1;
         return qty > 1 ? `${s.nome} x${qty}` : s.nome;
       }).join(", ");
-      const mainService = selectedServices[0];
+      const mainService = useRedemption ? (getCorteService() || selectedServices[0]) : selectedServices[0];
       const dateStr = format(selectedDate!, 'yyyy-MM-dd');
       const bookingTime = normalizeTimeValue(selectedTime);
 
@@ -1637,7 +1638,7 @@ const ClienteAgendar = () => {
         const qty = serviceQuantities[s.id] || 1;
         return qty > 1 ? `${s.nome} x${qty}` : s.nome;
       }).join(", ");
-      const mainService = selectedServices[0];
+      const mainService = useRedemption ? (getCorteService() || selectedServices[0]) : selectedServices[0];
       const dateStr = format(selectedDate!, 'yyyy-MM-dd');
       const bookingTime = normalizeTimeValue(selectedTime);
 
@@ -2233,7 +2234,7 @@ const ClienteAgendar = () => {
 
   /** Marca todos os resgates disponíveis como expirados (cliente abriu mão do corte grátis). */
   const consumeRedemptionsAsLost = async (appointmentId?: string) => {
-    if (availableRedemptions.length === 0) return;
+    if (!canUseRedemption || useRedemption || availableRedemptions.length === 0) return;
     try {
       const resolvedUserId = userId ?? (await supabase.auth.getUser()).data.user?.id;
       if (!resolvedUserId) throw new Error("Usuário não autenticado");
