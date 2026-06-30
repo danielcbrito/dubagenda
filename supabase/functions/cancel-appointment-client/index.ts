@@ -115,10 +115,10 @@ serve(async (req) => {
 
     if (updateError) throw updateError;
 
-    // Se o agendamento foi feito realmente com Corte Grátis, cancelar deve liberar
+    // Se o agendamento usou de verdade um Corte Grátis, cancelar deve liberar
     // o mesmo benefício para o cliente remarcar. Agendamentos pagos que apenas
-    // perderam o benefício NÃO têm payment_method='resgate' e não entram aqui.
-    if (paymentMethod === "resgate") {
+    // perderam o benefício NÃO têm usado_redemption_id e não entram aqui.
+    if (paymentMethod === "resgate" || appointment.usado_redemption_id) {
       let redemptionId = appointment.usado_redemption_id as string | null;
 
       if (!redemptionId) {
