@@ -2192,8 +2192,9 @@ const ClienteAgendar = () => {
 
   const handleSelectPaymentMethod = (method: 'cash' | 'pix' | 'wallet') => {
     setPaymentMethod(method);
-    // Método pago significa abrir mão do desconto visualmente agora; o aviso só aparece ao finalizar.
-    if (useRedemption) {
+    // Se o corte grátis já cobre tudo, escolher um método pago significa abrir mão do benefício.
+    // Se ainda há saldo de outros serviços, mantém o benefício e troca só a forma de pagar o restante.
+    if (useRedemption && getTotalPrice() === 0) {
       setUseRedemption(false);
     }
   };
