@@ -15,7 +15,7 @@ const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY") || "";
 
 // Destinatário Daniel Brito (admin DUB) — pode ser sobrescrito por secret
-const ALERT_PHONE = Deno.env.get("ALERT_RECIPIENT_PHONE") || "11982573707";
+const ALERT_PHONE = Deno.env.get("ALERT_RECIPIENT_PHONE") || "11952160719";
 const ALERT_NAME = "Daniel Brito";
 // Tenant da Barbearia DUB → usado para escolher a instância principal
 // de WhatsApp (mesmo fluxo de agendamento_confirmado).
