@@ -2201,7 +2201,8 @@ const ClienteAgendar = () => {
     // avisar uma vez antes de abrir mão do benefício.
     if (useRedemption) {
       if (!loseWarningShownRef.current) {
-        setPendingPaymentMethod(null); // não é troca de método, é só desmarcar
+        setPendingPaymentMethod(null);
+        setLoseDialogContext('toggle');
         setShowLoseRedemptionDialog(true);
         return;
       }
@@ -2218,6 +2219,7 @@ const ClienteAgendar = () => {
     if (useRedemption && canUseRedemption) {
       if (!loseWarningShownRef.current) {
         setPendingPaymentMethod(method);
+        setLoseDialogContext('switch');
         setShowLoseRedemptionDialog(true);
         return;
       }
