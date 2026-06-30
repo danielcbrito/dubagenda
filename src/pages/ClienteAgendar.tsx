@@ -151,6 +151,7 @@ const ClienteAgendar = () => {
   const [consumingRedemption, setConsumingRedemption] = useState(false);
   const [pendingPaymentMethod, setPendingPaymentMethod] = useState<'cash' | 'pix' | 'wallet' | null>(null);
   const redemptionAutoSelectedRef = useRef(false);
+  const loseWarningShownRef = useRef(false);
   const [serviceQuantities, setServiceQuantities] = useState<Record<string, number>>({});
   
   // Durações personalizadas do barbeiro selecionado (servico_id → duracao)
@@ -1269,6 +1270,12 @@ const ClienteAgendar = () => {
       return;
     }
 
+    // Se o cliente tinha corte grátis disponível mas optou por NÃO usá-lo,
+    // o benefício é perdido AGORA (no momento de finalizar o pagamento).
+    if (canUseRedemption && !useRedemption && availableRedemptions.length > 0) {
+      await consumeRedemptionsAsLost();
+    }
+
     if (isPlanEligible) {
       await createAppointmentWithPlan();
       return;
@@ -2199,11 +2206,16 @@ const ClienteAgendar = () => {
   };
 
   const handleSelectPaymentMethod = (method: 'cash' | 'pix' | 'wallet') => {
-    // Se há corte grátis ativo, avisar antes de trocar para método pago.
+    // Se há corte grátis ativo, avisar (apenas na primeira troca) antes de mudar para método pago.
     if (useRedemption && canUseRedemption) {
-      setPendingPaymentMethod(method);
-      setShowLoseRedemptionDialog(true);
-      return;
+      if (!loseWarningShownRef.current) {
+        setPendingPaymentMethod(method);
+        setShowLoseRedemptionDialog(true);
+        return;
+      }
+      // Já avisado anteriormente — apenas desmarca o resgate e troca o método
+      setUseRedemption(false);
+      redemptionAutoSelectedRef.current = true;
     }
     setPaymentMethod(method);
   };
@@ -2225,18 +2237,12 @@ const ClienteAgendar = () => {
 
   /** Ação do botão "Continuar" do passo 5 (pagamento). */
   const handleProceedFromPayment = async () => {
-    // Se há corte grátis disponível e o cliente optou por NÃO usar → confirmar perda
-    if (canUseRedemption && !useRedemption) {
+    // Se há corte grátis disponível e o cliente optou por NÃO usar → confirmar perda (1x)
+    if (canUseRedemption && !useRedemption && !loseWarningShownRef.current) {
       setShowLoseRedemptionDialog(true);
       return;
     }
-    
-    // Se o cliente tem um corte grátis mas o serviço de corte NÃO está selecionado,
-    // ele também deve ser avisado que perderá o benefício se prosseguir sem ele?
-    // O usuário disse: "quando ele tem a opção ali de corte grátis... tem que aparecer essa opção... 
-    // mas também se o cliente ele selecionar pagar na barbearia... e não selecionar o corte grátis, 
-    // vai aparecer uma tela... falando pra ele... ele vai perder a promoção"
-    
+
     if (paymentMethod === 'pix' || paymentMethod === 'card' || paymentMethod === 'cash') {
       handlePayment();
     } else {
@@ -2245,11 +2251,11 @@ const ClienteAgendar = () => {
   };
 
   const handleConfirmLoseRedemption = async () => {
-    setConsumingRedemption(true);
-    await consumeRedemptionsAsLost();
+    // Não consome o resgate agora — apenas avisa uma vez.
+    // O benefício só é perdido de fato quando o pagamento for finalizado (em handlePayment).
+    loseWarningShownRef.current = true;
     setUseRedemption(false);
     redemptionAutoSelectedRef.current = true; // não re-selecionar automaticamente
-    setConsumingRedemption(false);
     setShowLoseRedemptionDialog(false);
 
     // Caso 1: usuário estava trocando a forma de pagamento (ainda no passo 5)
