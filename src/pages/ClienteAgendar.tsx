@@ -2981,19 +2981,29 @@ const ClienteAgendar = () => {
                       </span>
                     </div>
                   )}
-                  <div className="flex items-center justify-between">
-                    <span className="text-[13px] text-muted-foreground">Taxa de serviço</span>
-                    <span className="text-[13px] text-foreground tabular-nums">
-                      R$ {getServiceFee(paymentMethod).toFixed(2).replace('.', ',')}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between pt-2">
-                    <span className="text-[15px] font-bold text-foreground">Total</span>
-                    <span className="text-[15px] font-bold text-foreground tabular-nums">
-                      R$ {(Math.max(0, getTotalPrice() - availableCredits) + getServiceFee(paymentMethod)).toFixed(2).replace('.', ',')}
-                    </span>
-                  </div>
-                </div>
+                  {(() => {
+                    const redemptionCoversAll = useRedemption && getTotalPrice() === 0;
+                    const fee = redemptionCoversAll ? 0 : getServiceFee(paymentMethod);
+                    const total = redemptionCoversAll ? 0 : Math.max(0, getTotalPrice() - availableCredits) + fee;
+                    return (
+                      <>
+                        {!redemptionCoversAll && (
+                          <div className="flex items-center justify-between">
+                            <span className="text-[13px] text-muted-foreground">Taxa de serviço</span>
+                            <span className="text-[13px] text-foreground tabular-nums">
+                              R$ {fee.toFixed(2).replace('.', ',')}
+                            </span>
+                          </div>
+                        )}
+                        <div className="flex items-center justify-between pt-2">
+                          <span className="text-[15px] font-bold text-foreground">Total</span>
+                          <span className={cn("text-[15px] font-bold tabular-nums", redemptionCoversAll ? "text-emerald-500" : "text-foreground")}>
+                            R$ {total.toFixed(2).replace('.', ',')}
+                          </span>
+                        </div>
+                      </>
+                    );
+                  })()}
               </div>
 
             </div>
