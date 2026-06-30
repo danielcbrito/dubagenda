@@ -1380,6 +1380,7 @@ const ClienteAgendar = () => {
             data: bookingData.data,
             hora: bookingData.hora,
             duracao: bookingData.duracao,
+            observacoes: bookingData.observacoes,
             consumeRedemptionOnPaidBooking: canUseRedemption && !useRedemption && availableRedemptions.length > 0,
           },
         });
