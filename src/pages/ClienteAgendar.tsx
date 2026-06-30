@@ -150,6 +150,7 @@ const ClienteAgendar = () => {
   const [showLoseRedemptionDialog, setShowLoseRedemptionDialog] = useState(false);
   const [consumingRedemption, setConsumingRedemption] = useState(false);
   const [pendingPaymentMethod, setPendingPaymentMethod] = useState<'cash' | 'pix' | 'wallet' | null>(null);
+  const [loseDialogContext, setLoseDialogContext] = useState<'toggle' | 'switch' | 'continue'>('continue');
   const redemptionAutoSelectedRef = useRef(false);
   const loseWarningShownRef = useRef(false);
   const [serviceQuantities, setServiceQuantities] = useState<Record<string, number>>({});
