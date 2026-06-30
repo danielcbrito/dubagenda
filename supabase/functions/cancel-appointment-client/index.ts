@@ -116,43 +116,43 @@ serve(async (req) => {
     if (updateError) throw updateError;
 
     // Se o agendamento usou de verdade um Corte Grátis, cancelar deve liberar
-    // o mesmo benefício para o cliente remarcar. Agendamentos pagos que apenas
-    // perderam o benefício NÃO têm usado_redemption_id e não entram aqui.
-    if (paymentMethod === "resgate" || appointment.usado_redemption_id) {
-      let redemptionId = appointment.usado_redemption_id as string | null;
+    // o mesmo benefício para o cliente remarcar. O fallback por appointment_id
+    // cobre agendamentos em que usado_redemption_id não foi gravado, mas o
+    // resgate ficou corretamente vinculado em resgates.appointment_id.
+    let redemptionId = appointment.usado_redemption_id as string | null;
 
-      if (!redemptionId) {
-        const { data: redemption } = await supabase
-          .from("resgates")
-          .select("id")
-          .eq("appointment_id", appointmentId)
-          .eq("user_id", callerUserId)
-          .eq("status", "used")
-          .maybeSingle();
+    if (!redemptionId) {
+      const { data: redemption } = await supabase
+        .from("resgates")
+        .select("id")
+        .eq("appointment_id", appointmentId)
+        .eq("user_id", callerUserId)
+        .eq("status", "used")
+        .maybeSingle();
 
-        redemptionId = redemption?.id ?? null;
-      }
+      redemptionId = redemption?.id ?? null;
+    }
 
-      if (redemptionId) {
-        await supabase
-          .from("resgates")
-          .update({
-            status: "available",
-            used_at: null,
-            appointment_id: null,
-            expired_at: null,
-          })
-          .eq("id", redemptionId)
-          .eq("user_id", callerUserId);
+    if (redemptionId) {
+      await supabase
+        .from("resgates")
+        .update({
+          status: "available",
+          used_at: null,
+          appointment_id: null,
+          expired_at: null,
+        })
+        .eq("id", redemptionId)
+        .eq("user_id", callerUserId)
+        .eq("status", "used");
 
-        await supabase.from("loyalty_audit_logs").insert({
-          user_id: callerUserId,
-          action: "redemption_restored_after_free_cancel",
-          reason: "Agendamento com corte grátis cancelado pelo cliente; benefício liberado para remarcação",
-          appointment_id: appointmentId,
-          metadata: { redemption_id: redemptionId },
-        });
-      }
+      await supabase.from("loyalty_audit_logs").insert({
+        user_id: callerUserId,
+        action: "redemption_restored_after_free_cancel",
+        reason: "Agendamento com corte grátis cancelado pelo cliente; benefício liberado para remarcação",
+        appointment_id: appointmentId,
+        metadata: { redemption_id: redemptionId },
+      });
     }
 
     // 5. Crédito na carteira interna (PIX, cartão ou crédito do app)
