@@ -195,6 +195,7 @@ interface CreatePaymentRequest {
   metodo: 'cash' | 'wallet';
   rescheduleFromId?: string;
   creditsUsed?: number;
+  consumeRedemptionOnPaidBooking?: boolean;
 }
 
 serve(async (req) => {
@@ -227,7 +228,7 @@ serve(async (req) => {
       );
     }
 
-    const { bookingData, metodo, rescheduleFromId }: CreatePaymentRequest = await req.json();
+    const { bookingData, metodo, rescheduleFromId, consumeRedemptionOnPaidBooking }: CreatePaymentRequest = await req.json();
 
     console.log('[create-payment] Request:', { bookingData, metodo, isRescheduling: !!rescheduleFromId });
 
@@ -278,6 +279,16 @@ serve(async (req) => {
       .single();
 
     if (aptError) throw aptError;
+
+    if (consumeRedemptionOnPaidBooking) {
+      const { error: consumeError } = await supabase.rpc('consume_available_redemptions_as_lost', {
+        p_user_id: user.id,
+        p_appointment_id: appointment.id,
+        p_reason: 'paid_booking_without_redemption',
+      });
+
+      if (consumeError) throw consumeError;
+    }
 
     // Google Calendar sync (non-blocking)
     try {

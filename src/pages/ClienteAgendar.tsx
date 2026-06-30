@@ -145,6 +145,7 @@ const ClienteAgendar = () => {
   const [subscriptionBlocked, setSubscriptionBlocked] = useState(false);
   const [subscriptionLimitReached, setSubscriptionLimitReached] = useState(false);
   const [availableRedemptions, setAvailableRedemptions] = useState<{ id: string; promocao_id: string }[]>([]);
+  const [hasActiveRedemptionAppointment, setHasActiveRedemptionAppointment] = useState(false);
   const [useRedemption, setUseRedemption] = useState(false);
   const [paymentSheetOpen, setPaymentSheetOpen] = useState(false);
   const [showLoseRedemptionDialog, setShowLoseRedemptionDialog] = useState(false);
@@ -666,15 +667,13 @@ const ClienteAgendar = () => {
   const loadAvailableRedemptionsOptimized = async (uid: string | null) => {
     if (!uid) return;
     try {
-      // Parallel: check active resgate appointments + available redemptions
+      // Regra anti-burla: se já existe agendamento ativo usando Corte Grátis,
+      // não mostrar outro resgate disponível até esse agendamento ser cancelado.
       const [activeRes, redemptionsRes] = await Promise.all([
-        supabase
-          .from("agendamentos")
-          .select("id")
-          .eq("user_id", uid)
-          .eq("payment_method", "resgate")
-          .in("status", ["pending", "confirmed"])
-          .limit(1),
+        (supabase as any).rpc("user_has_active_redemption_appointment", {
+          p_user_id: uid,
+          p_exclude_appointment_id: null,
+        }),
         supabase
           .from("resgates")
           .select("id, promocao_id")
@@ -684,8 +683,13 @@ const ClienteAgendar = () => {
           .order("created_at", { ascending: true }),
       ]);
 
-      if (activeRes.data && activeRes.data.length > 0) {
+      const hasActiveFreeAppointment = Boolean(activeRes.data);
+      setHasActiveRedemptionAppointment(hasActiveFreeAppointment);
+
+      if (hasActiveFreeAppointment) {
         setAvailableRedemptions([]);
+        setUseRedemption(false);
+        redemptionAutoSelectedRef.current = false;
         return;
       }
       setAvailableRedemptions(redemptionsRes.data || []);
@@ -1309,7 +1313,7 @@ const ClienteAgendar = () => {
       }).join(", ");
 
       const bookingTime = normalizeTimeValue(selectedTime);
-      const mainService = selectedServices[0];
+      const mainService = getCorteService() || selectedServices[0];
       
       // Construir observações detalhadas para o webhook/notificação
       let finalObservacoes = selectedServices.length > 1 
@@ -1589,7 +1593,7 @@ const ClienteAgendar = () => {
           preco: 0,
           status: "confirmed",
           observacoes: `Corte grátis - Resgate do programa de fidelidade. ${selectedServices.length > 1 ? 'Serviços: ' + serviceNames : ''}`,
-          payment_method: 'cash', // Alterado de 'resgate' para 'cash' para o markRedemptionAsUsed cuidar disso manualmente
+          payment_method: 'resgate',
           is_free: true,
           barbeiro_confirmou: true,
           cliente_confirmou: true,
@@ -1601,13 +1605,10 @@ const ClienteAgendar = () => {
       if (aptError) throw aptError;
 
       await markRedemptionAsUsed(appointment.id);
-      
-      // Atualiza o agendamento para refletir que o pagamento foi via resgate
-      // Fazemos isso após o markRedemptionAsUsed para garantir que o resgate foi vinculado corretamente
-      await supabase
-        .from("agendamentos")
-        .update({ payment_method: 'resgate' } as any)
-        .eq("id", appointment.id);
+
+      setHasActiveRedemptionAppointment(true);
+      setAvailableRedemptions([]);
+      setUseRedemption(false);
 
       // Webhook de confirmação é enviado automaticamente pelo trigger do banco de dados
 
@@ -2173,7 +2174,7 @@ const ClienteAgendar = () => {
     return Math.max(0, afterRedemption - getCouponDiscount());
   };
 
-  const canUseRedemption = availableRedemptions.length > 0 && !!getCorteService();
+  const canUseRedemption = !hasActiveRedemptionAppointment && availableRedemptions.length > 0 && !!getCorteService();
   // Pré-seleciona o corte grátis quando disponível, mas o cliente PODE optar por não usar.
   // Se ele seguir sem aplicar, será avisado e perderá a promoção (resgate consumido).
   const prevCanUseRedemptionRef = useRef(false);
