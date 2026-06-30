@@ -50,6 +50,7 @@ const BarbershopPublic = lazy(() => import("./pages/BarbershopPublic"));
 const BarbershopUnidades = lazy(() => import("./pages/BarbershopUnidades"));
 const Flowchart = lazy(() => import("./pages/Flowchart"));
 const ResponsivePreview = lazy(() => import("./pages/ResponsivePreview"));
+const BarbershopsCityGuide = lazy(() => import("./pages/BarbershopsCityGuide"));
 
 /** Minimal loading fallback */
 function PageLoader() {
@@ -102,7 +103,7 @@ function MaintenanceWrapper({ children }: { children: React.ReactNode }) {
 
   // Check if current route is public (before login)
   const isPublicRoute = PUBLIC_ROUTES.some(route => 
-    location.pathname === route || location.pathname.startsWith('/auth') || location.pathname.startsWith('/b/')
+    location.pathname === route || location.pathname.startsWith('/auth') || location.pathname.startsWith('/b/') || location.pathname.startsWith('/barbearias')
   );
 
   // Also treat /:slug (barbershop public pages) as public
@@ -247,7 +248,7 @@ function AuthRedirectGuard({ children }: { children: React.ReactNode }) {
     // Rotas de barbearia pública (/:slug — single segment, not a known route)
     const segments = location.pathname.split('/').filter(Boolean);
     const isBarbershopSlug = segments.length === 1 &&
-      !['cliente', 'suporte', 'admin', 'auth'].includes(segments[0]);
+      !['cliente', 'suporte', 'admin', 'auth', 'barbearias'].includes(segments[0]);
 
     if (isPublicRoute || isBarbershopSlug) {
       setReady(true);
@@ -382,6 +383,8 @@ function AppRoutes() {
               <Route path="/admin/efi-credenciais" element={<AdminEfiCredenciais />} />
               <Route path="/b/:slug/unidades" element={<BarbershopUnidades />} />
               <Route path="/b/:slug" element={<BarbershopPublic />} />
+              <Route path="/barbearias" element={<BarbershopsCityGuide />} />
+              <Route path="/barbearias/:cidade" element={<BarbershopsCityGuide />} />
               <Route path="/:slug" element={<BarbershopPublic />} />
               <Route path="/flowchart" element={<Flowchart />} />
               <Route path="/responsive-preview" element={<ResponsivePreview />} />
