@@ -1270,6 +1270,12 @@ const ClienteAgendar = () => {
       return;
     }
 
+    // Se o cliente tinha corte grátis disponível mas optou por NÃO usá-lo,
+    // o benefício é perdido AGORA (no momento de finalizar o pagamento).
+    if (canUseRedemption && !useRedemption && availableRedemptions.length > 0) {
+      await consumeRedemptionsAsLost();
+    }
+
     if (isPlanEligible) {
       await createAppointmentWithPlan();
       return;
