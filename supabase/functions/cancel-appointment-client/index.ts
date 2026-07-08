@@ -41,7 +41,7 @@ function buildRescheduleMessage(params: {
 }) {
   const nome = params.clienteNome?.split(" ")[0] || "Cliente";
   const servico = params.servico || "serviço";
-  return `🔄 *Agendamento Remarcado!*\nOlá ${nome}! Seu ${servico} foi remarcado com sucesso para o dia ${formatDatePtBR(params.data)} às ${normalizeTime(params.hora)}.\nNos vemos em breve! 💈`;
+  return `*Agendamento Remarcado!*\nOlá ${nome}! Seu ${servico} foi remarcado com sucesso para ${formatDatePtBR(params.data)} às ${normalizeTime(params.hora)}.\nNos vemos em breve! 💈`;
 }
 
 async function resolveBusinessHours(supabase: any, date: string, barberId: string) {
