@@ -3258,27 +3258,18 @@ const ClienteAgendar = () => {
                   label="Nova Data"
                   value={selectedDate ? format(selectedDate, "dd 'de' MMMM 'de' yyyy", { locale: ptBR }) : ""}
                 />
-                
-                <div className="border-t border-border" />
-                
+
                 <SummaryRow 
                   label="Novo Horário"
                   value={`${selectedTime} → ${getEndTime()}`}
                 />
-                
-                <div className="border-t border-border" />
-                
+
                 <SummaryRow 
                   label="Serviço"
                   value={selectedServices[0]?.nome || ""}
                 />
               </div>
 
-              <div className="bg-primary/10 border border-primary/20 rounded-xl p-4 mb-6">
-                <p className="text-sm text-primary text-center">
-                  O pagamento existente permanecerá válido
-                </p>
-              </div>
 
               <FloatingActionBar
                 isVisible={true}
