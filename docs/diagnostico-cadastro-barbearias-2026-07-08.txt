@@ -1,0 +1,47 @@
+DIAGNÓSTICO — CADASTRO SEM BARBEARIAS
+Data: 2026-07-08
+
+CAMADA USUÁRIO
+- Sintoma observado: na criação de conta, a etapa de escolha de barbearia exibia estado vazio.
+- Resultado esperado: usuário novo, ainda sem sessão ou vínculo, deve conseguir visualizar barbearias públicas ativas para se vincular.
+
+CAMADA FRONTEND
+- Tela analisada: fluxo público de descoberta/escolha de barbearias.
+- A tela carregava unidades ativas e, em paralelo, validava profissionais ativos.
+- Causa adicional encontrada: se a validação pública de profissionais falhasse, a lista final era filtrada como vazia.
+- Correção aplicada: falha na validação auxiliar de profissionais não esconde mais barbearias públicas já carregadas.
+
+CAMADA BANCO SUPABASE
+- Causa raiz confirmada: a consulta pública de profissionais retornava erro de permissão na função public.has_role.
+- Motivo: políticas administrativas com verificação de papel estavam associadas ao papel público, fazendo usuários anônimos avaliarem função administrativa.
+- Correção aplicada por migração:
+  - public.has_role não é executável por anon.
+  - public.has_role permanece disponível para authenticated e service_role.
+  - políticas com has_role que estavam como public foram restringidas para authenticated.
+  - políticas públicas legítimas de leitura de barbearias ativas foram preservadas.
+
+CAMADA SEGURANÇA
+- RLS permanece habilitado.
+- A correção não transforma dados administrativos em públicos.
+- O usuário anônimo continua limitado às políticas públicas existentes, como barbearias/unidades/profissionais ativos.
+- Acesso administrativo continua dependente de autenticação e validação de papel via user_roles.
+
+TESTES EXECUTADOS
+- REST anon tenant_unidades com join em tenants: HTTP 200, retornou 1 unidade ativa.
+- REST anon barbeiros: HTTP 200, retornou profissionais ativos sem erro de has_role.
+- REST anon tenants: HTTP 200, retornou tenants públicos ativos.
+- Preview Playwright em /escolher-barbearia?mode=search: renderizou Barbearia DUB.
+- Estado vazio "Nenhuma barbearia encontrada": não apareceu.
+- Network do preview: chamadas para tenant_unidades e barbeiros retornaram 200.
+- Console do preview: sem erros de aplicação; apenas avisos futuros do React Router.
+
+FLUXO CRÍTICO — AUTH / CADASTRO
+1. Usuário abre cadastro ou descoberta sem sessão.
+2. App consulta barbearias/unidades públicas ativas.
+3. Usuário escolhe a barbearia pública.
+4. Após autenticação, profile.barbearia_preferida_id é preenchido conforme a barbearia escolhida.
+5. Caso falhe uma consulta auxiliar, a UI não deve ocultar barbearias públicas já disponíveis.
+
+TRATAMENTO DE ERROS
+- Erro principal de unidades continua exibindo feedback ao usuário.
+- Erro auxiliar de profissionais é tratado como degradação segura: registra aviso técnico e mantém barbearias públicas visíveis.

@@ -245,7 +245,7 @@ const EscolherBarbearia = () => {
     try {
       clearLegacyGeocodeCaches(DISCOVER_CACHE_KEYS_TO_CLEAR);
 
-      const [{ data: units, error }, { data: barbers }] = await Promise.all([
+      const [{ data: units, error }, { data: barbers, error: barbersError }] = await Promise.all([
         supabase
           .from("tenant_unidades")
           .select(`id, nome, rua, numero, cep, bairro, cidade, estado, is_sede, latitude, longitude, tenant_id,
@@ -313,14 +313,18 @@ const EscolherBarbearia = () => {
           };
         });
 
-      const activeTenantIds = new Set((barbers ?? []).map((b) => b.tenant_id).filter((tid): tid is string => !!tid));
-      const hasGlobalBarbers = (barbers ?? []).some((b) => !b.tenant_id);
+      if (barbersError) {
+        console.warn("Não foi possível validar profissionais ativos; mantendo barbearias públicas visíveis.", barbersError);
+      } else {
+        const activeTenantIds = new Set((barbers ?? []).map((b) => b.tenant_id).filter((tid): tid is string => !!tid));
+        const hasGlobalBarbers = (barbers ?? []).some((b) => !b.tenant_id);
 
-      unitList = unitList.filter((u) => {
-        const isDub = normalizeText(u.brandSlug ?? "") === "barbeariadub" || normalizeText(u.brandName) === "barbeariadub";
-        if (isDub && hasGlobalBarbers) return true;
-        return u.tenant_id ? activeTenantIds.has(u.tenant_id) : false;
-      });
+        unitList = unitList.filter((u) => {
+          const isDub = normalizeText(u.brandSlug ?? "") === "barbeariadub" || normalizeText(u.brandName) === "barbeariadub";
+          if (isDub && hasGlobalBarbers) return true;
+          return u.tenant_id ? activeTenantIds.has(u.tenant_id) : false;
+        });
+      }
 
       setAllUnits(unitList);
       setCache(DISCOVER_UNITS_CACHE_KEY, unitList, DISCOVER_UNITS_CACHE_TTL_MINUTES);
