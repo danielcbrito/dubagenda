@@ -3253,7 +3253,7 @@ const ClienteAgendar = () => {
                 </p>
               </div>
 
-              <div className="bg-card border border-border rounded-2xl p-5 space-y-4 mb-6">
+              <div className="space-y-4 mb-6 px-1">
                 <SummaryRow 
                   label="Nova Data"
                   value={selectedDate ? format(selectedDate, "dd 'de' MMMM 'de' yyyy", { locale: ptBR }) : ""}
@@ -3269,6 +3269,7 @@ const ClienteAgendar = () => {
                   value={selectedServices[0]?.nome || ""}
                 />
               </div>
+
 
 
               <FloatingActionBar
