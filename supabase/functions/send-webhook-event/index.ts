@@ -443,6 +443,11 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Remarcação nunca deve reaproveitar mensagem genérica/legada enviada por callers antigos.
+    if (eventPayload.evento === 'remarcacao_concluida' || eventPayload.evento === 'agendamento_remarcado') {
+      eventPayload.mensagem = gerarMensagemPersonalizada(eventPayload.evento, eventPayload);
+    }
+
     // GERAR MENSAGEM PERSONALIZADA SE NÃO TIVER
     if (!eventPayload.mensagem && eventPayload.evento !== 'disparo_mensagem') {
       eventPayload.mensagem = gerarMensagemPersonalizada(eventPayload.evento, eventPayload);
