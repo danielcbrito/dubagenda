@@ -184,6 +184,7 @@ async function handleReschedule(params: {
   const data = String(body.data || "");
   const hora = normalizeTime(String(body.hora || ""));
   const duracao = body.duracao ? Number(body.duracao) : undefined;
+  const dryRun = body.dryRun === true;
 
   if (!appointmentId || !data || !hora || !/^\d{4}-\d{2}-\d{2}$/.test(data)) {
     return jsonResponse({ error: "Dados inválidos para remarcação" }, 400);
@@ -217,6 +218,10 @@ async function handleReschedule(params: {
   });
 
   if (!availability.valid) return jsonResponse({ error: availability.message, code: "TIME_SLOT_UNAVAILABLE" }, 409);
+
+  if (dryRun) {
+    return jsonResponse({ success: true, valid: true, message: availability.message });
+  }
 
   const previousDate = appointment.data;
   const previousTime = normalizeTime(appointment.hora);
