@@ -188,7 +188,7 @@ function gerarMensagemPersonalizada(evento: string, payload: WebhookEventPayload
 
     case 'remarcacao_concluida':
     case 'agendamento_remarcado':
-      return `🔄 *Agendamento Remarcado!*\nOlá ${nome}! Seu ${servico} foi remarcado com sucesso para o dia ${data} às ${hora}.\nNos vemos em breve! 💈`;
+      return `*Agendamento Remarcado!*\nOlá ${nome}! Seu ${servico} foi remarcado com sucesso para ${data} às ${hora}.\nNos vemos em breve! 💈`;
 
 
     
