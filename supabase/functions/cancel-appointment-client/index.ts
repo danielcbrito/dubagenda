@@ -7,6 +7,291 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+function jsonResponse(body: Record<string, unknown>, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
+function normalizeTime(value: string | null | undefined): string {
+  if (!value) return "";
+  const [hours = "00", minutes = "00"] = value.split(":");
+  return `${hours.padStart(2, "0")}:${minutes.padStart(2, "0")}`;
+}
+
+function timeToMinutes(time: string): number {
+  const [hours, minutes] = normalizeTime(time).split(":").map(Number);
+  return hours * 60 + minutes;
+}
+
+function formatDatePtBR(date: string): string {
+  return new Date(`${date}T00:00:00`).toLocaleDateString("pt-BR", {
+    weekday: "long",
+    day: "2-digit",
+    month: "long",
+  });
+}
+
+function buildRescheduleMessage(params: {
+  clienteNome?: string | null;
+  servico?: string | null;
+  data: string;
+  hora: string;
+}) {
+  const nome = params.clienteNome?.split(" ")[0] || "Cliente";
+  const servico = params.servico || "serviço";
+  return `🔄 *Agendamento Remarcado!*\nOlá ${nome}! Seu ${servico} foi remarcado com sucesso para o dia ${formatDatePtBR(params.data)} às ${normalizeTime(params.hora)}.\nNos vemos em breve! 💈`;
+}
+
+async function resolveBusinessHours(supabase: any, date: string, barberId: string) {
+  const dayOfWeek = new Date(`${date}T12:00:00`).getDay();
+  let configData: any = null;
+
+  const { data: barberException } = await supabase
+    .from("horarios_excepcionais_barbeiro")
+    .select("*")
+    .eq("barbeiro_id", barberId)
+    .eq("data", date)
+    .maybeSingle();
+  configData = barberException;
+
+  if (!configData) {
+    const { data: globalException } = await supabase
+      .from("horarios_excepcionais")
+      .select("*")
+      .eq("data", date)
+      .maybeSingle();
+    configData = globalException;
+  }
+
+  if (!configData) {
+    const { data: barberConfig } = await supabase
+      .from("configuracoes_horario_barbeiro")
+      .select("*")
+      .eq("barbeiro_id", barberId)
+      .eq("dia_semana", dayOfWeek)
+      .maybeSingle();
+    if (barberConfig && barberConfig.aberto !== null) configData = barberConfig;
+  }
+
+  if (!configData) {
+    const { data: globalConfig } = await supabase
+      .from("configuracoes_horario")
+      .select("*")
+      .eq("dia_semana", dayOfWeek)
+      .maybeSingle();
+    configData = globalConfig;
+  }
+
+  return configData
+    ? {
+        aberto: configData.aberto ?? true,
+        hora_abertura: configData.hora_abertura || "09:00",
+        hora_fechamento: configData.hora_fechamento || "21:00",
+        hora_almoco_inicio: configData.hora_almoco_inicio,
+        hora_almoco_fim: configData.hora_almoco_fim,
+        delay_entre_servicos: configData.delay_entre_servicos || 10,
+      }
+    : {
+        aberto: dayOfWeek !== 0,
+        hora_abertura: "09:00",
+        hora_fechamento: "21:00",
+        hora_almoco_inicio: "13:00",
+        hora_almoco_fim: "14:00",
+        delay_entre_servicos: 10,
+      };
+}
+
+async function validateRescheduleAvailability(params: {
+  supabase: any;
+  appointmentId: string;
+  data: string;
+  hora: string;
+  duracao: number;
+  barberId: string;
+}) {
+  const { supabase, appointmentId, data, hora, duracao, barberId } = params;
+  const config = await resolveBusinessHours(supabase, data, barberId);
+
+  if (!config.aberto) return { valid: false, message: "A barbearia não funciona neste dia." };
+
+  const start = timeToMinutes(hora);
+  const end = start + duracao;
+  const open = timeToMinutes(config.hora_abertura);
+  const close = timeToMinutes(config.hora_fechamento);
+  const lunchStart = config.hora_almoco_inicio ? timeToMinutes(config.hora_almoco_inicio) : null;
+  const lunchEnd = config.hora_almoco_fim ? timeToMinutes(config.hora_almoco_fim) : null;
+
+  if (start < open || end > close) {
+    return { valid: false, message: `Horário fora do expediente. Funcionamento: ${config.hora_abertura} às ${config.hora_fechamento}.` };
+  }
+
+  if (lunchStart !== null && lunchEnd !== null && start < lunchEnd && end > lunchStart) {
+    return { valid: false, message: `Horário indisponível. A barbearia está fechada para almoço entre ${config.hora_almoco_inicio} e ${config.hora_almoco_fim}.` };
+  }
+
+  const { data: appointments, error: appointmentsError } = await supabase
+    .from("agendamentos")
+    .select("id, hora, duracao")
+    .eq("data", data)
+    .eq("barbeiro_id", barberId)
+    .in("status", ["pending", "confirmed", "completed"])
+    .neq("id", appointmentId);
+
+  if (appointmentsError) {
+    console.error("[cancel-appointment-client] erro disponibilidade agendamentos:", appointmentsError);
+    return { valid: false, message: "Erro ao verificar disponibilidade." };
+  }
+
+  const delay = config.delay_entre_servicos;
+  for (const appointment of appointments || []) {
+    const appointmentStart = timeToMinutes(appointment.hora);
+    const appointmentEnd = appointmentStart + appointment.duracao + delay;
+    if (start < appointmentEnd && end > appointmentStart) {
+      return { valid: false, message: "Horário indisponível. Já existe um agendamento nesse período." };
+    }
+  }
+
+  const { data: pendingBookings } = await supabase
+    .from("pending_bookings")
+    .select("id, hora, duracao")
+    .eq("data", data)
+    .eq("barbeiro_id", barberId)
+    .gt("expires_at", new Date().toISOString());
+
+  for (const pending of pendingBookings || []) {
+    const pendingStart = timeToMinutes(pending.hora);
+    const pendingEnd = pendingStart + pending.duracao + delay;
+    if (start < pendingEnd && end > pendingStart) {
+      return { valid: false, message: "Horário temporariamente reservado. Tente outro horário ou aguarde alguns minutos." };
+    }
+  }
+
+  return { valid: true, message: "Horário disponível" };
+}
+
+async function handleReschedule(params: {
+  supabase: any;
+  supabaseUrl: string;
+  serviceKey: string;
+  callerUserId: string;
+  callerEmail?: string | null;
+  body: any;
+}) {
+  const { supabase, supabaseUrl, serviceKey, callerUserId, callerEmail, body } = params;
+  const appointmentId = String(body.appointmentId || "");
+  const data = String(body.data || "");
+  const hora = normalizeTime(String(body.hora || ""));
+  const duracao = body.duracao ? Number(body.duracao) : undefined;
+
+  if (!appointmentId || !data || !hora || !/^\d{4}-\d{2}-\d{2}$/.test(data)) {
+    return jsonResponse({ error: "Dados inválidos para remarcação" }, 400);
+  }
+
+  const { data: appointment, error: fetchError } = await supabase
+    .from("agendamentos")
+    .select(`
+      id, user_id, barbeiro_id, servico_id, data, hora, duracao, status, preco,
+      servicos:servico_id (nome),
+      barbeiros:barbeiro_id (apelido, tenant_id)
+    `)
+    .eq("id", appointmentId)
+    .single();
+
+  if (fetchError || !appointment) return jsonResponse({ error: "Agendamento não encontrado" }, 404);
+  if (appointment.user_id !== callerUserId) return jsonResponse({ error: "Sem permissão para remarcar este agendamento" }, 403);
+  if (!["pending", "confirmed"].includes(appointment.status)) {
+    return jsonResponse({ error: `Agendamento com status '${appointment.status}' não pode ser remarcado` }, 400);
+  }
+  if (!appointment.barbeiro_id) return jsonResponse({ error: "Agendamento sem profissional vinculado não pode ser remarcado" }, 400);
+
+  const durationToUse = duracao || appointment.duracao;
+  const availability = await validateRescheduleAvailability({
+    supabase,
+    appointmentId,
+    data,
+    hora,
+    duracao: durationToUse,
+    barberId: appointment.barbeiro_id,
+  });
+
+  if (!availability.valid) return jsonResponse({ error: availability.message, code: "TIME_SLOT_UNAVAILABLE" }, 409);
+
+  const previousDate = appointment.data;
+  const previousTime = normalizeTime(appointment.hora);
+
+  const { data: updatedAppointment, error: updateError } = await supabase
+    .from("agendamentos")
+    .update({
+      data,
+      hora,
+      duracao: durationToUse,
+      status: "confirmed",
+      barbeiro_confirmou: true,
+      cliente_confirmou: true,
+      remarcacao_solicitada: false,
+      motivo_remarcacao: null,
+      visivel_para_usuario: true,
+    })
+    .eq("id", appointmentId)
+    .select("id, data, hora, duracao, status, updated_at")
+    .single();
+
+  if (updateError) {
+    console.error("[cancel-appointment-client] erro ao remarcar:", updateError);
+    return jsonResponse({ error: "Erro ao remarcar agendamento" }, 500);
+  }
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("nome, telefone")
+    .eq("id", callerUserId)
+    .maybeSingle();
+
+  const serviceName = Array.isArray(appointment.servicos) ? appointment.servicos[0]?.nome : appointment.servicos?.nome;
+  const barber = Array.isArray(appointment.barbeiros) ? appointment.barbeiros[0] : appointment.barbeiros;
+  const message = buildRescheduleMessage({ clienteNome: profile?.nome || callerEmail, servico: serviceName, data, hora });
+
+  let notification: Record<string, unknown> | null = null;
+  try {
+    const webhookResponse = await fetch(`${supabaseUrl}/functions/v1/send-webhook-event`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${serviceKey}` },
+      body: JSON.stringify({
+        evento: "remarcacao_concluida",
+        descricao: "Cliente concluiu a remarcação do agendamento",
+        status: "remarcado",
+        agendamento_id: appointmentId,
+        data,
+        hora,
+        duracao_minutos: durationToUse,
+        servico_id: appointment.servico_id,
+        servico: serviceName || "Serviço",
+        valor_total: appointment.preco,
+        preco: appointment.preco,
+        cliente_id: callerUserId,
+        cliente_nome: profile?.nome || callerEmail || "Cliente",
+        cliente_telefone: profile?.telefone || null,
+        cliente_email: callerEmail || null,
+        barbeiro_id: appointment.barbeiro_id,
+        barbeiro_nome: barber?.apelido || null,
+        mensagem: message,
+        detalhes: {
+          tenant_id: barber?.tenant_id || null,
+          data_anterior: previousDate,
+          hora_anterior: previousTime,
+        },
+      }),
+    });
+    notification = await webhookResponse.json().catch(() => null);
+  } catch (notificationError) {
+    console.warn("[cancel-appointment-client] falha webhook remarcação:", notificationError);
+  }
+
+  return jsonResponse({ success: true, appointment: updatedAppointment, notification });
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -40,7 +325,8 @@ serve(async (req) => {
     const callerUserId = claimsData.user.id;
 
     // ── Parse body ──
-    const { appointmentId } = await req.json();
+    const body = await req.json();
+    const { appointmentId } = body;
     if (!appointmentId) {
       return new Response(
         JSON.stringify({ error: "appointmentId é obrigatório" }),
@@ -50,6 +336,17 @@ serve(async (req) => {
 
     // ── Service-role client for privileged operations ──
     const supabase = createClient(supabaseUrl, serviceKey);
+
+    if (body.action === "reschedule") {
+      return await handleReschedule({
+        supabase,
+        supabaseUrl,
+        serviceKey,
+        callerUserId,
+        callerEmail: claimsData.user.email,
+        body,
+      });
+    }
 
     // 1. Fetch appointment and verify ownership
     const { data: appointment, error: fetchError } = await supabase

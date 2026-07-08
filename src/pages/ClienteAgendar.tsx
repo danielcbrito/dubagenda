@@ -2058,8 +2058,9 @@ const ClienteAgendar = () => {
         return;
       }
       
-      const { data: rescheduleResult, error } = await supabase.functions.invoke('reschedule-appointment-client', {
+      const { data: rescheduleResult, error } = await supabase.functions.invoke('cancel-appointment-client', {
         body: {
+          action: 'reschedule',
           appointmentId: rescheduleAppointmentId,
           data: dateStr,
           hora: bookingTime,
