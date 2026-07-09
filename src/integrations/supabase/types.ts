@@ -6530,6 +6530,10 @@ export type Database = {
         Args: { p_amount: number; p_description?: string; p_user_id: string }
         Returns: number
       }
+      admin_invalidar_indicacao: {
+        Args: { p_indicacao_id: string; p_motivo: string }
+        Returns: Json
+      }
       apply_cupom: {
         Args: {
           p_agendamento_id: string
