@@ -1,7 +1,7 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Copy, Share2, Gift, Users, MessageCircle, Loader2 } from "lucide-react";
+import { Copy, Share2, Gift, Users, MessageCircle, Loader2, MousePointerClick, UserPlus, CalendarCheck, CheckCircle2, XCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { BackArrow } from "@/components/ui/back-arrow";
@@ -17,41 +17,107 @@ interface Indicacao {
   indicado_nome?: string | null;
 }
 
-const STATUS_LABELS: Record<string, string> = {
-  pendente: "Aguardando agendamento",
-  agendado: "Aguardando atendimento",
-  confirmado: "Confirmando...",
-  liberado: "Corte grátis liberado!",
-  invalidado: "Indicação não elegível",
-  expirado: "Expirada",
+const STATUS_META: Record<string, { label: string; color: string; Icon: any }> = {
+  link_clicked: {
+    label: "Entrou no link",
+    color: "bg-sky-500/10 text-sky-600 dark:text-sky-400 ring-1 ring-sky-500/20",
+    Icon: MousePointerClick,
+  },
+  pendente: {
+    label: "Criou conta",
+    color: "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 ring-1 ring-indigo-500/20",
+    Icon: UserPlus,
+  },
+  agendado: {
+    label: "Agendou",
+    color: "bg-amber-500/10 text-amber-600 dark:text-amber-400 ring-1 ring-amber-500/20",
+    Icon: CalendarCheck,
+  },
+  confirmado: {
+    label: "Agendou",
+    color: "bg-amber-500/10 text-amber-600 dark:text-amber-400 ring-1 ring-amber-500/20",
+    Icon: CalendarCheck,
+  },
+  liberado: {
+    label: "Serviço concluído",
+    color: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 ring-1 ring-emerald-500/20",
+    Icon: CheckCircle2,
+  },
+  invalidado: {
+    label: "Não elegível",
+    color: "bg-muted text-muted-foreground ring-1 ring-border/40",
+    Icon: XCircle,
+  },
+  expirado: {
+    label: "Expirada",
+    color: "bg-muted text-muted-foreground ring-1 ring-border/40",
+    Icon: XCircle,
+  },
 };
 
-const STATUS_COLORS: Record<string, string> = {
-  pendente: "bg-amber-500/10 text-amber-600 dark:text-amber-400 ring-1 ring-amber-500/20",
-  agendado: "bg-blue-500/10 text-blue-600 dark:text-blue-400 ring-1 ring-blue-500/20",
-  confirmado: "bg-blue-500/10 text-blue-600 dark:text-blue-400 ring-1 ring-blue-500/20",
-  liberado: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 ring-1 ring-emerald-500/20",
-  invalidado: "bg-muted text-muted-foreground ring-1 ring-border/40",
-  expirado: "bg-muted text-muted-foreground ring-1 ring-border/40",
-};
+const LIMITE_MENSAL = 4;
+const PRETTY_HOST = "https://dubagenda.lovable.app";
 
-const LIMITE_MENSAL = 10;
+// Fallback de cópia — funciona em iframes/preview e mobile antigo onde
+// navigator.clipboard falha silenciosamente.
+async function copyToClipboard(text: string): Promise<boolean> {
+  try {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch {
+    /* try fallback */
+  }
+  try {
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.position = "fixed";
+    ta.style.top = "0";
+    ta.style.left = "0";
+    ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.focus();
+    ta.select();
+    const ok = document.execCommand("copy");
+    document.body.removeChild(ta);
+    return ok;
+  } catch {
+    return false;
+  }
+}
 
 export default function ClienteIndicacoes() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
+  const [userId, setUserId] = useState<string | null>(null);
   const [referralCode, setReferralCode] = useState<string | null>(null);
   const [availableCredits, setAvailableCredits] = useState(0);
   const [indicacoes, setIndicacoes] = useState<Indicacao[]>([]);
   const [monthUsed, setMonthUsed] = useState(0);
 
+  const loadNames = useCallback(async (rows: Indicacao[]) => {
+    const ids = Array.from(new Set(rows.map((r) => r.indicado_id).filter(Boolean))) as string[];
+    if (ids.length === 0) return rows;
+    const { data: profs } = await supabase.from("profiles").select("id, nome").in("id", ids);
+    const map: Record<string, string> = {};
+    (profs || []).forEach((p: any) => { map[p.id] = p.nome; });
+    return rows.map((r) => ({ ...r, indicado_nome: r.indicado_id ? map[r.indicado_id] : null }));
+  }, []);
+
+  const recomputeMonth = useCallback((rows: Indicacao[]) => {
+    const startMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+    const monthValid = rows.filter(
+      (r) => r.indicado_id && new Date(r.criado_em) >= startMonth && r.status !== "invalidado"
+    ).length;
+    setMonthUsed(monthValid);
+  }, []);
+
   useEffect(() => {
     (async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        navigate("/auth");
-        return;
-      }
+      if (!user) { navigate("/auth"); return; }
+      setUserId(user.id);
 
       const [profileRes, creditsRes, indicacoesRes] = await Promise.all([
         supabase.from("profiles").select("referral_code").eq("id", user.id).maybeSingle(),
@@ -71,52 +137,63 @@ export default function ClienteIndicacoes() {
       setAvailableCredits(creditsRes.count || 0);
 
       const rows: Indicacao[] = indicacoesRes.data || [];
-
-      // Contar indicações válidas do mês atual
-      const now = new Date();
-      const startMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-      const monthValid = rows.filter(
-        (r) => new Date(r.criado_em) >= startMonth && r.status !== "invalidado"
-      ).length;
-      setMonthUsed(monthValid);
-
-      // Buscar apenas nomes dos indicados (nenhum outro dado sensível)
-      const ids = Array.from(new Set(rows.map((r) => r.indicado_id).filter(Boolean))) as string[];
-      let nomes: Record<string, string> = {};
-      if (ids.length > 0) {
-        const { data: profs } = await supabase
-          .from("profiles")
-          .select("id, nome")
-          .in("id", ids);
-        (profs || []).forEach((p: any) => {
-          nomes[p.id] = p.nome;
-        });
-      }
-
-      setIndicacoes(rows.map((r) => ({ ...r, indicado_nome: r.indicado_id ? nomes[r.indicado_id] : null })));
+      const enriched = await loadNames(rows);
+      setIndicacoes(enriched);
+      recomputeMonth(enriched);
       setLoading(false);
     })();
-  }, [navigate]);
+  }, [navigate, loadNames, recomputeMonth]);
 
-  const referralLink = useMemo(() => {
-    if (!referralCode) return "";
-    return `${window.location.origin}/?ref=${referralCode}`;
-  }, [referralCode]);
+  // Realtime — atualiza cliques/cadastros/agendamentos/conclusões ao vivo
+  useEffect(() => {
+    if (!userId) return;
+    const channel = supabase
+      .channel(`indicacoes:${userId}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "indicacoes", filter: `indicador_id=eq.${userId}` },
+        async () => {
+          const { data } = await supabase
+            .from("indicacoes")
+            .select("id, indicado_id, status, criado_em")
+            .eq("indicador_id", userId)
+            .order("criado_em", { ascending: false });
+          const enriched = await loadNames(data || []);
+          setIndicacoes(enriched);
+          recomputeMonth(enriched);
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "creditos_indicacao", filter: `user_id=eq.${userId}` },
+        async () => {
+          const { count } = await supabase
+            .from("creditos_indicacao")
+            .select("id", { count: "exact", head: true })
+            .eq("user_id", userId)
+            .eq("status", "disponivel");
+          setAvailableCredits(count || 0);
+        }
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [userId, loadNames, recomputeMonth]);
+
+  const referralLink = useMemo(
+    () => (referralCode ? `${PRETTY_HOST}/i/${referralCode}` : ""),
+    [referralCode]
+  );
 
   const shareText = useMemo(
-    () =>
-      `Ei! Baixe o app da Barbearia DUB usando meu convite e ganhe um corte grátis: ${referralLink}`,
+    () => `Baixe o app da Barbearia DUB pelo meu convite e ganhe um corte grátis: ${referralLink}`,
     [referralLink]
   );
 
   const handleCopy = async () => {
     if (!referralLink) return;
-    try {
-      await navigator.clipboard.writeText(referralLink);
-      toast.success("Link copiado!");
-    } catch {
-      toast.error("Não foi possível copiar");
-    }
+    const ok = await copyToClipboard(referralLink);
+    if (ok) toast.success("Link copiado!");
+    else toast.error("Não foi possível copiar. Toque em Enviar.");
   };
 
   const handleShareWhats = () => {
@@ -127,11 +204,8 @@ export default function ClienteIndicacoes() {
   const handleShareNative = async () => {
     if (!referralLink) return;
     if (navigator.share) {
-      try {
-        await navigator.share({ title: "Convite Barbearia DUB", text: shareText, url: referralLink });
-      } catch {
-        /* usuário cancelou */
-      }
+      try { await navigator.share({ title: "Convite Barbearia DUB", text: shareText, url: referralLink }); }
+      catch { /* cancelou */ }
     } else {
       handleCopy();
     }
@@ -139,7 +213,6 @@ export default function ClienteIndicacoes() {
 
   return (
     <div className="flex flex-col h-[100dvh] bg-background">
-      {/* Header */}
       <div className="flex-shrink-0 flex items-center gap-3 px-4 pt-4 pb-3">
         <motion.button
           whileTap={{ scale: 0.9 }}
@@ -160,7 +233,6 @@ export default function ClienteIndicacoes() {
         </div>
       ) : (
         <div className="flex-1 overflow-y-auto overscroll-contain px-4 pb-24 space-y-4">
-          {/* Card Saldo */}
           <motion.div
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
@@ -175,19 +247,14 @@ export default function ClienteIndicacoes() {
                   Cortes grátis disponíveis
                 </p>
                 {availableCredits > 0 ? (
-                  <p className="text-2xl font-bold tabular-nums text-foreground">
-                    {availableCredits}
-                  </p>
+                  <p className="text-2xl font-bold tabular-nums text-foreground">{availableCredits}</p>
                 ) : (
-                  <p className="text-[13px] text-muted-foreground mt-0.5">
-                    Indique amigos para ganhar
-                  </p>
+                  <p className="text-[13px] text-muted-foreground mt-0.5">Indique amigos para ganhar</p>
                 )}
               </div>
             </div>
           </motion.div>
 
-          {/* Card Link */}
           <motion.div
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
@@ -198,7 +265,7 @@ export default function ClienteIndicacoes() {
               <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60 mb-1.5">
                 Seu link de convite
               </p>
-              <div className="rounded-lg bg-muted/50 border border-border/30 px-3 py-2.5 text-[12px] font-mono text-foreground break-all">
+              <div className="rounded-lg bg-muted/50 border border-border/30 px-3 py-2.5 text-[13px] font-mono text-foreground break-all">
                 {referralLink || "—"}
               </div>
             </div>
@@ -234,14 +301,13 @@ export default function ClienteIndicacoes() {
             </div>
           </motion.div>
 
-          {/* Lista */}
           <motion.div
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
           >
             <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60 mb-2 px-1">
-              Histórico
+              Histórico ao vivo
             </p>
 
             {indicacoes.length === 0 ? (
@@ -253,44 +319,52 @@ export default function ClienteIndicacoes() {
               </div>
             ) : (
               <div className="space-y-2">
-                {indicacoes.map((ind, idx) => (
-                  <motion.div
-                    key={ind.id}
-                    initial={{ opacity: 0, y: 4 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: idx * 0.03 }}
-                    className="rounded-lg border border-border/30 bg-card p-3.5 flex items-center gap-3"
-                  >
-                    <div className="w-9 h-9 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
-                      <span className="text-[11px] font-bold text-muted-foreground">
-                        {ind.indicado_nome
-                          ? ind.indicado_nome
-                              .split(" ")
-                              .map((n) => n[0])
-                              .join("")
-                              .toUpperCase()
-                              .slice(0, 2)
-                          : "?"}
-                      </span>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[13px] font-medium text-foreground truncate">
-                        {ind.indicado_nome || "Convidado"}
-                      </p>
-                      <p className="text-[10px] text-muted-foreground/70">
-                        {format(new Date(ind.criado_em), "d 'de' MMM, yyyy", { locale: ptBR })}
-                      </p>
-                    </div>
-                    <span
-                      className={cn(
-                        "text-[9px] font-bold uppercase tracking-wider px-2 py-1 rounded-md whitespace-nowrap",
-                        STATUS_COLORS[ind.status] || STATUS_COLORS.pendente
-                      )}
+                {indicacoes.map((ind, idx) => {
+                  const meta = STATUS_META[ind.status] || STATUS_META.pendente;
+                  const Icon = meta.Icon;
+                  const isClick = ind.status === "link_clicked";
+                  return (
+                    <motion.div
+                      key={ind.id}
+                      initial={{ opacity: 0, y: 4 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: idx * 0.03 }}
+                      className="rounded-lg border border-border/30 bg-card p-3.5 flex items-center gap-3"
                     >
-                      {STATUS_LABELS[ind.status] || ind.status}
-                    </span>
-                  </motion.div>
-                ))}
+                      <div className={cn(
+                        "w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0",
+                        isClick ? "bg-sky-500/10" : "bg-muted"
+                      )}>
+                        {isClick ? (
+                          <Icon className="w-4 h-4 text-sky-500" />
+                        ) : (
+                          <span className="text-[11px] font-bold text-muted-foreground">
+                            {ind.indicado_nome
+                              ? ind.indicado_nome.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
+                              : "?"}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[13px] font-medium text-foreground truncate">
+                          {ind.indicado_nome || (isClick ? "Alguém abriu seu link" : "Convidado")}
+                        </p>
+                        <p className="text-[10px] text-muted-foreground/70">
+                          {format(new Date(ind.criado_em), "d 'de' MMM, HH:mm", { locale: ptBR })}
+                        </p>
+                      </div>
+                      <span
+                        className={cn(
+                          "text-[9px] font-bold uppercase tracking-wider px-2 py-1 rounded-md whitespace-nowrap flex items-center gap-1",
+                          meta.color
+                        )}
+                      >
+                        <Icon className="w-3 h-3" />
+                        {meta.label}
+                      </span>
+                    </motion.div>
+                  );
+                })}
               </div>
             )}
           </motion.div>

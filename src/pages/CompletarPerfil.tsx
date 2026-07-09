@@ -83,16 +83,22 @@ const CompletarPerfil = () => {
     try {
       const pendingRef = sessionStorage.getItem("pending_referral_code");
       if (pendingRef) {
+        const sid =
+          sessionStorage.getItem("pending_referral_session_id") ||
+          localStorage.getItem("dub_ref_session_id");
         await supabase.rpc("registrar_indicacao", {
           p_indicado_id: userId!,
           p_codigo: pendingRef,
+          p_session_id: sid,
         });
         sessionStorage.removeItem("pending_referral_code");
+        sessionStorage.removeItem("pending_referral_session_id");
       }
     } catch (err) {
       // Silencioso: código inválido ou usuário já indicado — não bloqueia o cadastro
       console.warn("Falha ao registrar indicação:", err);
       sessionStorage.removeItem("pending_referral_code");
+      sessionStorage.removeItem("pending_referral_session_id");
     }
 
     const { data: updated } = await supabase
