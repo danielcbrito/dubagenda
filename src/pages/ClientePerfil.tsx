@@ -19,6 +19,7 @@ import {
   Bell,
   Star,
   Tag,
+  UserPlus,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -152,6 +153,7 @@ export default function ClientePerfil() {
   const [points, setPoints] = useState(0);
   const [completedAppointments, setCompletedAppointments] = useState(0);
   const [redemptions, setRedemptions] = useState(0);
+  const [referralCredits, setReferralCredits] = useState(0);
   const [pontosNecessarios, setPontosNecessarios] = useState(8);
 
   // Sub-sheets
@@ -217,6 +219,13 @@ export default function ClientePerfil() {
     const { data: resgates } = await supabase.from("resgates").select("id")
       .eq("user_id", user.id).eq("status", "available");
     setRedemptions(resgates?.length || 0);
+
+    const { count: refCount } = await supabase
+      .from("creditos_indicacao")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .eq("status", "disponivel");
+    setReferralCredits(refCount || 0);
 
     // Buscar promoção filtrada pelo tenant preferido
     let promoQuery = supabase.from("promocoes").select("pontos_necessarios").eq("ativo", true);
@@ -375,6 +384,12 @@ export default function ClientePerfil() {
                 label="Programa de Pontos"
                 badge={redemptions > 0 ? `${redemptions} disponível` : undefined}
                 onClick={() => setPointsModalOpen(true)}
+              />
+              <ProfileItem
+                icon={UserPlus}
+                label="Indicações"
+                badge={referralCredits > 0 ? `${referralCredits} grátis` : undefined}
+                onClick={() => navigate("/cliente/indicacoes")}
               />
               <ProfileItem
                 icon={HelpCircle}

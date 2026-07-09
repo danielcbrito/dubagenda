@@ -79,6 +79,22 @@ const CompletarPerfil = () => {
       return;
     }
 
+    // Registra indicação se houver código pendente (não bloqueia o cadastro se falhar)
+    try {
+      const pendingRef = sessionStorage.getItem("pending_referral_code");
+      if (pendingRef) {
+        await supabase.rpc("registrar_indicacao", {
+          p_indicado_id: userId!,
+          p_codigo: pendingRef,
+        });
+        sessionStorage.removeItem("pending_referral_code");
+      }
+    } catch (err) {
+      // Silencioso: código inválido ou usuário já indicado — não bloqueia o cadastro
+      console.warn("Falha ao registrar indicação:", err);
+      sessionStorage.removeItem("pending_referral_code");
+    }
+
     const { data: updated } = await supabase
       .from("profiles")
       .select("barbearia_preferida_id")

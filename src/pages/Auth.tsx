@@ -44,6 +44,17 @@ const Auth = () => {
   useEffect(() => {
     const verified = searchParams.get("verified");
     const prefilledEmail = searchParams.get("email");
+    const refCode = searchParams.get("ref");
+
+    // Persist referral code across the entire signup flow (Auth → CompletarPerfil → EscolherBarbearia).
+    // Kept in sessionStorage so it survives page reloads (e.g. email confirmation redirect).
+    if (refCode && refCode.trim().length > 0) {
+      try {
+        sessionStorage.setItem("pending_referral_code", refCode.trim().toUpperCase());
+      } catch {
+        /* ignore storage failures */
+      }
+    }
 
     if (prefilledEmail) {
       setEmail(prefilledEmail);

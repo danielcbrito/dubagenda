@@ -146,6 +146,8 @@ const ClienteAgendar = () => {
   const [availableRedemptions, setAvailableRedemptions] = useState<{ id: string; promocao_id: string }[]>([]);
   const [hasActiveRedemptionAppointment, setHasActiveRedemptionAppointment] = useState(false);
   const [useRedemption, setUseRedemption] = useState(false);
+  const [referralCredits, setReferralCredits] = useState(0);
+  const [useReferralCredit, setUseReferralCredit] = useState(false);
   const [paymentSheetOpen, setPaymentSheetOpen] = useState(false);
   const [showLoseRedemptionDialog, setShowLoseRedemptionDialog] = useState(false);
   const [consumingRedemption, setConsumingRedemption] = useState(false);
@@ -692,6 +694,14 @@ const ClienteAgendar = () => {
         return;
       }
       setAvailableRedemptions(redemptionsRes.data || []);
+
+      // Buscar créditos de indicação disponíveis (paralelo simples)
+      const { count: refCount } = await supabase
+        .from("creditos_indicacao")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", uid)
+        .eq("status", "disponivel");
+      setReferralCredits(refCount || 0);
     } catch (error) {
       console.error("Error loading redemptions:", error);
     }
@@ -1284,6 +1294,11 @@ const ClienteAgendar = () => {
     const serviceFee = getServiceFee(paymentMethod);
     const chargeAmount = finalPrice + serviceFee;
 
+    if (useReferralCredit && referralCredits > 0) {
+      await createAppointmentWithReferralCredit();
+      return;
+    }
+
     if (totalPrice === 0 && useRedemption) {
       await createAppointmentWithRedemption();
       return;
@@ -1616,6 +1631,104 @@ const ClienteAgendar = () => {
       navigate("/cliente");
     } catch (error: any) {
       console.error('Error creating appointment with redemption:', error);
+      toast.error("Erro ao criar agendamento: " + (error.message || "Erro desconhecido"));
+    } finally {
+      setProcessingPayment(false);
+    }
+  };
+
+  /** Cria agendamento gratuito consumindo um crédito de indicação */
+  const createAppointmentWithReferralCredit = async () => {
+    setProcessingPayment(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error("Você precisa estar logado");
+        navigate("/auth");
+        return;
+      }
+
+      const totalDuration = selectedServices.reduce((sum, s) => sum + getEffectiveDuration(s) * (serviceQuantities[s.id] || 1), 0);
+      const serviceNames = selectedServices.map(s => {
+        const qty = serviceQuantities[s.id] || 1;
+        return qty > 1 ? `${s.nome} x${qty}` : s.nome;
+      }).join(", ");
+      const mainService = getCorteService() || selectedServices[0];
+      const dateStr = format(selectedDate!, 'yyyy-MM-dd');
+      const bookingTime = normalizeTimeValue(selectedTime);
+
+      const { data: validation, error: validationError } = await supabase.functions.invoke('validate-appointment', {
+        body: {
+          data: dateStr,
+          hora: bookingTime,
+          duracao: totalDuration,
+          userId: session.user.id,
+          barberId: selectedBarberId,
+        },
+      });
+
+      if (validationError) {
+        toast.error("Erro ao verificar disponibilidade. Tente novamente.");
+        return;
+      }
+      const resolvedValidation = normalizeAppointmentValidation(validation);
+      if (!resolvedValidation.valid) {
+        toast.error(resolvedValidation.message || "Horário indisponível. Escolha outro horário.");
+        setStep(4);
+        refreshSlots();
+        return;
+      }
+
+      const { data: appointment, error: aptError } = await supabase
+        .from("agendamentos")
+        .insert({
+          user_id: session.user.id,
+          servico_id: mainService.id,
+          barbeiro_id: selectedBarberId || null,
+          data: dateStr,
+          hora: bookingTime,
+          duracao: totalDuration,
+          preco: 0,
+          status: "confirmed",
+          observacoes: `Corte grátis por indicação. ${selectedServices.length > 1 ? 'Serviços: ' + serviceNames : ''}`,
+          payment_method: 'indicacao',
+          is_free: true,
+          barbeiro_confirmou: true,
+          cliente_confirmou: true,
+          unidade_id: selectedUnit?.id || null,
+        } as any)
+        .select()
+        .single();
+
+      if (aptError) throw aptError;
+
+      // Consome o crédito de indicação após o agendamento ser criado
+      const { data: consumed, error: consumeError } = await (supabase as any).rpc(
+        "consumir_credito_indicacao",
+        { p_agendamento_id: appointment.id }
+      );
+
+      if (consumeError || consumed === false) {
+        // Race condition: crédito não estava mais disponível.
+        // Reverte o agendamento e avisa o cliente.
+        await supabase
+          .from("agendamentos")
+          .update({ status: 'cancelled_by_user' as any, visivel_para_usuario: false } as any)
+          .eq("id", appointment.id);
+
+        setReferralCredits(0);
+        setUseReferralCredit(false);
+        toast.error("Seu crédito de indicação não está mais disponível. Escolha outra forma de pagamento.");
+        return;
+      }
+
+      setReferralCredits((prev) => Math.max(0, prev - 1));
+      setUseReferralCredit(false);
+
+      toast.success("Corte grátis de indicação resgatado com sucesso!");
+      navigate("/cliente");
+    } catch (error: any) {
+      console.error('Error creating appointment with referral credit:', error);
       toast.error("Erro ao criar agendamento: " + (error.message || "Erro desconhecido"));
     } finally {
       setProcessingPayment(false);
@@ -2809,6 +2922,20 @@ const ClienteAgendar = () => {
                     </h3>
 
                     <div className="space-y-2">
+                      {referralCredits > 0 && selectedServices.length === 1 && (
+                        <PaymentOption
+                          value="referral"
+                          selected={useReferralCredit}
+                          onSelect={() => setUseReferralCredit((v) => !v)}
+                          title="Usar Corte Grátis de Indicação"
+                          description={useReferralCredit
+                            ? "Benefício aplicado — este agendamento será gratuito."
+                            : `Você tem ${referralCredits} corte${referralCredits > 1 ? 's' : ''} grátis por indicação.`}
+                          highlight={true}
+                          icon={<Star className={cn("w-5 h-5", useReferralCredit ? "fill-gold text-gold" : "text-muted-foreground/40")} />}
+                        />
+                      )}
+
                       {canUseRedemption && (
                         <PaymentOption
                           value="redemption"
