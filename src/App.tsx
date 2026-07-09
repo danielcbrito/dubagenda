@@ -372,7 +372,8 @@ function AppRoutes() {
               <Route path="/cliente/pix-checkout" element={<ClientePixCheckout />} />
               <Route path="/cliente/assinatura-pix" element={<SubscriptionPixCheckout />} />
               <Route path="/cliente/carteira" element={<ClienteCarteira />} />
-              <Route path="/cliente/perfil" element={<ClientePerfil />} />
+             <Route path="/cliente/perfil" element={<ClientePerfil />} />
+             <Route path="/cliente/indicacoes" element={<ClienteIndicacoes />} />
               <Route path="/cliente/dados-pessoais" element={<ClienteDadosPessoais />} />
               <Route path="/cliente/seguranca" element={<ClienteSeguranca />} />
               <Route path="/cliente/barbearia" element={<ClienteBarbearia />} />
