@@ -153,6 +153,7 @@ export default function ClientePerfil() {
   const [points, setPoints] = useState(0);
   const [completedAppointments, setCompletedAppointments] = useState(0);
   const [redemptions, setRedemptions] = useState(0);
+  const [referralCredits, setReferralCredits] = useState(0);
   const [pontosNecessarios, setPontosNecessarios] = useState(8);
 
   // Sub-sheets
