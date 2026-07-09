@@ -105,6 +105,18 @@ serve(async (req) => {
         if (duplicateClientAccount) {
           duplicates.push("email");
         }
+
+        // Camada extra: identidade já usada em conta antiga (mesmo deletada)
+        try {
+          const { data: dup } = await supabase.rpc("validar_identidade_duplicada", {
+            p_profile_id: foundUserId,
+          });
+          if (dup === true && !duplicates.includes("email")) {
+            duplicates.push("identidade_previa");
+          }
+        } catch (e) {
+          console.warn("validar_identidade_duplicada failed:", e);
+        }
       }
     }
 
