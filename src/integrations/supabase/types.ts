@@ -2750,39 +2750,45 @@ export type Database = {
         Row: {
           agendado_em: string | null
           agendamento_qualificador_id: string | null
+          click_session_id: string | null
           codigo_usado: string
           confirmado_em: string | null
           criado_em: string
           id: string
-          indicado_id: string
+          indicado_id: string | null
           indicador_id: string
           liberado_em: string | null
+          link_clicked_em: string | null
           motivo_invalidacao: string | null
           status: string
         }
         Insert: {
           agendado_em?: string | null
           agendamento_qualificador_id?: string | null
+          click_session_id?: string | null
           codigo_usado: string
           confirmado_em?: string | null
           criado_em?: string
           id?: string
-          indicado_id: string
+          indicado_id?: string | null
           indicador_id: string
           liberado_em?: string | null
+          link_clicked_em?: string | null
           motivo_invalidacao?: string | null
           status?: string
         }
         Update: {
           agendado_em?: string | null
           agendamento_qualificador_id?: string | null
+          click_session_id?: string | null
           codigo_usado?: string
           confirmado_em?: string | null
           criado_em?: string
           id?: string
-          indicado_id?: string
+          indicado_id?: string | null
           indicador_id?: string
           liberado_em?: string | null
+          link_clicked_em?: string | null
           motivo_invalidacao?: string | null
           status?: string
         }
@@ -6858,14 +6864,24 @@ export type Database = {
         Args: { p_charge_id: string }
         Returns: undefined
       }
+      registrar_click_indicacao: {
+        Args: { p_codigo: string; p_session_id: string }
+        Returns: string
+      }
       registrar_identidade_usada: {
         Args: { p_profile_id: string }
         Returns: undefined
       }
-      registrar_indicacao: {
-        Args: { p_codigo: string; p_indicado_id: string }
-        Returns: string
-      }
+      registrar_indicacao:
+        | { Args: { p_codigo: string; p_indicado_id: string }; Returns: string }
+        | {
+            Args: {
+              p_codigo: string
+              p_indicado_id: string
+              p_session_id?: string
+            }
+            Returns: string
+          }
       renovar_plano_cliente: {
         Args: { p_assinatura_id: string; p_forma_pagamento: string }
         Returns: Json
