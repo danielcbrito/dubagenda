@@ -146,6 +146,8 @@ const ClienteAgendar = () => {
   const [availableRedemptions, setAvailableRedemptions] = useState<{ id: string; promocao_id: string }[]>([]);
   const [hasActiveRedemptionAppointment, setHasActiveRedemptionAppointment] = useState(false);
   const [useRedemption, setUseRedemption] = useState(false);
+  const [referralCredits, setReferralCredits] = useState(0);
+  const [useReferralCredit, setUseReferralCredit] = useState(false);
   const [paymentSheetOpen, setPaymentSheetOpen] = useState(false);
   const [showLoseRedemptionDialog, setShowLoseRedemptionDialog] = useState(false);
   const [consumingRedemption, setConsumingRedemption] = useState(false);
