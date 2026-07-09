@@ -1294,6 +1294,11 @@ const ClienteAgendar = () => {
     const serviceFee = getServiceFee(paymentMethod);
     const chargeAmount = finalPrice + serviceFee;
 
+    if (useReferralCredit && referralCredits > 0) {
+      await createAppointmentWithReferralCredit();
+      return;
+    }
+
     if (totalPrice === 0 && useRedemption) {
       await createAppointmentWithRedemption();
       return;
