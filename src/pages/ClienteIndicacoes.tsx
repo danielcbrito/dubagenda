@@ -56,7 +56,7 @@ const STATUS_META: Record<string, { label: string; color: string; Icon: any }> =
 };
 
 const LIMITE_MENSAL = 4;
-const PRETTY_HOST = "https://dubagenda.lovable.app/auth?ref=";
+const PRETTY_HOST = "https://dubagenda.lovable.app/auth?mode=signup&ref=";
 
 // Fallback de cópia — funciona em iframes/preview e mobile antigo onde
 // navigator.clipboard falha silenciosamente.
