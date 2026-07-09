@@ -36,6 +36,7 @@ const ClientePixCheckout = lazy(() => import("./pages/ClientePixCheckout"));
 const SubscriptionPixCheckout = lazy(() => import("./pages/SubscriptionPixCheckout"));
 const ClienteCarteira = lazy(() => import("./pages/ClienteCarteira"));
 const ClientePerfil = lazy(() => import("./pages/ClientePerfil"));
+const ClienteIndicacoes = lazy(() => import("./pages/ClienteIndicacoes"));
 const ClienteDadosPessoais = lazy(() => import("./pages/ClienteDadosPessoais"));
 const ClienteSeguranca = lazy(() => import("./pages/ClienteSeguranca"));
 const ClienteBarbearia = lazy(() => import("./pages/ClienteBarbearia"));
