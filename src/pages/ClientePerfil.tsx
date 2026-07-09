@@ -220,6 +220,13 @@ export default function ClientePerfil() {
       .eq("user_id", user.id).eq("status", "available");
     setRedemptions(resgates?.length || 0);
 
+    const { count: refCount } = await supabase
+      .from("creditos_indicacao")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .eq("status", "disponivel");
+    setReferralCredits(refCount || 0);
+
     // Buscar promoção filtrada pelo tenant preferido
     let promoQuery = supabase.from("promocoes").select("pontos_necessarios").eq("ativo", true);
     if (prof?.barbearia_preferida_id) {
