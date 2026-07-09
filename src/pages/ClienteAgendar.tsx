@@ -2922,6 +2922,20 @@ const ClienteAgendar = () => {
                     </h3>
 
                     <div className="space-y-2">
+                      {referralCredits > 0 && selectedServices.length === 1 && (
+                        <PaymentOption
+                          value="referral"
+                          selected={useReferralCredit}
+                          onSelect={() => setUseReferralCredit((v) => !v)}
+                          title="Usar Corte Grátis de Indicação"
+                          description={useReferralCredit
+                            ? "Benefício aplicado — este agendamento será gratuito."
+                            : `Você tem ${referralCredits} corte${referralCredits > 1 ? 's' : ''} grátis por indicação.`}
+                          highlight={true}
+                          icon={<Star className={cn("w-5 h-5", useReferralCredit ? "fill-gold text-gold" : "text-muted-foreground/40")} />}
+                        />
+                      )}
+
                       {canUseRedemption && (
                         <PaymentOption
                           value="redemption"
