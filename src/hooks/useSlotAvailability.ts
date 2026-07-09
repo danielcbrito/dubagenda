@@ -210,11 +210,11 @@ export function useSlotAvailability(
     }
     abortControllerRef.current = new AbortController();
 
-    // Loading apenas no carregamento inicial
-    if (isInitialLoadRef.current || forceFullUpdate) {
-      setLoading(true);
-    }
+    // Sempre mostrar loading enquanto busca — evita mensagem "agenda cheia"
+    // aparecer durante o carregamento (usando slots vazios/stale).
+    setLoading(true);
     setError(null);
+
 
     const dateStr = format(selectedDate, 'yyyy-MM-dd');
 
