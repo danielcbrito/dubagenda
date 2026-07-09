@@ -237,6 +237,7 @@ function AuthRedirectGuard({ children }: { children: React.ReactNode }) {
     const isPublicRoute =
       location.pathname.startsWith('/auth') ||
       location.pathname.startsWith('/b/') ||
+      location.pathname.startsWith('/i/') ||
       location.pathname === '/esqueci-senha' ||
       location.pathname === '/resetar-senha' ||
       location.pathname === '/verificar-email' ||
