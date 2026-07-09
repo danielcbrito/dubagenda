@@ -180,7 +180,7 @@ export default function ClienteIndicacoes() {
   }, [userId, loadNames, recomputeMonth]);
 
   const referralLink = useMemo(
-    () => (referralCode ? `${PRETTY_HOST}/i/${referralCode}` : ""),
+    () => (referralCode ? `${PRETTY_HOST}${referralCode}` : ""),
     [referralCode]
   );
 
