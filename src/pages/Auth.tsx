@@ -49,8 +49,27 @@ const Auth = () => {
     // Persist referral code across the entire signup flow (Auth → CompletarPerfil → EscolherBarbearia).
     // Kept in sessionStorage so it survives page reloads (e.g. email confirmation redirect).
     if (refCode && refCode.trim().length > 0) {
+      const codeUp = refCode.trim().toUpperCase();
       try {
-        sessionStorage.setItem("pending_referral_code", refCode.trim().toUpperCase());
+        sessionStorage.setItem("pending_referral_code", codeUp);
+
+        // Gera/recupera um session id estável por navegador para vincular
+        // o clique (anônimo) ao futuro cadastro do mesmo usuário.
+        let sid = localStorage.getItem("dub_ref_session_id") || "";
+        if (!sid) {
+          sid =
+            (crypto as any)?.randomUUID?.() ||
+            `sid_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+          localStorage.setItem("dub_ref_session_id", sid);
+        }
+        sessionStorage.setItem("pending_referral_session_id", sid);
+
+        // Registra o clique em tempo real (aparece como "Entrou no link"
+        // no painel de indicações do indicador). Silencioso em caso de erro.
+        supabase.rpc("registrar_click_indicacao", {
+          p_codigo: codeUp,
+          p_session_id: sid,
+        }).then(() => {}, () => {});
       } catch {
         /* ignore storage failures */
       }
