@@ -6588,6 +6588,10 @@ export type Database = {
         }
         Returns: Json
       }
+      consumir_credito_indicacao: {
+        Args: { p_agendamento_id: string }
+        Returns: boolean
+      }
       count_subscription_uses_in_cycle: {
         Args: {
           p_assinatura_id: string
@@ -6657,6 +6661,7 @@ export type Database = {
       }
       format_phone_for_whatsapp: { Args: { phone: string }; Returns: string }
       generate_tenant_slug: { Args: { tenant_name: string }; Returns: string }
+      gerar_referral_code: { Args: never; Returns: string }
       get_admin_banner_for_barber: {
         Args: { p_barbeiro_id: string }
         Returns: string
@@ -6849,6 +6854,14 @@ export type Database = {
         Args: { p_charge_id: string }
         Returns: undefined
       }
+      registrar_identidade_usada: {
+        Args: { p_profile_id: string }
+        Returns: undefined
+      }
+      registrar_indicacao: {
+        Args: { p_codigo: string; p_indicado_id: string }
+        Returns: string
+      }
       renovar_plano_cliente: {
         Args: { p_assinatura_id: string; p_forma_pagamento: string }
         Returns: Json
@@ -6892,6 +6905,10 @@ export type Database = {
       }
       user_has_active_redemption_appointment: {
         Args: { p_exclude_appointment_id?: string; p_user_id: string }
+        Returns: boolean
+      }
+      validar_identidade_duplicada: {
+        Args: { p_profile_id: string }
         Returns: boolean
       }
       validar_saque: {
