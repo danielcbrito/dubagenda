@@ -173,6 +173,19 @@ export function useSlotAvailability(
     const interval = setInterval(() => setNowTick(Date.now()), 30000);
     return () => clearInterval(interval);
   }, []);
+
+  // Ao mudar data/barbeiro/duração, resetar refs e slots para forçar load completo
+  // e evitar que a UI use dados stale do request anterior.
+  useEffect(() => {
+    isInitialLoadRef.current = true;
+    lastSlotsRef.current = [];
+    setSlots([]);
+    setOccupiedSlots([]);
+    if (selectedDate && barbeiroId && serviceDuration > 0) {
+      setLoading(true);
+    }
+  }, [selectedDate, barbeiroId, serviceDuration]);
+
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
