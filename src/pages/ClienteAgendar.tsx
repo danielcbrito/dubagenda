@@ -694,6 +694,14 @@ const ClienteAgendar = () => {
         return;
       }
       setAvailableRedemptions(redemptionsRes.data || []);
+
+      // Buscar créditos de indicação disponíveis (paralelo simples)
+      const { count: refCount } = await supabase
+        .from("creditos_indicacao")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", uid)
+        .eq("status", "disponivel");
+      setReferralCredits(refCount || 0);
     } catch (error) {
       console.error("Error loading redemptions:", error);
     }
