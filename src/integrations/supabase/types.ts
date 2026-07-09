@@ -1663,6 +1663,58 @@ export type Database = {
         }
         Relationships: []
       }
+      creditos_indicacao: {
+        Row: {
+          criado_em: string
+          id: string
+          indicacao_id: string
+          status: string
+          usado_em: string | null
+          usado_no_agendamento_id: string | null
+          user_id: string
+        }
+        Insert: {
+          criado_em?: string
+          id?: string
+          indicacao_id: string
+          status?: string
+          usado_em?: string | null
+          usado_no_agendamento_id?: string | null
+          user_id: string
+        }
+        Update: {
+          criado_em?: string
+          id?: string
+          indicacao_id?: string
+          status?: string
+          usado_em?: string | null
+          usado_no_agendamento_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "creditos_indicacao_indicacao_id_fkey"
+            columns: ["indicacao_id"]
+            isOneToOne: true
+            referencedRelation: "indicacoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "creditos_indicacao_usado_no_agendamento_id_fkey"
+            columns: ["usado_no_agendamento_id"]
+            isOneToOne: false
+            referencedRelation: "agendamentos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "creditos_indicacao_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cupom_usos: {
         Row: {
           agendamento_id: string | null
@@ -2655,6 +2707,105 @@ export type Database = {
             columns: ["barbeiro_id"]
             isOneToOne: false
             referencedRelation: "barbeiros_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      identidades_usadas: {
+        Row: {
+          cpf_hash: string | null
+          criado_em: string
+          email: string | null
+          id: string
+          primeiro_profile_id: string | null
+          telefone_hash: string | null
+        }
+        Insert: {
+          cpf_hash?: string | null
+          criado_em?: string
+          email?: string | null
+          id?: string
+          primeiro_profile_id?: string | null
+          telefone_hash?: string | null
+        }
+        Update: {
+          cpf_hash?: string | null
+          criado_em?: string
+          email?: string | null
+          id?: string
+          primeiro_profile_id?: string | null
+          telefone_hash?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "identidades_usadas_primeiro_profile_id_fkey"
+            columns: ["primeiro_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      indicacoes: {
+        Row: {
+          agendado_em: string | null
+          agendamento_qualificador_id: string | null
+          codigo_usado: string
+          confirmado_em: string | null
+          criado_em: string
+          id: string
+          indicado_id: string
+          indicador_id: string
+          liberado_em: string | null
+          motivo_invalidacao: string | null
+          status: string
+        }
+        Insert: {
+          agendado_em?: string | null
+          agendamento_qualificador_id?: string | null
+          codigo_usado: string
+          confirmado_em?: string | null
+          criado_em?: string
+          id?: string
+          indicado_id: string
+          indicador_id: string
+          liberado_em?: string | null
+          motivo_invalidacao?: string | null
+          status?: string
+        }
+        Update: {
+          agendado_em?: string | null
+          agendamento_qualificador_id?: string | null
+          codigo_usado?: string
+          confirmado_em?: string | null
+          criado_em?: string
+          id?: string
+          indicado_id?: string
+          indicador_id?: string
+          liberado_em?: string | null
+          motivo_invalidacao?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "indicacoes_agendamento_qualificador_id_fkey"
+            columns: ["agendamento_qualificador_id"]
+            isOneToOne: false
+            referencedRelation: "agendamentos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "indicacoes_indicado_id_fkey"
+            columns: ["indicado_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "indicacoes_indicador_id_fkey"
+            columns: ["indicador_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -4215,6 +4366,8 @@ export type Database = {
           endereco_uf: string | null
           id: string
           nome: string
+          referral_code: string | null
+          referred_by: string | null
           signup_origin: string | null
           telefone: string | null
           unidade_preferida_id: string | null
@@ -4238,6 +4391,8 @@ export type Database = {
           endereco_uf?: string | null
           id: string
           nome: string
+          referral_code?: string | null
+          referred_by?: string | null
           signup_origin?: string | null
           telefone?: string | null
           unidade_preferida_id?: string | null
@@ -4261,6 +4416,8 @@ export type Database = {
           endereco_uf?: string | null
           id?: string
           nome?: string
+          referral_code?: string | null
+          referred_by?: string | null
           signup_origin?: string | null
           telefone?: string | null
           unidade_preferida_id?: string | null
@@ -4273,6 +4430,13 @@ export type Database = {
             columns: ["barbearia_preferida_id"]
             isOneToOne: false
             referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profiles_referred_by_fkey"
+            columns: ["referred_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
