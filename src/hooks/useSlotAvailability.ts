@@ -862,6 +862,7 @@ export function useSlotAvailability(
   return {
     slots: enforcedSlots,
     loading,
+    hasLoaded,
     error,
     occupiedSlots,
     refreshSlots,
