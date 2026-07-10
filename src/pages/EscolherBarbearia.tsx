@@ -141,6 +141,8 @@ const EscolherBarbearia = () => {
 
   const isChangeMode = searchParams.get("mode") === "change";
   const isSearchMode = searchParams.get("mode") === "search";
+  const isInviteMode = searchParams.get("mode") === "invite";
+  const inviteRef = searchParams.get("ref") || "";
 
   // ── iOS install banner ──
   useEffect(() => {
