@@ -758,20 +758,28 @@ const Auth = () => {
     navigate("/");
   };
 
-  // ─────────── Shared "One-Question" shell ───────────
-  const Shell: React.FC<{
-    headerTitle: string;
-    title: string;
-    subtitle?: React.ReactNode;
-    stepKey: string;
-    children: React.ReactNode;
-    footer: React.ReactNode;
-    bottomHint?: React.ReactNode;
-  }> = (props) => (
-    <AuthShell {...props} kbOffset={kbOffset} onBack={handleBack} />
-  );
+  // Stable Shell/ContinueButton references — prevent full remount (and
+  // input focus loss / keyboard flicker) on every keystroke.
+  const handleBackRef = useRef(handleBack);
+  handleBackRef.current = handleBack;
+  const stableOnBack = useCallback(() => handleBackRef.current(), []);
+  const Shell = useMemo(() => {
+    const C: React.FC<{
+      headerTitle: string;
+      title: string;
+      subtitle?: React.ReactNode;
+      stepKey: string;
+      children: React.ReactNode;
+      footer: React.ReactNode;
+      bottomHint?: React.ReactNode;
+    }> = (props) => (
+      <AuthShell {...props} kbOffset={kbOffset} onBack={stableOnBack} />
+    );
+    return C;
+  }, [kbOffset, stableOnBack]);
 
   const ContinueButton = ContinueButtonBase;
+
 
 
   // ── Magic link sent screen ──
