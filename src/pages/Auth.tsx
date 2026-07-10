@@ -599,13 +599,13 @@ const Auth = () => {
       {/* Top bar: back + centered title */}
       <div
         className="relative flex-shrink-0 flex items-center justify-center px-4"
-        style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 1.5rem)", paddingBottom: "1rem" }}
+        style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 2.25rem)", paddingBottom: "1rem" }}
       >
         <button
           type="button"
           onClick={handleBack}
           className="absolute left-3 p-2 -m-2 text-foreground hover:text-foreground/70 transition-colors"
-          style={{ top: "calc(env(safe-area-inset-top, 0px) + 1.25rem)" }}
+          style={{ top: "calc(env(safe-area-inset-top, 0px) + 2rem)" }}
           aria-label="Voltar"
         >
           <BackArrow size={20} />
