@@ -164,7 +164,12 @@ export function useSlotAvailability(
   tenantId?: string | null
 ) {
   const [slots, setSlots] = useState<TimeSlot[]>([]);
-  const [loading, setLoading] = useState(false);
+  // Inicializa como `true` quando os inputs já estão prontos para evitar
+  // que a UI mostre "agenda cheia" no primeiro render antes do fetch iniciar.
+  const [loading, setLoading] = useState<boolean>(
+    () => Boolean(selectedDate && barbeiroId && serviceDuration > 0)
+  );
+  const [hasLoaded, setHasLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [occupiedSlots, setOccupiedSlots] = useState<OccupiedSlot[]>([]);
   const [nowTick, setNowTick] = useState(() => Date.now());
@@ -181,6 +186,7 @@ export function useSlotAvailability(
     lastSlotsRef.current = [];
     setSlots([]);
     setOccupiedSlots([]);
+    setHasLoaded(false);
     if (selectedDate && barbeiroId && serviceDuration > 0) {
       setLoading(true);
     }
@@ -309,6 +315,7 @@ export function useSlotAvailability(
       }
 
       setOccupiedSlots(responseOccupied);
+      setHasLoaded(true);
 
     } catch (err) {
       if (err instanceof Error && err.name === 'AbortError') {
@@ -321,6 +328,7 @@ export function useSlotAvailability(
       // Fallback: carregar direto do banco se Edge Function falhar
       console.log('[useSlotAvailability] Usando FALLBACK direto do banco...');
       await loadSlotsFromDatabase(dateStr, forceFullUpdate);
+      setHasLoaded(true);
     } finally {
       setLoading(false);
     }
@@ -854,6 +862,7 @@ export function useSlotAvailability(
   return {
     slots: enforcedSlots,
     loading,
+    hasLoaded,
     error,
     occupiedSlots,
     refreshSlots,
