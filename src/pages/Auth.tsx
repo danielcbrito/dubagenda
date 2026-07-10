@@ -57,6 +57,9 @@ const Auth = () => {
   const [otpToken, setOtpToken] = useState("");
   const [otpCooldown, setOtpCooldown] = useState(0);
   const [signupBusy, setSignupBusy] = useState(false);
+  const [cpfTaken, setCpfTaken] = useState(false);
+  const [checkingCpf, setCheckingCpf] = useState(false);
+  const cpfDebounceRef = useRef<ReturnType<typeof setTimeout>>();
 
   useEffect(() => {
     if (otpCooldown <= 0) return;
