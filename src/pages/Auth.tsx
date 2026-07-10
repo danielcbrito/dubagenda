@@ -472,6 +472,30 @@ const Auth = () => {
             user_id: userId,
           },
         }).catch(() => {});
+
+        // Registra a indicação imediatamente — não depende de CompletarPerfil.
+        // Assim o indicador vê "criou conta" em tempo real no painel.
+        try {
+          const pendingRef =
+            sessionStorage.getItem("pending_referral_code") ||
+            searchParams.get("ref") ||
+            "";
+          if (pendingRef) {
+            const sid =
+              sessionStorage.getItem("pending_referral_session_id") ||
+              localStorage.getItem("dub_ref_session_id") ||
+              null;
+            await supabase.rpc("registrar_indicacao", {
+              p_indicado_id: userId,
+              p_codigo: pendingRef.trim().toUpperCase(),
+              p_session_id: sid,
+            });
+            sessionStorage.removeItem("pending_referral_code");
+            sessionStorage.removeItem("pending_referral_session_id");
+          }
+        } catch (err) {
+          console.warn("Falha ao registrar indicação:", err);
+        }
       }
 
       // Nenhuma conta precisa mais confirmar email — força login com senha
