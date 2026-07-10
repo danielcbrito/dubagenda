@@ -184,7 +184,7 @@ export default function ClienteIndicacoes() {
   }, [userId, loadNames, recomputeMonth]);
 
   const referralLink = useMemo(
-    () => (referralCode ? `${getInviteOrigin()}/i/${referralCode}` : ""),
+    () => (referralCode ? `${getInviteOrigin()}/barbearia-dub/${referralCode}` : ""),
     [referralCode]
   );
   const prettyLink = referralLink.replace(/^https?:\/\//, "");

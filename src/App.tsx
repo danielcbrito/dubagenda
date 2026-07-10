@@ -105,7 +105,7 @@ function MaintenanceWrapper({ children }: { children: React.ReactNode }) {
 
   // Check if current route is public (before login)
   const isPublicRoute = PUBLIC_ROUTES.some(route => 
-    location.pathname === route || location.pathname.startsWith('/auth') || location.pathname.startsWith('/b/') || location.pathname.startsWith('/barbearias') || location.pathname.startsWith('/i/')
+    location.pathname === route || location.pathname.startsWith('/auth') || location.pathname.startsWith('/b/') || location.pathname.startsWith('/barbearias') || location.pathname.startsWith('/i/') || location.pathname.startsWith('/barbearia-dub/')
   );
 
   // Also treat /:slug (barbershop public pages) as public
@@ -238,6 +238,7 @@ function AuthRedirectGuard({ children }: { children: React.ReactNode }) {
       location.pathname.startsWith('/auth') ||
       location.pathname.startsWith('/b/') ||
       location.pathname.startsWith('/i/') ||
+      location.pathname.startsWith('/barbearia-dub/') ||
       location.pathname === '/esqueci-senha' ||
       location.pathname === '/resetar-senha' ||
       location.pathname === '/verificar-email' ||
@@ -390,6 +391,7 @@ function AppRoutes() {
               <Route path="/barbearias" element={<BarbershopsCityGuide />} />
               <Route path="/barbearias/:cidade" element={<BarbershopsCityGuide />} />
               <Route path="/i/:code" element={<ConviteRedirect />} />
+              <Route path="/barbearia-dub/:code" element={<ConviteRedirect />} />
               <Route path="/:slug" element={<BarbershopPublic />} />
               <Route path="/flowchart" element={<Flowchart />} />
               <Route path="/responsive-preview" element={<ResponsivePreview />} />
