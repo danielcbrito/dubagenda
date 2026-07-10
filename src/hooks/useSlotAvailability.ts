@@ -164,7 +164,11 @@ export function useSlotAvailability(
   tenantId?: string | null
 ) {
   const [slots, setSlots] = useState<TimeSlot[]>([]);
-  const [loading, setLoading] = useState(false);
+  // Inicializa como `true` quando os inputs já estão prontos para evitar
+  // que a UI mostre "agenda cheia" no primeiro render antes do fetch iniciar.
+  const [loading, setLoading] = useState<boolean>(
+    () => Boolean(selectedDate && barbeiroId && serviceDuration > 0)
+  );
   const [error, setError] = useState<string | null>(null);
   const [occupiedSlots, setOccupiedSlots] = useState<OccupiedSlot[]>([]);
   const [nowTick, setNowTick] = useState(() => Date.now());
