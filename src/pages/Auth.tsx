@@ -47,9 +47,11 @@ const Auth = () => {
     if (!isSignup) setLastAccount(getLastAccount());
   }, [isSignup]);
 
-  // ── Signup multi-step (WhatsApp OTP first, then email+password) ──
-  type SignupStep = "phone" | "otp" | "email" | "password";
-  const [signupStep, setSignupStep] = useState<SignupStep>("phone");
+  // ── Signup multi-step: Nome → CPF → Email → WhatsApp → OTP → Senha ──
+  type SignupStep = "nome" | "cpf" | "email" | "phone" | "otp" | "password";
+  const [signupStep, setSignupStep] = useState<SignupStep>("nome");
+  const [nome, setNome] = useState("");
+  const [cpfDigits, setCpfDigits] = useState(""); // 11 digits, no mask
   const [phoneDigits, setPhoneDigits] = useState(""); // BR digits (10 or 11, no country code)
   const [otpCode, setOtpCode] = useState("");
   const [otpToken, setOtpToken] = useState("");
@@ -367,6 +369,28 @@ const Auth = () => {
     return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
   };
 
+  const maskCpf = (digits: string) => {
+    const d = digits.replace(/\D/g, "").slice(0, 11);
+    if (d.length <= 3) return d;
+    if (d.length <= 6) return `${d.slice(0, 3)}.${d.slice(3)}`;
+    if (d.length <= 9) return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6)}`;
+    return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9)}`;
+  };
+
+  // Full CPF validation with checksum digits
+  const isValidCpf = (digits: string) => {
+    const d = digits.replace(/\D/g, "");
+    if (d.length !== 11) return false;
+    if (/^(\d)\1{10}$/.test(d)) return false;
+    const calc = (base: number) => {
+      let sum = 0;
+      for (let i = 0; i < base; i++) sum += parseInt(d[i]) * (base + 1 - i);
+      const r = (sum * 10) % 11;
+      return r === 10 ? 0 : r;
+    };
+    return calc(9) === parseInt(d[9]) && calc(10) === parseInt(d[10]);
+  };
+
   const handleSendOtp = async () => {
     const digits = phoneDigits.replace(/\D/g, "");
     if (digits.length < 10 || digits.length > 11) {
@@ -423,7 +447,7 @@ const Auth = () => {
         return;
       }
       setOtpToken(data.verification_token);
-      setSignupStep("email");
+      setSignupStep("password");
       toast.success("WhatsApp verificado!");
     } catch {
       toast.error("Erro ao verificar o código");
@@ -464,7 +488,8 @@ const Auth = () => {
             email: validEmail,
             password: senha,
             signup_origin: signupOrigin,
-            nome: validEmail.split("@")[0],
+            nome: nome.trim() || validEmail.split("@")[0],
+            cpf: cpfDigits.replace(/\D/g, ""),
           },
         }
       );
@@ -481,6 +506,19 @@ const Auth = () => {
       }
 
       const userId = createRes.user_id as string;
+
+      // Best-effort: garantir nome + CPF persistidos no profile (idempotente).
+      try {
+        await supabase
+          .from("profiles")
+          .update({
+            nome: nome.trim() || validEmail.split("@")[0],
+            cpf: cpfDigits.replace(/\D/g, "") || null,
+          })
+          .eq("id", userId);
+      } catch {
+        /* ignore — perfil será completado depois se falhar */
+      }
 
       // Registra a indicação imediatamente — não depende de CompletarPerfil.
       try {
@@ -571,9 +609,11 @@ const Auth = () => {
       return;
     }
     if (isSignup) {
-      if (signupStep === "password") return setSignupStep("email");
-      if (signupStep === "email") return setSignupStep("otp");
+      if (signupStep === "password") return setSignupStep("otp");
       if (signupStep === "otp") return setSignupStep("phone");
+      if (signupStep === "phone") return setSignupStep("email");
+      if (signupStep === "email") return setSignupStep("cpf");
+      if (signupStep === "cpf") return setSignupStep("nome");
       return navigate("/");
     }
     if (step === "password") {
@@ -731,6 +771,83 @@ const Auth = () => {
       </>
     );
 
+    // Step: NOME
+    if (signupStep === "nome") {
+      const canContinue = nome.trim().length >= 2;
+      return (
+        <Shell
+          headerTitle="Criar conta"
+          stepKey="s-nome"
+          title="Qual é o seu nome?"
+          subtitle="Como você quer ser chamado."
+          footer={
+            <ContinueButton
+              onClick={() => setSignupStep("cpf")}
+              type="button"
+              disabled={!canContinue}
+              label="Continuar"
+            />
+          }
+          bottomHint={bottomLogin}
+        >
+          <Input
+            name="nome"
+            type="text"
+            required
+            autoFocus
+            value={nome}
+            onChange={(e) => setNome(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter" && canContinue) setSignupStep("cpf"); }}
+            className={inputClasses}
+            placeholder="Seu nome completo"
+            autoComplete="name"
+            maxLength={80}
+          />
+        </Shell>
+      );
+    }
+
+    // Step: CPF
+    if (signupStep === "cpf") {
+      const canContinue = isValidCpf(cpfDigits);
+      return (
+        <Shell
+          headerTitle="Criar conta"
+          stepKey="s-cpf"
+          title="Qual é o seu CPF?"
+          subtitle="Usado somente para identificar sua conta."
+          footer={
+            <ContinueButton
+              onClick={() => setSignupStep("email")}
+              type="button"
+              disabled={!canContinue}
+              label="Continuar"
+            />
+          }
+          bottomHint={bottomLogin}
+        >
+          <Input
+            name="cpf"
+            type="text"
+            required
+            autoFocus
+            value={maskCpf(cpfDigits)}
+            onChange={(e) => setCpfDigits(e.target.value.replace(/\D/g, "").slice(0, 11))}
+            onKeyDown={(e) => { if (e.key === "Enter" && canContinue) setSignupStep("email"); }}
+            className={inputClasses}
+            placeholder="000.000.000-00"
+            autoComplete="off"
+            inputMode="numeric"
+          />
+          {cpfDigits.length === 11 && !canContinue && (
+            <p className="text-[12px] text-destructive font-medium mt-2 px-1">
+              CPF inválido. Verifique os dígitos.
+            </p>
+          )}
+        </Shell>
+      );
+    }
+
     // Step: PHONE
     if (signupStep === "phone") {
       return (
@@ -824,7 +941,7 @@ const Auth = () => {
           subtitle="Usaremos para você acessar sua conta."
           footer={
             <ContinueButton
-              onClick={() => setSignupStep("password")}
+              onClick={() => setSignupStep("phone")}
               type="button"
               disabled={!canContinue}
               label="Continuar"
@@ -840,7 +957,7 @@ const Auth = () => {
               autoFocus
               value={email}
               onChange={(e) => { setEmail(e.target.value); setEmailExists(false); }}
-              onKeyDown={(e) => { if (e.key === "Enter" && canContinue) setSignupStep("password"); }}
+              onKeyDown={(e) => { if (e.key === "Enter" && canContinue) setSignupStep("phone"); }}
               className={inputClasses}
               placeholder="seu@email.com"
               autoComplete="email"
