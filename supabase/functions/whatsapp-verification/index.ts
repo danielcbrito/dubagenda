@@ -209,8 +209,6 @@ Deno.serve(async (req) => {
       await supabase.from("profiles").update({ telefone: phone }).eq("id", userId);
       await supabase.from("whatsapp_signup_otp").update({ verification_token: null }).eq("id", row.id);
 
-      // Auto-confirma email — a partir de agora nenhuma conta exige confirmação de email
-      // (a verificação de identidade já foi feita via OTP de WhatsApp)
       try {
         await supabase.auth.admin.updateUserById(userId, { email_confirm: true });
       } catch (e) {
@@ -218,6 +216,71 @@ Deno.serve(async (req) => {
       }
 
       return jsonResponse({ success: true });
+    }
+
+    // =============================================
+    // ACTION: signup_create_account
+    // Cria a conta 100% via admin API — sem envio de email de confirmação.
+    // Requer OTP de WhatsApp já validado (verification_token).
+    // =============================================
+    if (action === "signup_create_account") {
+      const phone = normalizePhone(data.phone || "");
+      const token = String(data.verification_token || "");
+      const email = String(data.email || "").trim().toLowerCase();
+      const password = String(data.password || "");
+      const signupOrigin = String(data.signup_origin || "cliente");
+      const nome = String(data.nome || email.split("@")[0] || "Cliente");
+
+      if (!phone || !token || !email || !password) {
+        return jsonResponse({ success: false, error: "Dados incompletos" }, 400);
+      }
+      if (password.length < 6) {
+        return jsonResponse({ success: false, error: "Senha muito curta" }, 400);
+      }
+
+      const { data: row } = await supabase
+        .from("whatsapp_signup_otp")
+        .select("id, verified_at, verification_token")
+        .eq("phone", phone)
+        .eq("verification_token", token)
+        .not("verified_at", "is", null)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (!row) return jsonResponse({ success: false, error: "Verificação de WhatsApp não encontrada" }, 400);
+      const ageMin = (Date.now() - new Date(row.verified_at as string).getTime()) / 60000;
+      if (ageMin > 30) return jsonResponse({ success: false, error: "Verificação expirada. Refaça o OTP." }, 400);
+
+      // Cria usuário JÁ com email confirmado — impede envio de email pelo GoTrue.
+      const { data: created, error: createErr } = await supabase.auth.admin.createUser({
+        email,
+        password,
+        email_confirm: true,
+        user_metadata: {
+          signup_origin: signupOrigin,
+          telefone: phone,
+          phone_verified_via_whatsapp: true,
+          nome,
+        },
+      });
+
+      if (createErr || !created?.user) {
+        const msg = (createErr?.message || "").toLowerCase();
+        if (msg.includes("already") || msg.includes("registered") || msg.includes("exists")) {
+          return jsonResponse({ success: false, error: "Este email já possui uma conta", code: "email_exists" }, 409);
+        }
+        console.error("[signup_create_account] createUser failed", createErr);
+        return jsonResponse({ success: false, error: "Erro ao criar conta" }, 500);
+      }
+
+      const userId = created.user.id;
+
+      // Garante telefone e consome token
+      await supabase.from("profiles").update({ telefone: phone }).eq("id", userId);
+      await supabase.from("whatsapp_signup_otp").update({ verification_token: null }).eq("id", row.id);
+
+      return jsonResponse({ success: true, user_id: userId });
     }
 
     // =============================================
