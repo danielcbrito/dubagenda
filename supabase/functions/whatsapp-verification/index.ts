@@ -21,6 +21,25 @@ function formatPhoneForWhatsApp(phone: string): string {
   return `${cleaned}@s.whatsapp.net`;
 }
 
+/** Normaliza telefone BR para dígitos com DDI 55. */
+function normalizePhone(phone: string): string {
+  let cleaned = String(phone || '').replace(/\D/g, '');
+  if (!cleaned) return '';
+  if (!cleaned.startsWith('55')) cleaned = '55' + cleaned;
+  return cleaned;
+}
+
+function jsonResponse(body: unknown, status = 200): Response {
+  return new Response(JSON.stringify(body), {
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+    status,
+  });
+}
+
+function generateVerificationToken(): string {
+  return crypto.randomUUID().replace(/-/g, '') + crypto.randomUUID().replace(/-/g, '');
+}
+
 /**
  * Gera um código numérico de 6 dígitos
  */
@@ -40,6 +59,166 @@ Deno.serve(async (req) => {
 
     const { action, ...data } = await req.json();
     console.log(`[whatsapp-verification] Action: ${action}`);
+
+    // =============================================
+    // PRE-SIGNUP OTP: telefone -> código -> token
+    // Usa a função existente para evitar limite de Edge Functions do projeto.
+    // =============================================
+    if (action === "signup_send") {
+      const phone = normalizePhone(data.phone || "");
+      if (!phone || phone.length < 12 || phone.length > 13) {
+        return jsonResponse({ success: false, error: "Número de WhatsApp inválido" }, 400);
+      }
+
+      const { data: last } = await supabase
+        .from("whatsapp_signup_otp")
+        .select("created_at")
+        .eq("phone", phone)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (last?.created_at) {
+        const diff = (Date.now() - new Date(last.created_at).getTime()) / 1000;
+        if (diff < 60) {
+          return jsonResponse({
+            success: false,
+            error: `Aguarde ${Math.ceil(60 - diff)}s para reenviar.`,
+            cooldown_remaining: Math.ceil(60 - diff),
+          }, 429);
+        }
+      }
+
+      await supabase
+        .from("whatsapp_signup_otp")
+        .update({ expires_at: new Date().toISOString() })
+        .eq("phone", phone)
+        .is("verified_at", null);
+
+      const code = generateCode();
+      const { error: insertError } = await supabase
+        .from("whatsapp_signup_otp")
+        .insert({
+          phone,
+          code,
+          expires_at: new Date(Date.now() + 5 * 60 * 1000).toISOString(),
+        });
+
+      if (insertError) {
+        console.error("[whatsapp-verification] signup_send insert error:", insertError);
+        return jsonResponse({ success: false, error: "Erro ao gerar código" }, 500);
+      }
+
+      const { data: webhookConfig } = await supabase
+        .from("webhook_config")
+        .select("whatsapp_webhook_url, whatsapp_ativo, webhook_url, ativo")
+        .order("updated_at", { ascending: false })
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      const webhookUrl = webhookConfig?.whatsapp_webhook_url || webhookConfig?.webhook_url;
+      const webhookAtivo = webhookConfig?.whatsapp_webhook_url ? webhookConfig?.whatsapp_ativo : webhookConfig?.ativo;
+
+      if (!webhookUrl || !webhookAtivo) {
+        console.error("[whatsapp-verification] signup_send webhook not configured");
+        return jsonResponse({ success: false, error: "Envio por WhatsApp indisponível no momento" }, 503);
+      }
+
+      const webhookPayload = {
+        evento: "verificacao_cadastro",
+        cliente_nome: "Cliente",
+        telefone: formatPhoneForWhatsApp(phone),
+        codigo: code,
+        mensagem: `Ola! Seu codigo de verificacao DUB e ${code}. Expira em 5 minutos. Nao compartilhe.`,
+        timestamp: new Date().toISOString(),
+      };
+
+      EdgeRuntime.waitUntil((async () => {
+        try {
+          const response = await fetch(webhookUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(webhookPayload),
+          });
+          if (!response.ok) {
+            console.warn("[whatsapp-verification] signup_send webhook failed:", response.status, await response.text());
+          }
+        } catch (err) {
+          console.warn("[whatsapp-verification] signup_send webhook error:", err);
+        }
+      })());
+
+      return jsonResponse({ success: true, message: "Código enviado para seu WhatsApp" });
+    }
+
+    if (action === "signup_verify") {
+      const phone = normalizePhone(data.phone || "");
+      const code = String(data.code || "").trim();
+      if (!phone || !/^\d{6}$/.test(code)) {
+        return jsonResponse({ success: false, error: "Dados inválidos" }, 400);
+      }
+
+      const { data: row } = await supabase
+        .from("whatsapp_signup_otp")
+        .select("*")
+        .eq("phone", phone)
+        .is("verified_at", null)
+        .gt("expires_at", new Date().toISOString())
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (!row) return jsonResponse({ success: false, error: "Código expirado. Solicite um novo." }, 400);
+
+      const attempts = (row.attempts || 0) + 1;
+      await supabase.from("whatsapp_signup_otp").update({ attempts }).eq("id", row.id);
+
+      if (row.code !== code) {
+        if (attempts >= 5) {
+          await supabase.from("whatsapp_signup_otp").update({ expires_at: new Date().toISOString() }).eq("id", row.id);
+          return jsonResponse({ success: false, error: "Muitas tentativas. Solicite um novo código." }, 400);
+        }
+        return jsonResponse({ success: false, error: `Código incorreto. Restam ${5 - attempts} tentativa(s).` }, 400);
+      }
+
+      const token = generateVerificationToken();
+      await supabase
+        .from("whatsapp_signup_otp")
+        .update({ verified_at: new Date().toISOString(), verification_token: token })
+        .eq("id", row.id);
+
+      return jsonResponse({ success: true, phone, verification_token: token });
+    }
+
+    if (action === "signup_consume") {
+      const phone = normalizePhone(data.phone || "");
+      const token = String(data.verification_token || "");
+      const userId = String(data.user_id || "");
+      if (!phone || !token || !userId) {
+        return jsonResponse({ success: false, error: "Dados incompletos" }, 400);
+      }
+
+      const { data: row } = await supabase
+        .from("whatsapp_signup_otp")
+        .select("id, verified_at, verification_token")
+        .eq("phone", phone)
+        .eq("verification_token", token)
+        .not("verified_at", "is", null)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (!row) return jsonResponse({ success: false, error: "Verificação não encontrada" }, 400);
+
+      const ageMin = (Date.now() - new Date(row.verified_at as string).getTime()) / 60000;
+      if (ageMin > 30) return jsonResponse({ success: false, error: "Verificação expirada" }, 400);
+
+      await supabase.from("profiles").update({ telefone: phone }).eq("id", userId);
+      await supabase.from("whatsapp_signup_otp").update({ verification_token: null }).eq("id", row.id);
+
+      return jsonResponse({ success: true });
+    }
 
     // =============================================
     // ACTION: generate - Gerar e enviar código

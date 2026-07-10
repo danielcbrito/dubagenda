@@ -373,8 +373,8 @@ const Auth = () => {
     }
     setSignupBusy(true);
     try {
-      const { data, error } = await supabase.functions.invoke("whatsapp-signup-otp", {
-        body: { action: "send", phone: digits },
+      const { data, error } = await supabase.functions.invoke("whatsapp-verification", {
+        body: { action: "signup_send", phone: digits },
       });
       if (error) throw error;
       if (!data?.success) {
@@ -386,8 +386,14 @@ const Auth = () => {
       setSignupStep("otp");
       setOtpCooldown(60);
       toast.success("Código enviado para seu WhatsApp");
-    } catch (err) {
-      toast.error("Erro ao enviar o código. Tente novamente.");
+    } catch (err: any) {
+      const context = err?.context ? await err.context.text().catch(() => "") : "";
+      try {
+        const parsed = context ? JSON.parse(context) : null;
+        toast.error(parsed?.error || "Erro ao enviar o código. Tente novamente.");
+      } catch {
+        toast.error("Erro ao enviar o código. Tente novamente.");
+      }
     } finally {
       setSignupBusy(false);
     }
@@ -400,8 +406,8 @@ const Auth = () => {
     }
     setSignupBusy(true);
     try {
-      const { data, error } = await supabase.functions.invoke("whatsapp-signup-otp", {
-        body: { action: "verify", phone: phoneDigits.replace(/\D/g, ""), code: otpCode },
+      const { data, error } = await supabase.functions.invoke("whatsapp-verification", {
+        body: { action: "signup_verify", phone: phoneDigits.replace(/\D/g, ""), code: otpCode },
       });
       if (error) throw error;
       if (!data?.success) {
@@ -457,9 +463,9 @@ const Auth = () => {
 
       const userId = signUpData.user?.id;
       if (userId) {
-        supabase.functions.invoke("whatsapp-signup-otp", {
+        supabase.functions.invoke("whatsapp-verification", {
           body: {
-            action: "consume",
+            action: "signup_consume",
             phone: phoneDigits.replace(/\D/g, ""),
             verification_token: otpToken,
             user_id: userId,
