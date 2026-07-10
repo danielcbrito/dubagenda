@@ -17,6 +17,7 @@ import { RefreshRequiredScreen } from "@/components/RefreshRequiredScreen";
 import { supabase } from "@/integrations/supabase/client";
 import { lazy, Suspense } from "react";
 import { SupportChatBubble } from "@/components/support/SupportChatBubble";
+import { getVerifiedAuthUser } from "@/utils/authSession";
 
 // Lazy-loaded routes for reduced initial bundle
 const Index = lazy(() => import("./pages/Index"));
@@ -209,11 +210,11 @@ function AuthSessionGuard({ children }: { children: React.ReactNode }) {
       }
     });
 
-    supabase.auth.getSession().then(({ data, error }) => {
-      if (error) {
-        console.warn('[Auth] Erro ao verificar sessão (não deslogando):', error.message);
-      } else if (data.session) {
-        console.log('[Auth] Sessão ativa encontrada');
+    getVerifiedAuthUser().then((user) => {
+      if (user) {
+        console.log('[Auth] Sessão válida encontrada');
+      } else {
+        queryClient.clear();
       }
     });
 
@@ -268,14 +269,8 @@ function AuthRedirectGuard({ children }: { children: React.ReactNode }) {
     // Verificar sessão para redirecionar da landing
     const check = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session) {
-          navigate('/cliente', { replace: true });
-          return;
-        }
-
-        const { data: { session: refreshed } } = await supabase.auth.refreshSession();
-        if (refreshed) {
+        const user = await getVerifiedAuthUser();
+        if (user) {
           navigate('/cliente', { replace: true });
           return;
         }

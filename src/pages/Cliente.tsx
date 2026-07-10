@@ -8,6 +8,7 @@ import { useDataError } from "@/hooks/useDataError";
 import { useBlockedBarbers } from "@/hooks/useBlockedBarbers";
 
 import { supabase } from "@/integrations/supabase/client";
+import { getVerifiedAuthUser } from "@/utils/authSession";
 
 import { PointsDetailModal } from "@/components/PointsDetailModal";
 import { PendingPaymentCard } from "@/components/PendingPaymentCard";
@@ -86,8 +87,12 @@ const fetchShopData = async (tenantId: string) => {
 
 // ─── Profile query function (extracted for reuse) ───
 const fetchProfileData = async (userId: string) => {
-  const { data: prof, error } = await supabase.from("profiles").select("*").eq("id", userId).single();
+  const { data: prof, error } = await supabase.from("profiles").select("*").eq("id", userId).maybeSingle();
   if (error) throw error;
+  if (!prof) {
+    await supabase.auth.signOut({ scope: "local" });
+    throw new Error("Sessão inválida. Entre novamente.");
+  }
 
   let preferredShop: { id: string; nome: string } | null = null;
   const tenantId = prof?.barbearia_preferida_id;
@@ -861,14 +866,14 @@ const Cliente = () => {
   }, [user, invalidateAppointments, invalidateLoyalty, invalidateShop]);
 
   const checkAuth = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    
-    if (!session) {
+    const user = await getVerifiedAuthUser();
+
+    if (!user) {
       navigate("/auth");
       return;
     }
 
-    setUser(session.user);
+    setUser(user);
   };
 
 

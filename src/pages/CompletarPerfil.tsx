@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Loader2, User, Phone } from "lucide-react";
 import { motion } from "framer-motion";
 import { formatPhone, validatePhone } from "@/lib/validators";
+import { getVerifiedAuthUser } from "@/utils/authSession";
 
 const CompletarPerfil = () => {
   const navigate = useNavigate();
@@ -21,18 +22,18 @@ const CompletarPerfil = () => {
 
   useEffect(() => {
     const check = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
+      const user = await getVerifiedAuthUser();
+      if (!user) {
         navigate("/auth", { replace: true });
         return;
       }
 
-      setUserId(session.user.id);
+      setUserId(user.id);
 
       const { data: profile } = await supabase
         .from("profiles")
         .select("nome, telefone, barbearia_preferida_id")
-        .eq("id", session.user.id)
+        .eq("id", user.id)
         .maybeSingle();
 
       if (profile?.nome && profile?.telefone) {

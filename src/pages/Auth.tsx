@@ -10,6 +10,7 @@ import { BackArrow } from "@/components/ui/back-arrow";
 import { SupportChatBubble } from "@/components/support/SupportChatBubble";
 import { motion, AnimatePresence } from "framer-motion";
 import { getLastAccount, saveLastAccount, clearLastAccount, type LastAccount } from "@/utils/lastAccount";
+import { getVerifiedAuthUser } from "@/utils/authSession";
 
 const emailSchema = z.string().trim().email("Email inválido").max(255);
 const passwordSchema = z.string().min(1, "Senha é obrigatória");
@@ -104,9 +105,9 @@ const Auth = () => {
     if (verified === "true" || verified === "whatsapp") {
       toast.success("Conta confirmada com sucesso! Faça login para continuar.", { duration: 5000 });
     }
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user?.email_confirmed_at) {
-        checkUserRoleAndRedirect(session.user.id);
+    getVerifiedAuthUser().then((user) => {
+      if (user?.email_confirmed_at) {
+        checkUserRoleAndRedirect(user.id);
       }
     });
   }, [searchParams]);
@@ -373,6 +374,12 @@ const Auth = () => {
     }
     setSignupBusy(true);
     try {
+      const existingUser = await getVerifiedAuthUser();
+      if (existingUser) {
+        await checkUserRoleAndRedirect(existingUser.id);
+        return;
+      }
+
       const { data, error } = await supabase.functions.invoke("whatsapp-verification", {
         body: { action: "signup_send", phone: digits },
       });
@@ -453,6 +460,7 @@ const Auth = () => {
             signup_origin: signupOrigin,
             telefone: phoneNormalized,
             phone_verified_via_whatsapp: true,
+            nome: validEmail.split("@")[0],
           },
         },
       });
