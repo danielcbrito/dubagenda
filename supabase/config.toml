@@ -51,6 +51,6 @@ verify_jwt = false
 [functions.ai-security-monitor]
 verify_jwt = false
 
-[functions.whatsapp-signup-otp]
+[functions.whatsapp-verification]
 verify_jwt = false
 
