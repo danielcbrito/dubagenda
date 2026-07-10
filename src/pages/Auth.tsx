@@ -39,6 +39,12 @@ const Auth = () => {
   // Login sheet state
   const [showLoginSheet, setShowLoginSheet] = useState(false);
 
+  // Quick-access "last account" card
+  const [lastAccount, setLastAccount] = useState<LastAccount | null>(null);
+  useEffect(() => {
+    if (!isSignup) setLastAccount(getLastAccount());
+  }, [isSignup]);
+
   const passwordRef = useRef<HTMLInputElement>(null);
 
   // Auto-check session + prefill email from redirects
