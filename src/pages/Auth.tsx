@@ -5,12 +5,13 @@ import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { z } from "zod";
-import { Loader2, Eye, EyeOff, Mail, X } from "lucide-react";
+import { Loader2, Eye, EyeOff, Mail } from "lucide-react";
 import { BackArrow } from "@/components/ui/back-arrow";
 import { SupportChatBubble } from "@/components/support/SupportChatBubble";
 import { motion, AnimatePresence } from "framer-motion";
 import { getLastAccount, saveLastAccount, clearLastAccount, type LastAccount } from "@/utils/lastAccount";
 import { getVerifiedAuthUser } from "@/utils/authSession";
+import logoDub from "@/assets/logo-dub.png";
 
 const emailSchema = z.string().trim().email("Email inválido").max(255);
 const passwordSchema = z.string().min(1, "Senha é obrigatória");
