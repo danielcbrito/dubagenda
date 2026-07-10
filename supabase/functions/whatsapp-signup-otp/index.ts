@@ -200,10 +200,10 @@ Deno.serve(async (req) => {
       const ageMin = (Date.now() - new Date(row.verified_at as string).getTime()) / 60000;
       if (ageMin > 30) return json({ success: false, error: "Verificação expirada" }, 400);
 
-      // Marca perfil como WhatsApp verificado
+      // Marca telefone do perfil (verificado por OTP)
       await supabase
         .from("profiles")
-        .update({ whatsapp: phone, whatsapp_verified: true })
+        .update({ telefone: phone })
         .eq("id", userId);
 
       // Invalida o token (não pode ser reutilizado)
