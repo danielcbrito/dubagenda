@@ -15,6 +15,7 @@ interface Indicacao {
   status: string;
   criado_em: string;
   indicado_nome?: string | null;
+  indicado_email?: string | null;
 }
 
 const STATUS_META: Record<string, { label: string; color: string; Icon: any }> = {
