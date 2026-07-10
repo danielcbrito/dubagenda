@@ -599,7 +599,7 @@ const Auth = () => {
       {/* Top bar: back + centered title */}
       <div
         className="relative flex-shrink-0 flex items-center justify-center px-4"
-        style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 1rem)", paddingBottom: "1rem" }}
+        style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 1.15rem)", paddingBottom: "1rem" }}
       >
         <button
           type="button"
