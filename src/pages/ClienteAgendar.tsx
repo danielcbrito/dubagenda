@@ -2729,7 +2729,7 @@ const ClienteAgendar = () => {
                 </p>
               </div>
 
-              {loadingSlots || (availableSlots.length === 0 && !!selectedBarber && !!selectedDate) ? (
+              {loadingSlots || !slotsHasLoaded ? (
                 <div className="bg-card border border-border rounded-2xl p-8 text-center">
                   <div className="w-12 h-12 rounded-full bg-primary/20 mx-auto flex items-center justify-center mb-4">
                     <Clock className="w-6 h-6 text-primary animate-spin" />
