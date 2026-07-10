@@ -833,7 +833,12 @@ const Auth = () => {
 
     // Step: CPF
     if (signupStep === "cpf") {
-      const canContinue = isValidCpf(cpfDigits);
+      const cpfValid = isValidCpf(cpfDigits);
+      const canContinue = cpfValid && !cpfTaken && !checkingCpf;
+      const goToLogin = () => {
+        setSignupStep("nome");
+        navigate("/auth?mode=login", { replace: true });
+      };
       return (
         <Shell
           headerTitle="Criar conta"
@@ -863,14 +868,27 @@ const Auth = () => {
             autoComplete="off"
             inputMode="numeric"
           />
-          {cpfDigits.length === 11 && !canContinue && (
+          {cpfDigits.length === 11 && !cpfValid && (
             <p className="text-[12px] text-destructive font-medium mt-2 px-1">
               CPF inválido. Verifique os dígitos.
+            </p>
+          )}
+          {cpfValid && cpfTaken && (
+            <p className="text-[13px] text-destructive font-medium mt-2 px-1">
+              CPF já cadastrado. Faça login para continuar.{" "}
+              <button
+                type="button"
+                onClick={goToLogin}
+                className="underline underline-offset-2 font-semibold"
+              >
+                Entrar agora
+              </button>
             </p>
           )}
         </Shell>
       );
     }
+
 
     // Step: PHONE
     if (signupStep === "phone") {
