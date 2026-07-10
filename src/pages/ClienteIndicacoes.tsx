@@ -294,8 +294,8 @@ export default function ClienteIndicacoes() {
               <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60 mb-1.5">
                 Seu link de convite
               </p>
-              <div className="rounded-lg bg-muted/50 border border-border/30 px-3 py-2.5 text-[13px] font-mono text-foreground break-all">
-                {referralLink || "—"}
+              <div className="rounded-lg bg-muted/50 border border-border/30 px-3 py-2.5 text-[14px] font-mono font-medium text-foreground break-all">
+                {referralLink ? prettyLink : "—"}
               </div>
             </div>
 
