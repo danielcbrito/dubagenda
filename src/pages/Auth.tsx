@@ -45,6 +45,21 @@ const Auth = () => {
     if (!isSignup) setLastAccount(getLastAccount());
   }, [isSignup]);
 
+  // ── Signup multi-step (WhatsApp OTP first, then email+password) ──
+  type SignupStep = "phone" | "otp" | "account";
+  const [signupStep, setSignupStep] = useState<SignupStep>("phone");
+  const [phoneDigits, setPhoneDigits] = useState(""); // BR digits (10 or 11, no country code)
+  const [otpCode, setOtpCode] = useState("");
+  const [otpToken, setOtpToken] = useState("");
+  const [otpCooldown, setOtpCooldown] = useState(0);
+  const [signupBusy, setSignupBusy] = useState(false);
+
+  useEffect(() => {
+    if (otpCooldown <= 0) return;
+    const t = setTimeout(() => setOtpCooldown(c => c - 1), 1000);
+    return () => clearTimeout(t);
+  }, [otpCooldown]);
+
   const passwordRef = useRef<HTMLInputElement>(null);
 
   // Auto-check session + prefill email from redirects
