@@ -109,29 +109,21 @@ Deno.serve(async (req) => {
         return jsonResponse({ success: false, error: "Erro ao gerar código" }, 500);
       }
 
-      const { data: webhookConfig } = await supabase
-        .from("webhook_config")
-        .select("whatsapp_webhook_url, whatsapp_ativo, webhook_url, ativo")
-        .order("updated_at", { ascending: false })
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
+      // Webhook fixo dedicado ao OTP de cadastro (n8n)
+      const webhookUrl = "https://n8n-n8n.xcyr4f.easypanel.host/webhook/1b63ce24-4d00-4b74-9eac-104fdd812e01";
 
-      const webhookUrl = webhookConfig?.whatsapp_webhook_url || webhookConfig?.webhook_url;
-      const webhookAtivo = webhookConfig?.whatsapp_webhook_url ? webhookConfig?.whatsapp_ativo : webhookConfig?.ativo;
-
-      if (!webhookUrl || !webhookAtivo) {
-        console.error("[whatsapp-verification] signup_send webhook not configured");
-        return jsonResponse({ success: false, error: "Envio por WhatsApp indisponível no momento" }, 503);
-      }
-
+      const mensagem = `Ola! Seu codigo de verificacao DUB e ${code}. Expira em 5 minutos. Nao compartilhe com ninguem.`;
       const webhookPayload = {
         evento: "verificacao_cadastro",
+        descricao: "Codigo OTP de verificacao para cadastro de cliente",
+        timestamp: new Date().toISOString(),
         cliente_nome: "Cliente",
+        cliente_telefone: phone,
+        cliente_telefone_whatsapp: formatPhoneForWhatsApp(phone),
         telefone: formatPhoneForWhatsApp(phone),
         codigo: code,
-        mensagem: `Ola! Seu codigo de verificacao DUB e ${code}. Expira em 5 minutos. Nao compartilhe.`,
-        timestamp: new Date().toISOString(),
+        expira_em_minutos: 5,
+        mensagem,
       };
 
       EdgeRuntime.waitUntil((async () => {
