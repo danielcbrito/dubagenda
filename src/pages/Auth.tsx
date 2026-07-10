@@ -423,7 +423,7 @@ const Auth = () => {
         return;
       }
       setOtpToken(data.verification_token);
-      setSignupStep("account");
+      setSignupStep("email");
       toast.success("WhatsApp verificado!");
     } catch {
       toast.error("Erro ao verificar o código");
