@@ -957,7 +957,7 @@ const Auth = () => {
               autoFocus
               value={email}
               onChange={(e) => { setEmail(e.target.value); setEmailExists(false); }}
-              onKeyDown={(e) => { if (e.key === "Enter" && canContinue) setSignupStep("password"); }}
+              onKeyDown={(e) => { if (e.key === "Enter" && canContinue) setSignupStep("phone"); }}
               className={inputClasses}
               placeholder="seu@email.com"
               autoComplete="email"
