@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,7 +18,116 @@ const passwordSchema = z.string().min(1, "Senha é obrigatória");
 
 type AuthStep = "email" | "password" | "magic_sent";
 
+// ─────────── Shared "One-Question" shell (module-scope, stable identity) ───────────
+interface AuthShellProps {
+  headerTitle: string;
+  title: string;
+  subtitle?: React.ReactNode;
+  stepKey: string;
+  children: React.ReactNode;
+  footer: React.ReactNode;
+  bottomHint?: React.ReactNode;
+  kbOffset: number;
+  onBack: () => void;
+}
+
+const AuthShell: React.FC<AuthShellProps> = ({
+  headerTitle, title, subtitle, stepKey, children, footer, bottomHint, kbOffset, onBack,
+}) => (
+  <div className="min-h-[100dvh] flex flex-col bg-background">
+    <div
+      className="relative flex-shrink-0 flex items-center justify-center px-4"
+      style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 1.15rem)", paddingBottom: "1rem" }}
+    >
+      <button
+        type="button"
+        onClick={onBack}
+        className="absolute left-3 p-2 -m-2 text-foreground hover:text-foreground/70 transition-colors"
+        style={{ top: "calc(env(safe-area-inset-top, 0px) + 1.35rem)" }}
+        aria-label="Voltar"
+      >
+        <BackArrow size={20} />
+      </button>
+      <h2 className="text-[15px] font-semibold text-foreground">{headerTitle}</h2>
+    </div>
+
+    <div className="flex-1 flex flex-col px-6 pt-2 overflow-y-auto overscroll-contain">
+      <img
+        src={logoDub}
+        alt="DUB"
+        className="w-14 h-14 object-contain mb-8 [filter:brightness(0)] dark:[filter:brightness(0)_invert(1)]"
+      />
+
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={stepKey}
+          initial={{ opacity: 0, x: 12 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: -12 }}
+          transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+        >
+          <h1 className="text-[24px] font-bold text-foreground tracking-tight leading-tight">
+            {title}
+          </h1>
+          {subtitle && (
+            <p className="text-[14px] text-muted-foreground mt-2 mb-6 leading-relaxed">
+              {subtitle}
+            </p>
+          )}
+          {!subtitle && <div className="mb-6" />}
+          {children}
+        </motion.div>
+      </AnimatePresence>
+    </div>
+
+    <div
+      className="flex-shrink-0 px-6 pt-4 space-y-3 bg-background"
+      style={{
+        paddingBottom: `calc(env(safe-area-inset-bottom, 0px) + 1rem)`,
+        transform: kbOffset > 0 ? `translateY(-${kbOffset}px)` : undefined,
+        transition: "transform 180ms ease-out",
+      }}
+    >
+      {footer}
+      {bottomHint && (
+        <p className="text-center text-[13px] text-muted-foreground">{bottomHint}</p>
+      )}
+    </div>
+
+    <SupportChatBubble />
+  </div>
+);
+
+interface ContinueButtonProps {
+  onClick?: () => void;
+  disabled?: boolean;
+  loading?: boolean;
+  label?: string;
+  type?: "button" | "submit";
+}
+
+const ContinueButtonBase: React.FC<ContinueButtonProps> = ({
+  onClick, disabled, loading, label = "Continuar", type = "submit",
+}) => (
+  <Button
+    type={type}
+    onClick={onClick}
+    className="w-full h-14 rounded-2xl text-[15px] font-semibold bg-primary text-primary-foreground hover:bg-primary/90 active:scale-[0.98] transition-all shadow-lg shadow-primary/10 disabled:opacity-50 disabled:shadow-none"
+    disabled={disabled || loading}
+  >
+    {loading ? (
+      <span className="flex items-center gap-2">
+        <Loader2 className="w-4 h-4 animate-spin" />
+        Aguarde...
+      </span>
+    ) : (
+      label
+    )}
+  </Button>
+);
+
 const Auth = () => {
+
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const mode = searchParams.get("mode") || "login";
@@ -649,106 +758,29 @@ const Auth = () => {
     navigate("/");
   };
 
-  // ─────────── Shared "One-Question" shell ───────────
-  const Shell: React.FC<{
-    headerTitle: string;
-    title: string;
-    subtitle?: React.ReactNode;
-    stepKey: string;
-    children: React.ReactNode;
-    footer: React.ReactNode;
-    bottomHint?: React.ReactNode;
-  }> = ({ headerTitle, title, subtitle, stepKey, children, footer, bottomHint }) => (
-    <div className="min-h-[100dvh] flex flex-col bg-background">
-      {/* Top bar: back + centered title */}
-      <div
-        className="relative flex-shrink-0 flex items-center justify-center px-4"
-        style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 1.15rem)", paddingBottom: "1rem" }}
-      >
-        <button
-          type="button"
-          onClick={handleBack}
-          className="absolute left-3 p-2 -m-2 text-foreground hover:text-foreground/70 transition-colors"
-          style={{ top: "calc(env(safe-area-inset-top, 0px) + 1.35rem)" }}
-          aria-label="Voltar"
-        >
-          <BackArrow size={20} />
-        </button>
-        <h2 className="text-[15px] font-semibold text-foreground">{headerTitle}</h2>
-      </div>
+  // Stable Shell/ContinueButton references — prevent full remount (and
+  // input focus loss / keyboard flicker) on every keystroke.
+  const handleBackRef = useRef(handleBack);
+  handleBackRef.current = handleBack;
+  const stableOnBack = useCallback(() => handleBackRef.current(), []);
+  const Shell = useMemo(() => {
+    const C: React.FC<{
+      headerTitle: string;
+      title: string;
+      subtitle?: React.ReactNode;
+      stepKey: string;
+      children: React.ReactNode;
+      footer: React.ReactNode;
+      bottomHint?: React.ReactNode;
+    }> = (props) => (
+      <AuthShell {...props} kbOffset={kbOffset} onBack={stableOnBack} />
+    );
+    return C;
+  }, [kbOffset, stableOnBack]);
 
-      {/* Body */}
-      <div className="flex-1 flex flex-col px-6 pt-2 overflow-y-auto overscroll-contain">
-        <img
-          src={logoDub}
-          alt="DUB"
-          className="w-14 h-14 object-contain mb-8 [filter:brightness(0)] dark:[filter:brightness(0)_invert(1)]"
-        />
+  const ContinueButton = ContinueButtonBase;
 
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={stepKey}
-            initial={{ opacity: 0, x: 12 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -12 }}
-            transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
-          >
-            <h1 className="text-[24px] font-bold text-foreground tracking-tight leading-tight">
-              {title}
-            </h1>
-            {subtitle && (
-              <p className="text-[14px] text-muted-foreground mt-2 mb-6 leading-relaxed">
-                {subtitle}
-              </p>
-            )}
-            {!subtitle && <div className="mb-6" />}
-            {children}
-          </motion.div>
-        </AnimatePresence>
-      </div>
 
-      {/* Footer pinned bottom — lifts with the on-screen keyboard */}
-      <div
-        className="flex-shrink-0 px-6 pt-4 space-y-3 bg-background"
-        style={{
-          paddingBottom: `calc(env(safe-area-inset-bottom, 0px) + 1rem)`,
-          transform: kbOffset > 0 ? `translateY(-${kbOffset}px)` : undefined,
-          transition: "transform 180ms ease-out",
-        }}
-      >
-        {footer}
-        {bottomHint && (
-          <p className="text-center text-[13px] text-muted-foreground">{bottomHint}</p>
-        )}
-      </div>
-
-      <SupportChatBubble />
-    </div>
-  );
-
-  const ContinueButton: React.FC<{
-    onClick?: () => void;
-    disabled?: boolean;
-    loading?: boolean;
-    label?: string;
-    type?: "button" | "submit";
-  }> = ({ onClick, disabled, loading, label = "Continuar", type = "submit" }) => (
-    <Button
-      type={type}
-      onClick={onClick}
-      className="w-full h-14 rounded-2xl text-[15px] font-semibold bg-primary text-primary-foreground hover:bg-primary/90 active:scale-[0.98] transition-all shadow-lg shadow-primary/10 disabled:opacity-50 disabled:shadow-none"
-      disabled={disabled || loading}
-    >
-      {loading ? (
-        <span className="flex items-center gap-2">
-          <Loader2 className="w-4 h-4 animate-spin" />
-          Aguarde...
-        </span>
-      ) : (
-        label
-      )}
-    </Button>
-  );
 
   // ── Magic link sent screen ──
   if (step === "magic_sent") {
