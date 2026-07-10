@@ -278,6 +278,7 @@ const ClienteAgendar = () => {
   const { 
     slots: availableSlots, 
     loading: loadingSlots, 
+    hasLoaded: slotsHasLoaded,
     refreshSlots
   } = useSlotAvailability(
     selectedDate, 
