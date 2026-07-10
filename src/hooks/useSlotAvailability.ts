@@ -315,6 +315,7 @@ export function useSlotAvailability(
       }
 
       setOccupiedSlots(responseOccupied);
+      setHasLoaded(true);
 
     } catch (err) {
       if (err instanceof Error && err.name === 'AbortError') {
@@ -327,6 +328,7 @@ export function useSlotAvailability(
       // Fallback: carregar direto do banco se Edge Function falhar
       console.log('[useSlotAvailability] Usando FALLBACK direto do banco...');
       await loadSlotsFromDatabase(dateStr, forceFullUpdate);
+      setHasLoaded(true);
     } finally {
       setLoading(false);
     }
