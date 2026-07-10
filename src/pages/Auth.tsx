@@ -47,9 +47,11 @@ const Auth = () => {
     if (!isSignup) setLastAccount(getLastAccount());
   }, [isSignup]);
 
-  // ── Signup multi-step (WhatsApp OTP first, then email+password) ──
-  type SignupStep = "phone" | "otp" | "email" | "password";
-  const [signupStep, setSignupStep] = useState<SignupStep>("phone");
+  // ── Signup multi-step: Nome → CPF → Email → WhatsApp → OTP → Senha ──
+  type SignupStep = "nome" | "cpf" | "email" | "phone" | "otp" | "password";
+  const [signupStep, setSignupStep] = useState<SignupStep>("nome");
+  const [nome, setNome] = useState("");
+  const [cpfDigits, setCpfDigits] = useState(""); // 11 digits, no mask
   const [phoneDigits, setPhoneDigits] = useState(""); // BR digits (10 or 11, no country code)
   const [otpCode, setOtpCode] = useState("");
   const [otpToken, setOtpToken] = useState("");
