@@ -48,7 +48,7 @@ const Auth = () => {
   }, [isSignup]);
 
   // ── Signup multi-step (WhatsApp OTP first, then email+password) ──
-  type SignupStep = "phone" | "otp" | "account";
+  type SignupStep = "phone" | "otp" | "email" | "password";
   const [signupStep, setSignupStep] = useState<SignupStep>("phone");
   const [phoneDigits, setPhoneDigits] = useState(""); // BR digits (10 or 11, no country code)
   const [otpCode, setOtpCode] = useState("");
