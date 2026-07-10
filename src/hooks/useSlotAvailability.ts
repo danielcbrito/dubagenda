@@ -186,6 +186,7 @@ export function useSlotAvailability(
     lastSlotsRef.current = [];
     setSlots([]);
     setOccupiedSlots([]);
+    setHasLoaded(false);
     if (selectedDate && barbeiroId && serviceDuration > 0) {
       setLoading(true);
     }
