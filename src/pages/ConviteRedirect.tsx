@@ -45,7 +45,7 @@ export default function ConviteRedirect() {
         /* silent */
       }
 
-      navigate(`/auth?ref=${encodeURIComponent(codeUp)}`, { replace: true });
+      navigate(`/auth?mode=signup&ref=${encodeURIComponent(codeUp)}`, { replace: true });
     };
     run();
   }, [code, navigate]);
