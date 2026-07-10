@@ -103,16 +103,21 @@ export default function ClienteIndicacoes() {
   const loadNames = useCallback(async (rows: Indicacao[]) => {
     const ids = Array.from(new Set(rows.map((r) => r.indicado_id).filter(Boolean))) as string[];
     if (ids.length === 0) return rows;
-    const { data: profs } = await supabase.from("profiles").select("id, nome").in("id", ids);
-    const map: Record<string, string> = {};
-    (profs || []).forEach((p: any) => { map[p.id] = p.nome; });
-    return rows.map((r) => ({ ...r, indicado_nome: r.indicado_id ? map[r.indicado_id] : null }));
+    const { data: profs } = await supabase.from("profiles").select("id, nome, email").in("id", ids);
+    const map: Record<string, { nome: string | null; email: string | null }> = {};
+    (profs || []).forEach((p: any) => { map[p.id] = { nome: p.nome, email: p.email }; });
+    return rows.map((r) => ({
+      ...r,
+      indicado_nome: r.indicado_id ? map[r.indicado_id]?.nome ?? null : null,
+      indicado_email: r.indicado_id ? map[r.indicado_id]?.email ?? null : null,
+    }));
   }, []);
 
   const recomputeMonth = useCallback((rows: Indicacao[]) => {
     const startMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+    // Só conta indicação após o serviço ser concluído (status = 'liberado')
     const monthValid = rows.filter(
-      (r) => r.indicado_id && new Date(r.criado_em) >= startMonth && r.status !== "invalidado"
+      (r) => r.status === "liberado" && new Date(r.criado_em) >= startMonth
     ).length;
     setMonthUsed(monthValid);
   }, []);
