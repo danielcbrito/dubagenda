@@ -169,6 +169,7 @@ export function useSlotAvailability(
   const [loading, setLoading] = useState<boolean>(
     () => Boolean(selectedDate && barbeiroId && serviceDuration > 0)
   );
+  const [hasLoaded, setHasLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [occupiedSlots, setOccupiedSlots] = useState<OccupiedSlot[]>([]);
   const [nowTick, setNowTick] = useState(() => Date.now());
