@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
+import { getVerifiedAuthUser } from "@/utils/authSession";
 
 const AuthCallback = () => {
   const navigate = useNavigate();
@@ -54,9 +55,9 @@ const AuthCallback = () => {
         // Supabase PKCE flow sets session automatically via ?code= before we get here
 
         // Unified: get current session and route intelligently
-        const { data: { session } } = await supabase.auth.getSession();
+        const user = await getVerifiedAuthUser();
 
-        if (!session) {
+        if (!user) {
           navigate("/auth", { replace: true });
           return;
         }
@@ -65,7 +66,7 @@ const AuthCallback = () => {
         const { data: roles } = await supabase
           .from("user_roles")
           .select("role")
-          .eq("user_id", session.user.id);
+          .eq("user_id", user.id);
 
         if (roles?.some(r => r.role === "admin")) {
           await supabase.auth.signOut();
@@ -78,7 +79,7 @@ const AuthCallback = () => {
         const { data: profile } = await supabase
           .from("profiles")
           .select("nome, telefone, barbearia_preferida_id")
-          .eq("id", session.user.id)
+          .eq("id", user.id)
           .maybeSingle();
 
         const semPerfil = !profile?.nome || !profile?.telefone;

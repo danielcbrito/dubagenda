@@ -23,6 +23,7 @@ import { DiscoverMap } from "@/components/discover/DiscoverMap";
 import { DiscoverUnitCard } from "@/components/discover/DiscoverUnitCard";
 import { BottomSheet, SNAP_MID } from "@/components/discover/BottomSheet";
 import { getCache, setCache } from "@/utils/cache";
+import { getVerifiedAuthUser } from "@/utils/authSession";
 import type L from "leaflet";
 
 // ── Types ──
@@ -406,17 +407,17 @@ const EscolherBarbearia = () => {
         setIsLoading(false);
       }
 
-      const { data: { session } } = await supabase.auth.getSession();
+      const user = await getVerifiedAuthUser();
 
-      if (session) {
-        setUserId(session.user.id);
+      if (user) {
+        setUserId(user.id);
 
         const loadPromise = loadUnits({ preserveVisible: hasCachedUnits });
         const { data: profile } = await supabase
           .from("profiles")
           .select("barbearia_preferida_id")
-          .eq("id", session.user.id)
-          .single();
+          .eq("id", user.id)
+          .maybeSingle();
 
         if (profile?.barbearia_preferida_id) {
           setCurrentPreferred(profile.barbearia_preferida_id);
