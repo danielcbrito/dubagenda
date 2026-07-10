@@ -57,12 +57,36 @@ const Auth = () => {
   const [otpToken, setOtpToken] = useState("");
   const [otpCooldown, setOtpCooldown] = useState(0);
   const [signupBusy, setSignupBusy] = useState(false);
+  const [cpfTaken, setCpfTaken] = useState(false);
+  const [checkingCpf, setCheckingCpf] = useState(false);
+  const cpfDebounceRef = useRef<ReturnType<typeof setTimeout>>();
 
   useEffect(() => {
     if (otpCooldown <= 0) return;
     const t = setTimeout(() => setOtpCooldown(c => c - 1), 1000);
     return () => clearTimeout(t);
   }, [otpCooldown]);
+
+  // Debounced CPF duplicate check
+  useEffect(() => {
+    if (cpfDebounceRef.current) clearTimeout(cpfDebounceRef.current);
+    setCpfTaken(false);
+    if (cpfDigits.length !== 11) { setCheckingCpf(false); return; }
+    setCheckingCpf(true);
+    cpfDebounceRef.current = setTimeout(async () => {
+      try {
+        const { data } = await supabase.functions.invoke("check-duplicate-signup", {
+          body: { cpf: cpfDigits },
+        });
+        setCpfTaken(Array.isArray(data?.duplicates) && data.duplicates.includes("cpf"));
+      } catch {
+        setCpfTaken(false);
+      } finally {
+        setCheckingCpf(false);
+      }
+    }, 400);
+    return () => { if (cpfDebounceRef.current) clearTimeout(cpfDebounceRef.current); };
+  }, [cpfDigits]);
 
   const passwordRef = useRef<HTMLInputElement>(null);
 
@@ -809,7 +833,12 @@ const Auth = () => {
 
     // Step: CPF
     if (signupStep === "cpf") {
-      const canContinue = isValidCpf(cpfDigits);
+      const cpfValid = isValidCpf(cpfDigits);
+      const canContinue = cpfValid && !cpfTaken && !checkingCpf;
+      const goToLogin = () => {
+        setSignupStep("nome");
+        navigate("/auth?mode=login", { replace: true });
+      };
       return (
         <Shell
           headerTitle="Criar conta"
@@ -839,14 +868,27 @@ const Auth = () => {
             autoComplete="off"
             inputMode="numeric"
           />
-          {cpfDigits.length === 11 && !canContinue && (
+          {cpfDigits.length === 11 && !cpfValid && (
             <p className="text-[12px] text-destructive font-medium mt-2 px-1">
               CPF inválido. Verifique os dígitos.
+            </p>
+          )}
+          {cpfValid && cpfTaken && (
+            <p className="text-[13px] text-destructive font-medium mt-2 px-1">
+              CPF já cadastrado. Faça login para continuar.{" "}
+              <button
+                type="button"
+                onClick={goToLogin}
+                className="underline underline-offset-2 font-semibold"
+              >
+                Entrar agora
+              </button>
             </p>
           )}
         </Shell>
       );
     }
+
 
     // Step: PHONE
     if (signupStep === "phone") {
