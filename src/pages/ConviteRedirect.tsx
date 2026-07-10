@@ -45,7 +45,10 @@ export default function ConviteRedirect() {
         /* silent */
       }
 
-      navigate(`/auth?mode=signup&ref=${encodeURIComponent(codeUp)}`, { replace: true });
+      // Fluxo do convite: primeiro escolhe barbearia, depois segue o cadastro
+      // padrão (WhatsApp OTP → email/senha). O tenant escolhido é passado
+      // adiante via ?tenant= para vincular à conta na criação.
+      navigate(`/escolher-barbearia?mode=invite&ref=${encodeURIComponent(codeUp)}`, { replace: true });
     };
     run();
   }, [code, navigate]);
