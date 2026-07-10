@@ -45,6 +45,21 @@ const Auth = () => {
     if (!isSignup) setLastAccount(getLastAccount());
   }, [isSignup]);
 
+  // ── Signup multi-step (WhatsApp OTP first, then email+password) ──
+  type SignupStep = "phone" | "otp" | "account";
+  const [signupStep, setSignupStep] = useState<SignupStep>("phone");
+  const [phoneDigits, setPhoneDigits] = useState(""); // BR digits (10 or 11, no country code)
+  const [otpCode, setOtpCode] = useState("");
+  const [otpToken, setOtpToken] = useState("");
+  const [otpCooldown, setOtpCooldown] = useState(0);
+  const [signupBusy, setSignupBusy] = useState(false);
+
+  useEffect(() => {
+    if (otpCooldown <= 0) return;
+    const t = setTimeout(() => setOtpCooldown(c => c - 1), 1000);
+    return () => clearTimeout(t);
+  }, [otpCooldown]);
+
   const passwordRef = useRef<HTMLInputElement>(null);
 
   // Auto-check session + prefill email from redirects
@@ -342,6 +357,132 @@ const Auth = () => {
     handleMagicLink();
   };
 
+  // ─── Signup por WhatsApp OTP ───────────────────────────────
+  const maskPhone = (digits: string) => {
+    const d = digits.replace(/\D/g, "").slice(0, 11);
+    if (d.length <= 2) return d.length ? `(${d}` : "";
+    if (d.length <= 7) return `(${d.slice(0, 2)}) ${d.slice(2)}`;
+    return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
+  };
+
+  const handleSendOtp = async () => {
+    const digits = phoneDigits.replace(/\D/g, "");
+    if (digits.length < 10 || digits.length > 11) {
+      toast.error("Informe um WhatsApp válido (DDD + número)");
+      return;
+    }
+    setSignupBusy(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("whatsapp-signup-otp", {
+        body: { action: "send", phone: digits },
+      });
+      if (error) throw error;
+      if (!data?.success) {
+        if (data?.cooldown_remaining) setOtpCooldown(data.cooldown_remaining);
+        toast.error(data?.error || "Não foi possível enviar o código");
+        return;
+      }
+      setOtpCode("");
+      setSignupStep("otp");
+      setOtpCooldown(60);
+      toast.success("Código enviado para seu WhatsApp");
+    } catch (err) {
+      toast.error("Erro ao enviar o código. Tente novamente.");
+    } finally {
+      setSignupBusy(false);
+    }
+  };
+
+  const handleVerifyOtp = async () => {
+    if (!/^\d{6}$/.test(otpCode)) {
+      toast.error("Digite os 6 dígitos");
+      return;
+    }
+    setSignupBusy(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("whatsapp-signup-otp", {
+        body: { action: "verify", phone: phoneDigits.replace(/\D/g, ""), code: otpCode },
+      });
+      if (error) throw error;
+      if (!data?.success) {
+        toast.error(data?.error || "Código inválido");
+        return;
+      }
+      setOtpToken(data.verification_token);
+      setSignupStep("account");
+      toast.success("WhatsApp verificado!");
+    } catch {
+      toast.error("Erro ao verificar o código");
+    } finally {
+      setSignupBusy(false);
+    }
+  };
+
+  const handleCreateAccount = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSignupBusy(true);
+    try {
+      const validEmail = emailSchema.parse(email);
+      if (senha.length < 6) {
+        toast.error("A senha precisa ter ao menos 6 caracteres");
+        return;
+      }
+
+      const { data: dup } = await supabase.functions.invoke("check-duplicate-signup", {
+        body: { email: validEmail },
+      });
+      if (dup?.duplicateClientAccount || dup?.duplicates?.includes("email")) {
+        setEmailExists(true);
+        toast.error("Este email já possui uma conta. Faça login.");
+        return;
+      }
+
+      const phoneNormalized = "55" + phoneDigits.replace(/\D/g, "");
+      const { data: signUpData, error: signErr } = await supabase.auth.signUp({
+        email: validEmail,
+        password: senha,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
+          data: {
+            signup_origin: signupOrigin,
+            telefone: phoneNormalized,
+            phone_verified_via_whatsapp: true,
+          },
+        },
+      });
+      if (signErr) {
+        toast.error(signErr.message.includes("already") ? "Este email já possui uma conta" : "Erro ao criar conta");
+        return;
+      }
+
+      const userId = signUpData.user?.id;
+      if (userId) {
+        supabase.functions.invoke("whatsapp-signup-otp", {
+          body: {
+            action: "consume",
+            phone: phoneDigits.replace(/\D/g, ""),
+            verification_token: otpToken,
+            user_id: userId,
+          },
+        }).catch(() => {});
+      }
+
+      if (signUpData.session) {
+        toast.success("Conta criada!");
+        await checkUserRoleAndRedirect(signUpData.user!.id);
+      } else {
+        setStep("magic_sent");
+        toast.success("Confirme seu email para acessar a conta");
+      }
+    } catch (err) {
+      if (err instanceof z.ZodError) toast.error(err.errors[0]?.message || "Dados inválidos");
+      else toast.error("Erro ao criar conta");
+    } finally {
+      setSignupBusy(false);
+    }
+  };
+
+
   const handleGoogleLogin = async () => {
     await supabase.auth.signInWithOAuth({
       provider: "google",
@@ -452,82 +593,192 @@ const Auth = () => {
           <div className="w-full max-w-sm mx-auto py-8">
             {/* Title */}
             <motion.div
+              key={`title-${signupStep}`}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+              transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
               className="text-center mb-8"
             >
               <h1 className="text-[22px] font-bold text-foreground tracking-tight">
-                Criar sua conta
+                {signupStep === "phone" && "Criar sua conta"}
+                {signupStep === "otp" && "Confirme seu WhatsApp"}
+                {signupStep === "account" && "Quase lá"}
               </h1>
               <p className="text-[13px] text-muted-foreground mt-2">
-                Digite seu email para começar
+                {signupStep === "phone" && "Informe seu WhatsApp para começar"}
+                {signupStep === "otp" && `Enviamos um código para ${maskPhone(phoneDigits)}`}
+                {signupStep === "account" && "Crie seu email e senha para acessar"}
               </p>
             </motion.div>
 
-            {/* Form */}
-            <motion.form
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.06, ease: [0.22, 1, 0.36, 1] }}
-              onSubmit={handleSignupSubmit}
-              className="space-y-3"
-            >
-              <div className="relative">
-                <Input
-                  name="email"
-                  type="email"
-                  required
-                  value={email}
-                  onChange={e => {
-                    setEmail(e.target.value);
-                    setLoginError(null);
-                  }}
-                  className={inputClasses}
-                  placeholder="seu@email.com"
-                  autoComplete="email"
-                  inputMode="email"
-                />
-                {checkingEmail && (
-                  <div className="absolute right-4 top-1/2 -translate-y-1/2">
-                    <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
-                  </div>
-                )}
-              </div>
-
-              {/* Real-time duplicate detection — simple red text */}
-              <AnimatePresence>
-                {emailExists && (
-                  <motion.p
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.2 }}
-                    className="text-[12px] text-destructive font-medium px-1"
-                  >
-                    Este email já possui uma conta
-                  </motion.p>
-                )}
-              </AnimatePresence>
-
-              {/* Continue button */}
-              <Button
-                type="submit"
-                className="w-full h-14 rounded-2xl text-[15px] font-semibold bg-foreground text-background hover:bg-foreground/90 active:scale-[0.98] transition-all duration-200"
-                disabled={isLoading || cooldownTimer > 0 || emailExists || checkingEmail}
+            {/* Step: PHONE */}
+            {signupStep === "phone" && (
+              <motion.form
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4 }}
+                onSubmit={(e) => { e.preventDefault(); handleSendOtp(); }}
+                className="space-y-3"
               >
-                {isLoading ? (
-                  <span className="flex items-center gap-2">
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Enviando...
-                  </span>
-                ) : cooldownTimer > 0 ? (
-                  `Aguarde ${cooldownTimer}s`
-                ) : (
-                  "Criar conta"
-                )}
-              </Button>
-            </motion.form>
+                <Input
+                  name="phone"
+                  type="tel"
+                  required
+                  value={maskPhone(phoneDigits)}
+                  onChange={(e) => setPhoneDigits(e.target.value.replace(/\D/g, "").slice(0, 11))}
+                  className={inputClasses}
+                  placeholder="(11) 91234-5678"
+                  autoComplete="tel-national"
+                  inputMode="numeric"
+                />
+                <Button
+                  type="submit"
+                  className="w-full h-14 rounded-2xl text-[15px] font-semibold bg-foreground text-background hover:bg-foreground/90 active:scale-[0.98] transition-all"
+                  disabled={signupBusy || phoneDigits.length < 10}
+                >
+                  {signupBusy ? (
+                    <span className="flex items-center gap-2">
+                      <Loader2 className="w-4 h-4 animate-spin" /> Enviando...
+                    </span>
+                  ) : (
+                    "Enviar código no WhatsApp"
+                  )}
+                </Button>
+              </motion.form>
+            )}
+
+            {/* Step: OTP */}
+            {signupStep === "otp" && (
+              <motion.form
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4 }}
+                onSubmit={(e) => { e.preventDefault(); handleVerifyOtp(); }}
+                className="space-y-3"
+              >
+                <Input
+                  name="otp"
+                  type="text"
+                  required
+                  value={otpCode}
+                  onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                  className={`${inputClasses} text-center tracking-[0.5em] text-[18px] font-semibold`}
+                  placeholder="000000"
+                  autoComplete="one-time-code"
+                  inputMode="numeric"
+                  maxLength={6}
+                />
+                <Button
+                  type="submit"
+                  className="w-full h-14 rounded-2xl text-[15px] font-semibold bg-foreground text-background hover:bg-foreground/90 active:scale-[0.98] transition-all"
+                  disabled={signupBusy || otpCode.length !== 6}
+                >
+                  {signupBusy ? (
+                    <span className="flex items-center gap-2">
+                      <Loader2 className="w-4 h-4 animate-spin" /> Verificando...
+                    </span>
+                  ) : (
+                    "Verificar código"
+                  )}
+                </Button>
+                <div className="flex items-center justify-between px-1">
+                  <button
+                    type="button"
+                    onClick={() => setSignupStep("phone")}
+                    className="text-[12px] text-muted-foreground hover:text-foreground font-medium"
+                  >
+                    Trocar número
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSendOtp}
+                    disabled={otpCooldown > 0 || signupBusy}
+                    className="text-[12px] text-primary/80 hover:text-primary font-medium disabled:opacity-40"
+                  >
+                    {otpCooldown > 0 ? `Reenviar em ${otpCooldown}s` : "Reenviar código"}
+                  </button>
+                </div>
+              </motion.form>
+            )}
+
+            {/* Step: ACCOUNT */}
+            {signupStep === "account" && (
+              <motion.form
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4 }}
+                onSubmit={handleCreateAccount}
+                className="space-y-3"
+              >
+                <div className="relative">
+                  <Input
+                    name="email"
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => { setEmail(e.target.value); setEmailExists(false); }}
+                    className={inputClasses}
+                    placeholder="seu@email.com"
+                    autoComplete="email"
+                    inputMode="email"
+                  />
+                  {checkingEmail && (
+                    <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                      <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                    </div>
+                  )}
+                </div>
+
+                <AnimatePresence>
+                  {emailExists && (
+                    <motion.p
+                      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                      className="text-[12px] text-destructive font-medium px-1"
+                    >
+                      Este email já possui uma conta
+                    </motion.p>
+                  )}
+                </AnimatePresence>
+
+                <div className="relative">
+                  <Input
+                    name="senha"
+                    type={showPassword ? "text" : "password"}
+                    required
+                    minLength={6}
+                    value={senha}
+                    onChange={(e) => setSenha(e.target.value)}
+                    className={`${inputClasses} pr-12`}
+                    placeholder="Crie uma senha (mín. 6)"
+                    autoComplete="new-password"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground/40 hover:text-muted-foreground"
+                    aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
+                  >
+                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  </button>
+                </div>
+
+                <Button
+                  type="submit"
+                  className="w-full h-14 rounded-2xl text-[15px] font-semibold bg-foreground text-background hover:bg-foreground/90 active:scale-[0.98] transition-all"
+                  disabled={signupBusy || emailExists}
+                >
+                  {signupBusy ? (
+                    <span className="flex items-center gap-2">
+                      <Loader2 className="w-4 h-4 animate-spin" /> Criando...
+                    </span>
+                  ) : (
+                    "Criar conta"
+                  )}
+                </Button>
+              </motion.form>
+            )}
+
+
 
             {/* Separator */}
             <motion.div
