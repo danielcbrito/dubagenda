@@ -209,6 +209,14 @@ Deno.serve(async (req) => {
       await supabase.from("profiles").update({ telefone: phone }).eq("id", userId);
       await supabase.from("whatsapp_signup_otp").update({ verification_token: null }).eq("id", row.id);
 
+      // Auto-confirma email — a partir de agora nenhuma conta exige confirmação de email
+      // (a verificação de identidade já foi feita via OTP de WhatsApp)
+      try {
+        await supabase.auth.admin.updateUserById(userId, { email_confirm: true });
+      } catch (e) {
+        console.warn("[whatsapp-verification] auto email_confirm falhou:", e);
+      }
+
       return jsonResponse({ success: true });
     }
 

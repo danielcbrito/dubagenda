@@ -463,7 +463,8 @@ const Auth = () => {
 
       const userId = signUpData.user?.id;
       if (userId) {
-        supabase.functions.invoke("whatsapp-verification", {
+        // Aguarda consume (auto-confirma email via admin API) antes de logar
+        await supabase.functions.invoke("whatsapp-verification", {
           body: {
             action: "signup_consume",
             phone: phoneDigits.replace(/\D/g, ""),
@@ -473,12 +474,22 @@ const Auth = () => {
         }).catch(() => {});
       }
 
+      // Nenhuma conta precisa mais confirmar email — força login com senha
       if (signUpData.session) {
         toast.success("Conta criada!");
         await checkUserRoleAndRedirect(signUpData.user!.id);
       } else {
-        setStep("magic_sent");
-        toast.success("Confirme seu email para acessar a conta");
+        const { data: signInData, error: signInErr } = await supabase.auth.signInWithPassword({
+          email: validEmail,
+          password: senha,
+        });
+        if (signInErr || !signInData.session) {
+          toast.error("Conta criada. Faça login para continuar.");
+          navigate("/auth?mode=login&email=" + encodeURIComponent(validEmail));
+          return;
+        }
+        toast.success("Conta criada!");
+        await checkUserRoleAndRedirect(signInData.user.id);
       }
     } catch (err) {
       if (err instanceof z.ZodError) toast.error(err.errors[0]?.message || "Dados inválidos");
