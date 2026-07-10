@@ -540,599 +540,515 @@ const Auth = () => {
     });
   };
 
+  const inputClasses =
+    "h-14 bg-muted/40 border-border/60 text-foreground placeholder:text-muted-foreground/60 rounded-2xl focus:border-primary/40 focus-visible:ring-1 focus-visible:ring-primary/20 transition-all text-[15px] px-5";
+
+  // Back handler with per-step logic
   const handleBack = () => {
     if (step === "magic_sent") {
       setStep("email");
       setSenha("");
       setLoginError(null);
-    } else if (showLoginSheet) {
-      setShowLoginSheet(false);
-      navigate("/auth?mode=signup");
-    } else {
-      navigate("/");
+      return;
     }
+    if (isSignup) {
+      if (signupStep === "password") return setSignupStep("email");
+      if (signupStep === "email") return setSignupStep("otp");
+      if (signupStep === "otp") return setSignupStep("phone");
+      return navigate("/");
+    }
+    if (step === "password") {
+      setStep("email");
+      setSenha("");
+      setLoginError(null);
+      return;
+    }
+    navigate("/");
   };
 
-  const inputClasses =
-    "h-14 bg-muted/40 border-border/60 text-foreground placeholder:text-muted-foreground rounded-2xl focus:border-foreground/30 focus:ring-0 transition-all text-[15px] px-5";
-
-  // ── Magic link sent screen ──
-  if (step === "magic_sent") {
-    return (
-      <div className="min-h-[100dvh] flex flex-col bg-background">
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="pt-[calc(env(safe-area-inset-top)+1rem)] pl-6 z-10"
-        >
-          <button
-            type="button"
-            onClick={handleBack}
-            className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <BackArrow size={18} />
-            <span className="text-[13px]">Voltar</span>
-          </button>
-        </motion.div>
-
-        <div className="flex-1 flex flex-col items-center justify-center px-6">
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-            className="flex flex-col items-center text-center max-w-sm"
-          >
-            <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-5">
-              <Mail className="w-7 h-7 text-primary" />
-            </div>
-            <h1 className="text-xl font-bold text-foreground tracking-tight mb-2">
-              Verifique seu email
-            </h1>
-            <p className="text-[13px] text-muted-foreground leading-relaxed mb-6">
-              Enviamos um link de acesso para{" "}
-              <strong className="text-foreground">{email}</strong>.
-              <br />
-              Clique no link para entrar no aplicativo.
-            </p>
-            <Button
-              variant="outline"
-              className="rounded-xl text-[13px]"
-              onClick={handleBack}
-            >
-              Usar outro email
-            </Button>
-          </motion.div>
-        </div>
-        <SupportChatBubble />
-      </div>
-    );
-  }
-
-  // ── SIGNUP SCREEN (full page) ──
-  if (isSignup) {
-    return (
-      <div className="min-h-[100dvh] flex flex-col bg-background">
-        {/* Back */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.4 }}
-          className="flex-shrink-0 pt-[calc(env(safe-area-inset-top)+1rem)] pl-6 z-10"
-        >
-          <button
-            type="button"
-            onClick={() => navigate("/")}
-            className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <BackArrow size={18} />
-            <span className="text-[13px]">Voltar</span>
-          </button>
-        </motion.div>
-
-        {/* Content */}
-        <div className="flex-1 flex flex-col justify-center px-6 overflow-y-auto overscroll-contain"
-          style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
-        >
-          <div className="w-full max-w-sm mx-auto py-8">
-            {/* Title */}
-            <motion.div
-              key={`title-${signupStep}`}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-              className="text-center mb-8"
-            >
-              <h1 className="text-[22px] font-bold text-foreground tracking-tight">
-                {signupStep === "phone" && "Criar sua conta"}
-                {signupStep === "otp" && "Confirme seu WhatsApp"}
-                {signupStep === "account" && "Quase lá"}
-              </h1>
-              <p className="text-[13px] text-muted-foreground mt-2">
-                {signupStep === "phone" && "Informe seu WhatsApp para começar"}
-                {signupStep === "otp" && `Enviamos um código para ${maskPhone(phoneDigits)}`}
-                {signupStep === "account" && "Crie seu email e senha para acessar"}
-              </p>
-            </motion.div>
-
-            {/* Step: PHONE */}
-            {signupStep === "phone" && (
-              <motion.form
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4 }}
-                onSubmit={(e) => { e.preventDefault(); handleSendOtp(); }}
-                className="space-y-3"
-              >
-                <Input
-                  name="phone"
-                  type="tel"
-                  required
-                  value={maskPhone(phoneDigits)}
-                  onChange={(e) => setPhoneDigits(e.target.value.replace(/\D/g, "").slice(0, 11))}
-                  className={inputClasses}
-                  placeholder="(11) 91234-5678"
-                  autoComplete="tel-national"
-                  inputMode="numeric"
-                />
-                <Button
-                  type="submit"
-                  className="w-full h-14 rounded-2xl text-[15px] font-semibold bg-foreground text-background hover:bg-foreground/90 active:scale-[0.98] transition-all"
-                  disabled={signupBusy || phoneDigits.length < 10}
-                >
-                  {signupBusy ? (
-                    <span className="flex items-center gap-2">
-                      <Loader2 className="w-4 h-4 animate-spin" /> Enviando...
-                    </span>
-                  ) : (
-                    "Enviar código no WhatsApp"
-                  )}
-                </Button>
-              </motion.form>
-            )}
-
-            {/* Step: OTP */}
-            {signupStep === "otp" && (
-              <motion.form
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4 }}
-                onSubmit={(e) => { e.preventDefault(); handleVerifyOtp(); }}
-                className="space-y-3"
-              >
-                <Input
-                  name="otp"
-                  type="text"
-                  required
-                  value={otpCode}
-                  onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                  className={`${inputClasses} text-center tracking-[0.5em] text-[18px] font-semibold`}
-                  placeholder="000000"
-                  autoComplete="one-time-code"
-                  inputMode="numeric"
-                  maxLength={6}
-                />
-                <Button
-                  type="submit"
-                  className="w-full h-14 rounded-2xl text-[15px] font-semibold bg-foreground text-background hover:bg-foreground/90 active:scale-[0.98] transition-all"
-                  disabled={signupBusy || otpCode.length !== 6}
-                >
-                  {signupBusy ? (
-                    <span className="flex items-center gap-2">
-                      <Loader2 className="w-4 h-4 animate-spin" /> Verificando...
-                    </span>
-                  ) : (
-                    "Verificar código"
-                  )}
-                </Button>
-                <div className="flex items-center justify-between px-1">
-                  <button
-                    type="button"
-                    onClick={() => setSignupStep("phone")}
-                    className="text-[12px] text-muted-foreground hover:text-foreground font-medium"
-                  >
-                    Trocar número
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleSendOtp}
-                    disabled={otpCooldown > 0 || signupBusy}
-                    className="text-[12px] text-primary/80 hover:text-primary font-medium disabled:opacity-40"
-                  >
-                    {otpCooldown > 0 ? `Reenviar em ${otpCooldown}s` : "Reenviar código"}
-                  </button>
-                </div>
-              </motion.form>
-            )}
-
-            {/* Step: ACCOUNT */}
-            {signupStep === "account" && (
-              <motion.form
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4 }}
-                onSubmit={handleCreateAccount}
-                className="space-y-3"
-              >
-                <div className="relative">
-                  <Input
-                    name="email"
-                    type="email"
-                    required
-                    value={email}
-                    onChange={(e) => { setEmail(e.target.value); setEmailExists(false); }}
-                    className={inputClasses}
-                    placeholder="seu@email.com"
-                    autoComplete="email"
-                    inputMode="email"
-                  />
-                  {checkingEmail && (
-                    <div className="absolute right-4 top-1/2 -translate-y-1/2">
-                      <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
-                    </div>
-                  )}
-                </div>
-
-                <AnimatePresence>
-                  {emailExists && (
-                    <motion.p
-                      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                      className="text-[12px] text-destructive font-medium px-1"
-                    >
-                      Este email já possui uma conta
-                    </motion.p>
-                  )}
-                </AnimatePresence>
-
-                <div className="relative">
-                  <Input
-                    name="senha"
-                    type={showPassword ? "text" : "password"}
-                    required
-                    minLength={6}
-                    value={senha}
-                    onChange={(e) => setSenha(e.target.value)}
-                    className={`${inputClasses} pr-12`}
-                    placeholder="Crie uma senha (mín. 6)"
-                    autoComplete="new-password"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground/40 hover:text-muted-foreground"
-                    aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
-                  >
-                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                  </button>
-                </div>
-
-                <Button
-                  type="submit"
-                  className="w-full h-14 rounded-2xl text-[15px] font-semibold bg-foreground text-background hover:bg-foreground/90 active:scale-[0.98] transition-all"
-                  disabled={signupBusy || emailExists}
-                >
-                  {signupBusy ? (
-                    <span className="flex items-center gap-2">
-                      <Loader2 className="w-4 h-4 animate-spin" /> Criando...
-                    </span>
-                  ) : (
-                    "Criar conta"
-                  )}
-                </Button>
-              </motion.form>
-            )}
-
-
-
-            {/* Separator */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.4, delay: 0.12 }}
-              className="flex items-center gap-4 my-5"
-            >
-              <div className="flex-1 h-px bg-border" />
-              <span className="text-[12px] text-muted-foreground/50 lowercase">ou</span>
-              <div className="flex-1 h-px bg-border" />
-            </motion.div>
-
-            {/* OAuth */}
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.14, ease: [0.22, 1, 0.36, 1] }}
-              className="space-y-3"
-            >
-              <button
-                type="button"
-                onClick={handleGoogleLogin}
-                className="w-full flex items-center justify-center gap-3 h-14 rounded-2xl bg-card text-foreground font-medium text-[15px] border border-border/60 active:scale-[0.98] transition-all"
-              >
-                <svg viewBox="0 0 24 24" className="w-5 h-5">
-                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
-                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
-                </svg>
-                Continuar com Google
-              </button>
-
-              <button
-                type="button"
-                onClick={handleAppleLogin}
-                className="w-full flex items-center justify-center gap-3 h-14 rounded-2xl bg-foreground text-background font-medium text-[15px] border border-foreground active:scale-[0.98] transition-all"
-              >
-                <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current">
-                  <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z" />
-                </svg>
-                Continuar com Apple
-              </button>
-            </motion.div>
-
-            {/* Toggle to login */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.4, delay: 0.2 }}
-              className="text-center mt-8 pb-6"
-              style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 1.5rem)" }}
-            >
-              <p className="text-[13px] text-muted-foreground">
-                Já tem conta?
-                <button
-                  type="button"
-                  onClick={() => navigate("/auth?mode=login")}
-                  className="ml-1.5 text-primary hover:text-primary/80 font-semibold transition-colors"
-                >
-                  Entrar
-                </button>
-              </p>
-            </motion.div>
-          </div>
-        </div>
-
-        <SupportChatBubble />
-      </div>
-    );
-  }
-
-  // ── LOGIN SCREEN (with floating card) ──
-  return (
+  // ─────────── Shared "One-Question" shell ───────────
+  const Shell: React.FC<{
+    headerTitle: string;
+    title: string;
+    subtitle?: React.ReactNode;
+    stepKey: string;
+    children: React.ReactNode;
+    footer: React.ReactNode;
+    bottomHint?: React.ReactNode;
+  }> = ({ headerTitle, title, subtitle, stepKey, children, footer, bottomHint }) => (
     <div className="min-h-[100dvh] flex flex-col bg-background">
-      {/* Back */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.4 }}
-        className="flex-shrink-0 pt-[calc(env(safe-area-inset-top)+1rem)] pl-6 z-10"
+      {/* Top bar: back + centered title */}
+      <div
+        className="relative flex-shrink-0 flex items-center justify-center px-4"
+        style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 0.75rem)", paddingBottom: "0.75rem" }}
       >
         <button
           type="button"
-          onClick={() => navigate("/")}
-          className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors"
+          onClick={handleBack}
+          className="absolute left-3 p-2 -m-2 text-foreground hover:text-foreground/70 transition-colors"
+          style={{ top: "calc(env(safe-area-inset-top, 0px) + 0.5rem)" }}
+          aria-label="Voltar"
         >
-          <BackArrow size={18} />
-          <span className="text-[13px]">Voltar</span>
+          <BackArrow size={20} />
         </button>
-      </motion.div>
+        <h2 className="text-[15px] font-semibold text-foreground">{headerTitle}</h2>
+      </div>
 
-      {/* Center content - title + OAuth */}
-      <div className="flex-1 flex flex-col justify-center px-6 overflow-y-auto overscroll-contain"
-        style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
-      >
-        <div className="w-full max-w-sm mx-auto py-8">
+      {/* Body */}
+      <div className="flex-1 flex flex-col px-6 pt-2 overflow-y-auto overscroll-contain">
+        <img src={logoDub} alt="DUB" className="w-14 h-14 object-contain mb-6" />
+
+        <AnimatePresence mode="wait">
           <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-            className="text-center mb-8"
+            key={stepKey}
+            initial={{ opacity: 0, x: 12 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -12 }}
+            transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
           >
-            <h1 className="text-[22px] font-bold text-foreground tracking-tight">
-              Bem-vindo de volta
+            <h1 className="text-[24px] font-bold text-foreground tracking-tight leading-tight">
+              {title}
             </h1>
-            <p className="text-[13px] text-muted-foreground mt-2">
-              Entre na sua conta para continuar
-            </p>
-          </motion.div>
-
-          {/* Login form in floating card */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.06, ease: [0.22, 1, 0.36, 1] }}
-            className="rounded-3xl bg-card border border-border/60 p-5 shadow-lg dark:shadow-none mx-1"
-          >
-            {lastAccount && (
-              <div className="mb-4 flex items-center gap-3 rounded-2xl border border-border/60 bg-muted/40 p-3">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEmail(lastAccount.email);
-                    setLoginError(null);
-                    setTimeout(() => passwordRef.current?.focus(), 30);
-                  }}
-                  className="flex flex-1 items-center gap-3 text-left active:scale-[0.99] transition-transform"
-                >
-                  <div className="w-10 h-10 rounded-full bg-foreground/10 flex items-center justify-center overflow-hidden shrink-0">
-                    {lastAccount.avatar_url ? (
-                      <img src={lastAccount.avatar_url} alt="" className="w-full h-full object-cover" />
-                    ) : (
-                      <span className="text-[13px] font-semibold text-foreground">
-                        {(lastAccount.nome || lastAccount.email).charAt(0).toUpperCase()}
-                      </span>
-                    )}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[13px] font-semibold text-foreground truncate">
-                      Entrar como {lastAccount.nome || lastAccount.email.split("@")[0]}
-                    </p>
-                    <p className="text-[11px] text-muted-foreground truncate">{lastAccount.email}</p>
-                  </div>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    clearLastAccount();
-                    setLastAccount(null);
-                    setEmail("");
-                  }}
-                  className="text-[11px] text-muted-foreground hover:text-foreground transition-colors font-medium px-2 py-1 rounded-lg"
-                  aria-label="Trocar de conta"
-                >
-                  Trocar
-                </button>
-              </div>
+            {subtitle && (
+              <p className="text-[14px] text-muted-foreground mt-2 mb-6 leading-relaxed">
+                {subtitle}
+              </p>
             )}
-
-            <form onSubmit={handlePasswordSubmit} className="space-y-3">
-              <Input
-                name="email"
-                type="email"
-                required
-                value={email}
-                onChange={e => {
-                  setEmail(e.target.value);
-                  setLoginError(null);
-                }}
-                className={inputClasses}
-                placeholder="seu@email.com"
-                autoComplete="email"
-                inputMode="email"
-              />
-
-
-              <div className="relative">
-                <Input
-                  ref={passwordRef}
-                  name="senha"
-                  type={showPassword ? "text" : "password"}
-                  required
-                  value={senha}
-                  onChange={e => setSenha(e.target.value)}
-                  className={`${inputClasses} pr-12`}
-                  placeholder="Sua senha"
-                  autoComplete="current-password"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
-                  aria-pressed={showPassword}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground/40 hover:text-muted-foreground transition-colors"
-                >
-                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                </button>
-              </div>
-
-              <div className="flex justify-end">
-                <button
-                  type="button"
-                  onClick={() => navigate("/esqueci-senha")}
-                  className="text-[12px] text-primary/80 hover:text-primary transition-colors font-medium"
-                >
-                  Esqueci a senha
-                </button>
-              </div>
-
-              {/* Error */}
-              <AnimatePresence>
-                {loginError && (
-                  <motion.p
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="text-[13px] text-destructive text-center font-medium"
-                  >
-                    {loginError}
-                  </motion.p>
-                )}
-              </AnimatePresence>
-
-              <Button
-                type="submit"
-                className="w-full h-14 rounded-2xl text-[15px] font-semibold bg-foreground text-background hover:bg-foreground/90 active:scale-[0.98] transition-all duration-200"
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <span className="flex items-center gap-2">
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Entrando...
-                  </span>
-                ) : (
-                  "Entrar"
-                )}
-              </Button>
-            </form>
+            {!subtitle && <div className="mb-6" />}
+            {children}
           </motion.div>
+        </AnimatePresence>
+      </div>
 
-          {/* Separator */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.4, delay: 0.12 }}
-            className="flex items-center gap-4 my-5 mx-1"
-          >
-            <div className="flex-1 h-px bg-border" />
-            <span className="text-[12px] text-muted-foreground/50 lowercase">ou</span>
-            <div className="flex-1 h-px bg-border" />
-          </motion.div>
-
-          {/* OAuth */}
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.14, ease: [0.22, 1, 0.36, 1] }}
-            className="space-y-3 mx-1"
-          >
-            <button
-              type="button"
-              onClick={handleGoogleLogin}
-              className="w-full flex items-center justify-center gap-3 h-14 rounded-2xl bg-card text-foreground font-medium text-[15px] border border-border/60 active:scale-[0.98] transition-all"
-            >
-              <svg viewBox="0 0 24 24" className="w-5 h-5">
-                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
-                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
-              </svg>
-              Continuar com Google
-            </button>
-
-            <button
-              type="button"
-              onClick={handleAppleLogin}
-              className="w-full flex items-center justify-center gap-3 h-14 rounded-2xl bg-foreground text-background font-medium text-[15px] border border-foreground active:scale-[0.98] transition-all"
-            >
-              <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current">
-                <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z" />
-              </svg>
-              Continuar com Apple
-            </button>
-          </motion.div>
-
-          {/* Toggle to signup */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.4, delay: 0.2 }}
-            className="text-center mt-8 pb-6"
-            style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 1.5rem)" }}
-          >
-            <p className="text-[13px] text-muted-foreground">
-              Não tem conta?
-              <button
-                type="button"
-                onClick={() => navigate("/escolher-barbearia")}
-                className="ml-1.5 text-primary hover:text-primary/80 font-semibold transition-colors"
-              >
-                Criar agora
-              </button>
-            </p>
-          </motion.div>
-        </div>
+      {/* Footer pinned bottom */}
+      <div
+        className="flex-shrink-0 px-6 pt-4 space-y-3"
+        style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 1rem)" }}
+      >
+        {footer}
+        {bottomHint && (
+          <p className="text-center text-[13px] text-muted-foreground">{bottomHint}</p>
+        )}
       </div>
 
       <SupportChatBubble />
     </div>
+  );
+
+  const ContinueButton: React.FC<{
+    onClick?: () => void;
+    disabled?: boolean;
+    loading?: boolean;
+    label?: string;
+    type?: "button" | "submit";
+  }> = ({ onClick, disabled, loading, label = "Continuar", type = "submit" }) => (
+    <Button
+      type={type}
+      onClick={onClick}
+      className="w-full h-14 rounded-2xl text-[15px] font-semibold bg-primary text-primary-foreground hover:bg-primary/90 active:scale-[0.98] transition-all shadow-lg shadow-primary/10 disabled:opacity-50 disabled:shadow-none"
+      disabled={disabled || loading}
+    >
+      {loading ? (
+        <span className="flex items-center gap-2">
+          <Loader2 className="w-4 h-4 animate-spin" />
+          Aguarde...
+        </span>
+      ) : (
+        label
+      )}
+    </Button>
+  );
+
+  // ── Magic link sent screen ──
+  if (step === "magic_sent") {
+    return (
+      <Shell
+        headerTitle="Entrar"
+        stepKey="magic"
+        title="Verifique seu email"
+        subtitle={
+          <>
+            Enviamos um link de acesso para{" "}
+            <strong className="text-foreground">{email}</strong>.
+          </>
+        }
+        footer={
+          <Button
+            variant="outline"
+            className="w-full h-14 rounded-2xl text-[14px]"
+            onClick={handleBack}
+          >
+            Usar outro email
+          </Button>
+        }
+      >
+        <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center">
+          <Mail className="w-6 h-6 text-primary" />
+        </div>
+      </Shell>
+    );
+  }
+
+  // ─────────── SIGNUP FLOW ───────────
+  if (isSignup) {
+    const bottomLogin = (
+      <>
+        Já tem uma conta?{" "}
+        <button
+          type="button"
+          onClick={() => navigate("/auth?mode=login")}
+          className="text-primary font-semibold hover:text-primary/80 transition-colors"
+        >
+          Entrar
+        </button>
+      </>
+    );
+
+    // Step: PHONE
+    if (signupStep === "phone") {
+      return (
+        <Shell
+          headerTitle="Criar conta"
+          stepKey="s-phone"
+          title="Qual é o seu WhatsApp?"
+          subtitle="Enviaremos um código para verificar."
+          footer={
+            <ContinueButton
+              onClick={handleSendOtp}
+              type="button"
+              disabled={phoneDigits.length < 10}
+              loading={signupBusy}
+              label="Enviar código"
+            />
+          }
+          bottomHint={bottomLogin}
+        >
+          <Input
+            name="phone"
+            type="tel"
+            required
+            autoFocus
+            value={maskPhone(phoneDigits)}
+            onChange={(e) => setPhoneDigits(e.target.value.replace(/\D/g, "").slice(0, 11))}
+            onKeyDown={(e) => { if (e.key === "Enter" && phoneDigits.length >= 10) handleSendOtp(); }}
+            className={inputClasses}
+            placeholder="(11) 91234-5678"
+            autoComplete="tel-national"
+            inputMode="numeric"
+          />
+        </Shell>
+      );
+    }
+
+    // Step: OTP
+    if (signupStep === "otp") {
+      return (
+        <Shell
+          headerTitle="Criar conta"
+          stepKey="s-otp"
+          title="Digite o código"
+          subtitle={<>Enviamos um código de 6 dígitos para <strong className="text-foreground">{maskPhone(phoneDigits)}</strong>.</>}
+          footer={
+            <ContinueButton
+              onClick={handleVerifyOtp}
+              type="button"
+              disabled={otpCode.length !== 6}
+              loading={signupBusy}
+              label="Verificar"
+            />
+          }
+          bottomHint={
+            <button
+              type="button"
+              onClick={handleSendOtp}
+              disabled={otpCooldown > 0 || signupBusy}
+              className="text-primary font-semibold hover:text-primary/80 disabled:text-muted-foreground disabled:cursor-not-allowed transition-colors"
+            >
+              {otpCooldown > 0 ? `Reenviar código em ${otpCooldown}s` : "Reenviar código"}
+            </button>
+          }
+        >
+          <Input
+            name="otp"
+            type="text"
+            required
+            autoFocus
+            value={otpCode}
+            onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+            onKeyDown={(e) => { if (e.key === "Enter" && otpCode.length === 6) handleVerifyOtp(); }}
+            className={`${inputClasses} text-center tracking-[0.5em] text-[20px] font-semibold`}
+            placeholder="000000"
+            autoComplete="one-time-code"
+            inputMode="numeric"
+            maxLength={6}
+          />
+        </Shell>
+      );
+    }
+
+    // Step: EMAIL
+    if (signupStep === "email") {
+      const canContinue = emailLooksComplete && !emailExists && !checkingEmail;
+      return (
+        <Shell
+          headerTitle="Criar conta"
+          stepKey="s-email"
+          title="Qual é o seu email?"
+          subtitle="Usaremos para você acessar sua conta."
+          footer={
+            <ContinueButton
+              onClick={() => setSignupStep("password")}
+              type="button"
+              disabled={!canContinue}
+              label="Continuar"
+            />
+          }
+          bottomHint={bottomLogin}
+        >
+          <div className="relative">
+            <Input
+              name="email"
+              type="email"
+              required
+              autoFocus
+              value={email}
+              onChange={(e) => { setEmail(e.target.value); setEmailExists(false); }}
+              onKeyDown={(e) => { if (e.key === "Enter" && canContinue) setSignupStep("password"); }}
+              className={inputClasses}
+              placeholder="seu@email.com"
+              autoComplete="email"
+              inputMode="email"
+            />
+            {checkingEmail && (
+              <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+              </div>
+            )}
+          </div>
+          <AnimatePresence>
+            {emailExists && (
+              <motion.p
+                initial={{ opacity: 0, y: -4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                className="text-[12px] text-destructive font-medium mt-2 px-1"
+              >
+                Este email já possui uma conta.{" "}
+                <button
+                  type="button"
+                  onClick={() => navigate("/auth?mode=login&email=" + encodeURIComponent(email.trim()))}
+                  className="underline hover:no-underline"
+                >
+                  Entrar
+                </button>
+              </motion.p>
+            )}
+          </AnimatePresence>
+        </Shell>
+      );
+    }
+
+    // Step: PASSWORD
+    return (
+      <Shell
+        headerTitle="Criar conta"
+        stepKey="s-password"
+        title="Crie sua senha"
+        subtitle="Use pelo menos 6 caracteres."
+        footer={
+          <ContinueButton
+            onClick={() => handleCreateAccount({ preventDefault: () => {} } as React.FormEvent)}
+            type="button"
+            disabled={senha.length < 6}
+            loading={signupBusy}
+            label="Criar conta"
+          />
+        }
+      >
+        <div className="relative">
+          <Input
+            name="senha"
+            type={showPassword ? "text" : "password"}
+            required
+            autoFocus
+            minLength={6}
+            value={senha}
+            onChange={(e) => setSenha(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && senha.length >= 6) {
+                handleCreateAccount({ preventDefault: () => {} } as React.FormEvent);
+              }
+            }}
+            className={`${inputClasses} pr-12`}
+            placeholder="Mínimo 6 caracteres"
+            autoComplete="new-password"
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword(!showPassword)}
+            className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground/50 hover:text-foreground transition-colors"
+            aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
+          >
+            {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+          </button>
+        </div>
+      </Shell>
+    );
+  }
+
+  // ─────────── LOGIN FLOW ───────────
+  const bottomSignup = (
+    <>
+      Não tem uma conta?{" "}
+      <button
+        type="button"
+        onClick={() => navigate("/escolher-barbearia")}
+        className="text-primary font-semibold hover:text-primary/80 transition-colors"
+      >
+        Criar conta
+      </button>
+    </>
+  );
+
+  // Step: EMAIL
+  if (step === "email") {
+    return (
+      <Shell
+        headerTitle="Entrar"
+        stepKey="l-email"
+        title="Qual é o seu email?"
+        subtitle="Use o email cadastrado para acessar sua conta."
+        footer={
+          <ContinueButton
+            onClick={() => setStep("password")}
+            type="button"
+            disabled={!emailLooksComplete}
+            label="Continuar"
+          />
+        }
+        bottomHint={bottomSignup}
+      >
+        {lastAccount && !email && (
+          <button
+            type="button"
+            onClick={() => {
+              setEmail(lastAccount.email);
+              setStep("password");
+            }}
+            className="w-full mb-3 flex items-center gap-3 rounded-2xl border border-border/60 bg-muted/30 p-3 text-left active:scale-[0.99] transition-transform"
+          >
+            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden shrink-0">
+              {lastAccount.avatar_url ? (
+                <img src={lastAccount.avatar_url} alt="" className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-[13px] font-semibold text-primary">
+                  {(lastAccount.nome || lastAccount.email).charAt(0).toUpperCase()}
+                </span>
+              )}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-[13px] font-semibold text-foreground truncate">
+                Entrar como {lastAccount.nome || lastAccount.email.split("@")[0]}
+              </p>
+              <p className="text-[11px] text-muted-foreground truncate">{lastAccount.email}</p>
+            </div>
+            <span
+              role="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                clearLastAccount();
+                setLastAccount(null);
+              }}
+              className="text-[11px] text-muted-foreground hover:text-foreground font-medium px-2 py-1"
+            >
+              Trocar
+            </span>
+          </button>
+        )}
+        <Input
+          name="email"
+          type="email"
+          required
+          autoFocus
+          value={email}
+          onChange={(e) => { setEmail(e.target.value); setLoginError(null); }}
+          onKeyDown={(e) => { if (e.key === "Enter" && emailLooksComplete) setStep("password"); }}
+          className={inputClasses}
+          placeholder="seu@email.com"
+          autoComplete="email"
+          inputMode="email"
+        />
+      </Shell>
+    );
+  }
+
+  // Step: PASSWORD
+  return (
+    <Shell
+      headerTitle="Entrar"
+      stepKey="l-password"
+      title="Digite sua senha"
+      subtitle={<>Entrando como <strong className="text-foreground">{email}</strong></>}
+      footer={
+        <ContinueButton
+          onClick={() => handlePasswordSubmit({ preventDefault: () => {} } as React.FormEvent)}
+          type="button"
+          disabled={senha.length < 1}
+          loading={isLoading}
+          label="Entrar"
+        />
+      }
+      bottomHint={bottomSignup}
+    >
+      <div className="relative">
+        <Input
+          ref={passwordRef}
+          name="senha"
+          type={showPassword ? "text" : "password"}
+          required
+          autoFocus
+          value={senha}
+          onChange={(e) => { setSenha(e.target.value); setLoginError(null); }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && senha.length >= 1) {
+              handlePasswordSubmit({ preventDefault: () => {} } as React.FormEvent);
+            }
+          }}
+          className={`${inputClasses} pr-12`}
+          placeholder="Sua senha"
+          autoComplete="current-password"
+        />
+        <button
+          type="button"
+          onClick={() => setShowPassword(!showPassword)}
+          className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground/50 hover:text-foreground transition-colors"
+          aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
+        >
+          {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+        </button>
+      </div>
+      <AnimatePresence>
+        {loginError && (
+          <motion.p
+            initial={{ opacity: 0, y: -4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            className="text-[12px] text-destructive font-medium mt-2 px-1"
+          >
+            {loginError}
+          </motion.p>
+        )}
+      </AnimatePresence>
+      <div className="mt-3">
+        <button
+          type="button"
+          onClick={() => navigate("/esqueci-senha")}
+          className="text-[13px] text-primary/80 hover:text-primary transition-colors font-medium"
+        >
+          Esqueci a senha
+        </button>
+      </div>
+    </Shell>
   );
 };
 
