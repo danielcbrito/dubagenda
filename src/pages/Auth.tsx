@@ -618,8 +618,7 @@ const Auth = () => {
         <img
           src={logoDub}
           alt="DUB"
-          className="w-14 h-14 object-contain mb-8"
-          style={{ filter: "brightness(0)" }}
+          className="w-14 h-14 object-contain mb-8 [filter:brightness(0)] dark:[filter:brightness(0)_invert(1)]"
         />
 
         <AnimatePresence mode="wait">
