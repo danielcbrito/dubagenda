@@ -541,7 +541,26 @@ const Auth = () => {
   };
 
   const inputClasses =
-    "h-14 bg-muted/40 border-border/60 text-foreground placeholder:text-muted-foreground/60 rounded-2xl focus:border-primary/40 focus-visible:ring-1 focus-visible:ring-primary/20 transition-all text-[15px] px-5";
+    "h-14 bg-background border border-primary text-foreground placeholder:text-muted-foreground/50 rounded-xl focus:border-primary focus-visible:ring-0 focus-visible:ring-offset-0 outline-none transition-colors text-[15px] px-4";
+
+  // Keyboard offset: on mobile, when the on-screen keyboard opens, lift the
+  // footer (Continue button + hint) so it stays right above the keyboard.
+  const [kbOffset, setKbOffset] = useState(0);
+  useEffect(() => {
+    const vv = typeof window !== "undefined" ? window.visualViewport : null;
+    if (!vv) return;
+    const update = () => {
+      const offset = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+      setKbOffset(offset);
+    };
+    update();
+    vv.addEventListener("resize", update);
+    vv.addEventListener("scroll", update);
+    return () => {
+      vv.removeEventListener("resize", update);
+      vv.removeEventListener("scroll", update);
+    };
+  }, []);
 
   // Back handler with per-step logic
   const handleBack = () => {
@@ -580,13 +599,13 @@ const Auth = () => {
       {/* Top bar: back + centered title */}
       <div
         className="relative flex-shrink-0 flex items-center justify-center px-4"
-        style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 0.75rem)", paddingBottom: "0.75rem" }}
+        style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 1.5rem)", paddingBottom: "1rem" }}
       >
         <button
           type="button"
           onClick={handleBack}
           className="absolute left-3 p-2 -m-2 text-foreground hover:text-foreground/70 transition-colors"
-          style={{ top: "calc(env(safe-area-inset-top, 0px) + 0.5rem)" }}
+          style={{ top: "calc(env(safe-area-inset-top, 0px) + 1.25rem)" }}
           aria-label="Voltar"
         >
           <BackArrow size={20} />
@@ -596,7 +615,12 @@ const Auth = () => {
 
       {/* Body */}
       <div className="flex-1 flex flex-col px-6 pt-2 overflow-y-auto overscroll-contain">
-        <img src={logoDub} alt="DUB" className="w-14 h-14 object-contain mb-6" />
+        <img
+          src={logoDub}
+          alt="DUB"
+          className="w-14 h-14 object-contain mb-8"
+          style={{ filter: "brightness(0)" }}
+        />
 
         <AnimatePresence mode="wait">
           <motion.div
@@ -620,10 +644,14 @@ const Auth = () => {
         </AnimatePresence>
       </div>
 
-      {/* Footer pinned bottom */}
+      {/* Footer pinned bottom — lifts with the on-screen keyboard */}
       <div
-        className="flex-shrink-0 px-6 pt-4 space-y-3"
-        style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 1rem)" }}
+        className="flex-shrink-0 px-6 pt-4 space-y-3 bg-background"
+        style={{
+          paddingBottom: `calc(env(safe-area-inset-bottom, 0px) + 1rem)`,
+          transform: kbOffset > 0 ? `translateY(-${kbOffset}px)` : undefined,
+          transition: "transform 180ms ease-out",
+        }}
       >
         {footer}
         {bottomHint && (
