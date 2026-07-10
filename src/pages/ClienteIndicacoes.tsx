@@ -103,13 +103,13 @@ export default function ClienteIndicacoes() {
   const loadNames = useCallback(async (rows: Indicacao[]) => {
     const ids = Array.from(new Set(rows.map((r) => r.indicado_id).filter(Boolean))) as string[];
     if (ids.length === 0) return rows;
-    const { data: profs } = await supabase.from("profiles").select("id, nome, email").in("id", ids);
-    const map: Record<string, { nome: string | null; email: string | null }> = {};
-    (profs || []).forEach((p: any) => { map[p.id] = { nome: p.nome, email: p.email }; });
+    const { data: profs } = await supabase.from("profiles").select("id, nome, telefone").in("id", ids);
+    const map: Record<string, { nome: string | null; telefone: string | null }> = {};
+    (profs || []).forEach((p: any) => { map[p.id] = { nome: p.nome, telefone: p.telefone }; });
     return rows.map((r) => ({
       ...r,
       indicado_nome: r.indicado_id ? map[r.indicado_id]?.nome ?? null : null,
-      indicado_email: r.indicado_id ? map[r.indicado_id]?.email ?? null : null,
+      indicado_email: r.indicado_id ? map[r.indicado_id]?.telefone ?? null : null,
     }));
   }, []);
 
