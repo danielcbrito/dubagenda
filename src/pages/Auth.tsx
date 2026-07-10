@@ -771,6 +771,83 @@ const Auth = () => {
       </>
     );
 
+    // Step: NOME
+    if (signupStep === "nome") {
+      const canContinue = nome.trim().length >= 2;
+      return (
+        <Shell
+          headerTitle="Criar conta"
+          stepKey="s-nome"
+          title="Qual é o seu nome?"
+          subtitle="Como você quer ser chamado."
+          footer={
+            <ContinueButton
+              onClick={() => setSignupStep("cpf")}
+              type="button"
+              disabled={!canContinue}
+              label="Continuar"
+            />
+          }
+          bottomHint={bottomLogin}
+        >
+          <Input
+            name="nome"
+            type="text"
+            required
+            autoFocus
+            value={nome}
+            onChange={(e) => setNome(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter" && canContinue) setSignupStep("cpf"); }}
+            className={inputClasses}
+            placeholder="Seu nome completo"
+            autoComplete="name"
+            maxLength={80}
+          />
+        </Shell>
+      );
+    }
+
+    // Step: CPF
+    if (signupStep === "cpf") {
+      const canContinue = isValidCpf(cpfDigits);
+      return (
+        <Shell
+          headerTitle="Criar conta"
+          stepKey="s-cpf"
+          title="Qual é o seu CPF?"
+          subtitle="Usado somente para identificar sua conta."
+          footer={
+            <ContinueButton
+              onClick={() => setSignupStep("email")}
+              type="button"
+              disabled={!canContinue}
+              label="Continuar"
+            />
+          }
+          bottomHint={bottomLogin}
+        >
+          <Input
+            name="cpf"
+            type="text"
+            required
+            autoFocus
+            value={maskCpf(cpfDigits)}
+            onChange={(e) => setCpfDigits(e.target.value.replace(/\D/g, "").slice(0, 11))}
+            onKeyDown={(e) => { if (e.key === "Enter" && canContinue) setSignupStep("email"); }}
+            className={inputClasses}
+            placeholder="000.000.000-00"
+            autoComplete="off"
+            inputMode="numeric"
+          />
+          {cpfDigits.length === 11 && !canContinue && (
+            <p className="text-[12px] text-destructive font-medium mt-2 px-1">
+              CPF inválido. Verifique os dígitos.
+            </p>
+          )}
+        </Shell>
+      );
+    }
+
     // Step: PHONE
     if (signupStep === "phone") {
       return (
