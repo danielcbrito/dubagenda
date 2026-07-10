@@ -67,6 +67,27 @@ const Auth = () => {
     return () => clearTimeout(t);
   }, [otpCooldown]);
 
+  // Debounced CPF duplicate check
+  useEffect(() => {
+    if (cpfDebounceRef.current) clearTimeout(cpfDebounceRef.current);
+    setCpfTaken(false);
+    if (cpfDigits.length !== 11) { setCheckingCpf(false); return; }
+    setCheckingCpf(true);
+    cpfDebounceRef.current = setTimeout(async () => {
+      try {
+        const { data } = await supabase.functions.invoke("check-duplicate-signup", {
+          body: { cpf: cpfDigits },
+        });
+        setCpfTaken(Array.isArray(data?.duplicates) && data.duplicates.includes("cpf"));
+      } catch {
+        setCpfTaken(false);
+      } finally {
+        setCheckingCpf(false);
+      }
+    }, 400);
+    return () => { if (cpfDebounceRef.current) clearTimeout(cpfDebounceRef.current); };
+  }, [cpfDigits]);
+
   const passwordRef = useRef<HTMLInputElement>(null);
 
   // Auto-check session + prefill email from redirects
