@@ -238,6 +238,7 @@ function AuthRedirectGuard({ children }: { children: React.ReactNode }) {
       location.pathname.startsWith('/auth') ||
       location.pathname.startsWith('/b/') ||
       location.pathname.startsWith('/i/') ||
+      location.pathname.startsWith('/barbearia-dub/') ||
       location.pathname === '/esqueci-senha' ||
       location.pathname === '/resetar-senha' ||
       location.pathname === '/verificar-email' ||
