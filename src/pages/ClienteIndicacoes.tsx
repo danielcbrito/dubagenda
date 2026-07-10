@@ -58,8 +58,7 @@ const STATUS_META: Record<string, { label: string; color: string; Icon: any }> =
 const LIMITE_MENSAL = 4;
 
 function getInviteOrigin() {
-  if (typeof window === "undefined") return "https://dubagenda.lovable.app";
-  return window.location.origin;
+  return "https://dubagenda.lovable.app";
 }
 
 // Fallback de cópia — funciona em iframes/preview e mobile antigo onde
