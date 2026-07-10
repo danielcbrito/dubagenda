@@ -609,9 +609,11 @@ const Auth = () => {
       return;
     }
     if (isSignup) {
-      if (signupStep === "password") return setSignupStep("email");
-      if (signupStep === "email") return setSignupStep("otp");
+      if (signupStep === "password") return setSignupStep("otp");
       if (signupStep === "otp") return setSignupStep("phone");
+      if (signupStep === "phone") return setSignupStep("email");
+      if (signupStep === "email") return setSignupStep("cpf");
+      if (signupStep === "cpf") return setSignupStep("nome");
       return navigate("/");
     }
     if (step === "password") {
