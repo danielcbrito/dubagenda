@@ -451,78 +451,71 @@ const Auth = () => {
       }
 
       const phoneNormalized = "55" + phoneDigits.replace(/\D/g, "");
-      const { data: signUpData, error: signErr } = await supabase.auth.signUp({
-        email: validEmail,
-        password: senha,
-        options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
-          data: {
+
+      // Cria a conta via edge function (admin API) — sem envio de email de confirmação.
+      const { data: createRes, error: createErr } = await supabase.functions.invoke(
+        "whatsapp-verification",
+        {
+          body: {
+            action: "signup_create_account",
+            phone: phoneDigits.replace(/\D/g, ""),
+            verification_token: otpToken,
+            email: validEmail,
+            password: senha,
             signup_origin: signupOrigin,
-            telefone: phoneNormalized,
-            phone_verified_via_whatsapp: true,
             nome: validEmail.split("@")[0],
           },
-        },
-      });
-      if (signErr) {
-        toast.error(signErr.message.includes("already") ? "Este email já possui uma conta" : "Erro ao criar conta");
+        }
+      );
+
+      if (createErr || !createRes?.success) {
+        const msg = createRes?.error || createErr?.message || "";
+        if (createRes?.code === "email_exists" || /already|exists|registered|já possui/i.test(msg)) {
+          setEmailExists(true);
+          toast.error("Este email já possui uma conta. Faça login.");
+        } else {
+          toast.error(msg || "Erro ao criar conta");
+        }
         return;
       }
 
-      const userId = signUpData.user?.id;
-      if (userId) {
-        // Aguarda consume (auto-confirma email via admin API) antes de logar
-        await supabase.functions.invoke("whatsapp-verification", {
-          body: {
-            action: "signup_consume",
-            phone: phoneDigits.replace(/\D/g, ""),
-            verification_token: otpToken,
-            user_id: userId,
-          },
-        }).catch(() => {});
+      const userId = createRes.user_id as string;
 
-        // Registra a indicação imediatamente — não depende de CompletarPerfil.
-        // Assim o indicador vê "criou conta" em tempo real no painel.
-        try {
-          const pendingRef =
-            sessionStorage.getItem("pending_referral_code") ||
-            searchParams.get("ref") ||
-            "";
-          if (pendingRef) {
-            const sid =
-              sessionStorage.getItem("pending_referral_session_id") ||
-              localStorage.getItem("dub_ref_session_id") ||
-              null;
-            await supabase.rpc("registrar_indicacao", {
-              p_indicado_id: userId,
-              p_codigo: pendingRef.trim().toUpperCase(),
-              p_session_id: sid,
-            });
-            sessionStorage.removeItem("pending_referral_code");
-            sessionStorage.removeItem("pending_referral_session_id");
-          }
-        } catch (err) {
-          console.warn("Falha ao registrar indicação:", err);
+      // Registra a indicação imediatamente — não depende de CompletarPerfil.
+      try {
+        const pendingRef =
+          sessionStorage.getItem("pending_referral_code") ||
+          searchParams.get("ref") ||
+          "";
+        if (pendingRef) {
+          const sid =
+            sessionStorage.getItem("pending_referral_session_id") ||
+            localStorage.getItem("dub_ref_session_id") ||
+            null;
+          await supabase.rpc("registrar_indicacao", {
+            p_indicado_id: userId,
+            p_codigo: pendingRef.trim().toUpperCase(),
+            p_session_id: sid,
+          });
+          sessionStorage.removeItem("pending_referral_code");
+          sessionStorage.removeItem("pending_referral_session_id");
         }
+      } catch (err) {
+        console.warn("Falha ao registrar indicação:", err);
       }
 
-      // Nenhuma conta precisa mais confirmar email — força login com senha
-      if (signUpData.session) {
-        toast.success("Conta criada!");
-        await checkUserRoleAndRedirect(signUpData.user!.id);
-      } else {
-        const { data: signInData, error: signInErr } = await supabase.auth.signInWithPassword({
-          email: validEmail,
-          password: senha,
-        });
-        if (signInErr || !signInData.session) {
-          toast.error("Conta criada. Faça login para continuar.");
-          navigate("/auth?mode=login&email=" + encodeURIComponent(validEmail));
-          return;
-        }
-        toast.success("Conta criada!");
-        await checkUserRoleAndRedirect(signInData.user.id);
+      // Login imediato com senha — sem passar por email de confirmação.
+      const { data: signInData, error: signInErr } = await supabase.auth.signInWithPassword({
+        email: validEmail,
+        password: senha,
+      });
+      if (signInErr || !signInData.session) {
+        toast.error("Conta criada. Faça login para continuar.");
+        navigate("/auth?mode=login&email=" + encodeURIComponent(validEmail));
+        return;
       }
+      toast.success("Conta criada!");
+      await checkUserRoleAndRedirect(signInData.user.id);
     } catch (err) {
       if (err instanceof z.ZodError) toast.error(err.errors[0]?.message || "Dados inválidos");
       else toast.error("Erro ao criar conta");
