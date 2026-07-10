@@ -9,6 +9,7 @@ import { Loader2, Eye, EyeOff, Mail, X } from "lucide-react";
 import { BackArrow } from "@/components/ui/back-arrow";
 import { SupportChatBubble } from "@/components/support/SupportChatBubble";
 import { motion, AnimatePresence } from "framer-motion";
+import { getLastAccount, saveLastAccount, clearLastAccount, type LastAccount } from "@/utils/lastAccount";
 
 const emailSchema = z.string().trim().email("Email inválido").max(255);
 const passwordSchema = z.string().min(1, "Senha é obrigatória");
@@ -37,6 +38,12 @@ const Auth = () => {
 
   // Login sheet state
   const [showLoginSheet, setShowLoginSheet] = useState(false);
+
+  // Quick-access "last account" card
+  const [lastAccount, setLastAccount] = useState<LastAccount | null>(null);
+  useEffect(() => {
+    if (!isSignup) setLastAccount(getLastAccount());
+  }, [isSignup]);
 
   const passwordRef = useRef<HTMLInputElement>(null);
 
@@ -298,6 +305,19 @@ const Auth = () => {
           return;
         }
         toast.success("Login realizado com sucesso");
+        // Persist non-sensitive metadata for "Entrar como <Nome>" quick-access card.
+        supabase
+          .from("profiles")
+          .select("nome, avatar_url")
+          .eq("id", data.user.id)
+          .maybeSingle()
+          .then(({ data: p }) => {
+            saveLastAccount({
+              nome: p?.nome ?? data.user.user_metadata?.nome ?? null,
+              email: data.user.email ?? email.trim(),
+              avatar_url: p?.avatar_url ?? null,
+            });
+          }, () => {});
         await checkUserRoleAndRedirect(data.user.id);
       }
     } catch (err) {
@@ -627,6 +647,48 @@ const Auth = () => {
             transition={{ duration: 0.5, delay: 0.06, ease: [0.22, 1, 0.36, 1] }}
             className="rounded-3xl bg-card border border-border/60 p-5 shadow-lg dark:shadow-none mx-1"
           >
+            {lastAccount && (
+              <div className="mb-4 flex items-center gap-3 rounded-2xl border border-border/60 bg-muted/40 p-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEmail(lastAccount.email);
+                    setLoginError(null);
+                    setTimeout(() => passwordRef.current?.focus(), 30);
+                  }}
+                  className="flex flex-1 items-center gap-3 text-left active:scale-[0.99] transition-transform"
+                >
+                  <div className="w-10 h-10 rounded-full bg-foreground/10 flex items-center justify-center overflow-hidden shrink-0">
+                    {lastAccount.avatar_url ? (
+                      <img src={lastAccount.avatar_url} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="text-[13px] font-semibold text-foreground">
+                        {(lastAccount.nome || lastAccount.email).charAt(0).toUpperCase()}
+                      </span>
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[13px] font-semibold text-foreground truncate">
+                      Entrar como {lastAccount.nome || lastAccount.email.split("@")[0]}
+                    </p>
+                    <p className="text-[11px] text-muted-foreground truncate">{lastAccount.email}</p>
+                  </div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    clearLastAccount();
+                    setLastAccount(null);
+                    setEmail("");
+                  }}
+                  className="text-[11px] text-muted-foreground hover:text-foreground transition-colors font-medium px-2 py-1 rounded-lg"
+                  aria-label="Trocar de conta"
+                >
+                  Trocar
+                </button>
+              </div>
+            )}
+
             <form onSubmit={handlePasswordSubmit} className="space-y-3">
               <Input
                 name="email"
@@ -642,6 +704,7 @@ const Auth = () => {
                 autoComplete="email"
                 inputMode="email"
               />
+
 
               <div className="relative">
                 <Input
