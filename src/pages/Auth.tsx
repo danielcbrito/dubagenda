@@ -488,7 +488,8 @@ const Auth = () => {
             email: validEmail,
             password: senha,
             signup_origin: signupOrigin,
-            nome: validEmail.split("@")[0],
+            nome: nome.trim() || validEmail.split("@")[0],
+            cpf: cpfDigits.replace(/\D/g, ""),
           },
         }
       );
