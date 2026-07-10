@@ -1,0 +1,67 @@
+DIAGNÓSTICO — SESSÃO FANTASMA APÓS CONTA APAGADA
+Data: 2026-07-10
+
+CAMADA USUÁRIO
+- Sintoma: após abrir link de indicação e escolher barbearia, o app parecia reconhecer uma conta antiga e entrar sem permitir criar nova conta.
+- Comportamento visto: ao tocar em Perfil ou voltar ao painel, o app redirecionava para a tela inicial/login.
+- E-mail analisado: pablosilva.empree@gmail.com.
+
+CAMADA FRONTEND
+- Causa raiz no app: algumas rotas confiavam em supabase.auth.getSession().
+- getSession() pode devolver sessão antiga salva no localStorage, mesmo quando o usuário já foi apagado no Auth.
+- Com isso, o app tratava um token local antigo como login válido e tentava abrir /cliente.
+- Correção aplicada: foi criado um verificador central que usa supabase.auth.getUser(), que valida a sessão no servidor do Supabase.
+- Se o usuário não existir mais, a sessão local é limpa e o fluxo volta para cadastro/login sem loop.
+- Arquivos ajustados:
+  - src/utils/authSession.ts
+  - src/App.tsx
+  - src/pages/Auth.tsx
+  - src/pages/AuthCallback.tsx
+  - src/pages/Cliente.tsx
+  - src/pages/CompletarPerfil.tsx
+  - src/pages/EscolherBarbearia.tsx
+
+CAMADA BANCO SUPABASE
+- Consulta em auth.users para pablosilva.empree@gmail.com: nenhum usuário ativo encontrado.
+- Havia um registro residual em public.identidades_usadas para esse e-mail.
+- Esse registro bloqueava/referenciava identidade anterior mesmo sem usuário ativo.
+- Correção de dados aplicada: removido somente o registro de public.identidades_usadas desse e-mail.
+- A função check-duplicate-signup agora retorna duplicateClientAccount=false e duplicates=[] para esse e-mail.
+
+CAMADA AUTH / TRIGGERS
+- Problema adicional encontrado: a função public.handle_new_user havia sido sobrescrita por uma versão que criava profile, mas não recriava o papel cliente.
+- Sem user_roles.role='cliente', contas novas poderiam nascer incompletas para o app de cliente.
+- Correção aplicada por migração:
+  - Cria/atualiza profile com nome, telefone e referral_code.
+  - Insere user_roles com role='cliente'.
+  - Mantém segurança contra admin/barbeiro no app de cliente.
+
+FLUXO CRÍTICO CORRIGIDO — INDICAÇÃO / CADASTRO
+1. Cliente abre link de indicação.
+2. App registra/preserva o código de indicação.
+3. Cliente escolhe barbearia.
+4. App abre cadastro por WhatsApp.
+5. Antes de confiar em qualquer sessão local, o app valida no servidor com getUser().
+6. Se a sessão antiga apontar para conta apagada, ela é limpa.
+7. Cliente consegue criar nova conta com o mesmo e-mail.
+8. Novo usuário nasce com profile e role cliente.
+
+TRATAMENTO DE ERROS
+- Tokens antigos de conta apagada agora deixam de gerar loop visual.
+- Sessões inválidas são limpas localmente.
+- Perfil inexistente na área /cliente encerra a sessão local e força novo login/cadastro.
+- Estado de cadastro permanece público e não é interrompido por sessão fantasma.
+
+TESTES EXECUTADOS
+- Consulta auth.users por e-mail: nenhum usuário encontrado.
+- Consulta identidades_usadas por e-mail após limpeza: nenhum registro encontrado.
+- Edge Function check-duplicate-signup com o e-mail: HTTP 200, duplicateClientAccount=false, duplicates=[].
+- Playwright com sessão falsa/antiga no localStorage:
+  - /auth?mode=signup&ref=TESTE permaneceu na tela de cadastro.
+  - Campo de telefone ficou visível.
+  - Storage de auth antigo foi limpo.
+  - /cliente com sessão falsa redirecionou para /auth.
+
+OBSERVAÇÃO DE SEGURANÇA
+- Não foram removidos registros não relacionados diretamente ao bloqueio de cadastro do cliente.
+- Um registro em barbeiros_private com esse e-mail foi identificado, mas não foi alterado por pertencer à camada privada de profissionais e não bloquear o cadastro de cliente.
