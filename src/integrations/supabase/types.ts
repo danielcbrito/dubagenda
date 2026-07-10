@@ -6754,6 +6754,15 @@ export type Database = {
           manutencao_mensagem: string
         }[]
       }
+      get_meus_indicados_info: {
+        Args: never
+        Returns: {
+          email: string
+          id: string
+          nome: string
+          telefone: string
+        }[]
+      }
       get_meus_pedidos_loja: { Args: { p_cliente_id: string }; Returns: Json }
       get_next_available_date: {
         Args: {
