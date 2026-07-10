@@ -357,7 +357,7 @@ export default function ClienteIndicacoes() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-[13px] font-medium text-foreground truncate">
-                          {ind.indicado_nome || (isClick ? "Alguém abriu seu link" : "Convidado")}
+                          {ind.indicado_nome || ind.indicado_email || (isClick ? "Alguém abriu seu link" : "Convidado")}
                         </p>
                         <p className="text-[10px] text-muted-foreground/70">
                           {format(new Date(ind.criado_em), "d 'de' MMM, HH:mm", { locale: ptBR })}
