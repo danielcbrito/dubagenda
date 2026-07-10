@@ -507,6 +507,19 @@ const Auth = () => {
 
       const userId = createRes.user_id as string;
 
+      // Best-effort: garantir nome + CPF persistidos no profile (idempotente).
+      try {
+        await supabase
+          .from("profiles")
+          .update({
+            nome: nome.trim() || validEmail.split("@")[0],
+            cpf: cpfDigits.replace(/\D/g, "") || null,
+          })
+          .eq("id", userId);
+      } catch {
+        /* ignore — perfil será completado depois se falhar */
+      }
+
       // Registra a indicação imediatamente — não depende de CompletarPerfil.
       try {
         const pendingRef =
