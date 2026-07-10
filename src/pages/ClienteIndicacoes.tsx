@@ -183,34 +183,10 @@ export default function ClienteIndicacoes() {
     return () => { supabase.removeChannel(channel); };
   }, [userId, loadNames, recomputeMonth]);
 
-  const fullLink = useMemo(
+  const referralLink = useMemo(
     () => (referralCode ? `${getInviteOrigin()}/i/${referralCode}` : ""),
     [referralCode]
   );
-
-  const [shortLink, setShortLink] = useState<string>("");
-
-  useEffect(() => {
-    if (!fullLink || !referralCode) return;
-    const cacheKey = `dub_short_${referralCode}`;
-    const cached = sessionStorage.getItem(cacheKey);
-    if (cached) { setShortLink(cached); return; }
-    setShortLink("");
-    (async () => {
-      try {
-        const res = await fetch(
-          `https://tinyurl.com/api-create.php?url=${encodeURIComponent(fullLink)}`
-        );
-        const url = (await res.text()).trim();
-        if (url.startsWith("http")) {
-          sessionStorage.setItem(cacheKey, url);
-          setShortLink(url);
-        }
-      } catch { /* mantém link longo */ }
-    })();
-  }, [fullLink, referralCode]);
-
-  const referralLink = shortLink || fullLink;
   const prettyLink = referralLink.replace(/^https?:\/\//, "");
 
   const shareText = useMemo(
