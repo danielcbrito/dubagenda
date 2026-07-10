@@ -538,8 +538,21 @@ const EscolherBarbearia = () => {
     localStorage.setItem('dub_last_barbershop_slug', slug);
     localStorage.setItem('dub_last_barbershop_name', unit.brandName || unit.nome);
 
+    // Modo convite: barbearia escolhida → segue direto pro cadastro
+    // (WhatsApp OTP → email/senha) já vinculando o tenant à conta.
+    if (isInviteMode) {
+      const params = new URLSearchParams({
+        mode: "signup",
+        tenant: unit.tenant_id,
+        origin: "discover",
+      });
+      if (inviteRef) params.set("ref", inviteRef);
+      navigate(`/auth?${params.toString()}`);
+      return;
+    }
+
     navigate(`/${slug}?from=${fromParam}&unidade=${unit.id}`);
-  }, [isChangeMode, navigate]);
+  }, [isChangeMode, isInviteMode, inviteRef, navigate]);
 
   const handleRecenter = useCallback(() => {
     setSelectedUnitId(null);
