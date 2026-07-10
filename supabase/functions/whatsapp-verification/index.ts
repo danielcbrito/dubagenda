@@ -112,7 +112,7 @@ Deno.serve(async (req) => {
       // Webhook fixo dedicado ao OTP de cadastro (n8n)
       const webhookUrl = "https://n8n-n8n.xcyr4f.easypanel.host/webhook/1b63ce24-4d00-4b74-9eac-104fdd812e01";
 
-      const mensagem = `Ola! Seu codigo de verificacao DUB e ${code}. Expira em 5 minutos. Nao compartilhe com ninguem.`;
+      const mensagem = code;
       const webhookPayload = {
         evento: "verificacao_cadastro",
         descricao: "Codigo OTP de verificacao para cadastro de cliente",
