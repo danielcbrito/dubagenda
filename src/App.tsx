@@ -390,6 +390,7 @@ function AppRoutes() {
               <Route path="/barbearias" element={<BarbershopsCityGuide />} />
               <Route path="/barbearias/:cidade" element={<BarbershopsCityGuide />} />
               <Route path="/i/:code" element={<ConviteRedirect />} />
+              <Route path="/barbearia-dub/:code" element={<ConviteRedirect />} />
               <Route path="/:slug" element={<BarbershopPublic />} />
               <Route path="/flowchart" element={<Flowchart />} />
               <Route path="/responsive-preview" element={<ResponsivePreview />} />
