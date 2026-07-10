@@ -299,6 +299,19 @@ const Auth = () => {
           return;
         }
         toast.success("Login realizado com sucesso");
+        // Persist non-sensitive metadata for "Entrar como <Nome>" quick-access card.
+        supabase
+          .from("profiles")
+          .select("nome, avatar_url")
+          .eq("id", data.user.id)
+          .maybeSingle()
+          .then(({ data: p }) => {
+            saveLastAccount({
+              nome: p?.nome ?? data.user.user_metadata?.nome ?? null,
+              email: data.user.email ?? email.trim(),
+              avatar_url: p?.avatar_url ?? null,
+            });
+          }, () => {});
         await checkUserRoleAndRedirect(data.user.id);
       }
     } catch (err) {
