@@ -357,6 +357,132 @@ const Auth = () => {
     handleMagicLink();
   };
 
+  // ─── Signup por WhatsApp OTP ───────────────────────────────
+  const maskPhone = (digits: string) => {
+    const d = digits.replace(/\D/g, "").slice(0, 11);
+    if (d.length <= 2) return d.length ? `(${d}` : "";
+    if (d.length <= 7) return `(${d.slice(0, 2)}) ${d.slice(2)}`;
+    return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
+  };
+
+  const handleSendOtp = async () => {
+    const digits = phoneDigits.replace(/\D/g, "");
+    if (digits.length < 10 || digits.length > 11) {
+      toast.error("Informe um WhatsApp válido (DDD + número)");
+      return;
+    }
+    setSignupBusy(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("whatsapp-signup-otp", {
+        body: { action: "send", phone: digits },
+      });
+      if (error) throw error;
+      if (!data?.success) {
+        if (data?.cooldown_remaining) setOtpCooldown(data.cooldown_remaining);
+        toast.error(data?.error || "Não foi possível enviar o código");
+        return;
+      }
+      setOtpCode("");
+      setSignupStep("otp");
+      setOtpCooldown(60);
+      toast.success("Código enviado para seu WhatsApp");
+    } catch (err) {
+      toast.error("Erro ao enviar o código. Tente novamente.");
+    } finally {
+      setSignupBusy(false);
+    }
+  };
+
+  const handleVerifyOtp = async () => {
+    if (!/^\d{6}$/.test(otpCode)) {
+      toast.error("Digite os 6 dígitos");
+      return;
+    }
+    setSignupBusy(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("whatsapp-signup-otp", {
+        body: { action: "verify", phone: phoneDigits.replace(/\D/g, ""), code: otpCode },
+      });
+      if (error) throw error;
+      if (!data?.success) {
+        toast.error(data?.error || "Código inválido");
+        return;
+      }
+      setOtpToken(data.verification_token);
+      setSignupStep("account");
+      toast.success("WhatsApp verificado!");
+    } catch {
+      toast.error("Erro ao verificar o código");
+    } finally {
+      setSignupBusy(false);
+    }
+  };
+
+  const handleCreateAccount = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSignupBusy(true);
+    try {
+      const validEmail = emailSchema.parse(email);
+      if (senha.length < 6) {
+        toast.error("A senha precisa ter ao menos 6 caracteres");
+        return;
+      }
+
+      const { data: dup } = await supabase.functions.invoke("check-duplicate-signup", {
+        body: { email: validEmail },
+      });
+      if (dup?.duplicateClientAccount || dup?.duplicates?.includes("email")) {
+        setEmailExists(true);
+        toast.error("Este email já possui uma conta. Faça login.");
+        return;
+      }
+
+      const phoneNormalized = "55" + phoneDigits.replace(/\D/g, "");
+      const { data: signUpData, error: signErr } = await supabase.auth.signUp({
+        email: validEmail,
+        password: senha,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
+          data: {
+            signup_origin: signupOrigin,
+            telefone: phoneNormalized,
+            phone_verified_via_whatsapp: true,
+          },
+        },
+      });
+      if (signErr) {
+        toast.error(signErr.message.includes("already") ? "Este email já possui uma conta" : "Erro ao criar conta");
+        return;
+      }
+
+      const userId = signUpData.user?.id;
+      if (userId) {
+        supabase.functions.invoke("whatsapp-signup-otp", {
+          body: {
+            action: "consume",
+            phone: phoneDigits.replace(/\D/g, ""),
+            verification_token: otpToken,
+            user_id: userId,
+          },
+        }).catch(() => {});
+      }
+
+      if (signUpData.session) {
+        toast.success("Conta criada!");
+        await checkUserRoleAndRedirect(signUpData.user!.id);
+      } else {
+        setStep("magic_sent");
+        toast.success("Confirme seu email para acessar a conta");
+      }
+    } catch (err) {
+      if (err instanceof z.ZodError) toast.error(err.errors[0]?.message || "Dados inválidos");
+      else toast.error("Erro ao criar conta");
+    } finally {
+      setSignupBusy(false);
+    }
+  };
+
+
   const handleGoogleLogin = async () => {
     await supabase.auth.signInWithOAuth({
       provider: "google",
