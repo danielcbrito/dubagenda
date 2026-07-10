@@ -941,7 +941,7 @@ const Auth = () => {
           subtitle="Usaremos para você acessar sua conta."
           footer={
             <ContinueButton
-              onClick={() => setSignupStep("password")}
+              onClick={() => setSignupStep("phone")}
               type="button"
               disabled={!canContinue}
               label="Continuar"
