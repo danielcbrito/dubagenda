@@ -1,15 +1,35 @@
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 import sceneClientSad from "@/assets/scene-client-sad.png";
 import sceneFriendApp from "@/assets/scene-friend-app.png";
 import { AmbientEffects } from "@/components/landing/AmbientEffects";
+import { getLastAccount, clearLastAccount, type LastAccount } from "@/utils/lastAccount";
+
+const firstName = (full?: string | null) =>
+  (full || "").trim().split(/\s+/)[0] || "";
 
 const Index = () => {
   const navigate = useNavigate();
+  const [lastAccount, setLastAccount] = useState<LastAccount | null>(null);
+
+  useEffect(() => {
+    setLastAccount(getLastAccount());
+  }, []);
 
   const handleJaTenhoBarbearia = () => {
     navigate('/auth?mode=login');
+  };
+
+  const handleContinueAsLast = () => {
+    if (!lastAccount) return;
+    navigate(`/auth?mode=login&email=${encodeURIComponent(lastAccount.email)}`);
+  };
+
+  const handleUseOtherAccount = () => {
+    clearLastAccount();
+    setLastAccount(null);
   };
 
   return (
@@ -130,51 +150,105 @@ const Index = () => {
             className="flex flex-col gap-2.5"
             style={{ marginBottom: "calc(env(safe-area-inset-bottom, 0px) + 28px)" }}
           >
-            <button
-              onClick={handleJaTenhoBarbearia}
-              className="w-full flex items-center justify-between active:scale-[0.97] transition-all bg-foreground text-background"
-              style={{
-                fontFamily: "'Plus Jakarta Sans', Inter, sans-serif",
-                fontWeight: 700,
-                fontSize: 15,
-                borderRadius: 14,
-                padding: "14px 18px",
-                border: "none",
-                cursor: "pointer",
-              }}
-            >
-              <span>Já sou cliente</span>
-              <span
-                className="flex items-center justify-center bg-background"
-                style={{ width: 28, height: 28, borderRadius: 8 }}
-              >
-                <ArrowRight className="w-3.5 h-3.5 text-foreground" />
-              </span>
-            </button>
+            {lastAccount ? (
+              <>
+                <button
+                  onClick={handleContinueAsLast}
+                  className="w-full flex items-center justify-between active:scale-[0.97] transition-all bg-foreground text-background"
+                  style={{
+                    fontFamily: "'Plus Jakarta Sans', Inter, sans-serif",
+                    fontWeight: 700,
+                    fontSize: 15,
+                    borderRadius: 14,
+                    padding: "14px 18px",
+                    border: "none",
+                    cursor: "pointer",
+                  }}
+                >
+                  <span className="truncate">
+                    Continuar como {firstName(lastAccount.nome) || lastAccount.email}
+                  </span>
+                  <span
+                    className="flex items-center justify-center bg-background flex-shrink-0 ml-2"
+                    style={{ width: 28, height: 28, borderRadius: 8 }}
+                  >
+                    <ArrowRight className="w-3.5 h-3.5 text-foreground" />
+                  </span>
+                </button>
 
-            <button
-              onClick={() => navigate("/escolher-barbearia")}
-              className="w-full flex items-center justify-between active:scale-[0.97] transition-all text-foreground border-foreground/20"
-              style={{
-                fontFamily: "'Plus Jakarta Sans', Inter, sans-serif",
-                fontWeight: 700,
-                fontSize: 15,
-                background: "hsl(var(--muted))",
-                borderRadius: 14,
-                padding: "14px 18px",
-                borderWidth: "1.5px",
-                borderStyle: "solid",
-                cursor: "pointer",
-              }}
-            >
-              <span>Encontrar Barbearias</span>
-              <span
-                className="flex items-center justify-center bg-foreground/10"
-                style={{ width: 28, height: 28, borderRadius: 8 }}
-              >
-                <ArrowRight className="w-3.5 h-3.5 text-foreground" />
-              </span>
-            </button>
+                <button
+                  onClick={handleUseOtherAccount}
+                  className="w-full flex items-center justify-between active:scale-[0.97] transition-all text-foreground border-foreground/20"
+                  style={{
+                    fontFamily: "'Plus Jakarta Sans', Inter, sans-serif",
+                    fontWeight: 700,
+                    fontSize: 15,
+                    background: "hsl(var(--muted))",
+                    borderRadius: 14,
+                    padding: "14px 18px",
+                    borderWidth: "1.5px",
+                    borderStyle: "solid",
+                    cursor: "pointer",
+                  }}
+                >
+                  <span>Acessar outra conta</span>
+                  <span
+                    className="flex items-center justify-center bg-foreground/10"
+                    style={{ width: 28, height: 28, borderRadius: 8 }}
+                  >
+                    <ArrowRight className="w-3.5 h-3.5 text-foreground" />
+                  </span>
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  onClick={handleJaTenhoBarbearia}
+                  className="w-full flex items-center justify-between active:scale-[0.97] transition-all bg-foreground text-background"
+                  style={{
+                    fontFamily: "'Plus Jakarta Sans', Inter, sans-serif",
+                    fontWeight: 700,
+                    fontSize: 15,
+                    borderRadius: 14,
+                    padding: "14px 18px",
+                    border: "none",
+                    cursor: "pointer",
+                  }}
+                >
+                  <span>Já sou cliente</span>
+                  <span
+                    className="flex items-center justify-center bg-background"
+                    style={{ width: 28, height: 28, borderRadius: 8 }}
+                  >
+                    <ArrowRight className="w-3.5 h-3.5 text-foreground" />
+                  </span>
+                </button>
+
+                <button
+                  onClick={() => navigate("/escolher-barbearia")}
+                  className="w-full flex items-center justify-between active:scale-[0.97] transition-all text-foreground border-foreground/20"
+                  style={{
+                    fontFamily: "'Plus Jakarta Sans', Inter, sans-serif",
+                    fontWeight: 700,
+                    fontSize: 15,
+                    background: "hsl(var(--muted))",
+                    borderRadius: 14,
+                    padding: "14px 18px",
+                    borderWidth: "1.5px",
+                    borderStyle: "solid",
+                    cursor: "pointer",
+                  }}
+                >
+                  <span>Encontrar Barbearias</span>
+                  <span
+                    className="flex items-center justify-center bg-foreground/10"
+                    style={{ width: 28, height: 28, borderRadius: 8 }}
+                  >
+                    <ArrowRight className="w-3.5 h-3.5 text-foreground" />
+                  </span>
+                </button>
+              </>
+            )}
           </div>
         </motion.div>
       </div>

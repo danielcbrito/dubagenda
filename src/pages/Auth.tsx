@@ -140,7 +140,10 @@ const Auth = () => {
   const signupOrigin = searchParams.get("origin") || "dub_exclusive";
   const isSignup = mode === "signup";
 
-  const [step, setStep] = useState<AuthStep>("email");
+  const prefilledEmailParam = searchParams.get("email");
+  const [step, setStep] = useState<AuthStep>(
+    !isSignup && prefilledEmailParam ? "password" : "email"
+  );
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   const [showPassword, setShowPassword] = useState(false);
