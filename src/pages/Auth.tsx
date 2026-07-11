@@ -84,8 +84,6 @@ const AuthShell: React.FC<AuthShellProps> = ({
       className="flex-shrink-0 px-6 pt-4 space-y-3 bg-background"
       style={{
         paddingBottom: `calc(env(safe-area-inset-bottom, 0px) + 1rem)`,
-        transform: kbOffset > 0 ? `translateY(-${kbOffset}px)` : undefined,
-        transition: "transform 180ms ease-out",
       }}
     >
       {footer}
