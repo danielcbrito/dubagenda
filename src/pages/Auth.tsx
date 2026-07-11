@@ -11,6 +11,7 @@ import { SupportChatBubble } from "@/components/support/SupportChatBubble";
 import { motion, AnimatePresence } from "framer-motion";
 import { getLastAccount, saveLastAccount, clearLastAccount, type LastAccount } from "@/utils/lastAccount";
 import { getVerifiedAuthUser } from "@/utils/authSession";
+import { useViewportHeight } from "@/hooks/useViewportHeight";
 import logoDub from "@/assets/logo-dub.png";
 
 const emailSchema = z.string().trim().email("Email inválido").max(255);
