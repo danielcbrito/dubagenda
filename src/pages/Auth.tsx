@@ -62,10 +62,11 @@ const AuthShell: React.FC<AuthShellProps> = ({
       {!keyboardOpen && (
         <div className="flex-shrink-0 flex justify-center pt-3 pb-1">
           <img
-            src={new URL("@/assets/logo-dub.png", import.meta.url).href}
+            src={logoDub}
             alt="Dub"
-            className="h-10 w-auto object-contain dark:invert-0"
+            className="h-10 w-auto object-contain"
           />
+
         </div>
       )}
 
