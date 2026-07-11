@@ -711,25 +711,6 @@ const Auth = () => {
   const inputClasses =
     "h-14 bg-background border border-primary text-foreground placeholder:text-muted-foreground/50 rounded-xl focus:border-primary focus-visible:ring-0 focus-visible:ring-offset-0 outline-none transition-colors text-[15px] px-4";
 
-  // Keyboard offset: on mobile, when the on-screen keyboard opens, lift the
-  // footer (Continue button + hint) so it stays right above the keyboard.
-  const [kbOffset, setKbOffset] = useState(0);
-  useEffect(() => {
-    const vv = typeof window !== "undefined" ? window.visualViewport : null;
-    if (!vv) return;
-    const update = () => {
-      const offset = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
-      setKbOffset(offset);
-    };
-    update();
-    vv.addEventListener("resize", update);
-    vv.addEventListener("scroll", update);
-    return () => {
-      vv.removeEventListener("resize", update);
-      vv.removeEventListener("scroll", update);
-    };
-  }, []);
-
   // Back handler with per-step logic
   const handleBack = () => {
     if (step === "magic_sent") {
@@ -770,10 +751,11 @@ const Auth = () => {
       footer: React.ReactNode;
       bottomHint?: React.ReactNode;
     }> = (props) => (
-      <AuthShell {...props} kbOffset={kbOffset} onBack={stableOnBack} />
+      <AuthShell {...props} onBack={stableOnBack} />
     );
     return C;
-  }, [kbOffset, stableOnBack]);
+  }, [stableOnBack]);
+
 
   const ContinueButton = ContinueButtonBase;
 
