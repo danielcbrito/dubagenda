@@ -27,12 +27,11 @@ interface AuthShellProps {
   children: React.ReactNode;
   footer: React.ReactNode;
   bottomHint?: React.ReactNode;
-  kbOffset: number;
   onBack: () => void;
 }
 
 const AuthShell: React.FC<AuthShellProps> = ({
-  headerTitle, title, subtitle, stepKey, children, footer, bottomHint, kbOffset, onBack,
+  headerTitle, title, subtitle, stepKey, children, footer, bottomHint, onBack,
 }) => (
   <div className="min-h-[100dvh] flex flex-col bg-background">
     <div
