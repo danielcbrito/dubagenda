@@ -9,10 +9,9 @@ import { Loader2, Eye, EyeOff, Mail } from "lucide-react";
 import { BackArrow } from "@/components/ui/back-arrow";
 import { SupportChatBubble } from "@/components/support/SupportChatBubble";
 import { motion, AnimatePresence } from "framer-motion";
-import { getLastAccount, saveLastAccount, clearLastAccount, type LastAccount } from "@/utils/lastAccount";
+import { saveLastAccount } from "@/utils/lastAccount";
 import { getVerifiedAuthUser } from "@/utils/authSession";
 import { useViewportHeight } from "@/hooks/useViewportHeight";
-import logoDub from "@/assets/logo-dub.png";
 
 const emailSchema = z.string().trim().email("Email inválido").max(255);
 const passwordSchema = z.string().min(1, "Senha é obrigatória");
@@ -34,17 +33,18 @@ interface AuthShellProps {
 const AuthShell: React.FC<AuthShellProps> = ({
   headerTitle, title, subtitle, stepKey, children, footer, bottomHint, onBack,
 }) => {
-  // Estratégia "Mr Caseiro": fluxo natural do documento com min-h-dvh.
-  // O navegador (Android/iOS) reduz automaticamente o viewport quando o teclado abre
-  // e faz scroll do input focado — o botão "Continuar" sobe suavemente logo acima
-  // do teclado sem sobrepor os campos.
+  const { height, keyboardOpen } = useViewportHeight();
+
+  // Estratégia "Mr Caseiro": o shell ocupa exatamente o visualViewport real.
+  // Quando o teclado abre, a altura do container reduz junto e o footer sobe
+  // por fluxo flex, sem translateY, sem barra fixa e sem sobrepor o campo.
   return (
     <div
-      className="min-h-[100dvh] flex flex-col bg-background"
-      style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}
+      className="fixed inset-x-0 top-0 flex flex-col overflow-hidden bg-background"
+      style={{ height, paddingTop: "env(safe-area-inset-top, 0px)" }}
     >
       {/* Header transparente — sem barra, apenas seta + título */}
-      <div className="relative flex-shrink-0 flex items-center justify-center px-4 h-14">
+      <div className="relative flex-shrink-0 flex items-center justify-center px-4 h-12">
         <button
           type="button"
           onClick={onBack}
@@ -56,14 +56,8 @@ const AuthShell: React.FC<AuthShellProps> = ({
         <h2 className="text-[15px] font-semibold text-foreground">{headerTitle}</h2>
       </div>
 
-      {/* Conteúdo — cresce naturalmente, empurra o footer para baixo */}
-      <div className="flex-1 flex flex-col px-6 pt-2">
-        <img
-          src={logoDub}
-          alt="DUB"
-          className="w-14 h-14 object-contain mb-8 [filter:brightness(0)] dark:[filter:brightness(0)_invert(1)]"
-        />
-
+      {/* Conteúdo compacto — sem logo para liberar espaço quando o teclado abre */}
+      <div className="flex-1 min-h-0 flex flex-col px-6 pt-3 overflow-y-auto overscroll-contain">
         <AnimatePresence mode="wait">
           <motion.div
             key={stepKey}
@@ -76,11 +70,11 @@ const AuthShell: React.FC<AuthShellProps> = ({
               {title}
             </h1>
             {subtitle && (
-              <p className="text-[14px] text-muted-foreground mt-2 mb-6 leading-relaxed">
+              <p className="text-[13px] text-muted-foreground mt-1.5 mb-5 leading-relaxed">
                 {subtitle}
               </p>
             )}
-            {!subtitle && <div className="mb-6" />}
+            {!subtitle && <div className="mb-5" />}
             {children}
           </motion.div>
         </AnimatePresence>
@@ -88,12 +82,15 @@ const AuthShell: React.FC<AuthShellProps> = ({
 
       {/* Footer em fluxo natural — sem fixed/sticky, sem bg extra */}
       <div
-        className="flex-shrink-0 px-6 pt-6 space-y-3"
-        style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 1rem)" }}
+        className="flex-shrink-0 px-6 space-y-2.5"
+        style={{
+          paddingTop: keyboardOpen ? "0.5rem" : "1.25rem",
+          paddingBottom: keyboardOpen ? "0.5rem" : "calc(env(safe-area-inset-bottom, 0px) + 1rem)",
+        }}
       >
         {footer}
         {bottomHint && (
-          <p className="text-center text-[13px] text-muted-foreground">{bottomHint}</p>
+          <p className="text-center text-[12px] text-muted-foreground">{bottomHint}</p>
         )}
       </div>
 
@@ -116,7 +113,7 @@ const ContinueButtonBase: React.FC<ContinueButtonProps> = ({
   <Button
     type={type}
     onClick={onClick}
-    className="w-full h-14 rounded-2xl text-[15px] font-semibold bg-primary text-primary-foreground hover:bg-primary/90 active:scale-[0.98] transition-all shadow-lg shadow-primary/10 disabled:opacity-50 disabled:shadow-none"
+    className="w-full h-12 rounded-xl text-[14px] font-semibold bg-primary text-primary-foreground hover:bg-primary/90 active:scale-[0.98] transition-all shadow-lg shadow-primary/10 disabled:opacity-50 disabled:shadow-none"
     disabled={disabled || loading}
   >
     {loading ? (
@@ -153,15 +150,6 @@ const Auth = () => {
   const [emailExists, setEmailExists] = useState(false);
   const [checkingEmail, setCheckingEmail] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
-
-  // Login sheet state
-  const [showLoginSheet, setShowLoginSheet] = useState(false);
-
-  // Quick-access "last account" card
-  const [lastAccount, setLastAccount] = useState<LastAccount | null>(null);
-  useEffect(() => {
-    if (!isSignup) setLastAccount(getLastAccount());
-  }, [isSignup]);
 
   // ── Signup multi-step: Nome → CPF → Email → WhatsApp → OTP → Senha ──
   type SignupStep = "nome" | "cpf" | "email" | "phone" | "otp" | "password";
@@ -255,15 +243,6 @@ const Auth = () => {
     });
   }, [searchParams]);
 
-  // Open login sheet automatically in login mode
-  useEffect(() => {
-    if (!isSignup) {
-      setShowLoginSheet(true);
-    } else {
-      setShowLoginSheet(false);
-    }
-  }, [isSignup]);
-
   // Cooldown timer
   useEffect(() => {
     if (cooldownTimer > 0) {
@@ -272,12 +251,12 @@ const Auth = () => {
     }
   }, [cooldownTimer]);
 
-  // Focus password when login sheet shows
+  // Focus password when the accelerated login route opens directly in password step
   useEffect(() => {
-    if (showLoginSheet && step === "password") {
+    if (!isSignup && step === "password") {
       setTimeout(() => passwordRef.current?.focus(), 350);
     }
-  }, [showLoginSheet, step]);
+  }, [isSignup, step]);
 
   const checkUserRoleAndRedirect = async (userId: string) => {
     const { data: roles } = await supabase
@@ -719,7 +698,7 @@ const Auth = () => {
   };
 
   const inputClasses =
-    "h-14 bg-background border border-primary text-foreground placeholder:text-muted-foreground/50 rounded-xl focus:border-primary focus-visible:ring-0 focus-visible:ring-offset-0 outline-none transition-colors text-[15px] px-4";
+    "h-12 bg-background border border-primary text-foreground placeholder:text-muted-foreground/50 rounded-lg focus:border-primary focus-visible:ring-0 focus-visible:ring-offset-0 outline-none transition-colors text-[14px] px-4";
 
   // Back handler with per-step logic
   const handleBack = () => {
@@ -845,7 +824,9 @@ const Auth = () => {
             onKeyDown={(e) => { if (e.key === "Enter" && canContinue) setSignupStep("cpf"); }}
             className={inputClasses}
             placeholder="Seu nome completo"
-            autoComplete="name"
+            autoComplete="off"
+            autoCorrect="off"
+            spellCheck={false}
             maxLength={80}
           />
         </Shell>
@@ -887,6 +868,8 @@ const Auth = () => {
             className={inputClasses}
             placeholder="000.000.000-00"
             autoComplete="off"
+            autoCorrect="off"
+            spellCheck={false}
             inputMode="numeric"
           />
           {cpfDigits.length === 11 && !cpfValid && (
@@ -940,7 +923,9 @@ const Auth = () => {
             onKeyDown={(e) => { if (e.key === "Enter" && phoneDigits.length >= 10) handleSendOtp(); }}
             className={inputClasses}
             placeholder="(11) 91234-5678"
-            autoComplete="tel-national"
+            autoComplete="off"
+            autoCorrect="off"
+            spellCheck={false}
             inputMode="numeric"
           />
         </Shell>
@@ -986,6 +971,8 @@ const Auth = () => {
             className={`${inputClasses} text-center tracking-[0.5em] text-[20px] font-semibold`}
             placeholder="000000"
             autoComplete="one-time-code"
+            autoCorrect="off"
+            spellCheck={false}
             inputMode="numeric"
             maxLength={6}
           />
@@ -1014,8 +1001,8 @@ const Auth = () => {
         >
           <div className="relative">
             <Input
-              name="email"
-              type="email"
+              name="dub_signup_email"
+              type="text"
               required
               autoFocus
               value={email}
@@ -1023,7 +1010,10 @@ const Auth = () => {
               onKeyDown={(e) => { if (e.key === "Enter" && canContinue) setSignupStep("phone"); }}
               className={inputClasses}
               placeholder="seu@email.com"
-              autoComplete="email"
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="none"
+              spellCheck={false}
               inputMode="email"
             />
             {checkingEmail && (
@@ -1088,7 +1078,9 @@ const Auth = () => {
             }}
             className={`${inputClasses} pr-12`}
             placeholder="Mínimo 6 caracteres"
-            autoComplete="new-password"
+            autoComplete="off"
+            autoCorrect="off"
+            spellCheck={false}
           />
           <button
             type="button"
@@ -1136,8 +1128,8 @@ const Auth = () => {
         bottomHint={bottomSignup}
       >
         <Input
-          name="email"
-          type="email"
+          name="dub_login_email"
+          type="text"
           required
           autoFocus
           value={email}
@@ -1145,7 +1137,10 @@ const Auth = () => {
           onKeyDown={(e) => { if (e.key === "Enter" && emailLooksComplete) setStep("password"); }}
           className={inputClasses}
           placeholder="seu@email.com"
-          autoComplete="email"
+          autoComplete="off"
+          autoCorrect="off"
+          autoCapitalize="none"
+          spellCheck={false}
           inputMode="email"
         />
       </Shell>
@@ -1186,7 +1181,9 @@ const Auth = () => {
           }}
           className={`${inputClasses} pr-12`}
           placeholder="Sua senha"
-          autoComplete="current-password"
+          autoComplete="off"
+          autoCorrect="off"
+          spellCheck={false}
         />
         <button
           type="button"
