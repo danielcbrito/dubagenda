@@ -12,6 +12,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { saveLastAccount } from "@/utils/lastAccount";
 import { getVerifiedAuthUser } from "@/utils/authSession";
 import { useViewportHeight } from "@/hooks/useViewportHeight";
+import logoDub from "@/assets/logo-dub.png";
+
 
 const emailSchema = z.string().trim().email("Email inválido").max(255);
 const passwordSchema = z.string().min(1, "Senha é obrigatória");
