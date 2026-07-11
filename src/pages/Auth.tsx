@@ -1125,43 +1125,6 @@ const Auth = () => {
         }
         bottomHint={bottomSignup}
       >
-        {lastAccount && !email && (
-          <button
-            type="button"
-            onClick={() => {
-              setEmail(lastAccount.email);
-              setStep("password");
-            }}
-            className="w-full mb-3 flex items-center gap-3 rounded-2xl border border-border/60 bg-muted/30 p-3 text-left active:scale-[0.99] transition-transform"
-          >
-            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden shrink-0">
-              {lastAccount.avatar_url ? (
-                <img src={lastAccount.avatar_url} alt="" className="w-full h-full object-cover" />
-              ) : (
-                <span className="text-[13px] font-semibold text-primary">
-                  {(lastAccount.nome || lastAccount.email).charAt(0).toUpperCase()}
-                </span>
-              )}
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-[13px] font-semibold text-foreground truncate">
-                Entrar como {lastAccount.nome || lastAccount.email.split("@")[0]}
-              </p>
-              <p className="text-[11px] text-muted-foreground truncate">{lastAccount.email}</p>
-            </div>
-            <span
-              role="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                clearLastAccount();
-                setLastAccount(null);
-              }}
-              className="text-[11px] text-muted-foreground hover:text-foreground font-medium px-2 py-1"
-            >
-              Trocar
-            </span>
-          </button>
-        )}
         <Input
           name="email"
           type="email"
