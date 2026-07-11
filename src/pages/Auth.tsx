@@ -824,7 +824,9 @@ const Auth = () => {
             onKeyDown={(e) => { if (e.key === "Enter" && canContinue) setSignupStep("cpf"); }}
             className={inputClasses}
             placeholder="Seu nome completo"
-            autoComplete="name"
+            autoComplete="off"
+            autoCorrect="off"
+            spellCheck={false}
             maxLength={80}
           />
         </Shell>
@@ -866,6 +868,8 @@ const Auth = () => {
             className={inputClasses}
             placeholder="000.000.000-00"
             autoComplete="off"
+            autoCorrect="off"
+            spellCheck={false}
             inputMode="numeric"
           />
           {cpfDigits.length === 11 && !cpfValid && (
@@ -919,7 +923,9 @@ const Auth = () => {
             onKeyDown={(e) => { if (e.key === "Enter" && phoneDigits.length >= 10) handleSendOtp(); }}
             className={inputClasses}
             placeholder="(11) 91234-5678"
-            autoComplete="tel-national"
+            autoComplete="off"
+            autoCorrect="off"
+            spellCheck={false}
             inputMode="numeric"
           />
         </Shell>
@@ -965,6 +971,8 @@ const Auth = () => {
             className={`${inputClasses} text-center tracking-[0.5em] text-[20px] font-semibold`}
             placeholder="000000"
             autoComplete="one-time-code"
+            autoCorrect="off"
+            spellCheck={false}
             inputMode="numeric"
             maxLength={6}
           />
@@ -993,8 +1001,8 @@ const Auth = () => {
         >
           <div className="relative">
             <Input
-              name="email"
-              type="email"
+              name="dub_signup_email"
+              type="text"
               required
               autoFocus
               value={email}
@@ -1002,7 +1010,10 @@ const Auth = () => {
               onKeyDown={(e) => { if (e.key === "Enter" && canContinue) setSignupStep("phone"); }}
               className={inputClasses}
               placeholder="seu@email.com"
-              autoComplete="email"
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="none"
+              spellCheck={false}
               inputMode="email"
             />
             {checkingEmail && (
@@ -1067,7 +1078,9 @@ const Auth = () => {
             }}
             className={`${inputClasses} pr-12`}
             placeholder="Mínimo 6 caracteres"
-            autoComplete="new-password"
+            autoComplete="off"
+            autoCorrect="off"
+            spellCheck={false}
           />
           <button
             type="button"
@@ -1115,8 +1128,8 @@ const Auth = () => {
         bottomHint={bottomSignup}
       >
         <Input
-          name="email"
-          type="email"
+          name="dub_login_email"
+          type="text"
           required
           autoFocus
           value={email}
@@ -1124,7 +1137,10 @@ const Auth = () => {
           onKeyDown={(e) => { if (e.key === "Enter" && emailLooksComplete) setStep("password"); }}
           className={inputClasses}
           placeholder="seu@email.com"
-          autoComplete="email"
+          autoComplete="off"
+          autoCorrect="off"
+          autoCapitalize="none"
+          spellCheck={false}
           inputMode="email"
         />
       </Shell>
@@ -1165,7 +1181,9 @@ const Auth = () => {
           }}
           className={`${inputClasses} pr-12`}
           placeholder="Sua senha"
-          autoComplete="current-password"
+          autoComplete="off"
+          autoCorrect="off"
+          spellCheck={false}
         />
         <button
           type="button"
