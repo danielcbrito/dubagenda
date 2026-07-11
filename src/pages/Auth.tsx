@@ -34,21 +34,21 @@ interface AuthShellProps {
 const AuthShell: React.FC<AuthShellProps> = ({
   headerTitle, title, subtitle, stepKey, children, footer, bottomHint, onBack,
 }) => {
-  const { height, keyboardOpen } = useViewportHeight();
+  // Estratégia "Mr Caseiro": fluxo natural do documento com min-h-dvh.
+  // O navegador (Android/iOS) reduz automaticamente o viewport quando o teclado abre
+  // e faz scroll do input focado — o botão "Continuar" sobe suavemente logo acima
+  // do teclado sem sobrepor os campos.
   return (
     <div
-      className="fixed inset-x-0 top-0 flex flex-col bg-background overflow-hidden"
-      style={{ height }}
+      className="min-h-[100dvh] flex flex-col bg-background"
+      style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}
     >
-      <div
-        className="relative flex-shrink-0 flex items-center justify-center px-4"
-        style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 1.15rem)", paddingBottom: "1rem" }}
-      >
+      {/* Header transparente — sem barra, apenas seta + título */}
+      <div className="relative flex-shrink-0 flex items-center justify-center px-4 h-14">
         <button
           type="button"
           onClick={onBack}
           className="absolute left-3 p-2 -m-2 text-foreground hover:text-foreground/70 transition-colors"
-          style={{ top: "calc(env(safe-area-inset-top, 0px) + 1.35rem)" }}
           aria-label="Voltar"
         >
           <BackArrow size={20} />
@@ -56,7 +56,8 @@ const AuthShell: React.FC<AuthShellProps> = ({
         <h2 className="text-[15px] font-semibold text-foreground">{headerTitle}</h2>
       </div>
 
-      <div className="flex-1 flex flex-col px-6 pt-2 overflow-y-auto overscroll-contain min-h-0">
+      {/* Conteúdo — cresce naturalmente, empurra o footer para baixo */}
+      <div className="flex-1 flex flex-col px-6 pt-2">
         <img
           src={logoDub}
           alt="DUB"
@@ -85,13 +86,10 @@ const AuthShell: React.FC<AuthShellProps> = ({
         </AnimatePresence>
       </div>
 
+      {/* Footer em fluxo natural — sem fixed/sticky, sem bg extra */}
       <div
-        className="flex-shrink-0 px-6 pt-4 space-y-3 bg-background"
-        style={{
-          paddingBottom: keyboardOpen
-            ? "16px"
-            : `calc(env(safe-area-inset-bottom, 0px) + 1rem)`,
-        }}
+        className="flex-shrink-0 px-6 pt-6 space-y-3"
+        style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 1rem)" }}
       >
         {footer}
         {bottomHint && (
