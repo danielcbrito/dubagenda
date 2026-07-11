@@ -1,15 +1,35 @@
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 import sceneClientSad from "@/assets/scene-client-sad.png";
 import sceneFriendApp from "@/assets/scene-friend-app.png";
 import { AmbientEffects } from "@/components/landing/AmbientEffects";
+import { getLastAccount, clearLastAccount, type LastAccount } from "@/utils/lastAccount";
+
+const firstName = (full?: string | null) =>
+  (full || "").trim().split(/\s+/)[0] || "";
 
 const Index = () => {
   const navigate = useNavigate();
+  const [lastAccount, setLastAccount] = useState<LastAccount | null>(null);
+
+  useEffect(() => {
+    setLastAccount(getLastAccount());
+  }, []);
 
   const handleJaTenhoBarbearia = () => {
     navigate('/auth?mode=login');
+  };
+
+  const handleContinueAsLast = () => {
+    if (!lastAccount) return;
+    navigate(`/auth?mode=login&email=${encodeURIComponent(lastAccount.email)}`);
+  };
+
+  const handleUseOtherAccount = () => {
+    clearLastAccount();
+    setLastAccount(null);
   };
 
   return (
