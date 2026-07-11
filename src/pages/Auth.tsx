@@ -58,18 +58,14 @@ const AuthShell: React.FC<AuthShellProps> = ({
         <h2 className="text-[15px] font-semibold text-foreground">{headerTitle}</h2>
       </div>
 
-      {/* Logo Dub — some quando o teclado abre para liberar espaço */}
-      {!keyboardOpen && (
-        <div className="flex-shrink-0 flex justify-start px-6 pt-3 pb-1">
-          <img
-            src={logoDub}
-            alt="Dub"
-            className="h-8 w-auto object-contain invert dark:invert-0"
-          />
-
-
-        </div>
-      )}
+      {/* Logo Dub — permanece visível também durante digitação */}
+      <div className="flex-shrink-0 flex justify-start px-6 pt-2 pb-1">
+        <img
+          src={logoDub}
+          alt="Dub"
+          className="h-10 w-auto object-contain invert dark:invert-0"
+        />
+      </div>
 
 
       {/* Conteúdo compacto */}
