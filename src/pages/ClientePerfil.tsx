@@ -245,6 +245,8 @@ export default function ClientePerfil() {
     setIsLoggingOut(true);
     try {
       await supabase.auth.signOut();
+      const { clearLastAccount } = await import("@/utils/lastAccount");
+      clearLastAccount();
       toast.success("Você saiu da conta");
       navigate("/auth");
     } catch {
