@@ -11,6 +11,7 @@ import { SupportChatBubble } from "@/components/support/SupportChatBubble";
 import { motion, AnimatePresence } from "framer-motion";
 import { getLastAccount, saveLastAccount, clearLastAccount, type LastAccount } from "@/utils/lastAccount";
 import { getVerifiedAuthUser } from "@/utils/authSession";
+import { useViewportHeight } from "@/hooks/useViewportHeight";
 import logoDub from "@/assets/logo-dub.png";
 
 const emailSchema = z.string().trim().email("Email inválido").max(255);
@@ -32,68 +33,76 @@ interface AuthShellProps {
 
 const AuthShell: React.FC<AuthShellProps> = ({
   headerTitle, title, subtitle, stepKey, children, footer, bottomHint, onBack,
-}) => (
-  <div className="min-h-[100dvh] flex flex-col bg-background">
+}) => {
+  const { height, keyboardOpen } = useViewportHeight();
+  return (
     <div
-      className="relative flex-shrink-0 flex items-center justify-center px-4"
-      style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 1.15rem)", paddingBottom: "1rem" }}
+      className="fixed inset-x-0 top-0 flex flex-col bg-background overflow-hidden"
+      style={{ height }}
     >
-      <button
-        type="button"
-        onClick={onBack}
-        className="absolute left-3 p-2 -m-2 text-foreground hover:text-foreground/70 transition-colors"
-        style={{ top: "calc(env(safe-area-inset-top, 0px) + 1.35rem)" }}
-        aria-label="Voltar"
+      <div
+        className="relative flex-shrink-0 flex items-center justify-center px-4"
+        style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 1.15rem)", paddingBottom: "1rem" }}
       >
-        <BackArrow size={20} />
-      </button>
-      <h2 className="text-[15px] font-semibold text-foreground">{headerTitle}</h2>
-    </div>
-
-    <div className="flex-1 flex flex-col px-6 pt-2 overflow-y-auto overscroll-contain">
-      <img
-        src={logoDub}
-        alt="DUB"
-        className="w-14 h-14 object-contain mb-8 [filter:brightness(0)] dark:[filter:brightness(0)_invert(1)]"
-      />
-
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={stepKey}
-          initial={{ opacity: 0, x: 12 }}
-          animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: -12 }}
-          transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+        <button
+          type="button"
+          onClick={onBack}
+          className="absolute left-3 p-2 -m-2 text-foreground hover:text-foreground/70 transition-colors"
+          style={{ top: "calc(env(safe-area-inset-top, 0px) + 1.35rem)" }}
+          aria-label="Voltar"
         >
-          <h1 className="text-[24px] font-bold text-foreground tracking-tight leading-tight">
-            {title}
-          </h1>
-          {subtitle && (
-            <p className="text-[14px] text-muted-foreground mt-2 mb-6 leading-relaxed">
-              {subtitle}
-            </p>
-          )}
-          {!subtitle && <div className="mb-6" />}
-          {children}
-        </motion.div>
-      </AnimatePresence>
-    </div>
+          <BackArrow size={20} />
+        </button>
+        <h2 className="text-[15px] font-semibold text-foreground">{headerTitle}</h2>
+      </div>
 
-    <div
-      className="flex-shrink-0 px-6 pt-4 space-y-3 bg-background"
-      style={{
-        paddingBottom: `calc(env(safe-area-inset-bottom, 0px) + 1rem)`,
-      }}
-    >
-      {footer}
-      {bottomHint && (
-        <p className="text-center text-[13px] text-muted-foreground">{bottomHint}</p>
-      )}
-    </div>
+      <div className="flex-1 flex flex-col px-6 pt-2 overflow-y-auto overscroll-contain min-h-0">
+        <img
+          src={logoDub}
+          alt="DUB"
+          className="w-14 h-14 object-contain mb-8 [filter:brightness(0)] dark:[filter:brightness(0)_invert(1)]"
+        />
 
-    <SupportChatBubble />
-  </div>
-);
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={stepKey}
+            initial={{ opacity: 0, x: 12 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -12 }}
+            transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <h1 className="text-[24px] font-bold text-foreground tracking-tight leading-tight">
+              {title}
+            </h1>
+            {subtitle && (
+              <p className="text-[14px] text-muted-foreground mt-2 mb-6 leading-relaxed">
+                {subtitle}
+              </p>
+            )}
+            {!subtitle && <div className="mb-6" />}
+            {children}
+          </motion.div>
+        </AnimatePresence>
+      </div>
+
+      <div
+        className="flex-shrink-0 px-6 pt-4 space-y-3 bg-background"
+        style={{
+          paddingBottom: keyboardOpen
+            ? "16px"
+            : `calc(env(safe-area-inset-bottom, 0px) + 1rem)`,
+        }}
+      >
+        {footer}
+        {bottomHint && (
+          <p className="text-center text-[13px] text-muted-foreground">{bottomHint}</p>
+        )}
+      </div>
+
+      <SupportChatBubble />
+    </div>
+  );
+};
 
 interface ContinueButtonProps {
   onClick?: () => void;
