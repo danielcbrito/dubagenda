@@ -64,7 +64,7 @@ const AuthShell: React.FC<AuthShellProps> = ({
           <img
             src={logoDub}
             alt="Dub"
-            className="h-8 w-auto object-contain dark:invert"
+            className="h-8 w-auto object-contain invert dark:invert-0"
           />
 
 
