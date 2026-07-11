@@ -12,6 +12,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { saveLastAccount } from "@/utils/lastAccount";
 import { getVerifiedAuthUser } from "@/utils/authSession";
 import { useViewportHeight } from "@/hooks/useViewportHeight";
+import logoDub from "@/assets/logo-dub.png";
+
 
 const emailSchema = z.string().trim().email("Email inválido").max(255);
 const passwordSchema = z.string().min(1, "Senha é obrigatória");
@@ -58,12 +60,16 @@ const AuthShell: React.FC<AuthShellProps> = ({
 
       {/* Logo Dub — some quando o teclado abre para liberar espaço */}
       {!keyboardOpen && (
-        <div className="flex-shrink-0 flex justify-center pt-2 pb-1">
-          <h1 className="text-[22px] font-bold text-foreground font-display tracking-tight">
-            DUB <span className="text-primary">Agenda</span>
-          </h1>
+        <div className="flex-shrink-0 flex justify-center pt-3 pb-1">
+          <img
+            src={logoDub}
+            alt="Dub"
+            className="h-10 w-auto object-contain"
+          />
+
         </div>
       )}
+
 
       {/* Conteúdo compacto */}
       <div className="flex-1 min-h-0 flex flex-col px-6 pt-3 overflow-y-auto overscroll-contain">
