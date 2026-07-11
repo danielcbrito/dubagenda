@@ -27,12 +27,11 @@ interface AuthShellProps {
   children: React.ReactNode;
   footer: React.ReactNode;
   bottomHint?: React.ReactNode;
-  kbOffset: number;
   onBack: () => void;
 }
 
 const AuthShell: React.FC<AuthShellProps> = ({
-  headerTitle, title, subtitle, stepKey, children, footer, bottomHint, kbOffset, onBack,
+  headerTitle, title, subtitle, stepKey, children, footer, bottomHint, onBack,
 }) => (
   <div className="min-h-[100dvh] flex flex-col bg-background">
     <div
@@ -84,8 +83,6 @@ const AuthShell: React.FC<AuthShellProps> = ({
       className="flex-shrink-0 px-6 pt-4 space-y-3 bg-background"
       style={{
         paddingBottom: `calc(env(safe-area-inset-bottom, 0px) + 1rem)`,
-        transform: kbOffset > 0 ? `translateY(-${kbOffset}px)` : undefined,
-        transition: "transform 180ms ease-out",
       }}
     >
       {footer}
@@ -714,25 +711,6 @@ const Auth = () => {
   const inputClasses =
     "h-14 bg-background border border-primary text-foreground placeholder:text-muted-foreground/50 rounded-xl focus:border-primary focus-visible:ring-0 focus-visible:ring-offset-0 outline-none transition-colors text-[15px] px-4";
 
-  // Keyboard offset: on mobile, when the on-screen keyboard opens, lift the
-  // footer (Continue button + hint) so it stays right above the keyboard.
-  const [kbOffset, setKbOffset] = useState(0);
-  useEffect(() => {
-    const vv = typeof window !== "undefined" ? window.visualViewport : null;
-    if (!vv) return;
-    const update = () => {
-      const offset = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
-      setKbOffset(offset);
-    };
-    update();
-    vv.addEventListener("resize", update);
-    vv.addEventListener("scroll", update);
-    return () => {
-      vv.removeEventListener("resize", update);
-      vv.removeEventListener("scroll", update);
-    };
-  }, []);
-
   // Back handler with per-step logic
   const handleBack = () => {
     if (step === "magic_sent") {
@@ -773,10 +751,11 @@ const Auth = () => {
       footer: React.ReactNode;
       bottomHint?: React.ReactNode;
     }> = (props) => (
-      <AuthShell {...props} kbOffset={kbOffset} onBack={stableOnBack} />
+      <AuthShell {...props} onBack={stableOnBack} />
     );
     return C;
-  }, [kbOffset, stableOnBack]);
+  }, [stableOnBack]);
+
 
   const ContinueButton = ContinueButtonBase;
 
@@ -1146,43 +1125,6 @@ const Auth = () => {
         }
         bottomHint={bottomSignup}
       >
-        {lastAccount && !email && (
-          <button
-            type="button"
-            onClick={() => {
-              setEmail(lastAccount.email);
-              setStep("password");
-            }}
-            className="w-full mb-3 flex items-center gap-3 rounded-2xl border border-border/60 bg-muted/30 p-3 text-left active:scale-[0.99] transition-transform"
-          >
-            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden shrink-0">
-              {lastAccount.avatar_url ? (
-                <img src={lastAccount.avatar_url} alt="" className="w-full h-full object-cover" />
-              ) : (
-                <span className="text-[13px] font-semibold text-primary">
-                  {(lastAccount.nome || lastAccount.email).charAt(0).toUpperCase()}
-                </span>
-              )}
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-[13px] font-semibold text-foreground truncate">
-                Entrar como {lastAccount.nome || lastAccount.email.split("@")[0]}
-              </p>
-              <p className="text-[11px] text-muted-foreground truncate">{lastAccount.email}</p>
-            </div>
-            <span
-              role="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                clearLastAccount();
-                setLastAccount(null);
-              }}
-              className="text-[11px] text-muted-foreground hover:text-foreground font-medium px-2 py-1"
-            >
-              Trocar
-            </span>
-          </button>
-        )}
         <Input
           name="email"
           type="email"
