@@ -58,12 +58,15 @@ const AuthShell: React.FC<AuthShellProps> = ({
 
       {/* Logo Dub — some quando o teclado abre para liberar espaço */}
       {!keyboardOpen && (
-        <div className="flex-shrink-0 flex justify-center pt-2 pb-1">
-          <h1 className="text-[22px] font-bold text-foreground font-display tracking-tight">
-            DUB <span className="text-primary">Agenda</span>
-          </h1>
+        <div className="flex-shrink-0 flex justify-center pt-3 pb-1">
+          <img
+            src={new URL("@/assets/logo-dub.png", import.meta.url).href}
+            alt="Dub"
+            className="h-10 w-auto object-contain dark:invert-0"
+          />
         </div>
       )}
+
 
       {/* Conteúdo compacto */}
       <div className="flex-1 min-h-0 flex flex-col px-6 pt-3 overflow-y-auto overscroll-contain">
