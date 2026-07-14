@@ -504,165 +504,165 @@ Deno.serve(async (req) => {
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
-221: 
-222:     // =============================================
-223:     // ACTION: reset_password_send - Enviar código de recuperação
-224:     // =============================================
-225:     if (action === "reset_password_send") {
-226:       const phone = normalizePhone(data.phone || "");
-227:       if (!phone || phone.length < 12) {
-228:         return jsonResponse({ success: false, error: "Número de WhatsApp inválido" }, 400);
-229:       }
-230: 
-231:       // Verificar se existe um perfil vinculado a este número
-232:       const { data: profile, error: profileError } = await supabase
-233:         .from("profiles")
-234:         .select("id, nome")
-235:         .eq("telefone", phone)
-236:         .maybeSingle();
-237: 
-238:       if (!profile) {
-239:         return jsonResponse({ success: false, error: "Nenhuma conta vinculada a este número de WhatsApp." }, 404);
-240:       }
-241: 
-242:       // Invalidar códigos de recuperação anteriores para este telefone
-243:       await supabase
-244:         .from("whatsapp_verification_codes")
-245:         .update({ expires_at: new Date().toISOString() })
-246:         .eq("phone", phone)
-247:         .is("verified_at", null);
-248: 
-249:       const code = generateCode();
-250:       const { error: insertError } = await supabase
-251:         .from("whatsapp_verification_codes")
-252:         .insert({
-253:           user_id: profile.id,
-254:           phone,
-255:           code,
-256:           expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
-257:           user_name: profile.nome
-258:         });
-259: 
-260:       if (insertError) {
-261:         return jsonResponse({ success: false, error: "Erro ao gerar código de recuperação" }, 500);
-262:       }
-263: 
-264:       // Webhook para envio de WhatsApp (usar webhook_config ou o fallback)
-265:       const { data: webhookConfig } = await supabase
-266:         .from('webhook_config')
-267:         .select('whatsapp_webhook_url, whatsapp_ativo, webhook_url, ativo')
-268:         .order('updated_at', { ascending: false })
-269:         .limit(1)
-270:         .maybeSingle();
-271: 
-272:       const webhookUrl = webhookConfig?.whatsapp_webhook_url || webhookConfig?.webhook_url || "https://n8n-n8n.xcyr4f.easypanel.host/webhook/1b63ce24-4d00-4b74-9eac-104fdd812e01";
-273:       
-274:       const webhookPayload = {
-275:         evento: "recuperacao_senha",
-276:         cliente_nome: profile.nome || "Cliente",
-277:         telefone: formatPhoneForWhatsApp(phone),
-278:         codigo: code,
-279:         mensagem: `Ola ${profile.nome || "Cliente"}, seu codigo de recuperacao de senha e: ${code}. Nao compartilhe.`,
-280:         timestamp: new Date().toISOString(),
-281:       };
-282: 
-283:       EdgeRuntime.waitUntil((async () => {
-284:         try {
-285:           await fetch(webhookUrl, {
-286:             method: "POST",
-287:             headers: { "Content-Type": "application/json" },
-288:             body: JSON.stringify(webhookPayload),
-289:           });
-290:         } catch (err) {
-291:           console.warn("[whatsapp-verification] reset_password_send webhook error:", err);
-292:         }
-293:       })());
-294: 
-295:       return jsonResponse({ success: true, message: "Código enviado para seu WhatsApp" });
-296:     }
-297: 
-298:     // =============================================
-299:     // ACTION: reset_password_verify - Verificar código de recuperação
-300:     // =============================================
-301:     if (action === "reset_password_verify") {
-302:       const phone = normalizePhone(data.phone || "");
-303:       const code = String(data.code || "").trim();
-304:       if (!phone || !/^\d{6}$/.test(code)) {
-305:         return jsonResponse({ success: false, error: "Dados inválidos" }, 400);
-306:       }
-307: 
-308:       const { data: row } = await supabase
-309:         .from("whatsapp_verification_codes")
-310:         .select("*")
-311:         .eq("phone", phone)
-312:         .is("verified_at", null)
-313:         .gt("expires_at", new Date().toISOString())
-314:         .order("created_at", { ascending: false })
-315:         .limit(1)
-316:         .maybeSingle();
-317: 
-318:       if (!row) return jsonResponse({ success: false, error: "Código expirado ou inválido. Solicite um novo." }, 400);
-319: 
-320:       const attempts = (row.attempts || 0) + 1;
-321:       await supabase.from("whatsapp_verification_codes").update({ attempts }).eq("id", row.id);
-322: 
-323:       if (row.code !== code) {
-324:         if (attempts >= 5) {
-325:           await supabase.from("whatsapp_verification_codes").update({ expires_at: new Date().toISOString() }).eq("id", row.id);
-326:           return jsonResponse({ success: false, error: "Muitas tentativas. Solicite um novo código." }, 400);
-327:         }
-328:         return jsonResponse({ success: false, error: `Código incorreto. Restam ${5 - attempts} tentativa(s).` }, 400);
-329:       }
-330: 
-331:       const token = generateVerificationToken();
-332:       await supabase
-333:         .from("whatsapp_verification_codes")
-334:         .update({ verified_at: new Date().toISOString(), verification_token: token })
-335:         .eq("id", row.id);
-336: 
-337:       return jsonResponse({ success: true, verification_token: token });
-338:     }
-339: 
-340:     // =============================================
-341:     // ACTION: reset_password_execute - Alterar senha via Admin API
-342:     // =============================================
-343:     if (action === "reset_password_execute") {
-344:       const phone = normalizePhone(data.phone || "");
-345:       const token = String(data.verification_token || "");
-346:       const newPassword = String(data.new_password || "");
-347: 
-348:       if (!phone || !token || !newPassword || newPassword.length < 6) {
-349:         return jsonResponse({ success: false, error: "Dados inválidos para redefinição" }, 400);
-350:       }
-351: 
-352:       const { data: row } = await supabase
-353:         .from("whatsapp_verification_codes")
-354:         .select("id, user_id, verified_at, verification_token")
-355:         .eq("phone", phone)
-356:         .eq("verification_token", token)
-357:         .not("verified_at", "is", null)
-358:         .order("created_at", { ascending: false })
-359:         .limit(1)
-360:         .maybeSingle();
-361: 
-362:       if (!row) return jsonResponse({ success: false, error: "Verificação de segurança não encontrada ou expirada" }, 400);
-363: 
-364:       // Executar a mudança de senha via Admin API
-365:       const { error: updateErr } = await supabase.auth.admin.updateUserById(row.user_id, {
-366:         password: newPassword,
-367:         email_confirm: true
-368:       });
-369: 
-370:       if (updateErr) {
-371:         console.error("[reset_password_execute] auth update error:", updateErr);
-372:         return jsonResponse({ success: false, error: "Erro ao atualizar senha no sistema" }, 500);
-373:       }
-374: 
-375:       // Consumir token
-376:       await supabase.from("whatsapp_verification_codes").update({ verification_token: null }).eq("id", row.id);
-377: 
-378:       return jsonResponse({ success: true, message: "Senha alterada com sucesso!" });
-379:     }
+
+    // =============================================
+    // ACTION: reset_password_send - Enviar código de recuperação
+    // =============================================
+    if (action === "reset_password_send") {
+      const phone = normalizePhone(data.phone || "");
+      if (!phone || phone.length < 12) {
+        return jsonResponse({ success: false, error: "Número de WhatsApp inválido" }, 400);
+      }
+
+      // Verificar se existe um perfil vinculado a este número
+      const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select("id, nome")
+        .eq("telefone", phone)
+        .maybeSingle();
+
+      if (!profile) {
+        return jsonResponse({ success: false, error: "Nenhuma conta vinculada a este número de WhatsApp." }, 404);
+      }
+
+      // Invalidar códigos de recuperação anteriores para este telefone
+      await supabase
+        .from("whatsapp_verification_codes")
+        .update({ expires_at: new Date().toISOString() })
+        .eq("phone", phone)
+        .is("verified_at", null);
+
+      const code = generateCode();
+      const { error: insertError } = await supabase
+        .from("whatsapp_verification_codes")
+        .insert({
+          user_id: profile.id,
+          phone,
+          code,
+          expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
+          user_name: profile.nome
+        });
+
+      if (insertError) {
+        return jsonResponse({ success: false, error: "Erro ao gerar código de recuperação" }, 500);
+      }
+
+      // Webhook para envio de WhatsApp (usar webhook_config ou o fallback)
+      const { data: webhookConfig } = await supabase
+        .from('webhook_config')
+        .select('whatsapp_webhook_url, whatsapp_ativo, webhook_url, ativo')
+        .order('updated_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      const webhookUrl = webhookConfig?.whatsapp_webhook_url || webhookConfig?.webhook_url || "https://n8n-n8n.xcyr4f.easypanel.host/webhook/1b63ce24-4d00-4b74-9eac-104fdd812e01";
+      
+      const webhookPayload = {
+        evento: "recuperacao_senha",
+        cliente_nome: profile.nome || "Cliente",
+        telefone: formatPhoneForWhatsApp(phone),
+        codigo: code,
+        mensagem: `Ola ${profile.nome || "Cliente"}, seu codigo de recuperacao de senha e: ${code}. Nao compartilhe.`,
+        timestamp: new Date().toISOString(),
+      };
+
+      EdgeRuntime.waitUntil((async () => {
+        try {
+          await fetch(webhookUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(webhookPayload),
+          });
+        } catch (err) {
+          console.warn("[whatsapp-verification] reset_password_send webhook error:", err);
+        }
+      })());
+
+      return jsonResponse({ success: true, message: "Código enviado para seu WhatsApp" });
+    }
+
+    // =============================================
+    // ACTION: reset_password_verify - Verificar código de recuperação
+    // =============================================
+    if (action === "reset_password_verify") {
+      const phone = normalizePhone(data.phone || "");
+      const code = String(data.code || "").trim();
+      if (!phone || !/^\d{6}$/.test(code)) {
+        return jsonResponse({ success: false, error: "Dados inválidos" }, 400);
+      }
+
+      const { data: row } = await supabase
+        .from("whatsapp_verification_codes")
+        .select("*")
+        .eq("phone", phone)
+        .is("verified_at", null)
+        .gt("expires_at", new Date().toISOString())
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (!row) return jsonResponse({ success: false, error: "Código expirado ou inválido. Solicite um novo." }, 400);
+
+      const attempts = (row.attempts || 0) + 1;
+      await supabase.from("whatsapp_verification_codes").update({ attempts }).eq("id", row.id);
+
+      if (row.code !== code) {
+        if (attempts >= 5) {
+          await supabase.from("whatsapp_verification_codes").update({ expires_at: new Date().toISOString() }).eq("id", row.id);
+          return jsonResponse({ success: false, error: "Muitas tentativas. Solicite um novo código." }, 400);
+        }
+        return jsonResponse({ success: false, error: `Código incorreto. Restam ${5 - attempts} tentativa(s).` }, 400);
+      }
+
+      const token = generateVerificationToken();
+      await supabase
+        .from("whatsapp_verification_codes")
+        .update({ verified_at: new Date().toISOString(), verification_token: token })
+        .eq("id", row.id);
+
+      return jsonResponse({ success: true, verification_token: token });
+    }
+
+    // =============================================
+    // ACTION: reset_password_execute - Alterar senha via Admin API
+    // =============================================
+    if (action === "reset_password_execute") {
+      const phone = normalizePhone(data.phone || "");
+      const token = String(data.verification_token || "");
+      const newPassword = String(data.new_password || "");
+
+      if (!phone || !token || !newPassword || newPassword.length < 6) {
+        return jsonResponse({ success: false, error: "Dados inválidos para redefinição" }, 400);
+      }
+
+      const { data: row } = await supabase
+        .from("whatsapp_verification_codes")
+        .select("id, user_id, verified_at, verification_token")
+        .eq("phone", phone)
+        .eq("verification_token", token)
+        .not("verified_at", "is", null)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (!row) return jsonResponse({ success: false, error: "Verificação de segurança não encontrada ou expirada" }, 400);
+
+      // Executar a mudança de senha via Admin API
+      const { error: updateErr } = await supabase.auth.admin.updateUserById(row.user_id, {
+        password: newPassword,
+        email_confirm: true
+      });
+
+      if (updateErr) {
+        console.error("[reset_password_execute] auth update error:", updateErr);
+        return jsonResponse({ success: false, error: "Erro ao atualizar senha no sistema" }, 500);
+      }
+
+      // Consumir token
+      await supabase.from("whatsapp_verification_codes").update({ verification_token: null }).eq("id", row.id);
+
+      return jsonResponse({ success: true, message: "Senha alterada com sucesso!" });
+    }
 
     // =============================================
     // ACTION: resend - Reenviar código
