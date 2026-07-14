@@ -11,6 +11,28 @@ import { motion, AnimatePresence } from "framer-motion";
 
 type Step = "phone" | "otp" | "new_password" | "success";
 
+const getEdgeFunctionErrorMessage = async (error: unknown, fallback: string) => {
+  const candidate = error as { context?: Response; message?: string } | null;
+
+  if (candidate?.context) {
+    try {
+      const payload = await candidate.context.clone().json();
+      if (
+        payload &&
+        typeof payload === "object" &&
+        "error" in payload &&
+        typeof payload.error === "string"
+      ) {
+        return payload.error;
+      }
+    } catch {
+      // Mantém fallback quando a resposta não vier em JSON.
+    }
+  }
+
+  return fallback;
+};
+
 const ForgotPassword = () => {
   const navigate = useNavigate();
   const [step, setStep] = useState<Step>("phone");
@@ -42,14 +64,18 @@ const ForgotPassword = () => {
       const { data, error } = await supabase.functions.invoke("whatsapp-verification", {
         body: { action: "reset_password_send", phone: digits },
       });
-      if (error || !data?.success) {
+      if (error) {
+        toast.error(await getEdgeFunctionErrorMessage(error, "Erro ao enviar código"));
+        return;
+      }
+      if (!data?.success) {
         toast.error(data?.error || "Erro ao enviar código");
         return;
       }
       toast.success("Código enviado para seu WhatsApp");
       setStep("otp");
     } catch (err) {
-      toast.error("Erro ao processar solicitação");
+      toast.error(await getEdgeFunctionErrorMessage(err, "Erro ao processar solicitação"));
     } finally {
       setIsLoading(false);
     }
@@ -70,14 +96,18 @@ const ForgotPassword = () => {
           code: otp 
         },
       });
-      if (error || !data?.success) {
+      if (error) {
+        toast.error(await getEdgeFunctionErrorMessage(error, "Código inválido"));
+        return;
+      }
+      if (!data?.success) {
         toast.error(data?.error || "Código inválido");
         return;
       }
       setToken(data.verification_token);
       setStep("new_password");
     } catch (err) {
-      toast.error("Erro ao validar código");
+      toast.error(await getEdgeFunctionErrorMessage(err, "Erro ao validar código"));
     } finally {
       setIsLoading(false);
     }
@@ -103,7 +133,11 @@ const ForgotPassword = () => {
           new_password: newPassword
         },
       });
-      if (error || !data?.success) {
+      if (error) {
+        toast.error(await getEdgeFunctionErrorMessage(error, "Erro ao redefinir senha"));
+        return;
+      }
+      if (!data?.success) {
         toast.error(data?.error || "Erro ao redefinir senha");
         return;
       }
@@ -111,7 +145,7 @@ const ForgotPassword = () => {
       toast.success("Senha alterada com sucesso!");
       setTimeout(() => navigate("/auth"), 3000);
     } catch (err) {
-      toast.error("Erro ao atualizar senha");
+      toast.error(await getEdgeFunctionErrorMessage(err, "Erro ao atualizar senha"));
     } finally {
       setIsLoading(false);
     }
