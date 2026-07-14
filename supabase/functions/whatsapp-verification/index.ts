@@ -518,7 +518,7 @@ Deno.serve(async (req) => {
       const { data: profile, error: profileError } = await supabase
         .from("profiles")
         .select("id, nome")
-        .eq("telefone", phone)
+        .ilike("telefone", `%${phone.replace(/^55/, "")}%`)
         .maybeSingle();
 
       if (!profile) {
