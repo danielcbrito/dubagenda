@@ -6379,6 +6379,7 @@ export type Database = {
           user_email: string | null
           user_id: string
           user_name: string | null
+          verification_token: string | null
           verified_at: string | null
         }
         Insert: {
@@ -6392,6 +6393,7 @@ export type Database = {
           user_email?: string | null
           user_id: string
           user_name?: string | null
+          verification_token?: string | null
           verified_at?: string | null
         }
         Update: {
@@ -6405,6 +6407,7 @@ export type Database = {
           user_email?: string | null
           user_id?: string
           user_name?: string | null
+          verification_token?: string | null
           verified_at?: string | null
         }
         Relationships: []
