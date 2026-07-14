@@ -26,10 +26,17 @@ const getEdgeFunctionErrorMessage = async (error: unknown, fallback: string) => 
         return payload.error;
       }
     } catch {
-      // Mantém fallback quando a resposta não vier em JSON.
+      // Se não for JSON, tenta pegar o texto puro
+      try {
+        const text = await candidate.context.clone().text();
+        if (text && text.length < 200) return text;
+      } catch {
+        // Ignora erros de leitura
+      }
     }
   }
 
+  if (candidate?.message) return candidate.message;
   return fallback;
 };
 
