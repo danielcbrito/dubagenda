@@ -522,7 +522,7 @@ Deno.serve(async (req) => {
         .maybeSingle();
 
       if (!profile) {
-        return jsonResponse({ success: false, error: "Nenhuma conta vinculada a este número de WhatsApp." }, 404);
+        return jsonResponse({ success: false, error: "Nenhuma conta vinculada a este número de WhatsApp." }, 200);
       }
 
       // Invalidar códigos de recuperação anteriores para este telefone
