@@ -320,28 +320,36 @@ export default function ClientePerfil() {
               transition={{ delay: 0.04, duration: 0.3 }}
               whileTap={{ scale: 0.99 }}
               onClick={() => navigate("/cliente/indicacoes")}
-              className="relative w-full h-16 rounded-xl bg-muted/60 dark:bg-card border border-border/40 text-left overflow-hidden"
+              className="relative w-full h-16 rounded-xl bg-muted/60 dark:bg-card border border-border/40 text-left"
             >
-              {/* Padrão de cupom — traço e dois pontos repetindo */}
-              <div
-                aria-hidden
-                className="absolute inset-0 pointer-events-none opacity-[0.10] dark:opacity-[0.14]"
-                style={{
-                  backgroundImage:
-                    "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='34' height='8' viewBox='0 0 34 8'><g fill='none' stroke='%23000' stroke-width='1.4' stroke-linecap='round'><path d='M2 4h12'/><circle cx='20' cy='4' r='1.2' fill='%23000'/><circle cx='28' cy='4' r='1.2' fill='%23000'/></g></svg>\")",
-                  backgroundRepeat: "repeat",
-                  backgroundSize: "34px 8px",
-                }}
-              />
+              {/* Camada interna com clipping — cupom de fundo */}
+              <div className="absolute inset-0 rounded-xl overflow-hidden pointer-events-none">
+                <div
+                  aria-hidden
+                  className="absolute -right-6 top-1/2 -translate-y-1/2 opacity-[0.07] dark:opacity-[0.10]"
+                >
+                  <svg width="220" height="140" viewBox="0 0 220 140" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path
+                      d="M20 30h180a6 6 0 016 6v22a10 10 0 000 20v22a6 6 0 01-6 6H20a6 6 0 01-6-6V78a10 10 0 000-20V36a6 6 0 016-6z"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                    />
+                    <path d="M110 34v72" stroke="currentColor" strokeWidth="2" strokeDasharray="4 6" />
+                    <circle cx="40" cy="70" r="3" fill="currentColor" />
+                    <path d="M55 62h40M55 70h30M55 78h35" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                    <path d="M130 62h60M130 70h50M130 78h55" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                  </svg>
+                </div>
+              </div>
 
-              {/* Mascote — clipado pelo card; apenas da barriga pra cima aparece */}
+              {/* Mascote — só do tronco pra cima aparece; pernas ficam dentro do card */}
               <img
                 src={referralMascot}
                 alt=""
                 width={1024}
                 height={1024}
                 loading="lazy"
-                className="absolute left-2 top-0 h-[190px] w-auto object-contain object-top pointer-events-none select-none dark:invert"
+                className="absolute left-3 bottom-0 h-[220%] w-auto object-contain object-bottom pointer-events-none select-none dark:invert z-10"
               />
 
               {/* Texto */}
