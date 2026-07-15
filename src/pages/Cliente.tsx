@@ -55,14 +55,22 @@ const Cliente = () => {
   const { data: loyaltyData } = useQuery({
     queryKey: ['cliente', 'loyalty', user?.id],
     queryFn: async () => {
-      const [credits, points] = await Promise.all([
+      const [credits, points, activeSub] = await Promise.all([
         supabase.rpc('get_user_available_credits', { p_user_id: user?.id }),
-        supabase.from("pontos").select("pontos").eq("user_id", user?.id).maybeSingle()
+        supabase.from("pontos").select("pontos").eq("user_id", user?.id).maybeSingle(),
+        supabase.from("assinaturas").select("*, plano:planos(nome, limite_agendamentos_mes, servico:servicos(nome))").eq("user_id", user?.id).eq("status", "active").maybeSingle()
       ]);
-      return { credits: credits.data || 0, points: points.data?.pontos || 0 };
+      return { 
+        credits: credits.data || 0, 
+        points: points.data?.pontos || 0,
+        activeSubscription: activeSub.data
+      };
     },
     enabled: !!user?.id,
   });
+
+  const activeSubscription = loyaltyData?.activeSubscription;
+
 
   if (profileLoading || !user) return <div className="flex items-center justify-center h-screen bg-background">Loading...</div>;
 
@@ -87,6 +95,25 @@ const Cliente = () => {
           </div>
 
           <ScheduleButton onClick={() => navigate("/agendar")} />
+
+          {activeSubscription && (
+            <PlanTrackerCard
+              planName={activeSubscription.plano.nome}
+              usedAppointments={activeSubscription.usos_ciclo_atual || 0}
+              totalAppointments={activeSubscription.plano.limite_agendamentos_mes}
+              nextBillingDate={activeSubscription.next_billing_date}
+              servicoNome={activeSubscription.plano.servico?.nome}
+              onViewDetails={() => setPlansSheetOpen(true)}
+            />
+          )}
+
+          <LoyaltyCard 
+            points={loyaltyData?.points || 0} 
+            redemptions={0} 
+            pontosNecessarios={8} 
+            onViewDetails={() => setPointsModalOpen(true)} 
+          />
+
 
           {/* Appointments */}
           <div className="space-y-3">
