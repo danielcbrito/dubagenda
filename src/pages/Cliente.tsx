@@ -109,7 +109,7 @@ const Cliente = () => {
       
       <WalletSheet open={walletSheetOpen} onOpenChange={setWalletSheetOpen} userId={user?.id} profile={profileData} />
       <MyPlansSheet open={plansSheetOpen} onOpenChange={setPlansSheetOpen} userId={user?.id} />
-      <PointsDetailModal open={pointsModalOpen} onOpenChange={setPointsModalOpen} points={loyaltyData?.points || 0} redemptions={0} pontosNecessarios={8} />
+      <PointsDetailModal open={pointsModalOpen} onOpenChange={setPointsModalOpen} points={loyaltyData?.points || 0} completedAppointments={0} redemptions={0} pontosNecessarios={8} />
     </div>
   );
 };
