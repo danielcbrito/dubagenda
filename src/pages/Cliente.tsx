@@ -2,7 +2,23 @@ import { useEffect, useState, useRef, useMemo, useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Calendar, Crown, Store, ChevronRight, Scissors, MapPin, Search, Clock, Star } from "lucide-react";
+import { 
+  Calendar, 
+  Crown, 
+  Store, 
+  ChevronRight, 
+  Scissors, 
+  MapPin, 
+  Search, 
+  Clock, 
+  Star,
+  Wallet,
+  Gift,
+  History,
+  Bell,
+  User,
+  LogOut
+} from "lucide-react";
 import { toast } from "sonner";
 import { useDataError } from "@/hooks/useDataError";
 import { useBlockedBarbers } from "@/hooks/useBlockedBarbers";
@@ -21,6 +37,8 @@ import { CancelledAppointmentBanner } from "@/components/CancelledAppointmentBan
 import { AnnouncementModal } from "@/components/AnnouncementModal";
 import { BottomNavigation } from "@/components/BottomNavigation";
 import { AppointmentHistorySheet } from "@/components/AppointmentHistorySheet";
+import { cn } from "@/lib/utils";
+
 
 // Premium components
 import { ClientHeader } from "@/components/client/ClientHeader";
@@ -336,7 +354,41 @@ const fetchLoyaltyData = async (userId: string, tenantId: string | null) => {
   };
 };
 
+interface ProfileItemProps {
+  icon: React.ElementType;
+  label: string;
+  onClick: () => void;
+  badge?: string;
+  danger?: boolean;
+}
+
+function ProfileItem({ icon: Icon, label, onClick, badge, danger }: ProfileItemProps) {
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        "w-full flex items-center justify-between py-4 border-b border-border/10 last:border-0 transition-all active:opacity-60",
+        danger && "text-destructive"
+      )}
+    >
+      <div className="flex items-center gap-4">
+        <Icon className={cn("w-5 h-5", danger ? "text-destructive" : "text-foreground/80")} strokeWidth={1.5} />
+        <span className="text-[14px] font-medium">{label}</span>
+      </div>
+      <div className="flex items-center gap-2">
+        {badge && (
+          <span className="px-1.5 py-0.5 bg-primary text-white text-[10px] font-bold rounded-full min-w-[18px] text-center">
+            {badge}
+          </span>
+        )}
+        <ChevronRight className="w-4 h-4 text-muted-foreground/30" />
+      </div>
+    </button>
+  );
+}
+
 const Cliente = () => {
+
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
@@ -401,6 +453,21 @@ const Cliente = () => {
   const redemptions = loyaltyQueryData?.redemptions ?? 0;
   const pontosNecessarios = loyaltyQueryData?.pontosNecessarios ?? 8;
   const loyaltyEnabled = loyaltyQueryData?.loyaltyEnabled ?? false;
+  
+  const { data: notificationsData } = useQuery({
+    queryKey: ['cliente', 'notifications', user?.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("notificacoes")
+        .select("id, lida")
+        .eq("user_id", user?.id)
+        .eq("lida", false);
+      return data || [];
+    },
+    enabled: !!user?.id,
+  });
+  const unreadNotifs = notificationsData?.length || 0;
+
 
   // ─── Shop via useQuery (Layer 4) ───
   const {
