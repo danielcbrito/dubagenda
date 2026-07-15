@@ -340,7 +340,7 @@ export default function ClientePerfil() {
                 <div className="relative h-full flex items-center pl-[92px] pr-3.5 gap-2">
                   <div className="flex-1 min-w-0">
                     <p className="text-[14.5px] font-semibold text-foreground leading-tight tracking-tight">
-                      Indique e ganhe corte grátis
+                      Indique e ganhe <span className="text-primary">corte grátis</span>
                     </p>
                   </div>
                   <span className="text-[12px] font-bold bg-foreground text-background px-4 py-1.5 rounded-full flex-shrink-0 active:scale-95 transition-transform shadow-sm">
