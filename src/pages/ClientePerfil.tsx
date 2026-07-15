@@ -42,6 +42,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { BarbershopDetailsSheet } from "@/components/client/BarbershopDetailsSheet";
+import { BottomNavigation } from "@/components/BottomNavigation";
 import { MyReviewsSheet } from "@/components/MyReviewsSheet";
 import { MyCouponsSheet } from "@/components/MyCouponsSheet";
 import { usePendingSubscription } from "@/hooks/usePendingSubscription";
