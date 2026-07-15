@@ -241,7 +241,10 @@ export default function ClienteIndicacoes() {
       <div className="flex-shrink-0 flex items-center gap-3 px-4 pt-4 pb-3">
         <motion.button
           whileTap={{ scale: 0.9 }}
-          onClick={() => navigate(-1)}
+          onClick={() => {
+            if (window.history.length > 1) navigate(-1);
+            else navigate("/cliente/perfil");
+          }}
           className="w-9 h-9 flex items-center justify-center rounded-xl bg-card border border-border/40"
         >
           <BackArrow size={20} className="text-foreground" />
