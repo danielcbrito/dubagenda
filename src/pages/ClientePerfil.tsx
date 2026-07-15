@@ -244,7 +244,7 @@ export default function ClientePerfil() {
         />
         
         <div className="h-full overflow-y-auto overscroll-contain pb-24">
-          <div className="px-5 pt-10 pb-4">
+          <div className="px-5 pt-16 pb-4">
 
             {/* Identity — iFood style: avatar + name + colored link */}
             <motion.div
