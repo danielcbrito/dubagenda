@@ -47,97 +47,67 @@ import { MyCouponsSheet } from "@/components/MyCouponsSheet";
 import { usePendingSubscription } from "@/hooks/usePendingSubscription";
 import { BarberReviewModal } from "@/components/client/BarberReviewModal";
 
-/* ─── Reusable sub-components ─── */
+/* ─── Reusable sub-components (iFood-style) ─── */
 
-interface ProfileSectionProps {
-  title: string;
-  children: React.ReactNode;
-  delay?: number;
-}
-function ProfileSection({ title, children, delay = 0 }: ProfileSectionProps) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 6 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay, duration: 0.3 }}
-    >
-      <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground/50 mb-2 px-1">
-        {title}
-      </p>
-      <div className="rounded-xl bg-card border border-border/30 overflow-hidden divide-y divide-border/20">
-        {children}
-      </div>
-    </motion.div>
-  );
-}
-
-interface ProfileItemProps {
+interface ProfileRowProps {
   icon: React.ElementType;
   label: string;
+  sublabel?: string;
   onClick?: () => void;
+  badgeCount?: number;
   trailing?: React.ReactNode;
-  badge?: string;
   danger?: boolean;
 }
-function ProfileItem({ icon: Icon, label, onClick, trailing, badge, danger }: ProfileItemProps) {
+function ProfileRow({ icon: Icon, label, sublabel, onClick, badgeCount, trailing, danger }: ProfileRowProps) {
   return (
     <button
       onClick={onClick}
       className={cn(
-        "w-full flex items-center gap-3 px-3.5 py-3 transition-colors",
-        "active:bg-secondary/50 active:scale-[0.99] transition-all",
+        "w-full flex items-center gap-4 py-4 transition-colors active:bg-muted/40",
         danger && "text-destructive"
       )}
     >
-      <div className={cn(
-        "w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0",
-        danger ? "bg-destructive/10" : "bg-secondary/50"
-      )}>
-        <Icon
-          className={cn("h-4 w-4", danger ? "text-destructive" : "text-muted-foreground")}
-          strokeWidth={1.8}
-        />
-      </div>
-      <span
-        className={cn(
-          "flex-1 text-left text-[13px] font-medium",
-          danger ? "text-destructive" : "text-foreground"
+      <Icon
+        className={cn("h-[22px] w-[22px] flex-shrink-0", danger ? "text-destructive" : "text-foreground")}
+        strokeWidth={1.6}
+      />
+      <div className="flex-1 min-w-0 text-left">
+        <p className={cn("text-[15px] font-semibold leading-tight", danger ? "text-destructive" : "text-foreground")}>
+          {label}
+        </p>
+        {sublabel && (
+          <p className="text-[12.5px] text-muted-foreground/80 leading-tight mt-0.5 truncate">
+            {sublabel}
+          </p>
         )}
-      >
-        {label}
-      </span>
-      {badge && (
-        <span className="px-1.5 py-0.5 bg-primary/15 text-primary text-[9px] font-bold rounded-md min-w-[20px] text-center uppercase tracking-wider">
-          {badge}
+      </div>
+      {typeof badgeCount === "number" && badgeCount > 0 && (
+        <span className="min-w-[22px] h-[22px] px-1.5 rounded-full bg-primary text-primary-foreground text-[11px] font-bold flex items-center justify-center tabular-nums">
+          {badgeCount > 99 ? "99+" : badgeCount}
         </span>
       )}
       {trailing || (
-        <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/30 flex-shrink-0" />
+        <ChevronRight className="h-4 w-4 text-muted-foreground/60 flex-shrink-0" />
       )}
     </button>
   );
 }
 
-function ThemeToggleItem() {
+function ThemeToggleRow() {
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === "dark";
-
+  const Icon = isDark ? Moon : Sun;
   return (
-    <div className="w-full flex items-center gap-3 px-3.5 py-3">
-      <div className="w-8 h-8 rounded-lg bg-secondary/50 flex items-center justify-center flex-shrink-0">
-        {isDark ? (
-          <Moon className="h-4 w-4 text-muted-foreground" strokeWidth={1.8} />
-        ) : (
-          <Sun className="h-4 w-4 text-muted-foreground" strokeWidth={1.8} />
-        )}
-      </div>
-      <span className="flex-1 text-left text-[13px] font-medium text-foreground">
+    <div className="w-full flex items-center gap-4 py-4">
+      <Icon className="h-[22px] w-[22px] text-foreground flex-shrink-0" strokeWidth={1.6} />
+      <span className="flex-1 text-left text-[15px] font-semibold text-foreground">
         {isDark ? "Modo escuro" : "Modo claro"}
       </span>
       <ThemeToggle />
     </div>
   );
 }
+
 
 /* ─── Main Page ─── */
 
@@ -282,49 +252,71 @@ export default function ClientePerfil() {
         </div>
 
         <div className="h-full overflow-y-auto overscroll-contain pb-16">
-          <div className="px-4 pt-12 pb-4 space-y-6">
+          <div className="px-5 pt-14 pb-4">
 
-            {/* Identity */}
+            {/* Identity — iFood style: avatar + name + colored link */}
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="flex flex-col items-center gap-2.5"
+              className="flex items-center gap-4 mb-6"
             >
-              <div className="relative">
-                <div className="h-[72px] w-[72px] rounded-full border-2 border-border/40 overflow-hidden bg-card flex items-center justify-center shadow-sm">
-                  {avatarUrl ? (
-                    <img src={avatarUrl} alt="Avatar" className="h-full w-full object-cover" />
-                  ) : (
-                    <span className="text-lg font-bold text-foreground tabular-nums">
-                      {profile?.nome ? getInitials(profile.nome) : "U"}
-                    </span>
-                  )}
-                </div>
+              <div className="h-16 w-16 rounded-full bg-primary/15 flex items-center justify-center overflow-hidden flex-shrink-0">
+                {avatarUrl ? (
+                  <img src={avatarUrl} alt="Avatar" className="h-full w-full object-cover" />
+                ) : (
+                  <span className="text-xl font-bold text-primary">
+                    {profile?.nome ? getInitials(profile.nome) : "U"}
+                  </span>
+                )}
               </div>
-
-              <div className="text-center space-y-1">
-                <p className="text-[15px] font-semibold text-foreground tracking-tight">
-                  {profile?.nome || "Carregando..."}
+              <div className="min-w-0 flex-1">
+                <p className="text-[22px] font-bold text-foreground leading-tight truncate">
+                  {profile?.nome?.split(" ")[0] || "Cliente"}
                 </p>
-                <p className="text-[11px] text-muted-foreground/60">{userEmail}</p>
-                <span className="inline-block mt-1 text-[9px] uppercase tracking-[0.12em] bg-primary/10 text-primary px-2 py-0.5 rounded-md font-bold">
-                  {userRole}
-                </span>
+                <button
+                  onClick={() => navigate("/cliente/dados-pessoais")}
+                  className="mt-0.5 inline-flex items-center gap-1 text-[14px] font-semibold text-primary active:opacity-70"
+                >
+                  Ver meus dados
+                  <ChevronRight className="h-4 w-4" strokeWidth={2.4} />
+                </button>
               </div>
             </motion.div>
 
-            {/* Indique e ganhe */}
-            <div className="relative pt-6 group">
+            {/* Featured card — Carteira (destaque estilo Pagamentos iFood) */}
+            <motion.button
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.03 }}
+              onClick={() => navigate("/cliente/carteira")}
+              className="w-full rounded-2xl bg-card border border-border/60 shadow-sm px-4 py-4 flex items-center gap-3 active:scale-[0.99] transition-transform mb-2"
+            >
+              <Wallet className="h-[22px] w-[22px] text-foreground flex-shrink-0" strokeWidth={1.8} />
+              <div className="flex-1 min-w-0 text-left">
+                <p className="text-[16px] font-bold text-foreground leading-tight">Minha Carteira</p>
+              </div>
+              {availableCredits > 0 && (
+                <span className="text-[13px] font-bold text-primary tabular-nums">
+                  R$ {availableCredits}
+                </span>
+              )}
+              <ChevronRight className="h-4 w-4 text-muted-foreground/60" />
+            </motion.button>
+            <p className="text-[12.5px] text-muted-foreground/80 px-1 mb-5">
+              Gerencie seus créditos e saques
+            </p>
+
+            {/* Indique e ganhe — banner preservado */}
+            <div className="relative pt-6 group mb-6">
               <motion.button
                 initial={{ opacity: 0, y: 6 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.04, duration: 0.3 }}
                 whileTap={{ scale: 0.99 }}
                 onClick={() => navigate("/cliente/indicacoes")}
-                className="relative w-full h-20 rounded-xl bg-muted/60 dark:bg-card border border-border/40 text-left overflow-visible"
+                className="relative w-full h-20 rounded-2xl bg-muted/60 dark:bg-card border border-border/40 text-left overflow-visible"
               >
-                {/* Background Pattern with its own clipping */}
-                <div className="absolute inset-0 rounded-xl overflow-hidden pointer-events-none opacity-[0.04] dark:opacity-[0.08]">
+                <div className="absolute inset-0 rounded-2xl overflow-hidden pointer-events-none opacity-[0.04] dark:opacity-[0.08]">
                   <div className="absolute inset-0" style={{
                     backgroundImage: `url("data:image/svg+xml,%3Csvg width='40' height='24' viewBox='0 0 40 24' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M4 4h32v16H4z' fill='none' stroke='currentColor' stroke-width='0.5'/%3E%3Cpath d='M10 4v16M30 4v16' stroke='currentColor' stroke-width='0.5' stroke-dasharray='1 1'/%3E%3C/svg%3E")`,
                     backgroundSize: '80px 48px'
@@ -332,21 +324,17 @@ export default function ClientePerfil() {
                 </div>
 
                 <div className="relative h-full flex items-center pl-[92px] pr-3.5 gap-2">
-                  {/* Text */}
                   <div className="flex-1 min-w-0">
                     <p className="text-[14.5px] font-semibold text-foreground leading-tight tracking-tight">
                       Indique e ganhe corte grátis
                     </p>
                   </div>
-
-                  {/* Button */}
                   <span className="text-[12px] font-bold bg-foreground text-background px-4 py-1.5 rounded-full flex-shrink-0 active:scale-95 transition-transform shadow-sm">
                     Convidar
                   </span>
                 </div>
               </motion.button>
 
-              {/* Mascot - Popping out of the card */}
               <div className="absolute left-1 bottom-0 w-24 h-[130px] pointer-events-none z-10 flex items-end overflow-visible">
                 <img
                   src={referralMascot}
@@ -356,49 +344,23 @@ export default function ClientePerfil() {
               </div>
             </div>
 
-
-
-            {/* Conta */}
-            <ProfileSection title="Conta" delay={0.05}>
-              <ProfileItem
-                icon={Wallet}
-                label="Minha Carteira"
-                badge={availableCredits > 0 ? `R$ ${availableCredits}` : undefined}
-                onClick={() => navigate("/cliente/carteira")}
+            {/* Flat list — iFood style with hairline dividers */}
+            <div className="divide-y divide-border/60">
+              <ProfileRow
+                icon={Bell}
+                label="Notificações"
+                onClick={() => setNotificationsOpen(true)}
               />
-              <ProfileItem
-                icon={CreditCard}
-                label="Meus Planos"
-                onClick={() => setPlansOpen(true)}
-              />
-              <ProfileItem
-                icon={Tag}
-                label="Meus Cupons"
-                onClick={() => setCouponsOpen(true)}
-              />
-              <ProfileItem
-                icon={User}
-                label="Meus Dados"
-                onClick={() => navigate("/cliente/dados-pessoais")}
-              />
-              <ProfileItem
-                icon={Shield}
-                label="Segurança"
-                onClick={() => navigate("/cliente/seguranca")}
-              />
-            </ProfileSection>
-
-            {/* Preferências */}
-            <ProfileSection title="Preferências" delay={0.1}>
-              <ProfileItem
+              <ProfileRow
                 icon={Store}
                 label={isDubExclusive ? "Barbearia DUB" : "Minha Barbearia"}
-                badge={isDubExclusive ? "Exclusivo" : preferredShopName || undefined}
+                sublabel={isDubExclusive ? "Cliente exclusivo" : preferredShopName || undefined}
                 onClick={() => navigate("/escolher-barbearia?mode=change&open=current")}
               />
-              <ProfileItem
+              <ProfileRow
                 icon={MapPin}
                 label="Encontrar barbearias"
+                sublabel="Explore unidades perto de você"
                 onClick={() => {
                   if (!profile?.barbearia_preferida_id) {
                     setShowDiscoverConfirm(true);
@@ -407,43 +369,65 @@ export default function ClientePerfil() {
                   }
                 }}
               />
-              <ProfileItem
-                icon={Bell}
-                label="Notificações"
-                onClick={() => setNotificationsOpen(true)}
+              <ProfileRow
+                icon={CreditCard}
+                label="Meus Planos"
+                sublabel="Assinaturas e renovações"
+                onClick={() => setPlansOpen(true)}
               />
-              <ThemeToggleItem />
-            </ProfileSection>
-
-            {/* Mais */}
-            <ProfileSection title="Mais" delay={0.15}>
-              <ProfileItem
-                icon={History}
-                label="Histórico de Agendamentos"
-                onClick={() => setHistoryOpen(true)}
+              <ProfileRow
+                icon={Tag}
+                label="Meus Cupons"
+                sublabel="Descontos disponíveis"
+                onClick={() => setCouponsOpen(true)}
               />
-              <ProfileItem
-                icon={Star}
-                label="Minhas Avaliações"
-                onClick={() => setReviewsOpen(true)}
-              />
-              <ProfileItem
+              <ProfileRow
                 icon={Gift}
-                label="Programa de Pontos"
-                badge={redemptions > 0 ? `${redemptions} disponível` : undefined}
+                label="Recompensas e Benefícios"
+                sublabel="Pontos, resgates e fidelidade"
+                badgeCount={redemptions}
                 onClick={() => setPointsModalOpen(true)}
               />
-              <ProfileItem
+              <ProfileRow
+                icon={History}
+                label="Histórico de Agendamentos"
+                sublabel="Todos os cortes já realizados"
+                onClick={() => setHistoryOpen(true)}
+              />
+              <ProfileRow
+                icon={Star}
+                label="Minhas Avaliações"
+                sublabel="Notas e comentários enviados"
+                onClick={() => setReviewsOpen(true)}
+              />
+              <ProfileRow
+                icon={User}
+                label="Conta"
+                sublabel="Dados pessoais e segurança"
+                onClick={() => navigate("/cliente/dados-pessoais")}
+              />
+              <ProfileRow
+                icon={Shield}
+                label="Segurança"
+                sublabel="Senha e proteção da conta"
+                onClick={() => navigate("/cliente/seguranca")}
+              />
+              <ThemeToggleRow />
+              <ProfileRow
                 icon={HelpCircle}
                 label="Central de Ajuda"
+                sublabel="Fale com o suporte"
                 trailing={
-                  <span className="text-[8px] uppercase tracking-[0.1em] text-muted-foreground/40 bg-muted/50 px-1.5 py-0.5 rounded font-semibold">
+                  <span className="text-[10px] uppercase tracking-wider text-muted-foreground/60 font-semibold">
                     Em breve
                   </span>
                 }
                 onClick={() => toast.info("Em breve")}
               />
-            </ProfileSection>
+            </div>
+
+            <div className="h-6" />
+
 
             {/* Logout */}
             <motion.div
