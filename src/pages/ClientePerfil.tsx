@@ -323,32 +323,33 @@ export default function ClientePerfil() {
               className="relative w-full h-16 rounded-xl bg-muted/60 dark:bg-card border border-border/40 text-left overflow-hidden group"
             >
               {/* Pattern Background */}
-              <div className="absolute inset-0 opacity-[0.03] dark:opacity-[0.06] pointer-events-none">
+              <div className="absolute inset-0 opacity-[0.04] dark:opacity-[0.08] pointer-events-none">
                 <div className="absolute inset-0" style={{ 
-                  backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='36' viewBox='0 0 60 36' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 4h60v28H0z' fill='none' stroke='currentColor' stroke-width='1'/%3E%3Cpath d='M15 4v28M45 4v28' stroke='currentColor' stroke-width='1' stroke-dasharray='2 2'/%3E%3C/svg%3E")`,
-                  backgroundSize: '120px 72px'
+                  backgroundImage: `url("data:image/svg+xml,%3Csvg width='40' height='24' viewBox='0 0 40 24' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M4 4h32v16H4z' fill='none' stroke='currentColor' stroke-width='0.5'/%3E%3Cpath d='M10 4v16M30 4v16' stroke='currentColor' stroke-width='0.5' stroke-dasharray='1 1'/%3E%3C/svg%3E")`,
+                  backgroundSize: '80px 48px'
                 }} />
               </div>
 
-              <div className="relative h-full flex items-center px-3 gap-3.5">
+              <div className="relative h-full flex items-center px-4 gap-4">
                 {/* Decorative circle for the mascot */}
-                <div className="relative w-12 h-12 rounded-full bg-secondary/15 dark:bg-secondary/10 flex-shrink-0 border border-secondary/10 overflow-hidden">
+                <div className="relative w-11 h-11 rounded-full bg-secondary/20 dark:bg-secondary/15 flex-shrink-0 border border-secondary/20 flex items-center justify-center">
                   <img
                     src={referralMascot}
                     alt=""
-                    className="absolute bottom-0 left-1/2 -translate-x-[45%] h-[160%] w-auto object-contain object-bottom dark:invert transition-transform duration-500 group-hover:scale-110"
+                    className="absolute -bottom-0.5 left-1/2 -translate-x-[40%] h-[155%] w-auto object-contain object-bottom dark:invert transition-all duration-500 group-hover:scale-105 group-hover:-translate-y-1"
                   />
                 </div>
 
                 {/* Text */}
                 <div className="flex-1 min-w-0">
-                  <p className="text-[13px] font-semibold text-foreground leading-tight tracking-tight">
-                    Indique e ganhe <span className="text-amber-500">corte grátis</span>
+                  <p className="text-[13px] font-bold text-foreground leading-tight tracking-tight uppercase">
+                    Indique e ganhe <br />
+                    <span className="text-amber-500">corte grátis</span>
                   </p>
                 </div>
 
                 {/* Button */}
-                <span className="text-[10px] font-bold uppercase tracking-widest bg-foreground text-background px-3 py-1.5 rounded-lg flex-shrink-0 shadow-sm">
+                <span className="text-[9px] font-black uppercase tracking-[0.15em] bg-foreground text-background px-3 py-1.5 rounded-md flex-shrink-0 shadow-sm active:scale-95 transition-transform">
                   Convidar
                 </span>
               </div>
