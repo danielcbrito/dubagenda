@@ -330,27 +330,24 @@ export default function ClientePerfil() {
                 }} />
               </div>
 
-              <div className="relative h-full flex items-center pl-2 pr-3 gap-2">
-                {/* Mascot */}
+              <div className="relative h-full flex items-center pl-[72px] pr-3 gap-2">
+                {/* Mascot - only top portion visible, overflows top of card */}
                 <img
                   src={referralMascot}
                   alt=""
-                  className="h-[110%] w-auto object-contain flex-shrink-0 -ml-1 transition-transform duration-500 group-hover:scale-105"
+                  className="absolute left-1 bottom-0 h-[190%] w-auto object-contain object-bottom pointer-events-none transition-transform duration-500 group-hover:-translate-y-0.5"
                 />
 
                 {/* Text */}
                 <div className="flex-1 min-w-0">
-                  <p className="text-[15px] font-semibold text-foreground leading-tight">
-                    Indique e ganhe <span className="text-amber-500 font-bold">R$ 50</span>
-                  </p>
-                  <p className="text-[11px] text-muted-foreground mt-0.5">
-                    Seu amigo também ganha
+                  <p className="text-[14px] font-semibold text-foreground leading-tight tracking-tight">
+                    Indique e ganhe corte grátis
                   </p>
                 </div>
 
                 {/* Button */}
-                <span className="text-[12px] font-semibold bg-foreground text-background px-4 py-2 rounded-full flex-shrink-0 shadow-sm active:scale-95 transition-transform">
-                  Convide
+                <span className="text-[12px] font-medium bg-foreground text-background px-3.5 py-1.5 rounded-full flex-shrink-0 active:scale-95 transition-transform">
+                  Convidar
                 </span>
               </div>
             </motion.button>
