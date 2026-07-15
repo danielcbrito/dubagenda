@@ -312,6 +312,31 @@ export default function ClientePerfil() {
               </div>
             </motion.div>
 
+            {/* Indique e ganhe */}
+            <motion.button
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.04, duration: 0.3 }}
+              whileTap={{ scale: 0.99 }}
+              onClick={() => navigate("/cliente/indicacoes")}
+              className="w-full flex items-center gap-3 p-3 rounded-2xl bg-card border border-border/30 shadow-sm text-left"
+            >
+              <div className="h-11 w-11 rounded-xl bg-amber-500/15 flex items-center justify-center flex-shrink-0">
+                <Gift className="w-6 h-6 text-amber-500" strokeWidth={2.2} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[13px] font-semibold text-foreground leading-tight">
+                  Indique e ganhe <span className="text-amber-500">corte grátis</span>
+                </p>
+                <p className="text-[11px] text-muted-foreground/70 leading-tight mt-0.5">
+                  Seu amigo também ganha
+                </p>
+              </div>
+              <span className="text-[12px] font-semibold bg-foreground text-background px-4 py-2 rounded-full flex-shrink-0">
+                Convide
+              </span>
+            </motion.button>
+
             {/* Conta */}
             <ProfileSection title="Conta" delay={0.05}>
               <ProfileItem
