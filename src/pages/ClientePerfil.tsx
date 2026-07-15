@@ -334,18 +334,18 @@ export default function ClientePerfil() {
                 }}
               />
 
-              {/* Mascote — clipado pelo card; apenas da barriga pra cima aparece */}
+              {/* Mascote — pequeno, colado à esquerda, apontando para o texto */}
               <img
                 src={referralMascot}
                 alt=""
                 width={1024}
                 height={1024}
                 loading="lazy"
-                className="absolute left-2 top-0 h-[190px] w-auto object-contain object-top pointer-events-none select-none dark:invert"
+                className="absolute left-1 top-1/2 -translate-y-1/2 h-14 w-14 object-contain pointer-events-none select-none dark:invert"
               />
 
               {/* Texto */}
-              <div className="relative h-full flex items-center pl-[92px] pr-3">
+              <div className="relative h-full flex items-center pl-[68px] pr-3">
                 <div className="flex-1 min-w-0">
                   <p className="text-[13px] font-semibold text-foreground leading-tight">
                     Indique e ganhe <span className="text-amber-500">corte grátis</span>
