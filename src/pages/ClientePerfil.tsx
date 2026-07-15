@@ -288,30 +288,26 @@ export default function ClientePerfil() {
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="flex flex-col items-center gap-2.5"
+              className="flex items-center gap-4 px-2"
             >
-              <div className="relative">
-                <div className="h-[72px] w-[72px] rounded-full border-2 border-border/40 overflow-hidden bg-card flex items-center justify-center shadow-sm">
-                  {avatarUrl ? (
-                    <img src={avatarUrl} alt="Avatar" className="h-full w-full object-cover" />
-                  ) : (
-                    <span className="text-lg font-bold text-foreground tabular-nums">
-                      {profile?.nome ? getInitials(profile.nome) : "U"}
-                    </span>
-                  )}
-                </div>
+              <div className="h-[72px] w-[72px] rounded-full border-2 border-border/40 overflow-hidden bg-card flex items-center justify-center shadow-sm">
+                {avatarUrl ? (
+                  <img src={avatarUrl} alt="Avatar" className="h-full w-full object-cover" />
+                ) : (
+                  <span className="text-xl font-bold text-foreground tabular-nums">
+                    {profile?.nome ? getInitials(profile.nome) : "U"}
+                  </span>
+                )}
               </div>
 
-              <div className="text-center space-y-1">
-                <p className="text-[15px] font-semibold text-foreground tracking-tight">
+              <div className="flex-1 min-w-0">
+                <h1 className="text-[24px] font-bold text-foreground tracking-tight leading-none mb-1">
                   {profile?.nome || "Carregando..."}
-                </p>
-                <p className="text-[11px] text-muted-foreground/60">{userEmail}</p>
-                <span className="inline-block mt-1 text-[9px] uppercase tracking-[0.12em] bg-primary/10 text-primary px-2 py-0.5 rounded-md font-bold">
-                  {userRole}
-                </span>
+                </h1>
+                <p className="text-[13px] text-muted-foreground/60">{userEmail}</p>
               </div>
             </motion.div>
+
 
             {/* Indique e ganhe */}
             <div className="relative pt-6 group">
