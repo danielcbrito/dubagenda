@@ -282,27 +282,27 @@ export default function ClientePerfil() {
             >
               {/* Brand label — tight */}
               <div className="flex items-baseline mb-2.5">
-                <span className="text-[13px] font-bold text-primary tracking-tight leading-none">
+                <span className="text-[12px] font-bold text-primary tracking-tight leading-none">
                   Dub
                 </span>
-                <span className="text-[13px] font-bold text-primary italic tracking-tight leading-none">
+                <span className="text-[12px] font-bold text-primary italic tracking-tight leading-none">
                   Pago
                 </span>
               </div>
 
               {/* Row */}
               <div className="flex items-center gap-2.5">
-                <div className="h-5 w-5 rounded-full bg-muted flex items-center justify-center overflow-hidden flex-shrink-0">
+                <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden flex-shrink-0">
                   {avatarUrl ? (
                     <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
                   ) : (
-                    <User className="h-3 w-3 text-muted-foreground" strokeWidth={1.6} />
+                    <User className="h-3.5 w-3.5 text-primary" strokeWidth={1.6} />
                   )}
                 </div>
-                <Wallet className="h-[16px] w-[16px] text-foreground/80 flex-shrink-0" strokeWidth={1.5} />
-                <p className="flex-1 text-[14.5px] font-medium text-foreground leading-tight">
+                <p className="flex-1 text-[14px] font-medium text-foreground leading-tight">
                   Minha Carteira
                 </p>
+
                 {availableCredits > 0 && (
                   <span className="text-[12px] font-semibold text-primary tabular-nums">
                     R$ {availableCredits}
