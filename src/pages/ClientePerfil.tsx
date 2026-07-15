@@ -330,13 +330,16 @@ export default function ClientePerfil() {
                 }} />
               </div>
 
-              <div className="relative h-full flex items-center pl-[72px] pr-3 gap-2">
-                {/* Mascot - only top portion visible, overflows top of card */}
-                <img
-                  src={referralMascot}
-                  alt=""
-                  className="absolute left-1 bottom-0 h-[190%] w-auto object-contain object-bottom pointer-events-none transition-transform duration-500 group-hover:-translate-y-0.5"
-                />
+              <div className="relative h-full flex items-center pl-[76px] pr-3 gap-2">
+                {/* Mascot - crop to show only head + megaphone */}
+                <div className="absolute left-2 top-1/2 -translate-y-1/2 w-16 h-16 overflow-hidden pointer-events-none">
+                  <img
+                    src={referralMascot}
+                    alt=""
+                    className="absolute left-1/2 -translate-x-1/2 top-0 h-[180%] max-w-none w-auto object-contain transition-transform duration-500 group-hover:-translate-y-0.5"
+                    style={{ transform: 'translateX(-50%)' }}
+                  />
+                </div>
 
                 {/* Text */}
                 <div className="flex-1 min-w-0">
