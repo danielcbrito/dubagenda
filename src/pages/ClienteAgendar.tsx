@@ -2251,11 +2251,26 @@ const ClienteAgendar = () => {
     return corteService.preco;
   };
 
+  /** Corte grátis por indicação: exclusivo para 1 corte único no carrinho. */
+  const canUseReferralCredit =
+    referralCredits > 0 &&
+    selectedServices.length === 1 &&
+    !!getCorteService();
+
+  const getReferralDiscount = () => {
+    if (!useReferralCredit || !canUseReferralCredit) return 0;
+    const corteService = getCorteService();
+    if (!corteService) return 0;
+    const qty = serviceQuantities[corteService.id] || 1;
+    return corteService.preco * qty;
+  };
+
   /** Retorna o valor base SEM cupom (para exibição) */
   const getBaseTotalBeforeCoupon = () => {
     const baseTotal = selectedServices.reduce((sum, s) => sum + s.preco * (serviceQuantities[s.id] || 1), 0);
     const redemptionDiscount = getRedemptionDiscount();
-    return Math.max(0, baseTotal - redemptionDiscount);
+    const referralDiscount = getReferralDiscount();
+    return Math.max(0, baseTotal - redemptionDiscount - referralDiscount);
   };
 
   /** Retorna o valor do desconto do cupom (recalculado a partir do valor base atual) */
@@ -2295,6 +2310,15 @@ const ClienteAgendar = () => {
     }
     prevCanUseRedemptionRef.current = canUseRedemption;
   }, [canUseRedemption, useRedemption]);
+
+  // Se o corte grátis por indicação deixa de ser elegível (mudou o serviço,
+  // adicionou combo, etc.), limpa a seleção para não travar em um estado
+  // "aplicado" sem desconto.
+  useEffect(() => {
+    if (!canUseReferralCredit && useReferralCredit) {
+      setUseReferralCredit(false);
+    }
+  }, [canUseReferralCredit, useReferralCredit]);
 
   const handleToggleRedemption = () => {
     if (!canUseRedemption) return;
@@ -2908,7 +2932,8 @@ const ClienteAgendar = () => {
                 // "Corte Grátis" só aparece como forma de pagamento quando cobre 100% do valor.
                 // Se houver remanescente (ex.: carrinho com 2 serviços), o cliente precisa escolher PIX/Carteira/Barbearia.
                 const redemptionCoversAll = useRedemption && totalPrice === 0;
-                const selectedSummary = redemptionCoversAll
+                const referralCoversAll = useReferralCredit && canUseReferralCredit && getTotalPrice() === 0;
+                const selectedSummary = redemptionCoversAll || referralCoversAll
                   ? { icon: <Star className="w-5 h-5 fill-gold text-gold" />, label: "Corte Grátis", sub: "Benefício aplicado" }
                   : paymentMethod === 'pix'
                     ? { icon: <img src={pixIcon} alt="PIX" className="w-5 h-5 object-contain" />, label: "PIX", sub: "Confirmação instantânea" }
@@ -2923,7 +2948,7 @@ const ClienteAgendar = () => {
                     </h3>
 
                     <div className="space-y-2">
-                      {referralCredits > 0 && selectedServices.length === 1 && (
+                      {canUseReferralCredit && (
                         <PaymentOption
                           value="referral"
                           selected={useReferralCredit}
@@ -3098,19 +3123,25 @@ const ClienteAgendar = () => {
                 <div className="space-y-2.5">
                   {(() => {
                     const redeemedCorte = useRedemption ? getCorteService() : undefined;
+                    const referralCorte = useReferralCredit && canUseReferralCredit ? getCorteService() : undefined;
                     let redemptionApplied = false;
                     return selectedServices.map((s) => {
                       const qty = serviceQuantities[s.id] || 1;
-                      // Aplica o desconto do Corte Grátis em 1 unidade do corte elegível.
                       const isRedeemed = !!redeemedCorte && s.id === redeemedCorte.id && !redemptionApplied;
                       if (isRedeemed) redemptionApplied = true;
-                      const lineTotal = isRedeemed ? s.preco * Math.max(0, qty - 1) : s.preco * qty;
+                      const isReferralFree = !!referralCorte && s.id === referralCorte.id;
+                      const lineTotal = isReferralFree
+                        ? 0
+                        : isRedeemed
+                          ? s.preco * Math.max(0, qty - 1)
+                          : s.preco * qty;
+                      const isFree = isReferralFree || (isRedeemed && lineTotal === 0);
                       return (
                         <div key={s.id} className="flex items-center justify-between gap-3">
                           <span className="text-[13px] text-muted-foreground truncate">
-                            {s.nome}{qty > 1 ? ` ×${qty}` : ""}{isRedeemed ? " (Grátis)" : ""}
+                            {s.nome}{qty > 1 ? ` ×${qty}` : ""}{isFree ? " (Grátis)" : ""}
                           </span>
-                          <span className={cn("text-[13px] tabular-nums flex-shrink-0", isRedeemed && lineTotal === 0 ? "text-emerald-500 font-medium" : "text-foreground")}>
+                          <span className={cn("text-[13px] tabular-nums flex-shrink-0", isFree ? "text-emerald-500 font-medium" : "text-foreground")}>
                             R$ {lineTotal.toFixed(2).replace('.', ',')}
                           </span>
                         </div>
@@ -3127,11 +3158,13 @@ const ClienteAgendar = () => {
                   )}
                   {(() => {
                     const redemptionCoversAll = useRedemption && getTotalPrice() === 0;
-                    const fee = redemptionCoversAll ? 0 : getServiceFee(paymentMethod);
-                    const total = redemptionCoversAll ? 0 : Math.max(0, getTotalPrice() - availableCredits) + fee;
+                    const referralCoversAll = useReferralCredit && canUseReferralCredit && getTotalPrice() === 0;
+                    const coversAll = redemptionCoversAll || referralCoversAll;
+                    const fee = coversAll ? 0 : getServiceFee(paymentMethod);
+                    const total = coversAll ? 0 : Math.max(0, getTotalPrice() - availableCredits) + fee;
                     return (
                       <>
-                        {!redemptionCoversAll && (
+                        {!coversAll && (
                           <div className="flex items-center justify-between">
                             <span className="text-[13px] text-muted-foreground">Taxa de serviço</span>
                             <span className="text-[13px] text-foreground tabular-nums">
@@ -3141,7 +3174,7 @@ const ClienteAgendar = () => {
                         )}
                         <div className="flex items-center justify-between pt-2">
                           <span className="text-[15px] font-bold text-foreground">Total</span>
-                          <span className={cn("text-[15px] font-bold tabular-nums", redemptionCoversAll ? "text-emerald-500" : "text-foreground")}>
+                          <span className={cn("text-[15px] font-bold tabular-nums", coversAll ? "text-emerald-500" : "text-foreground")}>
                             R$ {total.toFixed(2).replace('.', ',')}
                           </span>
                         </div>
@@ -3406,10 +3439,12 @@ const ClienteAgendar = () => {
         {step === 5 && !isRescheduling && !isPlanFlow && paymentMethod && (
           (() => {
             const redemptionCoversAll = useRedemption && getTotalPrice() === 0;
-            const actionTotal = redemptionCoversAll
+            const referralCoversAll = useReferralCredit && canUseReferralCredit && getTotalPrice() === 0;
+            const coversAll = redemptionCoversAll || referralCoversAll;
+            const actionTotal = coversAll
               ? 0
               : Math.max(0, getTotalPrice() - availableCredits) + getServiceFee(paymentMethod);
-            const actionLabel = redemptionCoversAll
+            const actionLabel = coversAll
               ? 'Confirmar'
               : paymentMethod === 'pix'
                 ? 'Gerar PIX'
