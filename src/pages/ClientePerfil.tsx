@@ -279,44 +279,44 @@ export default function ClientePerfil() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.03 }}
               onClick={() => navigate("/cliente/carteira")}
-              className="relative w-full rounded-2xl active:scale-[0.99] transition-transform mb-6 text-left"
+              className="relative w-full rounded-2xl active:scale-[0.99] transition-transform mb-6 text-left overflow-hidden"
             >
-              {/* Gray background layer behind the white card */}
-              <div className="absolute inset-0 bg-muted/60 dark:bg-muted/30 rounded-2xl" />
-
-              {/* White card foreground */}
-              <div className="relative z-10 mx-1 mt-2 bg-card rounded-2xl border border-border/60 shadow-sm px-4 pt-3 pb-3.5">
-                {/* Brand label — tight */}
-                <div className="flex items-baseline mb-2.5">
-                  <span className="text-[12px] font-bold text-primary tracking-tight leading-none">
-                    Dub
-                  </span>
-                  <span className="text-[12px] font-bold text-primary italic tracking-tight leading-none">
-                    Pago
-                  </span>
-                </div>
-
-                {/* Row */}
-                <div className="flex items-center gap-2.5">
-                  <Wallet className="h-[18px] w-[18px] text-foreground flex-shrink-0" strokeWidth={1.6} />
-                  <p className="flex-1 text-[14px] font-medium text-foreground leading-tight">
-                    Minha Carteira
-                  </p>
-
-                  {availableCredits > 0 && (
-                    <span className="text-[12px] font-semibold text-primary tabular-nums">
-                      R$ {availableCredits}
+              {/* Gray base that aligns flush with the white section */}
+              <div className="bg-muted/60 dark:bg-muted/30">
+                {/* White card top section */}
+                <div className="bg-card rounded-t-2xl border border-border/60 border-b-0 shadow-sm px-4 pt-3 pb-3.5">
+                  {/* Brand label — tight */}
+                  <div className="flex items-baseline mb-4">
+                    <span className="text-[12px] font-bold text-primary tracking-tight leading-none">
+                      Dub
                     </span>
-                  )}
-                  <ChevronRight className="h-[15px] w-[15px] text-muted-foreground/60" strokeWidth={1.8} />
-                </div>
-              </div>
+                    <span className="text-[12px] font-bold text-primary italic tracking-tight leading-none">
+                      Pago
+                    </span>
+                  </div>
 
-              {/* Grey subsection — appears behind the white card */}
-              <div className="relative z-10 px-4 py-2.5">
-                <p className="text-[11.5px] font-normal text-muted-foreground leading-tight">
-                  Gerencie seus créditos e saques
-                </p>
+                  {/* Row */}
+                  <div className="flex items-center gap-2.5">
+                    <Wallet className="h-[18px] w-[18px] text-foreground flex-shrink-0" strokeWidth={1.6} />
+                    <p className="flex-1 text-[14px] font-medium text-foreground leading-tight">
+                      Minha Carteira
+                    </p>
+
+                    {availableCredits > 0 && (
+                      <span className="text-[12px] font-semibold text-primary tabular-nums">
+                        R$ {availableCredits}
+                      </span>
+                    )}
+                    <ChevronRight className="h-[15px] w-[15px] text-muted-foreground/60" strokeWidth={1.8} />
+                  </div>
+                </div>
+
+                {/* Gray subsection — continuous with the background */}
+                <div className="px-4 py-2.5">
+                  <p className="text-[11.5px] font-normal text-muted-foreground leading-tight">
+                    Gerencie seus créditos e saques
+                  </p>
+                </div>
               </div>
             </motion.button>
 
