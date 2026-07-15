@@ -279,15 +279,12 @@ export default function ClientePerfil() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.03 }}
               onClick={() => navigate("/cliente/carteira")}
-              className="relative w-full rounded-2xl active:scale-[0.99] transition-transform mb-6 text-left"
+              className="relative w-full rounded-2xl active:scale-[0.99] transition-transform mb-6 text-left bg-muted/60 dark:bg-muted/30 overflow-hidden"
             >
-              {/* Gray base layer behind */}
-              <div className="absolute inset-0 bg-muted/60 dark:bg-muted/30 rounded-2xl" />
-
               {/* White floating card in front */}
-              <div className="relative m-1 bg-card rounded-2xl border border-border/60 shadow-sm px-4 pt-3 pb-3.5">
+              <div className="relative bg-card rounded-2xl border border-border/60 shadow-sm px-4 pt-3 pb-3.5">
                 {/* Brand label — tight */}
-                <div className="flex items-baseline mb-4">
+                <div className="flex items-baseline mb-5">
                   <span className="text-[12px] font-bold text-primary tracking-tight leading-none">
                     Dub
                   </span>
