@@ -320,37 +320,37 @@ export default function ClientePerfil() {
               transition={{ delay: 0.04, duration: 0.3 }}
               whileTap={{ scale: 0.99 }}
               onClick={() => navigate("/cliente/indicacoes")}
-              className="relative w-full h-16 rounded-xl bg-muted/60 dark:bg-card border border-border/40 text-left overflow-hidden group"
+              className="relative w-full h-20 rounded-xl bg-muted/60 dark:bg-card border border-border/40 text-left overflow-hidden group"
             >
               {/* Pattern Background */}
               <div className="absolute inset-0 opacity-[0.04] dark:opacity-[0.08] pointer-events-none">
-                <div className="absolute inset-0" style={{ 
+                <div className="absolute inset-0" style={{
                   backgroundImage: `url("data:image/svg+xml,%3Csvg width='40' height='24' viewBox='0 0 40 24' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M4 4h32v16H4z' fill='none' stroke='currentColor' stroke-width='0.5'/%3E%3Cpath d='M10 4v16M30 4v16' stroke='currentColor' stroke-width='0.5' stroke-dasharray='1 1'/%3E%3C/svg%3E")`,
                   backgroundSize: '80px 48px'
                 }} />
               </div>
 
-              <div className="relative h-full flex items-center px-4 gap-4">
-                {/* Decorative circle for the mascot */}
-                <div className="relative w-11 h-11 rounded-full bg-secondary/20 dark:bg-secondary/15 flex-shrink-0 border border-secondary/20 flex items-center justify-center">
-                  <img
-                    src={referralMascot}
-                    alt=""
-                    className="absolute -bottom-0.5 left-1/2 -translate-x-[40%] h-[155%] w-auto object-contain object-bottom dark:invert transition-all duration-500 group-hover:scale-105 group-hover:-translate-y-1"
-                  />
-                </div>
+              <div className="relative h-full flex items-center pl-2 pr-3 gap-2">
+                {/* Mascot */}
+                <img
+                  src={referralMascot}
+                  alt=""
+                  className="h-[110%] w-auto object-contain flex-shrink-0 -ml-1 transition-transform duration-500 group-hover:scale-105"
+                />
 
                 {/* Text */}
                 <div className="flex-1 min-w-0">
-                  <p className="text-[13px] font-bold text-foreground leading-tight tracking-tight uppercase">
-                    Indique e ganhe <br />
-                    <span className="text-amber-500">corte grátis</span>
+                  <p className="text-[15px] font-semibold text-foreground leading-tight">
+                    Indique e ganhe <span className="text-amber-500 font-bold">R$ 50</span>
+                  </p>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">
+                    Seu amigo também ganha
                   </p>
                 </div>
 
                 {/* Button */}
-                <span className="text-[9px] font-black uppercase tracking-[0.15em] bg-foreground text-background px-3 py-1.5 rounded-md flex-shrink-0 shadow-sm active:scale-95 transition-transform">
-                  Convidar
+                <span className="text-[12px] font-semibold bg-foreground text-background px-4 py-2 rounded-full flex-shrink-0 shadow-sm active:scale-95 transition-transform">
+                  Convide
                 </span>
               </div>
             </motion.button>
