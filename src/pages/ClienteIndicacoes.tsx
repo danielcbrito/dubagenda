@@ -97,6 +97,7 @@ export default function ClienteIndicacoes() {
   const [userId, setUserId] = useState<string | null>(null);
   const [referralCode, setReferralCode] = useState<string | null>(null);
   const [availableCredits, setAvailableCredits] = useState(0);
+  const [indicacoes, setIndicacoes] = useState<Indicacao[]>([]);
   const [tenantSlug, setTenantSlug] = useState<string>("barbearia-dub");
   const [monthUsed, setMonthUsed] = useState(0);
 
