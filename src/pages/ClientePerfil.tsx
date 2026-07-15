@@ -22,6 +22,7 @@ import {
   UserPlus,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import referralMascot from "@/assets/referral-mascot.png";
 import { toast } from "sonner";
 import { useTheme } from "next-themes";
 import { cn } from "@/lib/utils";
@@ -319,21 +320,39 @@ export default function ClientePerfil() {
               transition={{ delay: 0.04, duration: 0.3 }}
               whileTap={{ scale: 0.99 }}
               onClick={() => navigate("/cliente/indicacoes")}
-              className="w-full flex items-center gap-3 p-3 rounded-2xl bg-card border border-border/30 shadow-sm text-left"
+              className="relative w-full flex items-center gap-3 p-3 rounded-xl bg-muted/60 dark:bg-card border border-border/40 text-left overflow-hidden"
             >
-              <div className="h-11 w-11 rounded-xl bg-amber-500/15 flex items-center justify-center flex-shrink-0">
-                <Gift className="w-6 h-6 text-amber-500" strokeWidth={2.2} />
+              {/* Padrão de fundo — cupons */}
+              <div
+                aria-hidden
+                className="pointer-events-none absolute inset-0 opacity-[0.05] dark:opacity-[0.08]"
+                style={{
+                  backgroundImage: `url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='56' height='56' viewBox='0 0 56 56'><g fill='none' stroke='%23000' stroke-width='1.2'><path d='M8 20h24a2 2 0 012 2v4a3 3 0 000 6v4a2 2 0 01-2 2H8a2 2 0 01-2-2v-4a3 3 0 000-6v-4a2 2 0 012-2z'/><circle cx='14' cy='28' r='1' fill='%23000'/><path d='M20 26h8M20 30h6'/></g></svg>")`,
+                  backgroundSize: "56px 56px",
+                  backgroundRepeat: "repeat",
+                }}
+              />
+              {/* Mascote */}
+              <div className="relative h-12 w-12 rounded-lg bg-background/70 dark:bg-background/40 border border-border/40 flex items-center justify-center flex-shrink-0">
+                <img
+                  src={referralMascot}
+                  alt=""
+                  width={512}
+                  height={512}
+                  loading="lazy"
+                  className="w-10 h-10 object-contain"
+                />
               </div>
-              <div className="flex-1 min-w-0">
+              <div className="relative flex-1 min-w-0">
                 <p className="text-[13px] font-semibold text-foreground leading-tight">
                   Indique e ganhe <span className="text-amber-500">corte grátis</span>
                 </p>
                 <p className="text-[11px] text-muted-foreground/70 leading-tight mt-0.5">
-                  Seu amigo também ganha
+                  A cada 3 amigos, um corte por conta da casa
                 </p>
               </div>
-              <span className="text-[12px] font-semibold bg-foreground text-background px-4 py-2 rounded-full flex-shrink-0">
-                Convide
+              <span className="relative text-[11px] font-medium tracking-wide bg-foreground text-background px-3.5 py-1.5 rounded-md flex-shrink-0">
+                Convidar
               </span>
             </motion.button>
 
