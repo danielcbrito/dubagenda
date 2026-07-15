@@ -3123,19 +3123,25 @@ const ClienteAgendar = () => {
                 <div className="space-y-2.5">
                   {(() => {
                     const redeemedCorte = useRedemption ? getCorteService() : undefined;
+                    const referralCorte = useReferralCredit && canUseReferralCredit ? getCorteService() : undefined;
                     let redemptionApplied = false;
                     return selectedServices.map((s) => {
                       const qty = serviceQuantities[s.id] || 1;
-                      // Aplica o desconto do Corte Grátis em 1 unidade do corte elegível.
                       const isRedeemed = !!redeemedCorte && s.id === redeemedCorte.id && !redemptionApplied;
                       if (isRedeemed) redemptionApplied = true;
-                      const lineTotal = isRedeemed ? s.preco * Math.max(0, qty - 1) : s.preco * qty;
+                      const isReferralFree = !!referralCorte && s.id === referralCorte.id;
+                      const lineTotal = isReferralFree
+                        ? 0
+                        : isRedeemed
+                          ? s.preco * Math.max(0, qty - 1)
+                          : s.preco * qty;
+                      const isFree = isReferralFree || (isRedeemed && lineTotal === 0);
                       return (
                         <div key={s.id} className="flex items-center justify-between gap-3">
                           <span className="text-[13px] text-muted-foreground truncate">
-                            {s.nome}{qty > 1 ? ` ×${qty}` : ""}{isRedeemed ? " (Grátis)" : ""}
+                            {s.nome}{qty > 1 ? ` ×${qty}` : ""}{isFree ? " (Grátis)" : ""}
                           </span>
-                          <span className={cn("text-[13px] tabular-nums flex-shrink-0", isRedeemed && lineTotal === 0 ? "text-emerald-500 font-medium" : "text-foreground")}>
+                          <span className={cn("text-[13px] tabular-nums flex-shrink-0", isFree ? "text-emerald-500 font-medium" : "text-foreground")}>
                             R$ {lineTotal.toFixed(2).replace('.', ',')}
                           </span>
                         </div>
@@ -3152,11 +3158,13 @@ const ClienteAgendar = () => {
                   )}
                   {(() => {
                     const redemptionCoversAll = useRedemption && getTotalPrice() === 0;
-                    const fee = redemptionCoversAll ? 0 : getServiceFee(paymentMethod);
-                    const total = redemptionCoversAll ? 0 : Math.max(0, getTotalPrice() - availableCredits) + fee;
+                    const referralCoversAll = useReferralCredit && canUseReferralCredit && getTotalPrice() === 0;
+                    const coversAll = redemptionCoversAll || referralCoversAll;
+                    const fee = coversAll ? 0 : getServiceFee(paymentMethod);
+                    const total = coversAll ? 0 : Math.max(0, getTotalPrice() - availableCredits) + fee;
                     return (
                       <>
-                        {!redemptionCoversAll && (
+                        {!coversAll && (
                           <div className="flex items-center justify-between">
                             <span className="text-[13px] text-muted-foreground">Taxa de serviço</span>
                             <span className="text-[13px] text-foreground tabular-nums">
@@ -3166,7 +3174,7 @@ const ClienteAgendar = () => {
                         )}
                         <div className="flex items-center justify-between pt-2">
                           <span className="text-[15px] font-bold text-foreground">Total</span>
-                          <span className={cn("text-[15px] font-bold tabular-nums", redemptionCoversAll ? "text-emerald-500" : "text-foreground")}>
+                          <span className={cn("text-[15px] font-bold tabular-nums", coversAll ? "text-emerald-500" : "text-foreground")}>
                             R$ {total.toFixed(2).replace('.', ',')}
                           </span>
                         </div>
