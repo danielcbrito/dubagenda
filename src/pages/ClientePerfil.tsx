@@ -320,39 +320,40 @@ export default function ClientePerfil() {
               transition={{ delay: 0.04, duration: 0.3 }}
               whileTap={{ scale: 0.99 }}
               onClick={() => navigate("/cliente/indicacoes")}
-              className="relative w-full h-24 rounded-xl bg-muted/60 dark:bg-card border border-border/40 text-left overflow-hidden"
+              className="relative w-full h-16 rounded-xl bg-muted/60 dark:bg-card border border-border/40 text-left"
             >
-              {/* Cupom grande de fundo */}
-              <div
-                aria-hidden
-                className="pointer-events-none absolute -right-6 top-1/2 -translate-y-1/2 opacity-[0.07] dark:opacity-[0.10]"
-              >
-                <svg width="220" height="140" viewBox="0 0 220 140" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path
-                    d="M20 30h180a6 6 0 016 6v22a10 10 0 000 20v22a6 6 0 01-6 6H20a6 6 0 01-6-6V78a10 10 0 000-20V36a6 6 0 016-6z"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeDasharray="0"
-                  />
-                  <path d="M110 34v72" stroke="currentColor" strokeWidth="2" strokeDasharray="4 6" />
-                  <circle cx="40" cy="70" r="3" fill="currentColor" />
-                  <path d="M55 62h40M55 70h30M55 78h35" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                  <path d="M130 62h60M130 70h50M130 78h55" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                </svg>
+              {/* Camada interna com clipping — cupom de fundo */}
+              <div className="absolute inset-0 rounded-xl overflow-hidden pointer-events-none">
+                <div
+                  aria-hidden
+                  className="absolute -right-6 top-1/2 -translate-y-1/2 opacity-[0.07] dark:opacity-[0.10]"
+                >
+                  <svg width="220" height="140" viewBox="0 0 220 140" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path
+                      d="M20 30h180a6 6 0 016 6v22a10 10 0 000 20v22a6 6 0 01-6 6H20a6 6 0 01-6-6V78a10 10 0 000-20V36a6 6 0 016-6z"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                    />
+                    <path d="M110 34v72" stroke="currentColor" strokeWidth="2" strokeDasharray="4 6" />
+                    <circle cx="40" cy="70" r="3" fill="currentColor" />
+                    <path d="M55 62h40M55 70h30M55 78h35" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                    <path d="M130 62h60M130 70h50M130 78h55" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                  </svg>
+                </div>
               </div>
 
-              {/* Mascote — sai do card */}
+              {/* Mascote — só do tronco pra cima aparece; pernas ficam dentro do card */}
               <img
                 src={referralMascot}
                 alt=""
                 width={1024}
                 height={1024}
                 loading="lazy"
-                className="absolute left-2 -bottom-2 h-[110%] w-auto object-contain pointer-events-none select-none dark:invert"
+                className="absolute left-3 bottom-0 h-[220%] w-auto object-contain object-bottom pointer-events-none select-none dark:invert z-10"
               />
 
               {/* Texto */}
-              <div className="relative h-full flex items-center pl-[112px] pr-3">
+              <div className="relative h-full flex items-center pl-[92px] pr-3">
                 <div className="flex-1 min-w-0">
                   <p className="text-[13px] font-semibold text-foreground leading-tight">
                     Indique e ganhe <span className="text-amber-500">corte grátis</span>
@@ -363,6 +364,7 @@ export default function ClientePerfil() {
                 </span>
               </div>
             </motion.button>
+
 
 
             {/* Conta */}
