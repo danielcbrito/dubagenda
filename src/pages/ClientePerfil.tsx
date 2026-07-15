@@ -292,13 +292,7 @@ export default function ClientePerfil() {
 
               {/* Row */}
               <div className="flex items-center gap-2.5">
-                <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden flex-shrink-0">
-                  {avatarUrl ? (
-                    <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
-                  ) : (
-                    <User className="h-3.5 w-3.5 text-primary" strokeWidth={1.6} />
-                  )}
-                </div>
+                <Wallet className="h-[18px] w-[18px] text-foreground flex-shrink-0" strokeWidth={1.6} />
                 <p className="flex-1 text-[14px] font-medium text-foreground leading-tight">
                   Minha Carteira
                 </p>
