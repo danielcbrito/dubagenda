@@ -2311,6 +2311,15 @@ const ClienteAgendar = () => {
     prevCanUseRedemptionRef.current = canUseRedemption;
   }, [canUseRedemption, useRedemption]);
 
+  // Se o corte grátis por indicação deixa de ser elegível (mudou o serviço,
+  // adicionou combo, etc.), limpa a seleção para não travar em um estado
+  // "aplicado" sem desconto.
+  useEffect(() => {
+    if (!canUseReferralCredit && useReferralCredit) {
+      setUseReferralCredit(false);
+    }
+  }, [canUseReferralCredit, useReferralCredit]);
+
   const handleToggleRedemption = () => {
     if (!canUseRedemption) return;
     // Se está DESmarcando o corte grátis (estava ativo) → mesma regra anti-burla:
