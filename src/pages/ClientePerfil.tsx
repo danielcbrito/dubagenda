@@ -63,31 +63,31 @@ function ProfileRow({ icon: Icon, label, sublabel, onClick, badgeCount, trailing
     <button
       onClick={onClick}
       className={cn(
-        "w-full flex items-center gap-4 py-4 transition-colors active:bg-muted/40",
+        "w-full flex items-center gap-4 py-3.5 transition-colors active:bg-muted/40",
         danger && "text-destructive"
       )}
     >
       <Icon
-        className={cn("h-[22px] w-[22px] flex-shrink-0", danger ? "text-destructive" : "text-foreground")}
-        strokeWidth={1.6}
+        className={cn("h-[20px] w-[20px] flex-shrink-0", danger ? "text-destructive" : "text-foreground/80")}
+        strokeWidth={1.5}
       />
       <div className="flex-1 min-w-0 text-left">
-        <p className={cn("text-[15px] font-semibold leading-tight", danger ? "text-destructive" : "text-foreground")}>
+        <p className={cn("text-[14px] font-medium leading-tight", danger ? "text-destructive" : "text-foreground")}>
           {label}
         </p>
         {sublabel && (
-          <p className="text-[12.5px] text-muted-foreground/80 leading-tight mt-0.5 truncate">
+          <p className="text-[11.5px] font-normal text-muted-foreground/70 leading-snug mt-1 truncate">
             {sublabel}
           </p>
         )}
       </div>
       {typeof badgeCount === "number" && badgeCount > 0 && (
-        <span className="min-w-[22px] h-[22px] px-1.5 rounded-full bg-primary text-primary-foreground text-[11px] font-bold flex items-center justify-center tabular-nums">
+        <span className="min-w-[20px] h-[20px] px-1.5 rounded-full bg-primary text-primary-foreground text-[10.5px] font-semibold flex items-center justify-center tabular-nums">
           {badgeCount > 99 ? "99+" : badgeCount}
         </span>
       )}
       {trailing || (
-        <ChevronRight className="h-4 w-4 text-muted-foreground/60 flex-shrink-0" />
+        <ChevronRight className="h-[15px] w-[15px] text-muted-foreground/50 flex-shrink-0" strokeWidth={1.8} />
       )}
     </button>
   );
@@ -98,15 +98,16 @@ function ThemeToggleRow() {
   const isDark = resolvedTheme === "dark";
   const Icon = isDark ? Moon : Sun;
   return (
-    <div className="w-full flex items-center gap-4 py-4">
-      <Icon className="h-[22px] w-[22px] text-foreground flex-shrink-0" strokeWidth={1.6} />
-      <span className="flex-1 text-left text-[15px] font-semibold text-foreground">
+    <div className="w-full flex items-center gap-4 py-3.5">
+      <Icon className="h-[20px] w-[20px] text-foreground/80 flex-shrink-0" strokeWidth={1.5} />
+      <span className="flex-1 text-left text-[14px] font-medium text-foreground">
         {isDark ? "Modo escuro" : "Modo claro"}
       </span>
       <ThemeToggle />
     </div>
   );
 }
+
 
 
 /* ─── Main Page ─── */
@@ -283,47 +284,49 @@ export default function ClientePerfil() {
               </div>
             </motion.div>
 
-            {/* Featured card — Dub Pago (idêntico ao "iFood Pago") */}
+            {/* Featured card — Dub Pago */}
             <motion.button
               initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.03 }}
               onClick={() => navigate("/cliente/carteira")}
-              className="w-full rounded-2xl bg-card border border-border/60 shadow-sm px-4 pt-3 pb-4 active:scale-[0.99] transition-transform mb-2 text-left"
+              className="w-full rounded-2xl bg-card border border-border/60 shadow-sm px-4 pt-3 pb-3.5 active:scale-[0.99] transition-transform mb-2 text-left"
             >
-              {/* Brand label */}
-              <div className="flex items-center gap-1.5 mb-3">
-                <span className="text-[15px] font-extrabold text-primary tracking-tight leading-none">
+              {/* Brand label — tight */}
+              <div className="flex items-baseline mb-2.5">
+                <span className="text-[13px] font-bold text-primary tracking-tight leading-none">
                   Dub
                 </span>
-                <span className="text-[15px] font-extrabold text-primary italic tracking-tight leading-none">
+                <span className="text-[13px] font-bold text-primary italic tracking-tight leading-none">
                   Pago
                 </span>
               </div>
 
               {/* Row */}
-              <div className="flex items-center gap-3">
-                <div className="h-7 w-7 rounded-full bg-muted flex items-center justify-center overflow-hidden flex-shrink-0">
+              <div className="flex items-center gap-2.5">
+                <div className="h-5 w-5 rounded-full bg-muted flex items-center justify-center overflow-hidden flex-shrink-0">
                   {avatarUrl ? (
                     <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
                   ) : (
-                    <User className="h-4 w-4 text-muted-foreground" strokeWidth={1.8} />
+                    <User className="h-3 w-3 text-muted-foreground" strokeWidth={1.6} />
                   )}
                 </div>
-                <p className="flex-1 text-[16px] font-semibold text-foreground leading-tight">
+                <Wallet className="h-[16px] w-[16px] text-foreground/80 flex-shrink-0" strokeWidth={1.5} />
+                <p className="flex-1 text-[14.5px] font-medium text-foreground leading-tight">
                   Minha Carteira
                 </p>
                 {availableCredits > 0 && (
-                  <span className="text-[13px] font-bold text-primary tabular-nums">
+                  <span className="text-[12px] font-semibold text-primary tabular-nums">
                     R$ {availableCredits}
                   </span>
                 )}
-                <ChevronRight className="h-4 w-4 text-muted-foreground/70" />
+                <ChevronRight className="h-[15px] w-[15px] text-muted-foreground/60" strokeWidth={1.8} />
               </div>
             </motion.button>
-            <p className="text-[12.5px] text-muted-foreground/80 px-1 mb-5">
+            <p className="text-[11.5px] font-normal text-muted-foreground/70 px-1 mb-6">
               Gerencie seus créditos e saques
             </p>
+
 
 
             {/* Indique e ganhe — banner preservado */}
