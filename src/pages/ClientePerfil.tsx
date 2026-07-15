@@ -441,12 +441,6 @@ export default function ClientePerfil() {
                 onClick={() => setPointsModalOpen(true)}
               />
               <ProfileItem
-                icon={UserPlus}
-                label="Indicações"
-                badge={referralCredits > 0 ? `${referralCredits} grátis` : undefined}
-                onClick={() => navigate("/cliente/indicacoes")}
-              />
-              <ProfileItem
                 icon={HelpCircle}
                 label="Central de Ajuda"
                 trailing={
