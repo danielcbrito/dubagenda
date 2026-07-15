@@ -347,11 +347,8 @@ export default function ClientePerfil() {
                 <p className="text-[13px] font-semibold text-foreground leading-tight">
                   Indique e ganhe <span className="text-amber-500">corte grátis</span>
                 </p>
-                <p className="text-[11px] text-muted-foreground/70 leading-tight mt-0.5">
-                  A cada 3 amigos, um corte por conta da casa
-                </p>
               </div>
-              <span className="relative text-[11px] font-medium tracking-wide bg-foreground text-background px-3.5 py-1.5 rounded-md flex-shrink-0">
+              <span className="relative text-[11px] font-medium tracking-wide bg-foreground text-background px-3 py-1 rounded-md flex-shrink-0">
                 Convidar
               </span>
             </motion.button>
