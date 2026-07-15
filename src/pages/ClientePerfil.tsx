@@ -521,6 +521,11 @@ export default function ClientePerfil() {
           loadProfile();
         }}
       />
+
+      <BottomNavigation
+        onProfileClick={() => {}}
+        onPlansClick={() => setPlansOpen(true)}
+      />
     </div>
   );
 }
