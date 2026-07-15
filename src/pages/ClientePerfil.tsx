@@ -320,38 +320,50 @@ export default function ClientePerfil() {
               transition={{ delay: 0.04, duration: 0.3 }}
               whileTap={{ scale: 0.99 }}
               onClick={() => navigate("/cliente/indicacoes")}
-              className="relative w-full flex items-center gap-3 p-3 rounded-xl bg-muted/60 dark:bg-card border border-border/40 text-left overflow-hidden"
+              className="relative w-full h-24 rounded-xl bg-muted/60 dark:bg-card border border-border/40 text-left overflow-hidden"
             >
-              {/* Padrão de fundo — cupons */}
+              {/* Cupom grande de fundo */}
               <div
                 aria-hidden
-                className="pointer-events-none absolute inset-0 opacity-[0.05] dark:opacity-[0.08]"
-                style={{
-                  backgroundImage: `url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='56' height='56' viewBox='0 0 56 56'><g fill='none' stroke='%23000' stroke-width='1.2'><path d='M8 20h24a2 2 0 012 2v4a3 3 0 000 6v4a2 2 0 01-2 2H8a2 2 0 01-2-2v-4a3 3 0 000-6v-4a2 2 0 012-2z'/><circle cx='14' cy='28' r='1' fill='%23000'/><path d='M20 26h8M20 30h6'/></g></svg>")`,
-                  backgroundSize: "56px 56px",
-                  backgroundRepeat: "repeat",
-                }}
+                className="pointer-events-none absolute -right-6 top-1/2 -translate-y-1/2 opacity-[0.07] dark:opacity-[0.10]"
+              >
+                <svg width="220" height="140" viewBox="0 0 220 140" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path
+                    d="M20 30h180a6 6 0 016 6v22a10 10 0 000 20v22a6 6 0 01-6 6H20a6 6 0 01-6-6V78a10 10 0 000-20V36a6 6 0 016-6z"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeDasharray="0"
+                  />
+                  <path d="M110 34v72" stroke="currentColor" strokeWidth="2" strokeDasharray="4 6" />
+                  <circle cx="40" cy="70" r="3" fill="currentColor" />
+                  <path d="M55 62h40M55 70h30M55 78h35" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                  <path d="M130 62h60M130 70h50M130 78h55" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                </svg>
+              </div>
+
+              {/* Mascote — sai do card */}
+              <img
+                src={referralMascot}
+                alt=""
+                width={1024}
+                height={1024}
+                loading="lazy"
+                className="absolute left-2 -bottom-2 h-[110%] w-auto object-contain pointer-events-none select-none dark:invert"
               />
-              {/* Mascote */}
-              <div className="relative h-12 w-12 rounded-lg bg-background/70 dark:bg-background/40 border border-border/40 flex items-center justify-center flex-shrink-0">
-                <img
-                  src={referralMascot}
-                  alt=""
-                  width={512}
-                  height={512}
-                  loading="lazy"
-                  className="w-10 h-10 object-contain"
-                />
+
+              {/* Texto */}
+              <div className="relative h-full flex items-center pl-[112px] pr-3">
+                <div className="flex-1 min-w-0">
+                  <p className="text-[13px] font-semibold text-foreground leading-tight">
+                    Indique e ganhe <span className="text-amber-500">corte grátis</span>
+                  </p>
+                </div>
+                <span className="text-[11px] font-medium tracking-wide bg-foreground text-background px-3 py-1 rounded-md flex-shrink-0">
+                  Convidar
+                </span>
               </div>
-              <div className="relative flex-1 min-w-0">
-                <p className="text-[13px] font-semibold text-foreground leading-tight">
-                  Indique e ganhe <span className="text-amber-500">corte grátis</span>
-                </p>
-              </div>
-              <span className="relative text-[11px] font-medium tracking-wide bg-foreground text-background px-3 py-1 rounded-md flex-shrink-0">
-                Convidar
-              </span>
             </motion.button>
+
 
             {/* Conta */}
             <ProfileSection title="Conta" delay={0.05}>
@@ -427,12 +439,6 @@ export default function ClientePerfil() {
                 label="Programa de Pontos"
                 badge={redemptions > 0 ? `${redemptions} disponível` : undefined}
                 onClick={() => setPointsModalOpen(true)}
-              />
-              <ProfileItem
-                icon={UserPlus}
-                label="Indicações"
-                badge={referralCredits > 0 ? `${referralCredits} grátis` : undefined}
-                onClick={() => navigate("/cliente/indicacoes")}
               />
               <ProfileItem
                 icon={HelpCircle}
