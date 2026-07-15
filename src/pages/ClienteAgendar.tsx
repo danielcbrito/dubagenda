@@ -2251,11 +2251,26 @@ const ClienteAgendar = () => {
     return corteService.preco;
   };
 
+  /** Corte grátis por indicação: exclusivo para 1 corte único no carrinho. */
+  const canUseReferralCredit =
+    referralCredits > 0 &&
+    selectedServices.length === 1 &&
+    !!getCorteService();
+
+  const getReferralDiscount = () => {
+    if (!useReferralCredit || !canUseReferralCredit) return 0;
+    const corteService = getCorteService();
+    if (!corteService) return 0;
+    const qty = serviceQuantities[corteService.id] || 1;
+    return corteService.preco * qty;
+  };
+
   /** Retorna o valor base SEM cupom (para exibição) */
   const getBaseTotalBeforeCoupon = () => {
     const baseTotal = selectedServices.reduce((sum, s) => sum + s.preco * (serviceQuantities[s.id] || 1), 0);
     const redemptionDiscount = getRedemptionDiscount();
-    return Math.max(0, baseTotal - redemptionDiscount);
+    const referralDiscount = getReferralDiscount();
+    return Math.max(0, baseTotal - redemptionDiscount - referralDiscount);
   };
 
   /** Retorna o valor do desconto do cupom (recalculado a partir do valor base atual) */
