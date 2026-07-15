@@ -63,31 +63,31 @@ function ProfileRow({ icon: Icon, label, sublabel, onClick, badgeCount, trailing
     <button
       onClick={onClick}
       className={cn(
-        "w-full flex items-center gap-4 py-4 transition-colors active:bg-muted/40",
+        "w-full flex items-center gap-4 py-3.5 transition-colors active:bg-muted/40",
         danger && "text-destructive"
       )}
     >
       <Icon
-        className={cn("h-[22px] w-[22px] flex-shrink-0", danger ? "text-destructive" : "text-foreground")}
-        strokeWidth={1.6}
+        className={cn("h-[20px] w-[20px] flex-shrink-0", danger ? "text-destructive" : "text-foreground/80")}
+        strokeWidth={1.5}
       />
       <div className="flex-1 min-w-0 text-left">
-        <p className={cn("text-[15px] font-semibold leading-tight", danger ? "text-destructive" : "text-foreground")}>
+        <p className={cn("text-[14px] font-medium leading-tight", danger ? "text-destructive" : "text-foreground")}>
           {label}
         </p>
         {sublabel && (
-          <p className="text-[12.5px] text-muted-foreground/80 leading-tight mt-0.5 truncate">
+          <p className="text-[11.5px] font-normal text-muted-foreground/70 leading-snug mt-1 truncate">
             {sublabel}
           </p>
         )}
       </div>
       {typeof badgeCount === "number" && badgeCount > 0 && (
-        <span className="min-w-[22px] h-[22px] px-1.5 rounded-full bg-primary text-primary-foreground text-[11px] font-bold flex items-center justify-center tabular-nums">
+        <span className="min-w-[20px] h-[20px] px-1.5 rounded-full bg-primary text-primary-foreground text-[10.5px] font-semibold flex items-center justify-center tabular-nums">
           {badgeCount > 99 ? "99+" : badgeCount}
         </span>
       )}
       {trailing || (
-        <ChevronRight className="h-4 w-4 text-muted-foreground/60 flex-shrink-0" />
+        <ChevronRight className="h-[15px] w-[15px] text-muted-foreground/50 flex-shrink-0" strokeWidth={1.8} />
       )}
     </button>
   );
@@ -98,15 +98,16 @@ function ThemeToggleRow() {
   const isDark = resolvedTheme === "dark";
   const Icon = isDark ? Moon : Sun;
   return (
-    <div className="w-full flex items-center gap-4 py-4">
-      <Icon className="h-[22px] w-[22px] text-foreground flex-shrink-0" strokeWidth={1.6} />
-      <span className="flex-1 text-left text-[15px] font-semibold text-foreground">
+    <div className="w-full flex items-center gap-4 py-3.5">
+      <Icon className="h-[20px] w-[20px] text-foreground/80 flex-shrink-0" strokeWidth={1.5} />
+      <span className="flex-1 text-left text-[14px] font-medium text-foreground">
         {isDark ? "Modo escuro" : "Modo claro"}
       </span>
       <ThemeToggle />
     </div>
   );
 }
+
 
 
 /* ─── Main Page ─── */
