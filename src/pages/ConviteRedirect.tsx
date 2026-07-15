@@ -47,7 +47,7 @@ export default function ConviteRedirect() {
       }
 
       // Resolve slug → tenant id para pré-selecionar a barbearia do indicador
-      let tenantParam = "";
+      let tenantId = "";
       if (slug) {
         try {
           const { data: tenant } = await supabase
@@ -55,14 +55,31 @@ export default function ConviteRedirect() {
             .select("id")
             .eq("slug", slug)
             .maybeSingle();
-          if (tenant?.id) tenantParam = `&tenant=${encodeURIComponent(tenant.id)}`;
+          if (tenant?.id) tenantId = tenant.id;
         } catch {
           /* silent */
         }
       }
 
+      // Se resolvemos o tenant pelo slug, pula a tela de escolher barbearia
+      // e vai direto pro cadastro já vinculado à barbearia do indicador.
+      if (tenantId) {
+        try {
+          localStorage.setItem("dub_has_barbershop", "true");
+        } catch { /* ignore */ }
+        const params = new URLSearchParams({
+          mode: "signup",
+          tenant: tenantId,
+          origin: "invite",
+          ref: codeUp,
+        });
+        navigate(`/auth?${params.toString()}`, { replace: true });
+        return;
+      }
+
+      // Fallback: sem slug válido, mostra o seletor
       navigate(
-        `/escolher-barbearia?mode=invite&ref=${encodeURIComponent(codeUp)}${tenantParam}`,
+        `/escolher-barbearia?mode=invite&ref=${encodeURIComponent(codeUp)}`,
         { replace: true }
       );
     };
