@@ -241,48 +241,36 @@ export default function ClientePerfil() {
           style={{ background: "linear-gradient(to bottom, hsl(var(--background)), transparent)" }}
         />
         
-        {/* Back Button */}
-        <div className="absolute top-4 left-4 z-20">
-          <motion.button
-            whileTap={{ scale: 0.9 }}
-            onClick={() => navigate(-1)}
-            className="w-9 h-9 flex items-center justify-center rounded-xl bg-card border border-border/40 hover:bg-muted shadow-sm transition-colors active:scale-95"
-          >
-            <BackArrow size={20} className="text-foreground" />
-          </motion.button>
-        </div>
-
         <div className="h-full overflow-y-auto overscroll-contain pb-16">
-          <div className="px-5 pt-14 pb-4">
+          <div className="px-5 pt-8 pb-4">
 
             {/* Identity — iFood style: avatar + name + colored link */}
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="flex items-center gap-4 mb-6"
+              className="flex items-center gap-3.5 mb-6"
             >
-              <div className="h-16 w-16 rounded-full bg-primary/15 flex items-center justify-center overflow-hidden flex-shrink-0">
+              <div className="h-14 w-14 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden flex-shrink-0">
                 {avatarUrl ? (
                   <img src={avatarUrl} alt="Avatar" className="h-full w-full object-cover" />
                 ) : (
-                  <span className="text-xl font-bold text-primary">
-                    {profile?.nome ? getInitials(profile.nome) : "U"}
-                  </span>
+                  <User className="h-7 w-7 text-primary" strokeWidth={1.6} />
                 )}
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-[22px] font-bold text-foreground leading-tight truncate">
+                <p className="text-[19px] font-bold text-foreground leading-tight truncate">
                   {profile?.nome?.split(" ")[0] || "Cliente"}
                 </p>
                 <button
                   onClick={() => navigate("/cliente/dados-pessoais")}
-                  className="mt-0.5 inline-flex items-center gap-1 text-[14px] font-semibold text-primary active:opacity-70"
+                  className="mt-0.5 inline-flex items-center gap-0.5 text-[13px] font-semibold text-primary active:opacity-70"
                 >
                   Ver meus dados
-                  <ChevronRight className="h-4 w-4" strokeWidth={2.4} />
+                  <ChevronRight className="h-3.5 w-3.5" strokeWidth={2.4} />
                 </button>
               </div>
             </motion.div>
+
 
             {/* Featured card — Dub Pago */}
             <motion.button
