@@ -2948,7 +2948,7 @@ const ClienteAgendar = () => {
                     </h3>
 
                     <div className="space-y-2">
-                      {referralCredits > 0 && selectedServices.length === 1 && (
+                      {canUseReferralCredit && (
                         <PaymentOption
                           value="referral"
                           selected={useReferralCredit}
