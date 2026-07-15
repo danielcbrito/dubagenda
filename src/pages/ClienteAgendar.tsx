@@ -2932,7 +2932,8 @@ const ClienteAgendar = () => {
                 // "Corte Grátis" só aparece como forma de pagamento quando cobre 100% do valor.
                 // Se houver remanescente (ex.: carrinho com 2 serviços), o cliente precisa escolher PIX/Carteira/Barbearia.
                 const redemptionCoversAll = useRedemption && totalPrice === 0;
-                const selectedSummary = redemptionCoversAll
+                const referralCoversAll = useReferralCredit && canUseReferralCredit && getTotalPrice() === 0;
+                const selectedSummary = redemptionCoversAll || referralCoversAll
                   ? { icon: <Star className="w-5 h-5 fill-gold text-gold" />, label: "Corte Grátis", sub: "Benefício aplicado" }
                   : paymentMethod === 'pix'
                     ? { icon: <img src={pixIcon} alt="PIX" className="w-5 h-5 object-contain" />, label: "PIX", sub: "Confirmação instantânea" }
