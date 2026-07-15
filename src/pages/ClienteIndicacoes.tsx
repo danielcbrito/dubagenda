@@ -98,6 +98,7 @@ export default function ClienteIndicacoes() {
   const [referralCode, setReferralCode] = useState<string | null>(null);
   const [availableCredits, setAvailableCredits] = useState(0);
   const [indicacoes, setIndicacoes] = useState<Indicacao[]>([]);
+  const [tenantSlug, setTenantSlug] = useState<string>("barbearia-dub");
   const [monthUsed, setMonthUsed] = useState(0);
 
   const loadNames = useCallback(async (rows: Indicacao[]) => {
@@ -133,7 +134,7 @@ export default function ClienteIndicacoes() {
       setUserId(user.id);
 
       const [profileRes, creditsRes, indicacoesRes] = await Promise.all([
-        supabase.from("profiles").select("referral_code").eq("id", user.id).maybeSingle(),
+        supabase.from("profiles").select("referral_code, barbearia_preferida_id").eq("id", user.id).maybeSingle(),
         supabase
           .from("creditos_indicacao")
           .select("id", { count: "exact", head: true })
@@ -148,6 +149,16 @@ export default function ClienteIndicacoes() {
 
       setReferralCode(profileRes.data?.referral_code || null);
       setAvailableCredits(creditsRes.count || 0);
+
+      const tenantId = profileRes.data?.barbearia_preferida_id;
+      if (tenantId) {
+        const { data: tenant } = await supabase
+          .from("tenants")
+          .select("slug")
+          .eq("id", tenantId)
+          .maybeSingle();
+        if (tenant?.slug) setTenantSlug(tenant.slug);
+      }
 
       const rows: Indicacao[] = indicacoesRes.data || [];
       const enriched = await loadNames(rows);
@@ -193,8 +204,8 @@ export default function ClienteIndicacoes() {
   }, [userId, loadNames, recomputeMonth]);
 
   const referralLink = useMemo(
-    () => (referralCode ? `${getInviteOrigin()}/barbearia-dub/${referralCode}` : ""),
-    [referralCode]
+    () => (referralCode ? `${getInviteOrigin()}/${tenantSlug}/${referralCode}` : ""),
+    [referralCode, tenantSlug]
   );
   const prettyLink = referralLink.replace(/^https?:\/\//, "");
 

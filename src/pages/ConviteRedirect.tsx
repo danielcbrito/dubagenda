@@ -9,7 +9,7 @@ import { Loader2 } from "lucide-react";
  * e redireciona para /auth?ref=CODE.
  */
 export default function ConviteRedirect() {
-  const { code } = useParams<{ code: string }>();
+  const { code, slug } = useParams<{ code: string; slug?: string }>();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -32,6 +32,7 @@ export default function ConviteRedirect() {
         }
         sessionStorage.setItem("pending_referral_code", codeUp);
         sessionStorage.setItem("pending_referral_session_id", sessionId);
+        if (slug) sessionStorage.setItem("pending_referral_slug", slug);
       } catch {
         /* ignore */
       }
@@ -45,13 +46,28 @@ export default function ConviteRedirect() {
         /* silent */
       }
 
-      // Fluxo do convite: primeiro escolhe barbearia, depois segue o cadastro
-      // padrão (WhatsApp OTP → email/senha). O tenant escolhido é passado
-      // adiante via ?tenant= para vincular à conta na criação.
-      navigate(`/escolher-barbearia?mode=invite&ref=${encodeURIComponent(codeUp)}`, { replace: true });
+      // Resolve slug → tenant id para pré-selecionar a barbearia do indicador
+      let tenantParam = "";
+      if (slug) {
+        try {
+          const { data: tenant } = await supabase
+            .from("tenants")
+            .select("id")
+            .eq("slug", slug)
+            .maybeSingle();
+          if (tenant?.id) tenantParam = `&tenant=${encodeURIComponent(tenant.id)}`;
+        } catch {
+          /* silent */
+        }
+      }
+
+      navigate(
+        `/escolher-barbearia?mode=invite&ref=${encodeURIComponent(codeUp)}${tenantParam}`,
+        { replace: true }
+      );
     };
     run();
-  }, [code, navigate]);
+  }, [code, slug, navigate]);
 
   return (
     <div className="min-h-dvh flex items-center justify-center bg-background">

@@ -109,10 +109,11 @@ function MaintenanceWrapper({ children }: { children: React.ReactNode }) {
     location.pathname === route || location.pathname.startsWith('/auth') || location.pathname.startsWith('/b/') || location.pathname.startsWith('/barbearias') || location.pathname.startsWith('/i/') || location.pathname.startsWith('/barbearia-dub/')
   );
 
-  // Also treat /:slug (barbershop public pages) as public
-  const isBarbershopSlug = !location.pathname.startsWith('/cliente') && 
-    !location.pathname.startsWith('/suporte') &&
-    location.pathname.split('/').filter(Boolean).length === 1;
+  // Also treat /:slug and /:slug/:code (barbershop public pages / invite links) as public
+  const _segs = location.pathname.split('/').filter(Boolean);
+  const _reserved = ['cliente', 'suporte', 'admin', 'auth', 'barbearias', 'b', 'i', 'escolher-barbearia', 'escolher-verificacao', 'verificar-email', 'verificar-whatsapp', 'completar-perfil', 'esqueci-senha', 'resetar-senha', 'flowchart', 'responsive-preview'];
+  const isBarbershopSlug = (_segs.length === 1 || _segs.length === 2) &&
+    !_reserved.includes(_segs[0]);
 
   // If still loading, show nothing (to avoid flash)
   if (isLoading) {
@@ -250,10 +251,10 @@ function AuthRedirectGuard({ children }: { children: React.ReactNode }) {
       location.pathname === '/flowchart' ||
       location.pathname === '/responsive-preview';
 
-    // Rotas de barbearia pública (/:slug — single segment, not a known route)
+    // Rotas de barbearia pública (/:slug) e convite (/:slug/:code)
     const segments = location.pathname.split('/').filter(Boolean);
-    const isBarbershopSlug = segments.length === 1 &&
-      !['cliente', 'suporte', 'admin', 'auth', 'barbearias'].includes(segments[0]);
+    const isBarbershopSlug = (segments.length === 1 || segments.length === 2) &&
+      !['cliente', 'suporte', 'admin', 'auth', 'barbearias', 'b', 'i', 'escolher-barbearia', 'escolher-verificacao', 'verificar-email', 'verificar-whatsapp', 'completar-perfil', 'esqueci-senha', 'resetar-senha', 'flowchart', 'responsive-preview'].includes(segments[0]);
 
     if (isPublicRoute || isBarbershopSlug) {
       setReady(true);
@@ -387,6 +388,7 @@ function AppRoutes() {
               <Route path="/barbearias/:cidade" element={<BarbershopsCityGuide />} />
               <Route path="/i/:code" element={<ConviteRedirect />} />
               <Route path="/barbearia-dub/:code" element={<ConviteRedirect />} />
+              <Route path="/:slug/:code" element={<ConviteRedirect />} />
               <Route path="/:slug" element={<BarbershopPublic />} />
               <Route path="/flowchart" element={<Flowchart />} />
               <Route path="/responsive-preview" element={<ResponsivePreview />} />
