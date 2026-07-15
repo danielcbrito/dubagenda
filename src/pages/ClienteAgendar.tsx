@@ -3439,10 +3439,12 @@ const ClienteAgendar = () => {
         {step === 5 && !isRescheduling && !isPlanFlow && paymentMethod && (
           (() => {
             const redemptionCoversAll = useRedemption && getTotalPrice() === 0;
-            const actionTotal = redemptionCoversAll
+            const referralCoversAll = useReferralCredit && canUseReferralCredit && getTotalPrice() === 0;
+            const coversAll = redemptionCoversAll || referralCoversAll;
+            const actionTotal = coversAll
               ? 0
               : Math.max(0, getTotalPrice() - availableCredits) + getServiceFee(paymentMethod);
-            const actionLabel = redemptionCoversAll
+            const actionLabel = coversAll
               ? 'Confirmar'
               : paymentMethod === 'pix'
                 ? 'Gerar PIX'
