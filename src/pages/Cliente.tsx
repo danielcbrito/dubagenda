@@ -414,18 +414,30 @@ const Cliente = () => {
                 </div>
               </motion.div>
 
-              <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} onClick={() => navigate("/cliente/indicacoes")} className="bg-card rounded-2xl border border-border/40 shadow-sm p-4 flex items-center justify-between active:scale-[0.99] transition-transform cursor-pointer">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-primary/5 flex items-center justify-center">
-                    <Gift className="w-6 h-6 text-primary" />
+              <motion.div
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 }}
+                onClick={() => navigate("/cliente/indicacoes")}
+                className="bg-card rounded-2xl border border-border/40 shadow-sm overflow-hidden active:scale-[0.99] transition-transform cursor-pointer"
+              >
+                <div className="p-4 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-secondary/10 flex items-center justify-center">
+                      <Gift className="w-5 h-5 text-secondary" strokeWidth={2} />
+                    </div>
+                    <div>
+                      <p className="text-[11px] font-bold text-muted-foreground/60 uppercase tracking-wider">Indique e Ganhe</p>
+                      <h3 className="text-[14px] font-bold text-foreground">Meus Pontos Decolar</h3>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="text-[14px] font-bold text-foreground">Indique e Ganhe</h3>
-                    <p className="text-[11px] text-muted-foreground/60">Convidar amigos para ganhar cortes</p>
-                  </div>
+                  <ChevronRight className="w-4 h-4 text-muted-foreground/30" />
                 </div>
-                <ChevronRight className="w-4 h-4 text-primary" />
+                <div className="px-4 py-2.5 bg-muted/30 border-t border-border/20">
+                  <p className="text-[10px] text-muted-foreground/60">Convidar amigos para ganhar cortes</p>
+                </div>
               </motion.div>
+
 
               {activeSubscription && (
                 <PlanTrackerCard
@@ -444,14 +456,16 @@ const Cliente = () => {
               )}
 
               <div className="space-y-1 pt-2">
-                <ProfileItem icon={History} label="Histórico de Agendamentos" onClick={() => setHistorySheetOpen(true)} />
-                <ProfileItem icon={Star} label="Minhas Avaliações" onClick={() => navigate("/cliente/perfil")} />
-                <ProfileItem icon={Bell} label="Notificações" onClick={() => setPointsModalOpen(true)} badge={unreadNotifs > 0 ? String(unreadNotifs) : undefined} />
+                <ProfileItem icon={History} label="Conversas" onClick={() => {}} />
+                <ProfileItem icon={Bell} label="Notificações" onClick={() => {}} badge={unreadNotifs > 0 ? String(unreadNotifs) : undefined} />
                 <ProfileItem icon={Crown} label="Clube Dub" onClick={() => setPlansSheetOpen(true)} />
+                <ProfileItem icon={Gift} label="Cupons" onClick={() => {}} />
+                <ProfileItem icon={History} label="Histórico" onClick={() => setHistorySheetOpen(true)} />
                 <ProfileItem icon={Store} label="Minha Barbearia" onClick={() => navigate("/cliente/barbearia")} />
                 <ProfileItem icon={User} label="Minha Conta" onClick={() => navigate("/cliente/perfil")} />
                 <ProfileItem icon={LogOut} label="Sair da Conta" danger onClick={handleLogout} />
               </div>
+
             </div>
           </div>
         </div>
