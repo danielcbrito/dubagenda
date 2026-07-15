@@ -20,6 +20,7 @@ import {
   Star,
   Tag,
   UserPlus,
+  Smile,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import referralMascot from "@/assets/referral-mascot.png";
@@ -249,25 +250,25 @@ export default function ClientePerfil() {
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="flex items-center gap-3.5 mb-6"
+              className="flex items-center gap-3 mb-5"
             >
-              <div className="h-14 w-14 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden flex-shrink-0">
+              <div className="h-11 w-11 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden flex-shrink-0">
                 {avatarUrl ? (
                   <img src={avatarUrl} alt="Avatar" className="h-full w-full object-cover" />
                 ) : (
-                  <User className="h-7 w-7 text-primary" strokeWidth={1.6} />
+                  <Smile className="h-6 w-6 text-primary" strokeWidth={1.6} />
                 )}
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-[19px] font-bold text-foreground leading-tight truncate">
+                <p className="text-[17px] font-bold text-foreground leading-tight truncate">
                   {profile?.nome?.split(" ")[0] || "Cliente"}
                 </p>
                 <button
                   onClick={() => navigate("/cliente/dados-pessoais")}
-                  className="mt-0.5 inline-flex items-center gap-0.5 text-[13px] font-semibold text-primary active:opacity-70"
+                  className="mt-0.5 inline-flex items-center gap-0.5 text-[12px] font-semibold text-primary active:opacity-70"
                 >
                   Ver meus dados
-                  <ChevronRight className="h-3.5 w-3.5" strokeWidth={2.4} />
+                  <ChevronRight className="h-3 w-3" strokeWidth={2.4} />
                 </button>
               </div>
             </motion.div>
