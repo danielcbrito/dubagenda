@@ -47,97 +47,67 @@ import { MyCouponsSheet } from "@/components/MyCouponsSheet";
 import { usePendingSubscription } from "@/hooks/usePendingSubscription";
 import { BarberReviewModal } from "@/components/client/BarberReviewModal";
 
-/* ─── Reusable sub-components ─── */
+/* ─── Reusable sub-components (iFood-style) ─── */
 
-interface ProfileSectionProps {
-  title: string;
-  children: React.ReactNode;
-  delay?: number;
-}
-function ProfileSection({ title, children, delay = 0 }: ProfileSectionProps) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 6 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay, duration: 0.3 }}
-    >
-      <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground/50 mb-2 px-1">
-        {title}
-      </p>
-      <div className="rounded-xl bg-card border border-border/30 overflow-hidden divide-y divide-border/20">
-        {children}
-      </div>
-    </motion.div>
-  );
-}
-
-interface ProfileItemProps {
+interface ProfileRowProps {
   icon: React.ElementType;
   label: string;
+  sublabel?: string;
   onClick?: () => void;
+  badgeCount?: number;
   trailing?: React.ReactNode;
-  badge?: string;
   danger?: boolean;
 }
-function ProfileItem({ icon: Icon, label, onClick, trailing, badge, danger }: ProfileItemProps) {
+function ProfileRow({ icon: Icon, label, sublabel, onClick, badgeCount, trailing, danger }: ProfileRowProps) {
   return (
     <button
       onClick={onClick}
       className={cn(
-        "w-full flex items-center gap-3 px-3.5 py-3 transition-colors",
-        "active:bg-secondary/50 active:scale-[0.99] transition-all",
+        "w-full flex items-center gap-4 py-4 transition-colors active:bg-muted/40",
         danger && "text-destructive"
       )}
     >
-      <div className={cn(
-        "w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0",
-        danger ? "bg-destructive/10" : "bg-secondary/50"
-      )}>
-        <Icon
-          className={cn("h-4 w-4", danger ? "text-destructive" : "text-muted-foreground")}
-          strokeWidth={1.8}
-        />
-      </div>
-      <span
-        className={cn(
-          "flex-1 text-left text-[13px] font-medium",
-          danger ? "text-destructive" : "text-foreground"
+      <Icon
+        className={cn("h-[22px] w-[22px] flex-shrink-0", danger ? "text-destructive" : "text-foreground")}
+        strokeWidth={1.6}
+      />
+      <div className="flex-1 min-w-0 text-left">
+        <p className={cn("text-[15px] font-semibold leading-tight", danger ? "text-destructive" : "text-foreground")}>
+          {label}
+        </p>
+        {sublabel && (
+          <p className="text-[12.5px] text-muted-foreground/80 leading-tight mt-0.5 truncate">
+            {sublabel}
+          </p>
         )}
-      >
-        {label}
-      </span>
-      {badge && (
-        <span className="px-1.5 py-0.5 bg-primary/15 text-primary text-[9px] font-bold rounded-md min-w-[20px] text-center uppercase tracking-wider">
-          {badge}
+      </div>
+      {typeof badgeCount === "number" && badgeCount > 0 && (
+        <span className="min-w-[22px] h-[22px] px-1.5 rounded-full bg-primary text-primary-foreground text-[11px] font-bold flex items-center justify-center tabular-nums">
+          {badgeCount > 99 ? "99+" : badgeCount}
         </span>
       )}
       {trailing || (
-        <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/30 flex-shrink-0" />
+        <ChevronRight className="h-4 w-4 text-muted-foreground/60 flex-shrink-0" />
       )}
     </button>
   );
 }
 
-function ThemeToggleItem() {
+function ThemeToggleRow() {
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === "dark";
-
+  const Icon = isDark ? Moon : Sun;
   return (
-    <div className="w-full flex items-center gap-3 px-3.5 py-3">
-      <div className="w-8 h-8 rounded-lg bg-secondary/50 flex items-center justify-center flex-shrink-0">
-        {isDark ? (
-          <Moon className="h-4 w-4 text-muted-foreground" strokeWidth={1.8} />
-        ) : (
-          <Sun className="h-4 w-4 text-muted-foreground" strokeWidth={1.8} />
-        )}
-      </div>
-      <span className="flex-1 text-left text-[13px] font-medium text-foreground">
+    <div className="w-full flex items-center gap-4 py-4">
+      <Icon className="h-[22px] w-[22px] text-foreground flex-shrink-0" strokeWidth={1.6} />
+      <span className="flex-1 text-left text-[15px] font-semibold text-foreground">
         {isDark ? "Modo escuro" : "Modo claro"}
       </span>
       <ThemeToggle />
     </div>
   );
 }
+
 
 /* ─── Main Page ─── */
 
