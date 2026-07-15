@@ -445,7 +445,7 @@ function AppWithSplash() {
 
 const App = () => (
   <HelmetProvider>
-    <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
+    <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} forcedTheme="light">
       <ThemeColorSync />
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
