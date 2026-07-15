@@ -320,44 +320,40 @@ export default function ClientePerfil() {
               transition={{ delay: 0.04, duration: 0.3 }}
               whileTap={{ scale: 0.99 }}
               onClick={() => navigate("/cliente/indicacoes")}
-              className="relative w-full h-24 rounded-2xl bg-muted/60 dark:bg-card border border-border/40 text-left overflow-hidden"
+              className="relative w-full h-16 rounded-xl bg-muted/60 dark:bg-card border border-border/40 text-left overflow-hidden"
             >
               {/* Padrão de cupom — traço e dois pontos repetindo */}
               <div
                 aria-hidden
-                className="absolute inset-0 pointer-events-none opacity-[0.08] dark:opacity-[0.12]"
+                className="absolute inset-0 pointer-events-none opacity-[0.10] dark:opacity-[0.14]"
                 style={{
                   backgroundImage:
-                    "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='48' height='12' viewBox='0 0 48 12'><g fill='none' stroke='%23000' stroke-width='1.5' stroke-linecap='round'><path d='M4 6h20'/><circle cx='32' cy='6' r='1.5' fill='%23000'/><circle cx='40' cy='6' r='1.5' fill='%23000'/></g></svg>\")",
+                    "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='34' height='8' viewBox='0 0 34 8'><g fill='none' stroke='%23000' stroke-width='1.4' stroke-linecap='round'><path d='M2 4h12'/><circle cx='20' cy='4' r='1.2' fill='%23000'/><circle cx='28' cy='4' r='1.2' fill='%23000'/></g></svg>\")",
                   backgroundRepeat: "repeat",
-                  backgroundSize: "48px 12px",
+                  backgroundSize: "34px 8px",
                 }}
               />
 
-              {/* Mascote — grande, tronco para cima, apontando */}
-              <div className="absolute left-0 bottom-0 h-full w-[80px] overflow-hidden pointer-events-none">
-                <img
-                  src={referralMascot}
-                  alt=""
-                  width={1024}
-                  height={1024}
-                  loading="lazy"
-                  className="absolute left-[-10px] bottom-[-20px] h-[120px] w-[100px] object-contain select-none dark:invert"
-                />
-              </div>
+              {/* Mascote — clipado pelo card; apenas da barriga pra cima aparece */}
+              <img
+                src={referralMascot}
+                alt=""
+                width={1024}
+                height={1024}
+                loading="lazy"
+                className="absolute left-2 top-0 h-[190px] w-auto object-contain object-top pointer-events-none select-none dark:invert"
+              />
 
               {/* Texto */}
-              <div className="relative h-full flex flex-col justify-center pl-[85px] pr-4 gap-2">
-                <p className="text-[15px] font-bold text-foreground leading-tight tracking-tight">
-                  Indique e ganhe <br /> 
-                  <span className="text-amber-500 uppercase text-[12px] tracking-wider">corte grátis</span>
-                </p>
-                
-                <div>
-                  <span className="inline-flex items-center px-4 py-1.5 bg-foreground text-background text-[11px] font-bold rounded-lg uppercase tracking-widest active:scale-95 transition-transform">
-                    Convidar
-                  </span>
+              <div className="relative h-full flex items-center pl-[92px] pr-3">
+                <div className="flex-1 min-w-0">
+                  <p className="text-[13px] font-semibold text-foreground leading-tight">
+                    Indique e ganhe <span className="text-amber-500">corte grátis</span>
+                  </p>
                 </div>
+                <span className="text-[11px] font-medium tracking-wide bg-foreground text-background px-3 py-1 rounded-md flex-shrink-0">
+                  Convidar
+                </span>
               </div>
             </motion.button>
 
