@@ -314,46 +314,47 @@ export default function ClientePerfil() {
             </motion.div>
 
             {/* Indique e ganhe */}
-            <motion.button
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.04, duration: 0.3 }}
-              whileTap={{ scale: 0.99 }}
-              onClick={() => navigate("/cliente/indicacoes")}
-              className="relative w-full h-20 rounded-xl bg-muted/60 dark:bg-card border border-border/40 text-left overflow-hidden group"
-            >
-              {/* Pattern Background */}
-              <div className="absolute inset-0 opacity-[0.04] dark:opacity-[0.08] pointer-events-none">
-                <div className="absolute inset-0" style={{
-                  backgroundImage: `url("data:image/svg+xml,%3Csvg width='40' height='24' viewBox='0 0 40 24' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M4 4h32v16H4z' fill='none' stroke='currentColor' stroke-width='0.5'/%3E%3Cpath d='M10 4v16M30 4v16' stroke='currentColor' stroke-width='0.5' stroke-dasharray='1 1'/%3E%3C/svg%3E")`,
-                  backgroundSize: '80px 48px'
-                }} />
-              </div>
-
-              <div className="relative h-full flex items-center pl-[76px] pr-3 gap-2">
-                {/* Mascot - crop to show only head + megaphone */}
-                <div className="absolute left-2 top-1/2 -translate-y-1/2 w-16 h-16 overflow-hidden pointer-events-none">
-                  <img
-                    src={referralMascot}
-                    alt=""
-                    className="absolute left-1/2 -translate-x-1/2 top-0 h-[180%] max-w-none w-auto object-contain transition-transform duration-500 group-hover:-translate-y-0.5"
-                    style={{ transform: 'translateX(-50%)' }}
-                  />
+            <div className="relative pt-6 group">
+              <motion.button
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.04, duration: 0.3 }}
+                whileTap={{ scale: 0.99 }}
+                onClick={() => navigate("/cliente/indicacoes")}
+                className="relative w-full h-20 rounded-xl bg-muted/60 dark:bg-card border border-border/40 text-left overflow-visible"
+              >
+                {/* Background Pattern with its own clipping */}
+                <div className="absolute inset-0 rounded-xl overflow-hidden pointer-events-none opacity-[0.04] dark:opacity-[0.08]">
+                  <div className="absolute inset-0" style={{
+                    backgroundImage: `url("data:image/svg+xml,%3Csvg width='40' height='24' viewBox='0 0 40 24' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M4 4h32v16H4z' fill='none' stroke='currentColor' stroke-width='0.5'/%3E%3Cpath d='M10 4v16M30 4v16' stroke='currentColor' stroke-width='0.5' stroke-dasharray='1 1'/%3E%3C/svg%3E")`,
+                    backgroundSize: '80px 48px'
+                  }} />
                 </div>
 
-                {/* Text */}
-                <div className="flex-1 min-w-0">
-                  <p className="text-[14px] font-semibold text-foreground leading-tight tracking-tight">
-                    Indique e ganhe corte grátis
-                  </p>
-                </div>
+                <div className="relative h-full flex items-center pl-[92px] pr-3.5 gap-2">
+                  {/* Text */}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[14.5px] font-semibold text-foreground leading-tight tracking-tight">
+                      Indique e ganhe corte grátis
+                    </p>
+                  </div>
 
-                {/* Button */}
-                <span className="text-[12px] font-medium bg-foreground text-background px-3.5 py-1.5 rounded-full flex-shrink-0 active:scale-95 transition-transform">
-                  Convidar
-                </span>
+                  {/* Button */}
+                  <span className="text-[12px] font-bold bg-foreground text-background px-4 py-1.5 rounded-full flex-shrink-0 active:scale-95 transition-transform shadow-sm">
+                    Convidar
+                  </span>
+                </div>
+              </motion.button>
+
+              {/* Mascot - Popping out of the card */}
+              <div className="absolute left-1 bottom-0 w-24 h-[130px] pointer-events-none z-10 flex items-end overflow-visible">
+                <img
+                  src={referralMascot}
+                  alt=""
+                  className="h-full w-auto object-contain object-bottom drop-shadow-sm transition-transform duration-500 group-hover:-translate-y-2"
+                />
               </div>
-            </motion.button>
+            </div>
 
 
 
