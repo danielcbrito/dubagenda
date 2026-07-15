@@ -22,6 +22,7 @@ import {
   UserPlus,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import referralMascot from "@/assets/referral-mascot.png";
 import { toast } from "sonner";
 import { useTheme } from "next-themes";
 import { cn } from "@/lib/utils";
