@@ -314,14 +314,14 @@ export default function ClientePerfil() {
             </motion.div>
 
             {/* Indique e ganhe */}
-            <div className="relative pt-4">
+            <div className="relative pt-6 group">
               <motion.button
                 initial={{ opacity: 0, y: 6 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.04, duration: 0.3 }}
                 whileTap={{ scale: 0.99 }}
                 onClick={() => navigate("/cliente/indicacoes")}
-                className="relative w-full h-20 rounded-xl bg-muted/60 dark:bg-card border border-border/40 text-left group"
+                className="relative w-full h-20 rounded-xl bg-muted/60 dark:bg-card border border-border/40 text-left overflow-visible"
               >
                 {/* Background Pattern with its own clipping */}
                 <div className="absolute inset-0 rounded-xl overflow-hidden pointer-events-none opacity-[0.04] dark:opacity-[0.08]">
@@ -331,7 +331,7 @@ export default function ClientePerfil() {
                   }} />
                 </div>
 
-                <div className="relative h-full flex items-center pl-[88px] pr-3.5 gap-2">
+                <div className="relative h-full flex items-center pl-[92px] pr-3.5 gap-2">
                   {/* Text */}
                   <div className="flex-1 min-w-0">
                     <p className="text-[14.5px] font-semibold text-foreground leading-tight tracking-tight">
@@ -347,11 +347,11 @@ export default function ClientePerfil() {
               </motion.button>
 
               {/* Mascot - Popping out of the card */}
-              <div className="absolute left-1 -bottom-0.5 w-24 h-[120px] pointer-events-none z-10 flex items-end">
+              <div className="absolute left-1 bottom-0 w-24 h-[130px] pointer-events-none z-10 flex items-end overflow-visible">
                 <img
                   src={referralMascot}
                   alt=""
-                  className="h-full w-auto object-contain object-bottom drop-shadow-sm transition-transform duration-500 group-hover:-translate-y-1"
+                  className="h-full w-auto object-contain object-bottom drop-shadow-sm transition-transform duration-500 group-hover:-translate-y-2"
                 />
               </div>
             </div>
