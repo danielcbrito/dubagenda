@@ -251,10 +251,10 @@ function AuthRedirectGuard({ children }: { children: React.ReactNode }) {
       location.pathname === '/flowchart' ||
       location.pathname === '/responsive-preview';
 
-    // Rotas de barbearia pública (/:slug — single segment, not a known route)
+    // Rotas de barbearia pública (/:slug) e convite (/:slug/:code)
     const segments = location.pathname.split('/').filter(Boolean);
-    const isBarbershopSlug = segments.length === 1 &&
-      !['cliente', 'suporte', 'admin', 'auth', 'barbearias'].includes(segments[0]);
+    const isBarbershopSlug = (segments.length === 1 || segments.length === 2) &&
+      !['cliente', 'suporte', 'admin', 'auth', 'barbearias', 'b', 'i', 'escolher-barbearia', 'escolher-verificacao', 'verificar-email', 'verificar-whatsapp', 'completar-perfil', 'esqueci-senha', 'resetar-senha', 'flowchart', 'responsive-preview'].includes(segments[0]);
 
     if (isPublicRoute || isBarbershopSlug) {
       setReady(true);
