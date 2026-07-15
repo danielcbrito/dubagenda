@@ -2979,33 +2979,34 @@ const ClienteAgendar = () => {
                       {canReceivePix && (
                         <PaymentOption
                           value="pix"
-                          selected={paymentMethod === 'pix' && !redemptionCoversAll}
+                          selected={paymentMethod === 'pix' && !redemptionCoversAll && !referralCoversAll}
                           onSelect={() => handleSelectPaymentMethod('pix')}
                           title="Pagar via PIX"
                           description="Confirmação instantânea e segura"
-                          icon={<img src={pixIcon} alt="PIX" className={cn("w-5 h-5 object-contain", paymentMethod === 'pix' && !redemptionCoversAll ? "" : "grayscale opacity-50")} />}
+                          icon={<img src={pixIcon} alt="PIX" className={cn("w-5 h-5 object-contain", paymentMethod === 'pix' && !redemptionCoversAll && !referralCoversAll ? "" : "grayscale opacity-50")} />}
                         />
                       )}
 
                       {canReceivePix && walletBalance > 0 && (
                         <PaymentOption
                           value="wallet"
-                          selected={paymentMethod === 'wallet' && !redemptionCoversAll}
+                          selected={paymentMethod === 'wallet' && !redemptionCoversAll && !referralCoversAll}
                           onSelect={() => handleSelectPaymentMethod('wallet')}
                           title="Pagar com Carteira"
                           description={`Saldo: R$ ${walletBalance.toFixed(2).replace('.', ',')}`}
-                          icon={<Wallet className={cn("w-5 h-5", paymentMethod === 'wallet' && !redemptionCoversAll ? "text-emerald-500" : "text-muted-foreground/40")} />}
+                          icon={<Wallet className={cn("w-5 h-5", paymentMethod === 'wallet' && !redemptionCoversAll && !referralCoversAll ? "text-emerald-500" : "text-muted-foreground/40")} />}
                         />
                       )}
 
                       <PaymentOption
                         value="cash"
-                        selected={paymentMethod === 'cash' && !redemptionCoversAll}
+                        selected={paymentMethod === 'cash' && !redemptionCoversAll && !referralCoversAll}
                         onSelect={() => handleSelectPaymentMethod('cash')}
                         title="Pagar na Barbearia"
                         description="Pagamento presencial no dia"
-                        icon={<Landmark className={cn("w-5 h-5", paymentMethod === 'cash' && !redemptionCoversAll ? "text-primary" : "text-muted-foreground/40")} />}
+                        icon={<Landmark className={cn("w-5 h-5", paymentMethod === 'cash' && !redemptionCoversAll && !referralCoversAll ? "text-primary" : "text-muted-foreground/40")} />}
                       />
+
 
                     </div>
 
