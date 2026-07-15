@@ -280,7 +280,7 @@ export default function ClientePerfil() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.03 }}
               onClick={() => navigate("/cliente/carteira")}
-              className="relative w-full rounded-2xl active:scale-[0.99] transition-transform mb-6 text-left bg-muted/60 dark:bg-muted/30 overflow-hidden"
+              className="relative w-full rounded-2xl active:scale-[0.99] transition-transform mt-5 mb-6 text-left bg-muted/60 dark:bg-muted/30 overflow-hidden"
             >
               {/* White floating card in front */}
               <div className="relative bg-card rounded-2xl border border-border/60 shadow-sm px-4 pt-3 pb-3.5">
