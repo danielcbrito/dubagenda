@@ -426,7 +426,7 @@ export default function ClientePerfil() {
                 sublabel="Senha e proteção da conta"
                 onClick={() => navigate("/cliente/seguranca")}
               />
-              <ThemeToggleRow />
+              
               <ProfileRow
                 icon={HelpCircle}
                 label="Central de Ajuda"
