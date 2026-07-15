@@ -230,7 +230,7 @@ export default function ClientePerfil() {
     }
   };
 
-  const avatarUrl = profile?.avatar_url
+  const avatarUrl = profile?.avatar_url?.trim()
     ? supabase.storage.from("avatars").getPublicUrl(profile.avatar_url).data.publicUrl
     : null;
 
