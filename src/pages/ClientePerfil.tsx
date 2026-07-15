@@ -20,6 +20,7 @@ import {
   Star,
   Tag,
   UserPlus,
+  Smile,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import referralMascot from "@/assets/referral-mascot.png";
