@@ -283,28 +283,48 @@ export default function ClientePerfil() {
               </div>
             </motion.div>
 
-            {/* Featured card — Carteira (destaque estilo Pagamentos iFood) */}
+            {/* Featured card — Dub Pago (idêntico ao "iFood Pago") */}
             <motion.button
               initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.03 }}
               onClick={() => navigate("/cliente/carteira")}
-              className="w-full rounded-2xl bg-card border border-border/60 shadow-sm px-4 py-4 flex items-center gap-3 active:scale-[0.99] transition-transform mb-2"
+              className="w-full rounded-2xl bg-card border border-border/60 shadow-sm px-4 pt-3 pb-4 active:scale-[0.99] transition-transform mb-2 text-left"
             >
-              <Wallet className="h-[22px] w-[22px] text-foreground flex-shrink-0" strokeWidth={1.8} />
-              <div className="flex-1 min-w-0 text-left">
-                <p className="text-[16px] font-bold text-foreground leading-tight">Minha Carteira</p>
-              </div>
-              {availableCredits > 0 && (
-                <span className="text-[13px] font-bold text-primary tabular-nums">
-                  R$ {availableCredits}
+              {/* Brand label */}
+              <div className="flex items-center gap-1.5 mb-3">
+                <span className="text-[15px] font-extrabold text-primary tracking-tight leading-none">
+                  Dub
                 </span>
-              )}
-              <ChevronRight className="h-4 w-4 text-muted-foreground/60" />
+                <span className="text-[15px] font-extrabold text-primary italic tracking-tight leading-none">
+                  Pago
+                </span>
+              </div>
+
+              {/* Row */}
+              <div className="flex items-center gap-3">
+                <div className="h-7 w-7 rounded-full bg-muted flex items-center justify-center overflow-hidden flex-shrink-0">
+                  {avatarUrl ? (
+                    <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
+                  ) : (
+                    <User className="h-4 w-4 text-muted-foreground" strokeWidth={1.8} />
+                  )}
+                </div>
+                <p className="flex-1 text-[16px] font-semibold text-foreground leading-tight">
+                  Minha Carteira
+                </p>
+                {availableCredits > 0 && (
+                  <span className="text-[13px] font-bold text-primary tabular-nums">
+                    R$ {availableCredits}
+                  </span>
+                )}
+                <ChevronRight className="h-4 w-4 text-muted-foreground/70" />
+              </div>
             </motion.button>
             <p className="text-[12.5px] text-muted-foreground/80 px-1 mb-5">
               Gerencie seus créditos e saques
             </p>
+
 
             {/* Indique e ganhe — banner preservado */}
             <div className="relative pt-6 group mb-6">
