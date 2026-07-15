@@ -242,33 +242,34 @@ export default function ClienteCarteira() {
 
   return (
     <div className="flex flex-col h-[100dvh] bg-background overflow-hidden">
-      <div className="relative shrink-0 bg-background pt-[calc(env(safe-area-inset-top)+1rem)] pb-4 overflow-hidden border-b border-border/10">
+      <div className="relative shrink-0 bg-primary text-primary-foreground pt-[calc(env(safe-area-inset-top)+1rem)] pb-24 overflow-hidden">
         <div className="relative z-10 px-4">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-7">
             <motion.button
               whileTap={{ scale: 0.9 }}
               onClick={() => {
                 if (window.history.length > 1) navigate(-1);
                 else navigate("/cliente");
               }}
-              className="w-9 h-9 flex items-center justify-center rounded-xl bg-card border border-border/40 active:scale-95 transition-transform"
+
+              className="w-9 h-9 flex items-center justify-center rounded-lg bg-primary-foreground/10 border border-primary-foreground/15 active:scale-95 transition-transform"
               aria-label="Voltar"
             >
-              <BackArrow size={19} className="text-foreground" />
+              <BackArrow size={19} className="text-primary-foreground" />
             </motion.button>
-            <h1 className="text-base font-bold text-foreground">Carteira</h1>
+            <h1 className="text-base font-bold text-primary-foreground">Carteira</h1>
             <button
               onClick={loadData}
               disabled={loading}
-              className="w-9 h-9 flex items-center justify-center rounded-xl bg-card border border-border/40 disabled:opacity-60"
+              className="w-9 h-9 flex items-center justify-center rounded-lg bg-primary-foreground/10 border border-primary-foreground/15 disabled:opacity-60"
               aria-label="Atualizar carteira"
             >
-              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Receipt className="w-4 h-4 text-foreground" />}
+              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Receipt className="w-4 h-4" />}
             </button>
           </div>
 
-          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-4 py-2">
-            <div className="w-[72px] h-[72px] rounded-full border-2 border-border/40 text-foreground flex items-center justify-center overflow-hidden bg-card shadow-sm">
+          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-3">
+            <div className="w-11 h-11 rounded-full bg-primary-foreground/10 border border-primary-foreground/20 text-primary-foreground flex items-center justify-center overflow-hidden">
               {profile?.avatar_url ? (
                 <img
                   src={profile.avatar_url}
@@ -277,45 +278,44 @@ export default function ClienteCarteira() {
                   onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
                 />
               ) : profile?.nome ? (
-                <span className="text-xl font-bold uppercase tabular-nums">
+                <span className="text-sm font-semibold uppercase">
                   {profile.nome.trim().split(/\s+/).slice(0, 2).map((n: string) => n[0]).join("")}
                 </span>
               ) : (
-                <UserIcon className="w-6 h-6" strokeWidth={1.5} />
+                <UserIcon className="w-5 h-5" strokeWidth={1.75} />
               )}
             </div>
-            <div className="flex-1 min-w-0">
-              <h2 className="text-[24px] font-bold text-foreground tracking-tight leading-none mb-1">
-                {firstName(profile?.nome)}
-              </h2>
-              <p className="text-[13px] text-muted-foreground/60">Saldo e reembolsos</p>
-            </div>
+            <p className="text-base font-medium text-primary-foreground truncate">
+              Olá, <span className="font-semibold">{firstName(profile?.nome)}</span>
+            </p>
           </motion.div>
+
         </div>
+        <svg className="absolute -bottom-px left-0 w-full h-16" viewBox="0 0 400 64" preserveAspectRatio="none" aria-hidden="true">
+          <path d="M0 14 C95 62 295 62 400 14 L400 64 L0 64 Z" fill="hsl(var(--background))" />
+        </svg>
       </div>
 
-      <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 pb-24 relative z-10">
-
+      <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 pb-24 -mt-16 relative z-10">
         <AnimatePresence mode="wait">
           {view === "home" && (
             <motion.div key="home" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
-              <section className="mt-6 rounded-2xl bg-card border border-border/40 shadow-sm p-5 active:scale-[0.99] transition-transform">
-                <div className="flex items-start justify-between gap-3 mb-4">
+              <section className="rounded-lg bg-card border border-border shadow-premium p-4 active:scale-[0.99] transition-transform">
+                <div className="flex items-start justify-between gap-3 mb-3">
                   <div>
-                    <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground/60 mb-1.5">Saldo na carteira</p>
-                    <div className="text-3xl font-bold tabular-nums text-foreground tracking-tight">
+                    <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-1">Saldo na carteira</p>
+                    <div className="text-3xl font-semibold tabular-nums text-foreground tracking-tight">
                       {loading ? "—" : balanceVisible ? brl(balance) : "R$ ••••"}
                     </div>
                   </div>
                   <button
                     onClick={() => setBalanceVisible((visible) => !visible)}
-                    className="w-9 h-9 rounded-xl bg-muted/50 flex items-center justify-center text-muted-foreground/60 active:scale-95 transition-transform"
+                    className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center text-muted-foreground active:scale-95 transition-transform"
                     aria-label={balanceVisible ? "Ocultar saldo" : "Mostrar saldo"}
                   >
                     {balanceVisible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
                   </button>
                 </div>
-
 
                 <Button
                   onClick={() => setView("confirm")}
