@@ -121,6 +121,7 @@ export default function ClientePerfil() {
   const [userId, setUserId] = useState<string>();
   const [userRole, setUserRole] = useState("cliente");
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [avatarError, setAvatarError] = useState(false);
 
   // Data for badges
   const [availableCredits, setAvailableCredits] = useState(0);
