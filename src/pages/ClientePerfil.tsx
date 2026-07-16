@@ -121,6 +121,7 @@ export default function ClientePerfil() {
   const [userId, setUserId] = useState<string>();
   const [userRole, setUserRole] = useState("cliente");
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [avatarError, setAvatarError] = useState(false);
 
   // Data for badges
   const [availableCredits, setAvailableCredits] = useState(0);
@@ -253,8 +254,13 @@ export default function ClientePerfil() {
               className="flex items-center gap-4 mb-5"
             >
               <div className="h-11 w-11 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden flex-shrink-0">
-                {avatarUrl ? (
-                  <img src={avatarUrl} alt="Avatar" className="h-full w-full object-cover" />
+                {avatarUrl && !avatarError ? (
+                  <img 
+                    src={avatarUrl} 
+                    alt="Avatar" 
+                    className="h-full w-full object-cover" 
+                    onError={() => setAvatarError(true)}
+                  />
                 ) : (
                   <Smile className="h-7 w-7 text-primary" strokeWidth={1.8} />
                 )}
