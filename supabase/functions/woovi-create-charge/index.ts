@@ -220,40 +220,21 @@ Deno.serve(async (req) => {
       body: JSON.stringify(wooviPayload),
     });
 
-    const wooviRawText = await wooviResp.text();
-    let wooviJson: any = {};
-    try { wooviJson = JSON.parse(wooviRawText); } catch { wooviJson = { raw: wooviRawText }; }
+    const wooviJson = await wooviResp.json().catch(() => ({}));
     if (!wooviResp.ok) {
-      console.error(
-        "[woovi-create-charge] Woovi API error",
-        JSON.stringify({
-          status: wooviResp.status,
-          correlationID,
-          subaccount: subaccountPixKey,
-          value: valueCentavos,
-          body: wooviJson,
-          rawText: wooviRawText.slice(0, 1000),
-        }),
-      );
+      console.error("Woovi error:", wooviResp.status, wooviJson);
+      // Limpar pending_booking
       if (pendingBookingId) {
         await admin.from("pending_bookings").delete().eq("id", pendingBookingId);
       }
-      const detail =
-        wooviJson?.error ??
-        wooviJson?.message ??
-        wooviJson?.errors ??
-        wooviJson?.raw ??
-        `HTTP ${wooviResp.status}`;
       return new Response(
         JSON.stringify({
           error: "Falha ao criar cobrança Woovi",
-          status: wooviResp.status,
-          details: detail,
+          details: wooviJson?.error ?? wooviJson,
         }),
         { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
-
 
     const charge = wooviJson.charge ?? wooviJson;
     const brCode: string = charge.brCode ?? charge.paymentLinkUrl ?? "";
