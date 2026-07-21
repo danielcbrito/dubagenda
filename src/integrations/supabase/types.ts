@@ -1288,6 +1288,60 @@ export type Database = {
           },
         ]
       }
+      ciclos_indicacao: {
+        Row: {
+          apurado_em: string | null
+          criado_em: string
+          criado_por: string | null
+          data_fim: string
+          data_inicio: string
+          id: string
+          quantidade_indicacoes_vencedor: number | null
+          status: string
+          tenant_id: string | null
+          vencedor_id: string | null
+        }
+        Insert: {
+          apurado_em?: string | null
+          criado_em?: string
+          criado_por?: string | null
+          data_fim: string
+          data_inicio: string
+          id?: string
+          quantidade_indicacoes_vencedor?: number | null
+          status?: string
+          tenant_id?: string | null
+          vencedor_id?: string | null
+        }
+        Update: {
+          apurado_em?: string | null
+          criado_em?: string
+          criado_por?: string | null
+          data_fim?: string
+          data_inicio?: string
+          id?: string
+          quantidade_indicacoes_vencedor?: number | null
+          status?: string
+          tenant_id?: string | null
+          vencedor_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ciclos_indicacao_criado_por_fkey"
+            columns: ["criado_por"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ciclos_indicacao_vencedor_id_fkey"
+            columns: ["vencedor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_booking_blocks: {
         Row: {
           barbeiro_id: string | null
@@ -6591,6 +6645,7 @@ export type Database = {
           valor_descontado: number
         }[]
       }
+      apurar_ciclo_indicacao: { Args: { p_ciclo_id: string }; Returns: string }
       assign_tenant_admin_role: {
         Args: { p_user_id: string }
         Returns: undefined
@@ -6682,6 +6737,10 @@ export type Database = {
           saldo_novo: number
           transacao_id: string
         }[]
+      }
+      criar_ciclo_indicacao: {
+        Args: { p_data_fim: string; p_data_inicio: string }
+        Returns: string
       }
       debitar_carteira: {
         Args: {
@@ -6999,6 +7058,7 @@ export type Database = {
           valor_final: number
         }[]
       }
+      verificar_ciclos_para_apurar: { Args: never; Returns: number }
       woovi_blocked_centavos: { Args: { p_barbeiro: string }; Returns: number }
     }
     Enums: {
