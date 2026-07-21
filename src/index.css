@@ -52,11 +52,13 @@ html {
   position: fixed;
   width: 100%;
   overscroll-behavior: none;
+  scroll-behavior: smooth;
   -webkit-font-smoothing: antialiased;
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
   background-color: #FFFFFF;
 }
+
 
 /* ═══ EDGE-TO-EDGE IMMERSIVE ═══ */
 body {
@@ -117,6 +119,26 @@ select {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+/* 🎢 Scroll horizontal nativo com momentum + snap opcional */
+.scroll-x-native {
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+}
+.scroll-x-native::-webkit-scrollbar {
+  display: none;
+}
+.scroll-x-snap {
+  scroll-snap-type: x mandatory;
+}
+.scroll-x-snap > * {
+  scroll-snap-align: start;
+  flex-shrink: 0;
+}
+
 
 /* 🧭 Padding seguro para container principal (bottom nav + home indicator) */
 .pb-safe-nav {
