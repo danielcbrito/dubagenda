@@ -110,6 +110,9 @@ export default function ClienteIndicacoes() {
   const [indicacoes, setIndicacoes] = useState<Indicacao[]>([]);
   const [tenantSlug, setTenantSlug] = useState<string>("barbearia-dub");
   const [monthUsed, setMonthUsed] = useState(0);
+  const [cicloAtivo, setCicloAtivo] = useState<Ciclo | null>(null);
+  const [ciclosApurados, setCiclosApurados] = useState<Ciclo[]>([]);
+  const [vencedoresNomes, setVencedoresNomes] = useState<Record<string, string>>({});
 
   const loadNames = useCallback(async (rows: Indicacao[]) => {
     const ids = Array.from(new Set(rows.map((r) => r.indicado_id).filter(Boolean))) as string[];
