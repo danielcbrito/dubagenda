@@ -101,6 +101,37 @@ body {
   --safe-right: env(safe-area-inset-right);
 }
 
+/* 🔤 Evita zoom automático do Safari em inputs (font-size mínimo 16px) */
+input,
+textarea,
+select {
+  font-size: 16px;
+}
+
+/* ⬅️ Utilitário para esconder scrollbar em scrolls horizontais */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* 🧭 Padding seguro para container principal (bottom nav + home indicator) */
+.pb-safe-nav {
+  padding-bottom: calc(24px + var(--safe-bottom));
+}
+
+/* 👆 Elimina delay de 300ms em toques em botões */
+button,
+[role="button"],
+input[type="button"],
+input[type="submit"],
+input[type="reset"] {
+  touch-action: manipulation;
+}
+
 .notranslate {
   translate: no;
 }
