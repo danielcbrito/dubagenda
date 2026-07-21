@@ -12,19 +12,19 @@ interface NavItemProps {
 function NavItem({ icon: Icon, label, isActive, onClick }: NavItemProps) {
   return (
     <motion.button
-      whileTap={{ scale: 0.96 }}
+      whileTap={{ scale: 0.94 }}
       onClick={onClick}
-      className="relative flex flex-1 flex-col items-center justify-center gap-1.5 px-2 py-0"
+      className="relative flex flex-1 flex-col items-center justify-center gap-1 px-2 py-2"
     >
       <Icon
-        className={`h-[26px] w-[26px] transition-colors duration-200 ${
-          isActive ? "text-primary" : "text-muted-foreground/70"
+        className={`h-[22px] w-[22px] transition-colors duration-200 ${
+          isActive ? "text-foreground" : "text-muted-foreground/60"
         }`}
-        strokeWidth={isActive ? 2.4 : 2}
+        strokeWidth={isActive ? 2.2 : 1.6}
       />
       <span
         className={`text-[10px] leading-none tracking-tight transition-colors duration-200 ${
-          isActive ? "font-bold text-primary" : "font-medium text-muted-foreground/60"
+          isActive ? "font-semibold text-foreground" : "font-normal text-muted-foreground/60"
         }`}
       >
         {label}
@@ -42,12 +42,13 @@ export function BottomNavigation() {
 
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 z-[60] bg-background"
+      className="fixed bottom-0 left-0 right-0 z-[60] border-t border-border/40 bg-background"
       style={{
-        paddingBottom: "max(calc(env(safe-area-inset-bottom, 0px) - 24px), 0px)",
+        paddingBottom: "env(safe-area-inset-bottom, 0px)",
       }}
     >
-      <div className="mx-auto flex h-12 w-full -translate-y-2 items-center justify-around pt-0 pb-0">
+      <div className="mx-auto flex h-14 w-full items-stretch justify-around">
+
 
         <NavItem
           icon={Home}
