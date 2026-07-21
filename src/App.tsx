@@ -355,44 +355,46 @@ function AppRoutes() {
 
           <Suspense fallback={<PageLoader />}>
             <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/auth" element={<Auth />} />
-              <Route path="/auth/callback" element={<AuthCallback />} />
-              <Route path="/verificar-email" element={<EmailVerification />} />
-              <Route path="/verificar-whatsapp" element={<VerificarWhatsApp />} />
-              <Route path="/escolher-verificacao" element={<EscolherVerificacao />} />
-              <Route path="/esqueci-senha" element={<ForgotPassword />} />
-              <Route path="/resetar-senha" element={<ResetPassword />} />
-              <Route path="/completar-perfil" element={<CompletarPerfil />} />
-              <Route path="/cliente" element={<Cliente />} />
-              <Route path="/cliente/agendar" element={<ClienteAgendar />} />
-              <Route path="/cliente/assinar" element={<ClienteAssinar />} />
-              <Route path="/cliente/pagamento" element={<ClientePagamento />} />
-              <Route path="/cliente/pix-checkout" element={<ClientePixCheckout />} />
-              <Route path="/cliente/assinatura-pix" element={<SubscriptionPixCheckout />} />
-              <Route path="/cliente/carteira" element={<ClienteCarteira />} />
-             <Route path="/cliente/perfil" element={<ClientePerfil />} />
-             <Route path="/cliente/indicacoes" element={<ClienteIndicacoes />} />
-              <Route path="/cliente/dados-pessoais" element={<ClienteDadosPessoais />} />
-              <Route path="/cliente/seguranca" element={<ClienteSeguranca />} />
-              <Route path="/cliente/barbearia" element={<ClienteBarbearia />} />
-              <Route path="/cliente/loja" element={<StoreMaintenanceGate><ClienteLoja /></StoreMaintenanceGate>} />
-              <Route path="/cliente/barbeiro/:barberId/avaliacoes" element={<BarberReviews />} />
-              <Route path="/suporte" element={<SupportChat />} />
-              <Route path="/escolher-barbearia" element={<EscolherBarbearia />} />
-              <Route path="/admin/fix-coordinates" element={<AdminFixCoordinates />} />
-              <Route path="/admin/efi-credenciais" element={<AdminEfiCredenciais />} />
-              <Route path="/b/:slug/unidades" element={<BarbershopUnidades />} />
-              <Route path="/b/:slug" element={<BarbershopPublic />} />
-              <Route path="/barbearias" element={<BarbershopsCityGuide />} />
-              <Route path="/barbearias/:cidade" element={<BarbershopsCityGuide />} />
-              <Route path="/i/:code" element={<ConviteRedirect />} />
-              <Route path="/barbearia-dub/:code" element={<ConviteRedirect />} />
-              <Route path="/:slug/:code" element={<ConviteRedirect />} />
-              <Route path="/:slug" element={<BarbershopPublic />} />
-              <Route path="/flowchart" element={<Flowchart />} />
-              <Route path="/responsive-preview" element={<ResponsivePreview />} />
-              <Route path="*" element={<NotFound />} />
+              <Route element={<RootLayout />}>
+                <Route path="/" element={<Index />} />
+                <Route path="/auth" element={<Auth />} />
+                <Route path="/auth/callback" element={<AuthCallback />} />
+                <Route path="/verificar-email" element={<EmailVerification />} />
+                <Route path="/verificar-whatsapp" element={<VerificarWhatsApp />} />
+                <Route path="/escolher-verificacao" element={<EscolherVerificacao />} />
+                <Route path="/esqueci-senha" element={<ForgotPassword />} />
+                <Route path="/resetar-senha" element={<ResetPassword />} />
+                <Route path="/completar-perfil" element={<CompletarPerfil />} />
+                <Route path="/cliente" element={<Cliente />} />
+                <Route path="/cliente/agendar" element={<ClienteAgendar />} />
+                <Route path="/cliente/assinar" element={<ClienteAssinar />} />
+                <Route path="/cliente/pagamento" element={<ClientePagamento />} />
+                <Route path="/cliente/pix-checkout" element={<ClientePixCheckout />} />
+                <Route path="/cliente/assinatura-pix" element={<SubscriptionPixCheckout />} />
+                <Route path="/cliente/carteira" element={<ClienteCarteira />} />
+                <Route path="/cliente/perfil" element={<ClientePerfil />} />
+                <Route path="/cliente/indicacoes" element={<ClienteIndicacoes />} />
+                <Route path="/cliente/dados-pessoais" element={<ClienteDadosPessoais />} />
+                <Route path="/cliente/seguranca" element={<ClienteSeguranca />} />
+                <Route path="/cliente/barbearia" element={<ClienteBarbearia />} />
+                <Route path="/cliente/loja" element={<StoreMaintenanceGate><ClienteLoja /></StoreMaintenanceGate>} />
+                <Route path="/cliente/barbeiro/:barberId/avaliacoes" element={<BarberReviews />} />
+                <Route path="/suporte" element={<SupportChat />} />
+                <Route path="/escolher-barbearia" element={<EscolherBarbearia />} />
+                <Route path="/admin/fix-coordinates" element={<AdminFixCoordinates />} />
+                <Route path="/admin/efi-credenciais" element={<AdminEfiCredenciais />} />
+                <Route path="/b/:slug/unidades" element={<BarbershopUnidades />} />
+                <Route path="/b/:slug" element={<BarbershopPublic />} />
+                <Route path="/barbearias" element={<BarbershopsCityGuide />} />
+                <Route path="/barbearias/:cidade" element={<BarbershopsCityGuide />} />
+                <Route path="/i/:code" element={<ConviteRedirect />} />
+                <Route path="/barbearia-dub/:code" element={<ConviteRedirect />} />
+                <Route path="/:slug/:code" element={<ConviteRedirect />} />
+                <Route path="/:slug" element={<BarbershopPublic />} />
+                <Route path="/flowchart" element={<Flowchart />} />
+                <Route path="/responsive-preview" element={<ResponsivePreview />} />
+                <Route path="*" element={<NotFound />} />
+              </Route>
             </Routes>
           </Suspense>
           <SupportChatBubble />
