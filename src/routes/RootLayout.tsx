@@ -7,7 +7,7 @@ export function RootLayout() {
   const isClientRoute = location.pathname.startsWith("/cliente");
 
   return (
-    <div className="relative min-h-screen w-full touch-pan-y overflow-x-hidden bg-white pb-24 antialiased">
+    <div className="relative min-h-dvh w-full touch-pan-y overflow-x-hidden bg-white pb-24 antialiased">
       <Outlet />
       {isClientRoute && <BottomNavigation />}
     </div>
