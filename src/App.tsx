@@ -12,7 +12,7 @@ import { useStoreMaintenanceMode } from "@/hooks/useStoreMaintenanceMode";
 import { useRefreshRequired } from "@/hooks/useRefreshRequired";
 import { MaintenanceScreen } from "@/components/MaintenanceScreen";
 import { RefreshRequiredScreen } from "@/components/RefreshRequiredScreen";
-
+import { RootLayout } from "@/routes/RootLayout";
 
 import { supabase } from "@/integrations/supabase/client";
 import { lazy, Suspense } from "react";
