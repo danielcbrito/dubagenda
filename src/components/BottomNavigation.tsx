@@ -47,7 +47,7 @@ export function BottomNavigation() {
         paddingBottom: "env(safe-area-inset-bottom, 0px)",
       }}
     >
-      <div className="mx-auto flex h-11 w-full items-stretch justify-around">
+      <div className="mx-auto flex h-16 w-full items-stretch justify-around">
 
 
         <NavItem
