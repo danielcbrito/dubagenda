@@ -1,4 +1,4 @@
-import { Home, Calendar, User } from "lucide-react";
+import { Home, Crown, User } from "lucide-react";
 import { motion } from "framer-motion";
 import { useLocation, useNavigate } from "react-router-dom";
 
