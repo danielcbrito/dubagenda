@@ -243,7 +243,7 @@ export default function ClientePerfil() {
           style={{ background: "linear-gradient(to bottom, hsl(var(--background)), transparent)" }}
         />
 
-        <div className="h-full overflow-y-auto overscroll-contain">
+        <div className="h-full overflow-y-auto overscroll-contain scrollbar-hide">
           <div className="px-5 pt-16 pb-4">
 
             {/* Identity — iFood style: avatar + name + colored link */}
