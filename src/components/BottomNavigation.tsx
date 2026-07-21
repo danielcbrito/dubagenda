@@ -47,7 +47,7 @@ export function BottomNavigation() {
         paddingBottom: "env(safe-area-inset-bottom, 0px)",
       }}
     >
-      <div className="mx-auto flex h-[60px] w-full items-center justify-around">
+      <div className="mx-auto flex w-full items-center justify-around py-1">
         <NavItem
           icon={Home}
           label="Início"
