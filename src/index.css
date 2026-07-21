@@ -73,7 +73,10 @@ body {
   -webkit-overflow-scrolling: touch;
   margin: 0;
   padding: 0;
-  background-color: hsl(0 0% 5%);
+  background-color: #FFFFFF;
+  -webkit-font-smoothing: antialiased;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 #root {
