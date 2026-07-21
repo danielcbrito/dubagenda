@@ -19,7 +19,6 @@ import { WalletSheet } from "@/components/WalletSheet";
 import { AnnouncementDialog } from "@/components/AnnouncementDialog";
 import { CancelledAppointmentBanner } from "@/components/CancelledAppointmentBanner";
 import { AnnouncementModal } from "@/components/AnnouncementModal";
-import { BottomNavigation } from "@/components/BottomNavigation";
 import { AppointmentHistorySheet } from "@/components/AppointmentHistorySheet";
 
 // Premium components
