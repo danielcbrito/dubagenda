@@ -120,6 +120,26 @@ select {
   scrollbar-width: none;
 }
 
+/* 🎢 Scroll horizontal nativo com momentum + snap opcional */
+.scroll-x-native {
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+}
+.scroll-x-native::-webkit-scrollbar {
+  display: none;
+}
+.scroll-x-snap {
+  scroll-snap-type: x mandatory;
+}
+.scroll-x-snap > * {
+  scroll-snap-align: start;
+  flex-shrink: 0;
+}
+
+
 /* 🧭 Padding seguro para container principal (bottom nav + home indicator) */
 .pb-safe-nav {
   padding-bottom: calc(24px + var(--safe-bottom));
