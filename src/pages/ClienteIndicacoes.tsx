@@ -302,7 +302,7 @@ export default function ClienteIndicacoes() {
         </motion.button>
         <div>
           <h1 className="text-[15px] font-semibold text-foreground tracking-tight">Indicações</h1>
-          <p className="text-[11px] text-muted-foreground/70">Indique amigos e ganhe cortes grátis</p>
+          <p className="text-[11px] text-muted-foreground/70">Quem mais indicar no ciclo ganha 1 corte grátis</p>
         </div>
       </div>
 
