@@ -372,13 +372,90 @@ export default function ClienteIndicacoes() {
 
             <div className="flex items-center justify-between pt-1">
               <p className="text-[10px] uppercase tracking-widest text-muted-foreground/50 font-semibold">
-                Este mês
+                {cicloAtivo ? "Neste ciclo" : "Este mês"}
               </p>
               <p className="text-[11px] tabular-nums text-muted-foreground">
-                {monthUsed} de {LIMITE_MENSAL} indicações
+                {cicloAtivo
+                  ? `Você tem ${minhaContagemNoCiclo} indicaç${minhaContagemNoCiclo === 1 ? "ão" : "ões"} concluída${minhaContagemNoCiclo === 1 ? "" : "s"}`
+                  : `${monthUsed} de ${LIMITE_MENSAL} indicações`}
               </p>
             </div>
           </motion.div>
+
+          {cicloAtivo && (
+            <motion.div
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.08 }}
+              className="rounded-xl border border-border/40 bg-card p-4"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-11 h-11 rounded-xl bg-amber-500/10 flex items-center justify-center">
+                  <Trophy className="w-5 h-5 text-amber-500" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60">
+                    Ciclo em andamento
+                  </p>
+                  <p className="text-[13px] font-medium text-foreground truncate">
+                    {format(parseISO(cicloAtivo.data_inicio), "d MMM", { locale: ptBR })}
+                    {" — "}
+                    {format(parseISO(cicloAtivo.data_fim), "d MMM", { locale: ptBR })}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <div className="flex items-center gap-1 justify-end text-muted-foreground">
+                    <Clock className="w-3 h-3" />
+                    <span className="text-[10px] uppercase tracking-widest font-semibold">Faltam</span>
+                  </div>
+                  <p className="text-lg font-bold tabular-nums text-foreground leading-none mt-0.5">
+                    {diasRestantesCiclo}
+                    <span className="text-[10px] font-medium text-muted-foreground ml-1">
+                      {diasRestantesCiclo === 1 ? "dia" : "dias"}
+                    </span>
+                  </p>
+                </div>
+              </div>
+              <p className="mt-3 text-[11px] text-muted-foreground leading-relaxed">
+                Ao final do ciclo, quem tiver mais indicações concluídas ganha 1 corte grátis. Apenas o 1º lugar é premiado.
+              </p>
+            </motion.div>
+          )}
+
+          {ciclosApurados.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+            >
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60 mb-2 px-1">
+                Vencedores anteriores
+              </p>
+              <div className="space-y-2">
+                {ciclosApurados.map((c) => (
+                  <div
+                    key={c.id}
+                    className="rounded-lg border border-border/30 bg-card p-3.5 flex items-center gap-3"
+                  >
+                    <div className="w-9 h-9 rounded-full bg-amber-500/10 flex items-center justify-center flex-shrink-0">
+                      <Trophy className="w-4 h-4 text-amber-500" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[13px] font-medium text-foreground truncate">
+                        {c.vencedor_id ? (vencedoresNomes[c.vencedor_id] || "Cliente") : "Sem vencedor"}
+                      </p>
+                      <p className="text-[10px] text-muted-foreground/70">
+                        {format(parseISO(c.data_inicio), "d MMM", { locale: ptBR })} — {format(parseISO(c.data_fim), "d MMM", { locale: ptBR })}
+                      </p>
+                    </div>
+                    <span className="text-[10px] font-bold tabular-nums text-foreground bg-muted px-2 py-1 rounded-md">
+                      {c.quantidade_indicacoes_vencedor ?? 0} indic.
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+          )}
 
           <motion.div
             initial={{ opacity: 0, y: 6 }}
