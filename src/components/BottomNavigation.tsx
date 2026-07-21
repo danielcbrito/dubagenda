@@ -1,4 +1,4 @@
-import { Home, Crown, User } from "lucide-react";
+import { Home, Store, Crown, User } from "lucide-react";
 import { motion } from "framer-motion";
 import { useLocation, useNavigate } from "react-router-dom";
 
@@ -14,7 +14,7 @@ function NavItem({ icon: Icon, label, isActive, onClick }: NavItemProps) {
     <motion.button
       whileTap={{ scale: 0.96 }}
       onClick={onClick}
-      className="relative flex min-w-[64px] flex-col items-center justify-center gap-1 px-3 py-1.5"
+      className="relative flex flex-1 flex-col items-center justify-center gap-1 px-2 py-1.5"
     >
       <Icon
         className={`h-[22px] w-[22px] transition-colors duration-200 ${
@@ -33,7 +33,7 @@ function NavItem({ icon: Icon, label, isActive, onClick }: NavItemProps) {
   );
 }
 
-/** Fixed 3-tab bottom navigation for the client app. */
+/** Fixed 4-tab bottom navigation for the client app. */
 export function BottomNavigation() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -42,12 +42,12 @@ export function BottomNavigation() {
 
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 z-[60] border-t border-border/60 bg-white"
+      className="fixed bottom-0 left-0 right-0 z-[60] bg-white"
       style={{
         paddingBottom: "env(safe-area-inset-bottom, 0px)",
       }}
     >
-      <div className="mx-auto flex h-[60px] max-w-lg items-center justify-around">
+      <div className="mx-auto flex h-[60px] w-full items-center justify-around">
         <NavItem
           icon={Home}
           label="Início"
@@ -55,12 +55,17 @@ export function BottomNavigation() {
           onClick={() => navigate("/cliente")}
         />
         <NavItem
+          icon={Store}
+          label="Loja"
+          isActive={isActive("/cliente/loja")}
+          onClick={() => navigate("/cliente/loja")}
+        />
+        <NavItem
           icon={Crown}
           label="Plano"
           isActive={isActive("/cliente/assinar")}
           onClick={() => navigate("/cliente/assinar")}
         />
-
         <NavItem
           icon={User}
           label="Perfil"
