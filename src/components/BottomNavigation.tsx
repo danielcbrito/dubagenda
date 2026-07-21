@@ -14,16 +14,16 @@ function NavItem({ icon: Icon, label, isActive, onClick }: NavItemProps) {
     <motion.button
       whileTap={{ scale: 0.96 }}
       onClick={onClick}
-      className="relative flex flex-1 flex-col items-center justify-center gap-1 px-2 py-1.5"
+      className="relative flex flex-1 flex-col items-center justify-center gap-0.5 px-2 py-0"
     >
       <Icon
-        className={`h-[22px] w-[22px] transition-colors duration-200 ${
+        className={`h-[20px] w-[20px] transition-colors duration-200 ${
           isActive ? "text-primary" : "text-muted-foreground/70"
         }`}
         strokeWidth={isActive ? 2.4 : 2}
       />
       <span
-        className={`text-[10px] tracking-tight transition-colors duration-200 ${
+        className={`text-[9px] leading-none tracking-tight transition-colors duration-200 ${
           isActive ? "font-bold text-primary" : "font-medium text-muted-foreground/60"
         }`}
       >
