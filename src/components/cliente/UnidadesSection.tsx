@@ -130,18 +130,18 @@ function UnidadeDetailSheet({
                   />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
+                  <div className="flex min-w-0 items-center gap-2">
                     <h2 className="text-xl font-bold text-foreground font-['Space_Grotesk'] truncate">
                       {unidade.nome}
                     </h2>
                     {unidade.is_sede && (
-                      <span className="text-[9px] font-bold uppercase tracking-widest bg-primary/10 text-primary border border-primary/20 px-1.5 py-0.5 rounded flex-shrink-0">
+                      <span className="text-[9px] font-bold uppercase tracking-widest bg-primary/10 text-primary border border-primary/20 px-1.5 py-0.5 rounded shrink-0">
                         Sede
                       </span>
                     )}
                   </div>
                   {tenantNome && (
-                    <p className="text-xs text-muted-foreground mt-0.5">{tenantNome}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5 truncate">{tenantNome}</p>
                   )}
                 </div>
               </div>

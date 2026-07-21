@@ -49,18 +49,18 @@ export function LoyaltyCard({ points, redemptions, pontosNecessarios = 8, onView
     >
       <div className="p-4">
         {/* Header */}
-        <div className="flex items-center justify-between mb-3.5">
-          <div>
-            <p className="text-[8px] font-semibold text-muted-foreground/60 uppercase tracking-[0.2em] mb-0.5">
+        <div className="flex items-center justify-between gap-3 mb-3.5">
+          <div className="min-w-0 flex-1">
+            <p className="text-[8px] font-semibold text-muted-foreground/60 uppercase tracking-[0.2em] mb-0.5 truncate">
               Fidelidade
             </p>
-            <p className="text-foreground font-medium text-[13px] tracking-tight">
+            <p className="text-foreground font-medium text-[13px] tracking-tight truncate">
               {pontosNecessarios} cortes → 1 grátis
             </p>
           </div>
 
           {redemptions > 0 && (
-            <div className="px-2 py-0.5 rounded-md bg-primary/10 border border-primary/20">
+            <div className="shrink-0 px-2 py-0.5 rounded-md bg-primary/10 border border-primary/20">
               <span className="text-primary text-[9px] font-bold tabular-nums">
                 {redemptions}x
               </span>

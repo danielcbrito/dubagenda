@@ -25,10 +25,10 @@ export function ClientHeader({ profileName, userId }: ClientHeaderProps) {
       className="flex items-center justify-between"
     >
       <div className="flex-1 min-w-0">
-        <p className="text-[9px] font-medium text-muted-foreground/60 uppercase tracking-[0.18em] mb-0.5">
+        <p className="text-[9px] font-medium text-muted-foreground/60 uppercase tracking-[0.18em] mb-0.5 truncate">
           {dayOfWeek} · {formattedDate}
         </p>
-        <h1 className="text-[15px] font-semibold text-foreground font-display tracking-tight leading-snug">
+        <h1 className="text-[15px] font-semibold text-foreground font-display tracking-tight leading-snug truncate">
           {firstName ? `Olá, ${firstName}` : "Olá"}
         </h1>
       </div>
