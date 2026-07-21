@@ -146,7 +146,7 @@ export default function ClienteIndicacoes() {
       if (!user) { navigate("/auth"); return; }
       setUserId(user.id);
 
-      const [profileRes, creditsRes, indicacoesRes] = await Promise.all([
+      const [profileRes, creditsRes, indicacoesRes, ciclosRes] = await Promise.all([
         supabase.from("profiles").select("referral_code, barbearia_preferida_id").eq("id", user.id).maybeSingle(),
         supabase
           .from("creditos_indicacao")
@@ -158,6 +158,12 @@ export default function ClienteIndicacoes() {
           .select("id, indicado_id, status, criado_em")
           .eq("indicador_id", user.id)
           .order("criado_em", { ascending: false }),
+        supabase
+          .from("ciclos_indicacao")
+          .select("id, data_inicio, data_fim, status, vencedor_id, quantidade_indicacoes_vencedor, apurado_em")
+          .in("status", ["ativo", "apurado"])
+          .order("data_inicio", { ascending: false })
+          .limit(20),
       ]);
 
       setReferralCode(profileRes.data?.referral_code || null);
@@ -171,6 +177,22 @@ export default function ClienteIndicacoes() {
           .eq("id", tenantId)
           .maybeSingle();
         if (tenant?.slug) setTenantSlug(tenant.slug);
+      }
+
+      const ciclos = (ciclosRes.data || []) as Ciclo[];
+      setCicloAtivo(ciclos.find((c) => c.status === "ativo") || null);
+      const apurados = ciclos.filter((c) => c.status === "apurado");
+      setCiclosApurados(apurados);
+
+      const vencedorIds = Array.from(new Set(apurados.map((c) => c.vencedor_id).filter(Boolean))) as string[];
+      if (vencedorIds.length > 0) {
+        const { data: vencs } = await supabase
+          .from("profiles")
+          .select("id, nome")
+          .in("id", vencedorIds);
+        const map: Record<string, string> = {};
+        (vencs || []).forEach((v: any) => { map[v.id] = v.nome || "Cliente"; });
+        setVencedoresNomes(map);
       }
 
       const rows: Indicacao[] = indicacoesRes.data || [];
