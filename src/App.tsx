@@ -359,6 +359,7 @@ function AppRoutes() {
               <Route element={<RootLayout />}>
                 <Route path="/" element={<Index />} />
                 <Route path="/auth" element={<Auth />} />
+                <Route path="/login" element={<Login />} />
                 <Route path="/auth/callback" element={<AuthCallback />} />
                 <Route path="/verificar-email" element={<EmailVerification />} />
                 <Route path="/verificar-whatsapp" element={<VerificarWhatsApp />} />
