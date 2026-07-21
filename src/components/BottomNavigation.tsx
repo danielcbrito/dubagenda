@@ -44,10 +44,11 @@ export function BottomNavigation() {
     <nav
       className="fixed bottom-0 left-0 right-0 z-[60] bg-white"
       style={{
-        paddingBottom: "env(safe-area-inset-bottom, 0px)",
+        paddingBottom: "max(env(safe-area-inset-bottom, 0px) - 12px, 0px)",
       }}
     >
-      <div className="mx-auto flex w-full items-center justify-around pt-0.5 pb-0">
+      <div className="mx-auto flex w-full items-center justify-around pt-1.5 pb-1">
+
         <NavItem
           icon={Home}
           label="Início"
