@@ -1392,15 +1392,6 @@ const Cliente = () => {
         isCanceling={isCancelingSubscription}
       />
 
-      {/* Bottom Navigation */}
-      {!plansSheetOpen && !subscribeSheetOpen && !profileSheetOpen && !walletSheetOpen && !historySheetOpen && !pointsModalOpen && !pendingDrawerOpen && (
-        <BottomNavigation
-          onProfileClick={() => setProfileSheetOpen(true)}
-          onPlansClick={() => setPlansSheetOpen(true)}
-          planExhausted={planExhausted}
-          hasPendingSubscription={!!pendingSubscription}
-        />
-      )}
     </div>
   );
 };
