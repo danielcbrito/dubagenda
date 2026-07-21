@@ -1,13 +1,23 @@
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Copy, Share2, Gift, Users, MessageCircle, Loader2, MousePointerClick, UserPlus, CalendarCheck, CheckCircle2, XCircle } from "lucide-react";
+import { Copy, Share2, Gift, Users, MessageCircle, Loader2, MousePointerClick, UserPlus, CalendarCheck, CheckCircle2, XCircle, Trophy, Clock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { BackArrow } from "@/components/ui/back-arrow";
 import { cn } from "@/lib/utils";
-import { format } from "date-fns";
+import { format, differenceInCalendarDays, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
+
+interface Ciclo {
+  id: string;
+  data_inicio: string;
+  data_fim: string;
+  status: string;
+  vencedor_id: string | null;
+  quantidade_indicacoes_vencedor: number | null;
+  apurado_em: string | null;
+}
 
 interface Indicacao {
   id: string;
@@ -100,6 +110,9 @@ export default function ClienteIndicacoes() {
   const [indicacoes, setIndicacoes] = useState<Indicacao[]>([]);
   const [tenantSlug, setTenantSlug] = useState<string>("barbearia-dub");
   const [monthUsed, setMonthUsed] = useState(0);
+  const [cicloAtivo, setCicloAtivo] = useState<Ciclo | null>(null);
+  const [ciclosApurados, setCiclosApurados] = useState<Ciclo[]>([]);
+  const [vencedoresNomes, setVencedoresNomes] = useState<Record<string, string>>({});
 
   const loadNames = useCallback(async (rows: Indicacao[]) => {
     const ids = Array.from(new Set(rows.map((r) => r.indicado_id).filter(Boolean))) as string[];
@@ -133,7 +146,7 @@ export default function ClienteIndicacoes() {
       if (!user) { navigate("/auth"); return; }
       setUserId(user.id);
 
-      const [profileRes, creditsRes, indicacoesRes] = await Promise.all([
+      const [profileRes, creditsRes, indicacoesRes, ciclosRes] = await Promise.all([
         supabase.from("profiles").select("referral_code, barbearia_preferida_id").eq("id", user.id).maybeSingle(),
         supabase
           .from("creditos_indicacao")
@@ -145,6 +158,12 @@ export default function ClienteIndicacoes() {
           .select("id, indicado_id, status, criado_em")
           .eq("indicador_id", user.id)
           .order("criado_em", { ascending: false }),
+        supabase
+          .from("ciclos_indicacao")
+          .select("id, data_inicio, data_fim, status, vencedor_id, quantidade_indicacoes_vencedor, apurado_em")
+          .in("status", ["ativo", "apurado"])
+          .order("data_inicio", { ascending: false })
+          .limit(20),
       ]);
 
       setReferralCode(profileRes.data?.referral_code || null);
@@ -158,6 +177,22 @@ export default function ClienteIndicacoes() {
           .eq("id", tenantId)
           .maybeSingle();
         if (tenant?.slug) setTenantSlug(tenant.slug);
+      }
+
+      const ciclos = (ciclosRes.data || []) as Ciclo[];
+      setCicloAtivo(ciclos.find((c) => c.status === "ativo") || null);
+      const apurados = ciclos.filter((c) => c.status === "apurado");
+      setCiclosApurados(apurados);
+
+      const vencedorIds = Array.from(new Set(apurados.map((c) => c.vencedor_id).filter(Boolean))) as string[];
+      if (vencedorIds.length > 0) {
+        const { data: vencs } = await supabase
+          .from("profiles")
+          .select("id, nome")
+          .in("id", vencedorIds);
+        const map: Record<string, string> = {};
+        (vencs || []).forEach((v: any) => { map[v.id] = v.nome || "Cliente"; });
+        setVencedoresNomes(map);
       }
 
       const rows: Indicacao[] = indicacoesRes.data || [];
@@ -214,6 +249,22 @@ export default function ClienteIndicacoes() {
     [referralLink]
   );
 
+  const minhaContagemNoCiclo = useMemo(() => {
+    if (!cicloAtivo) return 0;
+    const ini = parseISO(cicloAtivo.data_inicio + "T00:00:00");
+    const fim = parseISO(cicloAtivo.data_fim + "T23:59:59");
+    return indicacoes.filter((i) => {
+      if (i.status !== "liberado") return false;
+      const d = new Date(i.criado_em);
+      return d >= ini && d <= fim;
+    }).length;
+  }, [cicloAtivo, indicacoes]);
+
+  const diasRestantesCiclo = useMemo(() => {
+    if (!cicloAtivo) return null;
+    return Math.max(0, differenceInCalendarDays(parseISO(cicloAtivo.data_fim), new Date()));
+  }, [cicloAtivo]);
+
   const handleCopy = async () => {
     if (!referralLink) return;
     const ok = await copyToClipboard(referralLink);
@@ -251,7 +302,7 @@ export default function ClienteIndicacoes() {
         </motion.button>
         <div>
           <h1 className="text-[15px] font-semibold text-foreground tracking-tight">Indicações</h1>
-          <p className="text-[11px] text-muted-foreground/70">Indique amigos e ganhe cortes grátis</p>
+          <p className="text-[11px] text-muted-foreground/70">Quem mais indicar no ciclo ganha 1 corte grátis</p>
         </div>
       </div>
 
@@ -321,13 +372,90 @@ export default function ClienteIndicacoes() {
 
             <div className="flex items-center justify-between pt-1">
               <p className="text-[10px] uppercase tracking-widest text-muted-foreground/50 font-semibold">
-                Este mês
+                {cicloAtivo ? "Neste ciclo" : "Este mês"}
               </p>
               <p className="text-[11px] tabular-nums text-muted-foreground">
-                {monthUsed} de {LIMITE_MENSAL} indicações
+                {cicloAtivo
+                  ? `Você tem ${minhaContagemNoCiclo} indicaç${minhaContagemNoCiclo === 1 ? "ão" : "ões"} concluída${minhaContagemNoCiclo === 1 ? "" : "s"}`
+                  : `${monthUsed} de ${LIMITE_MENSAL} indicações`}
               </p>
             </div>
           </motion.div>
+
+          {cicloAtivo && (
+            <motion.div
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.08 }}
+              className="rounded-xl border border-border/40 bg-card p-4"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-11 h-11 rounded-xl bg-amber-500/10 flex items-center justify-center">
+                  <Trophy className="w-5 h-5 text-amber-500" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60">
+                    Ciclo em andamento
+                  </p>
+                  <p className="text-[13px] font-medium text-foreground truncate">
+                    {format(parseISO(cicloAtivo.data_inicio), "d MMM", { locale: ptBR })}
+                    {" — "}
+                    {format(parseISO(cicloAtivo.data_fim), "d MMM", { locale: ptBR })}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <div className="flex items-center gap-1 justify-end text-muted-foreground">
+                    <Clock className="w-3 h-3" />
+                    <span className="text-[10px] uppercase tracking-widest font-semibold">Faltam</span>
+                  </div>
+                  <p className="text-lg font-bold tabular-nums text-foreground leading-none mt-0.5">
+                    {diasRestantesCiclo}
+                    <span className="text-[10px] font-medium text-muted-foreground ml-1">
+                      {diasRestantesCiclo === 1 ? "dia" : "dias"}
+                    </span>
+                  </p>
+                </div>
+              </div>
+              <p className="mt-3 text-[11px] text-muted-foreground leading-relaxed">
+                Ao final do ciclo, quem tiver mais indicações concluídas ganha 1 corte grátis. Apenas o 1º lugar é premiado.
+              </p>
+            </motion.div>
+          )}
+
+          {ciclosApurados.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+            >
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60 mb-2 px-1">
+                Vencedores anteriores
+              </p>
+              <div className="space-y-2">
+                {ciclosApurados.map((c) => (
+                  <div
+                    key={c.id}
+                    className="rounded-lg border border-border/30 bg-card p-3.5 flex items-center gap-3"
+                  >
+                    <div className="w-9 h-9 rounded-full bg-amber-500/10 flex items-center justify-center flex-shrink-0">
+                      <Trophy className="w-4 h-4 text-amber-500" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[13px] font-medium text-foreground truncate">
+                        {c.vencedor_id ? (vencedoresNomes[c.vencedor_id] || "Cliente") : "Sem vencedor"}
+                      </p>
+                      <p className="text-[10px] text-muted-foreground/70">
+                        {format(parseISO(c.data_inicio), "d MMM", { locale: ptBR })} — {format(parseISO(c.data_fim), "d MMM", { locale: ptBR })}
+                      </p>
+                    </div>
+                    <span className="text-[10px] font-bold tabular-nums text-foreground bg-muted px-2 py-1 rounded-md">
+                      {c.quantidade_indicacoes_vencedor ?? 0} indic.
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+          )}
 
           <motion.div
             initial={{ opacity: 0, y: 6 }}
