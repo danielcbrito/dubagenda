@@ -17,21 +17,18 @@ function NavItem({ icon: Icon, label, isActive, onClick }: NavItemProps) {
       className="relative flex flex-1 flex-col items-center justify-center gap-1 px-1 py-2"
     >
       <Icon
-        className={`h-[22px] w-[22px] transition-all duration-200 ${
-          isActive ? "text-foreground" : "text-muted-foreground/50"
+        className={`h-[26px] w-[26px] transition-all duration-200 ${
+          isActive ? "text-primary" : "text-muted-foreground/50"
         }`}
-        strokeWidth={isActive ? 2 : 1.5}
+        strokeWidth={isActive ? 2.2 : 1.5}
       />
       <span
         className={`text-[10px] leading-none tracking-wide transition-colors duration-200 ${
-          isActive ? "font-medium text-foreground" : "font-normal text-muted-foreground/50"
+          isActive ? "font-medium text-primary" : "font-normal text-muted-foreground/50"
         }`}
       >
         {label}
       </span>
-      {isActive && (
-        <span className="absolute bottom-1.5 h-1 w-1 rounded-full bg-foreground" />
-      )}
     </motion.button>
   );
 }
