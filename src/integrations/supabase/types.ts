@@ -6917,16 +6917,10 @@ export type Database = {
         Args: { p_profile_id: string }
         Returns: undefined
       }
-      registrar_indicacao:
-        | { Args: { p_codigo: string; p_indicado_id: string }; Returns: string }
-        | {
-            Args: {
-              p_codigo: string
-              p_indicado_id: string
-              p_session_id?: string
-            }
-            Returns: string
-          }
+      registrar_indicacao: {
+        Args: { p_codigo: string; p_indicado_id: string; p_session_id?: string }
+        Returns: string
+      }
       renovar_plano_cliente: {
         Args: { p_assinatura_id: string; p_forma_pagamento: string }
         Returns: Json
