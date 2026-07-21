@@ -14,7 +14,7 @@ function NavItem({ icon: Icon, label, isActive, onClick }: NavItemProps) {
     <motion.button
       whileTap={{ scale: 0.96 }}
       onClick={onClick}
-      className="relative flex flex-1 flex-col items-center justify-center gap-[2px] px-2 py-0"
+      className="relative flex flex-1 flex-col items-center justify-center gap-1 px-2 py-0"
     >
       <Icon
         className={`h-[26px] w-[26px] transition-colors duration-200 ${
