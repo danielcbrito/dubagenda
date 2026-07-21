@@ -979,7 +979,7 @@ const Cliente = () => {
         />
 
         <div className="h-full overflow-y-auto overscroll-contain touch-pan-y scrollbar-hide [webkit-overflow-scrolling:touch]">
-          <div className="px-5 pt-16 pb-6">
+          <div className="px-5 pt-6 pb-6">
 
             {/* Header */}
             <div className="mb-5">
