@@ -22,6 +22,7 @@ import { getVerifiedAuthUser } from "@/utils/authSession";
 // Lazy-loaded routes for reduced initial bundle
 const Index = lazy(() => import("./pages/Index"));
 const Auth = lazy(() => import("./pages/Auth"));
+const Login = lazy(() => import("./pages/Login"));
 const AuthCallback = lazy(() => import("./pages/AuthCallback"));
 const EmailVerification = lazy(() => import("./pages/EmailVerification"));
 const VerificarWhatsApp = lazy(() => import("./pages/VerificarWhatsApp"));
