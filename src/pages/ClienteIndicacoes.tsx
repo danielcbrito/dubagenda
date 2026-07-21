@@ -249,6 +249,22 @@ export default function ClienteIndicacoes() {
     [referralLink]
   );
 
+  const minhaContagemNoCiclo = useMemo(() => {
+    if (!cicloAtivo) return 0;
+    const ini = parseISO(cicloAtivo.data_inicio + "T00:00:00");
+    const fim = parseISO(cicloAtivo.data_fim + "T23:59:59");
+    return indicacoes.filter((i) => {
+      if (i.status !== "liberado") return false;
+      const d = new Date(i.criado_em);
+      return d >= ini && d <= fim;
+    }).length;
+  }, [cicloAtivo, indicacoes]);
+
+  const diasRestantesCiclo = useMemo(() => {
+    if (!cicloAtivo) return null;
+    return Math.max(0, differenceInCalendarDays(parseISO(cicloAtivo.data_fim), new Date()));
+  }, [cicloAtivo]);
+
   const handleCopy = async () => {
     if (!referralLink) return;
     const ok = await copyToClipboard(referralLink);
