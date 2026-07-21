@@ -14,7 +14,7 @@ function NavItem({ icon: Icon, label, isActive, onClick }: NavItemProps) {
     <motion.button
       whileTap={{ scale: 0.96 }}
       onClick={onClick}
-      className="relative flex flex-1 flex-col items-center justify-center gap-[2px] px-2 py-0"
+      className="relative flex flex-1 flex-col items-center justify-center gap-1 px-2 py-0"
     >
       <Icon
         className={`h-[26px] w-[26px] transition-colors duration-200 ${
@@ -44,10 +44,11 @@ export function BottomNavigation() {
     <nav
       className="fixed bottom-0 left-0 right-0 z-[60] bg-white"
       style={{
-        paddingBottom: "env(safe-area-inset-bottom, 0px)",
+        paddingBottom: "max(env(safe-area-inset-bottom, 0px) - 12px, 0px)",
       }}
     >
-      <div className="mx-auto flex w-full items-center justify-around pt-0.5 pb-0">
+      <div className="mx-auto flex w-full items-center justify-around pt-1.5 pb-1">
+
         <NavItem
           icon={Home}
           label="Início"
