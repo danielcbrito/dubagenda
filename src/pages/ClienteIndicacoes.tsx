@@ -1,13 +1,23 @@
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Copy, Share2, Gift, Users, MessageCircle, Loader2, MousePointerClick, UserPlus, CalendarCheck, CheckCircle2, XCircle } from "lucide-react";
+import { Copy, Share2, Gift, Users, MessageCircle, Loader2, MousePointerClick, UserPlus, CalendarCheck, CheckCircle2, XCircle, Trophy, Clock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { BackArrow } from "@/components/ui/back-arrow";
 import { cn } from "@/lib/utils";
-import { format } from "date-fns";
+import { format, differenceInCalendarDays, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
+
+interface Ciclo {
+  id: string;
+  data_inicio: string;
+  data_fim: string;
+  status: string;
+  vencedor_id: string | null;
+  quantidade_indicacoes_vencedor: number | null;
+  apurado_em: string | null;
+}
 
 interface Indicacao {
   id: string;
