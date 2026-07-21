@@ -969,8 +969,7 @@ const Cliente = () => {
   };
 
   return (
-    <div className="flex flex-col h-[100dvh]">
-      
+    <div className="flex flex-col h-full">
 
       {/* Scrollable Content */}
       <div className="flex-1 min-h-0 relative">
@@ -979,8 +978,8 @@ const Cliente = () => {
           style={{ background: "linear-gradient(to bottom, hsl(var(--background)), transparent)" }}
         />
 
-        <div className="h-full overflow-y-auto overscroll-contain touch-pan-y [webkit-overflow-scrolling:touch] pb-24">
-          <div className="max-w-lg mx-auto px-4 pt-4 pb-6">
+        <div className="h-full overflow-y-auto overscroll-contain touch-pan-y [webkit-overflow-scrolling:touch]">
+          <div className="px-4 pt-4 pb-6">
             {/* Header */}
             <div className="mb-5">
               <ClientHeader
