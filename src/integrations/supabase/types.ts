@@ -1291,41 +1291,60 @@ export type Database = {
       ciclos_indicacao: {
         Row: {
           apurado_em: string | null
+          ciclo_pai_id: string | null
           criado_em: string
           criado_por: string | null
           data_fim: string
           data_inicio: string
+          dia_fim_mes: number | null
+          dia_inicio_mes: number | null
           id: string
           quantidade_indicacoes_vencedor: number | null
           status: string
           tenant_id: string | null
+          tipo: string
           vencedor_id: string | null
         }
         Insert: {
           apurado_em?: string | null
+          ciclo_pai_id?: string | null
           criado_em?: string
           criado_por?: string | null
           data_fim: string
           data_inicio: string
+          dia_fim_mes?: number | null
+          dia_inicio_mes?: number | null
           id?: string
           quantidade_indicacoes_vencedor?: number | null
           status?: string
           tenant_id?: string | null
+          tipo?: string
           vencedor_id?: string | null
         }
         Update: {
           apurado_em?: string | null
+          ciclo_pai_id?: string | null
           criado_em?: string
           criado_por?: string | null
           data_fim?: string
           data_inicio?: string
+          dia_fim_mes?: number | null
+          dia_inicio_mes?: number | null
           id?: string
           quantidade_indicacoes_vencedor?: number | null
           status?: string
           tenant_id?: string | null
+          tipo?: string
           vencedor_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "ciclos_indicacao_ciclo_pai_id_fkey"
+            columns: ["ciclo_pai_id"]
+            isOneToOne: false
+            referencedRelation: "ciclos_indicacao"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "ciclos_indicacao_criado_por_fkey"
             columns: ["criado_por"]
@@ -6646,6 +6665,7 @@ export type Database = {
         }[]
       }
       apurar_ciclo_indicacao: { Args: { p_ciclo_id: string }; Returns: string }
+      apurar_ciclos_vencidos: { Args: never; Returns: number }
       assign_tenant_admin_role: {
         Args: { p_user_id: string }
         Returns: undefined
@@ -6739,7 +6759,13 @@ export type Database = {
         }[]
       }
       criar_ciclo_indicacao: {
-        Args: { p_data_fim: string; p_data_inicio: string }
+        Args: {
+          p_data_fim?: string
+          p_data_inicio?: string
+          p_dia_fim_mes?: number
+          p_dia_inicio_mes?: number
+          p_tipo?: string
+        }
         Returns: string
       }
       debitar_carteira: {

@@ -409,6 +409,14 @@ export default function ClientePerfil() {
                 onClick={() => setPointsModalOpen(true)}
               />
               <ProfileRow
+                icon={UserPlus}
+                label="Indique e Ganhe"
+                sublabel="Convide amigos e concorra a cortes grátis"
+                badgeCount={referralCredits}
+                onClick={() => navigate("/cliente/indicacoes")}
+              />
+
+              <ProfileRow
                 icon={History}
                 label="Histórico de Agendamentos"
                 sublabel="Todos os cortes já realizados"
