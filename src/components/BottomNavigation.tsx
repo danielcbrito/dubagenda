@@ -14,21 +14,24 @@ function NavItem({ icon: Icon, label, isActive, onClick }: NavItemProps) {
     <motion.button
       whileTap={{ scale: 0.94 }}
       onClick={onClick}
-      className="relative flex flex-1 flex-col items-center justify-center gap-1.5 px-2 py-1.5"
+      className="relative flex flex-1 flex-col items-center justify-center gap-1 px-1 py-2"
     >
       <Icon
-        className={`h-[26px] w-[26px] transition-colors duration-200 ${
-          isActive ? "text-foreground" : "text-muted-foreground/60"
+        className={`h-[22px] w-[22px] transition-all duration-200 ${
+          isActive ? "text-foreground" : "text-muted-foreground/50"
         }`}
-        strokeWidth={isActive ? 2.2 : 1.6}
+        strokeWidth={isActive ? 2 : 1.5}
       />
       <span
-        className={`text-[10px] leading-none tracking-tight transition-colors duration-200 ${
-          isActive ? "font-semibold text-foreground" : "font-normal text-muted-foreground/60"
+        className={`text-[10px] leading-none tracking-wide transition-colors duration-200 ${
+          isActive ? "font-medium text-foreground" : "font-normal text-muted-foreground/50"
         }`}
       >
         {label}
       </span>
+      {isActive && (
+        <span className="absolute bottom-1.5 h-1 w-1 rounded-full bg-foreground" />
+      )}
     </motion.button>
   );
 }
@@ -42,7 +45,7 @@ export function BottomNavigation() {
 
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 z-[60] border-t border-border/40 bg-background"
+      className="fixed bottom-0 left-0 right-0 z-[60] border-t border-border/30 bg-background/95 backdrop-blur-md"
       style={{
         paddingBottom: "env(safe-area-inset-bottom, 0px)",
       }}
