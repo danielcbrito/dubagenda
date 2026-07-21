@@ -1,4 +1,4 @@
-import { Home, Calendar, User } from "lucide-react";
+import { Home, Crown, User } from "lucide-react";
 import { motion } from "framer-motion";
 import { useLocation, useNavigate } from "react-router-dom";
 
@@ -55,11 +55,12 @@ export function BottomNavigation() {
           onClick={() => navigate("/cliente")}
         />
         <NavItem
-          icon={Calendar}
-          label="Agendar"
-          isActive={isActive("/cliente/agendar")}
-          onClick={() => navigate("/cliente/agendar")}
+          icon={Crown}
+          label="Plano"
+          isActive={isActive("/cliente/assinar")}
+          onClick={() => navigate("/cliente/assinar")}
         />
+
         <NavItem
           icon={User}
           label="Perfil"
