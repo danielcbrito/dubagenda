@@ -229,7 +229,10 @@ Deno.serve(async (req) => {
       const email = String(data.email || "").trim().toLowerCase();
       const password = String(data.password || "");
       const signupOrigin = String(data.signup_origin || "cliente");
-      const nome = String(data.nome || email.split("@")[0] || "Cliente");
+      const rawNome = String(data.nome || "").trim();
+      const nomeIsEmail = /@/.test(rawNome) || /\.(com|net|org|br)(\b|$)/i.test(rawNome);
+      const nomeHasLetters = /[a-zA-ZÀ-ÿ]{2,}/.test(rawNome);
+      const nome = (!rawNome || nomeIsEmail || !nomeHasLetters) ? "Cliente" : rawNome;
 
       if (!phone || !token || !email || !password) {
         return jsonResponse({ success: false, error: "Dados incompletos" }, 400);

@@ -609,6 +609,18 @@ const Auth = () => {
 
       const phoneNormalized = "55" + phoneDigits.replace(/\D/g, "");
 
+      // Sanitiza nome: rejeita e-mails e strings sem letras (evita autofill/typo).
+      const rawNome = nome.trim();
+      const nomeLooksLikeEmail = /@/.test(rawNome) || /\.(com|net|org|br)(\b|$)/i.test(rawNome);
+      const nomeHasLetters = /[a-zA-ZÀ-ÿ]{2,}/.test(rawNome);
+      const nomeSanitized = (!rawNome || nomeLooksLikeEmail || !nomeHasLetters) ? "" : rawNome;
+
+      if (!nomeSanitized) {
+        toast.error("Digite seu nome corretamente (não use o e-mail).");
+        setSignupStep("nome");
+        return;
+      }
+
       // Cria a conta via edge function (admin API) — sem envio de email de confirmação.
       const { data: createRes, error: createErr } = await supabase.functions.invoke(
         "whatsapp-verification",
@@ -620,7 +632,7 @@ const Auth = () => {
             email: validEmail,
             password: senha,
             signup_origin: signupOrigin,
-            nome: nome.trim() || validEmail.split("@")[0],
+            nome: nomeSanitized,
             cpf: cpfDigits.replace(/\D/g, ""),
           },
         }
@@ -644,7 +656,7 @@ const Auth = () => {
         await supabase
           .from("profiles")
           .update({
-            nome: nome.trim() || validEmail.split("@")[0],
+            nome: nomeSanitized,
             cpf: cpfDigits.replace(/\D/g, "") || null,
           })
           .eq("id", userId);
@@ -810,7 +822,10 @@ const Auth = () => {
 
     // Step: NOME
     if (signupStep === "nome") {
-      const canContinue = nome.trim().length >= 2;
+      const trimmed = nome.trim();
+      const looksLikeEmail = /@/.test(trimmed) || /\.(com|net|org|br)(\b|$)/i.test(trimmed);
+      const hasTwoLetters = /[a-zA-ZÀ-ÿ]{2,}/.test(trimmed);
+      const canContinue = trimmed.length >= 2 && !looksLikeEmail && hasTwoLetters;
       return (
         <Shell
           headerTitle="Criar conta"
@@ -828,7 +843,7 @@ const Auth = () => {
           bottomHint={bottomLogin}
         >
           <Input
-            name="nome"
+            name="given-name"
             type="text"
             required
             autoFocus
@@ -837,11 +852,17 @@ const Auth = () => {
             onKeyDown={(e) => { if (e.key === "Enter" && canContinue) setSignupStep("cpf"); }}
             className={inputClasses}
             placeholder="Seu nome completo"
-            autoComplete="off"
+            autoComplete="given-name"
             autoCorrect="off"
             spellCheck={false}
             maxLength={80}
+            inputMode="text"
           />
+          {trimmed.length >= 2 && looksLikeEmail && (
+            <p className="text-[11px] text-destructive mt-2 pl-1">
+              Digite seu nome, não seu e-mail.
+            </p>
+          )}
         </Shell>
       );
     }
