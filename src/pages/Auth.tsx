@@ -609,6 +609,18 @@ const Auth = () => {
 
       const phoneNormalized = "55" + phoneDigits.replace(/\D/g, "");
 
+      // Sanitiza nome: rejeita e-mails e strings sem letras (evita autofill/typo).
+      const rawNome = nome.trim();
+      const nomeLooksLikeEmail = /@/.test(rawNome) || /\.(com|net|org|br)(\b|$)/i.test(rawNome);
+      const nomeHasLetters = /[a-zA-ZÀ-ÿ]{2,}/.test(rawNome);
+      const nomeSanitized = (!rawNome || nomeLooksLikeEmail || !nomeHasLetters) ? "" : rawNome;
+
+      if (!nomeSanitized) {
+        toast.error("Digite seu nome corretamente (não use o e-mail).");
+        setSignupStep("nome");
+        return;
+      }
+
       // Cria a conta via edge function (admin API) — sem envio de email de confirmação.
       const { data: createRes, error: createErr } = await supabase.functions.invoke(
         "whatsapp-verification",
@@ -620,7 +632,7 @@ const Auth = () => {
             email: validEmail,
             password: senha,
             signup_origin: signupOrigin,
-            nome: nome.trim() || validEmail.split("@")[0],
+            nome: nomeSanitized,
             cpf: cpfDigits.replace(/\D/g, ""),
           },
         }
@@ -644,7 +656,7 @@ const Auth = () => {
         await supabase
           .from("profiles")
           .update({
-            nome: nome.trim() || validEmail.split("@")[0],
+            nome: nomeSanitized,
             cpf: cpfDigits.replace(/\D/g, "") || null,
           })
           .eq("id", userId);
