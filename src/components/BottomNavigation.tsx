@@ -35,7 +35,7 @@ function NavItem({ icon: Icon, label, isActive, onClick, filled, badge }: NavIte
     <motion.button
       whileTap={{ scale: 0.94 }}
       onClick={onClick}
-      className="relative flex flex-1 flex-col items-center justify-start gap-1 px-1 pt-2 pb-2"
+      className="relative flex flex-1 flex-col items-center justify-center gap-0.5 px-1 py-1"
     >
       <div className="relative">
         <Icon
