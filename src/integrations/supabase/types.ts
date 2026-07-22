@@ -6693,6 +6693,7 @@ export type Database = {
         Args: { p_email: string }
         Returns: boolean
       }
+      check_cpf_available_for_barber: { Args: { p_cpf: string }; Returns: Json }
       check_email_exists: { Args: { p_email: string }; Returns: string }
       clean_expired_pending_bookings: { Args: never; Returns: undefined }
       clean_expired_reservas_loja: { Args: never; Returns: undefined }
