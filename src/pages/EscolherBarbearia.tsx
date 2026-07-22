@@ -438,6 +438,29 @@ const EscolherBarbearia = () => {
     void init();
   }, [isChangeMode, loadUnits, navigate]);
 
+  // ── Realtime: novas barbearias aparecem sem refresh ──
+  useEffect(() => {
+    let reloadTimer: ReturnType<typeof setTimeout> | null = null;
+    const scheduleReload = () => {
+      if (reloadTimer) clearTimeout(reloadTimer);
+      reloadTimer = setTimeout(() => {
+        void loadUnits({ preserveVisible: true });
+      }, 400);
+    };
+
+    const channel = supabase
+      .channel("discover-units-realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "tenant_unidades" }, scheduleReload)
+      .on("postgres_changes", { event: "*", schema: "public", table: "tenants" }, scheduleReload)
+      .on("postgres_changes", { event: "*", schema: "public", table: "barbeiros" }, scheduleReload)
+      .subscribe();
+
+    return () => {
+      if (reloadTimer) clearTimeout(reloadTimer);
+      supabase.removeChannel(channel);
+    };
+  }, [loadUnits]);
+
   // ── Sort by distance ──
   const sortedUnits = useMemo(() => {
     return allUnits
