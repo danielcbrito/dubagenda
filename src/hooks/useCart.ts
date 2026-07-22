@@ -39,6 +39,11 @@ function saveCart(userId: string | null, tenantId: string | null, items: CartIte
     } else {
       localStorage.setItem(key, JSON.stringify(items));
     }
+    try {
+      window.dispatchEvent(new CustomEvent("dub:cart-changed"));
+    } catch {
+      // ignore
+    }
   } catch {
     // storage full or unavailable — silent fail
   }
