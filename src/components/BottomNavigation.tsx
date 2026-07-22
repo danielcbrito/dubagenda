@@ -137,10 +137,10 @@ export function BottomNavigation() {
     <nav
       className="fixed bottom-0 left-0 right-0 z-[60] border-t border-border/30 bg-background/95 backdrop-blur-md"
       style={{
-        paddingBottom: "env(safe-area-inset-bottom, 0px)",
+        paddingBottom: "max(env(safe-area-inset-bottom, 0px) - 12px, 0px)",
       }}
     >
-      <div className="mx-auto flex h-16 w-full items-stretch justify-around">
+      <div className="mx-auto flex h-14 w-full items-stretch justify-around">
         <NavItem
           icon={HomeIcon}
           label="Início"
