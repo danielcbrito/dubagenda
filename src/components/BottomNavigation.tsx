@@ -142,7 +142,7 @@ export function BottomNavigation() {
     >
       <div className="mx-auto flex h-16 w-full items-stretch justify-around">
         <NavItem
-          icon={(props: any) => <HomeIcon {...props} active={isActive("/cliente")} />}
+          icon={HomeIcon}
           label="Início"
           isActive={isActive("/cliente")}
           onClick={() => navigate("/cliente")}
