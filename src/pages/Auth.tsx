@@ -810,7 +810,10 @@ const Auth = () => {
 
     // Step: NOME
     if (signupStep === "nome") {
-      const canContinue = nome.trim().length >= 2;
+      const trimmed = nome.trim();
+      const looksLikeEmail = /@/.test(trimmed) || /\.(com|net|org|br)(\b|$)/i.test(trimmed);
+      const hasTwoLetters = /[a-zA-ZÀ-ÿ]{2,}/.test(trimmed);
+      const canContinue = trimmed.length >= 2 && !looksLikeEmail && hasTwoLetters;
       return (
         <Shell
           headerTitle="Criar conta"
@@ -828,7 +831,7 @@ const Auth = () => {
           bottomHint={bottomLogin}
         >
           <Input
-            name="nome"
+            name="given-name"
             type="text"
             required
             autoFocus
@@ -837,11 +840,17 @@ const Auth = () => {
             onKeyDown={(e) => { if (e.key === "Enter" && canContinue) setSignupStep("cpf"); }}
             className={inputClasses}
             placeholder="Seu nome completo"
-            autoComplete="off"
+            autoComplete="given-name"
             autoCorrect="off"
             spellCheck={false}
             maxLength={80}
+            inputMode="text"
           />
+          {trimmed.length >= 2 && looksLikeEmail && (
+            <p className="text-[11px] text-destructive mt-2 pl-1">
+              Digite seu nome, não seu e-mail.
+            </p>
+          )}
         </Shell>
       );
     }
