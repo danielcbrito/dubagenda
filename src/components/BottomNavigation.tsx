@@ -35,7 +35,7 @@ function NavItem({ icon: Icon, label, isActive, onClick, filled, badge }: NavIte
     <motion.button
       whileTap={{ scale: 0.94 }}
       onClick={onClick}
-      className="relative flex flex-1 flex-col items-center justify-center gap-0.5 px-1 py-1"
+      className="relative flex flex-1 flex-col items-center justify-start gap-1 px-1 pt-2 pb-2"
     >
       <div className="relative">
         <Icon
@@ -137,10 +137,10 @@ export function BottomNavigation() {
     <nav
       className="fixed bottom-0 left-0 right-0 z-[60] border-t border-border/30 bg-background/95 backdrop-blur-md"
       style={{
-        paddingBottom: "max(env(safe-area-inset-bottom, 0px) - 12px, 0px)",
+        paddingBottom: "env(safe-area-inset-bottom, 0px)",
       }}
     >
-      <div className="mx-auto flex h-14 w-full items-stretch justify-around">
+      <div className="mx-auto flex h-16 w-full items-stretch justify-around">
         <NavItem
           icon={HomeIcon}
           label="Início"

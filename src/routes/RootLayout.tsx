@@ -21,7 +21,7 @@ export function RootLayout() {
       className="relative min-h-dvh w-full touch-pan-y overflow-x-hidden bg-background antialiased"
       style={
         shouldShowNav
-          ? { paddingBottom: "calc(3.5rem + max(env(safe-area-inset-bottom, 0px) - 12px, 0px))" }
+          ? { paddingBottom: "calc(4rem + env(safe-area-inset-bottom, 0px))" }
           : undefined
       }
     >
