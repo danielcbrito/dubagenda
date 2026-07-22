@@ -3,24 +3,18 @@ import { motion } from "framer-motion";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useState, type SVGProps } from "react";
 
-/** Facebook-style filled house icon (rounded, single-color). */
-function HomeIcon({ active, ...props }: SVGProps<SVGSVGElement> & { active?: boolean }) {
+/** Facebook-style outlined house icon — same shape in every state, color changes only. */
+function HomeIcon(props: SVGProps<SVGSVGElement>) {
   return (
     <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" {...props}>
-      {active ? (
-        <path
-          d="M12 2.7c.53 0 1.04.2 1.44.55l8.13 7.12c.53.46.19 1.33-.52 1.33H20v7.55A1.75 1.75 0 0 1 18.25 21H15a1 1 0 0 1-1-1v-4.5a2 2 0 1 0-4 0V20a1 1 0 0 1-1 1H5.75A1.75 1.75 0 0 1 4 19.25V11.7h-1.05c-.71 0-1.05-.87-.52-1.33l8.13-7.12c.4-.35.91-.55 1.44-.55z"
-          fill="currentColor"
-        />
-      ) : (
-        <path
-          d="M12 3.4c.35 0 .69.13.96.36l7.5 6.57c.32.28.5.69.5 1.11v7.81A1.75 1.75 0 0 1 19.21 21H15.5a1 1 0 0 1-1-1v-4.5a2.5 2.5 0 1 0-5 0V20a1 1 0 0 1-1 1H4.79A1.75 1.75 0 0 1 3.04 19.25v-7.81c0-.42.18-.83.5-1.11l7.5-6.57c.27-.23.61-.36.96-.36z"
-          stroke="currentColor"
-          strokeWidth="1.8"
-          strokeLinejoin="round"
-          fill="none"
-        />
-      )}
+      <path
+        d="M12 3.4c.35 0 .69.13.96.36l7.5 6.57c.32.28.5.69.5 1.11v7.81A1.75 1.75 0 0 1 19.21 21H15.5a1 1 0 0 1-1-1v-4.5a2.5 2.5 0 1 0-5 0V20a1 1 0 0 1-1 1H4.79A1.75 1.75 0 0 1 3.04 19.25v-7.81c0-.42.18-.83.5-1.11l7.5-6.57c.27-.23.61-.36.96-.36z"
+        stroke="currentColor"
+        strokeWidth="1.9"
+        strokeLinejoin="round"
+        strokeLinecap="round"
+        fill="none"
+      />
     </svg>
   );
 }
@@ -148,7 +142,7 @@ export function BottomNavigation() {
     >
       <div className="mx-auto flex h-16 w-full items-stretch justify-around">
         <NavItem
-          icon={(props: any) => <HomeIcon {...props} active={isActive("/cliente")} />}
+          icon={HomeIcon}
           label="Início"
           isActive={isActive("/cliente")}
           onClick={() => navigate("/cliente")}
