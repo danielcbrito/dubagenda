@@ -1,4 +1,4 @@
-import { Home, ShoppingCart, Crown, User } from "lucide-react";
+import { ShoppingCart, Crown, User } from "lucide-react";
 import { motion } from "framer-motion";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
