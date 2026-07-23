@@ -494,9 +494,15 @@ const EscolherBarbearia = () => {
 
     const mapCenter = mapBounds.getCenter();
 
+    const withCoords = searchFilteredUnits.filter(
+      (u) => u.latitude !== null && u.longitude !== null
+    );
+    const withoutCoords = searchFilteredUnits.filter(
+      (u) => u.latitude === null || u.longitude === null
+    );
+
     // 1. Units within current map bounds
-    const inBounds = searchFilteredUnits.filter((unit) => {
-      if (unit.latitude === null || unit.longitude === null) return false;
+    const inBounds = withCoords.filter((unit) => {
       const lat = Number.parseFloat(String(unit.latitude));
       const lng = Number.parseFloat(String(unit.longitude));
       if (!Number.isFinite(lat) || !Number.isFinite(lng)) return false;
@@ -507,26 +513,26 @@ const EscolherBarbearia = () => {
       }
     });
 
-    // 2. If enough results, return sorted by distance from map center
+    // 2. If enough in bounds, sort by distance from map center.
+    //    Always append units without coordinates so they remain discoverable.
     if (inBounds.length >= MIN_VISIBLE) {
-      return inBounds.sort((a, b) => {
+      const sortedInBounds = inBounds.sort((a, b) => {
         const dA = haversineKm(mapCenter.lat, mapCenter.lng, a.latitude!, a.longitude!);
         const dB = haversineKm(mapCenter.lat, mapCenter.lng, b.latitude!, b.longitude!);
         return dA - dB;
       });
+      return [...sortedInBounds, ...withoutCoords];
     }
 
-    // 3. Not enough in bounds — always show at least MIN_VISIBLE closest to map center
-    const withCoords = searchFilteredUnits.filter(
-      (u) => u.latitude !== null && u.longitude !== null
-    );
+    // 3. Not enough in bounds — merge closest with-coords + all without-coords.
+    //    Never hide units just because their coordinates haven't been geocoded yet.
     const sortedByCenter = [...withCoords].sort((a, b) => {
       const dA = haversineKm(mapCenter.lat, mapCenter.lng, a.latitude!, a.longitude!);
       const dB = haversineKm(mapCenter.lat, mapCenter.lng, b.latitude!, b.longitude!);
       return dA - dB;
     });
-    return sortedByCenter.slice(0, Math.max(MIN_VISIBLE, inBounds.length));
-  }, [mapBounds, mapReady, searchFilteredUnits]);
+    return [...sortedByCenter, ...withoutCoords];
+  }, [mapBounds, mapReady, userLocation, searchFilteredUnits]);
 
   const inBoundsCount = useMemo(() => {
     if (!mapReady || !mapBounds) return visibleUnits.length;
