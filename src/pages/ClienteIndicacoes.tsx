@@ -146,6 +146,7 @@ export default function ClienteIndicacoes() {
       if (!user) { navigate("/auth"); return; }
       setUserId(user.id);
 
+
       const [profileRes, creditsRes, indicacoesRes, ciclosRes] = await Promise.all([
         supabase.from("profiles").select("referral_code, barbearia_preferida_id").eq("id", user.id).maybeSingle(),
         supabase
