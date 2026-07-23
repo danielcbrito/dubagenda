@@ -2688,6 +2688,7 @@ export type Database = {
           hora_fechamento: string | null
           id: string
           motivo: string | null
+          tenant_id: string
           unidade_id: string | null
           updated_at: string | null
         }
@@ -2701,6 +2702,7 @@ export type Database = {
           hora_fechamento?: string | null
           id?: string
           motivo?: string | null
+          tenant_id: string
           unidade_id?: string | null
           updated_at?: string | null
         }
@@ -2714,10 +2716,18 @@ export type Database = {
           hora_fechamento?: string | null
           id?: string
           motivo?: string | null
+          tenant_id?: string
           unidade_id?: string | null
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "horarios_excepcionais_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "horarios_excepcionais_unidade_id_fkey"
             columns: ["unidade_id"]
@@ -6994,6 +7004,10 @@ export type Database = {
       pix_signal_returned_to_app: {
         Args: { p_charge_id: string }
         Returns: undefined
+      }
+      profile_visible_to_tenant_admin: {
+        Args: { p_profile_id: string }
+        Returns: boolean
       }
       registrar_click_indicacao: {
         Args: { p_codigo: string; p_session_id: string }
