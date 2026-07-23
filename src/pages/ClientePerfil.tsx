@@ -416,13 +416,15 @@ export default function ClientePerfil() {
                 badgeCount={redemptions}
                 onClick={() => setPointsModalOpen(true)}
               />
-              <ProfileRow
-                icon={UserPlus}
-                label="Indique e Ganhe"
-                sublabel="Convide amigos e concorra a cortes grátis"
-                badgeCount={referralCredits}
-                onClick={() => navigate("/cliente/indicacoes")}
-              />
+              {!REFERRALS_DISABLED_TENANTS.has(profile?.barbearia_preferida_id) && (
+                <ProfileRow
+                  icon={UserPlus}
+                  label="Indique e Ganhe"
+                  sublabel="Convide amigos e concorra a cortes grátis"
+                  badgeCount={referralCredits}
+                  onClick={() => navigate("/cliente/indicacoes")}
+                />
+              )}
 
               <ProfileRow
                 icon={History}
