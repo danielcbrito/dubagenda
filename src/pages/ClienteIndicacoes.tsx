@@ -167,10 +167,19 @@ export default function ClienteIndicacoes() {
           .limit(20),
       ]);
 
+      const tenantId = profileRes.data?.barbearia_preferida_id;
+      // Tenants que não participam do programa "Indique e Ganhe"
+      const REFERRALS_DISABLED_TENANTS = new Set<string>([
+        "ed134ee7-99b5-4f72-8a2b-607e3e5bb08e", // Junior Cortes
+      ]);
+      if (tenantId && REFERRALS_DISABLED_TENANTS.has(tenantId)) {
+        navigate("/cliente/perfil", { replace: true });
+        return;
+      }
+
       setReferralCode(profileRes.data?.referral_code || null);
       setAvailableCredits(creditsRes.count || 0);
 
-      const tenantId = profileRes.data?.barbearia_preferida_id;
       if (tenantId) {
         const { data: tenant } = await supabase
           .from("tenants")
