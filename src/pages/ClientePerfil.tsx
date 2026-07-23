@@ -110,10 +110,15 @@ function ThemeToggleRow() {
 }
 
 
+/* Tenants sem programa "Indique e Ganhe" */
+const REFERRALS_DISABLED_TENANTS = new Set<string>([
+  "ed134ee7-99b5-4f72-8a2b-607e3e5bb08e", // Junior Cortes
+]);
 
 /* ─── Main Page ─── */
 
 export default function ClientePerfil() {
+
   const navigate = useNavigate();
   const [profile, setProfile] = useState<any>(null);
   const [userEmail, setUserEmail] = useState("");
