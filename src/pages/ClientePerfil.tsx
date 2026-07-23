@@ -110,10 +110,15 @@ function ThemeToggleRow() {
 }
 
 
+/* Tenants sem programa "Indique e Ganhe" */
+const REFERRALS_DISABLED_TENANTS = new Set<string>([
+  "ed134ee7-99b5-4f72-8a2b-607e3e5bb08e", // Junior Cortes
+]);
 
 /* ─── Main Page ─── */
 
 export default function ClientePerfil() {
+
   const navigate = useNavigate();
   const [profile, setProfile] = useState<any>(null);
   const [userEmail, setUserEmail] = useState("");
@@ -326,43 +331,46 @@ export default function ClientePerfil() {
 
 
 
-            {/* Indique e ganhe — banner preservado */}
-            <div className="relative pt-6 group mb-6">
-              <motion.button
-                initial={{ opacity: 0, y: 6 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.04, duration: 0.3 }}
-                whileTap={{ scale: 0.99 }}
-                onClick={() => navigate("/cliente/indicacoes")}
-                className="relative w-full h-20 rounded-2xl bg-muted/60 dark:bg-card border border-border/40 text-left overflow-visible"
-              >
-                <div className="absolute inset-0 rounded-2xl overflow-hidden pointer-events-none opacity-[0.04] dark:opacity-[0.08]">
-                  <div className="absolute inset-0" style={{
-                    backgroundImage: `url("data:image/svg+xml,%3Csvg width='40' height='24' viewBox='0 0 40 24' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M4 4h32v16H4z' fill='none' stroke='currentColor' stroke-width='0.5'/%3E%3Cpath d='M10 4v16M30 4v16' stroke='currentColor' stroke-width='0.5' stroke-dasharray='1 1'/%3E%3C/svg%3E")`,
-                    backgroundSize: '80px 48px'
-                  }} />
-                </div>
-
-                <div className="relative h-full flex items-center pl-[92px] pr-3.5 gap-2">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[14.5px] font-semibold text-foreground leading-tight tracking-tight">
-                      Indique e ganhe <span className="text-primary">corte grátis</span>
-                    </p>
+            {/* Indique e ganhe — banner preservado (oculto para tenants sem o programa) */}
+            {!REFERRALS_DISABLED_TENANTS.has(profile?.barbearia_preferida_id) && (
+              <div className="relative pt-6 group mb-6">
+                <motion.button
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.04, duration: 0.3 }}
+                  whileTap={{ scale: 0.99 }}
+                  onClick={() => navigate("/cliente/indicacoes")}
+                  className="relative w-full h-20 rounded-2xl bg-muted/60 dark:bg-card border border-border/40 text-left overflow-visible"
+                >
+                  <div className="absolute inset-0 rounded-2xl overflow-hidden pointer-events-none opacity-[0.04] dark:opacity-[0.08]">
+                    <div className="absolute inset-0" style={{
+                      backgroundImage: `url("data:image/svg+xml,%3Csvg width='40' height='24' viewBox='0 0 40 24' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M4 4h32v16H4z' fill='none' stroke='currentColor' stroke-width='0.5'/%3E%3Cpath d='M10 4v16M30 4v16' stroke='currentColor' stroke-width='0.5' stroke-dasharray='1 1'/%3E%3C/svg%3E")`,
+                      backgroundSize: '80px 48px'
+                    }} />
                   </div>
-                  <span className="text-[12px] font-bold bg-foreground text-background px-4 py-1.5 rounded-full flex-shrink-0 active:scale-95 transition-transform shadow-sm">
-                    Convidar
-                  </span>
-                </div>
-              </motion.button>
 
-              <div className="absolute left-1 bottom-0 w-24 h-[130px] pointer-events-none z-10 flex items-end overflow-visible">
-                <img
-                  src={referralMascot}
-                  alt=""
-                  className="h-full w-auto object-contain object-bottom drop-shadow-sm transition-transform duration-500 group-hover:-translate-y-2"
-                />
+                  <div className="relative h-full flex items-center pl-[92px] pr-3.5 gap-2">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[14.5px] font-semibold text-foreground leading-tight tracking-tight">
+                        Indique e ganhe <span className="text-primary">corte grátis</span>
+                      </p>
+                    </div>
+                    <span className="text-[12px] font-bold bg-foreground text-background px-4 py-1.5 rounded-full flex-shrink-0 active:scale-95 transition-transform shadow-sm">
+                      Convidar
+                    </span>
+                  </div>
+                </motion.button>
+
+                <div className="absolute left-1 bottom-0 w-24 h-[130px] pointer-events-none z-10 flex items-end overflow-visible">
+                  <img
+                    src={referralMascot}
+                    alt=""
+                    className="h-full w-auto object-contain object-bottom drop-shadow-sm transition-transform duration-500 group-hover:-translate-y-2"
+                  />
+                </div>
               </div>
-            </div>
+            )}
+
 
             {/* Flat list — iFood style with hairline dividers */}
             <div className="divide-y divide-border/60">
@@ -408,13 +416,15 @@ export default function ClientePerfil() {
                 badgeCount={redemptions}
                 onClick={() => setPointsModalOpen(true)}
               />
-              <ProfileRow
-                icon={UserPlus}
-                label="Indique e Ganhe"
-                sublabel="Convide amigos e concorra a cortes grátis"
-                badgeCount={referralCredits}
-                onClick={() => navigate("/cliente/indicacoes")}
-              />
+              {!REFERRALS_DISABLED_TENANTS.has(profile?.barbearia_preferida_id) && (
+                <ProfileRow
+                  icon={UserPlus}
+                  label="Indique e Ganhe"
+                  sublabel="Convide amigos e concorra a cortes grátis"
+                  badgeCount={referralCredits}
+                  onClick={() => navigate("/cliente/indicacoes")}
+                />
+              )}
 
               <ProfileRow
                 icon={History}
