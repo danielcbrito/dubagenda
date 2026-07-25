@@ -6811,6 +6811,13 @@ export type Database = {
       get_all_lojas_stats: { Args: never; Returns: Json }
       get_assinatura_status: { Args: { p_user_id: string }; Returns: Json }
       get_blocked_barber_ids: { Args: { p_user_id: string }; Returns: string[] }
+      get_client_loyalty_for_barber_view: {
+        Args: { p_barbeiro_id: string; p_user_id: string }
+        Returns: {
+          client_points: number
+          required_points: number
+        }[]
+      }
       get_client_loyalty_required_points: {
         Args: { p_user_id: string }
         Returns: number
