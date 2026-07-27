@@ -290,33 +290,41 @@ serve(async (req) => {
       if (consumeError) throw consumeError;
     }
 
-    // Google Calendar sync (non-blocking)
+    // Google Calendar sync (non-blocking) — só dispara se o barbeiro conectou
     try {
-      const { data: servico } = await supabase
-        .from('servicos')
-        .select('nome')
-        .eq('id', bookingData.servico_id)
-        .single();
+      const { data: barberInfo } = await supabase
+        .from('barbeiros')
+        .select('google_calendar_connected')
+        .eq('id', bookingData.barbeiro_id)
+        .maybeSingle();
 
-      const startDateTime = `${bookingData.data}T${bookingData.hora}:00`;
-      const endDate = new Date(`${bookingData.data}T${bookingData.hora}`);
-      endDate.setMinutes(endDate.getMinutes() + bookingData.duracao);
+      if (barberInfo?.google_calendar_connected) {
+        const { data: servico } = await supabase
+          .from('servicos')
+          .select('nome')
+          .eq('id', bookingData.servico_id)
+          .single();
 
-      await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/google-calendar-sync`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
-        },
-        body: JSON.stringify({
-          action: 'create',
-          appointmentId: appointment.id,
-          summary: `Agendamento: ${servico?.nome || 'Serviço'}`,
-          description: `Pagamento na barbearia (aguardando confirmação)`,
-          startDateTime,
-          endDateTime: endDate.toISOString().slice(0, 19),
-        }),
-      });
+        const startDateTime = `${bookingData.data}T${bookingData.hora}:00`;
+        const endDate = new Date(`${bookingData.data}T${bookingData.hora}`);
+        endDate.setMinutes(endDate.getMinutes() + bookingData.duracao);
+
+        await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/google-calendar-sync`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
+          },
+          body: JSON.stringify({
+            action: 'create',
+            appointmentId: appointment.id,
+            summary: `Agendamento: ${servico?.nome || 'Serviço'}`,
+            description: `Pagamento na barbearia (aguardando confirmação)`,
+            startDateTime,
+            endDateTime: endDate.toISOString().slice(0, 19),
+          }),
+        });
+      }
     } catch (gcError) {
       console.error('[create-payment] Google Calendar error:', gcError);
     }
