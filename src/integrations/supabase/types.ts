@@ -1093,6 +1093,81 @@ export type Database = {
           },
         ]
       }
+      barber_home_snapshot: {
+        Row: {
+          apt_last_month_revenue: number
+          apt_month_revenue: number
+          barbeiro_id: string
+          computed_for_date: string
+          is_stale: boolean
+          last_month_cuts: number
+          month_cuts: number
+          next_appointment: Json | null
+          pending_cash_count: number
+          plan_cash_last_month: number
+          plan_cash_month: number
+          plan_pix_last_month: number
+          plan_pix_month: number
+          recent_appointments: Json
+          today_count: number
+          updated_at: string
+          yesterday_count: number
+        }
+        Insert: {
+          apt_last_month_revenue?: number
+          apt_month_revenue?: number
+          barbeiro_id: string
+          computed_for_date?: string
+          is_stale?: boolean
+          last_month_cuts?: number
+          month_cuts?: number
+          next_appointment?: Json | null
+          pending_cash_count?: number
+          plan_cash_last_month?: number
+          plan_cash_month?: number
+          plan_pix_last_month?: number
+          plan_pix_month?: number
+          recent_appointments?: Json
+          today_count?: number
+          updated_at?: string
+          yesterday_count?: number
+        }
+        Update: {
+          apt_last_month_revenue?: number
+          apt_month_revenue?: number
+          barbeiro_id?: string
+          computed_for_date?: string
+          is_stale?: boolean
+          last_month_cuts?: number
+          month_cuts?: number
+          next_appointment?: Json | null
+          pending_cash_count?: number
+          plan_cash_last_month?: number
+          plan_cash_month?: number
+          plan_pix_last_month?: number
+          plan_pix_month?: number
+          recent_appointments?: Json
+          today_count?: number
+          updated_at?: string
+          yesterday_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "barber_home_snapshot_barbeiro_id_fkey"
+            columns: ["barbeiro_id"]
+            isOneToOne: true
+            referencedRelation: "barbeiros"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "barber_home_snapshot_barbeiro_id_fkey"
+            columns: ["barbeiro_id"]
+            isOneToOne: true
+            referencedRelation: "barbeiros_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bloqueios_cliente_barbeiro: {
         Row: {
           barbeiro_id: string
@@ -5667,327 +5742,6 @@ export type Database = {
         }
         Relationships: []
       }
-      ti_auth_attempts: {
-        Row: {
-          created_at: string
-          id: string
-          ip_address: string | null
-          reason: string | null
-          success: boolean
-          user_agent: string | null
-          user_id: string | null
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          ip_address?: string | null
-          reason?: string | null
-          success?: boolean
-          user_agent?: string | null
-          user_id?: string | null
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          ip_address?: string | null
-          reason?: string | null
-          success?: boolean
-          user_agent?: string | null
-          user_id?: string | null
-        }
-        Relationships: []
-      }
-      ti_auth_sessions: {
-        Row: {
-          created_at: string
-          expires_at: string
-          id: string
-          last_used_at: string
-          token_hash: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          expires_at: string
-          id?: string
-          last_used_at?: string
-          token_hash: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          expires_at?: string
-          id?: string
-          last_used_at?: string
-          token_hash?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
-      ti_impersonation_logs: {
-        Row: {
-          cliente_email: string | null
-          cliente_id: string | null
-          cliente_nome: string | null
-          created_at: string | null
-          expires_at: string
-          id: string
-          ip_address: string | null
-          operador_email: string
-          operador_id: string | null
-          token: string
-          usado_em: string | null
-        }
-        Insert: {
-          cliente_email?: string | null
-          cliente_id?: string | null
-          cliente_nome?: string | null
-          created_at?: string | null
-          expires_at: string
-          id?: string
-          ip_address?: string | null
-          operador_email: string
-          operador_id?: string | null
-          token: string
-          usado_em?: string | null
-        }
-        Update: {
-          cliente_email?: string | null
-          cliente_id?: string | null
-          cliente_nome?: string | null
-          created_at?: string | null
-          expires_at?: string
-          id?: string
-          ip_address?: string | null
-          operador_email?: string
-          operador_id?: string | null
-          token?: string
-          usado_em?: string | null
-        }
-        Relationships: []
-      }
-      ti_mudancas_agendadas: {
-        Row: {
-          aplicada_em: string | null
-          aplicar_em: string
-          cancelada_em: string | null
-          created_at: string
-          descricao: string | null
-          erro_msg: string | null
-          id: string
-          operador_email: string | null
-          operador_id: string | null
-          payload: Json | null
-          payload_antes: Json | null
-          payload_depois: Json | null
-          status: string
-          tipo: string
-          titulo: string
-          updated_at: string
-        }
-        Insert: {
-          aplicada_em?: string | null
-          aplicar_em: string
-          cancelada_em?: string | null
-          created_at?: string
-          descricao?: string | null
-          erro_msg?: string | null
-          id?: string
-          operador_email?: string | null
-          operador_id?: string | null
-          payload?: Json | null
-          payload_antes?: Json | null
-          payload_depois?: Json | null
-          status?: string
-          tipo?: string
-          titulo: string
-          updated_at?: string
-        }
-        Update: {
-          aplicada_em?: string | null
-          aplicar_em?: string
-          cancelada_em?: string | null
-          created_at?: string
-          descricao?: string | null
-          erro_msg?: string | null
-          id?: string
-          operador_email?: string | null
-          operador_id?: string | null
-          payload?: Json | null
-          payload_antes?: Json | null
-          payload_depois?: Json | null
-          status?: string
-          tipo?: string
-          titulo?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      ti_password_change: {
-        Row: {
-          created_at: string
-          must_change: boolean
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          must_change?: boolean
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          must_change?: boolean
-          user_id?: string
-        }
-        Relationships: []
-      }
-      ti_permissions: {
-        Row: {
-          created_at: string
-          enabled: boolean
-          id: string
-          permission: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          enabled?: boolean
-          id?: string
-          permission: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          enabled?: boolean
-          id?: string
-          permission?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
-      ti_permissoes: {
-        Row: {
-          created_at: string | null
-          id: string
-          perm_agendadas: boolean | null
-          perm_agendamentos: boolean | null
-          perm_barbearias: boolean | null
-          perm_clientes: boolean | null
-          perm_dispositivos: boolean | null
-          perm_financeiro: boolean | null
-          perm_impersonar: boolean | null
-          perm_logs: boolean | null
-          perm_manutencao: boolean | null
-          perm_monitoramento: boolean | null
-          perm_notificacoes: boolean | null
-          perm_suporte_ia: boolean | null
-          perm_tenants: boolean | null
-          perm_usuarios: boolean | null
-          perm_webhooks: boolean | null
-          updated_at: string | null
-          user_id: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          id?: string
-          perm_agendadas?: boolean | null
-          perm_agendamentos?: boolean | null
-          perm_barbearias?: boolean | null
-          perm_clientes?: boolean | null
-          perm_dispositivos?: boolean | null
-          perm_financeiro?: boolean | null
-          perm_impersonar?: boolean | null
-          perm_logs?: boolean | null
-          perm_manutencao?: boolean | null
-          perm_monitoramento?: boolean | null
-          perm_notificacoes?: boolean | null
-          perm_suporte_ia?: boolean | null
-          perm_tenants?: boolean | null
-          perm_usuarios?: boolean | null
-          perm_webhooks?: boolean | null
-          updated_at?: string | null
-          user_id?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          id?: string
-          perm_agendadas?: boolean | null
-          perm_agendamentos?: boolean | null
-          perm_barbearias?: boolean | null
-          perm_clientes?: boolean | null
-          perm_dispositivos?: boolean | null
-          perm_financeiro?: boolean | null
-          perm_impersonar?: boolean | null
-          perm_logs?: boolean | null
-          perm_manutencao?: boolean | null
-          perm_monitoramento?: boolean | null
-          perm_notificacoes?: boolean | null
-          perm_suporte_ia?: boolean | null
-          perm_tenants?: boolean | null
-          perm_usuarios?: boolean | null
-          perm_webhooks?: boolean | null
-          updated_at?: string | null
-          user_id?: string | null
-        }
-        Relationships: []
-      }
-      ti_security_config: {
-        Row: {
-          created_at: string | null
-          id: string
-          must_change_password: boolean
-          password_hash: string
-          updated_at: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          id?: string
-          must_change_password?: boolean
-          password_hash: string
-          updated_at?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          id?: string
-          must_change_password?: boolean
-          password_hash?: string
-          updated_at?: string | null
-        }
-        Relationships: []
-      }
-      ti_usuarios: {
-        Row: {
-          ativo: boolean | null
-          created_at: string | null
-          criado_por: string | null
-          email: string
-          id: string
-          nome: string | null
-          updated_at: string | null
-          user_id: string | null
-        }
-        Insert: {
-          ativo?: boolean | null
-          created_at?: string | null
-          criado_por?: string | null
-          email: string
-          id?: string
-          nome?: string | null
-          updated_at?: string | null
-          user_id?: string | null
-        }
-        Update: {
-          ativo?: boolean | null
-          created_at?: string | null
-          criado_por?: string | null
-          email?: string
-          id?: string
-          nome?: string | null
-          updated_at?: string | null
-          user_id?: string | null
-        }
-        Relationships: []
-      }
       transacoes_financeiras: {
         Row: {
           barbeiro_id: string
@@ -6704,10 +6458,17 @@ export type Database = {
         Returns: boolean
       }
       check_cpf_available_for_barber: { Args: { p_cpf: string }; Returns: Json }
-      check_email_exists: { Args: { p_email: string }; Returns: string }
+      check_email_exists: { Args: { p_email: string }; Returns: boolean }
       clean_expired_pending_bookings: { Args: never; Returns: undefined }
       clean_expired_reservas_loja: { Args: never; Returns: undefined }
       clean_expired_verification_codes: { Args: never; Returns: undefined }
+      cleanup_old_logs: {
+        Args: never
+        Returns: {
+          rows_deleted: number
+          table_name: string
+        }[]
+      }
       confirmar_transacao: {
         Args: { p_efi_e2e_id: string; p_transacao_id: string }
         Returns: undefined
@@ -6810,6 +6571,21 @@ export type Database = {
       }
       get_all_lojas_stats: { Args: never; Returns: Json }
       get_assinatura_status: { Args: { p_user_id: string }; Returns: Json }
+      get_barber_agenda_bundle: {
+        Args: { p_barbeiro_id: string; p_data: string }
+        Returns: Json
+      }
+      get_barber_app_context_fast: { Args: never; Returns: Json }
+      get_barber_boot_bundle: { Args: never; Returns: Json }
+      get_barber_dashboard_fast: {
+        Args: { p_barbeiro_id: string }
+        Returns: Json
+      }
+      get_barber_disparo_bundle: {
+        Args: { p_barbeiro_id: string }
+        Returns: Json
+      }
+      get_barber_home_bundle: { Args: { p_barbeiro_id: string }; Returns: Json }
       get_blocked_barber_ids: { Args: { p_user_id: string }; Returns: string[] }
       get_client_loyalty_for_barber_view: {
         Args: { p_barbeiro_id: string; p_user_id: string }
@@ -6963,6 +6739,7 @@ export type Database = {
       }
       get_user_preferred_tenant_id: { Args: never; Returns: string }
       get_user_tenant_id: { Args: never; Returns: string }
+      has_financial_pin: { Args: never; Returns: boolean }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -7016,6 +6793,10 @@ export type Database = {
         Args: { p_profile_id: string }
         Returns: boolean
       }
+      refresh_barber_home_snapshot: {
+        Args: { p_barbeiro_id: string }
+        Returns: undefined
+      }
       registrar_click_indicacao: {
         Args: { p_codigo: string; p_session_id: string }
         Returns: string
@@ -7039,6 +6820,10 @@ export type Database = {
       send_agendamento_whatsapp_webhook: {
         Args: { p_agendamento_id: string; p_kind: string; p_msg: string }
         Returns: number
+      }
+      set_financial_pin: {
+        Args: { p_current_pin?: string; p_new_pin: string }
+        Returns: boolean
       }
       store_create_order_with_reservations: {
         Args: {
@@ -7107,6 +6892,7 @@ export type Database = {
         }[]
       }
       verificar_ciclos_para_apurar: { Args: never; Returns: number }
+      verify_financial_pin: { Args: { p_pin: string }; Returns: boolean }
       woovi_blocked_centavos: { Args: { p_barbeiro: string }; Returns: number }
     }
     Enums: {
