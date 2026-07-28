@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { AlertTriangle, X, ChevronRight, ArrowLeft } from "lucide-react";
+import { AlertTriangle, X, ChevronRight } from "lucide-react";
 
 /** ID da Barbearia DUB (matriz). */
 const TENANT_DUB = "73d61f2f-b369-41f3-8915-8e6de52d6378";
