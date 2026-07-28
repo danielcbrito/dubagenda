@@ -1210,6 +1210,47 @@ export type Database = {
           },
         ]
       }
+      campanhas_config: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          id: string
+          indicacoes_necessarias: number
+          premio_descricao: string | null
+          tenant_id: string
+          tipo: string
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          id?: string
+          indicacoes_necessarias?: number
+          premio_descricao?: string | null
+          tenant_id: string
+          tipo: string
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          id?: string
+          indicacoes_necessarias?: number
+          premio_descricao?: string | null
+          tenant_id?: string
+          tipo?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campanhas_config_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       carteiras: {
         Row: {
           barbeiro_id: string
@@ -1501,6 +1542,60 @@ export type Database = {
           },
         ]
       }
+      client_home_snapshot: {
+        Row: {
+          appointments: Json
+          available_credits: number
+          has_active_plan: boolean
+          is_stale: boolean
+          loyalty_active: boolean
+          paid_completed_count: number
+          pending_bookings: Json
+          points: number
+          profile: Json
+          redemptions_available: number
+          redemptions_total: number
+          required_points: number
+          total_completed_count: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          appointments?: Json
+          available_credits?: number
+          has_active_plan?: boolean
+          is_stale?: boolean
+          loyalty_active?: boolean
+          paid_completed_count?: number
+          pending_bookings?: Json
+          points?: number
+          profile?: Json
+          redemptions_available?: number
+          redemptions_total?: number
+          required_points?: number
+          total_completed_count?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          appointments?: Json
+          available_credits?: number
+          has_active_plan?: boolean
+          is_stale?: boolean
+          loyalty_active?: boolean
+          paid_completed_count?: number
+          pending_bookings?: Json
+          points?: number
+          profile?: Json
+          redemptions_available?: number
+          redemptions_total?: number
+          required_points?: number
+          total_completed_count?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       comissoes: {
         Row: {
           appointment_id: string
@@ -1604,6 +1699,7 @@ export type Database = {
           hora_almoco_inicio: string | null
           hora_fechamento: string | null
           id: string
+          slot_interval_minutes: number | null
           updated_at: string | null
         }
         Insert: {
@@ -1617,6 +1713,7 @@ export type Database = {
           hora_almoco_inicio?: string | null
           hora_fechamento?: string | null
           id?: string
+          slot_interval_minutes?: number | null
           updated_at?: string | null
         }
         Update: {
@@ -1630,6 +1727,7 @@ export type Database = {
           hora_almoco_inicio?: string | null
           hora_fechamento?: string | null
           id?: string
+          slot_interval_minutes?: number | null
           updated_at?: string | null
         }
         Relationships: [
@@ -2911,6 +3009,7 @@ export type Database = {
           click_session_id: string | null
           codigo_usado: string
           confirmado_em: string | null
+          credito_gerado: boolean
           criado_em: string
           id: string
           indicado_id: string | null
@@ -2926,6 +3025,7 @@ export type Database = {
           click_session_id?: string | null
           codigo_usado: string
           confirmado_em?: string | null
+          credito_gerado?: boolean
           criado_em?: string
           id?: string
           indicado_id?: string | null
@@ -2941,6 +3041,7 @@ export type Database = {
           click_session_id?: string | null
           codigo_usado?: string
           confirmado_em?: string | null
+          credito_gerado?: boolean
           criado_em?: string
           id?: string
           indicado_id?: string | null
@@ -5670,6 +5771,7 @@ export type Database = {
           rua: string | null
           site: string | null
           slogan: string | null
+          slot_interval_minutes: number
           slug: string | null
           telefone: string | null
           trial_ends_at: string | null
@@ -5702,6 +5804,7 @@ export type Database = {
           rua?: string | null
           site?: string | null
           slogan?: string | null
+          slot_interval_minutes?: number
           slug?: string | null
           telefone?: string | null
           trial_ends_at?: string | null
@@ -5734,6 +5837,7 @@ export type Database = {
           rua?: string | null
           site?: string | null
           slogan?: string | null
+          slot_interval_minutes?: number
           slug?: string | null
           telefone?: string | null
           trial_ends_at?: string | null
@@ -6569,6 +6673,10 @@ export type Database = {
         Args: { p_barbeiro_id: string }
         Returns: string
       }
+      get_admin_dashboard_fast: {
+        Args: { p_barbeiro_id?: string; p_tenant_id?: string }
+        Returns: Json
+      }
       get_all_lojas_stats: { Args: never; Returns: Json }
       get_assinatura_status: { Args: { p_user_id: string }; Returns: Json }
       get_barber_agenda_bundle: {
@@ -6587,6 +6695,7 @@ export type Database = {
       }
       get_barber_home_bundle: { Args: { p_barbeiro_id: string }; Returns: Json }
       get_blocked_barber_ids: { Args: { p_user_id: string }; Returns: string[] }
+      get_client_home_bundle: { Args: never; Returns: Json }
       get_client_loyalty_for_barber_view: {
         Args: { p_barbeiro_id: string; p_user_id: string }
         Returns: {
@@ -6795,6 +6904,10 @@ export type Database = {
       }
       refresh_barber_home_snapshot: {
         Args: { p_barbeiro_id: string }
+        Returns: undefined
+      }
+      refresh_client_home_snapshot: {
+        Args: { p_user_id: string }
         Returns: undefined
       }
       registrar_click_indicacao: {
