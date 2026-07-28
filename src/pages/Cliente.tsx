@@ -1315,7 +1315,7 @@ const Cliente = () => {
       <AnnouncementDialog />
 
       {/* Aviso de reajuste de valores */}
-      <PriceUpdateNoticeModal />
+      <PriceUpdateNoticeModal tenantId={tenantId} />
 
       {/* History Sheet */}
       <AppointmentHistorySheet

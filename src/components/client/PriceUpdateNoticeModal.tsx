@@ -3,21 +3,85 @@ import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { AlertTriangle, X, ChevronRight, ArrowLeft } from "lucide-react";
 
-const SESSION_KEY = "dub:aviso-reajuste-2026-08";
+/** ID da Barbearia DUB (matriz). */
+const TENANT_DUB = "73d61f2f-b369-41f3-8915-8e6de52d6378";
+
+interface NoticeTopic {
+  t: string;
+  d: string;
+}
+
+interface TenantNotice {
+  /** Identificador do aviso — mudar para reexibir uma nova versão. */
+  id: string;
+  eyebrow: string;
+  title: string;
+  summary: React.ReactNode;
+  detailsTitle: string;
+  topics: NoticeTopic[];
+  footer: string;
+}
 
 /**
- * Aviso estratégico exibido ao entrar no app (uma vez por sessão).
- * Card centralizado com ícone de atenção (triângulo) e detalhamento das mudanças.
+ * Avisos por barbearia. Cada tenant só vê o próprio comunicado.
+ * (Futuramente estes dados virão da configuração do painel do barbeiro.)
  */
-export function PriceUpdateNoticeModal() {
+const NOTICES_BY_TENANT: Record<string, TenantNotice> = {
+  [TENANT_DUB]: {
+    id: "dub-reajuste-2026-08",
+    eyebrow: "Comunicado",
+    title: "Reajuste de valores",
+    summary: (
+      <>
+        A partir do dia{" "}
+        <span className="font-semibold text-foreground">20 de agosto</span>, alguns
+        serviços da Barbearia DUB terão seus valores reajustados.
+      </>
+    ),
+    detailsTitle: "O que muda a partir de 20 de agosto",
+    topics: [
+      {
+        t: "Novos valores em alguns serviços",
+        d: "Apenas parte do cardápio será reajustada. Os valores atualizados aparecem automaticamente no app na hora do agendamento.",
+      },
+      {
+        t: "Agendamentos já confirmados",
+        d: "Horários agendados e pagos antes do dia 20 de agosto mantêm o valor original.",
+      },
+      {
+        t: "Planos e benefícios",
+        d: "Assinaturas ativas, créditos de indicação e cortes do programa de fidelidade continuam válidos normalmente.",
+      },
+      {
+        t: "Por que o reajuste",
+        d: "Atualização de custos e investimento contínuo em estrutura, produtos e qualidade do atendimento.",
+      },
+    ],
+    footer:
+      "Obrigado pela confiança e por fazer parte da nossa caminhada. Seguimos comprometidos em entregar o melhor para você.",
+  },
+};
+
+interface PriceUpdateNoticeModalProps {
+  /** Barbearia preferida do cliente. O aviso só aparece se houver comunicado para ela. */
+  tenantId?: string | null;
+}
+
+/**
+ * Aviso estratégico exibido ao entrar no app (uma vez por sessão),
+ * restrito aos clientes da barbearia que publicou o comunicado.
+ */
+export function PriceUpdateNoticeModal({ tenantId }: PriceUpdateNoticeModalProps) {
+  const notice = tenantId ? NOTICES_BY_TENANT[tenantId] : undefined;
   const [open, setOpen] = useState(false);
   const [details, setDetails] = useState(false);
 
   useEffect(() => {
-    if (sessionStorage.getItem(SESSION_KEY)) return;
+    if (!notice) return;
+    if (sessionStorage.getItem(`dub:aviso:${notice.id}`)) return;
     const t = setTimeout(() => setOpen(true), 700);
     return () => clearTimeout(t);
-  }, []);
+  }, [notice]);
 
   useEffect(() => {
     if (!open) return;
@@ -28,8 +92,10 @@ export function PriceUpdateNoticeModal() {
     };
   }, [open]);
 
+  if (!notice) return null;
+
   const close = () => {
-    sessionStorage.setItem(SESSION_KEY, "1");
+    sessionStorage.setItem(`dub:aviso:${notice.id}`, "1");
     setOpen(false);
   };
 
@@ -68,7 +134,7 @@ export function PriceUpdateNoticeModal() {
                 </button>
               ) : null}
               <span className="text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-[0.18em]">
-                Comunicado
+                {notice.eyebrow}
               </span>
               <button
                 type="button"
@@ -97,12 +163,10 @@ export function PriceUpdateNoticeModal() {
                 </div>
 
                 <h2 className="text-[17px] font-semibold text-foreground font-display tracking-tight mb-2">
-                  Reajuste de valores
+                  {notice.title}
                 </h2>
                 <p className="text-[13px] text-muted-foreground leading-relaxed mb-6">
-                  A partir do dia{" "}
-                  <span className="font-semibold text-foreground">20 de agosto</span>,
-                  alguns serviços da Barbearia DUB terão seus valores reajustados.
+                  {notice.summary}
                 </p>
 
                 <button
@@ -124,28 +188,11 @@ export function PriceUpdateNoticeModal() {
             ) : (
               <div className="px-6 pt-5 pb-5">
                 <h2 className="text-[15px] font-semibold text-foreground font-display tracking-tight mb-4">
-                  O que muda a partir de 20 de agosto
+                  {notice.detailsTitle}
                 </h2>
 
                 <div className="space-y-3.5 mb-6">
-                  {[
-                    {
-                      t: "Novos valores em alguns serviços",
-                      d: "Apenas parte do cardápio será reajustada. Os valores atualizados aparecem automaticamente no app na hora do agendamento.",
-                    },
-                    {
-                      t: "Agendamentos já confirmados",
-                      d: "Horários agendados e pagos antes do dia 20 de agosto mantêm o valor original.",
-                    },
-                    {
-                      t: "Planos e benefícios",
-                      d: "Assinaturas ativas, créditos de indicação e cortes do programa de fidelidade continuam válidos normalmente.",
-                    },
-                    {
-                      t: "Por que o reajuste",
-                      d: "Atualização de custos e investimento contínuo em estrutura, produtos e qualidade do atendimento.",
-                    },
-                  ].map((item) => (
+                  {notice.topics.map((item) => (
                     <div key={item.t} className="flex gap-3">
                       <div className="w-1 rounded-full bg-primary/40 flex-shrink-0 mt-1 mb-1" />
                       <div>
@@ -161,8 +208,7 @@ export function PriceUpdateNoticeModal() {
                 </div>
 
                 <p className="text-[12px] text-muted-foreground leading-relaxed border-t border-border pt-4 mb-5">
-                  Obrigado pela confiança e por fazer parte da nossa caminhada. Seguimos
-                  comprometidos em entregar o melhor para você.
+                  {notice.footer}
                 </p>
 
                 <button
