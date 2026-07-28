@@ -173,18 +173,7 @@ export function PriceUpdateNoticeModal({ tenantId }: PriceUpdateNoticeModalProps
               onClick={(e) => e.stopPropagation()}
               className="fixed inset-0 bg-background flex flex-col"
             >
-              <div className="flex-shrink-0 flex items-center h-14 px-2 pt-[env(safe-area-inset-top)]">
-                <button
-                  type="button"
-                  onClick={() => setDetails(false)}
-                  aria-label="Voltar"
-                  className="p-2.5 rounded-full text-foreground active:scale-90 transition-transform"
-                >
-                  <ArrowLeft className="w-5 h-5" />
-                </button>
-                <span className="mx-auto text-[9.5px] font-semibold text-muted-foreground/55 uppercase tracking-[0.24em]">
-                  {notice.eyebrow}
-                </span>
+              <div className="flex-shrink-0 flex items-center justify-end h-14 px-2 pt-[env(safe-area-inset-top)]">
                 <button
                   type="button"
                   onClick={close}
