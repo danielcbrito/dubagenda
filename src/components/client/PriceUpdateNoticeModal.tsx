@@ -107,120 +107,132 @@ export function PriceUpdateNoticeModal({ tenantId }: PriceUpdateNoticeModalProps
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.2 }}
+          transition={{ duration: 0.22 }}
           className="fixed inset-0 flex items-center justify-center px-5"
-          style={{ zIndex: 9998, background: "hsl(var(--foreground) / 0.45)" }}
-          onClick={close}
+          style={{
+            zIndex: 9998,
+            background: "hsl(var(--foreground) / 0.28)",
+            backdropFilter: "blur(18px) saturate(140%)",
+            WebkitBackdropFilter: "blur(18px) saturate(140%)",
+          }}
+          onClick={details ? undefined : close}
         >
-          <motion.div
-            initial={{ opacity: 0, y: 16, scale: 0.97 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 8, scale: 0.98 }}
-            transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
-            onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-[360px] rounded-2xl border border-border bg-card overflow-hidden"
-            style={{ boxShadow: "0 24px 60px -20px hsl(var(--foreground) / 0.35)" }}
-          >
-            {/* Header */}
-            <div className="relative flex items-center justify-center h-12 border-b border-border">
-              {details ? (
-                <button
-                  type="button"
-                  onClick={() => setDetails(false)}
-                  aria-label="Voltar"
-                  className="absolute left-2 p-2.5 rounded-full text-foreground active:scale-90 transition-transform"
-                >
-                  <ArrowLeft className="w-4 h-4" />
-                </button>
-              ) : null}
-              <span className="text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-[0.18em]">
-                {notice.eyebrow}
-              </span>
+          {!details ? (
+            /* ---------- Card compacto ---------- */
+            <motion.div
+              initial={{ opacity: 0, y: 14, scale: 0.97 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 8, scale: 0.98 }}
+              transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+              onClick={(e) => e.stopPropagation()}
+              className="relative w-full max-w-[340px] rounded-[26px] border border-border/70 bg-card px-7 pt-9 pb-7 text-center"
+              style={{ boxShadow: "0 30px 70px -24px hsl(var(--foreground) / 0.4)" }}
+            >
               <button
                 type="button"
                 onClick={close}
                 aria-label="Fechar"
-                className="absolute right-2 p-2.5 rounded-full text-muted-foreground active:scale-90 transition-transform"
+                className="absolute top-3 right-3 p-2 rounded-full text-muted-foreground/70 active:scale-90 transition-transform"
               >
-                <X className="w-4 h-4" />
+                <X className="w-[18px] h-[18px]" strokeWidth={2.2} />
               </button>
-            </div>
 
-            {!details ? (
-              <div className="px-6 pt-6 pb-5 flex flex-col items-center text-center">
-                <div
-                  className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4 border"
-                  style={{
-                    background: "hsl(42 100% 50% / 0.12)",
-                    borderColor: "hsl(42 100% 50% / 0.35)",
-                  }}
+              <AlertTriangle
+                className="w-9 h-9 mx-auto mb-5"
+                strokeWidth={1.6}
+                style={{ color: "hsl(38 96% 48%)" }}
+              />
+
+              <p className="text-[9.5px] font-semibold text-muted-foreground/55 uppercase tracking-[0.24em] mb-2.5">
+                {notice.eyebrow}
+              </p>
+              <h2 className="text-[19px] font-semibold text-foreground font-display tracking-tight mb-3">
+                {notice.title}
+              </h2>
+              <p className="text-[13px] text-muted-foreground leading-relaxed mb-7">
+                {notice.summary}
+              </p>
+
+              <button
+                type="button"
+                onClick={() => setDetails(true)}
+                className="w-full h-12 rounded-2xl bg-foreground text-background text-[14px] font-semibold flex items-center justify-center gap-1 active:scale-[0.97] transition-transform"
+              >
+                Saiba mais sobre as mudanças
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </motion.div>
+          ) : (
+            /* ---------- Tela cheia de detalhes ---------- */
+            <motion.div
+              key="details"
+              initial={{ opacity: 0, y: 24 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 16 }}
+              transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+              onClick={(e) => e.stopPropagation()}
+              className="fixed inset-0 bg-background flex flex-col"
+            >
+              <div className="flex-shrink-0 flex items-center h-14 px-2 pt-[env(safe-area-inset-top)]">
+                <button
+                  type="button"
+                  onClick={() => setDetails(false)}
+                  aria-label="Voltar"
+                  className="p-2.5 rounded-full text-foreground active:scale-90 transition-transform"
                 >
-                  <AlertTriangle
-                    className="w-7 h-7"
-                    strokeWidth={2.2}
-                    style={{ color: "hsl(38 96% 45%)" }}
-                  />
-                </div>
+                  <ArrowLeft className="w-5 h-5" />
+                </button>
+                <span className="mx-auto text-[9.5px] font-semibold text-muted-foreground/55 uppercase tracking-[0.24em]">
+                  {notice.eyebrow}
+                </span>
+                <button
+                  type="button"
+                  onClick={close}
+                  aria-label="Fechar"
+                  className="p-2.5 rounded-full text-muted-foreground active:scale-90 transition-transform"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
 
-                <h2 className="text-[17px] font-semibold text-foreground font-display tracking-tight mb-2">
-                  {notice.title}
-                </h2>
-                <p className="text-[13px] text-muted-foreground leading-relaxed mb-6">
+              <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-6 pb-[calc(env(safe-area-inset-bottom)+2rem)]">
+                <AlertTriangle
+                  className="w-8 h-8 mb-5"
+                  strokeWidth={1.6}
+                  style={{ color: "hsl(38 96% 48%)" }}
+                />
+                <h1 className="text-[22px] font-semibold text-foreground font-display tracking-tight leading-tight mb-2">
+                  {notice.detailsTitle}
+                </h1>
+                <p className="text-[13px] text-muted-foreground leading-relaxed mb-8">
                   {notice.summary}
                 </p>
 
-                <button
-                  type="button"
-                  onClick={() => setDetails(true)}
-                  className="w-full h-11 rounded-xl bg-foreground text-background text-[14px] font-semibold flex items-center justify-center gap-1.5 active:scale-[0.97] transition-transform"
-                >
-                  Saiba mais sobre as mudanças
-                  <ChevronRight className="w-4 h-4" />
-                </button>
-                <button
-                  type="button"
-                  onClick={close}
-                  className="w-full h-10 mt-2 rounded-xl text-[13px] font-medium text-muted-foreground active:scale-[0.97] transition-transform"
-                >
-                  Entendi
-                </button>
-              </div>
-            ) : (
-              <div className="px-6 pt-5 pb-5">
-                <h2 className="text-[15px] font-semibold text-foreground font-display tracking-tight mb-4">
-                  {notice.detailsTitle}
-                </h2>
-
-                <div className="space-y-3.5 mb-6">
-                  {notice.topics.map((item) => (
-                    <div key={item.t} className="flex gap-3">
-                      <div className="w-1 rounded-full bg-primary/40 flex-shrink-0 mt-1 mb-1" />
-                      <div>
-                        <p className="text-[13px] font-semibold text-foreground leading-snug">
-                          {item.t}
-                        </p>
-                        <p className="text-[12px] text-muted-foreground leading-relaxed mt-0.5">
-                          {item.d}
-                        </p>
-                      </div>
-                    </div>
+                <div className="space-y-6">
+                  {notice.topics.map((item, i) => (
+                    <motion.div
+                      key={item.t}
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.05 + i * 0.05 }}
+                      className="border-t border-border pt-4"
+                    >
+                      <p className="text-[14px] font-semibold text-foreground leading-snug mb-1">
+                        {item.t}
+                      </p>
+                      <p className="text-[13px] text-muted-foreground leading-relaxed">
+                        {item.d}
+                      </p>
+                    </motion.div>
                   ))}
                 </div>
 
-                <p className="text-[12px] text-muted-foreground leading-relaxed border-t border-border pt-4 mb-5">
+                <p className="text-[12.5px] text-muted-foreground leading-relaxed border-t border-border pt-6 mt-8">
                   {notice.footer}
                 </p>
-
-                <button
-                  type="button"
-                  onClick={close}
-                  className="w-full h-11 rounded-xl bg-foreground text-background text-[14px] font-semibold active:scale-[0.97] transition-transform"
-                >
-                  Entendi
-                </button>
               </div>
-            )}
-          </motion.div>
+            </motion.div>
+          )}
         </motion.div>
       )}
     </AnimatePresence>,
