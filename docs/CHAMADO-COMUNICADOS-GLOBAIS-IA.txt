@@ -1,0 +1,543 @@
+═══════════════════════════════════════════════════════════════════════════════
+CHAMADO DE IMPLEMENTAÇÃO — SISTEMA DE COMUNICADOS MULTI-APP COM IA
+Origem: App Cliente DUB (projeto atual)  •  Destino: demais projetos (Barbeiro / TI)
+Versão: 1.0  •  Tipo: Nova funcionalidade  •  Prioridade: Alta
+═══════════════════════════════════════════════════════════════════════════════
+
+────────────────────────────────────────────────────────────────────────────────
+1. OBJETIVO
+────────────────────────────────────────────────────────────────────────────────
+Criar um sistema centralizado de COMUNICADOS onde:
+
+1. No painel de TI/Admin, escrevemos um aviso em texto livre ("do jeito que sai
+   da cabeça", sem formatação).
+2. Uma IA (Lovable AI Gateway) REESCREVE e ESTRUTURA esse aviso automaticamente
+   no formato exato exigido pela tela de notificação (eyebrow, título, resumo,
+   tópicos, rodapé).
+3. Escolhemos o PÚBLICO-ALVO: todos os apps, só app do BARBEIRO, só app do
+   CLIENTE — e opcionalmente uma barbearia (tenant) específica ou todas.
+4. O aviso aparece nos apps selecionados EXATAMENTE com o mesmo visual já
+   implementado no app cliente (card minimalista com blur iOS + tela cheia de
+   detalhes).
+
+REGRA DE OURO: o componente visual deve ser IDÊNTICO ao do app cliente. Copiar
+o código da seção 6 sem alterar espaçamentos, tamanhos de fonte, blur, raios de
+borda ou animações. Nada de "melhorar o design".
+
+────────────────────────────────────────────────────────────────────────────────
+2. ARQUITETURA (camadas)
+────────────────────────────────────────────────────────────────────────────────
+[USUÁRIO TI]
+  └─ Painel Admin → formulário "Novo comunicado" (texto bruto + público-alvo)
+        │
+[FRONTEND ADMIN]
+  └─ chama Edge Function `format-notice-ai` (preview) → mostra resultado
+  └─ salva registro em `comunicados` (status: rascunho | publicado)
+        │
+[BACKEND — SUPABASE EDGE FUNCTIONS (Deno)]
+  ├─ format-notice-ai : recebe texto bruto → IA → JSON estruturado
+  └─ (opcional) publish-notice : valida permissão de admin e publica
+        │
+[BANCO — SUPABASE]
+  └─ tabela `comunicados` + tabela `comunicados_leituras` (opcional)
+  └─ RLS: leitura pública apenas de comunicados PUBLICADOS e dentro da vigência
+        │
+[APPS CLIENTE / BARBEIRO]
+  └─ hook `useActiveNotice(app, tenantId)` → busca comunicado ativo
+  └─ componente `NoticeModal` (código idêntico ao da seção 6)
+  └─ controle de exibição: sessionStorage por `notice.id`
+
+────────────────────────────────────────────────────────────────────────────────
+3. BANCO DE DADOS (migration)
+────────────────────────────────────────────────────────────────────────────────
+-- Público-alvo do comunicado
+CREATE TYPE public.notice_audience AS ENUM ('all', 'cliente', 'barbeiro');
+CREATE TYPE public.notice_status   AS ENUM ('draft', 'published', 'archived');
+
+CREATE TABLE public.comunicados (
+  id             uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id      uuid NULL,                    -- NULL = todas as barbearias
+  audience       public.notice_audience NOT NULL DEFAULT 'all',
+  status         public.notice_status   NOT NULL DEFAULT 'draft',
+
+  raw_input      text NOT NULL,                -- texto cru digitado no TI
+  eyebrow        text NOT NULL DEFAULT 'Comunicado',
+  title          text NOT NULL,
+  summary        text NOT NULL,
+  details_title  text NOT NULL,
+  topics         jsonb NOT NULL DEFAULT '[]'::jsonb,  -- [{t, d}, ...]
+  footer         text NOT NULL DEFAULT '',
+
+  starts_at      timestamptz NOT NULL DEFAULT now(),
+  ends_at        timestamptz NULL,
+  created_by     uuid NULL,
+  created_at     timestamptz NOT NULL DEFAULT now(),
+  updated_at     timestamptz NOT NULL DEFAULT now()
+);
+
+-- GRANTS obrigatórios (PostgREST não concede por padrão)
+GRANT SELECT ON public.comunicados TO anon;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.comunicados TO authenticated;
+GRANT ALL ON public.comunicados TO service_role;
+
+ALTER TABLE public.comunicados ENABLE ROW LEVEL SECURITY;
+
+-- Leitura: qualquer um vê apenas comunicados PUBLICADOS e vigentes
+CREATE POLICY "comunicados_publicos_leitura"
+ON public.comunicados FOR SELECT
+USING (
+  status = 'published'
+  AND starts_at <= now()
+  AND (ends_at IS NULL OR ends_at > now())
+);
+
+-- Escrita: somente admin (usar a função has_role já existente no projeto)
+CREATE POLICY "comunicados_admin_total"
+ON public.comunicados FOR ALL
+TO authenticated
+USING (public.has_role(auth.uid(), 'admin'))
+WITH CHECK (public.has_role(auth.uid(), 'admin'));
+
+CREATE INDEX idx_comunicados_ativos
+  ON public.comunicados (status, audience, tenant_id, starts_at DESC);
+
+OBSERVAÇÃO DE SEGURANÇA: nunca permitir INSERT/UPDATE por usuário comum. O
+texto do comunicado é renderizado como TEXTO PURO (nunca dangerouslySetInnerHTML).
+
+────────────────────────────────────────────────────────────────────────────────
+4. EDGE FUNCTION — `format-notice-ai` (o "cérebro" da funcionalidade)
+────────────────────────────────────────────────────────────────────────────────
+Caminho: supabase/functions/format-notice-ai/index.ts
+Provider: Lovable AI Gateway (https://ai.gateway.lovable.dev/v1)
+Secret:   LOVABLE_API_KEY (server-side, NUNCA no frontend)
+Modelo sugerido: google/gemini-3.6-flash (rápido, barato, ótimo em PT-BR)
+
+O QUE ENVIAMOS PARA A IA:
+  • system prompt (regras de escrita e formato — seção 5)
+  • o texto bruto digitado pelo TI
+  • o público-alvo (cliente | barbeiro | all) para ajustar o tom
+  • o nome da barbearia/app quando existir
+
+O QUE A IA DEVOLVE (JSON estrito):
+  { eyebrow, title, summary, detailsTitle, topics: [{t, d}], footer }
+
+CÓDIGO:
+
+import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
+
+const SYSTEM_PROMPT = `Você é redator oficial de comunicados de um aplicativo de
+barbearia. Recebe um aviso escrito de forma informal e o transforma em um
+comunicado curto, elegante e profissional em português do Brasil.
+
+REGRAS:
+- Tom sóbrio, respeitoso e direto. Sem emojis. Sem exclamações exageradas.
+- Sem jargão técnico. Frases curtas. Nada de "prezado cliente" ou clichês.
+- NÃO invente datas, valores, políticas ou informações que não estejam no texto.
+- Se o público for "barbeiro", fale com o profissional (operação, agenda, repasse).
+  Se for "cliente", fale com o usuário final (atendimento, agendamento, valores).
+- Limites: title até 34 caracteres; summary até 220 caracteres;
+  cada topics[].t até 42 caracteres; cada topics[].d até 190 caracteres;
+  footer até 200 caracteres. Entre 2 e 5 tópicos.
+- eyebrow: uma palavra ou expressão curta (ex.: "Comunicado", "Atualização",
+  "Manutenção", "Novidade").
+- detailsTitle: título da tela cheia, pode citar a data/contexto principal.
+- Responda SOMENTE com JSON válido, sem markdown e sem comentários.`;
+
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  try {
+    const { rawInput, audience = "all", appName = "" } = await req.json();
+    if (!rawInput || typeof rawInput !== "string" || rawInput.trim().length < 10) {
+      return new Response(JSON.stringify({ error: "Texto do aviso muito curto." }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Lovable-API-Key": Deno.env.get("LOVABLE_API_KEY")!,
+      },
+      body: JSON.stringify({
+        model: "google/gemini-3.6-flash",
+        messages: [
+          { role: "system", content: SYSTEM_PROMPT },
+          { role: "user", content:
+              `Público-alvo: ${audience}\nAplicativo/Barbearia: ${appName || "não informado"}\n` +
+              `Aviso original:\n"""\n${rawInput.trim().slice(0, 4000)}\n"""` },
+        ],
+        response_format: {
+          type: "json_schema",
+          json_schema: {
+            name: "notice",
+            schema: {
+              type: "object",
+              additionalProperties: false,
+              properties: {
+                eyebrow:      { type: "string" },
+                title:        { type: "string" },
+                summary:      { type: "string" },
+                detailsTitle: { type: "string" },
+                topics: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    additionalProperties: false,
+                    properties: { t: { type: "string" }, d: { type: "string" } },
+                    required: ["t", "d"],
+                  },
+                },
+                footer: { type: "string" },
+              },
+              required: ["eyebrow","title","summary","detailsTitle","topics","footer"],
+            },
+          },
+        },
+      }),
+    });
+
+    if (res.status === 429)
+      return new Response(JSON.stringify({ error: "Limite de uso da IA atingido. Tente novamente em instantes." }),
+        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    if (res.status === 402)
+      return new Response(JSON.stringify({ error: "Créditos de IA esgotados. Adicione créditos no workspace." }),
+        { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    if (!res.ok)
+      return new Response(JSON.stringify({ error: "Falha ao formatar o comunicado." }),
+        { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+
+    const data = await res.json();
+    const notice = JSON.parse(data.choices[0].message.content);
+
+    // Clamp de segurança (a IA pode estourar limites)
+    const cut = (s: string, n: number) => String(s ?? "").trim().slice(0, n);
+    const out = {
+      eyebrow:      cut(notice.eyebrow, 24) || "Comunicado",
+      title:        cut(notice.title, 34),
+      summary:      cut(notice.summary, 220),
+      detailsTitle: cut(notice.detailsTitle, 90),
+      topics:       (notice.topics ?? []).slice(0, 5)
+                      .map((x: any) => ({ t: cut(x.t, 42), d: cut(x.d, 190) })),
+      footer:       cut(notice.footer, 200),
+    };
+
+    return new Response(JSON.stringify(out),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  } catch (e) {
+    console.error("format-notice-ai", e);
+    return new Response(JSON.stringify({ error: "Erro inesperado ao processar o aviso." }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  }
+});
+
+FLUXO NO PAINEL DE TI:
+  1. TI digita o aviso bruto e escolhe público-alvo (+ tenant opcional + vigência).
+  2. Botão "Gerar com IA" → invoca `format-notice-ai` → mostra PREVIEW usando o
+     PRÓPRIO componente NoticeModal (WYSIWYG real, não um mock).
+  3. TI pode editar manualmente qualquer campo antes de publicar.
+  4. Botão "Publicar" → INSERT em `comunicados` com status = 'published'.
+
+────────────────────────────────────────────────────────────────────────────────
+5. CONTRATO DE DADOS (o que a IA precisa devolver)
+────────────────────────────────────────────────────────────────────────────────
+{
+  "eyebrow":      "Comunicado",                       // ≤ 24 chars
+  "title":        "Reajuste de valores",              // ≤ 34 chars
+  "summary":      "A partir do dia 20 de agosto...",  // ≤ 220 chars
+  "detailsTitle": "O que muda a partir de 20 de agosto",
+  "topics": [ { "t": "Título curto", "d": "Descrição objetiva." } ],  // 2 a 5
+  "footer":       "Obrigado pela confiança..."        // ≤ 200 chars
+}
+
+────────────────────────────────────────────────────────────────────────────────
+6. COMPONENTE VISUAL — COPIAR IDÊNTICO
+────────────────────────────────────────────────────────────────────────────────
+Caminho sugerido no projeto destino: src/components/shared/NoticeModal.tsx
+Dependências: framer-motion, lucide-react, react-dom (createPortal).
+Requisito: design system com tokens semânticos (--background, --foreground,
+--card, --border, --muted-foreground). NÃO usar cores fixas.
+
+Diferença em relação ao código atual do app cliente: o conteúdo deixa de vir de
+uma constante local e passa a vir do banco (props). O restante é IDÊNTICO.
+
+--------------------------- INÍCIO DO CÓDIGO -----------------------------------
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
+import { motion, AnimatePresence } from "framer-motion";
+import { AlertTriangle, X, ChevronRight } from "lucide-react";
+
+export interface NoticeTopic { t: string; d: string; }
+
+export interface AppNotice {
+  id: string;
+  eyebrow: string;
+  title: string;
+  summary: string;
+  detailsTitle: string;
+  topics: NoticeTopic[];
+  footer: string;
+}
+
+interface NoticeModalProps {
+  notice?: AppNotice | null;
+  /** chave de persistência; padrão sessionStorage (1x por sessão) */
+  storage?: "session" | "local";
+}
+
+export function NoticeModal({ notice, storage = "session" }: NoticeModalProps) {
+  const [open, setOpen] = useState(false);
+  const [details, setDetails] = useState(false);
+  const store = storage === "local" ? window.localStorage : window.sessionStorage;
+
+  useEffect(() => {
+    if (!notice) return;
+    if (store.getItem(`app:aviso:${notice.id}`)) return;
+    const t = setTimeout(() => setOpen(true), 700);
+    return () => clearTimeout(t);
+  }, [notice]);
+
+  useEffect(() => {
+    if (!open) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = prev; };
+  }, [open]);
+
+  if (!notice) return null;
+
+  const close = () => {
+    store.setItem(`app:aviso:${notice.id}`, "1");
+    setOpen(false);
+  };
+
+  return createPortal(
+    <AnimatePresence>
+      {open && (
+        <motion.div
+          key="app-notice"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.22 }}
+          className="fixed inset-0 flex items-center justify-center px-5"
+          style={{
+            zIndex: 9998,
+            background: "hsl(var(--foreground) / 0.28)",
+            backdropFilter: "blur(18px) saturate(140%)",
+            WebkitBackdropFilter: "blur(18px) saturate(140%)",
+          }}
+          onClick={details ? undefined : close}
+        >
+          {!details ? (
+            /* ---------- Card compacto ---------- */
+            <motion.div
+              initial={{ opacity: 0, y: 14, scale: 0.97 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 8, scale: 0.98 }}
+              transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+              onClick={(e) => e.stopPropagation()}
+              className="relative w-full max-w-[340px] rounded-[26px] border border-border/70 bg-card px-7 pt-9 pb-7 text-center"
+              style={{ boxShadow: "0 30px 70px -24px hsl(var(--foreground) / 0.4)" }}
+            >
+              <button
+                type="button"
+                onClick={close}
+                aria-label="Fechar"
+                className="absolute top-3 right-3 p-2 rounded-full text-muted-foreground/70 active:scale-90 transition-transform"
+              >
+                <X className="w-[18px] h-[18px]" strokeWidth={2.2} />
+              </button>
+
+              <AlertTriangle
+                className="w-9 h-9 mx-auto mb-5"
+                strokeWidth={1.6}
+                style={{ color: "hsl(38 96% 48%)" }}
+              />
+
+              <p className="text-[9.5px] font-semibold text-muted-foreground/55 uppercase tracking-[0.24em] mb-2.5">
+                {notice.eyebrow}
+              </p>
+              <h2 className="text-[19px] font-semibold text-foreground font-display tracking-tight mb-3">
+                {notice.title}
+              </h2>
+              <p className="text-[13px] text-muted-foreground leading-relaxed mb-7">
+                {notice.summary}
+              </p>
+
+              <button
+                type="button"
+                onClick={() => setDetails(true)}
+                className="w-full h-12 rounded-2xl bg-foreground text-background text-[14px] font-semibold flex items-center justify-center gap-1 active:scale-[0.97] transition-transform"
+              >
+                Saiba mais sobre as mudanças
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </motion.div>
+          ) : (
+            /* ---------- Tela cheia de detalhes ---------- */
+            <motion.div
+              key="details"
+              initial={{ opacity: 0, y: 24 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 16 }}
+              transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+              onClick={(e) => e.stopPropagation()}
+              className="fixed inset-0 bg-background flex flex-col"
+            >
+              <div className="flex-shrink-0 flex items-center justify-end h-14 px-2 pt-[env(safe-area-inset-top)]">
+                <button
+                  type="button"
+                  onClick={close}
+                  aria-label="Fechar"
+                  className="p-2.5 rounded-full text-muted-foreground active:scale-90 transition-transform"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-6 pb-[calc(env(safe-area-inset-bottom)+2rem)]">
+                <AlertTriangle
+                  className="w-8 h-8 mb-5"
+                  strokeWidth={1.6}
+                  style={{ color: "hsl(38 96% 48%)" }}
+                />
+                <h1 className="text-[22px] font-semibold text-foreground font-display tracking-tight leading-tight mb-2">
+                  {notice.detailsTitle}
+                </h1>
+                <p className="text-[13px] text-muted-foreground leading-relaxed mb-8">
+                  {notice.summary}
+                </p>
+
+                <div className="space-y-6">
+                  {notice.topics.map((item, i) => (
+                    <motion.div
+                      key={item.t}
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.05 + i * 0.05 }}
+                      className="border-t border-border pt-4"
+                    >
+                      <p className="text-[14px] font-semibold text-foreground leading-snug mb-1">
+                        {item.t}
+                      </p>
+                      <p className="text-[13px] text-muted-foreground leading-relaxed">
+                        {item.d}
+                      </p>
+                    </motion.div>
+                  ))}
+                </div>
+
+                <p className="text-[12.5px] text-muted-foreground leading-relaxed border-t border-border pt-6 mt-8">
+                  {notice.footer}
+                </p>
+              </div>
+            </motion.div>
+          )}
+        </motion.div>
+      )}
+    </AnimatePresence>,
+    document.body
+  );
+}
+---------------------------- FIM DO CÓDIGO -------------------------------------
+
+DETALHES VISUAIS QUE NÃO PODEM MUDAR:
+  • Backdrop: hsl(var(--foreground)/0.28) + blur(18px) saturate(140%) (iOS glass).
+  • Card: max-w 340px, rounded-[26px], px-7 pt-9 pb-7, sombra 0 30px 70px -24px.
+  • Somente o X fecha (não existe botão "Entendi"), sem seta de voltar na tela cheia.
+  • Ícone AlertTriangle solto, sem fundo, strokeWidth 1.6, cor hsl(38 96% 48%).
+  • Eyebrow em caixa alta 9.5px tracking 0.24em.
+  • Delay de 700ms para abrir; body com overflow hidden enquanto aberto.
+  • Exibição 1x por sessão via sessionStorage com chave pelo id do comunicado.
+
+────────────────────────────────────────────────────────────────────────────────
+7. HOOK DE BUSCA DO COMUNICADO ATIVO
+────────────────────────────────────────────────────────────────────────────────
+src/hooks/useActiveNotice.ts
+
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import type { AppNotice } from "@/components/shared/NoticeModal";
+
+/** app: "cliente" | "barbeiro" — deve corresponder ao projeto atual. */
+export function useActiveNotice(app: "cliente" | "barbeiro", tenantId?: string | null) {
+  return useQuery({
+    queryKey: ["comunicado-ativo", app, tenantId],
+    staleTime: 5 * 60 * 1000,
+    queryFn: async (): Promise<AppNotice | null> => {
+      let q = supabase
+        .from("comunicados")
+        .select("id, eyebrow, title, summary, details_title, topics, footer, tenant_id")
+        .eq("status", "published")
+        .in("audience", ["all", app])
+        .lte("starts_at", new Date().toISOString())
+        .order("starts_at", { ascending: false })
+        .limit(10);
+
+      const { data, error } = await q;
+      if (error || !data?.length) return null;
+
+      // prioriza comunicado específico do tenant; senão o global (tenant_id null)
+      const row = data.find((r) => tenantId && r.tenant_id === tenantId)
+               ?? data.find((r) => r.tenant_id === null);
+      if (!row) return null;
+
+      return {
+        id: row.id,
+        eyebrow: row.eyebrow,
+        title: row.title,
+        summary: row.summary,
+        detailsTitle: row.details_title,
+        topics: (row.topics as any) ?? [],
+        footer: row.footer,
+      };
+    },
+  });
+}
+
+USO NA PÁGINA PRINCIPAL DO APP:
+  const { data: notice } = useActiveNotice("barbeiro", tenantId);
+  ...
+  <NoticeModal notice={notice} />
+
+────────────────────────────────────────────────────────────────────────────────
+8. TELA DE TI — "NOVO COMUNICADO" (requisitos funcionais)
+────────────────────────────────────────────────────────────────────────────────
+Campos:
+  • Aviso (textarea grande, texto livre) — obrigatório, mín. 10 caracteres.
+  • Público-alvo: [ Todos os apps ] [ App do Barbeiro ] [ App do Cliente ]
+    (segmented control, seleção única).
+  • Barbearia: [ Todas ] ou seleção de tenant específico.
+  • Vigência: início (padrão agora) e fim (opcional).
+Ações:
+  • "Gerar com IA" → format-notice-ai → preenche os campos estruturados.
+  • Campos estruturados ficam EDITÁVEIS após a geração.
+  • "Pré-visualizar" → abre o NoticeModal real com os dados atuais.
+  • "Publicar" / "Arquivar" / "Editar" na listagem de comunicados.
+Estados: loading no botão de IA, toast de erro para 429 (limite) e 402 (créditos).
+
+────────────────────────────────────────────────────────────────────────────────
+9. SEGURANÇA (obrigatório)
+────────────────────────────────────────────────────────────────────────────────
+  • LOVABLE_API_KEY somente na Edge Function. Nunca com prefixo VITE_.
+  • Escrita em `comunicados` restrita a admin via RLS + has_role (tabela de roles
+    separada; nunca role no perfil).
+  • Renderizar sempre como texto puro — proibido dangerouslySetInnerHTML.
+  • Validar o body da Edge Function (tipo, tamanho máximo 4000 caracteres).
+  • Respeitar isolamento por tenant_id nas consultas do app.
+
+────────────────────────────────────────────────────────────────────────────────
+10. CRITÉRIOS DE ACEITE
+────────────────────────────────────────────────────────────────────────────────
+[ ] Tabela `comunicados` criada com GRANTs, RLS e políticas de admin.
+[ ] Edge Function `format-notice-ai` respondendo JSON válido e com clamps.
+[ ] Painel TI cria, pré-visualiza, edita e publica comunicados.
+[ ] Público-alvo funciona: comunicado do cliente não aparece no app do barbeiro.
+[ ] Comunicado por tenant tem prioridade sobre o global.
+[ ] Visual 100% idêntico ao app cliente (card + tela cheia, blur, só X).
+[ ] Aviso aparece 1x por sessão e reaparece quando um novo comunicado é publicado.
+[ ] Erros 429/402 da IA exibidos com mensagem clara no painel.
+
+═══════════════════════════════════════════════════════════════════════════════
+FIM DO CHAMADO
+═══════════════════════════════════════════════════════════════════════════════
