@@ -229,10 +229,13 @@ export function useSlotAvailability(
     }
     abortControllerRef.current = new AbortController();
 
-    // Sempre mostrar loading enquanto busca — evita mensagem "agenda cheia"
-    // aparecer durante o carregamento (usando slots vazios/stale).
-    setLoading(true);
+    // Só mostrar loading no load inicial (ou quando forçado). Atualizações
+    // silenciosas via polling/realtime não devem piscar spinner na UI.
+    if (isInitialLoadRef.current || forceFullUpdate) {
+      setLoading(true);
+    }
     setError(null);
+
 
 
     const dateStr = format(selectedDate, 'yyyy-MM-dd');
@@ -684,10 +687,11 @@ export function useSlotAvailability(
 
     channelRef.current = channel;
 
-    // Polling de backup (a cada 10 segundos) - usa partial updates
+    // Polling de backup (a cada 30 segundos) - silencioso, sem spinner
     pollIntervalRef.current = setInterval(() => {
       loadSlots(false);
-    }, 10000);
+    }, 30000);
+
 
     return () => {
       if (channelRef.current) {
