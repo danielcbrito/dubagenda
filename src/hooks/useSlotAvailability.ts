@@ -687,10 +687,11 @@ export function useSlotAvailability(
 
     channelRef.current = channel;
 
-    // Polling de backup (a cada 10 segundos) - usa partial updates
+    // Polling de backup (a cada 30 segundos) - silencioso, sem spinner
     pollIntervalRef.current = setInterval(() => {
       loadSlots(false);
-    }, 10000);
+    }, 30000);
+
 
     return () => {
       if (channelRef.current) {
