@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { AlertTriangle, X, ChevronRight, ArrowLeft } from "lucide-react";
+import { AlertTriangle, X, ChevronRight } from "lucide-react";
 
 /** ID da Barbearia DUB (matriz). */
 const TENANT_DUB = "73d61f2f-b369-41f3-8915-8e6de52d6378";
@@ -173,18 +173,7 @@ export function PriceUpdateNoticeModal({ tenantId }: PriceUpdateNoticeModalProps
               onClick={(e) => e.stopPropagation()}
               className="fixed inset-0 bg-background flex flex-col"
             >
-              <div className="flex-shrink-0 flex items-center h-14 px-2 pt-[env(safe-area-inset-top)]">
-                <button
-                  type="button"
-                  onClick={() => setDetails(false)}
-                  aria-label="Voltar"
-                  className="p-2.5 rounded-full text-foreground active:scale-90 transition-transform"
-                >
-                  <ArrowLeft className="w-5 h-5" />
-                </button>
-                <span className="mx-auto text-[9.5px] font-semibold text-muted-foreground/55 uppercase tracking-[0.24em]">
-                  {notice.eyebrow}
-                </span>
+              <div className="flex-shrink-0 flex items-center justify-end h-14 px-2 pt-[env(safe-area-inset-top)]">
                 <button
                   type="button"
                   onClick={close}
