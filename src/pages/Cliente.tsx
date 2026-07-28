@@ -19,6 +19,7 @@ import { WalletSheet } from "@/components/WalletSheet";
 import { AnnouncementDialog } from "@/components/AnnouncementDialog";
 import { CancelledAppointmentBanner } from "@/components/CancelledAppointmentBanner";
 import { AnnouncementModal } from "@/components/AnnouncementModal";
+import { PriceUpdateNoticeModal } from "@/components/client/PriceUpdateNoticeModal";
 import { AppointmentHistorySheet } from "@/components/AppointmentHistorySheet";
 
 // Premium components
@@ -1312,6 +1313,9 @@ const Cliente = () => {
 
       {/* Announcement Dialog */}
       <AnnouncementDialog />
+
+      {/* Aviso de reajuste de valores */}
+      <PriceUpdateNoticeModal />
 
       {/* History Sheet */}
       <AppointmentHistorySheet
