@@ -40,7 +40,7 @@ function NavItem({ icon: Icon, label, isActive, onClick, filled, badge }: NavIte
       <div className="relative">
         <Icon
           className={`h-[26px] w-[26px] transition-all duration-200 ${
-            isActive ? "text-primary" : "text-muted-foreground/60"
+            isActive ? "text-primary" : "text-foreground"
           }`}
           strokeWidth={isActive ? 2.2 : 1.8}
           fill={filled && isActive ? "currentColor" : "none"}
