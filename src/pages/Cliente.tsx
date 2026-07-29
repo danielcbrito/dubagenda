@@ -9,6 +9,7 @@ import { useBlockedBarbers } from "@/hooks/useBlockedBarbers";
 
 import { supabase } from "@/integrations/supabase/client";
 import { getVerifiedAuthUser } from "@/utils/authSession";
+import { useAuth } from "@/contexts/AuthProvider";
 
 import { PointsDetailModal } from "@/components/PointsDetailModal";
 import { PendingPaymentCard } from "@/components/PendingPaymentCard";
@@ -340,7 +341,8 @@ const Cliente = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  const [user, setUser] = useState<any>(null);
+  // Auth síncrona: usuário disponível no primeiro render (sem waterfall de rede).
+  const { user, hydrated, verified } = useAuth();
 
   // ─── Profile via useQuery (Layer 1) ───
   const {
@@ -623,9 +625,9 @@ const Cliente = () => {
     }
   }, [eligibleReviews, dataLoaded]);
 
-  useEffect(() => {
-    checkAuth();
-  }, []);
+
+
+
 
   // Helper: update channel status and derive overall connection state
   const updateChannelStatus = useCallback((channelName: string, connected: boolean) => {
@@ -865,16 +867,11 @@ const Cliente = () => {
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, [user, invalidateAppointments, invalidateLoyalty, invalidateShop]);
 
-  const checkAuth = async () => {
-    const user = await getVerifiedAuthUser();
+  // Redireciona apenas quando a sessão foi confirmada como ausente.
+  useEffect(() => {
+    if (hydrated && verified && !user) navigate("/auth");
+  }, [hydrated, verified, user, navigate]);
 
-    if (!user) {
-      navigate("/auth");
-      return;
-    }
-
-    setUser(user);
-  };
 
 
   const handleLogout = async () => {

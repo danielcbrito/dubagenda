@@ -14,5 +14,22 @@ export default defineConfig(({ mode }) => ({
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
+    dedupe: ["react", "react-dom", "@tanstack/react-query", "@tanstack/query-core"],
+  },
+  build: {
+    target: "es2020",
+    cssCodeSplit: true,
+    rollupOptions: {
+      output: {
+        // Vendors estáveis em chunks separados → cache longo no navegador
+        manualChunks: {
+          "vendor-react": ["react", "react-dom", "react-router-dom"],
+          "vendor-query": ["@tanstack/react-query"],
+          "vendor-supabase": ["@supabase/supabase-js"],
+          "vendor-motion": ["framer-motion"],
+          "vendor-map": ["leaflet"],
+        },
+      },
+    },
   },
 }));

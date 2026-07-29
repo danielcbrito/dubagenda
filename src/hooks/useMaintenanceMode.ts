@@ -22,14 +22,28 @@ interface MaintenanceStatus {
  * - Se falhar (ex: RLS), faz fallback para a RPC `get_maintenance_status`.
  * - Mantém sincronizado via Realtime + polling de segurança (principalmente para destravar ao desativar).
  */
+const MAINT_CACHE_KEY = 'dub_maintenance_cache_v1';
+
+/** Lê o último status conhecido (síncrono) para não bloquear o primeiro paint. */
+function readMaintenanceCache(): MaintenanceStatus | null {
+  try {
+    const raw = localStorage.getItem(MAINT_CACHE_KEY);
+    return raw ? (JSON.parse(raw) as MaintenanceStatus) : null;
+  } catch {
+    return null;
+  }
+}
+
 export function useMaintenanceMode() {
-  const [isMaintenanceMode, setIsMaintenanceMode] = useState(false);
-  const [maintenanceMessage, setMaintenanceMessage] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const cached = typeof window !== 'undefined' ? readMaintenanceCache() : null;
+  const [isMaintenanceMode, setIsMaintenanceMode] = useState(!!cached?.manutencao_ativa);
+  const [maintenanceMessage, setMaintenanceMessage] = useState<string | null>(cached?.manutencao_mensagem ?? null);
+  // Se já temos um status em cache, o app renderiza imediatamente e revalida atrás.
+  const [isLoading, setIsLoading] = useState(!cached);
   const [isAllowedUser, setIsAllowedUser] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [warningActive, setWarningActive] = useState(false);
-  const [warningMessage, setWarningMessage] = useState<string | null>(null);
+  const [warningActive, setWarningActive] = useState(!!cached?.manutencao_aviso_ativo);
+  const [warningMessage, setWarningMessage] = useState<string | null>(cached?.manutencao_aviso_mensagem ?? null);
   const [scheduledStart, setScheduledStart] = useState<Date | null>(null);
   const [scheduledEnd, setScheduledEnd] = useState<Date | null>(null);
 
@@ -80,6 +94,11 @@ export function useMaintenanceMode() {
   }, []);
 
   const processMaintenanceData = (status: MaintenanceStatus) => {
+    try {
+      localStorage.setItem(MAINT_CACHE_KEY, JSON.stringify(status));
+    } catch {
+      /* ignore quota */
+    }
     const now = new Date();
 
     // Verifica manutenção manual

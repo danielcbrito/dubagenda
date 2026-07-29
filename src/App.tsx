@@ -1,11 +1,14 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { HelmetProvider } from "react-helmet-async";
 import { ThemeProvider } from "next-themes";
 import { SplashScreen } from "@/components/SplashScreen";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { queryClient, setupQueryPersistence, clearPersistedCache } from "@/lib/queryClient";
+import { AuthProvider, useAuth, getCachedUser } from "@/contexts/AuthProvider";
+import { prefetchClientRoutes } from "@/lib/routePrefetch";
 import { BrowserRouter, Routes, Route, useNavigate, useLocation } from "react-router-dom";
 import { useMaintenanceMode } from "@/hooks/useMaintenanceMode";
 import { useStoreMaintenanceMode } from "@/hooks/useStoreMaintenanceMode";
@@ -65,18 +68,7 @@ function PageLoader() {
   );
 }
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      refetchOnWindowFocus: true,
-      refetchOnMount: true,
-      retry: 1,
-      retryDelay: (n) => Math.min(1000 * 2 ** n, 10000),
-      staleTime: 2 * 60 * 1000, // 2 min default
-    },
-    mutations: { retry: 0 },
-  },
-});
+setupQueryPersistence();
 
 // Routes that are always accessible (before login)
 const PUBLIC_ROUTES = [
@@ -192,33 +184,15 @@ function StoreMaintenanceGate({ children }: { children: React.ReactNode }) {
 }
 
 /**
- * Limpa sessões inválidas automaticamente para evitar loops de erro
+ * Limpa o cache (memória + persistido) no logout e faz prefetch das rotas quentes.
  */
 function AuthSessionGuard({ children }: { children: React.ReactNode }) {
-  const navigate = useNavigate();
-  const location = useLocation();
-
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'TOKEN_REFRESHED') {
-        console.log('[Auth] Token renovado com sucesso');
-      }
-      if (event === 'SIGNED_OUT') {
-        console.log('[Auth] Usuário fez logout');
-        queryClient.clear();
-      }
-      if (event === 'SIGNED_IN') {
-        console.log('[Auth] Sessão restaurada/login');
-      }
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'SIGNED_OUT') clearPersistedCache();
     });
 
-    getVerifiedAuthUser().then((user) => {
-      if (user) {
-        console.log('[Auth] Sessão válida encontrada');
-      } else {
-        queryClient.clear();
-      }
-    });
+    prefetchClientRoutes();
 
     return () => subscription.unsubscribe();
   }, []);
@@ -226,75 +200,43 @@ function AuthSessionGuard({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+const PUBLIC_PREFIXES = ['/auth', '/b/', '/i/', '/barbearia-dub/'];
+const PUBLIC_EXACT = [
+  '/esqueci-senha', '/resetar-senha', '/verificar-email', '/verificar-whatsapp',
+  '/escolher-verificacao', '/escolher-barbearia', '/completar-perfil',
+  '/flowchart', '/responsive-preview',
+];
+const RESERVED_SEGMENTS = ['cliente', 'suporte', 'admin', 'auth', 'barbearias', 'b', 'i', 'escolher-barbearia', 'escolher-verificacao', 'verificar-email', 'verificar-whatsapp', 'completar-perfil', 'esqueci-senha', 'resetar-senha', 'flowchart', 'responsive-preview'];
+
 /**
- * Redireciona usuários logados da landing page direto para /cliente.
- * Verifica sessão ANTES de renderizar a rota.
+ * Redireciona usuários logados da landing direto para /cliente.
+ * A decisão é SÍNCRONA (sessão lida do storage) — zero tela branca.
  */
 function AuthRedirectGuard({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
   const location = useLocation();
-  const [ready, setReady] = useState(false);
+
+  const isPublicRoute =
+    PUBLIC_PREFIXES.some((p) => location.pathname.startsWith(p)) ||
+    PUBLIC_EXACT.includes(location.pathname);
+
+  const segments = location.pathname.split('/').filter(Boolean);
+  const isBarbershopSlug = (segments.length === 1 || segments.length === 2) &&
+    !RESERVED_SEGMENTS.includes(segments[0]);
+
+  const shouldRedirect =
+    !isPublicRoute && !isBarbershopSlug && location.pathname === '/' && !!getCachedUser();
 
   useEffect(() => {
-    // Rotas públicas que não precisam de verificação
-    const isPublicRoute =
-      location.pathname.startsWith('/auth') ||
-      location.pathname.startsWith('/b/') ||
-      location.pathname.startsWith('/i/') ||
-      location.pathname.startsWith('/barbearia-dub/') ||
-      location.pathname === '/esqueci-senha' ||
-      location.pathname === '/resetar-senha' ||
-      location.pathname === '/verificar-email' ||
-      location.pathname === '/verificar-whatsapp' ||
-      location.pathname === '/escolher-verificacao' ||
-      location.pathname === '/escolher-barbearia' ||
-      location.pathname === '/completar-perfil' ||
-      location.pathname === '/flowchart' ||
-      location.pathname === '/responsive-preview';
+    if (shouldRedirect) navigate('/cliente', { replace: true });
+  }, [shouldRedirect, navigate]);
 
-    // Rotas de barbearia pública (/:slug) e convite (/:slug/:code)
-    const segments = location.pathname.split('/').filter(Boolean);
-    const isBarbershopSlug = (segments.length === 1 || segments.length === 2) &&
-      !['cliente', 'suporte', 'admin', 'auth', 'barbearias', 'b', 'i', 'escolher-barbearia', 'escolher-verificacao', 'verificar-email', 'verificar-whatsapp', 'completar-perfil', 'esqueci-senha', 'resetar-senha', 'flowchart', 'responsive-preview'].includes(segments[0]);
-
-    if (isPublicRoute || isBarbershopSlug) {
-      setReady(true);
-      return;
-    }
-
-    // Só verifica redirect na landing page "/"
-    if (location.pathname !== '/') {
-      setReady(true);
-      return;
-    }
-
-    // Verificar sessão para redirecionar da landing
-    const check = async () => {
-      try {
-        const user = await getVerifiedAuthUser();
-        if (user) {
-          navigate('/cliente', { replace: true });
-          return;
-        }
-      } catch {
-        // Ignora erro — mostra landing normalmente
-      }
-      setReady(true);
-    };
-
-    check();
-  }, [location.pathname]);
-
-  if (!ready) {
-    return (
-      <div className="fixed inset-0 bg-background flex items-center justify-center">
-        <div className="w-8 h-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
-      </div>
-    );
-  }
+  if (shouldRedirect) return null;
 
   return <>{children}</>;
 }
+
+
 
 function ScrollLockGuard() {
   const location = useLocation();
@@ -430,10 +372,17 @@ function ThemeColorSync() {
 }
 
 function AppWithSplash() {
-  const [showSplash, setShowSplash] = useState(true);
+  // Splash só na primeira abertura da sessão do navegador — navegações
+  // internas e reloads na mesma sessão entram direto (zero espera).
+  const firstOpen = useRef(
+    typeof window !== "undefined" && !sessionStorage.getItem("dub_splash_shown")
+  );
+  const [showSplash, setShowSplash] = useState(firstOpen.current);
 
   useEffect(() => {
-    const timer = setTimeout(() => setShowSplash(false), 2000);
+    if (!firstOpen.current) return;
+    sessionStorage.setItem("dub_splash_shown", "1");
+    const timer = setTimeout(() => setShowSplash(false), 900);
     return () => clearTimeout(timer);
   }, []);
 
@@ -452,11 +401,13 @@ const App = () => (
     <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} forcedTheme="light">
       <ThemeColorSync />
       <QueryClientProvider client={queryClient}>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <AppWithSplash />
-        </TooltipProvider>
+        <AuthProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <AppWithSplash />
+          </TooltipProvider>
+        </AuthProvider>
       </QueryClientProvider>
     </ThemeProvider>
   </HelmetProvider>
