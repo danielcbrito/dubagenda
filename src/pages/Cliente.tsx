@@ -624,7 +624,8 @@ const Cliente = () => {
     }
   }, [eligibleReviews, dataLoaded]);
 
-  useEffect(() => {
+
+
 
 
   // Helper: update channel status and derive overall connection state
