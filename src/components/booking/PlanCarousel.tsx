@@ -365,11 +365,11 @@ export function PlanCarousel({
         )}
       </div>
 
-      {/* Bottom CTA — no background separation, seamless */}
+      {/* Bottom CTA — flutua acima da barra de navegação */}
       <div
         className="flex-shrink-0"
         style={{
-          padding: "10px 20px max(env(safe-area-inset-bottom), 14px)",
+          padding: "10px 20px 12px",
         }}
       >
         <div className="max-w-md mx-auto">
