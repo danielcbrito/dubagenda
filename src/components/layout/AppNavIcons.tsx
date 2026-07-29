@@ -8,7 +8,7 @@ const baseProps: SVGProps<SVGSVGElement> = {
   viewBox: "0 0 24 24",
   fill: "none",
   stroke: "currentColor",
-  strokeWidth: 2.25,
+  strokeWidth: 2.5,
   strokeLinecap: "round",
   strokeLinejoin: "round",
 };
@@ -18,7 +18,7 @@ const detailStroke = "hsl(var(--background))";
 
 export function HomeNavIcon({ active = false, ...props }: NavIconProps) {
   const d =
-    "M4 10.35c0-.58.25-1.13.69-1.5l6.04-5.11a1.96 1.96 0 0 1 2.54 0l6.04 5.11c.44.37.69.92.69 1.5v7.78A2.87 2.87 0 0 1 17.13 21h-2.18a.95.95 0 0 1-.95-.95v-4.1a1.05 1.05 0 0 0-1.05-1.05h-1.9A1.05 1.05 0 0 0 10 15.95v4.1a.95.95 0 0 1-.95.95H6.87A2.87 2.87 0 0 1 4 18.13v-7.78Z";
+    "M3.25 10.15c0-.62.27-1.21.75-1.61l6.38-5.4a2.07 2.07 0 0 1 2.68 0l6.38 5.4c.48.4.75.99.75 1.61v8.53A3.07 3.07 0 0 1 17.12 22h-2.47a1.05 1.05 0 0 1-1.05-1.05v-4.4a1.15 1.15 0 0 0-1.15-1.15h-1.9a1.15 1.15 0 0 0-1.15 1.15v4.4A1.05 1.05 0 0 1 8.35 22H6.88A3.07 3.07 0 0 1 3.25 18.88v-8.53Z";
   return (
     <svg {...baseProps} {...props}>
       {active ? (
@@ -35,7 +35,7 @@ export function CalendarNavIcon({ active = false, ...props }: NavIconProps) {
     <svg {...baseProps} {...props}>
       {active ? (
         <>
-          <rect width="18" height="18" x="3" y="4" rx="2" fill="currentColor" stroke="currentColor" />
+          <rect width="18" height="18" x="3" y="4" rx="2.5" fill="currentColor" stroke="currentColor" />
           <path d="M8 2v4" stroke={detailStroke} />
           <path d="M16 2v4" stroke={detailStroke} />
           <path d="M3 10h18" stroke={detailStroke} />
@@ -44,7 +44,7 @@ export function CalendarNavIcon({ active = false, ...props }: NavIconProps) {
         <>
           <path d="M8 2v4" />
           <path d="M16 2v4" />
-          <rect width="18" height="18" x="3" y="4" rx="2" />
+          <rect width="18" height="18" x="3" y="4" rx="2.5" />
           <path d="M3 10h18" />
         </>
       )}
@@ -70,96 +70,70 @@ export function ProfileNavIcon({ active = false, ...props }: NavIconProps) {
     <svg {...baseProps} {...props}>
       {active ? (
         <>
-          <circle cx="12" cy="12" r="10" fill="currentColor" stroke="currentColor" />
-          <circle cx="12" cy="10" r="4" stroke={detailStroke} />
-          <path d="M18 20a6 6 0 0 0-12 0" stroke={detailStroke} />
+          <circle cx="12" cy="12" r="10.5" fill="currentColor" stroke="currentColor" />
+          <circle cx="12" cy="10" r="4.2" stroke={detailStroke} />
+          <path d="M18.2 20.2a6.2 6.2 0 0 0-12.4 0" stroke={detailStroke} />
         </>
       ) : (
         <>
-          <path d="M18 20a6 6 0 0 0-12 0" />
-          <circle cx="12" cy="10" r="4" />
-          <circle cx="12" cy="12" r="10" />
+          <path d="M18.2 20.2a6.2 6.2 0 0 0-12.4 0" />
+          <circle cx="12" cy="10" r="4.2" />
+          <circle cx="12" cy="12" r="10.5" />
         </>
       )}
     </svg>
   );
 }
 
-/** Sacola (Loja) — mesma silhueta nos dois estados; ativo preenche em vermelho. */
-export function BagNavIcon({ active = false, ...props }: NavIconProps) {
-  return (
-    <svg {...baseProps} {...props}>
-      {active ? (
-        <>
-          <path
-            d="M6 2h12l2 5v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7l2-5Z"
-            fill="currentColor"
-            stroke="currentColor"
-          />
-          <path d="M4 7h16" stroke={detailStroke} />
-          <path d="M16 11a4 4 0 0 1-8 0" stroke={detailStroke} />
-        </>
-      ) : (
-        <>
-          <path d="M6 2h12l2 5v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7l2-5Z" />
-          <path d="M4 7h16" />
-          <path d="M16 11a4 4 0 0 1-8 0" />
-        </>
-      )}
-    </svg>
-  );
-}
-
-/** Carrinho de compras (Loja) — mesma silhueta nos dois estados; ativo preenche em vermelho. */
+/** Carrinho de compras (Loja) — silhueta mais robusta e espaçada. */
 export function CartNavIcon({ active = false, ...props }: NavIconProps) {
-  const body = "M3 4h2.2a1 1 0 0 1 .98.8L6.6 7m0 0 1.5 7.2a2 2 0 0 0 1.96 1.6h7.2a2 2 0 0 0 1.96-1.57L20.6 7H6.6Z";
+  const body = "M2.8 4.2h2.4a1 1 0 0 1 .98.8L7.2 7.4m0 0 1.7 8.2a2.2 2.2 0 0 0 2.16 1.76h7.6a2.2 2.2 0 0 0 2.16-1.73L21.6 7.4H7.2Z";
   return (
     <svg {...baseProps} {...props}>
       {active ? (
         <>
-          <path d={body} fill="currentColor" stroke="currentColor" strokeWidth={2} />
-          <circle cx="10" cy="20" r="1.7" fill="currentColor" stroke="currentColor" strokeWidth={1.6} />
-          <circle cx="17.5" cy="20" r="1.7" fill="currentColor" stroke="currentColor" strokeWidth={1.6} />
+          <path d={body} fill="currentColor" stroke="currentColor" strokeWidth={2.2} />
+          <circle cx="10.2" cy="20.5" r="1.9" fill="currentColor" stroke="currentColor" strokeWidth={1.6} />
+          <circle cx="18.2" cy="20.5" r="1.9" fill="currentColor" stroke="currentColor" strokeWidth={1.6} />
         </>
       ) : (
         <>
-          <path d={body} strokeWidth={2.25} />
-          <circle cx="10" cy="20" r="1.7" strokeWidth={2.25} />
-          <circle cx="17.5" cy="20" r="1.7" strokeWidth={2.25} />
+          <path d={body} strokeWidth={2.5} />
+          <circle cx="10.2" cy="20.5" r="1.9" strokeWidth={2.5} />
+          <circle cx="18.2" cy="20.5" r="1.9" strokeWidth={2.5} />
         </>
       )}
     </svg>
   );
 }
 
-/** Tesoura — ícone estratégico para Planos de Corte. */
+/** Tesoura — ícone estratégico, mais robusto e espaçado para Planos de Corte. */
 export function PlanNavIcon({ active = false, ...props }: NavIconProps) {
   return (
     <svg {...baseProps} {...props}>
       {active ? (
         <>
           {/* Lâminas cruzadas preenchidas em vermelho */}
-          <path d="M7.5 9.2L17 18.7" stroke="currentColor" strokeWidth={3.2} strokeLinecap="round" />
-          <path d="M17 9.2L7.5 18.7" stroke="currentColor" strokeWidth={3.2} strokeLinecap="round" />
+          <path d="M7 9.5L17.5 19" stroke="currentColor" strokeWidth={3.4} strokeLinecap="round" />
+          <path d="M17.5 9.5L7 19" stroke="currentColor" strokeWidth={3.4} strokeLinecap="round" />
           {/* Parafuso central */}
-          <circle cx="12.25" cy="13.95" r="1.6" fill={detailStroke} stroke={detailStroke} />
+          <circle cx="12.25" cy="14.25" r="1.8" fill={detailStroke} stroke={detailStroke} />
           {/* Alça esquerda */}
-          <circle cx="7" cy="6.5" r="3" fill="currentColor" stroke="currentColor" strokeWidth={2} />
-          <circle cx="7" cy="6.5" r="1.6" fill={detailStroke} stroke={detailStroke} />
+          <circle cx="6.5" cy="6.5" r="3.3" fill="currentColor" stroke="currentColor" strokeWidth={2.2} />
+          <circle cx="6.5" cy="6.5" r="1.8" fill={detailStroke} stroke={detailStroke} />
           {/* Alça direita */}
-          <circle cx="17.5" cy="6.5" r="3" fill="currentColor" stroke="currentColor" strokeWidth={2} />
-          <circle cx="17.5" cy="6.5" r="1.6" fill={detailStroke} stroke={detailStroke} />
+          <circle cx="18" cy="6.5" r="3.3" fill="currentColor" stroke="currentColor" strokeWidth={2.2} />
+          <circle cx="18" cy="6.5" r="1.8" fill={detailStroke} stroke={detailStroke} />
         </>
       ) : (
         <>
-          <circle cx="7" cy="6.5" r="2.5" />
-          <circle cx="17.5" cy="6.5" r="2.5" />
-          <path d="M7.5 9.2L17 18.7" />
-          <path d="M17 9.2L7.5 18.7" />
-          <circle cx="12.25" cy="13.95" r="1.2" />
+          <circle cx="6.5" cy="6.5" r="2.8" />
+          <circle cx="18" cy="6.5" r="2.8" />
+          <path d="M7 9.5L17.5 19" />
+          <path d="M17.5 9.5L7 19" />
+          <circle cx="12.25" cy="14.25" r="1.4" />
         </>
       )}
     </svg>
   );
 }
-
