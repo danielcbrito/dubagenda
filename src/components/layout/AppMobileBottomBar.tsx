@@ -43,7 +43,7 @@ export function AppMobileBottomBar({
         style={{ height: "var(--app-bottom-nav-bleed, 0px)" }}
       />
 
-      <div className="flex items-start justify-around px-2 pt-2 pb-0">
+      <div className="flex items-start justify-around px-2 pt-1 pb-1.5">
         {items.map(({ key, label, path, end, Icon, badge }) => {
           const to = `${basePath}${path}`;
           return (
