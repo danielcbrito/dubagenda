@@ -8,7 +8,7 @@ const baseProps: SVGProps<SVGSVGElement> = {
   viewBox: "0 0 24 24",
   fill: "none",
   stroke: "currentColor",
-  strokeWidth: 2,
+  strokeWidth: 2.25,
   strokeLinecap: "round",
   strokeLinejoin: "round",
 };
@@ -117,15 +117,15 @@ export function CartNavIcon({ active = false, ...props }: NavIconProps) {
     <svg {...baseProps} {...props}>
       {active ? (
         <>
-          <path d={body} fill="currentColor" stroke="currentColor" strokeWidth={1.6} />
-          <circle cx="10" cy="20" r="1.7" fill="currentColor" stroke="currentColor" strokeWidth={1.2} />
-          <circle cx="17.5" cy="20" r="1.7" fill="currentColor" stroke="currentColor" strokeWidth={1.2} />
+          <path d={body} fill="currentColor" stroke="currentColor" strokeWidth={2} />
+          <circle cx="10" cy="20" r="1.7" fill="currentColor" stroke="currentColor" strokeWidth={1.6} />
+          <circle cx="17.5" cy="20" r="1.7" fill="currentColor" stroke="currentColor" strokeWidth={1.6} />
         </>
       ) : (
         <>
-          <path d={body} strokeWidth={1.8} />
-          <circle cx="10" cy="20" r="1.7" strokeWidth={1.8} />
-          <circle cx="17.5" cy="20" r="1.7" strokeWidth={1.8} />
+          <path d={body} strokeWidth={2.25} />
+          <circle cx="10" cy="20" r="1.7" strokeWidth={2.25} />
+          <circle cx="17.5" cy="20" r="1.7" strokeWidth={2.25} />
         </>
       )}
     </svg>
@@ -140,12 +140,12 @@ export function CrownNavIcon({ active = false, ...props }: NavIconProps) {
     <svg {...baseProps} {...props}>
       {active ? (
         <>
-          <path d={body} fill="currentColor" stroke="currentColor" strokeWidth={1.4} />
-          <path d="M4 14.5H20" stroke={detailStroke} strokeWidth={1.3} />
-          <circle cx="12" cy="11.5" r="1.3" fill={detailStroke} stroke={detailStroke} strokeWidth={0.8} />
+          <path d={body} fill="currentColor" stroke="currentColor" strokeWidth={2} />
+          <path d="M4 14.5H20" stroke={detailStroke} strokeWidth={1.6} />
+          <circle cx="12" cy="11.5" r="1.3" fill={detailStroke} stroke={detailStroke} strokeWidth={1} />
         </>
       ) : (
-        <path d={body} strokeWidth={1.6} />
+        <path d={body} strokeWidth={2.25} />
       )}
     </svg>
   );
