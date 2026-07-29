@@ -2,8 +2,8 @@ import { NavLink, useNavigate, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import {
   CartNavIcon,
-  CrownNavIcon,
   HomeNavIcon,
+  PlanNavIcon,
   ProfileNavIcon,
 } from "./AppNavIcons";
 
