@@ -94,6 +94,11 @@ export function useMaintenanceMode() {
   }, []);
 
   const processMaintenanceData = (status: MaintenanceStatus) => {
+    try {
+      localStorage.setItem(MAINT_CACHE_KEY, JSON.stringify(status));
+    } catch {
+      /* ignore quota */
+    }
     const now = new Date();
 
     // Verifica manutenção manual
