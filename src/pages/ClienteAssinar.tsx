@@ -34,6 +34,7 @@ import { BottomNavigation } from "@/components/BottomNavigation";
 
 import { PaymentOption } from "@/components/booking/PaymentOption";
 import { enrichPlansWithAvailability, type PlanWithAvailability } from "@/hooks/usePlansAvailability";
+import { getCache, setCache } from "@/utils/cache";
 
 type Plan = PlanWithAvailability;
 
@@ -137,6 +138,38 @@ function BarbershopCard({
   );
 }
 
+// ─── Cache local do contexto de planos ────────────────────
+// Guarda a última barbearia/planos/barbeiros vistos para que a tela
+// de Planos abra JÁ renderizada (sem spinner) e revalide em background.
+const ASSINAR_CTX_KEY = "assinar:ctx";
+const ASSINAR_CTX_TTL_MIN = 30;
+
+interface AssinarCtx {
+  tenantKey: string;
+  plans: Plan[];
+  barbers: Barber[];
+}
+
+function readAssinarCtx(): AssinarCtx | null {
+  const ctx = getCache<AssinarCtx>(ASSINAR_CTX_KEY);
+  if (!ctx?.tenantKey || !Array.isArray(ctx.plans) || ctx.plans.length === 0) return null;
+  return ctx;
+}
+
+// ─── Skeleton do carrossel de planos ──────────────────────
+function PlansSkeleton() {
+  return (
+    <div className="h-full flex flex-col items-center justify-center px-4 gap-4">
+      <div className="w-full max-w-xs h-[22rem] rounded-3xl bg-muted/60 animate-pulse" />
+      <div className="flex items-center gap-1.5">
+        {[0, 1, 2].map((i) => (
+          <div key={i} className="w-1.5 h-1.5 rounded-full bg-muted animate-pulse" />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ─── Main Page ────────────────────────────────────────────
 const ClienteAssinar = () => {
   const navigate = useNavigate();
@@ -149,20 +182,25 @@ const ClienteAssinar = () => {
   const isRenewalMode = mode === "renew";
   const isChangeMode = mode === "change";
 
+  // Fluxo padrão (sem renovar/trocar/retomar) pode abrir direto do cache.
+  const canHydrateFromCache = !isRenewalMode && !isChangeMode && !resumePlanId;
+  const cachedCtx = useRef<AssinarCtx | null>(canHydrateFromCache ? readAssinarCtx() : null).current;
+
   // Data
   const [tenants, setTenants] = useState<Tenant[]>([]);
-  const [plans, setPlans] = useState<Plan[]>([]);
-  const [barbers, setBarbers] = useState<Barber[]>([]);
+  const [plans, setPlans] = useState<Plan[]>(cachedCtx?.plans ?? []);
+  const [barbers, setBarbers] = useState<Barber[]>(cachedCtx?.barbers ?? []);
 
   // Selections
-  const [selectedTenantId, setSelectedTenantId] = useState<string | null | "dub">(null);
+  const [selectedTenantId, setSelectedTenantId] = useState<string | null | "dub">(cachedCtx?.tenantKey ?? null);
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
   const [selectedBarber, setSelectedBarber] = useState<Barber | null>(null);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<"pix" | "card" | "cash" | null>("pix");
 
   // UI
   const [loading, setLoading] = useState(false);
-  const [step, setStep] = useState(0);
+  // Com cache disponível já entramos direto no carrossel de planos (step 2).
+  const [step, setStep] = useState(cachedCtx ? 2 : 0);
   const [hasActiveSubscription, setHasActiveSubscription] = useState(false);
   const [currentPlanIndex, setCurrentPlanIndex] = useState(0);
 
