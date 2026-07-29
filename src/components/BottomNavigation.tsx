@@ -158,7 +158,7 @@ export function BottomNavigation() {
           onClick={() => navigate("/cliente/loja")}
         />
         <NavItem
-          icon={Crown}
+          icon={Scissors}
           label="Plano"
           isActive={isActive("/cliente/assinar")}
           onClick={() => navigate("/cliente/assinar")}
