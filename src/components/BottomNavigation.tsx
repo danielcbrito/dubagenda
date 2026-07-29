@@ -1,4 +1,4 @@
-import { ShoppingCart, Crown, User } from "lucide-react";
+import { ShoppingCart, Scissors, User } from "lucide-react";
 import { motion } from "framer-motion";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useState, type SVGProps } from "react";
@@ -40,7 +40,7 @@ function NavItem({ icon: Icon, label, isActive, onClick, filled, badge }: NavIte
       <div className="relative">
         <Icon
           className={`h-[26px] w-[26px] transition-all duration-200 ${
-            isActive ? "text-primary" : "text-muted-foreground/60"
+            isActive ? "text-primary" : "text-foreground"
           }`}
           strokeWidth={isActive ? 2.2 : 1.8}
           fill={filled && isActive ? "currentColor" : "none"}
@@ -55,7 +55,7 @@ function NavItem({ icon: Icon, label, isActive, onClick, filled, badge }: NavIte
       </div>
       <span
         className={`text-[10px] leading-none tracking-wide transition-colors duration-200 ${
-          isActive ? "font-medium text-primary" : "font-normal text-muted-foreground/60"
+          isActive ? "font-medium text-primary" : "font-normal text-foreground"
         }`}
       >
         {label}
@@ -158,7 +158,7 @@ export function BottomNavigation() {
           onClick={() => navigate("/cliente/loja")}
         />
         <NavItem
-          icon={Crown}
+          icon={Scissors}
           label="Plano"
           isActive={isActive("/cliente/assinar")}
           onClick={() => navigate("/cliente/assinar")}
