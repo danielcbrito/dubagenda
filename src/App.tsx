@@ -18,7 +18,7 @@ import { RefreshRequiredScreen } from "@/components/RefreshRequiredScreen";
 import { RootLayout } from "@/routes/RootLayout";
 
 import { supabase } from "@/integrations/supabase/client";
-import { lazy, Suspense } from "react";
+import { lazy } from "react";
 import { SupportChatBubble } from "@/components/support/SupportChatBubble";
 import { getVerifiedAuthUser } from "@/utils/authSession";
 
@@ -58,15 +58,6 @@ const BarbershopUnidades = lazy(() => import("./pages/BarbershopUnidades"));
 const Flowchart = lazy(() => import("./pages/Flowchart"));
 const ResponsivePreview = lazy(() => import("./pages/ResponsivePreview"));
 const BarbershopsCityGuide = lazy(() => import("./pages/BarbershopsCityGuide"));
-
-/** Minimal loading fallback */
-function PageLoader() {
-  return (
-    <div className="flex items-center justify-center min-h-dvh bg-background">
-      <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-    </div>
-  );
-}
 
 setupQueryPersistence();
 
