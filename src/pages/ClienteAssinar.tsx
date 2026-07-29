@@ -30,7 +30,6 @@ import scissorsDecor from "@/assets/scissors-decorative.png";
 import { BarberCard } from "@/components/booking/BarberCard";
 import { useBarberRatings } from "@/hooks/useBarberRatings";
 import { PlanCarousel } from "@/components/booking/PlanCarousel";
-import { BottomNavigation } from "@/components/BottomNavigation";
 
 import { PaymentOption } from "@/components/booking/PaymentOption";
 import { enrichPlansWithAvailability, type PlanWithAvailability } from "@/hooks/usePlansAvailability";
@@ -914,8 +913,6 @@ const ClienteAssinar = () => {
           </motion.div>
         )}
       </AnimatePresence>
-
-      {showBottomNav && <BottomNavigation />}
     </div>
   );
 };
