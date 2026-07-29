@@ -70,15 +70,22 @@ serve(async (req) => {
     }
 
     if (telefone) {
-      const cleanPhone = String(telefone).replace(/\D/g, "");
-      const { data } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("telefone", cleanPhone)
-        .limit(1);
+      const normalized = normalizeBrPhone(String(telefone));
+      if (normalized) {
+        // Busca por qualquer variação salva (normalizada ou legada com/sem 55)
+        const variants = Array.from(new Set([
+          normalized,
+          "55" + normalized,
+        ]));
+        const { data } = await supabase
+          .from("profiles")
+          .select("id")
+          .in("telefone", variants)
+          .limit(1);
 
-      if (data && data.length > 0) {
-        duplicates.push("telefone");
+        if (data && data.length > 0) {
+          duplicates.push("telefone");
+        }
       }
     }
 
