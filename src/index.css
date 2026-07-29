@@ -273,6 +273,7 @@ All colors MUST be HSL. */
 
   /* ☀️ LIGHT THEME — tweakcn Premium */
   .light {
+    --accent-red: 9 71% 42%;
     --background: 0 0% 100%;
     --background-elevated: 0 0% 98%;
     --foreground: 0 0% 9%;
