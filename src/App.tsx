@@ -68,18 +68,7 @@ function PageLoader() {
   );
 }
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      refetchOnWindowFocus: true,
-      refetchOnMount: true,
-      retry: 1,
-      retryDelay: (n) => Math.min(1000 * 2 ** n, 10000),
-      staleTime: 2 * 60 * 1000, // 2 min default
-    },
-    mutations: { retry: 0 },
-  },
-});
+setupQueryPersistence();
 
 // Routes that are always accessible (before login)
 const PUBLIC_ROUTES = [
