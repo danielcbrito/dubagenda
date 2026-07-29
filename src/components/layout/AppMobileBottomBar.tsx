@@ -58,7 +58,7 @@ export function AppMobileBottomBar({
               onClick={(e) => e.preventDefault()}
               className={({ isActive }) =>
                 cn(
-                  "flex flex-1 flex-col items-center gap-1.5 px-2 py-1 transition-colors duration-150 touch-manipulation select-none",
+                  "flex flex-1 flex-col items-center gap-2 px-2 pt-0.5 pb-0 transition-colors duration-150 touch-manipulation select-none",
                   isActive ? "text-accent-red" : "text-foreground"
                 )
               }
