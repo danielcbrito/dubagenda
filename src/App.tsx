@@ -372,10 +372,17 @@ function ThemeColorSync() {
 }
 
 function AppWithSplash() {
-  const [showSplash, setShowSplash] = useState(true);
+  // Splash só na primeira abertura da sessão do navegador — navegações
+  // internas e reloads na mesma sessão entram direto (zero espera).
+  const firstOpen = useRef(
+    typeof window !== "undefined" && !sessionStorage.getItem("dub_splash_shown")
+  );
+  const [showSplash, setShowSplash] = useState(firstOpen.current);
 
   useEffect(() => {
-    const timer = setTimeout(() => setShowSplash(false), 2000);
+    if (!firstOpen.current) return;
+    sessionStorage.setItem("dub_splash_shown", "1");
+    const timer = setTimeout(() => setShowSplash(false), 900);
     return () => clearTimeout(timer);
   }, []);
 
@@ -394,11 +401,13 @@ const App = () => (
     <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} forcedTheme="light">
       <ThemeColorSync />
       <QueryClientProvider client={queryClient}>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <AppWithSplash />
-        </TooltipProvider>
+        <AuthProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <AppWithSplash />
+          </TooltipProvider>
+        </AuthProvider>
       </QueryClientProvider>
     </ThemeProvider>
   </HelmetProvider>
