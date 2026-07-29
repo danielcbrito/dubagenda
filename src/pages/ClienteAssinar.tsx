@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { sendAssinaturaCashCriadaEvent } from "@/lib/webhookService";
@@ -30,10 +30,10 @@ import scissorsDecor from "@/assets/scissors-decorative.png";
 import { BarberCard } from "@/components/booking/BarberCard";
 import { useBarberRatings } from "@/hooks/useBarberRatings";
 import { PlanCarousel } from "@/components/booking/PlanCarousel";
+import { BottomNavigation } from "@/components/BottomNavigation";
 
 import { PaymentOption } from "@/components/booking/PaymentOption";
 import { enrichPlansWithAvailability, type PlanWithAvailability } from "@/hooks/usePlansAvailability";
-import { getCache, setCache } from "@/utils/cache";
 
 type Plan = PlanWithAvailability;
 
@@ -137,38 +137,6 @@ function BarbershopCard({
   );
 }
 
-// ─── Cache local do contexto de planos ────────────────────
-// Guarda a última barbearia/planos/barbeiros vistos para que a tela
-// de Planos abra JÁ renderizada (sem spinner) e revalide em background.
-const ASSINAR_CTX_KEY = "assinar:ctx";
-const ASSINAR_CTX_TTL_MIN = 30;
-
-interface AssinarCtx {
-  tenantKey: string;
-  plans: Plan[];
-  barbers: Barber[];
-}
-
-function readAssinarCtx(): AssinarCtx | null {
-  const ctx = getCache<AssinarCtx>(ASSINAR_CTX_KEY);
-  if (!ctx?.tenantKey || !Array.isArray(ctx.plans) || ctx.plans.length === 0) return null;
-  return ctx;
-}
-
-// ─── Skeleton do carrossel de planos ──────────────────────
-function PlansSkeleton() {
-  return (
-    <div className="h-full flex flex-col items-center justify-center px-4 gap-4">
-      <div className="w-full max-w-xs h-[22rem] rounded-3xl bg-muted/60 animate-pulse" />
-      <div className="flex items-center gap-1.5">
-        {[0, 1, 2].map((i) => (
-          <div key={i} className="w-1.5 h-1.5 rounded-full bg-muted animate-pulse" />
-        ))}
-      </div>
-    </div>
-  );
-}
-
 // ─── Main Page ────────────────────────────────────────────
 const ClienteAssinar = () => {
   const navigate = useNavigate();
@@ -181,25 +149,20 @@ const ClienteAssinar = () => {
   const isRenewalMode = mode === "renew";
   const isChangeMode = mode === "change";
 
-  // Fluxo padrão (sem renovar/trocar/retomar) pode abrir direto do cache.
-  const canHydrateFromCache = !isRenewalMode && !isChangeMode && !resumePlanId;
-  const cachedCtx = useRef<AssinarCtx | null>(canHydrateFromCache ? readAssinarCtx() : null).current;
-
   // Data
   const [tenants, setTenants] = useState<Tenant[]>([]);
-  const [plans, setPlans] = useState<Plan[]>(cachedCtx?.plans ?? []);
-  const [barbers, setBarbers] = useState<Barber[]>(cachedCtx?.barbers ?? []);
+  const [plans, setPlans] = useState<Plan[]>([]);
+  const [barbers, setBarbers] = useState<Barber[]>([]);
 
   // Selections
-  const [selectedTenantId, setSelectedTenantId] = useState<string | null | "dub">(cachedCtx?.tenantKey ?? null);
+  const [selectedTenantId, setSelectedTenantId] = useState<string | null | "dub">(null);
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
   const [selectedBarber, setSelectedBarber] = useState<Barber | null>(null);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<"pix" | "card" | "cash" | null>("pix");
 
   // UI
   const [loading, setLoading] = useState(false);
-  // Com cache disponível já entramos direto no carrossel de planos (step 2).
-  const [step, setStep] = useState(cachedCtx ? 2 : 0);
+  const [step, setStep] = useState(0);
   const [hasActiveSubscription, setHasActiveSubscription] = useState(false);
   const [currentPlanIndex, setCurrentPlanIndex] = useState(0);
 
@@ -273,7 +236,8 @@ const ClienteAssinar = () => {
       setSelectedTenantId(key);
       const [enrichedActive] = await enrichPlansWithAvailability([activeSub.plano]);
       setSelectedPlan(enrichedActive ?? null);
-      await loadTenantData(tenantId);
+      await loadPlansForTenant(tenantId);
+      await loadBarbersForTenant(tenantId);
       setStep(3); // Go straight to barber selection
     } catch (err) {
       console.error("Erro ao iniciar renovação:", err);
@@ -296,12 +260,13 @@ const ClienteAssinar = () => {
       const tenantId = preferredId || null;
       const key = tenantId || "dub";
       setSelectedTenantId(key);
-      await loadTenantData(tenantId);
-      if (!cachedCtx) setCurrentPlanIndex(0);
+      await loadPlansForTenant(tenantId);
+      await loadBarbersForTenant(tenantId);
+      setCurrentPlanIndex(0);
       setStep(2);
     } catch (err) {
       console.error("Erro ao carregar barbearia preferida:", err);
-      if (!cachedCtx) setStep(1);
+      setStep(1);
     }
   };
 
@@ -319,7 +284,8 @@ const ClienteAssinar = () => {
       setSelectedTenantId(tenantId || "dub");
       const [enriched] = await enrichPlansWithAvailability([data]);
       setSelectedPlan(enriched ?? null);
-      await loadTenantData(tenantId);
+      await loadPlansForTenant(tenantId);
+      await loadBarbersForTenant(tenantId);
       setStep(3);
     } else {
       setStep(1);
@@ -351,11 +317,6 @@ const ClienteAssinar = () => {
     setPlans(enriched);
   };
 
-  /** Carrega planos + barbeiros em paralelo e persiste no cache de sessão. */
-  const loadTenantData = async (tenantId: string | null) => {
-    await Promise.all([loadPlansForTenant(tenantId), loadBarbersForTenant(tenantId)]);
-  };
-
   const loadBarbersForTenant = async (tenantId: string | null) => {
     let query = supabase.from('barbeiros').select('id, apelido, foto_url, tenant_id').eq('ativo', true).order('apelido');
     if (tenantId) { query = query.eq('tenant_id', tenantId); }
@@ -383,7 +344,6 @@ const ClienteAssinar = () => {
         const enriched = await enrichPlansWithAvailability(nextPlans || []);
         setPlans(enriched);
         setBarbers(nextBarbers || []);
-        setCache(ASSINAR_CTX_KEY, { tenantKey: selectedTenantId, plans: enriched, barbers: nextBarbers || [] }, ASSINAR_CTX_TTL_MIN);
         setSelectedPlan((prev) => prev ? enriched.find((p) => p.id === prev.id) || null : null);
         setSelectedBarber((prev) => prev ? (nextBarbers || []).find((b) => b.id === prev.id) || null : null);
       } catch (error) {
@@ -407,7 +367,8 @@ const ClienteAssinar = () => {
     setSelectedTenantId(key);
     setSelectedPlan(null);
     setSelectedBarber(null);
-    await loadTenantData(tenantId);
+    await loadPlansForTenant(tenantId);
+    await loadBarbersForTenant(tenantId);
     setCurrentPlanIndex(0);
     setStep(2);
   };
@@ -527,20 +488,22 @@ const ClienteAssinar = () => {
 
   // Na etapa de Planos a barra de navegação global fica visível,
   // então o conteúdo é encurtado e a seta de voltar é ocultada.
-  // A bottom nav permanece SEMPRE visível nesta tela (renderizada pelo RootLayout),
-  // então o conteúdo reserva o espaço dela em todos os passos.
-  const hideBackArrow = step === 2;
+  const showBottomNav = step === 2;
 
   return (
     <div
       className="fixed inset-0 flex flex-col bg-background"
-      style={{ paddingBottom: "calc(4rem + env(safe-area-inset-bottom, 0px))" }}
+      style={
+        showBottomNav
+          ? { paddingBottom: "calc(4rem + env(safe-area-inset-bottom, 0px))" }
+          : undefined
+      }
     >
 
       {/* Header — back arrow + step dots */}
       <div className="flex-shrink-0 px-4 pt-[max(env(safe-area-inset-top),0.75rem)] pb-2">
         <div className="max-w-2xl mx-auto flex items-center justify-between">
-          {!hideBackArrow && (
+          {!showBottomNav && (
             <button
               onClick={handleBack}
               className="flex items-center justify-center active:scale-95 transition-transform"
@@ -561,11 +524,11 @@ const ClienteAssinar = () => {
       <div className="flex-1 min-h-0 overflow-hidden">
         <AnimatePresence mode="wait">
 
-          {/* Loading — skeleton do carrossel (nunca uma tela de spinner cheia) */}
+          {/* Loading */}
           {step === 0 && (
             <motion.div key="step0" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              className="h-full">
-              <PlansSkeleton />
+              className="flex items-center justify-center h-full">
+              <div className="w-7 h-7 border-2 border-primary border-t-transparent rounded-full animate-spin" />
             </motion.div>
           )}
 
@@ -913,6 +876,8 @@ const ClienteAssinar = () => {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {showBottomNav && <BottomNavigation />}
     </div>
   );
 };
