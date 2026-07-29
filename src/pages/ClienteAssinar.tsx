@@ -274,8 +274,7 @@ const ClienteAssinar = () => {
       setSelectedTenantId(key);
       const [enrichedActive] = await enrichPlansWithAvailability([activeSub.plano]);
       setSelectedPlan(enrichedActive ?? null);
-      await loadPlansForTenant(tenantId);
-      await loadBarbersForTenant(tenantId);
+      await loadTenantData(tenantId);
       setStep(3); // Go straight to barber selection
     } catch (err) {
       console.error("Erro ao iniciar renovação:", err);
@@ -298,13 +297,12 @@ const ClienteAssinar = () => {
       const tenantId = preferredId || null;
       const key = tenantId || "dub";
       setSelectedTenantId(key);
-      await loadPlansForTenant(tenantId);
-      await loadBarbersForTenant(tenantId);
-      setCurrentPlanIndex(0);
+      await loadTenantData(tenantId);
+      if (!cachedCtx) setCurrentPlanIndex(0);
       setStep(2);
     } catch (err) {
       console.error("Erro ao carregar barbearia preferida:", err);
-      setStep(1);
+      if (!cachedCtx) setStep(1);
     }
   };
 
@@ -322,8 +320,7 @@ const ClienteAssinar = () => {
       setSelectedTenantId(tenantId || "dub");
       const [enriched] = await enrichPlansWithAvailability([data]);
       setSelectedPlan(enriched ?? null);
-      await loadPlansForTenant(tenantId);
-      await loadBarbersForTenant(tenantId);
+      await loadTenantData(tenantId);
       setStep(3);
     } else {
       setStep(1);
@@ -355,6 +352,11 @@ const ClienteAssinar = () => {
     setPlans(enriched);
   };
 
+  /** Carrega planos + barbeiros em paralelo e persiste no cache de sessão. */
+  const loadTenantData = async (tenantId: string | null) => {
+    await Promise.all([loadPlansForTenant(tenantId), loadBarbersForTenant(tenantId)]);
+  };
+
   const loadBarbersForTenant = async (tenantId: string | null) => {
     let query = supabase.from('barbeiros').select('id, apelido, foto_url, tenant_id').eq('ativo', true).order('apelido');
     if (tenantId) { query = query.eq('tenant_id', tenantId); }
@@ -382,6 +384,7 @@ const ClienteAssinar = () => {
         const enriched = await enrichPlansWithAvailability(nextPlans || []);
         setPlans(enriched);
         setBarbers(nextBarbers || []);
+        setCache(ASSINAR_CTX_KEY, { tenantKey: selectedTenantId, plans: enriched, barbers: nextBarbers || [] }, ASSINAR_CTX_TTL_MIN);
         setSelectedPlan((prev) => prev ? enriched.find((p) => p.id === prev.id) || null : null);
         setSelectedBarber((prev) => prev ? (nextBarbers || []).find((b) => b.id === prev.id) || null : null);
       } catch (error) {
@@ -405,8 +408,7 @@ const ClienteAssinar = () => {
     setSelectedTenantId(key);
     setSelectedPlan(null);
     setSelectedBarber(null);
-    await loadPlansForTenant(tenantId);
-    await loadBarbersForTenant(tenantId);
+    await loadTenantData(tenantId);
     setCurrentPlanIndex(0);
     setStep(2);
   };
@@ -526,22 +528,20 @@ const ClienteAssinar = () => {
 
   // Na etapa de Planos a barra de navegação global fica visível,
   // então o conteúdo é encurtado e a seta de voltar é ocultada.
-  const showBottomNav = step === 2;
+  // A bottom nav permanece SEMPRE visível nesta tela (renderizada pelo RootLayout),
+  // então o conteúdo reserva o espaço dela em todos os passos.
+  const hideBackArrow = step === 2;
 
   return (
     <div
       className="fixed inset-0 flex flex-col bg-background"
-      style={
-        showBottomNav
-          ? { paddingBottom: "calc(4rem + env(safe-area-inset-bottom, 0px))" }
-          : undefined
-      }
+      style={{ paddingBottom: "calc(4rem + env(safe-area-inset-bottom, 0px))" }}
     >
 
       {/* Header — back arrow + step dots */}
       <div className="flex-shrink-0 px-4 pt-[max(env(safe-area-inset-top),0.75rem)] pb-2">
         <div className="max-w-2xl mx-auto flex items-center justify-between">
-          {!showBottomNav && (
+          {!hideBackArrow && (
             <button
               onClick={handleBack}
               className="flex items-center justify-center active:scale-95 transition-transform"
@@ -562,11 +562,11 @@ const ClienteAssinar = () => {
       <div className="flex-1 min-h-0 overflow-hidden">
         <AnimatePresence mode="wait">
 
-          {/* Loading */}
+          {/* Loading — skeleton do carrossel (nunca uma tela de spinner cheia) */}
           {step === 0 && (
             <motion.div key="step0" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              className="flex items-center justify-center h-full">
-              <div className="w-7 h-7 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+              className="h-full">
+              <PlansSkeleton />
             </motion.div>
           )}
 
