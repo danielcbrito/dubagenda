@@ -145,15 +145,26 @@ export function PlanCarousel({
                   }}
                 >
                   <div
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => {
+                      if (indisponivel || hasActiveSubscription) return;
+                      if (idx !== currentPlanIndex) {
+                        emblaApi?.scrollTo(idx);
+                        return;
+                      }
+                      onSelectPlan(plan);
+                    }}
                     className={cn(
-                      "rounded-2xl p-5 h-full flex flex-col relative",
-                      "border transition-opacity duration-300",
+                      "rounded-2xl p-5 h-full flex flex-col relative cursor-pointer select-none",
+                      "border transition-opacity duration-300 active:scale-[0.98]",
                       isActive
                         ? "bg-card border-border/60 shadow-[0_2px_16px_rgba(0,0,0,0.05)]"
                         : "bg-card/60 border-border/20",
                       indisponivel && "opacity-30 pointer-events-none"
                     )}
                   >
+
                     {/* Status badge — top right */}
                     {(indisponivel || lowStock) && (
                       <div className="absolute top-3 right-3 z-10">
@@ -365,71 +376,22 @@ export function PlanCarousel({
         )}
       </div>
 
-      {/* Bottom CTA — flutua acima da barra de navegação */}
-      <div
-        className="flex-shrink-0"
-        style={{
-          padding: "10px 20px 12px",
-        }}
-      >
-        <div className="max-w-md mx-auto">
-          {(() => {
-            const planoIndisponivel = !!activePlan?.indisponivel;
-            const disabled = hasActiveSubscription || planoIndisponivel;
-            const ctaLabel = activePlan?.inativo
+      {/* Hint discreto — clique no plano para assinar */}
+      <div className="flex-shrink-0" style={{ padding: "6px 20px 10px" }}>
+        <p
+          className="text-center text-muted-foreground/40"
+          style={{ fontSize: "10px", fontWeight: 500 }}
+        >
+          {hasActiveSubscription
+            ? "Você já possui um plano ativo"
+            : activePlan?.inativo
               ? "Plano indisponível"
               : activePlan?.esgotado
                 ? "Vagas esgotadas"
-                : "Assinar este plano";
-            return (
-              <motion.button
-                whileTap={{ scale: disabled ? 1 : 0.97 }}
-                onClick={() => !disabled && activePlan && onSelectPlan(activePlan)}
-                disabled={disabled}
-                className={cn(
-                  "w-full flex items-center justify-center gap-2 transition-all",
-                  "bg-foreground text-background active:scale-[0.97]",
-                  disabled && "opacity-50 cursor-not-allowed"
-                )}
-                style={{
-                  borderRadius: "14px",
-                  padding: "14px",
-                  fontSize: "13px",
-                  fontWeight: 700,
-                }}
-              >
-                <span>{ctaLabel}</span>
-                {!planoIndisponivel && <ArrowRight className="w-4 h-4" />}
-              </motion.button>
-            );
-          })()}
-
-          <div className="flex items-center justify-center gap-3 mt-2">
-            <div className="flex items-center gap-1">
-              <Shield className="w-2.5 h-2.5 text-muted-foreground/25" />
-              <span
-                className="text-muted-foreground/25"
-                style={{ fontSize: "9px", fontWeight: 500 }}
-              >
-                Seguro
-              </span>
-            </div>
-            <div className="w-px h-2 bg-border/30" />
-            <div className="flex items-center gap-1">
-              <Check
-                className="w-2.5 h-2.5 text-muted-foreground/25"
-                strokeWidth={2}
-              />
-              <span
-                className="text-muted-foreground/25"
-                style={{ fontSize: "9px", fontWeight: 500 }}
-              >
-                Cancele quando quiser
-              </span>
-            </div>
-          </div>
-        </div>
+                : "Toque no plano para assinar"}
+        </p>
       </div>
     </div>
   );
 }
+
