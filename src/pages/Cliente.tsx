@@ -866,16 +866,11 @@ const Cliente = () => {
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, [user, invalidateAppointments, invalidateLoyalty, invalidateShop]);
 
-  const checkAuth = async () => {
-    const user = await getVerifiedAuthUser();
+  // Redireciona apenas quando a sessão foi confirmada como ausente.
+  useEffect(() => {
+    if (hydrated && verified && !user) navigate("/auth");
+  }, [hydrated, verified, user, navigate]);
 
-    if (!user) {
-      navigate("/auth");
-      return;
-    }
-
-    setUser(user);
-  };
 
 
   const handleLogout = async () => {
