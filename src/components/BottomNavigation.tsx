@@ -55,7 +55,7 @@ function NavItem({ icon: Icon, label, isActive, onClick, filled, badge }: NavIte
       </div>
       <span
         className={`text-[10px] leading-none tracking-wide transition-colors duration-200 ${
-          isActive ? "font-medium text-primary" : "font-normal text-muted-foreground/60"
+          isActive ? "font-medium text-primary" : "font-normal text-foreground"
         }`}
       >
         {label}
