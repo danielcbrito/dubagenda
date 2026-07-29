@@ -9,14 +9,22 @@ import { supabase } from "@/integrations/supabase/client";
 export async function getVerifiedAuthUser(): Promise<User | null> {
   const { data, error } = await supabase.auth.getUser();
 
-  if (error || !data.user) {
-    try {
-      await supabase.auth.signOut({ scope: "local" });
-    } catch {
-      /* ignore cleanup failures */
-    }
+  if (!error && data.user) return data.user;
+
+  // Falha de rede NÃO derruba a sessão — mantém o usuário logado offline.
+  const status = (error as any)?.status;
+  const isAuthError = status === 401 || status === 403;
+
+  if (!isAuthError) {
+    const { data: local } = await supabase.auth.getSession();
+    if (local.session?.user) return local.session.user;
     return null;
   }
 
-  return data.user;
+  try {
+    await supabase.auth.signOut({ scope: "local" });
+  } catch {
+    /* ignore cleanup failures */
+  }
+  return null;
 }
