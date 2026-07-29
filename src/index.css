@@ -178,7 +178,10 @@ All colors MUST be HSL. */
 @layer base {
   :root {
     /* 🎨 TWEAKCN DARK PREMIUM THEME (default = dark) */
-    
+
+    /* Bottom nav accent */
+    --accent-red: 9 71% 42%;
+
     /* Backgrounds */
     --background: 0 0% 5%;
     --background-elevated: 0 0% 8%;
