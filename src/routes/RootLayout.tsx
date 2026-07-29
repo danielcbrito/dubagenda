@@ -12,6 +12,7 @@ export function RootLayout() {
     "/cliente/pagamento",
     "/cliente/pix-checkout",
     "/cliente/subscription-pix",
+    "/cliente/assinar",
   ];
   const shouldShowNav =
     isClientRoute && !hideNavPatterns.some((p) => path.startsWith(p));
