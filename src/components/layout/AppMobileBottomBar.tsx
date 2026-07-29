@@ -2,8 +2,8 @@ import { NavLink, useNavigate, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import {
   CartNavIcon,
-  CrownNavIcon,
   HomeNavIcon,
+  PlanNavIcon,
   ProfileNavIcon,
 } from "./AppNavIcons";
 
@@ -17,7 +17,7 @@ interface AppMobileNavProps {
 const items = [
   { key: "inicio", label: "Início", path: "", end: true, Icon: HomeNavIcon, badge: false },
   { key: "loja", label: "Loja", path: "/loja", end: false, Icon: CartNavIcon, badge: true },
-  { key: "plano", label: "Plano", path: "/assinar", end: false, Icon: CrownNavIcon, badge: false },
+  { key: "plano", label: "Plano", path: "/assinar", end: false, Icon: PlanNavIcon, badge: false },
   { key: "perfil", label: "Perfil", path: "/perfil", end: false, Icon: ProfileNavIcon, badge: false },
 ];
 
