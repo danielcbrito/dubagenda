@@ -485,18 +485,31 @@ const ClienteAssinar = () => {
           ? "Escolha seu barbeiro"
           : "Forma de pagamento";
 
+  // Na etapa de Planos a barra de navegação global fica visível,
+  // então o conteúdo é encurtado e a seta de voltar é ocultada.
+  const showBottomNav = step === 2;
+
   return (
-    <div className="fixed inset-0 flex flex-col bg-background">
-      
+    <div
+      className="fixed inset-0 flex flex-col bg-background"
+      style={
+        showBottomNav
+          ? { paddingBottom: "calc(4rem + env(safe-area-inset-bottom, 0px))" }
+          : undefined
+      }
+    >
+
       {/* Header — back arrow + step dots */}
       <div className="flex-shrink-0 px-4 pt-[max(env(safe-area-inset-top),0.75rem)] pb-2">
         <div className="max-w-2xl mx-auto flex items-center justify-between">
-          <button 
-            onClick={handleBack}
-            className="flex items-center justify-center active:scale-95 transition-transform"
-          >
-            <BackArrow size={24} className="text-foreground" />
-          </button>
+          {!showBottomNav && (
+            <button
+              onClick={handleBack}
+              className="flex items-center justify-center active:scale-95 transition-transform"
+            >
+              <BackArrow size={24} className="text-foreground" />
+            </button>
+          )}
 
           {/* Title for non-carousel steps */}
           {step !== 2 && (
@@ -504,6 +517,7 @@ const ClienteAssinar = () => {
           )}
         </div>
       </div>
+
 
       {/* Content area */}
       <div className="flex-1 min-h-0 overflow-hidden">
