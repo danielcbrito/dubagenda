@@ -110,23 +110,47 @@ export function BagNavIcon({ active = false, ...props }: NavIconProps) {
   );
 }
 
-/** Coroa (Plano) — mesma silhueta nos dois estados; ativo preenche em vermelho. */
-export function CrownNavIcon({ active = false, ...props }: NavIconProps) {
-  const d =
-    "M2 18h20l-1.5-9-5 4L12 5 8.5 13l-5-4L2 18Z";
+/** Carrinho de compras (Loja) — mesma silhueta nos dois estados; ativo preenche em vermelho. */
+export function CartNavIcon({ active = false, ...props }: NavIconProps) {
+  const body = "M3 4h2.2a1 1 0 0 1 .98.8L6.6 7m0 0 1.5 7.2a2 2 0 0 0 1.96 1.6h7.2a2 2 0 0 0 1.96-1.57L20.6 7H6.6Z";
   return (
     <svg {...baseProps} {...props}>
       {active ? (
         <>
-          <path d={d} fill="currentColor" stroke="currentColor" />
-          <path d="M5 21h14" stroke={detailStroke} />
+          <path d={body} fill="currentColor" stroke="currentColor" strokeWidth={1.6} />
+          <circle cx="10" cy="20" r="1.7" fill="currentColor" stroke="currentColor" strokeWidth={1.2} />
+          <circle cx="17.5" cy="20" r="1.7" fill="currentColor" stroke="currentColor" strokeWidth={1.2} />
         </>
       ) : (
         <>
-          <path d={d} />
-          <path d="M5 21h14" />
+          <path d={body} strokeWidth={1.8} />
+          <circle cx="10" cy="20" r="1.7" strokeWidth={1.8} />
+          <circle cx="17.5" cy="20" r="1.7" strokeWidth={1.8} />
         </>
       )}
     </svg>
   );
 }
+
+/** Selo premium (Plano) — medalha com estrela interna. */
+export function PlanNavIcon({ active = false, ...props }: NavIconProps) {
+  const seal =
+    "M12 2.6l2.35 1.36 2.7-.1.83 2.58 2.2 1.58-1.05 2.5 1.05 2.5-2.2 1.58-.83 2.58-2.7-.1L12 18.44l-2.35 1.36-2.7-.1-.83-2.58-2.2-1.58 1.05-2.5-1.05-2.5 2.2-1.58.83-2.58 2.7.1L12 2.6Z";
+  const star = "M12 7.9l1.24 2.5 2.76.4-2 1.95.47 2.75L12 14.2l-2.47 1.3.47-2.75-2-1.95 2.76-.4L12 7.9Z";
+  return (
+    <svg {...baseProps} {...props}>
+      {active ? (
+        <>
+          <path d={seal} fill="currentColor" stroke="currentColor" strokeWidth={1.4} />
+          <path d={star} fill={detailStroke} stroke={detailStroke} strokeWidth={1} />
+        </>
+      ) : (
+        <>
+          <path d={seal} strokeWidth={1.6} />
+          <path d={star} strokeWidth={1.4} />
+        </>
+      )}
+    </svg>
+  );
+}
+
