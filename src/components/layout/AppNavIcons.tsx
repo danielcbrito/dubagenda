@@ -132,23 +132,20 @@ export function CartNavIcon({ active = false, ...props }: NavIconProps) {
   );
 }
 
-/** Selo premium (Plano) — medalha com estrela interna. */
-export function PlanNavIcon({ active = false, ...props }: NavIconProps) {
-  const seal =
-    "M12 2.6l2.35 1.36 2.7-.1.83 2.58 2.2 1.58-1.05 2.5 1.05 2.5-2.2 1.58-.83 2.58-2.7-.1L12 18.44l-2.35 1.36-2.7-.1-.83-2.58-2.2-1.58 1.05-2.5-1.05-2.5 2.2-1.58.83-2.58 2.7.1L12 2.6Z";
-  const star = "M12 7.9l1.24 2.5 2.76.4-2 1.95.47 2.75L12 14.2l-2.47 1.3.47-2.75-2-1.95 2.76-.4L12 7.9Z";
+/** Coroa premium (Plano) — preenchimento vermelho com joia interna no tom do fundo. */
+export function CrownNavIcon({ active = false, ...props }: NavIconProps) {
+  const body =
+    "M4 17V11L7 14L9.5 7L12 11L14.5 7L17 14L20 11V17H4Z";
   return (
     <svg {...baseProps} {...props}>
       {active ? (
         <>
-          <path d={seal} fill="currentColor" stroke="currentColor" strokeWidth={1.4} />
-          <path d={star} fill={detailStroke} stroke={detailStroke} strokeWidth={1} />
+          <path d={body} fill="currentColor" stroke="currentColor" strokeWidth={1.4} />
+          <path d="M4 14.5H20" stroke={detailStroke} strokeWidth={1.3} />
+          <circle cx="12" cy="11.5" r="1.3" fill={detailStroke} stroke={detailStroke} strokeWidth={0.8} />
         </>
       ) : (
-        <>
-          <path d={seal} strokeWidth={1.6} />
-          <path d={star} strokeWidth={1.4} />
-        </>
+        <path d={body} strokeWidth={1.6} />
       )}
     </svg>
   );
