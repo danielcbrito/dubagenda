@@ -117,15 +117,15 @@ export function CartNavIcon({ active = false, ...props }: NavIconProps) {
     <svg {...baseProps} {...props}>
       {active ? (
         <>
-          <path d={body} fill="currentColor" stroke="currentColor" strokeWidth={1.6} />
-          <circle cx="10" cy="20" r="1.7" fill="currentColor" stroke="currentColor" strokeWidth={1.2} />
-          <circle cx="17.5" cy="20" r="1.7" fill="currentColor" stroke="currentColor" strokeWidth={1.2} />
+          <path d={body} fill="currentColor" stroke="currentColor" strokeWidth={2} />
+          <circle cx="10" cy="20" r="1.7" fill="currentColor" stroke="currentColor" strokeWidth={1.6} />
+          <circle cx="17.5" cy="20" r="1.7" fill="currentColor" stroke="currentColor" strokeWidth={1.6} />
         </>
       ) : (
         <>
-          <path d={body} strokeWidth={1.8} />
-          <circle cx="10" cy="20" r="1.7" strokeWidth={1.8} />
-          <circle cx="17.5" cy="20" r="1.7" strokeWidth={1.8} />
+          <path d={body} strokeWidth={2.25} />
+          <circle cx="10" cy="20" r="1.7" strokeWidth={2.25} />
+          <circle cx="17.5" cy="20" r="1.7" strokeWidth={2.25} />
         </>
       )}
     </svg>
