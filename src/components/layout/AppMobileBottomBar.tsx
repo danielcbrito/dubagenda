@@ -1,8 +1,8 @@
 import { NavLink, useNavigate, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import {
-  BagNavIcon,
-  CrownNavIcon,
+  CartNavIcon,
+  PlanNavIcon,
   HomeNavIcon,
   ProfileNavIcon,
 } from "./AppNavIcons";
@@ -16,8 +16,8 @@ interface AppMobileNavProps {
 
 const items = [
   { key: "inicio", label: "Início", path: "", end: true, Icon: HomeNavIcon, badge: false },
-  { key: "loja", label: "Loja", path: "/loja", end: false, Icon: BagNavIcon, badge: true },
-  { key: "plano", label: "Plano", path: "/assinar", end: false, Icon: CrownNavIcon, badge: false },
+  { key: "loja", label: "Loja", path: "/loja", end: false, Icon: CartNavIcon, badge: true },
+  { key: "plano", label: "Plano", path: "/assinar", end: false, Icon: PlanNavIcon, badge: false },
   { key: "perfil", label: "Perfil", path: "/perfil", end: false, Icon: ProfileNavIcon, badge: false },
 ];
 
@@ -43,7 +43,7 @@ export function AppMobileBottomBar({
         style={{ height: "var(--app-bottom-nav-bleed, 0px)" }}
       />
 
-      <div className="flex items-start justify-around px-2 pt-2 pb-0">
+      <div className="flex items-start justify-around px-2 pt-1 pb-1.5">
         {items.map(({ key, label, path, end, Icon, badge }) => {
           const to = `${basePath}${path}`;
           return (
@@ -58,7 +58,7 @@ export function AppMobileBottomBar({
               onClick={(e) => e.preventDefault()}
               className={({ isActive }) =>
                 cn(
-                  "flex flex-1 flex-col items-center gap-1.5 px-2 py-1 transition-colors duration-150 touch-manipulation select-none",
+                  "flex flex-1 flex-col items-center gap-2 px-2 pt-0.5 pb-0 transition-colors duration-150 touch-manipulation select-none",
                   isActive ? "text-accent-red" : "text-foreground"
                 )
               }
