@@ -340,7 +340,8 @@ const Cliente = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  const [user, setUser] = useState<any>(null);
+  // Auth síncrona: usuário disponível no primeiro render (sem waterfall de rede).
+  const { user, hydrated, verified } = useAuth();
 
   // ─── Profile via useQuery (Layer 1) ───
   const {
