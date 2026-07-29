@@ -296,8 +296,7 @@ function AppRoutes() {
         <ScrollLockGuard />
         <MaintenanceWrapper>
 
-          <Suspense fallback={<PageLoader />}>
-            <Routes>
+          <Routes>
               <Route element={<RootLayout />}>
                 <Route path="/" element={<Index />} />
                 <Route path="/auth" element={<Auth />} />
@@ -339,8 +338,7 @@ function AppRoutes() {
                 <Route path="/responsive-preview" element={<ResponsivePreview />} />
                 <Route path="*" element={<NotFound />} />
               </Route>
-            </Routes>
-          </Suspense>
+          </Routes>
           <SupportChatBubble />
         </MaintenanceWrapper>
       </AuthRedirectGuard>
