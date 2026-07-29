@@ -1,6 +1,7 @@
-import { Suspense } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { Outlet, useLocation } from "react-router-dom";
-import { BottomNavigation } from "@/components/BottomNavigation";
+import { AppMobileBottomBar } from "@/components/layout/AppMobileBottomBar";
+import { supabase } from "@/integrations/supabase/client";
 
 /** Fallback leve: mantém a barra de navegação visível enquanto o chunk da rota carrega. */
 function RouteFallback() {
