@@ -1,55 +1,9 @@
-import { Crown, User } from "lucide-react";
+import { Crown, Home, ShoppingBag, User } from "lucide-react";
 import { motion } from "framer-motion";
 import { useLocation, useNavigate } from "react-router-dom";
-import { useEffect, useState, type SVGProps } from "react";
+import { useEffect, useState } from "react";
 
 import { supabase } from "@/integrations/supabase/client";
-
-/** Facebook-style outlined house icon. When active the interior fills red,
- *  but the door cutout stays transparent so the background shows through. */
-function HomeIcon(props: SVGProps<SVGSVGElement>) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" {...props}>
-      <path
-        fillRule="evenodd"
-        clipRule="evenodd"
-        d="M12 3.4c.35 0 .69.13.96.36l7.5 6.57c.32.28.5.69.5 1.11v7.81A1.75 1.75 0 0 1 19.21 21H15.5a1 1 0 0 1-1-1v-4.5a2.5 2.5 0 1 0-5 0V20a1 1 0 0 1-1 1H4.79A1.75 1.75 0 0 1 3.04 19.25v-7.81c0-.42.18-.83.5-1.11l7.5-6.57c.27-.23.61-.36.96-.36z"
-        stroke="currentColor"
-        strokeWidth="1.9"
-        strokeLinejoin="round"
-        strokeLinecap="round"
-        fill={props.fill || "none"}
-      />
-    </svg>
-  );
-}
-
-/** Solid shopping-cart style icon. When active the basket body fills red;
- *  the wheels are rendered as background-coloured holes so they never look red. */
-function CartIcon(props: SVGProps<SVGSVGElement>) {
-  const isFilled = Boolean(props.fill);
-
-  return (
-    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" {...props}>
-      <path
-        d="M2 5 h3 l1.5 2 h13 a1 1 0 0 1 .98 1.22 l-1.4 8.78 a1 1 0 0 1-.98.78 H6 a1 1 0 0 1-.98-.78 L3.5 7 H2 Z"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        fill={props.fill || "none"}
-      />
-      <circle cx="9" cy="20" r="2" stroke="currentColor" strokeWidth="1.6" fill="none" />
-      <circle cx="18" cy="20" r="2" stroke="currentColor" strokeWidth="1.6" fill="none" />
-      {isFilled && (
-        <>
-          <circle cx="9" cy="20" r="2.2" fill="hsl(var(--background))" />
-          <circle cx="18" cy="20" r="2.2" fill="hsl(var(--background))" />
-        </>
-      )}
-    </svg>
-  );
-}
 
 interface NavItemProps {
   icon: React.ElementType;
@@ -59,30 +13,31 @@ interface NavItemProps {
   badge?: number;
 }
 
+/** Ícone contornado quando inativo, preenchido em vermelho quando ativo (estilo iFood). */
 function NavItem({ icon: Icon, label, isActive, onClick, badge }: NavItemProps) {
   return (
     <motion.button
       whileTap={{ scale: 0.94 }}
       onClick={onClick}
-      className="relative flex flex-1 flex-col items-center justify-start h-full"
+      className={`flex flex-1 flex-col items-center gap-1 px-2 py-1 ${
+        isActive ? "text-primary" : "text-muted-foreground/70"
+      }`}
     >
-      <div className="relative pt-1.5">
+      <div className="relative">
         <Icon
-          className={`h-[22px] w-[22px] transition-all duration-200 ${
-            isActive ? "text-primary" : "text-muted-foreground/60"
-          }`}
-          strokeWidth={isActive ? 2.2 : 1.8}
+          className="h-[22px] w-[22px] transition-all duration-200"
+          strokeWidth={isActive ? 2 : 1.8}
           fill={isActive ? "currentColor" : "none"}
         />
         {typeof badge === "number" && badge > 0 && (
-          <span className="absolute -top-1.5 -right-2 min-w-[18px] h-[18px] px-1 rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center tabular-nums leading-none ring-2 ring-background">
+          <span className="absolute -top-2 -right-2.5 min-w-[19px] h-[19px] px-1 rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center tabular-nums leading-none ring-2 ring-background">
             {badge > 99 ? "99+" : badge}
           </span>
         )}
       </div>
       <span
-        className={`absolute bottom-2 left-0 right-0 text-center text-[10px] leading-none tracking-wide transition-colors duration-200 ${
-          isActive ? "font-medium text-primary" : "font-normal text-muted-foreground/60"
+        className={`text-[12px] leading-none tracking-wide transition-colors duration-200 ${
+          isActive ? "font-medium" : "font-normal"
         }`}
       >
         {label}
@@ -167,20 +122,20 @@ export function BottomNavigation() {
 
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 z-[60] border-t border-foreground/15 bg-background/95 backdrop-blur-md"
+      className="fixed bottom-0 left-0 right-0 z-[60] border-t border-foreground/15 bg-background"
       style={{
         paddingBottom: "env(safe-area-inset-bottom, 0px)",
       }}
     >
-      <div className="mx-auto flex h-16 w-full items-stretch justify-around">
+      <div className="mx-auto flex w-full items-start justify-around px-2 pt-2 pb-3">
         <NavItem
-          icon={HomeIcon}
+          icon={Home}
           label="Início"
           isActive={isActive("/cliente")}
           onClick={() => navigate("/cliente")}
         />
         <NavItem
-          icon={CartIcon}
+          icon={ShoppingBag}
           label="Loja"
           badge={cartCount}
           isActive={isActive("/cliente/loja")}
