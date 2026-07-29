@@ -95,8 +95,8 @@ function useCartBadge() {
       setCount(total);
     };
 
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      userId = user?.id ?? null;
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      userId = session?.user?.id ?? null;
       recount();
     });
 
@@ -112,13 +112,16 @@ function useCartBadge() {
 
     window.addEventListener("storage", onStorage);
     window.addEventListener("dub:cart-changed", onCustom);
-    const interval = window.setInterval(recount, 1500);
+    // Sem polling: o badge é atualizado por eventos ('storage' e 'dub:cart-changed')
+    // e ao voltar para o app.
+    const onVisible = () => { if (document.visibilityState === "visible") recount(); };
+    document.addEventListener("visibilitychange", onVisible);
 
     return () => {
       subscription.unsubscribe();
       window.removeEventListener("storage", onStorage);
       window.removeEventListener("dub:cart-changed", onCustom);
-      window.clearInterval(interval);
+      document.removeEventListener("visibilitychange", onVisible);
     };
   }, []);
 
