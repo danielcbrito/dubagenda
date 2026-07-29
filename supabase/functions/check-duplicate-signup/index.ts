@@ -8,6 +8,32 @@ const corsHeaders = {
 
 const emailSchema = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+/**
+ * Normaliza telefone BR para formato canônico local (10 ou 11 dígitos, sem DDI).
+ * Remove DDI 55, insere o "9" de celular quando faltando (números começando 6-9 com 8 dígitos).
+ * Retorna null se o número não bater com padrão BR.
+ */
+function normalizeBrPhone(input: string): string | null {
+  let v = String(input || "").replace(/\D/g, "");
+  if (!v) return null;
+  if ((v.length === 12 || v.length === 13) && v.startsWith("55")) {
+    v = v.slice(2);
+  }
+  if (v.length !== 10 && v.length !== 11) return null;
+  const ddd = parseInt(v.slice(0, 2), 10);
+  if (isNaN(ddd) || ddd < 11 || ddd > 99) return null;
+  const rest = v.slice(2);
+  if (rest.length === 9) {
+    if (rest[0] !== "9") return null;
+    return v;
+  }
+  // rest.length === 8
+  if (["6", "7", "8", "9"].includes(rest[0])) {
+    return v.slice(0, 2) + "9" + rest;
+  }
+  return v; // fixo
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -44,15 +70,22 @@ serve(async (req) => {
     }
 
     if (telefone) {
-      const cleanPhone = String(telefone).replace(/\D/g, "");
-      const { data } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("telefone", cleanPhone)
-        .limit(1);
+      const normalized = normalizeBrPhone(String(telefone));
+      if (normalized) {
+        // Busca por qualquer variação salva (normalizada ou legada com/sem 55)
+        const variants = Array.from(new Set([
+          normalized,
+          "55" + normalized,
+        ]));
+        const { data } = await supabase
+          .from("profiles")
+          .select("id")
+          .in("telefone", variants)
+          .limit(1);
 
-      if (data && data.length > 0) {
-        duplicates.push("telefone");
+        if (data && data.length > 0) {
+          duplicates.push("telefone");
+        }
       }
     }
 

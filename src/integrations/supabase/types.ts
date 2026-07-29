@@ -6890,6 +6890,7 @@ export type Database = {
         Args: { p_appointment_id: string; p_reason?: string; p_user_id: string }
         Returns: Json
       }
+      normalize_br_phone: { Args: { p_phone: string }; Returns: string }
       pix_signal_bank_opened: {
         Args: { p_charge_id: string }
         Returns: undefined
