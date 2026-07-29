@@ -335,27 +335,7 @@ export function PlanCarousel({
                       </div>
                     )}
 
-                    {/* Serviços incluídos no plano (plano_servicos) */}
-                    {plan.servicos && plan.servicos.length > 0 && (
-                      <div className="mt-3 pt-3 border-t border-border/30">
-                        <p
-                          className="text-muted-foreground/50 uppercase mb-1.5"
-                          style={{
-                            fontSize: "9px",
-                            fontWeight: 700,
-                            letterSpacing: "1.2px",
-                          }}
-                        >
-                          Inclui
-                        </p>
-                        <p
-                          className="text-foreground/70"
-                          style={{ fontSize: "11px", fontWeight: 500, lineHeight: 1.45 }}
-                        >
-                          {plan.servicos.map((s) => s.nome).join(" • ")}
-                        </p>
-                      </div>
-                    )}
+                  
                   </div>
                 </div>
               );
