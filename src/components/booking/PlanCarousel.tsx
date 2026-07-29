@@ -145,15 +145,26 @@ export function PlanCarousel({
                   }}
                 >
                   <div
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => {
+                      if (indisponivel || hasActiveSubscription) return;
+                      if (idx !== currentPlanIndex) {
+                        emblaApi?.scrollTo(idx);
+                        return;
+                      }
+                      onSelectPlan(plan);
+                    }}
                     className={cn(
-                      "rounded-2xl p-5 h-full flex flex-col relative",
-                      "border transition-opacity duration-300",
+                      "rounded-2xl p-5 h-full flex flex-col relative cursor-pointer select-none",
+                      "border transition-opacity duration-300 active:scale-[0.98]",
                       isActive
                         ? "bg-card border-border/60 shadow-[0_2px_16px_rgba(0,0,0,0.05)]"
                         : "bg-card/60 border-border/20",
                       indisponivel && "opacity-30 pointer-events-none"
                     )}
                   >
+
                     {/* Status badge — top right */}
                     {(indisponivel || lowStock) && (
                       <div className="absolute top-3 right-3 z-10">
