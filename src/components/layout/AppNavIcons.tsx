@@ -132,27 +132,31 @@ export function CartNavIcon({ active = false, ...props }: NavIconProps) {
   );
 }
 
-/** Cartão de plano / assinatura — visual de membership premium com estrela. */
+/** Tesoura — ícone estratégico para Planos de Corte. */
 export function PlanNavIcon({ active = false, ...props }: NavIconProps) {
-  const card =
-    "M3 5.5h18a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2v-9a2 2 0 0 1 2-2Z";
-  const star =
-    "M12 8.8l1.4 2.9 3.1.5-2.2 2.2.5 3.1-2.8-1.5-2.8 1.5.5-3.1-2.2-2.2 3.1-.5Z";
   return (
     <svg {...baseProps} {...props}>
       {active ? (
         <>
-          <path d={card} fill="currentColor" stroke="currentColor" strokeWidth={2} />
-          <path d={star} fill={detailStroke} stroke={detailStroke} strokeWidth={1.4} />
-          <path d="M6 18.5h4" stroke={detailStroke} strokeWidth={1.6} strokeLinecap="round" />
-          <path d="M14 18.5h4" stroke={detailStroke} strokeWidth={1.6} strokeLinecap="round" />
+          {/* Lâminas cruzadas preenchidas em vermelho */}
+          <path d="M7.5 9.2L17 18.7" stroke="currentColor" strokeWidth={3.2} strokeLinecap="round" />
+          <path d="M17 9.2L7.5 18.7" stroke="currentColor" strokeWidth={3.2} strokeLinecap="round" />
+          {/* Parafuso central */}
+          <circle cx="12.25" cy="13.95" r="1.6" fill={detailStroke} stroke={detailStroke} />
+          {/* Alça esquerda */}
+          <circle cx="7" cy="6.5" r="3" fill="currentColor" stroke="currentColor" strokeWidth={2} />
+          <circle cx="7" cy="6.5" r="1.6" fill={detailStroke} stroke={detailStroke} />
+          {/* Alça direita */}
+          <circle cx="17.5" cy="6.5" r="3" fill="currentColor" stroke="currentColor" strokeWidth={2} />
+          <circle cx="17.5" cy="6.5" r="1.6" fill={detailStroke} stroke={detailStroke} />
         </>
       ) : (
         <>
-          <path d={card} strokeWidth={2.25} />
-          <path d={star} strokeWidth={2} />
-          <path d="M6 18.5h4" strokeWidth={2} strokeLinecap="round" />
-          <path d="M14 18.5h4" strokeWidth={2} strokeLinecap="round" />
+          <circle cx="7" cy="6.5" r="2.5" />
+          <circle cx="17.5" cy="6.5" r="2.5" />
+          <path d="M7.5 9.2L17 18.7" />
+          <path d="M17 9.2L7.5 18.7" />
+          <circle cx="12.25" cy="13.95" r="1.2" />
         </>
       )}
     </svg>
