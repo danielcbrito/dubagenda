@@ -9,6 +9,7 @@ import { useBlockedBarbers } from "@/hooks/useBlockedBarbers";
 
 import { supabase } from "@/integrations/supabase/client";
 import { getVerifiedAuthUser } from "@/utils/authSession";
+import { useAuth } from "@/contexts/AuthProvider";
 
 import { PointsDetailModal } from "@/components/PointsDetailModal";
 import { PendingPaymentCard } from "@/components/PendingPaymentCard";
