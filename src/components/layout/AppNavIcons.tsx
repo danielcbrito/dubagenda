@@ -140,12 +140,12 @@ export function CrownNavIcon({ active = false, ...props }: NavIconProps) {
     <svg {...baseProps} {...props}>
       {active ? (
         <>
-          <path d={body} fill="currentColor" stroke="currentColor" strokeWidth={1.4} />
-          <path d="M4 14.5H20" stroke={detailStroke} strokeWidth={1.3} />
-          <circle cx="12" cy="11.5" r="1.3" fill={detailStroke} stroke={detailStroke} strokeWidth={0.8} />
+          <path d={body} fill="currentColor" stroke="currentColor" strokeWidth={2} />
+          <path d="M4 14.5H20" stroke={detailStroke} strokeWidth={1.6} />
+          <circle cx="12" cy="11.5" r="1.3" fill={detailStroke} stroke={detailStroke} strokeWidth={1} />
         </>
       ) : (
-        <path d={body} strokeWidth={1.6} />
+        <path d={body} strokeWidth={2.25} />
       )}
     </svg>
   );
