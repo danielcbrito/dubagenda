@@ -19,7 +19,6 @@ export default {
       },
       colors: {
         border: "hsl(var(--border))",
-        "accent-red": "hsl(var(--accent-red))",
         'border-glow': "hsl(var(--border-glow))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
