@@ -6533,7 +6533,6 @@ export type Database = {
         }[]
       }
       apurar_ciclo_indicacao: { Args: { p_ciclo_id: string }; Returns: string }
-      apurar_ciclos_vencidos: { Args: never; Returns: number }
       assign_tenant_admin_role: {
         Args: { p_user_id: string }
         Returns: undefined
