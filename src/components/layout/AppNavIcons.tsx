@@ -132,20 +132,28 @@ export function CartNavIcon({ active = false, ...props }: NavIconProps) {
   );
 }
 
-/** Coroa premium (Plano) — preenchimento vermelho com joia interna no tom do fundo. */
-export function CrownNavIcon({ active = false, ...props }: NavIconProps) {
-  const body =
-    "M4 17V11L7 14L9.5 7L12 11L14.5 7L17 14L20 11V17H4Z";
+/** Cartão de plano / assinatura — visual de membership premium com estrela. */
+export function PlanNavIcon({ active = false, ...props }: NavIconProps) {
+  const card =
+    "M3 5.5h18a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2v-9a2 2 0 0 1 2-2Z";
+  const star =
+    "M12 8.8l1.4 2.9 3.1.5-2.2 2.2.5 3.1-2.8-1.5-2.8 1.5.5-3.1-2.2-2.2 3.1-.5Z";
   return (
     <svg {...baseProps} {...props}>
       {active ? (
         <>
-          <path d={body} fill="currentColor" stroke="currentColor" strokeWidth={2} />
-          <path d="M4 14.5H20" stroke={detailStroke} strokeWidth={1.6} />
-          <circle cx="12" cy="11.5" r="1.3" fill={detailStroke} stroke={detailStroke} strokeWidth={1} />
+          <path d={card} fill="currentColor" stroke="currentColor" strokeWidth={2} />
+          <path d={star} fill={detailStroke} stroke={detailStroke} strokeWidth={1.4} />
+          <path d="M6 18.5h4" stroke={detailStroke} strokeWidth={1.6} strokeLinecap="round" />
+          <path d="M14 18.5h4" stroke={detailStroke} strokeWidth={1.6} strokeLinecap="round" />
         </>
       ) : (
-        <path d={body} strokeWidth={2.25} />
+        <>
+          <path d={card} strokeWidth={2.25} />
+          <path d={star} strokeWidth={2} />
+          <path d="M6 18.5h4" strokeWidth={2} strokeLinecap="round" />
+          <path d="M14 18.5h4" strokeWidth={2} strokeLinecap="round" />
+        </>
       )}
     </svg>
   );
