@@ -625,8 +625,7 @@ const Cliente = () => {
   }, [eligibleReviews, dataLoaded]);
 
   useEffect(() => {
-    checkAuth();
-  }, []);
+
 
   // Helper: update channel status and derive overall connection state
   const updateChannelStatus = useCallback((channelName: string, connected: boolean) => {
