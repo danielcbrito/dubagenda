@@ -21,6 +21,14 @@ import {
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { getServiceFee } from "@/lib/payment-fees";
+import {
+  getBookingContext,
+  setBookingContext,
+  getCachedBookingData,
+  fetchBarbers,
+  fetchServices,
+  fetchUnits,
+} from "@/lib/bookingPrefetch";
 
 // Premium Components
 import { ServiceCard } from "@/components/booking/ServiceCard";
@@ -114,9 +122,25 @@ function normalizeAppointmentValidation(
 const ClienteAgendar = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [barbers, setBarbers] = useState<Barber[]>([]);
+
+  // ── Hidratação SÍNCRONA do cache: a lista de profissionais aparece na hora ──
+  const bootRef = useRef<{
+    ctx: ReturnType<typeof getBookingContext>;
+    cached: ReturnType<typeof getCachedBookingData> | null;
+  }>(null as any);
+  if (!bootRef.current) {
+    const ctx = getBookingContext();
+    bootRef.current = {
+      ctx,
+      cached: ctx ? getCachedBookingData(ctx.tenantId, ctx.unitId) : null,
+    };
+  }
+  const boot = bootRef.current;
+  const hasInstantBarbers = Boolean(boot.cached?.barbers?.length) && !boot.ctx?.hasPlan;
+
+  const [barbers, setBarbers] = useState<Barber[]>((boot.cached?.barbers as Barber[]) ?? []);
   const [selectedBarber, setSelectedBarber] = useState<Barber | null>(null);
-  const [services, setServices] = useState<Service[]>([]);
+  const [services, setServices] = useState<Service[]>((boot.cached?.services as Service[]) ?? []);
   const [selectedServices, setSelectedServices] = useState<Service[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date>();
   const [selectedTime, setSelectedTime] = useState<string>("");
@@ -183,18 +207,18 @@ const ClienteAgendar = () => {
   
   // Indica se o usuário está usando fluxo de plano (serviço pré-selecionado)
   const [isPlanFlow, setIsPlanFlow] = useState(false);
-  const [isInitializing, setIsInitializing] = useState(true);
+  const [isInitializing, setIsInitializing] = useState(!hasInstantBarbers);
 
   // Barbearia preferida do usuário (multi-tenant)
   const [preferredShop, setPreferredShop] = useState<{ id: string; nome: string } | null>(null);
   const [showingOtherShops, setShowingOtherShops] = useState(false);
-  const [allBarbers, setAllBarbers] = useState<Barber[]>([]);
+  const [allBarbers, setAllBarbers] = useState<Barber[]>((boot.cached?.allBarbers as Barber[]) ?? []);
 
   // Sistema de unidades
-  const [tenantUnits, setTenantUnits] = useState<TenantUnit[]>([]);
+  const [tenantUnits, setTenantUnits] = useState<TenantUnit[]>((boot.cached?.units as TenantUnit[]) ?? []);
   const [selectedUnit, setSelectedUnit] = useState<TenantUnit | null>(null);
-  const [preferredUnitId, setPreferredUnitId] = useState<string | null>(null);
-  const [hasMultipleUnits, setHasMultipleUnits] = useState(false);
+  const [preferredUnitId, setPreferredUnitId] = useState<string | null>(boot.ctx?.unitId ?? null);
+  const [hasMultipleUnits, setHasMultipleUnits] = useState((boot.cached?.units?.length ?? 0) > 1);
 
   // Verificação se usuário pode usar o plano
   const isPlanEligible =
@@ -326,225 +350,230 @@ const ClienteAgendar = () => {
 
   // Carregar barbeiros (filtrado pelo tenant da barbearia preferida e opcionalmente pela unidade)
   const loadBarbers = async (tenantId?: string | null, unitId?: string | null) => {
-    // Busca filtrada + todos em paralelo
-    let query = supabase
-      .from("barbeiros")
-      .select("id, apelido, foto_url, tenant_id, unidade_id")
-      .eq("ativo", true)
-      .order("apelido");
-
-    if (tenantId) {
-      query = query.eq("tenant_id", tenantId);
-    } else {
-      query = query.is("tenant_id", null);
-    }
-
-    // Filtrar por unidade se selecionada
-    if (unitId) {
-      query = query.or(`unidade_id.eq.${unitId},unidade_id.is.null`);
-    }
-
-    const allQuery = supabase
-      .from("barbeiros")
-      .select("id, apelido, foto_url, tenant_id, unidade_id")
-      .eq("ativo", true)
-      .order("apelido");
-
-    const [filtered, all] = await Promise.all([query, allQuery]);
+    const { filtered, all } = await fetchBarbers(tenantId ?? null, unitId ?? null);
     const filterBlocked = (list: Barber[]) => list.filter(b => !blockedBarberIds.includes(b.id));
-    setBarbers(filterBlocked(filtered.data || []));
-    setAllBarbers(filterBlocked(all.data || []));
-    return filtered.data || [];
+    setBarbers(filterBlocked(filtered as Barber[]));
+    setAllBarbers(filterBlocked(all as Barber[]));
+    return filtered as Barber[];
   };
 
   // Carregar unidades do tenant
   const loadTenantUnits = async (tenantId: string) => {
-    const { data } = await supabase
-      .from("tenant_unidades")
-      .select("id, nome, bairro, cidade, estado, is_sede")
-      .eq("tenant_id", tenantId)
-      .eq("ativo", true)
-      .order("is_sede", { ascending: false });
-    
-    const units = (data || []) as TenantUnit[];
+    const units = (await fetchUnits(tenantId)) as TenantUnit[];
     setTenantUnits(units);
     setHasMultipleUnits(units.length > 1);
     return units;
   };
 
+
   // Initialize booking
   useEffect(() => {
     const initializeBooking = async () => {
-      setIsInitializing(true);
       try {
+        // Flags locais (síncronas) — decididas antes de qualquer rede
+        const resumePaymentRaw = sessionStorage.getItem("resumeToPaymentStep");
+        const isReschedulingSession = sessionStorage.getItem("isRescheduling");
+        const appointmentId = sessionStorage.getItem("rescheduleAppointmentId");
+        const barberFromParam = searchParams.get("barber");
 
-      // SINGLE session call — reused everywhere
-      const { data: { session } } = await supabase.auth.getSession();
-      const uid = session?.user?.id || null;
-      if (uid) setUserId(uid);
+        const cachedCtx = boot.ctx;
+        const isPlainFlow = !resumePaymentRaw && isReschedulingSession !== "true";
 
-      // Check fast session-storage flags BEFORE heavy queries
-      const resumePaymentRaw = sessionStorage.getItem("resumeToPaymentStep");
-      const isReschedulingSession = sessionStorage.getItem('isRescheduling');
-      const appointmentId = sessionStorage.getItem('rescheduleAppointmentId');
-      const barberFromParam = searchParams.get("barber");
+        // ── Revalidação otimista: com cache quente já pintamos a tela e
+        //    atualizamos os dados do último contexto conhecido em paralelo ──
+        let optimistic: Promise<Barber[] | null> | null = null;
+        if (hasInstantBarbers && cachedCtx && isPlainFlow) {
+          if (cachedCtx.unitId && boot.cached?.units) {
+            const cachedUnit = boot.cached.units.find((u) => u.id === cachedCtx.unitId);
+            if (cachedUnit) setSelectedUnit(cachedUnit as TenantUnit);
+          }
+          optimistic = Promise.all([
+            loadBarbers(cachedCtx.tenantId, cachedCtx.unitId),
+            loadServices(cachedCtx.tenantId),
+          ])
+            .then(([list]) => list as Barber[])
+            .catch(() => null);
+        }
 
-      // Rescheduling — early exit, minimal queries
-      if (isReschedulingSession === 'true' && appointmentId) {
-        setIsRescheduling(true);
-        setRescheduleAppointmentId(appointmentId);
-        loadAppointmentForReschedule(appointmentId);
-        setIsInitializing(false);
-        return;
-      }
+        // SINGLE session call — reused everywhere (leitura local, sem rede)
+        const { data: { session } } = await supabase.auth.getSession();
+        const uid = session?.user?.id || null;
+        if (uid) setUserId(uid);
 
-      const profilePromise = uid
-        ? supabase
-            .from("profiles")
-            .select("barbearia_preferida_id, unidade_preferida_id")
-            .eq("id", uid)
+        // Rescheduling — early exit, minimal queries
+        if (isReschedulingSession === "true" && appointmentId) {
+          setIsRescheduling(true);
+          setRescheduleAppointmentId(appointmentId);
+          loadAppointmentForReschedule(appointmentId);
+          setIsInitializing(false);
+          return;
+        }
+
+        const profilePromise = uid
+          ? supabase
+              .from("profiles")
+              .select("barbearia_preferida_id, unidade_preferida_id")
+              .eq("id", uid)
+              .single()
+          : Promise.resolve({ data: null, error: null });
+
+        const [{ data: profile }, subscription] = await Promise.all([
+          profilePromise,
+          !resumePaymentRaw ? loadActiveSubscriptionOptimized(uid) : Promise.resolve(null),
+        ]);
+
+        // Carregar barbearia preferida + unidade preferida do perfil
+        let tenantId: string | null = null;
+        let userPreferredUnitId: string | null = null;
+
+        if (profile?.barbearia_preferida_id) {
+          tenantId = profile.barbearia_preferida_id;
+          userPreferredUnitId = (profile as any).unidade_preferida_id || null;
+          setPreferredUnitId(userPreferredUnitId);
+
+          // Buscar nome da barbearia (non-blocking)
+          supabase
+            .from("tenants")
+            .select("id, nome")
+            .eq("id", tenantId)
             .single()
-        : Promise.resolve({ data: null, error: null });
+            .then(({ data: tenant }) => {
+              if (tenant) setPreferredShop(tenant);
+            });
+        }
 
-      const [{ data: profile }, subscription] = await Promise.all([
-        profilePromise,
-        !resumePaymentRaw ? loadActiveSubscriptionOptimized(uid) : Promise.resolve(null),
-      ]);
+        // Dados secundários (créditos, resgates, carteira) nunca bloqueiam a tela
+        void loadUserCreditsOptimized(uid);
+        void loadAvailableRedemptionsOptimized(uid);
 
-      // Carregar barbearia preferida + unidade preferida do perfil
-      let tenantId: string | null = null;
-      let userPreferredUnitId: string | null = null;
+        // ══════════════════════════════════════════════════════════════
+        // FAST-PATH: plano ativo pula as consultas pesadas
+        // ══════════════════════════════════════════════════════════════
+        if (!resumePaymentRaw) {
+          if (subscription) {
+            setBookingContext({ tenantId, unitId: null, hasPlan: true });
+            const restantes = subscription.limite_agendamentos_mes - subscription.agendamentos_usados;
 
-      if (profile?.barbearia_preferida_id) {
-        tenantId = profile.barbearia_preferida_id;
-        userPreferredUnitId = (profile as any).unidade_preferida_id || null;
-        setPreferredUnitId(userPreferredUnitId);
+            if (restantes > 0) {
+              if (subscription.barbeiro) {
+                setSelectedBarber(subscription.barbeiro);
+                void loadBarberCustomDurations(subscription.barbeiro.id);
+              }
 
-        // Buscar nome da barbearia (non-blocking)
-        supabase
-          .from("tenants")
-          .select("id, nome")
-          .eq("id", tenantId)
-          .single()
-          .then(({ data: tenant }) => {
-            if (tenant) setPreferredShop(tenant);
-          });
-      }
+              if (subscription.servicos.length === 0) {
+                setSubscriptionBlocked(true);
+                toast.error("Seu plano não possui um serviço válido vinculado. Fale com o suporte da barbearia.");
+                setIsInitializing(false);
+                return;
+              }
 
-      // ══════════════════════════════════════════════════════════════
-      // FAST-PATH: Check subscription FIRST to skip heavy queries
-      // for plan users (barbers list, credits, redemptions, etc.)
-      // ══════════════════════════════════════════════════════════════
-      if (!resumePaymentRaw) {
-        if (subscription) {
-          const restantes = subscription.limite_agendamentos_mes - subscription.agendamentos_usados;
-          
-          if (restantes > 0) {
-            if (subscription.barbeiro) {
-              setSelectedBarber(subscription.barbeiro);
-              void loadBarberCustomDurations(subscription.barbeiro.id);
-            }
+              setIsPlanFlow(true);
 
-            if (subscription.servicos.length === 0) {
-              setSubscriptionBlocked(true);
-              toast.error("Seu plano não possui um serviço válido vinculado. Fale com o suporte da barbearia.");
+              if (subscription.servicos.length === 1 && subscription.barbeiro) {
+                setSelectedServices([subscription.servicos[0]]);
+                setStep(3);
+              } else if (subscription.servicos.length > 1 && subscription.barbeiro) {
+                setStep(2);
+              } else {
+                setStep(1);
+                setIsInitializing(false);
+                await loadBarbers(tenantId, null);
+              }
               setIsInitializing(false);
               return;
             }
 
-            setIsPlanFlow(true);
-            
-            // Se tiver APENAS UM serviço, pré-seleciona e vai para o passo da data
-            if (subscription.servicos.length === 1 && subscription.barbeiro) {
-              setSelectedServices([subscription.servicos[0]]);
-              setStep(3);
-            } else if (subscription.servicos.length > 1 && subscription.barbeiro) {
-              // Se tiver múltiplos serviços, precisa escolher um (Step 2)
-              setStep(2);
-            } else {
-              // Sem barbeiro, precisa escolher barbeiro (Step 1)
-              await loadBarbers(tenantId, null);
-              setStep(1);
-            }
+            setSubscriptionLimitReached(true);
             setIsInitializing(false);
             return;
           }
-
-
-          setSubscriptionLimitReached(true);
-          setIsInitializing(false);
-          return;
         }
-      }
 
-      // ══════════════════════════════════════════════════════════════
-      // NORMAL PATH: Non-plan users — load everything
-      // ══════════════════════════════════════════════════════════════
+        // ══════════════════════════════════════════════════════════════
+        // NORMAL PATH
+        // ══════════════════════════════════════════════════════════════
+        let effectiveUnitId: string | null = null;
 
-      // Carregar unidades do tenant
-      let units: TenantUnit[] = [];
-      let effectiveUnitId: string | null = null;
-      
-      if (tenantId) {
-        units = await loadTenantUnits(tenantId);
-        
-        if (userPreferredUnitId && units.find(u => u.id === userPreferredUnitId)) {
-          const preferredUnit = units.find(u => u.id === userPreferredUnitId)!;
-          setSelectedUnit(preferredUnit);
-          effectiveUnitId = preferredUnit.id;
-        }
-      }
+        if (tenantId) {
+          const units = boot.cached?.units?.length && cachedCtx?.tenantId === tenantId
+            ? ((boot.cached.units as TenantUnit[]))
+            : await loadTenantUnits(tenantId);
 
-      const [barbersList] = await Promise.all([
-        loadBarbers(tenantId, effectiveUnitId),
-        loadUserCreditsOptimized(uid),
-        loadAvailableRedemptionsOptimized(uid),
-      ]);
-
-      // Auto-select barber from query param
-      if (barberFromParam && barbersList) {
-        const matchedBarber = barbersList.find((b: Barber) => b.id === barberFromParam);
-        if (matchedBarber) {
-          setSelectedBarber(matchedBarber);
-          loadBarberCustomDurations(matchedBarber.id);
-          setSearchParams(prev => {
-            prev.delete("barber");
-            return prev;
-          }, { replace: true });
-        }
-      }
-
-      // Resume payment step
-      if (resumePaymentRaw) {
-        sessionStorage.removeItem("resumeToPaymentStep");
-        try {
-          const resumeData = JSON.parse(resumePaymentRaw);
-          
-          const [, resumeBarberResult, resumeServiceResult] = await Promise.all([
-            loadServices(tenantId),
-            resumeData.barberId ? supabase.from("barbeiros").select("id, apelido, foto_url, tenant_id").eq("id", resumeData.barberId).maybeSingle() : null,
-            resumeData.servicoId ? supabase.from("servicos").select("*").eq("id", resumeData.servicoId).maybeSingle() : null,
-          ]);
-          
-          if (resumeBarberResult?.data) {
-            setSelectedBarber(resumeBarberResult.data);
-            loadBarberCustomDurations(resumeBarberResult.data.id);
+          // revalida unidades em background quando veio do cache
+          if (boot.cached?.units?.length && cachedCtx?.tenantId === tenantId) {
+            void loadTenantUnits(tenantId);
           }
-          if (resumeServiceResult?.data) setSelectedServices([resumeServiceResult.data]);
-          if (resumeData.date) setSelectedDate(new Date(`${resumeData.date}T12:00:00`));
-          if (resumeData.time) setSelectedTime(normalizeTimeValue(resumeData.time));
 
-          setStep(5);
-          setIsInitializing(false);
-          return;
-        } catch (e) {
-          console.error("Erro ao restaurar dados de pagamento:", e);
+          const preferredUnit = userPreferredUnitId
+            ? units.find((u) => u.id === userPreferredUnitId)
+            : undefined;
+          if (preferredUnit) {
+            setSelectedUnit(preferredUnit);
+            effectiveUnitId = preferredUnit.id;
+          }
         }
-      }
 
-      await loadServices(tenantId);
-      setStep(1);
-      setIsInitializing(false);
+        // Salva contexto para o próximo boot instantâneo
+        setBookingContext({ tenantId, unitId: effectiveUnitId, hasPlan: false });
+
+        const sameAsCached =
+          optimistic !== null &&
+          cachedCtx?.tenantId === tenantId &&
+          (cachedCtx?.unitId ?? null) === effectiveUnitId;
+
+        let barbersList: Barber[];
+        if (sameAsCached && optimistic) {
+          setIsInitializing(false);
+          barbersList = (await optimistic) ?? ((boot.cached?.barbers as Barber[]) ?? []);
+        } else {
+          barbersList = await loadBarbers(tenantId, effectiveUnitId);
+          setIsInitializing(false);
+          void loadServices(tenantId);
+        }
+
+        // Auto-select barber from query param
+        if (barberFromParam && barbersList?.length) {
+          const matchedBarber = barbersList.find((b: Barber) => b.id === barberFromParam);
+          if (matchedBarber) {
+            setSelectedBarber(matchedBarber);
+            loadBarberCustomDurations(matchedBarber.id);
+            setSearchParams(prev => {
+              prev.delete("barber");
+              return prev;
+            }, { replace: true });
+          }
+        }
+
+        // Resume payment step
+        if (resumePaymentRaw) {
+          sessionStorage.removeItem("resumeToPaymentStep");
+          try {
+            const resumeData = JSON.parse(resumePaymentRaw);
+
+            const [, resumeBarberResult, resumeServiceResult] = await Promise.all([
+              loadServices(tenantId),
+              resumeData.barberId ? supabase.from("barbeiros").select("id, apelido, foto_url, tenant_id").eq("id", resumeData.barberId).maybeSingle() : null,
+              resumeData.servicoId ? supabase.from("servicos").select("*").eq("id", resumeData.servicoId).maybeSingle() : null,
+            ]);
+
+            if (resumeBarberResult?.data) {
+              setSelectedBarber(resumeBarberResult.data);
+              loadBarberCustomDurations(resumeBarberResult.data.id);
+            }
+            if (resumeServiceResult?.data) setSelectedServices([resumeServiceResult.data]);
+            if (resumeData.date) setSelectedDate(new Date(`${resumeData.date}T12:00:00`));
+            if (resumeData.time) setSelectedTime(normalizeTimeValue(resumeData.time));
+
+            setStep(5);
+            setIsInitializing(false);
+            return;
+          } catch (e) {
+            console.error("Erro ao restaurar dados de pagamento:", e);
+          }
+        }
+
+        setStep(1);
+        setIsInitializing(false);
       } catch (err) {
         console.error("[initializeBooking] Fatal error:", err);
         setIsInitializing(false);
@@ -554,6 +583,7 @@ const ClienteAgendar = () => {
 
     initializeBooking();
   }, []);
+
 
   // Dynamic viewport height for mobile browsers (without locking scroll)
   useEffect(() => {
@@ -622,20 +652,8 @@ const ClienteAgendar = () => {
   }, []);
 
   const loadServices = async (tenantId?: string | null) => {
-    let query = supabase
-      .from("servicos")
-      .select("*")
-      .eq("ativo", true)
-      .order("preco");
-
-    if (tenantId) {
-      query = query.eq("tenant_id", tenantId);
-    } else {
-      query = query.is("tenant_id", null);
-    }
-
-    const { data: allServices } = await query;
-    let finalServices = allServices || [];
+    const allServices = await fetchServices(tenantId ?? null);
+    let finalServices = (allServices || []) as unknown as Service[];
 
     // Se cliente tem plano ativo e está em fluxo de plano, restringir aos serviços vinculados
     if (isPlanFlow && activeSubscription?.servicos && activeSubscription.servicos.length > 0) {
@@ -645,19 +663,18 @@ const ClienteAgendar = () => {
 
 
     setServices(finalServices);
+    return finalServices;
   };
 
   const loadUserCreditsOptimized = async (uid: string | null) => {
     if (!uid) return;
     try {
-      // Ensure session is fresh before calling edge functions
-      await supabase.auth.refreshSession();
-
-      // Parallel: credits RPC + wallet edge function
+      // Parallel: credits RPC + wallet edge function (sem refreshSession bloqueante)
       const [creditsResult, walletResult] = await Promise.all([
         supabase.rpc("get_user_available_credits", { p_user_id: uid }),
         supabase.functions.invoke('wallet-operations', { body: { action: 'get_balance' } }),
       ]);
+
 
       setAvailableCredits(creditsResult.data || 0);
       setWalletBalance(walletResult.data?.balance || 0);
