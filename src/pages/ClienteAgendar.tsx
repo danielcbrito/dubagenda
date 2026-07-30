@@ -381,7 +381,7 @@ const ClienteAgendar = () => {
 
         // ── Revalidação otimista: com cache quente já pintamos a tela e
         //    atualizamos os dados do último contexto conhecido em paralelo ──
-        let optimistic: Promise<unknown> | null = null;
+        let optimistic: Promise<Barber[] | null> | null = null;
         if (hasInstantBarbers && cachedCtx && isPlainFlow) {
           if (cachedCtx.unitId && boot.cached?.units) {
             const cachedUnit = boot.cached.units.find((u) => u.id === cachedCtx.unitId);
@@ -390,7 +390,9 @@ const ClienteAgendar = () => {
           optimistic = Promise.all([
             loadBarbers(cachedCtx.tenantId, cachedCtx.unitId),
             loadServices(cachedCtx.tenantId),
-          ]).catch(() => null);
+          ])
+            .then(([list]) => list as Barber[])
+            .catch(() => null);
         }
 
         // SINGLE session call — reused everywhere (leitura local, sem rede)
