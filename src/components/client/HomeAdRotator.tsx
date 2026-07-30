@@ -17,7 +17,7 @@ interface HomeAdRotatorProps {
 }
 
 const EASE = [0.22, 1, 0.36, 1] as const;
-const SLIDE_DURATION = 0.7;
+const SLIDE_DURATION = 0.85;
 
 function AdSlide({ ad, onPress }: { ad: HomeAd; onPress: () => void }) {
   return (
@@ -72,8 +72,8 @@ function AdSlide({ ad, onPress }: { ad: HomeAd; onPress: () => void }) {
 
 /**
  * Carrossel suave entre o card de fidelidade e os anúncios da barbearia/app.
- * Todos os slides ficam num "trilho" horizontal, então a troca é contínua
- * (sem gap de saída/entrada) e a imagem já entra pré-carregada.
+ * O trilho se move sempre para a frente; ao chegar no final, um clone do
+ * primeiro slide permite o loop contínuo sem "voltar" visualmente.
  */
 export function HomeAdRotator({
   children,
@@ -86,6 +86,7 @@ export function HomeAdRotator({
   const [index, setIndex] = useState(0);
   const [loops, setLoops] = useState(0);
   const [paused, setPaused] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
   const [readyIds, setReadyIds] = useState<string[]>([]);
   const timer = useRef<ReturnType<typeof setTimeout>>();
 
@@ -130,32 +131,57 @@ export function HomeAdRotator({
     [ads, readyIds],
   );
 
-  // slides: 0 = base (se existir) | demais = anúncios
-  const total = (hasBase ? 1 : 0) + visibleAds.length;
+  // slides: 0 = base (se existir) | demais = anúncios | último = clone do primeiro
+  // para permitir loop infinito sempre avançando para a frente.
+  const itemCount = hasBase ? visibleAds.length + 1 : visibleAds.length;
+  const totalSlides = itemCount > 1 ? itemCount + 1 : itemCount;
 
   useEffect(() => {
     setIndex(0);
     setLoops(0);
+    setIsResetting(false);
   }, [visibleAds.length, hasBase]);
 
   useEffect(() => {
-    // Reduced motion desativa só o movimento, nunca a rotação do conteúdo.
-    if (total <= 1 || paused) return;
-    const isBase = hasBase && index === 0;
+    if (totalSlides <= 1 || paused || isResetting) return;
+    const isBase = hasBase && (index === 0 || index === totalSlides - 1);
     const delay = isBase
-      ? loops === 0
+      ? loops === 0 && index === 0
         ? firstBaseDurationMs
         : baseDurationMs
       : adDurationMs;
     timer.current = setTimeout(() => {
       setIndex((i) => {
-        const next = (i + 1) % total;
-        if (next === 0) setLoops((l) => l + 1);
+        const next = i + 1;
+        if (next >= totalSlides) {
+          // Chegou no clone do primeiro slide; reseta silenciosamente para o
+          // slide original sem animação, mantendo a sensação de movimento contínuo.
+          setIsResetting(true);
+          setLoops((l) => l + 1);
+          return 0;
+        }
         return next;
       });
     }, delay);
     return () => clearTimeout(timer.current);
-  }, [index, loops, total, paused, hasBase, baseDurationMs, adDurationMs, firstBaseDurationMs]);
+  }, [
+    index,
+    loops,
+    totalSlides,
+    paused,
+    isResetting,
+    hasBase,
+    baseDurationMs,
+    adDurationMs,
+    firstBaseDurationMs,
+  ]);
+
+  // Sai do estado de reset no próximo frame para reativar as transições.
+  useEffect(() => {
+    if (!isResetting) return;
+    const raf = requestAnimationFrame(() => setIsResetting(false));
+    return () => cancelAnimationFrame(raf);
+  }, [isResetting]);
 
   // Pausa quando a aba não está visível (economia + não "queima" impressão)
   useEffect(() => {
@@ -177,7 +203,7 @@ export function HomeAdRotator({
     [navigate],
   );
 
-  if (total === 0) return null;
+  if (totalSlides === 0) return null;
 
   return (
     <div
@@ -190,7 +216,7 @@ export function HomeAdRotator({
         className="flex w-full items-stretch"
         animate={{ x: `-${index * 100}%` }}
         transition={
-          reducedMotion
+          isResetting || reducedMotion
             ? { duration: 0 }
             : { duration: SLIDE_DURATION, ease: EASE }
         }
@@ -201,10 +227,26 @@ export function HomeAdRotator({
         ) : null}
 
         {visibleAds.map((ad) => (
-          <div key={ad.id} className={hasBase ? "w-full shrink-0" : "w-full shrink-0 h-[104px]"}>
+          <div
+            key={ad.id}
+            className={hasBase ? "w-full shrink-0" : "w-full shrink-0 h-[104px]"}
+          >
             <AdSlide ad={ad} onPress={() => handleAdPress(ad)} />
           </div>
         ))}
+
+        {/* Clone do primeiro slide para loop infinito sempre à frente */}
+        {itemCount > 1 && hasBase ? (
+          <div className="w-full shrink-0">{children}</div>
+        ) : null}
+        {itemCount > 1 && !hasBase && visibleAds[0] ? (
+          <div
+            key={`${visibleAds[0].id}-clone`}
+            className="w-full shrink-0 h-[104px]"
+          >
+            <AdSlide ad={visibleAds[0]} onPress={() => handleAdPress(visibleAds[0])} />
+          </div>
+        ) : null}
       </motion.div>
     </div>
   );
