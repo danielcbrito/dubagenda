@@ -28,6 +28,8 @@ import { AppointmentHistorySheet } from "@/components/AppointmentHistorySheet";
 import { ClientHeader } from "@/components/client/ClientHeader";
 import { LoyaltyCard } from "@/components/client/LoyaltyCard";
 import { PlanTrackerCard } from "@/components/client/PlanTrackerCard";
+import { HomeAdRotator } from "@/components/client/HomeAdRotator";
+import { useHomeAds } from "@/hooks/useHomeAds";
 import { PlanExpiredBanner } from "@/components/client/PlanExpiredBanner";
 import { PlanRenewalDrawer } from "@/components/client/PlanRenewalDrawer";
 import { PendingSubscriptionDrawer } from "@/components/client/PendingSubscriptionDrawer";
