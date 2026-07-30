@@ -28,6 +28,8 @@ import { AppointmentHistorySheet } from "@/components/AppointmentHistorySheet";
 import { ClientHeader } from "@/components/client/ClientHeader";
 import { LoyaltyCard } from "@/components/client/LoyaltyCard";
 import { PlanTrackerCard } from "@/components/client/PlanTrackerCard";
+import { HomeAdRotator } from "@/components/client/HomeAdRotator";
+import { useHomeAds } from "@/hooks/useHomeAds";
 import { PlanExpiredBanner } from "@/components/client/PlanExpiredBanner";
 import { PlanRenewalDrawer } from "@/components/client/PlanRenewalDrawer";
 import { PendingSubscriptionDrawer } from "@/components/client/PendingSubscriptionDrawer";
@@ -410,6 +412,11 @@ const Cliente = () => {
   const planUsageCount = loyaltyQueryData?.planUsageCount ?? 0;
   const redemptions = loyaltyQueryData?.redemptions ?? 0;
   const pontosNecessarios = loyaltyQueryData?.pontosNecessarios ?? 8;
+
+  // Anúncios rotativos exibidos no espaço do card de fidelidade
+  const { ads: homeAds } = useHomeAds(tenantId, {
+    hasSubscription: !!activeSubscription || !!pendingSubscription,
+  });
   const loyaltyEnabled = loyaltyQueryData?.loyaltyEnabled ?? false;
 
   // ─── Shop via useQuery (Layer 4) ───
@@ -1122,16 +1129,17 @@ const Cliente = () => {
                         onRenew={() => setPlansSheetOpen(true)}
                       />
                     ) : (
-                      /* Lógica de Exibição Única: LoyaltyCard apenas se não houver plano ativo/expirado */
-                      loyaltyEnabled && (
-                        <LoyaltyCard
-                          key="loyalty-card"
-                          points={points}
-                          redemptions={redemptions}
-                          pontosNecessarios={pontosNecessarios}
-                          onViewDetails={() => setPointsModalOpen(true)}
-                        />
-                      )
+                      /* Card de fidelidade + anúncios rotativos no mesmo espaço */
+                      <HomeAdRotator key="loyalty-ads" ads={homeAds}>
+                        {loyaltyEnabled ? (
+                          <LoyaltyCard
+                            points={points}
+                            redemptions={redemptions}
+                            pontosNecessarios={pontosNecessarios}
+                            onViewDetails={() => setPointsModalOpen(true)}
+                          />
+                        ) : undefined}
+                      </HomeAdRotator>
                     )}
                   </AnimatePresence>
                 </div>
