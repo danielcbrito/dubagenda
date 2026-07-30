@@ -652,20 +652,8 @@ const ClienteAgendar = () => {
   }, []);
 
   const loadServices = async (tenantId?: string | null) => {
-    let query = supabase
-      .from("servicos")
-      .select("*")
-      .eq("ativo", true)
-      .order("preco");
-
-    if (tenantId) {
-      query = query.eq("tenant_id", tenantId);
-    } else {
-      query = query.is("tenant_id", null);
-    }
-
-    const { data: allServices } = await query;
-    let finalServices = allServices || [];
+    const allServices = await fetchServices(tenantId ?? null);
+    let finalServices = (allServices || []) as unknown as Service[];
 
     // Se cliente tem plano ativo e está em fluxo de plano, restringir aos serviços vinculados
     if (isPlanFlow && activeSubscription?.servicos && activeSubscription.servicos.length > 0) {
@@ -675,19 +663,18 @@ const ClienteAgendar = () => {
 
 
     setServices(finalServices);
+    return finalServices;
   };
 
   const loadUserCreditsOptimized = async (uid: string | null) => {
     if (!uid) return;
     try {
-      // Ensure session is fresh before calling edge functions
-      await supabase.auth.refreshSession();
-
-      // Parallel: credits RPC + wallet edge function
+      // Parallel: credits RPC + wallet edge function (sem refreshSession bloqueante)
       const [creditsResult, walletResult] = await Promise.all([
         supabase.rpc("get_user_available_credits", { p_user_id: uid }),
         supabase.functions.invoke('wallet-operations', { body: { action: 'get_balance' } }),
       ]);
+
 
       setAvailableCredits(creditsResult.data || 0);
       setWalletBalance(walletResult.data?.balance || 0);
