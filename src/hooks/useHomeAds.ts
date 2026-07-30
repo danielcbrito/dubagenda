@@ -83,7 +83,7 @@ export function useHomeAds(
       : planosBase.is("tenant_id", null);
 
     const planosPromise = hasSubscription
-      ? Promise.resolve({ data: [] as any[] })
+      ? Promise.resolve({ data: [] as any[], error: null })
       : planosBase.order("preco_mensal", { ascending: true }).limit(1);
 
     const [planosRes, anunciosRes] = await Promise.all([
