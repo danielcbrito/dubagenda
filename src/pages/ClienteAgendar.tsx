@@ -21,6 +21,14 @@ import {
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { getServiceFee } from "@/lib/payment-fees";
+import {
+  getBookingContext,
+  setBookingContext,
+  getCachedBookingData,
+  fetchBarbers,
+  fetchServices,
+  fetchUnits,
+} from "@/lib/bookingPrefetch";
 
 // Premium Components
 import { ServiceCard } from "@/components/booking/ServiceCard";
