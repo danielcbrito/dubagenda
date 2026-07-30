@@ -100,14 +100,17 @@ export function HomeAdRotator({
   }, [ads.length, hasBase]);
 
   useEffect(() => {
-    if (total <= 1 || paused || reducedMotion) return;
+    // Reduced motion must disable only the movement, not the content rotation.
+    // On Android, the system "Remove animations" option enables this media
+    // query; previously that made the loyalty card remain visible forever.
+    if (total <= 1 || paused) return;
     const isBase = hasBase && index === 0;
     timer.current = setTimeout(
       () => setIndex((i) => (i + 1) % total),
       isBase ? baseDurationMs : adDurationMs,
     );
     return () => clearTimeout(timer.current);
-  }, [index, total, paused, hasBase, baseDurationMs, adDurationMs, reducedMotion]);
+  }, [index, total, paused, hasBase, baseDurationMs, adDurationMs]);
 
   // Pausa quando a aba não está visível (economia + não "queima" impressão)
   useEffect(() => {
@@ -145,7 +148,7 @@ export function HomeAdRotator({
       {hasBase ? (
         <motion.div
           animate={{ opacity: currentAd ? 0 : 1 }}
-          transition={{ duration: 0.25, ease: EASE }}
+          transition={{ duration: reducedMotion ? 0 : 0.25, ease: EASE }}
           style={{ pointerEvents: currentAd ? "none" : "auto" }}
         >
           {children}
@@ -158,10 +161,10 @@ export function HomeAdRotator({
         {currentAd && (
           <motion.div
             key={currentAd.id}
-            initial={{ opacity: 0, y: 6 }}
+            initial={reducedMotion ? false : { opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -6 }}
-            transition={{ duration: 0.25, ease: EASE }}
+            exit={reducedMotion ? { opacity: 0 } : { opacity: 0, y: -6 }}
+            transition={{ duration: reducedMotion ? 0 : 0.25, ease: EASE }}
             className="absolute inset-0"
           >
             <AdSlide ad={currentAd} onPress={() => handleAdPress(currentAd)} />

@@ -18,7 +18,7 @@ export interface HomeAd {
   imageUrl?: string | null;
 }
 
-const CACHE_PREFIX = "home_ads_v2:";
+const CACHE_PREFIX = "home_ads_v3:";
 const CACHE_TTL_MS = 5 * 60 * 1000;
 
 function readCache(key: string): HomeAd[] | null {
@@ -83,7 +83,7 @@ export function useHomeAds(
       : planosBase.is("tenant_id", null);
 
     const planosPromise = hasSubscription
-      ? Promise.resolve({ data: [] as any[] })
+      ? Promise.resolve({ data: [] as any[], error: null })
       : planosBase.order("preco_mensal", { ascending: true }).limit(1);
 
     const [planosRes, anunciosRes] = await Promise.all([
@@ -95,6 +95,14 @@ export function useHomeAds(
         .order("ordem", { ascending: true }),
     ]);
 
+    // Never let an optional institutional-ad failure discard a valid plan ad.
+    // Keeping these errors visible also prevents another silent empty queue.
+    if (planosRes.error) {
+      console.error("[home-ads] Não foi possível carregar os planos", planosRes.error.message);
+    }
+    if (anunciosRes.error) {
+      console.error("[home-ads] Não foi possível carregar anúncios institucionais", anunciosRes.error.message);
+    }
 
     const plano = (planosRes.data || [])[0] as any;
     if (plano) {
