@@ -35,28 +35,28 @@ export function BarberCard({ barber, isSelected, onSelect, rating, isPlanBarber 
     <>
       <motion.button
         onClick={onSelect}
-        whileTap={{ scale: 0.98 }}
+        whileTap={{ scale: 0.985 }}
         className={cn(
-          "w-full text-left rounded-lg p-3 transition-all duration-200 border relative",
-          "bg-card/60 active:scale-[0.99]",
+          "w-full text-left rounded-xl p-3.5 transition-all duration-200 relative group",
+          "bg-card border",
           isSelected
-            ? "border-primary/40 bg-primary/5"
-            : "border-border/50 hover:border-border"
+            ? "border-primary/25 shadow-[0_2px_12px_-4px_hsl(var(--primary)/0.12)]"
+            : "border-border/40 hover:border-border/80 hover:bg-card/80"
         )}
       >
         {/* Plan badge */}
         {isPlanBarber && (
-          <div className="absolute top-1.5 right-1.5 flex items-center gap-1 bg-secondary/15 text-secondary px-2 py-0.5 rounded-full border border-secondary/20">
+          <div className="absolute top-3 right-3 flex items-center gap-1 bg-secondary/10 text-secondary px-2 py-0.5 rounded-full border border-secondary/15">
             <Crown className="w-2.5 h-2.5" />
             <span className="text-[9px] font-semibold uppercase tracking-wider">Seu Plano</span>
           </div>
         )}
 
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-3.5">
           {/* Avatar */}
           <div className={cn(
-            "relative w-9 h-9 rounded-full overflow-hidden flex-shrink-0 transition-all duration-200",
-            isSelected ? "ring-[1.5px] ring-primary/50 ring-offset-1 ring-offset-background" : ""
+            "relative w-12 h-12 rounded-full overflow-hidden flex-shrink-0 transition-all duration-200",
+            isSelected ? "ring-[2px] ring-primary/20" : ""
           )}>
             {barber.foto_url ? (
               <img
@@ -65,7 +65,7 @@ export function BarberCard({ barber, isSelected, onSelect, rating, isPlanBarber 
                 className="w-full h-full object-cover"
               />
             ) : (
-              <div className="w-full h-full bg-muted/20 flex items-center justify-center">
+              <div className="w-full h-full bg-muted/30 flex items-center justify-center">
                 <User className="w-5 h-5 text-muted-foreground" />
               </div>
             )}
@@ -74,41 +74,31 @@ export function BarberCard({ barber, isSelected, onSelect, rating, isPlanBarber 
           {/* Info */}
           <div className="flex-1 min-w-0">
             <h3 className={cn(
-              "text-[13px] font-semibold truncate transition-colors",
-              isSelected ? "text-primary" : "text-foreground"
+              "text-[14px] font-semibold truncate transition-colors",
+              isSelected ? "text-foreground" : "text-foreground"
             )}>
               {barber.apelido}
             </h3>
 
             {/* Rating */}
             {rating && rating.count > 0 ? (
-              <div className="flex items-center gap-1.5 mt-0.5">
-                <div className="flex gap-px">
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <Star
-                      key={star}
-                      className={cn(
-                        "w-2.5 h-2.5",
-                        star <= Math.round(rating.average)
-                          ? "fill-primary text-primary"
-                          : "text-muted-foreground/30"
-                      )}
-                    />
-                  ))}
+              <div className="flex items-center gap-2 mt-1">
+                <div className="flex items-center gap-0.5 bg-muted/40 px-1.5 py-0.5 rounded-md">
+                  <Star className="w-3 h-3 fill-primary text-primary" />
+                  <span className="text-[11px] font-semibold text-foreground tabular-nums">
+                    {rating.average.toFixed(1)}
+                  </span>
                 </div>
-                <span className="text-[10px] text-muted-foreground tabular-nums">
-                  {rating.average.toFixed(1)}
-                </span>
                 <button
                   onClick={handleViewReviews}
-                  className="text-[10px] text-muted-foreground hover:text-foreground flex items-center gap-0.5 transition-colors ml-0.5"
+                  className="text-[11px] text-muted-foreground hover:text-foreground flex items-center gap-0.5 transition-colors"
                 >
                   <span>{rating.count} avaliações</span>
-                  <ChevronRight className="w-2.5 h-2.5" />
+                  <ChevronRight className="w-3 h-3" />
                 </button>
               </div>
             ) : (
-              <p className="text-[10px] text-muted-foreground mt-0.5">
+              <p className="text-[11px] text-muted-foreground mt-1">
                 Profissional
               </p>
             )}
@@ -116,18 +106,22 @@ export function BarberCard({ barber, isSelected, onSelect, rating, isPlanBarber 
 
           {/* Selection Indicator */}
           <div className={cn(
-            "flex-shrink-0 w-5 h-5 rounded-full border-[1.5px] transition-all duration-200 flex items-center justify-center",
+            "flex-shrink-0 w-6 h-6 rounded-full border transition-all duration-200 flex items-center justify-center",
             isSelected 
               ? "bg-primary border-primary"
-              : "border-muted-foreground/40",
-            isPlanBarber ? "mt-4" : ""
+              : "border-muted-foreground/30 group-hover:border-muted-foreground/50",
+            isPlanBarber ? "mt-5" : ""
           )}>
             {isSelected && (
               <motion.div
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                className="w-2 h-2 rounded-full bg-primary-foreground"
-              />
+                initial={{ scale: 0, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ type: "spring", stiffness: 400, damping: 25 }}
+              >
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M2.5 6L5 8.5L9.5 4" stroke="hsl(var(--primary-foreground))" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </motion.div>
             )}
           </div>
         </div>
