@@ -18,7 +18,7 @@ export interface HomeAd {
   imageUrl?: string | null;
 }
 
-const CACHE_PREFIX = "home_ads_v4:";
+const CACHE_PREFIX = "home_ads_v5:";
 const CACHE_TTL_MS = 5 * 60 * 1000;
 
 function readCache(key: string): HomeAd[] | null {
