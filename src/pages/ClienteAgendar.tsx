@@ -522,10 +522,9 @@ const ClienteAgendar = () => {
           (cachedCtx?.unitId ?? null) === effectiveUnitId;
 
         let barbersList: Barber[];
-        if (sameAsCached) {
+        if (sameAsCached && optimistic) {
           setIsInitializing(false);
-          await optimistic;
-          barbersList = barbers;
+          barbersList = (await optimistic) ?? ((boot.cached?.barbers as Barber[]) ?? []);
         } else {
           barbersList = await loadBarbers(tenantId, effectiveUnitId);
           setIsInitializing(false);
