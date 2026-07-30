@@ -10,6 +10,7 @@ import { useBlockedBarbers } from "@/hooks/useBlockedBarbers";
 import { supabase } from "@/integrations/supabase/client";
 import { getVerifiedAuthUser } from "@/utils/authSession";
 import { useAuth } from "@/contexts/AuthProvider";
+import { prefetchBookingData } from "@/lib/bookingPrefetch";
 
 import { PointsDetailModal } from "@/components/PointsDetailModal";
 import { PendingPaymentCard } from "@/components/PendingPaymentCard";
