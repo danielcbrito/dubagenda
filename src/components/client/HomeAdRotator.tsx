@@ -76,8 +76,8 @@ function AdSlide({ ad, onPress }: { ad: HomeAd; onPress: () => void }) {
 export function HomeAdRotator({
   children,
   ads,
-  baseDurationMs = 9000,
-  adDurationMs = 6000,
+  baseDurationMs = 2000,
+  adDurationMs = 2500,
 }: HomeAdRotatorProps) {
   const navigate = useNavigate();
   const [index, setIndex] = useState(0);
