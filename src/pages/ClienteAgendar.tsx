@@ -114,7 +114,23 @@ function normalizeAppointmentValidation(
 const ClienteAgendar = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [barbers, setBarbers] = useState<Barber[]>([]);
+
+  // ── Hidratação SÍNCRONA do cache: a lista de profissionais aparece na hora ──
+  const bootRef = useRef<{
+    ctx: ReturnType<typeof getBookingContext>;
+    cached: ReturnType<typeof getCachedBookingData> | null;
+  }>(null as any);
+  if (!bootRef.current) {
+    const ctx = getBookingContext();
+    bootRef.current = {
+      ctx,
+      cached: ctx ? getCachedBookingData(ctx.tenantId, ctx.unitId) : null,
+    };
+  }
+  const boot = bootRef.current;
+  const hasInstantBarbers = Boolean(boot.cached?.barbers?.length) && !boot.ctx?.hasPlan;
+
+  const [barbers, setBarbers] = useState<Barber[]>((boot.cached?.barbers as Barber[]) ?? []);
   const [selectedBarber, setSelectedBarber] = useState<Barber | null>(null);
   const [services, setServices] = useState<Service[]>([]);
   const [selectedServices, setSelectedServices] = useState<Service[]>([]);
