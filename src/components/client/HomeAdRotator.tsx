@@ -187,7 +187,7 @@ export function HomeAdRotator({
       onPointerLeave={() => setPaused(false)}
     >
       <motion.div
-        className="flex w-full"
+        className="flex w-full items-stretch"
         animate={{ x: `-${index * 100}%` }}
         transition={
           reducedMotion
@@ -201,7 +201,7 @@ export function HomeAdRotator({
         ) : null}
 
         {visibleAds.map((ad) => (
-          <div key={ad.id} className="w-full shrink-0">
+          <div key={ad.id} className={hasBase ? "w-full shrink-0" : "w-full shrink-0 h-[104px]"}>
             <AdSlide ad={ad} onPress={() => handleAdPress(ad)} />
           </div>
         ))}
