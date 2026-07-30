@@ -369,176 +369,210 @@ const ClienteAgendar = () => {
   // Initialize booking
   useEffect(() => {
     const initializeBooking = async () => {
-      setIsInitializing(true);
       try {
+        // Flags locais (síncronas) — decididas antes de qualquer rede
+        const resumePaymentRaw = sessionStorage.getItem("resumeToPaymentStep");
+        const isReschedulingSession = sessionStorage.getItem("isRescheduling");
+        const appointmentId = sessionStorage.getItem("rescheduleAppointmentId");
+        const barberFromParam = searchParams.get("barber");
 
-      // SINGLE session call — reused everywhere
-      const { data: { session } } = await supabase.auth.getSession();
-      const uid = session?.user?.id || null;
-      if (uid) setUserId(uid);
+        const cachedCtx = boot.ctx;
+        const isPlainFlow = !resumePaymentRaw && isReschedulingSession !== "true";
 
-      // Check fast session-storage flags BEFORE heavy queries
-      const resumePaymentRaw = sessionStorage.getItem("resumeToPaymentStep");
-      const isReschedulingSession = sessionStorage.getItem('isRescheduling');
-      const appointmentId = sessionStorage.getItem('rescheduleAppointmentId');
-      const barberFromParam = searchParams.get("barber");
+        // ── Revalidação otimista: com cache quente já pintamos a tela e
+        //    atualizamos os dados do último contexto conhecido em paralelo ──
+        let optimistic: Promise<unknown> | null = null;
+        if (hasInstantBarbers && cachedCtx && isPlainFlow) {
+          if (cachedCtx.unitId && boot.cached?.units) {
+            const cachedUnit = boot.cached.units.find((u) => u.id === cachedCtx.unitId);
+            if (cachedUnit) setSelectedUnit(cachedUnit as TenantUnit);
+          }
+          optimistic = Promise.all([
+            loadBarbers(cachedCtx.tenantId, cachedCtx.unitId),
+            loadServices(cachedCtx.tenantId),
+          ]).catch(() => null);
+        }
 
-      // Rescheduling — early exit, minimal queries
-      if (isReschedulingSession === 'true' && appointmentId) {
-        setIsRescheduling(true);
-        setRescheduleAppointmentId(appointmentId);
-        loadAppointmentForReschedule(appointmentId);
-        setIsInitializing(false);
-        return;
-      }
+        // SINGLE session call — reused everywhere (leitura local, sem rede)
+        const { data: { session } } = await supabase.auth.getSession();
+        const uid = session?.user?.id || null;
+        if (uid) setUserId(uid);
 
-      const profilePromise = uid
-        ? supabase
-            .from("profiles")
-            .select("barbearia_preferida_id, unidade_preferida_id")
-            .eq("id", uid)
+        // Rescheduling — early exit, minimal queries
+        if (isReschedulingSession === "true" && appointmentId) {
+          setIsRescheduling(true);
+          setRescheduleAppointmentId(appointmentId);
+          loadAppointmentForReschedule(appointmentId);
+          setIsInitializing(false);
+          return;
+        }
+
+        const profilePromise = uid
+          ? supabase
+              .from("profiles")
+              .select("barbearia_preferida_id, unidade_preferida_id")
+              .eq("id", uid)
+              .single()
+          : Promise.resolve({ data: null, error: null });
+
+        const [{ data: profile }, subscription] = await Promise.all([
+          profilePromise,
+          !resumePaymentRaw ? loadActiveSubscriptionOptimized(uid) : Promise.resolve(null),
+        ]);
+
+        // Carregar barbearia preferida + unidade preferida do perfil
+        let tenantId: string | null = null;
+        let userPreferredUnitId: string | null = null;
+
+        if (profile?.barbearia_preferida_id) {
+          tenantId = profile.barbearia_preferida_id;
+          userPreferredUnitId = (profile as any).unidade_preferida_id || null;
+          setPreferredUnitId(userPreferredUnitId);
+
+          // Buscar nome da barbearia (non-blocking)
+          supabase
+            .from("tenants")
+            .select("id, nome")
+            .eq("id", tenantId)
             .single()
-        : Promise.resolve({ data: null, error: null });
+            .then(({ data: tenant }) => {
+              if (tenant) setPreferredShop(tenant);
+            });
+        }
 
-      const [{ data: profile }, subscription] = await Promise.all([
-        profilePromise,
-        !resumePaymentRaw ? loadActiveSubscriptionOptimized(uid) : Promise.resolve(null),
-      ]);
+        // Dados secundários (créditos, resgates, carteira) nunca bloqueiam a tela
+        void loadUserCreditsOptimized(uid);
+        void loadAvailableRedemptionsOptimized(uid);
 
-      // Carregar barbearia preferida + unidade preferida do perfil
-      let tenantId: string | null = null;
-      let userPreferredUnitId: string | null = null;
+        // ══════════════════════════════════════════════════════════════
+        // FAST-PATH: plano ativo pula as consultas pesadas
+        // ══════════════════════════════════════════════════════════════
+        if (!resumePaymentRaw) {
+          if (subscription) {
+            setBookingContext({ tenantId, unitId: null, hasPlan: true });
+            const restantes = subscription.limite_agendamentos_mes - subscription.agendamentos_usados;
 
-      if (profile?.barbearia_preferida_id) {
-        tenantId = profile.barbearia_preferida_id;
-        userPreferredUnitId = (profile as any).unidade_preferida_id || null;
-        setPreferredUnitId(userPreferredUnitId);
+            if (restantes > 0) {
+              if (subscription.barbeiro) {
+                setSelectedBarber(subscription.barbeiro);
+                void loadBarberCustomDurations(subscription.barbeiro.id);
+              }
 
-        // Buscar nome da barbearia (non-blocking)
-        supabase
-          .from("tenants")
-          .select("id, nome")
-          .eq("id", tenantId)
-          .single()
-          .then(({ data: tenant }) => {
-            if (tenant) setPreferredShop(tenant);
-          });
-      }
+              if (subscription.servicos.length === 0) {
+                setSubscriptionBlocked(true);
+                toast.error("Seu plano não possui um serviço válido vinculado. Fale com o suporte da barbearia.");
+                setIsInitializing(false);
+                return;
+              }
 
-      // ══════════════════════════════════════════════════════════════
-      // FAST-PATH: Check subscription FIRST to skip heavy queries
-      // for plan users (barbers list, credits, redemptions, etc.)
-      // ══════════════════════════════════════════════════════════════
-      if (!resumePaymentRaw) {
-        if (subscription) {
-          const restantes = subscription.limite_agendamentos_mes - subscription.agendamentos_usados;
-          
-          if (restantes > 0) {
-            if (subscription.barbeiro) {
-              setSelectedBarber(subscription.barbeiro);
-              void loadBarberCustomDurations(subscription.barbeiro.id);
-            }
+              setIsPlanFlow(true);
 
-            if (subscription.servicos.length === 0) {
-              setSubscriptionBlocked(true);
-              toast.error("Seu plano não possui um serviço válido vinculado. Fale com o suporte da barbearia.");
+              if (subscription.servicos.length === 1 && subscription.barbeiro) {
+                setSelectedServices([subscription.servicos[0]]);
+                setStep(3);
+              } else if (subscription.servicos.length > 1 && subscription.barbeiro) {
+                setStep(2);
+              } else {
+                setStep(1);
+                setIsInitializing(false);
+                await loadBarbers(tenantId, null);
+              }
               setIsInitializing(false);
               return;
             }
 
-            setIsPlanFlow(true);
-            
-            // Se tiver APENAS UM serviço, pré-seleciona e vai para o passo da data
-            if (subscription.servicos.length === 1 && subscription.barbeiro) {
-              setSelectedServices([subscription.servicos[0]]);
-              setStep(3);
-            } else if (subscription.servicos.length > 1 && subscription.barbeiro) {
-              // Se tiver múltiplos serviços, precisa escolher um (Step 2)
-              setStep(2);
-            } else {
-              // Sem barbeiro, precisa escolher barbeiro (Step 1)
-              await loadBarbers(tenantId, null);
-              setStep(1);
-            }
+            setSubscriptionLimitReached(true);
             setIsInitializing(false);
             return;
           }
-
-
-          setSubscriptionLimitReached(true);
-          setIsInitializing(false);
-          return;
         }
-      }
 
-      // ══════════════════════════════════════════════════════════════
-      // NORMAL PATH: Non-plan users — load everything
-      // ══════════════════════════════════════════════════════════════
+        // ══════════════════════════════════════════════════════════════
+        // NORMAL PATH
+        // ══════════════════════════════════════════════════════════════
+        let effectiveUnitId: string | null = null;
 
-      // Carregar unidades do tenant
-      let units: TenantUnit[] = [];
-      let effectiveUnitId: string | null = null;
-      
-      if (tenantId) {
-        units = await loadTenantUnits(tenantId);
-        
-        if (userPreferredUnitId && units.find(u => u.id === userPreferredUnitId)) {
-          const preferredUnit = units.find(u => u.id === userPreferredUnitId)!;
-          setSelectedUnit(preferredUnit);
-          effectiveUnitId = preferredUnit.id;
-        }
-      }
+        if (tenantId) {
+          const units = boot.cached?.units?.length && cachedCtx?.tenantId === tenantId
+            ? ((boot.cached.units as TenantUnit[]))
+            : await loadTenantUnits(tenantId);
 
-      const [barbersList] = await Promise.all([
-        loadBarbers(tenantId, effectiveUnitId),
-        loadUserCreditsOptimized(uid),
-        loadAvailableRedemptionsOptimized(uid),
-      ]);
-
-      // Auto-select barber from query param
-      if (barberFromParam && barbersList) {
-        const matchedBarber = barbersList.find((b: Barber) => b.id === barberFromParam);
-        if (matchedBarber) {
-          setSelectedBarber(matchedBarber);
-          loadBarberCustomDurations(matchedBarber.id);
-          setSearchParams(prev => {
-            prev.delete("barber");
-            return prev;
-          }, { replace: true });
-        }
-      }
-
-      // Resume payment step
-      if (resumePaymentRaw) {
-        sessionStorage.removeItem("resumeToPaymentStep");
-        try {
-          const resumeData = JSON.parse(resumePaymentRaw);
-          
-          const [, resumeBarberResult, resumeServiceResult] = await Promise.all([
-            loadServices(tenantId),
-            resumeData.barberId ? supabase.from("barbeiros").select("id, apelido, foto_url, tenant_id").eq("id", resumeData.barberId).maybeSingle() : null,
-            resumeData.servicoId ? supabase.from("servicos").select("*").eq("id", resumeData.servicoId).maybeSingle() : null,
-          ]);
-          
-          if (resumeBarberResult?.data) {
-            setSelectedBarber(resumeBarberResult.data);
-            loadBarberCustomDurations(resumeBarberResult.data.id);
+          // revalida unidades em background quando veio do cache
+          if (boot.cached?.units?.length && cachedCtx?.tenantId === tenantId) {
+            void loadTenantUnits(tenantId);
           }
-          if (resumeServiceResult?.data) setSelectedServices([resumeServiceResult.data]);
-          if (resumeData.date) setSelectedDate(new Date(`${resumeData.date}T12:00:00`));
-          if (resumeData.time) setSelectedTime(normalizeTimeValue(resumeData.time));
 
-          setStep(5);
-          setIsInitializing(false);
-          return;
-        } catch (e) {
-          console.error("Erro ao restaurar dados de pagamento:", e);
+          const preferredUnit = userPreferredUnitId
+            ? units.find((u) => u.id === userPreferredUnitId)
+            : undefined;
+          if (preferredUnit) {
+            setSelectedUnit(preferredUnit);
+            effectiveUnitId = preferredUnit.id;
+          }
         }
-      }
 
-      await loadServices(tenantId);
-      setStep(1);
-      setIsInitializing(false);
+        // Salva contexto para o próximo boot instantâneo
+        setBookingContext({ tenantId, unitId: effectiveUnitId, hasPlan: false });
+
+        const sameAsCached =
+          optimistic !== null &&
+          cachedCtx?.tenantId === tenantId &&
+          (cachedCtx?.unitId ?? null) === effectiveUnitId;
+
+        let barbersList: Barber[];
+        if (sameAsCached) {
+          setIsInitializing(false);
+          await optimistic;
+          barbersList = barbers;
+        } else {
+          barbersList = await loadBarbers(tenantId, effectiveUnitId);
+          setIsInitializing(false);
+          void loadServices(tenantId);
+        }
+
+        // Auto-select barber from query param
+        if (barberFromParam && barbersList?.length) {
+          const matchedBarber = barbersList.find((b: Barber) => b.id === barberFromParam);
+          if (matchedBarber) {
+            setSelectedBarber(matchedBarber);
+            loadBarberCustomDurations(matchedBarber.id);
+            setSearchParams(prev => {
+              prev.delete("barber");
+              return prev;
+            }, { replace: true });
+          }
+        }
+
+        // Resume payment step
+        if (resumePaymentRaw) {
+          sessionStorage.removeItem("resumeToPaymentStep");
+          try {
+            const resumeData = JSON.parse(resumePaymentRaw);
+
+            const [, resumeBarberResult, resumeServiceResult] = await Promise.all([
+              loadServices(tenantId),
+              resumeData.barberId ? supabase.from("barbeiros").select("id, apelido, foto_url, tenant_id").eq("id", resumeData.barberId).maybeSingle() : null,
+              resumeData.servicoId ? supabase.from("servicos").select("*").eq("id", resumeData.servicoId).maybeSingle() : null,
+            ]);
+
+            if (resumeBarberResult?.data) {
+              setSelectedBarber(resumeBarberResult.data);
+              loadBarberCustomDurations(resumeBarberResult.data.id);
+            }
+            if (resumeServiceResult?.data) setSelectedServices([resumeServiceResult.data]);
+            if (resumeData.date) setSelectedDate(new Date(`${resumeData.date}T12:00:00`));
+            if (resumeData.time) setSelectedTime(normalizeTimeValue(resumeData.time));
+
+            setStep(5);
+            setIsInitializing(false);
+            return;
+          } catch (e) {
+            console.error("Erro ao restaurar dados de pagamento:", e);
+          }
+        }
+
+        setStep(1);
+        setIsInitializing(false);
       } catch (err) {
         console.error("[initializeBooking] Fatal error:", err);
         setIsInitializing(false);
@@ -548,6 +582,7 @@ const ClienteAgendar = () => {
 
     initializeBooking();
   }, []);
+
 
   // Dynamic viewport height for mobile browsers (without locking scroll)
   useEffect(() => {
