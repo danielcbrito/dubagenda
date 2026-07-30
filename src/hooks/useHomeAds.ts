@@ -18,7 +18,7 @@ export interface HomeAd {
   imageUrl?: string | null;
 }
 
-const CACHE_PREFIX = "home_ads_v1:";
+const CACHE_PREFIX = "home_ads_v2:";
 const CACHE_TTL_MS = 5 * 60 * 1000;
 
 function readCache(key: string): HomeAd[] | null {
@@ -72,25 +72,29 @@ export function useHomeAds(
   const load = useCallback(async () => {
     const queue: HomeAd[] = [];
 
-    const planosQuery = supabase
+    // Filtros ANTES de order/limit (encadear .eq depois de .limit quebra o builder)
+    let planosBase = supabase
       .from("planos")
       .select("id, nome, preco_mensal, limite_agendamentos_mes")
-      .eq("ativo", true)
-      .order("preco_mensal", { ascending: true })
-      .limit(1);
+      .eq("ativo", true);
+
+    planosBase = tenantId
+      ? planosBase.eq("tenant_id", tenantId)
+      : planosBase.is("tenant_id", null);
+
+    const planosPromise = hasSubscription
+      ? Promise.resolve({ data: [] as any[] })
+      : planosBase.order("preco_mensal", { ascending: true }).limit(1);
 
     const [planosRes, anunciosRes] = await Promise.all([
-      hasSubscription
-        ? Promise.resolve({ data: [] as any[] })
-        : tenantId
-          ? planosQuery.eq("tenant_id", tenantId)
-          : planosQuery.is("tenant_id", null),
+      planosPromise,
       supabase
         .from("anuncios_app")
         .select("id, titulo, descricao, imagem_path, cta_label, cta_target, cta_tipo, ordem")
         .eq("ativo", true)
         .order("ordem", { ascending: true }),
     ]);
+
 
     const plano = (planosRes.data || [])[0] as any;
     if (plano) {
