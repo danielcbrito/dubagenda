@@ -261,7 +261,7 @@ export function NotificationsSheet({ open, onOpenChange, userId }: Notifications
                 onClick={() => onOpenChange(false)}
                 className="w-8 h-8 flex items-center justify-center rounded-lg bg-card border border-border/40 active:scale-90 transition-transform"
               >
-                <BackArrow size={18} className="text-foreground" />
+                <BackArrow size={24} className="text-foreground" />
               </button>
               <h1 className="text-[14px] font-semibold text-foreground tracking-tight flex-1">
                 Notificações
