@@ -12,9 +12,12 @@ interface HomeAdRotatorProps {
   baseDurationMs?: number;
   /** Tempo de cada anúncio visível */
   adDurationMs?: number;
+  /** Primeira exibição do card base (mais curta, para o cliente já ver o carrossel) */
+  firstBaseDurationMs?: number;
 }
 
-const EASE = [0.22, 1, 0.36, 1] as const;
+const EASE = [0.32, 0.72, 0, 1] as const;
+const SLIDE_DURATION = 0.55;
 
 function AdSlide({ ad, onPress }: { ad: HomeAd; onPress: () => void }) {
   return (
@@ -24,7 +27,6 @@ function AdSlide({ ad, onPress }: { ad: HomeAd; onPress: () => void }) {
       className="relative w-full h-full text-left rounded-xl overflow-hidden bg-card active:scale-[0.99] transition-transform"
       style={{ boxShadow: "var(--shadow-card)" }}
     >
-      {/* Imagem de fundo ocupando o card inteiro */}
       {ad.imageUrl ? (
         <img
           src={ad.imageUrl}
@@ -41,46 +43,47 @@ function AdSlide({ ad, onPress }: { ad: HomeAd; onPress: () => void }) {
         className="absolute inset-0"
         style={{
           background:
-            "linear-gradient(90deg, hsl(0 0% 0% / 0.88) 0%, hsl(0 0% 0% / 0.72) 45%, hsl(0 0% 0% / 0.15) 100%)",
+            "linear-gradient(90deg, hsl(0 0% 0% / 0.9) 0%, hsl(0 0% 0% / 0.78) 55%, hsl(0 0% 0% / 0.25) 100%)",
         }}
       />
 
-      <div className="relative h-full w-full flex items-center gap-3 px-4 py-3">
-        <div className="min-w-0 flex-1">
-          <p className="text-[8px] font-semibold uppercase tracking-[0.2em] mb-1 truncate text-primary-foreground/60">
-            {ad.eyebrow}
+      <div className="relative h-full w-full flex flex-col justify-center px-4 py-3">
+        <p className="text-[8px] font-semibold uppercase tracking-[0.2em] text-primary-foreground/55">
+          {ad.eyebrow}
+        </p>
+        <p className="mt-1 pr-16 text-primary-foreground font-semibold text-[15px] leading-tight tracking-tight line-clamp-2">
+          {ad.titulo}
+        </p>
+        {ad.descricao ? (
+          <p className="mt-1 pr-16 text-[11px] leading-snug text-primary-foreground/65 line-clamp-1">
+            {ad.descricao}
           </p>
-          <p className="text-primary-foreground font-semibold text-[14px] tracking-tight line-clamp-1">
-            {ad.titulo}
-          </p>
-          {ad.descricao ? (
-            <p className="text-[11px] text-primary-foreground/70 line-clamp-1 mt-0.5">
-              {ad.descricao}
-            </p>
-          ) : null}
-        </div>
-
-        <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-primary-foreground text-background px-3.5 h-8 text-[12px] font-semibold shadow-sm">
-          {ad.ctaLabel}
-          <ChevronRight className="w-3.5 h-3.5" />
-        </span>
+        ) : null}
       </div>
+
+      {/* CTA minimalista no canto */}
+      <span className="absolute bottom-2.5 right-3 inline-flex items-center gap-0.5 text-[11px] font-semibold text-primary-foreground/90">
+        {ad.ctaLabel}
+        <ChevronRight className="w-3.5 h-3.5" />
+      </span>
     </button>
   );
 }
 
 /**
- * Alterna suavemente entre o card de fidelidade e os anúncios da barbearia/app.
+ * Carrossel suave entre o card de fidelidade e os anúncios da barbearia/app.
  * O card base fica sempre montado (define altura e nunca "some" da home).
  */
 export function HomeAdRotator({
   children,
   ads,
-  baseDurationMs = 2000,
-  adDurationMs = 2500,
+  baseDurationMs = 5000,
+  adDurationMs = 5500,
+  firstBaseDurationMs = 2000,
 }: HomeAdRotatorProps) {
   const navigate = useNavigate();
   const [index, setIndex] = useState(0);
+  const [loops, setLoops] = useState(0);
   const [paused, setPaused] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout>>();
 
@@ -97,20 +100,27 @@ export function HomeAdRotator({
 
   useEffect(() => {
     setIndex(0);
+    setLoops(0);
   }, [ads.length, hasBase]);
 
   useEffect(() => {
     // Reduced motion must disable only the movement, not the content rotation.
-    // On Android, the system "Remove animations" option enables this media
-    // query; previously that made the loyalty card remain visible forever.
     if (total <= 1 || paused) return;
     const isBase = hasBase && index === 0;
-    timer.current = setTimeout(
-      () => setIndex((i) => (i + 1) % total),
-      isBase ? baseDurationMs : adDurationMs,
-    );
+    const delay = isBase
+      ? loops === 0
+        ? firstBaseDurationMs
+        : baseDurationMs
+      : adDurationMs;
+    timer.current = setTimeout(() => {
+      setIndex((i) => {
+        const next = (i + 1) % total;
+        if (next === 0) setLoops((l) => l + 1);
+        return next;
+      });
+    }, delay);
     return () => clearTimeout(timer.current);
-  }, [index, total, paused, hasBase, baseDurationMs, adDurationMs]);
+  }, [index, loops, total, paused, hasBase, baseDurationMs, adDurationMs, firstBaseDurationMs]);
 
   // Pausa quando a aba não está visível (economia + não "queima" impressão)
   useEffect(() => {
@@ -136,10 +146,11 @@ export function HomeAdRotator({
 
   const adIndex = hasBase ? index - 1 : index;
   const currentAd = adIndex >= 0 ? ads[adIndex] : null;
+  const duration = reducedMotion ? 0 : SLIDE_DURATION;
 
   return (
     <div
-      className="relative"
+      className="relative overflow-hidden rounded-xl"
       onPointerDown={() => setPaused(true)}
       onPointerUp={() => setPaused(false)}
       onPointerLeave={() => setPaused(false)}
@@ -147,8 +158,12 @@ export function HomeAdRotator({
       {/* Card base sempre montado — mantém a altura estável */}
       {hasBase ? (
         <motion.div
-          animate={{ opacity: currentAd ? 0 : 1 }}
-          transition={{ duration: reducedMotion ? 0 : 0.25, ease: EASE }}
+          animate={
+            reducedMotion
+              ? { opacity: currentAd ? 0 : 1 }
+              : { x: currentAd ? "-22%" : "0%", opacity: currentAd ? 0 : 1 }
+          }
+          transition={{ duration, ease: EASE }}
           style={{ pointerEvents: currentAd ? "none" : "auto" }}
         >
           {children}
@@ -161,10 +176,10 @@ export function HomeAdRotator({
         {currentAd && (
           <motion.div
             key={currentAd.id}
-            initial={reducedMotion ? false : { opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={reducedMotion ? { opacity: 0 } : { opacity: 0, y: -6 }}
-            transition={{ duration: reducedMotion ? 0 : 0.25, ease: EASE }}
+            initial={reducedMotion ? { opacity: 0 } : { x: "100%", opacity: 0 }}
+            animate={{ x: "0%", opacity: 1 }}
+            exit={reducedMotion ? { opacity: 0 } : { x: "-22%", opacity: 0 }}
+            transition={{ duration, ease: EASE }}
             className="absolute inset-0"
           >
             <AdSlide ad={currentAd} onPress={() => handleAdPress(currentAd)} />
