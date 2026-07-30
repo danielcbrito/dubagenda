@@ -344,6 +344,13 @@ const Cliente = () => {
   // Auth síncrona: usuário disponível no primeiro render (sem waterfall de rede).
   const { user, hydrated, verified } = useAuth();
 
+  // Aquece o cache da tela de agendamento (profissionais/serviços/unidades)
+  useEffect(() => {
+    if (user?.id) prefetchBookingData(user.id);
+  }, [user?.id]);
+
+
+
   // ─── Profile via useQuery (Layer 1) ───
   const {
     data: profileQueryData,
