@@ -168,23 +168,6 @@ export function HomeAdRotator({
           </motion.div>
         )}
       </AnimatePresence>
-
-      {/* Indicadores discretos */}
-      {total > 1 && (
-        <div className="absolute bottom-2 right-3 flex items-center gap-1 z-10">
-          {Array.from({ length: total }).map((_, i) => (
-            <button
-              key={i}
-              type="button"
-              aria-label={`Slide ${i + 1}`}
-              onClick={() => setIndex(i)}
-              className={`h-[3px] rounded-full transition-all duration-300 ${
-                i === index ? "w-3.5 bg-foreground/50" : "w-1.5 bg-foreground/15"
-              }`}
-            />
-          ))}
-        </div>
-      )}
     </div>
   );
 }
