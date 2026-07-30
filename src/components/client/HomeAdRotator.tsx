@@ -76,8 +76,8 @@ function AdSlide({ ad, onPress }: { ad: HomeAd; onPress: () => void }) {
 export function HomeAdRotator({
   children,
   ads,
-  baseDurationMs = 9000,
-  adDurationMs = 6000,
+  baseDurationMs = 2000,
+  adDurationMs = 2500,
 }: HomeAdRotatorProps) {
   const navigate = useNavigate();
   const [index, setIndex] = useState(0);
@@ -145,7 +145,7 @@ export function HomeAdRotator({
       {hasBase ? (
         <motion.div
           animate={{ opacity: currentAd ? 0 : 1 }}
-          transition={{ duration: 0.35, ease: EASE }}
+          transition={{ duration: 0.25, ease: EASE }}
           style={{ pointerEvents: currentAd ? "none" : "auto" }}
         >
           {children}
@@ -161,7 +161,7 @@ export function HomeAdRotator({
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -6 }}
-            transition={{ duration: 0.35, ease: EASE }}
+            transition={{ duration: 0.25, ease: EASE }}
             className="absolute inset-0"
           >
             <AdSlide ad={currentAd} onPress={() => handleAdPress(currentAd)} />
