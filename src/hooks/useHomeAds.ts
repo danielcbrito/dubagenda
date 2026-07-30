@@ -109,6 +109,7 @@ export function useHomeAds(
         ctaLabel: "Ver planos",
         ctaTarget: "/cliente/assinar",
         ctaTipo: "rota",
+        imageUrl: adPlansImage,
       });
     }
 
