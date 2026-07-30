@@ -1129,16 +1129,17 @@ const Cliente = () => {
                         onRenew={() => setPlansSheetOpen(true)}
                       />
                     ) : (
-                      /* Lógica de Exibição Única: LoyaltyCard apenas se não houver plano ativo/expirado */
-                      loyaltyEnabled && (
-                        <LoyaltyCard
-                          key="loyalty-card"
-                          points={points}
-                          redemptions={redemptions}
-                          pontosNecessarios={pontosNecessarios}
-                          onViewDetails={() => setPointsModalOpen(true)}
-                        />
-                      )
+                      /* Card de fidelidade + anúncios rotativos no mesmo espaço */
+                      <HomeAdRotator key="loyalty-ads" ads={homeAds}>
+                        {loyaltyEnabled ? (
+                          <LoyaltyCard
+                            points={points}
+                            redemptions={redemptions}
+                            pontosNecessarios={pontosNecessarios}
+                            onViewDetails={() => setPointsModalOpen(true)}
+                          />
+                        ) : undefined}
+                      </HomeAdRotator>
                     )}
                   </AnimatePresence>
                 </div>
