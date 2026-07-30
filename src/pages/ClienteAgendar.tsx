@@ -207,18 +207,18 @@ const ClienteAgendar = () => {
   
   // Indica se o usuário está usando fluxo de plano (serviço pré-selecionado)
   const [isPlanFlow, setIsPlanFlow] = useState(false);
-  const [isInitializing, setIsInitializing] = useState(true);
+  const [isInitializing, setIsInitializing] = useState(!hasInstantBarbers);
 
   // Barbearia preferida do usuário (multi-tenant)
   const [preferredShop, setPreferredShop] = useState<{ id: string; nome: string } | null>(null);
   const [showingOtherShops, setShowingOtherShops] = useState(false);
-  const [allBarbers, setAllBarbers] = useState<Barber[]>([]);
+  const [allBarbers, setAllBarbers] = useState<Barber[]>((boot.cached?.allBarbers as Barber[]) ?? []);
 
   // Sistema de unidades
-  const [tenantUnits, setTenantUnits] = useState<TenantUnit[]>([]);
+  const [tenantUnits, setTenantUnits] = useState<TenantUnit[]>((boot.cached?.units as TenantUnit[]) ?? []);
   const [selectedUnit, setSelectedUnit] = useState<TenantUnit | null>(null);
-  const [preferredUnitId, setPreferredUnitId] = useState<string | null>(null);
-  const [hasMultipleUnits, setHasMultipleUnits] = useState(false);
+  const [preferredUnitId, setPreferredUnitId] = useState<string | null>(boot.ctx?.unitId ?? null);
+  const [hasMultipleUnits, setHasMultipleUnits] = useState((boot.cached?.units?.length ?? 0) > 1);
 
   // Verificação se usuário pode usar o plano
   const isPlanEligible =
