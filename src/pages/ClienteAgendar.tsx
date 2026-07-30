@@ -140,7 +140,7 @@ const ClienteAgendar = () => {
 
   const [barbers, setBarbers] = useState<Barber[]>((boot.cached?.barbers as Barber[]) ?? []);
   const [selectedBarber, setSelectedBarber] = useState<Barber | null>(null);
-  const [services, setServices] = useState<Service[]>([]);
+  const [services, setServices] = useState<Service[]>((boot.cached?.services as Service[]) ?? []);
   const [selectedServices, setSelectedServices] = useState<Service[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date>();
   const [selectedTime, setSelectedTime] = useState<string>("");
