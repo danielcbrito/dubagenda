@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import adPlansImage from "@/assets/ad-plans.jpg";
 
 export type HomeAdKind = "plans" | "app";
 
@@ -108,6 +109,7 @@ export function useHomeAds(
         ctaLabel: "Ver planos",
         ctaTarget: "/cliente/assinar",
         ctaTipo: "rota",
+        imageUrl: adPlansImage,
       });
     }
 

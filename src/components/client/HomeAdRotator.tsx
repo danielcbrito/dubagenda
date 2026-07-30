@@ -21,38 +21,49 @@ function AdSlide({ ad, onPress }: { ad: HomeAd; onPress: () => void }) {
     <button
       type="button"
       onClick={onPress}
-      className="w-full h-full text-left rounded-xl border border-border bg-card overflow-hidden active:scale-[0.99] transition-transform"
+      className="relative w-full h-full text-left rounded-xl overflow-hidden bg-card active:scale-[0.99] transition-transform"
       style={{ boxShadow: "var(--shadow-card)" }}
     >
-      <div className="h-full w-full flex items-center gap-3 p-4">
-        {ad.imageUrl ? (
-          <div className="shrink-0 w-14 h-14 rounded-[14px] overflow-hidden bg-muted">
-            <img
-              src={ad.imageUrl}
-              alt=""
-              loading="lazy"
-              className="w-full h-full object-cover"
-            />
-          </div>
-        ) : null}
+      {/* Imagem de fundo ocupando o card inteiro */}
+      {ad.imageUrl ? (
+        <img
+          src={ad.imageUrl}
+          alt=""
+          loading="lazy"
+          className="absolute inset-0 w-full h-full object-cover"
+        />
+      ) : (
+        <div className="absolute inset-0 bg-muted" />
+      )}
 
+      {/* Overlay para legibilidade do texto */}
+      <div
+        className="absolute inset-0"
+        style={{
+          background:
+            "linear-gradient(90deg, hsl(0 0% 0% / 0.88) 0%, hsl(0 0% 0% / 0.72) 45%, hsl(0 0% 0% / 0.15) 100%)",
+        }}
+      />
+
+      <div className="relative h-full w-full flex items-center gap-3 px-4 py-3">
         <div className="min-w-0 flex-1">
-          <p className="text-[8px] font-semibold text-muted-foreground/60 uppercase tracking-[0.2em] mb-1 truncate">
+          <p className="text-[8px] font-semibold uppercase tracking-[0.2em] mb-1 truncate text-primary-foreground/60">
             {ad.eyebrow}
           </p>
-          <p className="text-foreground font-medium text-[13px] tracking-tight line-clamp-1">
+          <p className="text-primary-foreground font-semibold text-[14px] tracking-tight line-clamp-1">
             {ad.titulo}
           </p>
           {ad.descricao ? (
-            <p className="text-[11px] text-muted-foreground line-clamp-1 mt-0.5">
+            <p className="text-[11px] text-primary-foreground/70 line-clamp-1 mt-0.5">
               {ad.descricao}
             </p>
           ) : null}
-          <span className="inline-flex items-center gap-0.5 mt-2 text-[10px] font-semibold text-primary">
-            {ad.ctaLabel}
-            <ChevronRight className="w-3 h-3" />
-          </span>
         </div>
+
+        <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-primary-foreground text-background px-3.5 h-8 text-[12px] font-semibold shadow-sm">
+          {ad.ctaLabel}
+          <ChevronRight className="w-3.5 h-3.5" />
+        </span>
       </div>
     </button>
   );
@@ -157,23 +168,6 @@ export function HomeAdRotator({
           </motion.div>
         )}
       </AnimatePresence>
-
-      {/* Indicadores discretos */}
-      {total > 1 && (
-        <div className="absolute bottom-2 right-3 flex items-center gap-1 z-10">
-          {Array.from({ length: total }).map((_, i) => (
-            <button
-              key={i}
-              type="button"
-              aria-label={`Slide ${i + 1}`}
-              onClick={() => setIndex(i)}
-              className={`h-[3px] rounded-full transition-all duration-300 ${
-                i === index ? "w-3.5 bg-foreground/50" : "w-1.5 bg-foreground/15"
-              }`}
-            />
-          ))}
-        </div>
-      )}
     </div>
   );
 }
