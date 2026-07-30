@@ -18,7 +18,7 @@ export interface HomeAd {
   imageUrl?: string | null;
 }
 
-const CACHE_PREFIX = "home_ads_v3:";
+const CACHE_PREFIX = "home_ads_v4:";
 const CACHE_TTL_MS = 5 * 60 * 1000;
 
 function readCache(key: string): HomeAd[] | null {
@@ -111,7 +111,7 @@ export function useHomeAds(
         id: `plan-${plano.id}`,
         kind: "plans",
         eyebrow: "Planos",
-        titulo: "Conheça os planos da barbearia",
+        titulo: "Conheça os planos",
         descricao:
           preco > 0
             ? `A partir de R$ ${preco.toFixed(2).replace(".", ",")} por mês${
