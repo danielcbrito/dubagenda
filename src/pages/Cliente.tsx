@@ -410,6 +410,11 @@ const Cliente = () => {
   const planUsageCount = loyaltyQueryData?.planUsageCount ?? 0;
   const redemptions = loyaltyQueryData?.redemptions ?? 0;
   const pontosNecessarios = loyaltyQueryData?.pontosNecessarios ?? 8;
+
+  // Anúncios rotativos exibidos no espaço do card de fidelidade
+  const { ads: homeAds } = useHomeAds(tenantId, {
+    hasSubscription: !!activeSubscription || !!pendingSubscription,
+  });
   const loyaltyEnabled = loyaltyQueryData?.loyaltyEnabled ?? false;
 
   // ─── Shop via useQuery (Layer 4) ───
