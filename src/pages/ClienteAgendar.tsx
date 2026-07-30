@@ -350,51 +350,21 @@ const ClienteAgendar = () => {
 
   // Carregar barbeiros (filtrado pelo tenant da barbearia preferida e opcionalmente pela unidade)
   const loadBarbers = async (tenantId?: string | null, unitId?: string | null) => {
-    // Busca filtrada + todos em paralelo
-    let query = supabase
-      .from("barbeiros")
-      .select("id, apelido, foto_url, tenant_id, unidade_id")
-      .eq("ativo", true)
-      .order("apelido");
-
-    if (tenantId) {
-      query = query.eq("tenant_id", tenantId);
-    } else {
-      query = query.is("tenant_id", null);
-    }
-
-    // Filtrar por unidade se selecionada
-    if (unitId) {
-      query = query.or(`unidade_id.eq.${unitId},unidade_id.is.null`);
-    }
-
-    const allQuery = supabase
-      .from("barbeiros")
-      .select("id, apelido, foto_url, tenant_id, unidade_id")
-      .eq("ativo", true)
-      .order("apelido");
-
-    const [filtered, all] = await Promise.all([query, allQuery]);
+    const { filtered, all } = await fetchBarbers(tenantId ?? null, unitId ?? null);
     const filterBlocked = (list: Barber[]) => list.filter(b => !blockedBarberIds.includes(b.id));
-    setBarbers(filterBlocked(filtered.data || []));
-    setAllBarbers(filterBlocked(all.data || []));
-    return filtered.data || [];
+    setBarbers(filterBlocked(filtered as Barber[]));
+    setAllBarbers(filterBlocked(all as Barber[]));
+    return filtered as Barber[];
   };
 
   // Carregar unidades do tenant
   const loadTenantUnits = async (tenantId: string) => {
-    const { data } = await supabase
-      .from("tenant_unidades")
-      .select("id, nome, bairro, cidade, estado, is_sede")
-      .eq("tenant_id", tenantId)
-      .eq("ativo", true)
-      .order("is_sede", { ascending: false });
-    
-    const units = (data || []) as TenantUnit[];
+    const units = (await fetchUnits(tenantId)) as TenantUnit[];
     setTenantUnits(units);
     setHasMultipleUnits(units.length > 1);
     return units;
   };
+
 
   // Initialize booking
   useEffect(() => {
