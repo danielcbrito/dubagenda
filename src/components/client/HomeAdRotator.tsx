@@ -1,5 +1,5 @@
 import { ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { motion } from "framer-motion";
 import { ChevronRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { HomeAd } from "@/hooks/useHomeAds";
@@ -16,8 +16,8 @@ interface HomeAdRotatorProps {
   firstBaseDurationMs?: number;
 }
 
-const EASE = [0.32, 0.72, 0, 1] as const;
-const SLIDE_DURATION = 0.55;
+const EASE = [0.22, 1, 0.36, 1] as const;
+const SLIDE_DURATION = 0.7;
 
 function AdSlide({ ad, onPress }: { ad: HomeAd; onPress: () => void }) {
   return (
@@ -31,7 +31,7 @@ function AdSlide({ ad, onPress }: { ad: HomeAd; onPress: () => void }) {
         <img
           src={ad.imageUrl}
           alt=""
-          loading="lazy"
+          decoding="sync"
           className="absolute inset-0 w-full h-full object-cover"
         />
       ) : (
@@ -43,26 +43,26 @@ function AdSlide({ ad, onPress }: { ad: HomeAd; onPress: () => void }) {
         className="absolute inset-0"
         style={{
           background:
-            "linear-gradient(90deg, hsl(0 0% 0% / 0.9) 0%, hsl(0 0% 0% / 0.78) 55%, hsl(0 0% 0% / 0.25) 100%)",
+            "linear-gradient(90deg, hsl(0 0% 0% / 0.94) 0%, hsl(0 0% 0% / 0.88) 48%, hsl(0 0% 0% / 0.55) 78%, hsl(0 0% 0% / 0.35) 100%)",
         }}
       />
 
       <div className="relative h-full w-full flex flex-col justify-center px-4 py-3">
-        <p className="text-[8px] font-semibold uppercase tracking-[0.2em] text-primary-foreground/55">
+        <p className="text-[9px] font-semibold uppercase tracking-[0.22em] text-primary-foreground/75">
           {ad.eyebrow}
         </p>
-        <p className="mt-1 pr-16 text-primary-foreground font-semibold text-[15px] leading-tight tracking-tight line-clamp-2">
+        <p className="mt-1.5 pr-20 text-primary-foreground font-bold text-[17px] leading-[1.15] tracking-tight line-clamp-2">
           {ad.titulo}
         </p>
         {ad.descricao ? (
-          <p className="mt-1 pr-16 text-[11px] leading-snug text-primary-foreground/65 line-clamp-1">
+          <p className="mt-1 pr-20 text-[12px] leading-snug text-primary-foreground/85 line-clamp-1">
             {ad.descricao}
           </p>
         ) : null}
       </div>
 
       {/* CTA minimalista no canto */}
-      <span className="absolute bottom-2.5 right-3 inline-flex items-center gap-0.5 text-[11px] font-semibold text-primary-foreground/90">
+      <span className="absolute bottom-2.5 right-3 inline-flex items-center gap-0.5 text-[12px] font-semibold text-primary-foreground">
         {ad.ctaLabel}
         <ChevronRight className="w-3.5 h-3.5" />
       </span>
@@ -72,24 +72,24 @@ function AdSlide({ ad, onPress }: { ad: HomeAd; onPress: () => void }) {
 
 /**
  * Carrossel suave entre o card de fidelidade e os anúncios da barbearia/app.
- * O card base fica sempre montado (define altura e nunca "some" da home).
+ * Todos os slides ficam num "trilho" horizontal, então a troca é contínua
+ * (sem gap de saída/entrada) e a imagem já entra pré-carregada.
  */
 export function HomeAdRotator({
   children,
   ads,
-  baseDurationMs = 5000,
-  adDurationMs = 5500,
-  firstBaseDurationMs = 2000,
+  baseDurationMs = 6500,
+  adDurationMs = 7000,
+  firstBaseDurationMs = 3500,
 }: HomeAdRotatorProps) {
   const navigate = useNavigate();
   const [index, setIndex] = useState(0);
   const [loops, setLoops] = useState(0);
   const [paused, setPaused] = useState(false);
+  const [readyIds, setReadyIds] = useState<string[]>([]);
   const timer = useRef<ReturnType<typeof setTimeout>>();
 
   const hasBase = !!children;
-  // slides: 0 = base (se existir) | demais = anúncios
-  const total = (hasBase ? 1 : 0) + ads.length;
 
   const reducedMotion = useMemo(
     () =>
@@ -98,13 +98,48 @@ export function HomeAdRotator({
     [],
   );
 
+  // Pré-carrega as imagens: um anúncio só entra na fila depois de estar pronto,
+  // evitando o "flash" de card carregando na entrada do app.
+  useEffect(() => {
+    let alive = true;
+    ads.forEach((ad) => {
+      if (!ad.imageUrl) {
+        setReadyIds((prev) => (prev.includes(ad.id) ? prev : [...prev, ad.id]));
+        return;
+      }
+      const img = new Image();
+      img.decoding = "async";
+      img.src = ad.imageUrl;
+      const done = () => {
+        if (!alive) return;
+        setReadyIds((prev) => (prev.includes(ad.id) ? prev : [...prev, ad.id]));
+      };
+      if (img.complete) done();
+      else {
+        img.onload = done;
+        img.onerror = done;
+      }
+    });
+    return () => {
+      alive = false;
+    };
+  }, [ads]);
+
+  const visibleAds = useMemo(
+    () => ads.filter((ad) => readyIds.includes(ad.id)),
+    [ads, readyIds],
+  );
+
+  // slides: 0 = base (se existir) | demais = anúncios
+  const total = (hasBase ? 1 : 0) + visibleAds.length;
+
   useEffect(() => {
     setIndex(0);
     setLoops(0);
-  }, [ads.length, hasBase]);
+  }, [visibleAds.length, hasBase]);
 
   useEffect(() => {
-    // Reduced motion must disable only the movement, not the content rotation.
+    // Reduced motion desativa só o movimento, nunca a rotação do conteúdo.
     if (total <= 1 || paused) return;
     const isBase = hasBase && index === 0;
     const delay = isBase
@@ -144,10 +179,6 @@ export function HomeAdRotator({
 
   if (total === 0) return null;
 
-  const adIndex = hasBase ? index - 1 : index;
-  const currentAd = adIndex >= 0 ? ads[adIndex] : null;
-  const duration = reducedMotion ? 0 : SLIDE_DURATION;
-
   return (
     <div
       className="relative overflow-hidden rounded-xl"
@@ -155,37 +186,26 @@ export function HomeAdRotator({
       onPointerUp={() => setPaused(false)}
       onPointerLeave={() => setPaused(false)}
     >
-      {/* Card base sempre montado — mantém a altura estável */}
-      {hasBase ? (
-        <motion.div
-          animate={
-            reducedMotion
-              ? { opacity: currentAd ? 0 : 1 }
-              : { x: currentAd ? "-22%" : "0%", opacity: currentAd ? 0 : 1 }
-          }
-          transition={{ duration, ease: EASE }}
-          style={{ pointerEvents: currentAd ? "none" : "auto" }}
-        >
-          {children}
-        </motion.div>
-      ) : (
-        <div className="h-[104px]" aria-hidden />
-      )}
+      <motion.div
+        className="flex w-full items-stretch"
+        animate={{ x: `-${index * 100}%` }}
+        transition={
+          reducedMotion
+            ? { duration: 0 }
+            : { duration: SLIDE_DURATION, ease: EASE }
+        }
+        style={{ willChange: "transform" }}
+      >
+        {hasBase ? (
+          <div className="w-full shrink-0">{children}</div>
+        ) : null}
 
-      <AnimatePresence mode="wait">
-        {currentAd && (
-          <motion.div
-            key={currentAd.id}
-            initial={reducedMotion ? { opacity: 0 } : { x: "100%", opacity: 0 }}
-            animate={{ x: "0%", opacity: 1 }}
-            exit={reducedMotion ? { opacity: 0 } : { x: "-22%", opacity: 0 }}
-            transition={{ duration, ease: EASE }}
-            className="absolute inset-0"
-          >
-            <AdSlide ad={currentAd} onPress={() => handleAdPress(currentAd)} />
-          </motion.div>
-        )}
-      </AnimatePresence>
+        {visibleAds.map((ad) => (
+          <div key={ad.id} className={hasBase ? "w-full shrink-0" : "w-full shrink-0 h-[104px]"}>
+            <AdSlide ad={ad} onPress={() => handleAdPress(ad)} />
+          </div>
+        ))}
+      </motion.div>
     </div>
   );
 }
