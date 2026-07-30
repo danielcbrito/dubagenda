@@ -55,7 +55,7 @@ export function BarberCard({ barber, isSelected, onSelect, rating, isPlanBarber 
         <div className="flex items-center gap-3.5">
           {/* Avatar */}
           <div className={cn(
-            "relative w-[52px] h-[52px] rounded-[14px] overflow-hidden flex-shrink-0 transition-all duration-200",
+            "relative w-[52px] h-[52px] rounded-full overflow-hidden flex-shrink-0 transition-all duration-200",
             isSelected
               ? "shadow-[0_0_0_1.5px_hsl(var(--primary)/0.18)]"
               : ""
