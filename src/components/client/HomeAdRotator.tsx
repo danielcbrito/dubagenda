@@ -18,7 +18,6 @@ interface HomeAdRotatorProps {
 
 const EASE = [0.22, 1, 0.36, 1] as const;
 const SLIDE_DURATION = 0.7;
-const GAP = 12;
 
 function AdSlide({ ad, onPress }: { ad: HomeAd; onPress: () => void }) {
   return (
@@ -88,8 +87,6 @@ export function HomeAdRotator({
   const [loops, setLoops] = useState(0);
   const [paused, setPaused] = useState(false);
   const [readyIds, setReadyIds] = useState<string[]>([]);
-  const [width, setWidth] = useState(0);
-  const containerRef = useRef<HTMLDivElement>(null);
   const timer = useRef<ReturnType<typeof setTimeout>>();
 
   const hasBase = !!children;
@@ -167,16 +164,6 @@ export function HomeAdRotator({
     return () => document.removeEventListener("visibilitychange", onVis);
   }, []);
 
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    const measure = () => setWidth(el.clientWidth);
-    measure();
-    const ro = new ResizeObserver(measure);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
-
   const handleAdPress = useCallback(
     (ad: HomeAd) => {
       const target = ad.ctaTarget;
@@ -190,93 +177,35 @@ export function HomeAdRotator({
     [navigate],
   );
 
-  const slides = useMemo(
-    () => [
-      ...(hasBase ? [{ key: "__base__", node: children }] : []),
-      ...visibleAds.map((ad) => ({
-        key: ad.id,
-        node: <AdSlide ad={ad} onPress={() => handleAdPress(ad)} />,
-      })),
-    ],
-    [hasBase, children, visibleAds, handleAdPress],
-  );
-
   if (total === 0) return null;
-
-  const goTo = (i: number) => {
-    const next = ((i % total) + total) % total;
-    setIndex(next);
-  };
-
-  const step = width + GAP;
 
   return (
     <div
-      ref={containerRef}
       className="relative overflow-hidden rounded-xl"
-      onPointerEnter={() => setPaused(true)}
+      onPointerDown={() => setPaused(true)}
+      onPointerUp={() => setPaused(false)}
       onPointerLeave={() => setPaused(false)}
     >
       <motion.div
-        className="flex items-stretch"
-        style={{ gap: GAP, willChange: "transform" }}
-        animate={{ x: -index * step }}
-        drag={total > 1 ? "x" : false}
-        dragElastic={0.12}
-        dragConstraints={{ left: -(total - 1) * step, right: 0 }}
-        onDragStart={() => setPaused(true)}
-        onDragEnd={(_, info) => {
-          const threshold = Math.min(80, width * 0.22);
-          if (info.offset.x < -threshold || info.velocity.x < -450) goTo(index + 1);
-          else if (info.offset.x > threshold || info.velocity.x > 450) goTo(index - 1);
-          setPaused(false);
-        }}
+        className="flex w-full items-stretch"
+        animate={{ x: `-${index * 100}%` }}
         transition={
           reducedMotion
             ? { duration: 0 }
-            : { type: "spring", stiffness: 260, damping: 34, mass: 0.9 }
+            : { duration: SLIDE_DURATION, ease: EASE }
         }
+        style={{ willChange: "transform" }}
       >
-        {slides.map((slide, i) => {
-          const active = i === index;
-          return (
-            <motion.div
-              key={slide.key}
-              className={hasBase ? "shrink-0" : "shrink-0 h-[104px]"}
-              style={{ width: width || "100%" }}
-              animate={
-                reducedMotion
-                  ? { opacity: 1 }
-                  : { scale: active ? 1 : 0.94, opacity: active ? 1 : 0.55 }
-              }
-              transition={
-                reducedMotion
-                  ? { duration: 0 }
-                  : { type: "spring", stiffness: 260, damping: 34, mass: 0.9 }
-              }
-            >
-              {slide.node}
-            </motion.div>
-          );
-        })}
-      </motion.div>
+        {hasBase ? (
+          <div className="w-full shrink-0">{children}</div>
+        ) : null}
 
-      {total > 1 && (
-        <div className="pointer-events-none absolute bottom-1.5 left-1/2 -translate-x-1/2 flex items-center gap-1">
-          {slides.map((slide, i) => (
-            <span
-              key={slide.key}
-              className="rounded-full bg-foreground/25 transition-all duration-300"
-              style={{
-                width: i === index ? 10 : 4,
-                height: 4,
-                backgroundColor:
-                  i === index ? "hsl(var(--foreground) / 0.55)" : undefined,
-              }}
-            />
-          ))}
-        </div>
-      )}
+        {visibleAds.map((ad) => (
+          <div key={ad.id} className={hasBase ? "w-full shrink-0" : "w-full shrink-0 h-[104px]"}>
+            <AdSlide ad={ad} onPress={() => handleAdPress(ad)} />
+          </div>
+        ))}
+      </motion.div>
     </div>
   );
 }
