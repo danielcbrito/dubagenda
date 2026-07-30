@@ -7,11 +7,11 @@ interface BackArrowProps {
 }
 
 /** Seta em V (chevron) — padrão clean do design system. Substitui setas curvadas em botões de voltar. */
-export function BackArrow({ className, size = 22 }: BackArrowProps) {
+export function BackArrow({ className, size = 26 }: BackArrowProps) {
   return (
     <ChevronLeft
       size={size}
-      strokeWidth={1.8}
+      strokeWidth={2}
       className={cn("shrink-0", className)}
     />
   );
