@@ -420,7 +420,10 @@ O aceite exige a substituição integral e o código acima aplicado.
 
 CHECKLIST FINAL:
 [ ] Barra antiga totalmente removida.
-[ ] HomeIcon usa literalmente o path fornecido.
+[ ] HomeIcon usa literalmente o path fornecido (comparado caractere a caractere).
+[ ] NÃO foi usado o ícone `Home` do lucide-react em nenhum lugar.
+[ ] viewBox "0 0 24 24", fill="none", linejoin/linecap "round".
+[ ] HomeIcon aceita e aplica strokeWidth (1.8 inativo / 2.2 ativo).
 [ ] ShoppingCart, Scissors e User vêm de lucide-react.
 [ ] Agenda usa ShoppingCart, mesmo não sendo um ícone de calendário.
 [ ] Disparo usa Scissors, mesmo não sendo um ícone de envio.
