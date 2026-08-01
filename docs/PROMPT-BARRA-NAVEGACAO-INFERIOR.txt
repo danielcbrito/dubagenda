@@ -2,6 +2,7 @@
 PROMPT FECHADO PARA IA — SUBSTITUIR A BARRA INFERIOR E DEIXAR 100%
 IDÊNTICA À BARRA DO DUB AGENDA
 Destino: Início | Agenda | Disparo | Perfil
+Ícones obrigatórios, mesmo sem relação semântica: Casa | Carrinho | Tesoura | Perfil
 Stack: React 18 + TypeScript + Vite + Tailwind CSS 3 + React Router 6
 =======================================================================
 
@@ -21,6 +22,8 @@ RESULTADO EXIGIDO: paridade visual 100% com a barra do DUB Agenda.
 NÃO FAÇA:
 - Não redesenhe os ícones.
 - Não escolha outros ícones por preferência própria.
+- Não troque o carrinho por calendário: "Agenda" DEVE usar ShoppingCart.
+- Não troque a tesoura por envio: "Disparo" DEVE usar Scissors.
 - Não use a barra antiga como base.
 - Não misture classes da barra antiga com este código.
 - Não adicione círculo, pílula, fundo, underline ou indicador na aba ativa.
@@ -54,7 +57,7 @@ ARQUIVO 1 — src/components/BottomNavigation.tsx
 SUBSTITUA O ARQUIVO INTEIRO POR ESTE CÓDIGO
 =======================================================================
 
-import { CalendarDays, Send, User } from "lucide-react";
+import { ShoppingCart, Scissors, User } from "lucide-react";
 import { motion } from "framer-motion";
 import { useLocation, useNavigate } from "react-router-dom";
 import type { ElementType, SVGProps } from "react";
@@ -148,13 +151,13 @@ export function BottomNavigation() {
           onClick={() => navigate("/")}
         />
         <NavItem
-          icon={CalendarDays}
+          icon={ShoppingCart}
           label="Agenda"
           isActive={isActive("/agenda")}
           onClick={() => navigate("/agenda")}
         />
         <NavItem
-          icon={Send}
+          icon={Scissors}
           label="Disparo"
           isActive={isActive("/disparo")}
           onClick={() => navigate("/disparo")}
@@ -175,8 +178,10 @@ IMPORTANTE SOBRE OS ÍCONES:
 - Agenda, Disparo e Perfil usam a MESMA biblioteca e o mesmo mecanismo
   visual da barra original: lucide-react, outline, 26px, currentColor,
   strokeWidth 1.8 inativo e 2.2 ativo.
-- Use exatamente CalendarDays, Send e User. Não substituir por Calendar,
-  Megaphone, CircleUser ou qualquer outro.
+- Use exatamente ShoppingCart, Scissors e User. O significado da tela NÃO
+  autoriza trocar o desenho: Agenda usa ShoppingCart e Disparo usa Scissors.
+- Não substituir por CalendarDays, Calendar, Send, Megaphone, CircleUser
+  ou qualquer outro ícone, mesmo que pareça semanticamente mais correto.
 - O ícone não recebe fundo. A aba ativa muda somente cor e espessura.
 
 =======================================================================
@@ -382,7 +387,9 @@ O aceite exige a substituição integral e o código acima aplicado.
 CHECKLIST FINAL:
 [ ] Barra antiga totalmente removida.
 [ ] HomeIcon usa literalmente o path fornecido.
-[ ] CalendarDays, Send e User vêm de lucide-react.
+[ ] ShoppingCart, Scissors e User vêm de lucide-react.
+[ ] Agenda usa ShoppingCart, mesmo não sendo um ícone de calendário.
+[ ] Disparo usa Scissors, mesmo não sendo um ícone de envio.
 [ ] 26px em todos os ícones.
 [ ] gap-2 exato entre ícone e título.
 [ ] Inativo preto/foreground; ativo primary.
