@@ -62,19 +62,26 @@ import { motion } from "framer-motion";
 import { useLocation, useNavigate } from "react-router-dom";
 import type { ElementType, SVGProps } from "react";
 
-/** SVG EXATO da casa usada pelo DUB Agenda. Não alterar o path. */
-function HomeIcon(props: SVGProps<SVGSVGElement>) {
+/**
+ * ÍCONE DA CASA — CÓPIA LITERAL. NÃO REDESENHAR, NÃO SIMPLIFICAR,
+ * NÃO SUBSTITUIR POR <Home /> DO LUCIDE, NÃO GERAR OUTRO PATH.
+ * Copie e cole este bloco byte a byte.
+ */
+function HomeIcon({ strokeWidth = 1.9, ...props }: SVGProps<SVGSVGElement> & { strokeWidth?: number | string }) {
   return (
     <svg
       viewBox="0 0 24 24"
+      width="26"
+      height="26"
       fill="none"
+      stroke="currentColor"
       xmlns="http://www.w3.org/2000/svg"
       {...props}
     >
       <path
         d="M12 3.4c.35 0 .69.13.96.36l7.5 6.57c.32.28.5.69.5 1.11v7.81A1.75 1.75 0 0 1 19.21 21H15.5a1 1 0 0 1-1-1v-4.5a2.5 2.5 0 1 0-5 0V20a1 1 0 0 1-1 1H4.79A1.75 1.75 0 0 1 3.04 19.25v-7.81c0-.42.18-.83.5-1.11l7.5-6.57c.27-.23.61-.36.96-.36z"
         stroke="currentColor"
-        strokeWidth="1.9"
+        strokeWidth={strokeWidth}
         strokeLinejoin="round"
         strokeLinecap="round"
         fill="none"
@@ -82,6 +89,33 @@ function HomeIcon(props: SVGProps<SVGSVGElement>) {
     </svg>
   );
 }
+
+/* -----------------------------------------------------------------
+   POR QUE A SUA CASINHA ESTÁ ERRADA (LEIA ANTES DE RESPONDER)
+   Se a casa do seu app não estiver 100% igual, é porque você fez um
+   destes erros. Corrija TODOS:
+
+   1. Você usou o ícone `Home` do lucide-react. PROIBIDO.
+      A casa é um SVG autoral e NÃO existe no lucide.
+   2. Você "recriou" o path com outra geometria (telhado em V,
+      porta retangular, linhas separadas). PROIBIDO.
+      O desenho é UM ÚNICO path fechado, com telhado contínuo e a
+      porta formada por um arco (2.5 de raio) na base do próprio path.
+   3. Você mudou o viewBox. Ele é OBRIGATORIAMENTE "0 0 24 24".
+   4. Você deixou `fill="currentColor"`. É `fill="none"` — ícone
+      totalmente vazado, apenas contorno.
+   5. Você não repassou o strokeWidth. O componente precisa aceitar
+      strokeWidth como prop para variar 1.8 (inativo) / 2.2 (ativo).
+   6. Você aplicou tamanho por classe sem remover width/height fixos,
+      ou o contrário. Mantenha width="26" height="26" no SVG E
+      className="h-[26px] w-[26px]" no uso.
+   7. Você mudou strokeLinejoin/strokeLinecap. Ambos são "round".
+
+   TESTE DE ACEITE: renderize a casa a 26px e compare o path
+   caractere por caractere com a string `d` acima. Qualquer diferença
+   de um único caractere = reprovado.
+   ----------------------------------------------------------------- */
+
 
 interface NavItemProps {
   icon: ElementType;
