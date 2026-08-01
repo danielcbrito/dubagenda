@@ -1,0 +1,396 @@
+=======================================================================
+PROMPT FECHADO PARA IA — SUBSTITUIR A BARRA INFERIOR E DEIXAR 100%
+IDÊNTICA À BARRA DO DUB AGENDA
+Destino: Início | Agenda | Disparo | Perfil
+Stack: React 18 + TypeScript + Vite + Tailwind CSS 3 + React Router 6
+=======================================================================
+
+COPIE TODO O TEXTO DESTE ARQUIVO E ENVIE PARA A OUTRA IA.
+
+-----------------------------------------------------------------------
+INÍCIO DO PROMPT
+-----------------------------------------------------------------------
+
+Sua tarefa NÃO é se inspirar nesta barra e NÃO é criar uma versão
+parecida. Sua tarefa é SUBSTITUIR integralmente a barra de navegação
+inferior existente pelo código fornecido abaixo, preservando literalmente
+medidas, SVG, classes, pesos, animação, cores semânticas e safe area.
+
+RESULTADO EXIGIDO: paridade visual 100% com a barra do DUB Agenda.
+
+NÃO FAÇA:
+- Não redesenhe os ícones.
+- Não escolha outros ícones por preferência própria.
+- Não use a barra antiga como base.
+- Não misture classes da barra antiga com este código.
+- Não adicione círculo, pílula, fundo, underline ou indicador na aba ativa.
+- Não use `justify-center` nos itens.
+- Não mude 26px para 24px.
+- Não mude `gap-2` para outro espaçamento.
+- Não use cinza nos itens inativos.
+- Não reduza a altura de 64px.
+- Não omita o safe area do iPhone.
+- Não adapte o design. Altere somente os caminhos de rota caso as rotas
+  reais do projeto tenham outros nomes.
+
+ANTES DE EDITAR:
+1. Localize o componente que atualmente renderiza a navegação inferior.
+2. Localize o layout raiz que envolve as páginas autenticadas.
+3. Remova a barra antiga por completo, inclusive estilos, indicadores,
+   wrappers, FAB central e imports que só ela utilizava.
+4. Instale as dependências abaixo se ainda não existirem.
+5. Crie/substitua os arquivos exatamente na ordem deste documento.
+
+DEPENDÊNCIAS EXATAS:
+
+  npm install framer-motion@12 lucide-react@0.462 react-router-dom@6
+
+Se o projeto usa Bun:
+
+  bun add framer-motion@12 lucide-react@0.462 react-router-dom@6
+
+=======================================================================
+ARQUIVO 1 — src/components/BottomNavigation.tsx
+SUBSTITUA O ARQUIVO INTEIRO POR ESTE CÓDIGO
+=======================================================================
+
+import { CalendarDays, Send, User } from "lucide-react";
+import { motion } from "framer-motion";
+import { useLocation, useNavigate } from "react-router-dom";
+import type { ElementType, SVGProps } from "react";
+
+/** SVG EXATO da casa usada pelo DUB Agenda. Não alterar o path. */
+function HomeIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      {...props}
+    >
+      <path
+        d="M12 3.4c.35 0 .69.13.96.36l7.5 6.57c.32.28.5.69.5 1.11v7.81A1.75 1.75 0 0 1 19.21 21H15.5a1 1 0 0 1-1-1v-4.5a2.5 2.5 0 1 0-5 0V20a1 1 0 0 1-1 1H4.79A1.75 1.75 0 0 1 3.04 19.25v-7.81c0-.42.18-.83.5-1.11l7.5-6.57c.27-.23.61-.36.96-.36z"
+        stroke="currentColor"
+        strokeWidth="1.9"
+        strokeLinejoin="round"
+        strokeLinecap="round"
+        fill="none"
+      />
+    </svg>
+  );
+}
+
+interface NavItemProps {
+  icon: ElementType;
+  label: string;
+  isActive?: boolean;
+  onClick: () => void;
+  badge?: number;
+}
+
+/** Item EXATO: o espaço ícone/título vem de gap-2 = 8px. */
+function NavItem({ icon: Icon, label, isActive, onClick, badge }: NavItemProps) {
+  return (
+    <motion.button
+      type="button"
+      whileTap={{ scale: 0.94 }}
+      onClick={onClick}
+      aria-current={isActive ? "page" : undefined}
+      aria-label={label}
+      className="relative flex flex-1 flex-col items-center justify-start gap-2 px-1 pt-2 pb-2"
+    >
+      <div className="relative">
+        <Icon
+          aria-hidden="true"
+          className={`h-[26px] w-[26px] transition-all duration-200 ${
+            isActive ? "text-primary" : "text-foreground"
+          }`}
+          strokeWidth={isActive ? 2.2 : 1.8}
+        />
+
+        {typeof badge === "number" && badge > 0 && (
+          <span className="absolute -top-1.5 -right-2 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold leading-none tabular-nums text-primary-foreground ring-2 ring-background">
+            {badge > 99 ? "99+" : badge}
+          </span>
+        )}
+      </div>
+
+      <span
+        className={`text-[10px] leading-none tracking-wide transition-colors duration-200 ${
+          isActive
+            ? "font-medium text-primary"
+            : "font-normal text-foreground"
+        }`}
+      >
+        {label}
+      </span>
+    </motion.button>
+  );
+}
+
+/** Barra inferior fixa com quatro abas de mesma largura. */
+export function BottomNavigation() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const isActive = (path: string) => location.pathname === path;
+
+  return (
+    <nav
+      aria-label="Navegação principal"
+      className="fixed bottom-0 left-0 right-0 z-[60] border-t border-border/30 bg-background/95 backdrop-blur-md"
+      style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
+    >
+      <div className="mx-auto flex h-16 w-full items-stretch justify-around">
+        <NavItem
+          icon={HomeIcon}
+          label="Início"
+          isActive={isActive("/")}
+          onClick={() => navigate("/")}
+        />
+        <NavItem
+          icon={CalendarDays}
+          label="Agenda"
+          isActive={isActive("/agenda")}
+          onClick={() => navigate("/agenda")}
+        />
+        <NavItem
+          icon={Send}
+          label="Disparo"
+          isActive={isActive("/disparo")}
+          onClick={() => navigate("/disparo")}
+        />
+        <NavItem
+          icon={User}
+          label="Perfil"
+          isActive={isActive("/perfil")}
+          onClick={() => navigate("/perfil")}
+        />
+      </div>
+    </nav>
+  );
+}
+
+IMPORTANTE SOBRE OS ÍCONES:
+- A casa é um SVG autoral. O path acima é o MESMO do DUB Agenda.
+- Agenda, Disparo e Perfil usam a MESMA biblioteca e o mesmo mecanismo
+  visual da barra original: lucide-react, outline, 26px, currentColor,
+  strokeWidth 1.8 inativo e 2.2 ativo.
+- Use exatamente CalendarDays, Send e User. Não substituir por Calendar,
+  Megaphone, CircleUser ou qualquer outro.
+- O ícone não recebe fundo. A aba ativa muda somente cor e espessura.
+
+=======================================================================
+ARQUIVO 2 — src/routes/RootLayout.tsx
+SUBSTITUA/INTEGRE ESTE LAYOUT SEM ALTERAR AS CLASSES
+=======================================================================
+
+import { Outlet, useLocation } from "react-router-dom";
+import { BottomNavigation } from "@/components/BottomNavigation";
+
+/** Layout mobile-first com espaço reservado para a barra inferior. */
+export function RootLayout() {
+  const { pathname } = useLocation();
+
+  const hideNavPatterns = [
+    "/agenda/novo",
+    "/disparo/novo",
+    "/checkout",
+    "/pagamento",
+  ];
+
+  const shouldShowNav = !hideNavPatterns.some((path) =>
+    pathname.startsWith(path),
+  );
+
+  return (
+    <div
+      className="relative min-h-dvh w-full touch-pan-y overflow-x-hidden bg-background antialiased"
+      style={
+        shouldShowNav
+          ? {
+              paddingBottom:
+                "calc(4rem + env(safe-area-inset-bottom, 0px))",
+            }
+          : undefined
+      }
+    >
+      <Outlet />
+      {shouldShowNav && <BottomNavigation />}
+    </div>
+  );
+}
+
+Se o projeto não usa Outlet, mantenha o mesmo wrapper e troque apenas
+<Outlet /> por {children}. Não remova o paddingBottom condicional.
+
+=======================================================================
+ARQUIVO 3 — src/index.css
+GARANTA ESTES TOKENS E REGRAS GLOBAIS
+=======================================================================
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 0 0% 9%;
+    --primary: 0 78% 45%;
+    --primary-foreground: 0 0% 96%;
+    --border: 0 0% 87%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html,
+  body,
+  #root {
+    width: 100%;
+    min-height: 100%;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    margin: 0;
+  }
+
+  button,
+  [role="button"] {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+Se já existem tokens com esses nomes, NÃO duplique :root. Preserve os
+tokens do produto, mas confirme que `background` é a superfície da barra,
+`foreground` é preto/alto contraste, `primary` é a cor ativa e `border`
+é a divisória sutil. A barra não aceita cores hardcoded no componente.
+
+=======================================================================
+ARQUIVO 4 — tailwind.config.ts
+GARANTA ESTE MAPEAMENTO; SEM ELE AS CORES NÃO SERÃO IDÊNTICAS
+=======================================================================
+
+import type { Config } from "tailwindcss";
+
+export default {
+  darkMode: ["class"],
+  content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx}"],
+  theme: {
+    extend: {
+      colors: {
+        border: "hsl(var(--border))",
+        background: "hsl(var(--background))",
+        foreground: "hsl(var(--foreground))",
+        primary: {
+          DEFAULT: "hsl(var(--primary))",
+          foreground: "hsl(var(--primary-foreground))",
+        },
+      },
+      height: { screen: "100dvh" },
+      minHeight: { screen: "100dvh" },
+    },
+  },
+  plugins: [],
+} satisfies Config;
+
+Se o Tailwind do projeto já tem outros tokens/plugins, faça merge deste
+bloco; não apague configurações não relacionadas.
+
+=======================================================================
+ARQUIVO 5 — index.html
+CONFIRME QUE O VIEWPORT TEM viewport-fit=cover
+=======================================================================
+
+<meta
+  name="viewport"
+  content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0, viewport-fit=cover"
+/>
+
+Sem `viewport-fit=cover`, a proteção do indicador inferior do iPhone não
+fica igual. Não retire essa propriedade.
+
+=======================================================================
+INTEGRAÇÃO DAS ROTAS
+=======================================================================
+
+O RootLayout precisa envolver as quatro páginas. Exemplo React Router 6:
+
+<Route element={<RootLayout />}>
+  <Route path="/" element={<Inicio />} />
+  <Route path="/agenda" element={<Agenda />} />
+  <Route path="/disparo" element={<Disparo />} />
+  <Route path="/perfil" element={<Perfil />} />
+</Route>
+
+Se as rotas reais forem diferentes, altere SOMENTE as strings de path e
+navigate no BottomNavigation e neste registro. Não mude JSX ou classes.
+
+=======================================================================
+MEDIDAS EXATAS — NÃO NEGOCIÁVEIS
+=======================================================================
+
+- Barra: position fixed; left/right/bottom 0; z-index 60.
+- Altura útil: 64px (`h-16`) mais safe-area inferior do aparelho.
+- Fundo: 95% da cor background + `backdrop-blur-md`.
+- Borda superior: 1px, token border com 30% de opacidade.
+- Quatro itens `flex-1`: cada aba ocupa exatamente 25% da largura.
+- Conteúdo de cada item começa no topo: `justify-start`.
+- Padding de cada item: 8px topo, 8px base, 4px laterais.
+- Ícones: exatamente 26 × 26px.
+- Ícones inativos: `text-foreground`, nunca cinza.
+- Ícones ativos: `text-primary`.
+- Traço Lucide: 1.8 inativo / 2.2 ativo.
+- Distância ícone → título: exatamente 8px (`gap-2`).
+- Título: 10px, line-height 1, tracking-wide.
+- Título inativo: peso 400 e foreground.
+- Título ativo: peso 500 e primary.
+- Transição: 200ms.
+- Toque: escala 0.94 com Framer Motion.
+- Sem indicador adicional de seleção.
+- Sem sombra, sem elevação e sem arredondamento na barra.
+- Conteúdo da página: padding inferior de 64px + safe area.
+
+=======================================================================
+VALIDAÇÃO OBRIGATÓRIA ANTES DE RESPONDER QUE TERMINOU
+=======================================================================
+
+1. Rode build e lint completos.
+2. Abra a aplicação em viewport mobile 390 × 844.
+3. Tire uma captura da barra.
+4. Inspecione no navegador e confirme:
+   - nav com position fixed e z-index 60;
+   - container interno com 64px;
+   - quatro botões de mesma largura;
+   - cada SVG computado em 26 × 26px;
+   - gap computado em 8px;
+   - labels computadas em 10px;
+   - cor inativa foreground, sem opacidade reduzida;
+   - somente a rota atual usa primary;
+   - safe area presente;
+   - conteúdo não fica escondido atrás da barra.
+5. Clique nas quatro abas e confirme navegação e estado ativo.
+6. Compare o resultado com todas as medidas desta especificação.
+
+Se qualquer item divergir, corrija antes de finalizar. Não responda
+“fiz parecido”, “adaptei ao design existente” ou “usei um equivalente”.
+O aceite exige a substituição integral e o código acima aplicado.
+
+CHECKLIST FINAL:
+[ ] Barra antiga totalmente removida.
+[ ] HomeIcon usa literalmente o path fornecido.
+[ ] CalendarDays, Send e User vêm de lucide-react.
+[ ] 26px em todos os ícones.
+[ ] gap-2 exato entre ícone e título.
+[ ] Inativo preto/foreground; ativo primary.
+[ ] Nenhum fundo/pílula/underline no item ativo.
+[ ] h-16 e quatro itens flex-1.
+[ ] safe-area e padding do conteúdo implementados.
+[ ] Build, lint e inspeção mobile concluídos.
+
+-----------------------------------------------------------------------
+FIM DO PROMPT
+-----------------------------------------------------------------------
