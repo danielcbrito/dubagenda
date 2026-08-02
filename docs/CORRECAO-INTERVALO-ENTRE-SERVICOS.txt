@@ -1,0 +1,40 @@
+CORREÇÃO — INTERVALO ENTRE SERVIÇOS (BUFFER) REMOVIDO EM TODA A PLATAFORMA
+Data: 2026-08-02
+
+1) PROBLEMA
+Após um agendamento (ex.: 10:30–11:00), o horário 11:00 não aparecia para outros clientes.
+Causa: as funções de disponibilidade somavam um "delay entre serviços" de 10 min ao fim do atendimento.
+
+2) CAMADAS ENVOLVIDAS
+- Usuário: cliente não conseguia agendar o horário imediatamente seguinte.
+- Frontend (app cliente): src/hooks/useSlotAvailability.ts — delay já fixado em 0.
+- Backend (Edge Functions Supabase): check-availability, validate-appointment, create-payment,
+  atomic-booking, create-checkout, cancel-appointment-client — todas usam
+  config.delay_entre_servicos vindo do banco.
+- Banco (Supabase): configuracoes_horario (global) e configuracoes_horario_barbeiro (por profissional),
+  coluna delay_entre_servicos.
+
+3) DETALHE TÉCNICO IMPORTANTE
+As funções em produção leem o valor com fallback `config.delay_entre_servicos || 10`.
+Como 0 é "falsy" em JavaScript, gravar 0 no banco reativava o buffer de 10 minutos.
+Solução: gravar -1 (valor "truthy") — matematicamente equivale a buffer zero na grade de horários
+(fim do serviço - 1 min), sem liberar sobreposição real de horários.
+
+4) O QUE FOI APLICADO
+- UPDATE em configuracoes_horario e configuracoes_horario_barbeiro: delay_entre_servicos = -1 (todos os registros).
+- Migration: DEFAULT da coluna alterado para -1 nas duas tabelas (novos profissionais já nascem sem buffer).
+- Função SQL get_next_available_date ajustada para ignorar o delay.
+- Código das Edge Functions no repositório com DELAY_MINUTES = 0.
+
+5) TESTES EXECUTADOS (produção)
+Profissional 767c51a7… — 07/08/2026 (agendamentos 09:30+35min e 10:30+50min):
+- validate-appointment 10:05 → VÁLIDO (encaixa exatamente no fim do anterior)
+- validate-appointment 11:20 → VÁLIDO
+- validate-appointment 10:00 → BLOQUEADO (sobreposição real)
+- validate-appointment 11:00 → BLOQUEADO (sobreposição real)
+- check-availability: sem buracos artificiais; almoço e antecedência mínima preservados.
+Profissional 0ee2c3be… — dia fechado, comportamento correto (nenhum slot).
+
+6) OBSERVAÇÕES
+- O buffer de 10 minutos após o almoço foi mantido, conforme regra do projeto.
+- A app do barbeiro/admin (projeto separado) consome as mesmas tabelas: a correção vale para ela também.
