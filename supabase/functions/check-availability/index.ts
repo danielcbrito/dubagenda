@@ -324,7 +324,8 @@ Deno.serve(async (req) => {
     const LUNCH_END = config.hora_almoco_fim ? timeToMinutes(config.hora_almoco_fim) : null;
     const LUNCH_BUFFER_MINUTES = 10;
     const LUNCH_END_WITH_BUFFER = LUNCH_END !== null ? LUNCH_END + LUNCH_BUFFER_MINUTES : null;
-    const DELAY_MINUTES = config.delay_entre_servicos || 10;
+    // REGRA: sem intervalo entre serviços — o próximo horário livre é exatamente o fim do serviço anterior.
+    const DELAY_MINUTES = 0;
 
     console.log(`[check-availability] Horário: ${minutesToTime(OPEN_MINUTES)}-${minutesToTime(CLOSE_MINUTES)} | Almoço: ${LUNCH_START ? minutesToTime(LUNCH_START) : 'N/A'}-${LUNCH_END ? minutesToTime(LUNCH_END) : 'N/A'} | Delay: ${DELAY_MINUTES}min`);
 

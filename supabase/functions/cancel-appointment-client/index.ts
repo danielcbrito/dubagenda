@@ -144,7 +144,7 @@ async function validateRescheduleAvailability(params: {
     return { valid: false, message: "Erro ao verificar disponibilidade." };
   }
 
-  const delay = config.delay_entre_servicos;
+  const delay = 0;
   for (const appointment of appointments || []) {
     const appointmentStart = timeToMinutes(appointment.hora);
     const appointmentEnd = appointmentStart + appointment.duracao + delay;

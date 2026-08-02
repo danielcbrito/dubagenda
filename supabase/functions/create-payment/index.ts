@@ -117,7 +117,8 @@ async function checkTimeSlotAvailability(
     }
   }
 
-  const DELAY_MINUTES = config.delay_entre_servicos || 10;
+  // Sem intervalo entre serviços: próximo horário disponível = fim do serviço anterior
+  const DELAY_MINUTES = 0;
   
   // Verificar conflitos com agendamentos existentes
   let query = supabase

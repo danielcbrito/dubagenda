@@ -238,7 +238,8 @@ Deno.serve(async (req) => {
     }
 
     // Check for time conflicts with existing appointments
-    const DELAY_MINUTES = config.delay_entre_servicos;
+    // Sem intervalo entre serviços
+    const DELAY_MINUTES = 0;
     
     for (const apt of existingAppointments || []) {
       const [aptHour, aptMinute] = apt.hora.split(':').map(Number);

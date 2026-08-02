@@ -87,7 +87,8 @@ async function checkTimeSlotAvailability(
     }
   }
 
-  const DELAY = config.delay_entre_servicos || 10;
+  // Sem intervalo entre serviços
+  const DELAY = 0;
 
   let query = supabase
     .from("agendamentos")
