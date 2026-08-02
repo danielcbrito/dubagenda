@@ -75,7 +75,7 @@ function normalizeAvailabilityResponse(payload: AvailabilityResponseEnvelope): A
 const SUPABASE_URL = 'https://djtpzvujzmrrslirzwun.supabase.co';
 
 // Constantes de configuração padrão
-const DEFAULT_DELAY_MINUTES = 10;
+const DEFAULT_DELAY_MINUTES = 0;
 const SLOT_INTERVAL = 10;
 const MINIMUM_ADVANCE_MINUTES = 30; // 30 min de antecedência
 
@@ -466,7 +466,7 @@ export function useSlotAvailability(
       const LUNCH_END = config.hora_almoco_fim ? timeToMinutes(config.hora_almoco_fim) : null;
       const LUNCH_BUFFER_MINUTES = 10;
       const LUNCH_END_WITH_BUFFER = LUNCH_END !== null ? LUNCH_END + LUNCH_BUFFER_MINUTES : null;
-      const DELAY_MINUTES = config.delay_entre_servicos || DEFAULT_DELAY_MINUTES;
+      const DELAY_MINUTES = DEFAULT_DELAY_MINUTES;
 
       // Buscar agendamentos com status bloqueante (filtrado por barbeiro/tenant)
       let scopedBarberIds: string[] = [];
@@ -767,7 +767,7 @@ export function useSlotAvailability(
         if (data) delayConfig = data;
       }
 
-      const DELAY_MINUTES = delayConfig?.delay_entre_servicos || DEFAULT_DELAY_MINUTES;
+      const DELAY_MINUTES = DEFAULT_DELAY_MINUTES;
 
       // Buscar agendamentos com status bloqueante (filtrado por barbeiro)
       let query = supabase

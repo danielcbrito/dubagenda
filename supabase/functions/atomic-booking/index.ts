@@ -148,7 +148,8 @@ Deno.serve(async (req) => {
       }
     }
 
-    const DELAY_MINUTES = resolvedConfig.delay_entre_servicos || 10;
+    // Sem intervalo entre serviços
+    const DELAY_MINUTES = 0;
 
     // Validar horário de expediente
     const openMinutes = (() => { const [h, m] = (resolvedConfig.hora_abertura || '09:00').split(':').map(Number); return h * 60 + m; })();
