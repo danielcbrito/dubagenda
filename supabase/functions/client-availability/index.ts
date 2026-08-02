@@ -436,9 +436,21 @@ Deno.serve(async (req) => {
       console.log(`[client-availability] É HOJE (BRT) - Hora atual: ${minutesToTime(currentMinutes)} | Mínimo: ${minutesToTime(minimumAdvanceMinutes)}`);
     }
 
-    // Gerar slots a cada 10 minutos
+    // Grade de horários: intervalo configurado pelo profissional (padrão 30min)
     const slots: TimeSlot[] = [];
-    const SLOT_INTERVAL = 10;
+    let SLOT_INTERVAL = 30;
+    if (resolvedBarbeiroId) {
+      const { data: intervalData } = await supabase
+        .from('configuracoes_horario_barbeiro')
+        .select('slot_interval_minutes')
+        .eq('barbeiro_id', resolvedBarbeiroId)
+        .eq('dia_semana', dayOfWeek)
+        .maybeSingle();
+      if (intervalData?.slot_interval_minutes && intervalData.slot_interval_minutes > 0) {
+        SLOT_INTERVAL = intervalData.slot_interval_minutes;
+      }
+    }
+    console.log(`[client-availability] Intervalo da grade: ${SLOT_INTERVAL}min | Delay entre serviços: ${DELAY_MINUTES}min`);
 
     for (let slotStartMinutes = OPEN_MINUTES; slotStartMinutes < CLOSE_MINUTES; slotStartMinutes += SLOT_INTERVAL) {
       const timeStr = minutesToTime(slotStartMinutes);
@@ -512,7 +524,7 @@ Deno.serve(async (req) => {
         date,
         slots,
         occupiedSlots,
-        businessHours: config
+        businessHours: { ...config, delay_entre_servicos: DELAY_MINUTES, slot_interval_minutes: SLOT_INTERVAL }
       } as AvailabilityResponse),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
     );
