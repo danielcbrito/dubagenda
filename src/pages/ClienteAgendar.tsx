@@ -2242,15 +2242,21 @@ const ClienteAgendar = () => {
    */
   const getCorteService = () => {
     if (!selectedServices || selectedServices.length === 0) return undefined;
-    // Removido o filtro de palavras-chave restritivas para combos.
-    // Qualquer serviço que contenha "Corte" no nome pode ser alvo do resgate.
-    // O sistema aplicará o desconto sobre o item identificado como corte.
+    
+    // Filtra apenas serviços que contenham a palavra exata "Corte"
+    // para evitar que combos ou serviços com nomes compostos (ex: "Corte + Alisante")
+    // sejam marcados como gratuitos por inteiro.
     const cortes = selectedServices.filter(s => {
       const name = (s.nome || "").toLowerCase();
-      return name.includes("corte");
+      // O nome deve ser EXATAMENTE "corte" ou começar com "corte " (com espaço) 
+      // ou terminar com " corte", ou ser cercado por espaços.
+      // Isso evita "Corte + Algo" se o nome do serviço for o combo todo.
+      return name.trim() === "corte";
     });
+
     if (cortes.length === 0) return undefined;
-    // Escolhe o corte de MAIOR preço para beneficiar o cliente (ele ganha o item mais caro do carrinho).
+    
+    // Escolhe o de maior preço caso haja mais de um "Corte" puro (raro)
     return cortes.reduce((max, s) => (s.preco > max.preco ? s : max), cortes[0]);
   };
 
@@ -3148,19 +3154,25 @@ const ClienteAgendar = () => {
                       const qty = serviceQuantities[s.id] || 1;
                       const isRedeemed = !!redeemedCorte && s.id === redeemedCorte.id && !redemptionApplied;
                       if (isRedeemed) redemptionApplied = true;
+                      
                       const isReferralFree = !!referralCorte && s.id === referralCorte.id;
+                      
+                      // Se for resgate, o desconto é de apenas 1 unidade do serviço "Corte"
+                      // Se houver quantidade > 1, as demais são cobradas normalmente.
                       const lineTotal = isReferralFree
                         ? 0
                         : isRedeemed
                           ? s.preco * Math.max(0, qty - 1)
                           : s.preco * qty;
-                      const isFree = isReferralFree || (isRedeemed && lineTotal === 0);
+                      
+                      // Só exibe "(Grátis)" se o valor total da linha for zero (ou seja, qty=1 e isRedeemed)
+                      const showFreeLabel = isReferralFree || (isRedeemed && qty === 1);
                       return (
                         <div key={s.id} className="flex items-center justify-between gap-3">
                           <span className="text-[13px] text-muted-foreground truncate">
-                            {s.nome}{qty > 1 ? ` ×${qty}` : ""}{isFree ? " (Grátis)" : ""}
+                            {s.nome}{qty > 1 ? ` ×${qty}` : ""}{showFreeLabel ? " (Grátis)" : ""}
                           </span>
-                          <span className={cn("text-[13px] tabular-nums flex-shrink-0", isFree ? "text-emerald-500 font-medium" : "text-foreground")}>
+                          <span className={cn("text-[13px] tabular-nums flex-shrink-0", showFreeLabel ? "text-emerald-500 font-medium" : "text-foreground")}>
                             R$ {lineTotal.toFixed(2).replace('.', ',')}
                           </span>
                         </div>
