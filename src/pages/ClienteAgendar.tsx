@@ -2242,15 +2242,16 @@ const ClienteAgendar = () => {
    */
   const getCorteService = () => {
     if (!selectedServices || selectedServices.length === 0) return undefined;
-    const comboKeywords = ["barba", "+", " e ", "mais", "combo", "pacote", "duo", "kit"];
+    // Removido o filtro de palavras-chave restritivas para combos.
+    // Qualquer serviço que contenha "Corte" no nome pode ser alvo do resgate.
+    // O sistema aplicará o desconto sobre o item identificado como corte.
     const cortes = selectedServices.filter(s => {
       const name = (s.nome || "").toLowerCase();
-      if (!name.includes("corte")) return false;
-      return !comboKeywords.some(k => name.includes(k));
+      return name.includes("corte");
     });
     if (cortes.length === 0) return undefined;
-    // Escolhe o corte de MENOR preço (mais justo: cliente paga o item mais caro).
-    return cortes.reduce((min, s) => (s.preco < min.preco ? s : min), cortes[0]);
+    // Escolhe o corte de MAIOR preço para beneficiar o cliente (ele ganha o item mais caro do carrinho).
+    return cortes.reduce((max, s) => (s.preco > max.preco ? s : max), cortes[0]);
   };
 
   // Helper para formatar nomes dos serviços com quantidade
