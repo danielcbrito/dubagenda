@@ -88,9 +88,12 @@ export default function Login() {
         password,
       });
       if (error) {
-        const msg = error.message.includes("Invalid login")
-          ? "Credenciais incorretas"
-          : "Erro ao entrar. Tente novamente.";
+        const isEmailUnconfirmed = error.message.includes("Email not confirmed");
+        const msg = isEmailUnconfirmed
+          ? "Seu e-mail ainda não foi confirmado. Verifique sua caixa de entrada ou tente recuperar a senha."
+          : error.message.includes("Invalid login")
+            ? "Credenciais incorretas"
+            : "Erro ao entrar. Tente novamente.";
         setErrorMsg(msg);
         toast.error(msg);
         return;

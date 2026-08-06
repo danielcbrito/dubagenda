@@ -443,7 +443,7 @@ const Auth = () => {
         const msg = error.message.includes("Invalid login")
           ? "Email ou senha incorretos"
           : error.message.includes("Email not confirmed")
-            ? "Confirme seu cadastro antes de fazer login"
+            ? "Seu e-mail ainda não foi confirmado. Verifique sua caixa de entrada ou tente recuperar a senha."
             : "Erro ao fazer login";
         setLoginError(msg);
         toast.error(msg);
@@ -452,7 +452,7 @@ const Auth = () => {
 
       if (data.user) {
         if (!data.user.email_confirmed_at) {
-          toast.error("Confirme seu cadastro antes de fazer login");
+          toast.error("Seu e-mail ainda não foi confirmado. Verifique sua caixa de entrada ou tente recuperar a senha.");
           return;
         }
         toast.success("Login realizado com sucesso");
