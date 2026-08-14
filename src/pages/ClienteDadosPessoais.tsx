@@ -215,13 +215,26 @@ export default function ClienteDadosPessoais() {
     } as any).eq("id", userId);
 
     if (error) {
-      toast.error("Erro ao salvar");
+      if ((error as any).code === "23505") {
+        toast.error(
+          (error as any).message?.includes("cpf")
+            ? "Este CPF já está cadastrado em outra conta"
+            : "Estes dados já estão cadastrados em outra conta"
+        );
+      } else {
+        toast.error("Erro ao salvar");
+      }
       console.error(error);
     } else {
       // Update email if changed
       if (form.email !== original.email) {
         const { error: emailErr } = await supabase.auth.updateUser({ email: form.email });
-        if (emailErr) { toast.error("Erro ao atualizar e-mail"); setSaving(false); return; }
+        if (emailErr) {
+          toast.error(emailErr.message || "Erro ao atualizar e-mail");
+          setSaving(false);
+          return;
+        }
+        toast.success("Confirme o novo e-mail pelo link enviado");
       }
       toast.success("Dados atualizados!");
       setOriginal(form);
