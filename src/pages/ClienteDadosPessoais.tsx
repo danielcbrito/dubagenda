@@ -226,15 +226,26 @@ export default function ClienteDadosPessoais() {
       }
       console.error(error);
     } else {
-      // Update email if changed
-      if (form.email !== original.email) {
-        const { error: emailErr } = await supabase.auth.updateUser({ email: form.email });
+      // Update email if changed (comparação sem diferenciar maiúsculas/minúsculas)
+      const newEmail = form.email.trim().toLowerCase();
+      const currentEmail = original.email.trim().toLowerCase();
+      if (newEmail && newEmail !== currentEmail) {
+        const { error: emailErr } = await supabase.auth.updateUser({ email: newEmail });
         if (emailErr) {
-          toast.error(emailErr.message || "Erro ao atualizar e-mail");
+          const msg = (emailErr.message || "").toLowerCase();
+          toast.error(
+            msg.includes("already been registered") || msg.includes("already registered")
+              ? "Este e-mail já está em uso por outra conta"
+              : "Não foi possível atualizar o e-mail"
+          );
           setSaving(false);
           return;
         }
         toast.success("Confirme o novo e-mail pelo link enviado");
+        setOriginal({ ...form, email: newEmail });
+        setForm((p) => ({ ...p, email: newEmail }));
+        setSaving(false);
+        return;
       }
       toast.success("Dados atualizados!");
       setOriginal(form);
