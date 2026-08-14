@@ -226,9 +226,10 @@ export default function ClienteDadosPessoais() {
       }
       console.error(error);
     } else {
-      // Update email if changed (comparação sem diferenciar maiúsculas/minúsculas)
+      // Update email if changed — compara com o e-mail REAL da conta (não com o cache local)
       const newEmail = form.email.trim().toLowerCase();
-      const currentEmail = original.email.trim().toLowerCase();
+      const { data: authData } = await supabase.auth.getUser();
+      const currentEmail = (authData?.user?.email || original.email).trim().toLowerCase();
       if (newEmail && newEmail !== currentEmail) {
         const { error: emailErr } = await supabase.auth.updateUser({ email: newEmail });
         if (emailErr) {
