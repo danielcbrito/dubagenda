@@ -203,9 +203,9 @@ export default function ClienteDadosPessoais() {
 
     const { error } = await supabase.from("profiles").update({
       nome: form.nome,
-      cpf: cleanCPF,
-      telefone: cleanPhone,
-      cep: form.cep,
+      cpf: cleanCPF || null,
+      telefone: cleanPhone || null,
+      cep: form.cep || null,
       data_nascimento: form.data_nascimento || null,
       endereco_rua: form.endereco_rua,
       endereco_numero: form.endereco_numero,
