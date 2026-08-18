@@ -182,6 +182,28 @@ Deno.serve(async (req) => {
     const body = parsed.data;
     const { date, duration, excludeAppointmentId, barbeiroId, barberId, barbeiro_id, barber_id, tenantId } = body;
     const resolvedBarbeiroId = barbeiroId ?? barberId ?? barbeiro_id ?? barber_id;
+    let resolvedTenantId = tenantId;
+
+    if (resolvedBarbeiroId) {
+      const { data: barberScope, error: barberScopeError } = await supabase
+        .from('barbeiros')
+        .select('tenant_id')
+        .eq('id', resolvedBarbeiroId)
+        .maybeSingle();
+      if (barberScopeError || !barberScope?.tenant_id) {
+        return new Response(JSON.stringify({ success: false, message: 'Profissional inválido ou sem barbearia vinculada.' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      if (tenantId && tenantId !== barberScope.tenant_id) {
+        return new Response(JSON.stringify({ success: false, message: 'Profissional não pertence à barbearia selecionada.' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      resolvedTenantId = barberScope.tenant_id;
+    }
 
     console.log('='.repeat(70));
     console.log('[check-availability] INICIANDO VERIFICAÇÃO');
@@ -234,7 +256,7 @@ Deno.serve(async (req) => {
           .from('horarios_excepcionais')
           .select('*')
           .eq('data', date);
-        if (tenantId) globalExceptionQuery = globalExceptionQuery.eq('tenant_id', tenantId);
+        if (resolvedTenantId) globalExceptionQuery = globalExceptionQuery.eq('tenant_id', resolvedTenantId);
         const { data: excecaoGlobalData } = await globalExceptionQuery.maybeSingle();
 
         if (excecaoGlobalData) {
@@ -275,13 +297,13 @@ Deno.serve(async (req) => {
           } else {
             console.log(`[check-availability] Sem config para barbeiro ${resolvedBarbeiroId} dia ${dayOfWeek}, usando global`);
             // Fallback para config geral (já verifica horarios_excepcionais)
-            config = await getDefaultConfig(supabase, date, dayOfWeek, tenantId);
+            config = await getDefaultConfig(supabase, date, dayOfWeek, resolvedTenantId);
           }
         }
       }
     } else {
       // Sem barbeiro - usar config geral
-      config = await getDefaultConfig(supabase, date, dayOfWeek, tenantId);
+      config = await getDefaultConfig(supabase, date, dayOfWeek, resolvedTenantId);
     }
 
     // ============================================
@@ -289,7 +311,7 @@ Deno.serve(async (req) => {
     // O horário global da barbearia é o limite máximo de funcionamento
     // ============================================
     if (resolvedBarbeiroId) {
-      const globalConfig = await getDefaultConfig(supabase, date, dayOfWeek, tenantId);
+      const globalConfig = await getDefaultConfig(supabase, date, dayOfWeek, resolvedTenantId);
       
       if (!globalConfig.aberto) {
         config.aberto = false;

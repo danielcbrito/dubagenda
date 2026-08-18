@@ -39,6 +39,16 @@ Deno.serve(async (req) => {
 
     const body: BookingRequest = await req.json();
     const { date, time, duration, userId, servicoId, preco, paymentMethod, observacoes, barbeiroId } = body;
+    let tenantId: string | null = null;
+
+    if (barbeiroId) {
+      const { data: barberScope } = await supabase
+        .from('barbeiros')
+        .select('tenant_id')
+        .eq('id', barbeiroId)
+        .maybeSingle();
+      tenantId = barberScope?.tenant_id ?? null;
+    }
 
     console.log('='.repeat(60));
     console.log(`[atomic-booking] Data: ${date} | Hora: ${time} | Duração: ${duration}min | Barbeiro: ${barbeiroId || 'N/A'}`);
@@ -68,11 +78,12 @@ Deno.serve(async (req) => {
     }
 
     if (!resolvedConfig) {
-      const { data: excGlobal } = await supabase
+      let globalExceptionQuery = supabase
         .from('horarios_excepcionais')
         .select('*')
-        .eq('data', date)
-        .maybeSingle();
+        .eq('data', date);
+      if (tenantId) globalExceptionQuery = globalExceptionQuery.eq('tenant_id', tenantId);
+      const { data: excGlobal } = await globalExceptionQuery.maybeSingle();
       if (excGlobal) resolvedConfig = excGlobal;
     }
 
@@ -110,11 +121,12 @@ Deno.serve(async (req) => {
     // CLAMP: Garantir que horário do barbeiro respeite limites globais
     if (barbeiroId) {
       // Buscar config global para aplicar limites
-      const { data: globalExc } = await supabase
+      let globalExceptionQuery = supabase
         .from('horarios_excepcionais')
         .select('*')
-        .eq('data', date)
-        .maybeSingle();
+        .eq('data', date);
+      if (tenantId) globalExceptionQuery = globalExceptionQuery.eq('tenant_id', tenantId);
+      const { data: globalExc } = await globalExceptionQuery.maybeSingle();
 
       let globalRef: any = globalExc;
       if (!globalRef) {
