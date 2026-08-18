@@ -417,14 +417,14 @@ export function useSlotAvailability(
         hora_fechamento: sourceData.hora_fechamento || '21:00',
         hora_almoco_inicio: sourceData.hora_almoco_inicio,
         hora_almoco_fim: sourceData.hora_almoco_fim,
-        delay_entre_servicos: (sourceData as any).delay_entre_servicos || DEFAULT_DELAY_MINUTES
+        delay_entre_servicos: (sourceData as any).delay_entre_servicos || 0
       } : {
         aberto: dayOfWeek !== 0,
         hora_abertura: '09:00',
         hora_fechamento: '21:00',
         hora_almoco_inicio: '13:00',
         hora_almoco_fim: '14:00',
-        delay_entre_servicos: DEFAULT_DELAY_MINUTES
+        delay_entre_servicos: 0
       };
 
       console.log(`[useSlotAvailability FALLBACK] Config do dia ${dayOfWeek}: (${configSource})`, `${config.hora_abertura} - ${config.hora_fechamento}`);
