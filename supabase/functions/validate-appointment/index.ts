@@ -53,6 +53,7 @@ Deno.serve(async (req) => {
 
     const { data, hora, duracao, userId, barberId, barbeiroId, excludeAppointmentId }: AppointmentRequest = await req.json();
     const resolvedBarberId = barberId ?? barbeiroId;
+    let tenantId: string | null = null;
     
     console.log('[validate-appointment] Iniciando validação:', { data, hora, duracao, userId, barberId: resolvedBarberId, excludeAppointmentId });
 
@@ -62,6 +63,13 @@ Deno.serve(async (req) => {
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
       );
     }
+
+    const { data: barberScope } = await supabase
+      .from('barbeiros')
+      .select('tenant_id')
+      .eq('id', resolvedBarberId)
+      .maybeSingle();
+    tenantId = barberScope?.tenant_id ?? null;
 
     // Parse the date and get day of week
     const appointmentDate = new Date(data + 'T12:00:00'); // Parse as local date
@@ -90,11 +98,12 @@ Deno.serve(async (req) => {
 
     // 2) Exceção global para esta data
     if (!configData) {
-      const result = await supabase
+      let globalExceptionQuery = supabase
         .from('horarios_excepcionais')
         .select('*')
-        .eq('data', data)
-        .maybeSingle();
+        .eq('data', data);
+      if (tenantId) globalExceptionQuery = globalExceptionQuery.eq('tenant_id', tenantId);
+      const result = await globalExceptionQuery.maybeSingle();
       if (result.data) {
         console.log('[validate-appointment] EXCEÇÃO GLOBAL encontrada');
         configData = result.data;

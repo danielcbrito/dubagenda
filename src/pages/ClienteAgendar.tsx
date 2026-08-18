@@ -928,12 +928,20 @@ const ClienteAgendar = () => {
       // Parallelizar TODAS as queries: SEMPRE buscar config global + (config barbeiro) + exceções.
       // Config do barbeiro tem prioridade dia-a-dia, mas dias não configurados pelo barbeiro
       // usam o global (assim domingo fechado no global é respeitado mesmo sem linha do barbeiro).
+      const tenantId = selectedBarber?.tenant_id ?? preferredShop?.id ?? null;
+      let globalExceptionQuery = supabase
+        .from('horarios_excepcionais')
+        .select('data, aberto')
+        .gte('data', startStr)
+        .lte('data', endStr);
+      if (tenantId) globalExceptionQuery = globalExceptionQuery.eq('tenant_id', tenantId);
+
       const [globalConfigResult, barberConfigResult, globalExcResult, barberExcResult] = await Promise.all([
         supabase.from('configuracoes_horario').select('dia_semana, aberto'),
         barbeiroId
           ? supabase.from('configuracoes_horario_barbeiro').select('dia_semana, aberto').eq('barbeiro_id', barbeiroId)
           : Promise.resolve({ data: null as { dia_semana: number; aberto: boolean }[] | null }),
-        supabase.from('horarios_excepcionais').select('data, aberto').gte('data', startStr).lte('data', endStr),
+        globalExceptionQuery,
         barbeiroId
           ? supabase.from('horarios_excepcionais_barbeiro').select('data, aberto').eq('barbeiro_id', barbeiroId).gte('data', startStr).lte('data', endStr)
           : Promise.resolve({ data: null as { data: string; aberto: boolean }[] | null }),
@@ -979,7 +987,7 @@ const ClienteAgendar = () => {
     } finally {
       setClosedDatesLoading(false);
     }
-  }, [selectedBarberId]);
+  }, [selectedBarber?.tenant_id, selectedBarberId, preferredShop?.id]);
 
   // ─── syncBookingData: recarrega serviços, barbeiros e dias fechados ───
   // Chamado on-demand (ao entrar no passo 3 e ao selecionar data), não mais via Realtime
@@ -1013,8 +1021,12 @@ const ClienteAgendar = () => {
       }
 
       if (selectedBarberId) {
-        const refreshedBarber = safeBarbers.find((barber) => barber.id === selectedBarberId) || null;
-        setSelectedBarber(refreshedBarber);
+        const refreshedBarber = safeBarbers.find((barber) => barber.id === selectedBarberId);
+        if (refreshedBarber) {
+          setSelectedBarber(refreshedBarber);
+        } else {
+          console.warn('[syncBookingData] Profissional selecionado não apareceu na atualização; mantendo seleção atual.');
+        }
       }
 
       const baseDate = selectedDate || new Date();
@@ -2844,6 +2856,8 @@ const ClienteAgendar = () => {
                     <NextAvailableDateButton
                       selectedDate={selectedDate}
                       barberId={selectedBarber?.id}
+                      serviceDuration={totalDuration}
+                      tenantId={availabilityTenantId}
                       onSelectDate={(d) => {
                         setSelectedDate(d);
                         setSelectedTime("");

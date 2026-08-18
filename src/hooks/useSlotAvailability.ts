@@ -12,13 +12,13 @@ import { format } from 'date-fns';
  * - Transições suaves
  * 
  * REGRA DE DISPONIBILIDADE:
- * próximo_horário_disponível = horário_fim_do_serviço + delay (10min)
+ * próximo_horário_disponível = horário_fim_do_serviço (sem intervalo artificial)
  */
 
 export interface TimeSlot {
   time: string;
   available: boolean;
-  blockedReason?: 'occupied' | 'minimum_advance' | 'lunch' | 'closed';
+  blockedReason?: 'occupied' | 'minimum_advance' | 'lunch' | 'lunch_buffer' | 'closed';
 }
 
 interface OccupiedSlot {
@@ -173,6 +173,7 @@ export function useSlotAvailability(
   const [error, setError] = useState<string | null>(null);
   const [occupiedSlots, setOccupiedSlots] = useState<OccupiedSlot[]>([]);
   const [nowTick, setNowTick] = useState(() => Date.now());
+  const selectedDateKey = selectedDate ? format(selectedDate, 'yyyy-MM-dd') : '';
 
   useEffect(() => {
     const interval = setInterval(() => setNowTick(Date.now()), 30000);
@@ -190,7 +191,7 @@ export function useSlotAvailability(
     if (selectedDate && barbeiroId && serviceDuration > 0) {
       setLoading(true);
     }
-  }, [selectedDate, barbeiroId, serviceDuration]);
+  }, [selectedDateKey, barbeiroId, serviceDuration]);
 
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -209,6 +210,8 @@ export function useSlotAvailability(
       setOccupiedSlots([]);
       lastSlotsRef.current = [];
       isInitialLoadRef.current = true;
+      setLoading(false);
+      setHasLoaded(false);
       return;
     }
 
@@ -220,6 +223,8 @@ export function useSlotAvailability(
       setError(null);
       lastSlotsRef.current = [];
       isInitialLoadRef.current = true;
+      setLoading(false);
+      setHasLoaded(false);
       return;
     }
 
@@ -373,13 +378,14 @@ export function useSlotAvailability(
         if (data) { sourceData = data; configSource = 'EXCEÇÃO BARBEIRO'; }
       }
 
-      // 2) Exceção global
+       // 2) Exceção da barbearia atual (nunca misturar tenants)
       if (!sourceData) {
-        const { data } = await supabase
+        let exceptionQuery = supabase
           .from('horarios_excepcionais')
           .select('*')
-          .eq('data', dateStr)
-          .maybeSingle();
+          .eq('data', dateStr);
+        if (tenantId) exceptionQuery = exceptionQuery.eq('tenant_id', tenantId);
+        const { data } = await exceptionQuery.maybeSingle();
         if (data) { sourceData = data; configSource = 'EXCEÇÃO GLOBAL'; }
       }
 
@@ -707,7 +713,7 @@ export function useSlotAvailability(
         abortControllerRef.current = null;
       }
     };
-  }, [selectedDate, serviceDuration, barbeiroId, loadSlots]);
+   }, [selectedDateKey, serviceDuration, barbeiroId, loadSlots]);
 
   /**
    * Função para forçar recarga completa dos slots

@@ -35,6 +35,16 @@ async function checkTimeSlotAvailability(
 
   const appointmentDate = new Date(data + 'T12:00:00');
   const dayOfWeek = appointmentDate.getDay();
+  let tenantId: string | null = null;
+
+  if (barbeiro_id) {
+    const { data: barberScope } = await supabase
+      .from('barbeiros')
+      .select('tenant_id')
+      .eq('id', barbeiro_id)
+      .maybeSingle();
+    tenantId = barberScope?.tenant_id ?? null;
+  }
 
   // Buscar configurações de horário com hierarquia completa:
   // 1) Exceção do barbeiro, 2) Exceção global, 3) Config barbeiro, 4) Config global
@@ -54,11 +64,12 @@ async function checkTimeSlotAvailability(
 
   if (!config) {
     // 2) Exceção global para a data específica
-    const { data: excGlobal } = await supabase
+    let globalExceptionQuery = supabase
       .from('horarios_excepcionais')
       .select('*')
-      .eq('data', data)
-      .maybeSingle();
+      .eq('data', data);
+    if (tenantId) globalExceptionQuery = globalExceptionQuery.eq('tenant_id', tenantId);
+    const { data: excGlobal } = await globalExceptionQuery.maybeSingle();
     if (excGlobal) { config = excGlobal; configSource = 'exceção global'; }
   }
 

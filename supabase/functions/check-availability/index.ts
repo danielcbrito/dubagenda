@@ -10,13 +10,14 @@
  * - pending_bookings não expirados → BLOQUEIA
  * 
  * REGRA DE DISPONIBILIDADE:
- * próximo_horário_disponível = horário_fim_do_serviço + delay (10min)
+ * próximo_horário_disponível = horário_fim_do_serviço (sem intervalo artificial)
  * 
  * ISOLAMENTO: barbeiroId é OBRIGATÓRIO para retorno de slots válidos.
  * Sem barbeiroId, retorna erro 400 (não slots vazios).
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.80.0';
+import { z } from 'npm:zod@3.24.2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -35,16 +36,16 @@ interface BusinessHoursConfig {
   delay_entre_servicos: number;
 }
 
-interface AvailabilityRequest {
-  date: string;
-  duration: number;
-  excludeAppointmentId?: string;
-  barbeiroId?: string;
-  barberId?: string; // compatibilidade retroativa (camelCase)
-  barbeiro_id?: string; // compatibilidade legada (snake_case)
-  barber_id?: string; // compatibilidade legada (snake_case EN)
-  tenantId?: string | null;
-}
+const AvailabilityRequestSchema = z.object({
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  duration: z.number().int().min(1).max(720),
+  excludeAppointmentId: z.string().uuid().optional(),
+  barbeiroId: z.string().uuid().optional(),
+  barberId: z.string().uuid().optional(),
+  barbeiro_id: z.string().uuid().optional(),
+  barber_id: z.string().uuid().optional(),
+  tenantId: z.string().uuid().nullable().optional(),
+});
 
 interface TimeSlot {
   time: string;
@@ -83,13 +84,14 @@ function minutesToTime(minutes: number): string {
 }
 
 // Helper function to get default business hours config
-async function getDefaultConfig(supabase: any, date: string, dayOfWeek: number): Promise<BusinessHoursConfig> {
-  // Primeiro: Verificar exceção geral para esta data
-  const { data: excecaoData, error: excecaoError } = await supabase
+async function getDefaultConfig(supabase: any, date: string, dayOfWeek: number, tenantId?: string | null): Promise<BusinessHoursConfig> {
+  // Primeiro: verificar exceção da barbearia atual para esta data.
+  let exceptionQuery = supabase
     .from('horarios_excepcionais')
     .select('*')
-    .eq('data', date)
-    .maybeSingle();
+    .eq('data', date);
+  if (tenantId) exceptionQuery = exceptionQuery.eq('tenant_id', tenantId);
+  const { data: excecaoData, error: excecaoError } = await exceptionQuery.maybeSingle();
 
   if (excecaoError) {
     console.log('[check-availability] Erro ao buscar exceção:', excecaoError.message);
@@ -174,9 +176,38 @@ Deno.serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const body: AvailabilityRequest = await req.json();
+    const parsed = AvailabilityRequestSchema.safeParse(await req.json());
+    if (!parsed.success) {
+      return new Response(JSON.stringify({ success: false, error: parsed.error.flatten().fieldErrors }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    const body = parsed.data;
     const { date, duration, excludeAppointmentId, barbeiroId, barberId, barbeiro_id, barber_id, tenantId } = body;
     const resolvedBarbeiroId = barbeiroId ?? barberId ?? barbeiro_id ?? barber_id;
+    let resolvedTenantId = tenantId;
+
+    if (resolvedBarbeiroId) {
+      const { data: barberScope, error: barberScopeError } = await supabase
+        .from('barbeiros')
+        .select('tenant_id')
+        .eq('id', resolvedBarbeiroId)
+        .maybeSingle();
+      if (barberScopeError || !barberScope?.tenant_id) {
+        return new Response(JSON.stringify({ success: false, message: 'Profissional inválido ou sem barbearia vinculada.' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      if (tenantId && tenantId !== barberScope.tenant_id) {
+        return new Response(JSON.stringify({ success: false, message: 'Profissional não pertence à barbearia selecionada.' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      resolvedTenantId = barberScope.tenant_id;
+    }
 
     console.log('='.repeat(70));
     console.log('[check-availability] INICIANDO VERIFICAÇÃO');
@@ -225,11 +256,12 @@ Deno.serve(async (req) => {
       } else {
         // IMPORTANTE: Verificar exceção GLOBAL antes de usar config do barbeiro
         // Exceções globais (feriados, folgas) devem ter prioridade sobre config padrão do barbeiro
-        const { data: excecaoGlobalData } = await supabase
+        let globalExceptionQuery = supabase
           .from('horarios_excepcionais')
           .select('*')
-          .eq('data', date)
-          .maybeSingle();
+          .eq('data', date);
+        if (resolvedTenantId) globalExceptionQuery = globalExceptionQuery.eq('tenant_id', resolvedTenantId);
+        const { data: excecaoGlobalData } = await globalExceptionQuery.maybeSingle();
 
         if (excecaoGlobalData) {
           console.log(`[check-availability] EXCEÇÃO GLOBAL encontrada para ${date} (barbeiro ${resolvedBarbeiroId})`);
@@ -269,13 +301,13 @@ Deno.serve(async (req) => {
           } else {
             console.log(`[check-availability] Sem config para barbeiro ${resolvedBarbeiroId} dia ${dayOfWeek}, usando global`);
             // Fallback para config geral (já verifica horarios_excepcionais)
-            config = await getDefaultConfig(supabase, date, dayOfWeek);
+            config = await getDefaultConfig(supabase, date, dayOfWeek, resolvedTenantId);
           }
         }
       }
     } else {
       // Sem barbeiro - usar config geral
-      config = await getDefaultConfig(supabase, date, dayOfWeek);
+      config = await getDefaultConfig(supabase, date, dayOfWeek, resolvedTenantId);
     }
 
     // ============================================
@@ -283,7 +315,7 @@ Deno.serve(async (req) => {
     // O horário global da barbearia é o limite máximo de funcionamento
     // ============================================
     if (resolvedBarbeiroId) {
-      const globalConfig = await getDefaultConfig(supabase, date, dayOfWeek);
+      const globalConfig = await getDefaultConfig(supabase, date, dayOfWeek, resolvedTenantId);
       
       if (!globalConfig.aberto) {
         config.aberto = false;

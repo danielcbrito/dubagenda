@@ -27,6 +27,16 @@ export function useBarberBusinessHours(date: Date, barbeiroId: string | null) {
       setLoading(true);
       const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
       const dayOfWeek = date.getDay();
+      let tenantId: string | null = null;
+
+      if (barbeiroId) {
+        const { data: barberScope } = await supabase
+          .from("barbeiros")
+          .select("tenant_id")
+          .eq("id", barbeiroId)
+          .maybeSingle();
+        tenantId = barberScope?.tenant_id ?? null;
+      }
 
       let sourceData: any = null;
       let configSource = "padrão global";
@@ -44,11 +54,12 @@ export function useBarberBusinessHours(date: Date, barbeiroId: string | null) {
 
       // 2) Exceção global
       if (!sourceData) {
-        const { data } = await supabase
+        let globalExceptionQuery = supabase
           .from("horarios_excepcionais")
           .select("*")
-          .eq("data", dateStr)
-          .maybeSingle();
+          .eq("data", dateStr);
+        if (tenantId) globalExceptionQuery = globalExceptionQuery.eq("tenant_id", tenantId);
+        const { data } = await globalExceptionQuery.maybeSingle();
         if (data) { sourceData = data; configSource = "EXCEÇÃO GLOBAL"; }
       }
 
