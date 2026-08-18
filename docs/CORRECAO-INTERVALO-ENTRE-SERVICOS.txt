@@ -38,3 +38,27 @@ Profissional 0ee2c3be… — dia fechado, comportamento correto (nenhum slot).
 6) OBSERVAÇÕES
 - O buffer de 10 minutos após o almoço foi mantido, conforme regra do projeto.
 - A app do barbeiro/admin (projeto separado) consome as mesmas tabelas: a correção vale para ela também.
+
+7) AUDITORIA DE DISPONIBILIDADE — 17/08/2026
+- Causa do alerta observado às 19:14 BRT: para o próprio dia 17/08, o expediente terminava às 19:00;
+  portanto os 16 horários gerados estavam corretamente bloqueados pela antecedência mínima.
+- Datas futuras foram testadas diretamente no motor autoritativo `check-availability` e retornaram horários:
+  19/08, Barbearia DUB, serviço de 30 min → 9 horários livres entre 14:30 e 18:30.
+- Corrigido vazamento lógico de exceções: `horarios_excepcionais` agora é filtrada por `tenant_id`
+  no calendário, no fallback do frontend e na Edge Function. Uma folga de outra barbearia não fecha mais a DUB.
+- A atualização silenciosa de dados não remove mais o barbeiro selecionado quando uma consulta transitória
+  retorna lista incompleta.
+- O botão “Próxima data” deixou de usar a estimativa SQL baseada em contagem fixa de 30 min; agora consulta
+  o mesmo motor de slots usado pela tela, considerando duração real, almoço, expediente e conflitos.
+- Estados transitórios sem data, duração ou profissional não são mais apresentados como “agenda cheia”.
+
+8) FLUXO CRÍTICO E ERROS
+User → escolhe barbeiro, serviço e data.
+Frontend → consulta `check-availability` com barbeiro, tenant, data e duração total.
+Backend Supabase → aplica exceção do barbeiro, exceção do tenant, configuração do barbeiro e limite global;
+depois cruza agendamentos e reservas temporárias exclusivamente daquele barbeiro.
+Database Supabase → status pending/confirmed/completed bloqueiam; cancelados/no_show/excluido liberam.
+External Services → não participam do cálculo de horários.
+
+Se a Edge Function falhar, o frontend executa o fallback com as mesmas regras e mantém a falha como erro de
+carregamento, sem afirmar falsamente que a agenda está cheia. A confirmação final continua validada no servidor.
