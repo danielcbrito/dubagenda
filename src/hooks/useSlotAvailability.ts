@@ -76,7 +76,7 @@ const SUPABASE_URL = 'https://djtpzvujzmrrslirzwun.supabase.co';
 
 // Constantes de configuração padrão
 const DEFAULT_DELAY_MINUTES = 0;
-const SLOT_INTERVAL = 10;
+const SLOT_INTERVAL = 30; // 30 min padrão Dub se não houver config específica
 const MINIMUM_ADVANCE_MINUTES = 30; // 30 min de antecedência
 
 function timeToMinutes(timeStr: string): number {
@@ -417,14 +417,14 @@ export function useSlotAvailability(
         hora_fechamento: sourceData.hora_fechamento || '21:00',
         hora_almoco_inicio: sourceData.hora_almoco_inicio,
         hora_almoco_fim: sourceData.hora_almoco_fim,
-        delay_entre_servicos: (sourceData as any).delay_entre_servicos || DEFAULT_DELAY_MINUTES
+        delay_entre_servicos: (sourceData as any).delay_entre_servicos || 0
       } : {
         aberto: dayOfWeek !== 0,
         hora_abertura: '09:00',
         hora_fechamento: '21:00',
         hora_almoco_inicio: '13:00',
         hora_almoco_fim: '14:00',
-        delay_entre_servicos: DEFAULT_DELAY_MINUTES
+        delay_entre_servicos: 0
       };
 
       console.log(`[useSlotAvailability FALLBACK] Config do dia ${dayOfWeek}: (${configSource})`, `${config.hora_abertura} - ${config.hora_fechamento}`);
@@ -559,10 +559,11 @@ export function useSlotAvailability(
         })
       ];
 
-      // Gerar slots a cada 10 minutos (igual ao backend)
+      // Gerar slots com base no delay configurado (fallback 10min)
+      const dynamicSlotInterval = config.delay_entre_servicos || 30;
       const generatedSlots: TimeSlot[] = [];
 
-      for (let slotStartMinutes = OPEN_MINUTES; slotStartMinutes < CLOSE_MINUTES; slotStartMinutes += SLOT_INTERVAL) {
+      for (let slotStartMinutes = OPEN_MINUTES; slotStartMinutes < CLOSE_MINUTES; slotStartMinutes += dynamicSlotInterval) {
         const timeStr = minutesToTime(slotStartMinutes);
         const slotEndMinutes = slotStartMinutes + serviceDuration;
 
@@ -773,7 +774,7 @@ export function useSlotAvailability(
         if (data) delayConfig = data;
       }
 
-      const DELAY_MINUTES = DEFAULT_DELAY_MINUTES;
+      const DELAY_MINUTES = 0; // Regra global Dub: sem intervalo artificial entre serviços
 
       // Buscar agendamentos com status bloqueante (filtrado por barbeiro)
       let query = supabase
