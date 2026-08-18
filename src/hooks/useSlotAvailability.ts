@@ -559,10 +559,11 @@ export function useSlotAvailability(
         })
       ];
 
-      // Gerar slots a cada 10 minutos (igual ao backend)
+      // Gerar slots com base no delay configurado (fallback 10min)
+      const dynamicSlotInterval = config.delay_entre_servicos || 10;
       const generatedSlots: TimeSlot[] = [];
 
-      for (let slotStartMinutes = OPEN_MINUTES; slotStartMinutes < CLOSE_MINUTES; slotStartMinutes += SLOT_INTERVAL) {
+      for (let slotStartMinutes = OPEN_MINUTES; slotStartMinutes < CLOSE_MINUTES; slotStartMinutes += dynamicSlotInterval) {
         const timeStr = minutesToTime(slotStartMinutes);
         const slotEndMinutes = slotStartMinutes + serviceDuration;
 
