@@ -468,7 +468,7 @@ Deno.serve(async (req) => {
       console.log(`[check-availability] É HOJE (BRT) - Hora atual: ${minutesToTime(currentMinutes)} | Mínimo: ${minutesToTime(minimumAdvanceMinutes)}`);
     }
 
-    // Gerar slots a cada 10 minutos
+    // Gerar slots dinâmicos (default 30 min)
     const slots: TimeSlot[] = [];
     const SLOT_INTERVAL = config.delay_entre_servicos || 30; // 30 min padrão se não configurado
 

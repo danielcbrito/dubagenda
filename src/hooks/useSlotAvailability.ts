@@ -344,7 +344,7 @@ export function useSlotAvailability(
 
   /**
    * Fallback CORRIGIDO: carregar slots diretamente do banco
-   * Usa as MESMAS regras do backend (intervalo de 10min, delay de 10min)
+   * Usa as MESMAS regras do backend (intervalo de 30min, delay de 0min)
    * Também usa partial updates para evitar re-render completo
    */
   const loadSlotsFromDatabase = useCallback(async (dateStr: string, forceFullUpdate = false) => {
@@ -559,7 +559,7 @@ export function useSlotAvailability(
         })
       ];
 
-      // Gerar slots com base no delay configurado (fallback 10min)
+      // Gerar slots com base no delay configurado (fallback 30min)
       const dynamicSlotInterval = config.delay_entre_servicos || 30;
       const generatedSlots: TimeSlot[] = [];
 
