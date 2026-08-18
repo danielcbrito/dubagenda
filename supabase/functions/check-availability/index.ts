@@ -105,7 +105,7 @@ async function getDefaultConfig(supabase: any, date: string, dayOfWeek: number, 
       hora_fechamento: excecaoData.hora_fechamento || '20:00',
       hora_almoco_inicio: excecaoData.hora_almoco_inicio,
       hora_almoco_fim: excecaoData.hora_almoco_fim,
-      delay_entre_servicos: excecaoData.delay_entre_servicos || 10
+      delay_entre_servicos: excecaoData.delay_entre_servicos || 0
     };
   }
 
@@ -130,14 +130,14 @@ async function getDefaultConfig(supabase: any, date: string, dayOfWeek: number, 
     hora_fechamento: configData.hora_fechamento,
     hora_almoco_inicio: configData.hora_almoco_inicio,
     hora_almoco_fim: configData.hora_almoco_fim,
-    delay_entre_servicos: configData.delay_entre_servicos || 10
+    delay_entre_servicos: configData.delay_entre_servicos || 0
   } : {
     aberto: dayOfWeek !== 0,
     hora_abertura: '09:00',
     hora_fechamento: '21:00',
     hora_almoco_inicio: '13:00',
     hora_almoco_fim: '14:00',
-    delay_entre_servicos: 10
+    delay_entre_servicos: 0
   };
 }
 
@@ -251,7 +251,7 @@ Deno.serve(async (req) => {
           hora_fechamento: excecaoBarbeiroData.hora_fechamento || '20:00',
           hora_almoco_inicio: excecaoBarbeiroData.hora_almoco_inicio,
           hora_almoco_fim: excecaoBarbeiroData.hora_almoco_fim,
-          delay_entre_servicos: excecaoBarbeiroData.delay_entre_servicos || 10
+          delay_entre_servicos: excecaoBarbeiroData.delay_entre_servicos || 0
         };
       } else {
         // IMPORTANTE: Verificar exceção GLOBAL antes de usar config do barbeiro
@@ -271,7 +271,7 @@ Deno.serve(async (req) => {
             hora_fechamento: excecaoGlobalData.hora_fechamento || '20:00',
             hora_almoco_inicio: excecaoGlobalData.hora_almoco_inicio,
             hora_almoco_fim: excecaoGlobalData.hora_almoco_fim,
-            delay_entre_servicos: excecaoGlobalData.delay_entre_servicos || 10
+            delay_entre_servicos: excecaoGlobalData.delay_entre_servicos || 0
           };
         } else {
           // Buscar config padrão do barbeiro
@@ -296,7 +296,7 @@ Deno.serve(async (req) => {
               hora_fechamento: configBarbeiroData.hora_fechamento || '20:00',
               hora_almoco_inicio: configBarbeiroData.hora_almoco_inicio || null,
               hora_almoco_fim: configBarbeiroData.hora_almoco_fim || null,
-              delay_entre_servicos: configBarbeiroData.delay_entre_servicos || 10
+              delay_entre_servicos: configBarbeiroData.delay_entre_servicos || 0
             };
           } else {
             console.log(`[check-availability] Sem config para barbeiro ${resolvedBarbeiroId} dia ${dayOfWeek}, usando global`);
@@ -470,7 +470,7 @@ Deno.serve(async (req) => {
 
     // Gerar slots a cada 10 minutos
     const slots: TimeSlot[] = [];
-    const SLOT_INTERVAL = config.delay_entre_servicos || 10;
+    const SLOT_INTERVAL = config.delay_entre_servicos || 30; // 30 min padrão se não configurado
 
     for (let slotStartMinutes = OPEN_MINUTES; slotStartMinutes < CLOSE_MINUTES; slotStartMinutes += SLOT_INTERVAL) {
       const timeStr = minutesToTime(slotStartMinutes);

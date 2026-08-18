@@ -76,7 +76,7 @@ const SUPABASE_URL = 'https://djtpzvujzmrrslirzwun.supabase.co';
 
 // Constantes de configuração padrão
 const DEFAULT_DELAY_MINUTES = 0;
-const SLOT_INTERVAL = 10; // O fallback agora é dinâmico no backend
+const SLOT_INTERVAL = 30; // 30 min padrão Dub se não houver config específica
 const MINIMUM_ADVANCE_MINUTES = 30; // 30 min de antecedência
 
 function timeToMinutes(timeStr: string): number {
@@ -560,7 +560,7 @@ export function useSlotAvailability(
       ];
 
       // Gerar slots com base no delay configurado (fallback 10min)
-      const dynamicSlotInterval = config.delay_entre_servicos || 10;
+      const dynamicSlotInterval = config.delay_entre_servicos || 30;
       const generatedSlots: TimeSlot[] = [];
 
       for (let slotStartMinutes = OPEN_MINUTES; slotStartMinutes < CLOSE_MINUTES; slotStartMinutes += dynamicSlotInterval) {
