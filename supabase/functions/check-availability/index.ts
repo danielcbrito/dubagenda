@@ -105,7 +105,7 @@ async function getDefaultConfig(supabase: any, date: string, dayOfWeek: number, 
       hora_fechamento: excecaoData.hora_fechamento || '20:00',
       hora_almoco_inicio: excecaoData.hora_almoco_inicio,
       hora_almoco_fim: excecaoData.hora_almoco_fim,
-      delay_entre_servicos: 10
+      delay_entre_servicos: excecaoData.delay_entre_servicos || 10
     };
   }
 
@@ -251,7 +251,7 @@ Deno.serve(async (req) => {
           hora_fechamento: excecaoBarbeiroData.hora_fechamento || '20:00',
           hora_almoco_inicio: excecaoBarbeiroData.hora_almoco_inicio,
           hora_almoco_fim: excecaoBarbeiroData.hora_almoco_fim,
-          delay_entre_servicos: 10
+          delay_entre_servicos: excecaoBarbeiroData.delay_entre_servicos || 10
         };
       } else {
         // IMPORTANTE: Verificar exceção GLOBAL antes de usar config do barbeiro
@@ -271,7 +271,7 @@ Deno.serve(async (req) => {
             hora_fechamento: excecaoGlobalData.hora_fechamento || '20:00',
             hora_almoco_inicio: excecaoGlobalData.hora_almoco_inicio,
             hora_almoco_fim: excecaoGlobalData.hora_almoco_fim,
-            delay_entre_servicos: 10
+            delay_entre_servicos: excecaoGlobalData.delay_entre_servicos || 10
           };
         } else {
           // Buscar config padrão do barbeiro
