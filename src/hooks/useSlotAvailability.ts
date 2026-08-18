@@ -76,7 +76,7 @@ const SUPABASE_URL = 'https://djtpzvujzmrrslirzwun.supabase.co';
 
 // Constantes de configuração padrão
 const DEFAULT_DELAY_MINUTES = 0;
-const SLOT_INTERVAL = 10;
+const SLOT_INTERVAL = 10; // O fallback agora é dinâmico no backend
 const MINIMUM_ADVANCE_MINUTES = 30; // 30 min de antecedência
 
 function timeToMinutes(timeStr: string): number {

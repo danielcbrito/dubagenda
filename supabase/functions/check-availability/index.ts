@@ -470,7 +470,7 @@ Deno.serve(async (req) => {
 
     // Gerar slots a cada 10 minutos
     const slots: TimeSlot[] = [];
-    const SLOT_INTERVAL = 10;
+    const SLOT_INTERVAL = config.delay_entre_servicos || 10;
 
     for (let slotStartMinutes = OPEN_MINUTES; slotStartMinutes < CLOSE_MINUTES; slotStartMinutes += SLOT_INTERVAL) {
       const timeStr = minutesToTime(slotStartMinutes);
