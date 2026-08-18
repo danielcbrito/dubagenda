@@ -774,7 +774,7 @@ export function useSlotAvailability(
         if (data) delayConfig = data;
       }
 
-      const DELAY_MINUTES = DEFAULT_DELAY_MINUTES;
+      const DELAY_MINUTES = 0; // Regra global Dub: sem intervalo artificial entre serviços
 
       // Buscar agendamentos com status bloqueante (filtrado por barbeiro)
       let query = supabase
