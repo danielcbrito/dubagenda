@@ -79,6 +79,13 @@ const DEFAULT_DELAY_MINUTES = 0;
 const SLOT_INTERVAL = 30; // 30 min padrão Dub se não houver config específica
 const MINIMUM_ADVANCE_MINUTES = 30; // 30 min de antecedência
 
+/** Normaliza o intervalo da grade: aceita apenas valores plausíveis (5–120 min) */
+function normalizeSlotInterval(value: unknown): number | null {
+  const n = typeof value === 'number' ? value : Number(value);
+  if (!Number.isFinite(n) || n < 5 || n > 120) return null;
+  return Math.round(n);
+}
+
 function timeToMinutes(timeStr: string): number {
   const parts = timeStr.split(':').map(Number);
   return parts[0] * 60 + parts[1];
@@ -417,14 +424,16 @@ export function useSlotAvailability(
         hora_fechamento: sourceData.hora_fechamento || '21:00',
         hora_almoco_inicio: sourceData.hora_almoco_inicio,
         hora_almoco_fim: sourceData.hora_almoco_fim,
-        delay_entre_servicos: (sourceData as any).delay_entre_servicos || 0
+        delay_entre_servicos: (sourceData as any).delay_entre_servicos || 0,
+        slot_interval_minutes: normalizeSlotInterval((sourceData as any).slot_interval_minutes)
       } : {
         aberto: dayOfWeek !== 0,
         hora_abertura: '09:00',
         hora_fechamento: '21:00',
         hora_almoco_inicio: '13:00',
         hora_almoco_fim: '14:00',
-        delay_entre_servicos: 0
+        delay_entre_servicos: 0,
+        slot_interval_minutes: null as number | null
       };
 
       console.log(`[useSlotAvailability FALLBACK] Config do dia ${dayOfWeek}: (${configSource})`, `${config.hora_abertura} - ${config.hora_fechamento}`);
@@ -559,8 +568,18 @@ export function useSlotAvailability(
         })
       ];
 
-      // Gerar slots com base no delay configurado (fallback 30min)
-      const dynamicSlotInterval = config.delay_entre_servicos || 30;
+      // Intervalo da grade: 1) config do profissional 2) config da barbearia 3) 30 min
+      let tenantSlotInterval: number | null = null;
+      if (tenantId) {
+        const { data: tenantConfig } = await supabase
+          .from('tenants')
+          .select('slot_interval_minutes')
+          .eq('id', tenantId)
+          .maybeSingle();
+        tenantSlotInterval = normalizeSlotInterval((tenantConfig as any)?.slot_interval_minutes);
+      }
+      const dynamicSlotInterval =
+        normalizeSlotInterval(config.slot_interval_minutes) ?? tenantSlotInterval ?? 30;
       const generatedSlots: TimeSlot[] = [];
 
       for (let slotStartMinutes = OPEN_MINUTES; slotStartMinutes < CLOSE_MINUTES; slotStartMinutes += dynamicSlotInterval) {

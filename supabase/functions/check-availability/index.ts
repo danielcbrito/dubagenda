@@ -34,6 +34,15 @@ interface BusinessHoursConfig {
   hora_almoco_inicio: string | null;
   hora_almoco_fim: string | null;
   delay_entre_servicos: number;
+  /** Intervalo da grade de horários (minutos) configurado pelo profissional */
+  slot_interval_minutes?: number | null;
+}
+
+/** Normaliza o intervalo da grade: aceita apenas valores plausíveis (5–120 min) */
+function normalizeSlotInterval(value: unknown): number | null {
+  const n = typeof value === 'number' ? value : Number(value);
+  if (!Number.isFinite(n) || n < 5 || n > 120) return null;
+  return Math.round(n);
 }
 
 const AvailabilityRequestSchema = z.object({
@@ -296,7 +305,8 @@ Deno.serve(async (req) => {
               hora_fechamento: configBarbeiroData.hora_fechamento || '20:00',
               hora_almoco_inicio: configBarbeiroData.hora_almoco_inicio || null,
               hora_almoco_fim: configBarbeiroData.hora_almoco_fim || null,
-              delay_entre_servicos: configBarbeiroData.delay_entre_servicos || 0
+              delay_entre_servicos: configBarbeiroData.delay_entre_servicos || 0,
+              slot_interval_minutes: normalizeSlotInterval(configBarbeiroData.slot_interval_minutes)
             };
           } else {
             console.log(`[check-availability] Sem config para barbeiro ${resolvedBarbeiroId} dia ${dayOfWeek}, usando global`);
@@ -468,9 +478,24 @@ Deno.serve(async (req) => {
       console.log(`[check-availability] É HOJE (BRT) - Hora atual: ${minutesToTime(currentMinutes)} | Mínimo: ${minutesToTime(minimumAdvanceMinutes)}`);
     }
 
-    // Gerar slots dinâmicos (default 30 min)
+    // ============================================
+    // INTERVALO DA GRADE DE HORÁRIOS
+    // Prioridade: 1) config do profissional (dia) 2) config da barbearia 3) 30 min
+    // ============================================
+    let tenantSlotInterval: number | null = null;
+    if (resolvedTenantId) {
+      const { data: tenantConfig } = await supabase
+        .from('tenants')
+        .select('slot_interval_minutes')
+        .eq('id', resolvedTenantId)
+        .maybeSingle();
+      tenantSlotInterval = normalizeSlotInterval(tenantConfig?.slot_interval_minutes);
+    }
+
     const slots: TimeSlot[] = [];
-    const SLOT_INTERVAL = config.delay_entre_servicos || 30; // 30 min padrão se não configurado
+    const SLOT_INTERVAL =
+      normalizeSlotInterval(config.slot_interval_minutes) ?? tenantSlotInterval ?? 30;
+    console.log(`[check-availability] Intervalo da grade: ${SLOT_INTERVAL}min (barbeiro: ${config.slot_interval_minutes ?? 'n/a'} | barbearia: ${tenantSlotInterval ?? 'n/a'})`);
 
     for (let slotStartMinutes = OPEN_MINUTES; slotStartMinutes < CLOSE_MINUTES; slotStartMinutes += SLOT_INTERVAL) {
       const timeStr = minutesToTime(slotStartMinutes);
