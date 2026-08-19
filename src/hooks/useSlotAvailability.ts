@@ -79,6 +79,13 @@ const DEFAULT_DELAY_MINUTES = 0;
 const SLOT_INTERVAL = 30; // 30 min padrão Dub se não houver config específica
 const MINIMUM_ADVANCE_MINUTES = 30; // 30 min de antecedência
 
+/** Normaliza o intervalo da grade: aceita apenas valores plausíveis (5–120 min) */
+function normalizeSlotInterval(value: unknown): number | null {
+  const n = typeof value === 'number' ? value : Number(value);
+  if (!Number.isFinite(n) || n < 5 || n > 120) return null;
+  return Math.round(n);
+}
+
 function timeToMinutes(timeStr: string): number {
   const parts = timeStr.split(':').map(Number);
   return parts[0] * 60 + parts[1];
