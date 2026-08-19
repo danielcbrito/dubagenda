@@ -34,6 +34,15 @@ interface BusinessHoursConfig {
   hora_almoco_inicio: string | null;
   hora_almoco_fim: string | null;
   delay_entre_servicos: number;
+  /** Intervalo da grade de horários (minutos) configurado pelo profissional */
+  slot_interval_minutes?: number | null;
+}
+
+/** Normaliza o intervalo da grade: aceita apenas valores plausíveis (5–120 min) */
+function normalizeSlotInterval(value: unknown): number | null {
+  const n = typeof value === 'number' ? value : Number(value);
+  if (!Number.isFinite(n) || n < 5 || n > 120) return null;
+  return Math.round(n);
 }
 
 const AvailabilityRequestSchema = z.object({
