@@ -375,11 +375,6 @@ export default function ClientePerfil() {
             {/* Flat list — iFood style with hairline dividers */}
             <div className="divide-y divide-border/60">
               <ProfileRow
-                icon={Bell}
-                label="Notificações"
-                onClick={() => setNotificationsOpen(true)}
-              />
-              <ProfileRow
                 icon={Store}
                 label={isDubExclusive ? "Barbearia DUB" : "Minha Barbearia"}
                 sublabel={isDubExclusive ? "Cliente exclusivo" : preferredShopName || undefined}
@@ -409,22 +404,6 @@ export default function ClientePerfil() {
                 sublabel="Descontos disponíveis"
                 onClick={() => setCouponsOpen(true)}
               />
-              <ProfileRow
-                icon={Gift}
-                label="Recompensas e Benefícios"
-                sublabel="Pontos, resgates e fidelidade"
-                badgeCount={redemptions}
-                onClick={() => setPointsModalOpen(true)}
-              />
-              {!REFERRALS_DISABLED_TENANTS.has(profile?.barbearia_preferida_id) && (
-                <ProfileRow
-                  icon={UserPlus}
-                  label="Indique e Ganhe"
-                  sublabel="Convide amigos e concorra a cortes grátis"
-                  badgeCount={referralCredits}
-                  onClick={() => navigate("/cliente/indicacoes")}
-                />
-              )}
 
               <ProfileRow
                 icon={History}
@@ -449,18 +428,6 @@ export default function ClientePerfil() {
                 label="Segurança"
                 sublabel="Senha e proteção da conta"
                 onClick={() => navigate("/cliente/seguranca")}
-              />
-              
-              <ProfileRow
-                icon={HelpCircle}
-                label="Central de Ajuda"
-                sublabel="Fale com o suporte"
-                trailing={
-                  <span className="text-[10px] uppercase tracking-wider text-muted-foreground/60 font-semibold">
-                    Em breve
-                  </span>
-                }
-                onClick={() => toast.info("Em breve")}
               />
             </div>
 

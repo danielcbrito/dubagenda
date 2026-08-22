@@ -358,20 +358,6 @@ export function MyProfileSheet({
                   </div>
                 </div>
 
-                {/* Preferences Section */}
-                <div className="space-y-2">
-                  <p className="text-xs text-zinc-500 uppercase tracking-wider font-semibold px-1">
-                    Preferências
-                  </p>
-                  <div className="space-y-2">
-                    <ProfileMenuItem
-                      icon={Bell}
-                      label="Notificações"
-                      onClick={() => setNotificationsOpen(true)}
-                    />
-                  </div>
-                </div>
-
                 {/* More Section */}
                 <div className="space-y-2">
                   <p className="text-xs text-zinc-500 uppercase tracking-wider font-semibold px-1">
@@ -388,12 +374,6 @@ export function MyProfileSheet({
                       label="Programa de Pontos"
                       onClick={() => setPointsModalOpen(true)}
                       badge={redemptions > 0 ? `${redemptions} disponível` : undefined}
-                    />
-                    <ProfileMenuItem
-                      icon={HelpCircle}
-                      label="Central de Ajuda"
-                      onClick={() => toast.info("Em breve")}
-                      comingSoon
                     />
                   </div>
                 </div>
