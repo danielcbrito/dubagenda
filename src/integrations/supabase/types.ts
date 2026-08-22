@@ -6694,6 +6694,7 @@ export type Database = {
       }
       get_barber_home_bundle: { Args: { p_barbeiro_id: string }; Returns: Json }
       get_blocked_barber_ids: { Args: { p_user_id: string }; Returns: string[] }
+      get_client_campaigns: { Args: { p_tenant_id?: string }; Returns: Json }
       get_client_home_bundle: { Args: never; Returns: Json }
       get_client_loyalty_for_barber_view: {
         Args: { p_barbeiro_id: string; p_user_id: string }
