@@ -3,7 +3,11 @@
 // Retorna { charge_id, correlation_id, br_code, qr_code_image, expires_at, pending_booking_id }
 
 import { createClient } from "npm:@supabase/supabase-js@2.45.0";
-import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
 
 const WOOVI_API = "https://api.woovi.com";
 const EXPIRES_SECONDS = 30 * 60;
