@@ -1587,7 +1587,12 @@ const ClienteAgendar = () => {
         setStep(4);
         refreshSlots();
       } else {
-        toast.error("Erro ao processar pagamento: " + (errorMessage || "Erro desconhecido"));
+        const paymentUnavailable = errorCode === 'WOOVI_AUTH_INVALID' || errorCode === 'WOOVI_AUTH_MISSING';
+        toast.error(
+          paymentUnavailable
+            ? "Pagamento PIX temporariamente indisponível. Escolha outra forma de pagamento."
+            : "Erro ao processar pagamento: " + (errorMessage || "Erro desconhecido"),
+        );
       }
     } finally {
       setProcessingPayment(false);

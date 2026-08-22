@@ -2,33 +2,53 @@
 // Cria uma cobrança PIX via API da Woovi, direcionando o split para a chave Pix do barbeiro.
 // Retorna { charge_id, correlation_id, br_code, qr_code_image, expires_at, pending_booking_id }
 
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { createClient } from "npm:@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
 const WOOVI_API = "https://api.woovi.com";
 const EXPIRES_SECONDS = 30 * 60;
 
+const jsonResponse = (body: unknown, status = 200) => new Response(
+  JSON.stringify(body),
+  { status, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+);
+
+const getWooviErrorMessage = (payload: unknown): string => {
+  if (!payload || typeof payload !== "object") return "";
+  const value = payload as {
+    error?: unknown;
+    message?: unknown;
+    errors?: Array<{ message?: unknown }>;
+  };
+  if (typeof value.error === "string") return value.error;
+  if (typeof value.message === "string") return value.message;
+  const nestedMessage = value.errors?.find((item) => typeof item?.message === "string")?.message;
+  return typeof nestedMessage === "string" ? nestedMessage : "";
+};
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response("ok", { headers: corsHeaders });
   }
 
   try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
     const wooviAppId = Deno.env.get("ID_DO_APLICATIVO_WOOVI");
 
+    if (!supabaseUrl || !serviceKey || !anonKey) {
+      console.error("woovi-create-charge: configuração Supabase ausente");
+      return jsonResponse({ error: "Serviço de pagamento temporariamente indisponível", code: "PAYMENT_CONFIG_ERROR" }, 503);
+    }
+
     if (!wooviAppId) {
-      return new Response(
-        JSON.stringify({ error: "ID_DO_APLICATIVO_WOOVI não configurado" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
+      console.error("woovi-create-charge: ID_DO_APLICATIVO_WOOVI ausente");
+      return jsonResponse({ error: "Pagamento PIX temporariamente indisponível", code: "WOOVI_AUTH_MISSING" }, 503);
     }
 
     // Autenticar cliente
@@ -38,10 +58,7 @@ Deno.serve(async (req) => {
     });
     const { data: userData, error: userErr } = await userClient.auth.getUser();
     if (userErr || !userData?.user) {
-      return new Response(JSON.stringify({ error: "Não autenticado" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return jsonResponse({ error: "Não autenticado" }, 401);
     }
     const userId = userData.user.id;
 
@@ -169,8 +186,8 @@ Deno.serve(async (req) => {
       }),
     });
     if (!ensureResp.ok) {
-      const ensureJson = await ensureResp.json().catch(() => ({}));
-      const msg = String(ensureJson?.error ?? ensureJson?.message ?? "");
+      const ensureJson: unknown = await ensureResp.json().catch(() => ({}));
+      const msg = getWooviErrorMessage(ensureJson);
       // Ignora "já existe"; aborta em outros erros
       const alreadyExists = /exist|already|cadastrad/i.test(msg);
       if (!alreadyExists) {
@@ -178,13 +195,13 @@ Deno.serve(async (req) => {
         if (pendingBookingId) {
           await admin.from("pending_bookings").delete().eq("id", pendingBookingId);
         }
-        return new Response(
-          JSON.stringify({
-            error: "Falha ao registrar subconta do barbeiro na Woovi",
-            details: msg || ensureJson,
-          }),
-          { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-        );
+        const invalidCredential = ensureResp.status === 401 || /appid inv[aá]lido|unauthorized/i.test(msg);
+        return jsonResponse({
+          error: invalidCredential
+            ? "Pagamento PIX temporariamente indisponível. Escolha outra forma de pagamento."
+            : "Não foi possível iniciar o pagamento PIX. Tente novamente.",
+          code: invalidCredential ? "WOOVI_AUTH_INVALID" : "WOOVI_SUBACCOUNT_ERROR",
+        }, invalidCredential ? 503 : 502);
       }
     } else {
       await ensureResp.text().catch(() => undefined);
