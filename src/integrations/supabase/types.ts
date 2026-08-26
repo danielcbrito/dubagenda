@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "13.0.5"
+    PostgrestVersion: "14.17"
   }
   public: {
     Tables: {
@@ -3288,6 +3288,81 @@ export type Database = {
           },
         ]
       }
+      loja_cupons: {
+        Row: {
+          ativo: boolean
+          codigo: string
+          created_at: string
+          created_by: string | null
+          descricao: string | null
+          id: string
+          max_usos_por_cliente: number | null
+          max_usos_total: number | null
+          produto_id: string | null
+          tenant_id: string
+          tipo_desconto: string
+          updated_at: string
+          usos_count: number
+          valido_ate: string | null
+          valido_de: string
+          valor_desconto: number
+          valor_minimo: number
+        }
+        Insert: {
+          ativo?: boolean
+          codigo: string
+          created_at?: string
+          created_by?: string | null
+          descricao?: string | null
+          id?: string
+          max_usos_por_cliente?: number | null
+          max_usos_total?: number | null
+          produto_id?: string | null
+          tenant_id: string
+          tipo_desconto?: string
+          updated_at?: string
+          usos_count?: number
+          valido_ate?: string | null
+          valido_de?: string
+          valor_desconto?: number
+          valor_minimo?: number
+        }
+        Update: {
+          ativo?: boolean
+          codigo?: string
+          created_at?: string
+          created_by?: string | null
+          descricao?: string | null
+          id?: string
+          max_usos_por_cliente?: number | null
+          max_usos_total?: number | null
+          produto_id?: string | null
+          tenant_id?: string
+          tipo_desconto?: string
+          updated_at?: string
+          usos_count?: number
+          valido_ate?: string | null
+          valido_de?: string
+          valor_desconto?: number
+          valor_minimo?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loja_cupons_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "produtos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loja_cupons_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       loyalty_audit_logs: {
         Row: {
           action: string
@@ -6229,9 +6304,13 @@ export type Database = {
           api_key: string | null
           barbeiro_id: string
           connected_at: string | null
+          connection_method: string | null
           created_at: string
           id: string
           instance_name: string | null
+          pairing_code: string | null
+          pairing_expires_at: string | null
+          phone_number: string | null
           qrcode_base64: string | null
           status: string
           updated_at: string
@@ -6240,9 +6319,13 @@ export type Database = {
           api_key?: string | null
           barbeiro_id: string
           connected_at?: string | null
+          connection_method?: string | null
           created_at?: string
           id?: string
           instance_name?: string | null
+          pairing_code?: string | null
+          pairing_expires_at?: string | null
+          phone_number?: string | null
           qrcode_base64?: string | null
           status?: string
           updated_at?: string
@@ -6251,9 +6334,13 @@ export type Database = {
           api_key?: string | null
           barbeiro_id?: string
           connected_at?: string | null
+          connection_method?: string | null
           created_at?: string
           id?: string
           instance_name?: string | null
+          pairing_code?: string | null
+          pairing_expires_at?: string | null
+          phone_number?: string | null
           qrcode_base64?: string | null
           status?: string
           updated_at?: string
