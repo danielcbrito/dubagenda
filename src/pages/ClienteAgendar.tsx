@@ -263,6 +263,33 @@ const ClienteAgendar = () => {
 
   const totalDuration = (selectedServices || []).reduce((sum, s) => sum + getEffectiveDuration(s) * (serviceQuantities[s.id] || 1), 0);
 
+  /**
+   * Clientes que sempre agendam acompanhado (dupla) dentro do plano.
+   * O agendamento é criado com quantidade fixa, dobrando duração e reservando
+   * o tempo correto na agenda do barbeiro — igual a selecionar 2x o serviço.
+   */
+  const COMPANION_PLAN_USERS: Record<string, number> = {
+    "d1de638f-a01d-45d0-87ee-fcd5bfa00c99": 2, // Tiago da Silva (corta sempre com o irmão)
+  };
+  const companionQuantity = userId ? COMPANION_PLAN_USERS[userId] : undefined;
+  const isCompanionPlanUser = isPlanFlow && !!companionQuantity;
+
+  // Força a quantidade fixa nos serviços do plano para esses clientes
+  useEffect(() => {
+    if (!isCompanionPlanUser || !companionQuantity || selectedServices.length === 0) return;
+    setServiceQuantities(prev => {
+      let changed = false;
+      const next = { ...prev };
+      for (const s of selectedServices) {
+        if (next[s.id] !== companionQuantity) {
+          next[s.id] = companionQuantity;
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [isCompanionPlanUser, companionQuantity, selectedServices]);
+
   // Fonte única do barbeiro selecionado (fallback para assinatura vinculada)
   const selectedBarberId = selectedBarber?.id || activeSubscription?.barbeiro_id || null;
 
@@ -1949,7 +1976,7 @@ const ClienteAgendar = () => {
           duracao: totalDuration,
           preco: 0,
           status: "confirmed",
-          observacoes: `Agendamento via ${activeSubscription.plano_nome}. ${selectedServices.length > 1 ? 'Serviços: ' + serviceNames : ''}`,
+          observacoes: `Agendamento via ${activeSubscription.plano_nome}.${isCompanionPlanUser ? ` ${companionQuantity} pessoas — ${serviceNames}.` : ''} ${selectedServices.length > 1 ? 'Serviços: ' + serviceNames : ''}`.trim(),
           payment_method: 'plano',
           tipo_agendamento: 'plano',
           barbeiro_confirmou: true,
