@@ -1976,7 +1976,7 @@ const ClienteAgendar = () => {
           duracao: totalDuration,
           preco: 0,
           status: "confirmed",
-          observacoes: `Agendamento via ${activeSubscription.plano_nome}. ${selectedServices.length > 1 ? 'Serviços: ' + serviceNames : ''}`,
+          observacoes: `Agendamento via ${activeSubscription.plano_nome}.${isCompanionPlanUser ? ` ${companionQuantity} pessoas — ${serviceNames}.` : ''} ${selectedServices.length > 1 ? 'Serviços: ' + serviceNames : ''}`.trim(),
           payment_method: 'plano',
           tipo_agendamento: 'plano',
           barbeiro_confirmou: true,
