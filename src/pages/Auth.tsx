@@ -532,8 +532,8 @@ const Auth = () => {
         return;
       }
       setOtpToken(data.verification_token);
-      setSignupStep("password");
-      toast.success("WhatsApp verificado!");
+      // Verificado → cria a conta imediatamente e segue para o agendamento.
+      await handleCreateAccount(data.verification_token);
     } catch {
       toast.error("Erro ao verificar o código");
     } finally {
@@ -541,8 +541,37 @@ const Auth = () => {
     }
   };
 
-  const handleCreateAccount = async (e: React.FormEvent) => {
-    e.preventDefault();
+  /** Etapa "Criar conta": valida os dados e dispara o código no WhatsApp. */
+  const handleStartSignup = async () => {
+    setSignupBusy(true);
+    try {
+      const validEmail = emailSchema.parse(email);
+      if (senha.length < 6) {
+        toast.error("A senha precisa ter ao menos 6 caracteres");
+        return;
+      }
+      const { data: dup } = await supabase.functions.invoke("check-duplicate-signup", {
+        body: { email: validEmail },
+      });
+      if (dup?.duplicateClientAccount || dup?.duplicates?.includes("email")) {
+        setEmailExists(true);
+        toast.error("Este email já possui uma conta. Faça login.");
+        setSignupStep("email");
+        return;
+      }
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        toast.error(err.errors[0]?.message || "Dados inválidos");
+        return;
+      }
+    } finally {
+      setSignupBusy(false);
+    }
+    await handleSendOtp();
+  };
+
+  const handleCreateAccount = async (token?: string) => {
+    const verificationToken = token || otpToken;
     setSignupBusy(true);
     try {
       const validEmail = emailSchema.parse(email);
