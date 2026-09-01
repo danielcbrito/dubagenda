@@ -3616,6 +3616,34 @@ const ClienteAgendar = () => {
         )}
       </AnimatePresence>
 
+      {/* Diálogo: CPF necessário apenas para pagamento via PIX */}
+      <Dialog open={showCpfDialog} onOpenChange={setShowCpfDialog}>
+        <DialogContent className="max-w-[340px] rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-[16px]">Informe seu CPF</DialogTitle>
+            <DialogDescription className="text-[13px]">
+              O CPF é usado apenas para gerar a cobrança PIX.
+            </DialogDescription>
+          </DialogHeader>
+          <input
+            inputMode="numeric"
+            value={cpfInput}
+            onChange={(e) => setCpfInput(formatCPF(e.target.value))}
+            placeholder="000.000.000-00"
+            className="h-12 w-full rounded-xl border border-border bg-background px-4 text-[15px] tabular-nums outline-none focus:border-primary"
+          />
+          <Button
+            onClick={handleSaveCpf}
+            disabled={savingCpf || cpfInput.replace(/\D/g, "").length !== 11}
+            className="h-12 w-full rounded-xl text-[14px] font-semibold"
+          >
+            {savingCpf ? <Loader2 className="w-4 h-4 animate-spin" /> : "Continuar com PIX"}
+          </Button>
+        </DialogContent>
+      </Dialog>
+
+
+
       {/* Diálogo: perder corte grátis ao seguir sem aplicar */}
       <Dialog open={showLoseRedemptionDialog} onOpenChange={(open) => {
         if (!open) {
