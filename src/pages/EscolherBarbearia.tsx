@@ -576,6 +576,7 @@ const EscolherBarbearia = () => {
         tenant: unit.tenant_id,
         origin: "discover",
       });
+      params.set("next", "agendar");
       if (inviteRef) params.set("ref", inviteRef);
       navigate(`/auth?${params.toString()}`);
       return;
