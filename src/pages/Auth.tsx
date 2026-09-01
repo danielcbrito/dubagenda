@@ -261,6 +261,10 @@ const Auth = () => {
       }
     }
 
+    // Fluxo "Agendar com essa barbearia": após confirmar o código o cliente
+    // vai direto para a escolha do profissional, sem passar pela home.
+    const nextTarget = searchParams.get("next") === "agendar" ? "/cliente/agendar" : "/cliente";
+
     const preSelectedTenant = searchParams.get("tenant");
     if (preSelectedTenant) {
       const { data: tenantData } = await supabase
@@ -280,7 +284,7 @@ const Auth = () => {
           ? { barbearia_preferida_id: preSelectedTenant, signup_origin: "dub_exclusive" }
           : { barbearia_preferida_id: preSelectedTenant, signup_origin: "discover" })
         .eq("id", userId);
-      navigate("/cliente");
+      navigate(nextTarget);
       return;
     }
 
@@ -297,7 +301,7 @@ const Auth = () => {
       }
     }
 
-    navigate("/cliente");
+    navigate(nextTarget);
   };
 
   // Email looks complete check
