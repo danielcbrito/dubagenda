@@ -610,7 +610,7 @@ const Auth = () => {
           body: {
             action: "signup_create_account",
             phone: phoneDigits.replace(/\D/g, ""),
-            verification_token: otpToken,
+            verification_token: verificationToken,
             email: validEmail,
             password: senha,
             signup_origin: signupOrigin,
@@ -1003,7 +1003,7 @@ const Auth = () => {
         subtitle="Use pelo menos 6 caracteres."
         footer={
           <ContinueButton
-            onClick={() => handleCreateAccount({ preventDefault: () => {} } as React.FormEvent)}
+            onClick={handleStartSignup}
             type="button"
             disabled={senha.length < 6}
             loading={signupBusy}
@@ -1022,7 +1022,7 @@ const Auth = () => {
             onChange={(e) => setSenha(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter" && senha.length >= 6) {
-                handleCreateAccount({ preventDefault: () => {} } as React.FormEvent);
+                handleStartSignup();
               }
             }}
             className={`${inputClasses} pr-12`}
