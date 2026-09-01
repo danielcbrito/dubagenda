@@ -164,46 +164,21 @@ const Auth = () => {
   const [checkingEmail, setCheckingEmail] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
 
-  // ── Signup multi-step: Nome → CPF → Email → WhatsApp → OTP → Senha ──
-  type SignupStep = "nome" | "cpf" | "email" | "phone" | "otp" | "password";
+  // ── Signup multi-step: Nome → Email → WhatsApp → Senha → OTP ──
+  type SignupStep = "nome" | "email" | "phone" | "password" | "otp";
   const [signupStep, setSignupStep] = useState<SignupStep>("nome");
   const [nome, setNome] = useState("");
-  const [cpfDigits, setCpfDigits] = useState(""); // 11 digits, no mask
   const [phoneDigits, setPhoneDigits] = useState(""); // BR digits (10 or 11, no country code)
   const [otpCode, setOtpCode] = useState("");
   const [otpToken, setOtpToken] = useState("");
   const [otpCooldown, setOtpCooldown] = useState(0);
   const [signupBusy, setSignupBusy] = useState(false);
-  const [cpfTaken, setCpfTaken] = useState(false);
-  const [checkingCpf, setCheckingCpf] = useState(false);
-  const cpfDebounceRef = useRef<ReturnType<typeof setTimeout>>();
 
   useEffect(() => {
     if (otpCooldown <= 0) return;
     const t = setTimeout(() => setOtpCooldown(c => c - 1), 1000);
     return () => clearTimeout(t);
   }, [otpCooldown]);
-
-  // Debounced CPF duplicate check
-  useEffect(() => {
-    if (cpfDebounceRef.current) clearTimeout(cpfDebounceRef.current);
-    setCpfTaken(false);
-    if (cpfDigits.length !== 11) { setCheckingCpf(false); return; }
-    setCheckingCpf(true);
-    cpfDebounceRef.current = setTimeout(async () => {
-      try {
-        const { data } = await supabase.functions.invoke("check-duplicate-signup", {
-          body: { cpf: cpfDigits },
-        });
-        setCpfTaken(Array.isArray(data?.duplicates) && data.duplicates.includes("cpf"));
-      } catch {
-        setCpfTaken(false);
-      } finally {
-        setCheckingCpf(false);
-      }
-    }, 400);
-    return () => { if (cpfDebounceRef.current) clearTimeout(cpfDebounceRef.current); };
-  }, [cpfDigits]);
 
   const passwordRef = useRef<HTMLInputElement>(null);
 
@@ -501,28 +476,6 @@ const Auth = () => {
     return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
   };
 
-  const maskCpf = (digits: string) => {
-    const d = digits.replace(/\D/g, "").slice(0, 11);
-    if (d.length <= 3) return d;
-    if (d.length <= 6) return `${d.slice(0, 3)}.${d.slice(3)}`;
-    if (d.length <= 9) return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6)}`;
-    return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9)}`;
-  };
-
-  // Full CPF validation with checksum digits
-  const isValidCpf = (digits: string) => {
-    const d = digits.replace(/\D/g, "");
-    if (d.length !== 11) return false;
-    if (/^(\d)\1{10}$/.test(d)) return false;
-    const calc = (base: number) => {
-      let sum = 0;
-      for (let i = 0; i < base; i++) sum += parseInt(d[i]) * (base + 1 - i);
-      const r = (sum * 10) % 11;
-      return r === 10 ? 0 : r;
-    };
-    return calc(9) === parseInt(d[9]) && calc(10) === parseInt(d[10]);
-  };
-
   const handleSendOtp = async () => {
     const digits = phoneDigits.replace(/\D/g, "");
     if (digits.length < 10 || digits.length > 11) {
@@ -633,7 +586,6 @@ const Auth = () => {
             password: senha,
             signup_origin: signupOrigin,
             nome: nomeSanitized,
-            cpf: cpfDigits.replace(/\D/g, ""),
           },
         }
       );
@@ -655,10 +607,7 @@ const Auth = () => {
       try {
         await supabase
           .from("profiles")
-          .update({
-            nome: nomeSanitized,
-            cpf: cpfDigits.replace(/\D/g, "") || null,
-          })
+          .update({ nome: nomeSanitized })
           .eq("id", userId);
       } catch {
         /* ignore — perfil será completado depois se falhar */
@@ -734,11 +683,10 @@ const Auth = () => {
       return;
     }
     if (isSignup) {
-      if (signupStep === "password") return setSignupStep("otp");
-      if (signupStep === "otp") return setSignupStep("phone");
+      if (signupStep === "otp") return setSignupStep("password");
+      if (signupStep === "password") return setSignupStep("phone");
       if (signupStep === "phone") return setSignupStep("email");
-      if (signupStep === "email") return setSignupStep("cpf");
-      if (signupStep === "cpf") return setSignupStep("nome");
+      if (signupStep === "email") return setSignupStep("nome");
       return navigate("/");
     }
     if (step === "password") {
@@ -834,7 +782,7 @@ const Auth = () => {
           subtitle="Como você quer ser chamado."
           footer={
             <ContinueButton
-              onClick={() => setSignupStep("cpf")}
+              onClick={() => setSignupStep("email")}
               type="button"
               disabled={!canContinue}
               label="Continuar"
@@ -849,7 +797,7 @@ const Auth = () => {
             autoFocus
             value={nome}
             onChange={(e) => setNome(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter" && canContinue) setSignupStep("cpf"); }}
+            onKeyDown={(e) => { if (e.key === "Enter" && canContinue) setSignupStep("email"); }}
             className={inputClasses}
             placeholder="Seu nome completo"
             autoComplete="given-name"
@@ -867,67 +815,6 @@ const Auth = () => {
       );
     }
 
-    // Step: CPF
-    if (signupStep === "cpf") {
-      const cpfValid = isValidCpf(cpfDigits);
-      const canContinue = cpfValid && !cpfTaken && !checkingCpf;
-      const goToLogin = () => {
-        setSignupStep("nome");
-        navigate("/auth?mode=login", { replace: true });
-      };
-      return (
-        <Shell
-          headerTitle="Criar conta"
-          stepKey="s-cpf"
-          title="Qual é o seu CPF?"
-          subtitle="Usado somente para identificar sua conta."
-          footer={
-            <ContinueButton
-              onClick={() => setSignupStep("email")}
-              type="button"
-              disabled={!canContinue}
-              label="Continuar"
-            />
-          }
-          bottomHint={bottomLogin}
-        >
-          <Input
-            name="cpf"
-            type="text"
-            required
-            autoFocus
-            value={maskCpf(cpfDigits)}
-            onChange={(e) => setCpfDigits(e.target.value.replace(/\D/g, "").slice(0, 11))}
-            onKeyDown={(e) => { if (e.key === "Enter" && canContinue) setSignupStep("email"); }}
-            className={inputClasses}
-            placeholder="000.000.000-00"
-            autoComplete="off"
-            autoCorrect="off"
-            spellCheck={false}
-            inputMode="numeric"
-          />
-          {cpfDigits.length === 11 && !cpfValid && (
-            <p className="text-[12px] text-destructive font-medium mt-2 px-1">
-              CPF inválido. Verifique os dígitos.
-            </p>
-          )}
-          {cpfValid && cpfTaken && (
-            <p className="text-[13px] text-destructive font-medium mt-2 px-1">
-              CPF já cadastrado. Faça login para continuar.{" "}
-              <button
-                type="button"
-                onClick={goToLogin}
-                className="underline underline-offset-2 font-semibold"
-              >
-                Entrar agora
-              </button>
-            </p>
-          )}
-        </Shell>
-      );
-    }
-
-
     // Step: PHONE
     if (signupStep === "phone") {
       return (
@@ -938,11 +825,10 @@ const Auth = () => {
           subtitle="Enviaremos um código para verificar."
           footer={
             <ContinueButton
-              onClick={handleSendOtp}
+              onClick={() => setSignupStep("password")}
               type="button"
               disabled={phoneDigits.length < 10}
-              loading={signupBusy}
-              label="Enviar código"
+              label="Continuar"
             />
           }
           bottomHint={bottomLogin}
@@ -954,7 +840,7 @@ const Auth = () => {
             autoFocus
             value={maskPhone(phoneDigits)}
             onChange={(e) => setPhoneDigits(e.target.value.replace(/\D/g, "").slice(0, 11))}
-            onKeyDown={(e) => { if (e.key === "Enter" && phoneDigits.length >= 10) handleSendOtp(); }}
+            onKeyDown={(e) => { if (e.key === "Enter" && phoneDigits.length >= 10) setSignupStep("password"); }}
             className={inputClasses}
             placeholder="(11) 91234-5678"
             autoComplete="off"
