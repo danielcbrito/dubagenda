@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.17"
+    PostgrestVersion: "14.5"
   }
   public: {
     Tables: {
@@ -382,7 +382,7 @@ export type Database = {
       }
       agent_memories: {
         Row: {
-          barbershop_id: string
+          barbershop_id: string | null
           created_at: string
           customer_id: string | null
           id: string
@@ -391,7 +391,7 @@ export type Database = {
           value: string
         }
         Insert: {
-          barbershop_id: string
+          barbershop_id?: string | null
           created_at?: string
           customer_id?: string | null
           id?: string
@@ -400,7 +400,7 @@ export type Database = {
           value: string
         }
         Update: {
-          barbershop_id?: string
+          barbershop_id?: string | null
           created_at?: string
           customer_id?: string | null
           id?: string
@@ -6712,6 +6712,7 @@ export type Database = {
           phone_number: string | null
           qrcode_base64: string | null
           status: string
+          tenant_id: string | null
           updated_at: string
         }
         Insert: {
@@ -6727,6 +6728,7 @@ export type Database = {
           phone_number?: string | null
           qrcode_base64?: string | null
           status?: string
+          tenant_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -6742,6 +6744,7 @@ export type Database = {
           phone_number?: string | null
           qrcode_base64?: string | null
           status?: string
+          tenant_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -6757,6 +6760,13 @@ export type Database = {
             columns: ["barbeiro_id"]
             isOneToOne: true
             referencedRelation: "barbeiros_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_instances_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
         ]

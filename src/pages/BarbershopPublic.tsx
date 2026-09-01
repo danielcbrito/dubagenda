@@ -518,7 +518,7 @@ const BarbershopPublic = () => {
     if (!tenant) return;
 
     if (!isLoggedIn) {
-      navigate(`/auth?mode=signup&origin=discover&tenant=${tenant.id}`);
+      navigate(`/auth?mode=signup&origin=discover&tenant=${tenant.id}&next=agendar`);
       return;
     }
 
@@ -1022,7 +1022,7 @@ const BarbershopPublic = () => {
               "bg-foreground text-background shadow-lg"
             )}
           >
-            <span>Escolher essa barbearia</span>
+            <span>Agendar com essa barbearia</span>
             <ArrowRight className="w-4 h-4" />
           </motion.button>
         )}

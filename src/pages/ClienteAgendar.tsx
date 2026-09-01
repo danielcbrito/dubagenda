@@ -21,6 +21,7 @@ import {
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { getServiceFee } from "@/lib/payment-fees";
+import { formatCPF, validateCPF } from "@/lib/validators";
 import {
   getBookingContext,
   setBookingContext,
@@ -439,7 +440,7 @@ const ClienteAgendar = () => {
         const profilePromise = uid
           ? supabase
               .from("profiles")
-              .select("barbearia_preferida_id, unidade_preferida_id")
+              .select("barbearia_preferida_id, unidade_preferida_id, cpf")
               .eq("id", uid)
               .single()
           : Promise.resolve({ data: null, error: null });
@@ -452,6 +453,8 @@ const ClienteAgendar = () => {
         // Carregar barbearia preferida + unidade preferida do perfil
         let tenantId: string | null = null;
         let userPreferredUnitId: string | null = null;
+
+        setProfileCpf(((profile as any)?.cpf || "").replace(/\D/g, "") || null);
 
         if (profile?.barbearia_preferida_id) {
           tenantId = profile.barbearia_preferida_id;
@@ -2403,7 +2406,40 @@ const ClienteAgendar = () => {
     setUseRedemption(true);
   };
 
+  const [profileCpf, setProfileCpf] = useState<string | null>(null);
+  const [showCpfDialog, setShowCpfDialog] = useState(false);
+  const [cpfInput, setCpfInput] = useState("");
+  const [savingCpf, setSavingCpf] = useState(false);
+
+  const handleSaveCpf = async () => {
+    const digits = cpfInput.replace(/\D/g, "");
+    if (!validateCPF(digits)) {
+      toast.error("CPF inválido");
+      return;
+    }
+    setSavingCpf(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Sessão expirada");
+      const { error } = await supabase.from("profiles").update({ cpf: digits }).eq("id", user.id);
+      if (error) throw error;
+      setProfileCpf(digits);
+      setShowCpfDialog(false);
+      setPaymentMethod('pix');
+    } catch {
+      toast.error("Não foi possível salvar seu CPF");
+    } finally {
+      setSavingCpf(false);
+    }
+  };
+
+  /** Solicita o CPF apenas quando o cliente escolhe pagar via PIX. */
   const handleSelectPaymentMethod = (method: 'cash' | 'pix' | 'wallet') => {
+    if (method === 'pix' && !profileCpf) {
+      setCpfInput("");
+      setShowCpfDialog(true);
+      return;
+    }
     // Se há corte grátis ativo, avisar (apenas na primeira troca) antes de mudar para método pago.
     if (useRedemption && canUseRedemption) {
       if (!loseWarningShownRef.current) {
@@ -3579,6 +3615,34 @@ const ClienteAgendar = () => {
           })()
         )}
       </AnimatePresence>
+
+      {/* Diálogo: CPF necessário apenas para pagamento via PIX */}
+      <Dialog open={showCpfDialog} onOpenChange={setShowCpfDialog}>
+        <DialogContent className="max-w-[340px] rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-[16px]">Informe seu CPF</DialogTitle>
+            <DialogDescription className="text-[13px]">
+              O CPF é usado apenas para gerar a cobrança PIX.
+            </DialogDescription>
+          </DialogHeader>
+          <input
+            inputMode="numeric"
+            value={cpfInput}
+            onChange={(e) => setCpfInput(formatCPF(e.target.value))}
+            placeholder="000.000.000-00"
+            className="h-12 w-full rounded-xl border border-border bg-background px-4 text-[15px] tabular-nums outline-none focus:border-primary"
+          />
+          <Button
+            onClick={handleSaveCpf}
+            disabled={savingCpf || cpfInput.replace(/\D/g, "").length !== 11}
+            className="h-12 w-full rounded-xl text-[14px] font-semibold"
+          >
+            {savingCpf ? <Loader2 className="w-4 h-4 animate-spin" /> : "Continuar com PIX"}
+          </Button>
+        </DialogContent>
+      </Dialog>
+
+
 
       {/* Diálogo: perder corte grátis ao seguir sem aplicar */}
       <Dialog open={showLoseRedemptionDialog} onOpenChange={(open) => {
