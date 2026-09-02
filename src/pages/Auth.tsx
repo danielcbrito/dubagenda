@@ -60,6 +60,13 @@ const AuthShell: React.FC<AuthShellProps> = ({
         </span>
       </div>
 
+      {/* Honeypot oculto — absorve detecção de autofill do Chrome Android,
+          impedindo a barra de sugestões de cartão/endereço no teclado. */}
+      <div aria-hidden="true" style={{ position: 'absolute', left: '-9999px', top: '-9999px', width: 0, height: 0, overflow: 'hidden', pointerEvents: 'none' }}>
+        <input type="text" autoComplete="username" tabIndex={-1} readOnly value="" />
+        <input type="password" autoComplete="current-password" tabIndex={-1} readOnly value="" />
+      </div>
+
       {/* Conteúdo principal (sem logo, 100% minimalista e focado) */}
       <div className="flex-1 min-h-0 flex flex-col px-6 pt-4 sm:pt-7 overflow-y-auto overscroll-contain">
         <AnimatePresence mode="wait">
@@ -817,29 +824,31 @@ const Auth = () => {
           }
           bottomHint={bottomLogin}
         >
-          <Input
-            name="given-name"
-            type="text"
-            required
-            autoFocus
-            value={nome}
-            onChange={(e) => setNome(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter" && canContinue) setSignupStep("email"); }}
-            className={inputClasses}
-            placeholder="Seu nome completo"
-            autoComplete="off"
-            autoCorrect="off"
-            spellCheck={false}
-            autoCapitalize="words"
-            enterKeyHint="next"
-            maxLength={80}
-            inputMode="text"
-          />
-          {trimmed.length >= 2 && looksLikeEmail && (
-            <p className="text-[12px] text-destructive mt-2.5 pl-1 font-medium">
-              Digite seu nome, não seu e-mail.
-            </p>
-          )}
+          <form autoComplete="off" onSubmit={e => e.preventDefault()}>
+            <Input
+              name="dub_nome"
+              type="text"
+              required
+              autoFocus
+              value={nome}
+              onChange={(e) => setNome(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter" && canContinue) setSignupStep("email"); }}
+              className={inputClasses}
+              placeholder="Seu nome completo"
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck={false}
+              enterKeyHint="next"
+              maxLength={80}
+              inputMode="text"
+            />
+            {trimmed.length >= 2 && looksLikeEmail && (
+              <p className="text-[12px] text-destructive mt-2.5 pl-1 font-medium">
+                Digite seu nome, não seu e-mail.
+              </p>
+            )}
+          </form>
         </Shell>
       );
     }
@@ -862,21 +871,24 @@ const Auth = () => {
           }
           bottomHint={bottomLogin}
         >
-          <Input
-            name="phone"
-            type="tel"
-            required
-            autoFocus
-            value={maskPhone(phoneDigits)}
-            onChange={(e) => setPhoneDigits(e.target.value.replace(/\D/g, "").slice(0, 11))}
-            onKeyDown={(e) => { if (e.key === "Enter" && phoneDigits.length >= 10) setSignupStep("password"); }}
-            className={inputClasses}
-            placeholder="(11) 91234-5678"
-            autoComplete="off"
-            autoCorrect="off"
-            spellCheck={false}
-            inputMode="numeric"
-          />
+          <form autoComplete="off" onSubmit={e => e.preventDefault()}>
+            <Input
+              name="dub_whatsapp"
+              type="tel"
+              required
+              autoFocus
+              value={maskPhone(phoneDigits)}
+              onChange={(e) => setPhoneDigits(e.target.value.replace(/\D/g, "").slice(0, 11))}
+              onKeyDown={(e) => { if (e.key === "Enter" && phoneDigits.length >= 10) setSignupStep("password"); }}
+              className={inputClasses}
+              placeholder="(11) 91234-5678"
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck={false}
+              inputMode="numeric"
+            />
+          </form>
         </Shell>
       );
     }
@@ -909,22 +921,25 @@ const Auth = () => {
             </button>
           }
         >
-          <Input
-            name="otp"
-            type="text"
-            required
-            autoFocus
-            value={otpCode}
-            onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
-            onKeyDown={(e) => { if (e.key === "Enter" && otpCode.length === 6) handleVerifyOtp(); }}
-            className={`${inputClasses} text-center tracking-[0.5em] text-[20px] font-semibold`}
-            placeholder="000000"
-            autoComplete="one-time-code"
-            autoCorrect="off"
-            spellCheck={false}
-            inputMode="numeric"
-            maxLength={6}
-          />
+          <form autoComplete="off" onSubmit={e => e.preventDefault()}>
+            <Input
+              name="dub_otp"
+              type="text"
+              required
+              autoFocus
+              value={otpCode}
+              onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+              onKeyDown={(e) => { if (e.key === "Enter" && otpCode.length === 6) handleVerifyOtp(); }}
+              className={`${inputClasses} text-center tracking-[0.5em] text-[20px] font-semibold`}
+              placeholder="000000"
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck={false}
+              inputMode="numeric"
+              maxLength={6}
+            />
+          </form>
         </Shell>
       );
     }
@@ -959,9 +974,9 @@ const Auth = () => {
               onKeyDown={(e) => { if (e.key === "Enter" && canContinue) setSignupStep("phone"); }}
               className={inputClasses}
               placeholder="seu@email.com"
-              autoComplete="off"
+              autoComplete="email"
               autoCorrect="off"
-              autoCapitalize="none"
+              autoCapitalize="off"
               spellCheck={false}
               inputMode="email"
             />
@@ -1027,8 +1042,9 @@ const Auth = () => {
             }}
             className={`${inputClasses} pr-12`}
             placeholder="Mínimo 6 caracteres"
-            autoComplete="off"
+            autoComplete="new-password"
             autoCorrect="off"
+            autoCapitalize="off"
             spellCheck={false}
           />
           <button
@@ -1086,9 +1102,9 @@ const Auth = () => {
           onKeyDown={(e) => { if (e.key === "Enter" && emailLooksComplete) setStep("password"); }}
           className={inputClasses}
           placeholder="seu@email.com"
-          autoComplete="off"
+          autoComplete="email"
           autoCorrect="off"
-          autoCapitalize="none"
+          autoCapitalize="off"
           spellCheck={false}
           inputMode="email"
         />
@@ -1130,8 +1146,9 @@ const Auth = () => {
           }}
           className={`${inputClasses} pr-12`}
           placeholder="Sua senha"
-          autoComplete="off"
+          autoComplete="current-password"
           autoCorrect="off"
+          autoCapitalize="off"
           spellCheck={false}
         />
         <button
