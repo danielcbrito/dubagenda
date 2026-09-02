@@ -47,6 +47,16 @@ export function useMaintenanceMode() {
   const [scheduledStart, setScheduledStart] = useState<Date | null>(null);
   const [scheduledEnd, setScheduledEnd] = useState<Date | null>(null);
 
+  // Safety timeout: never stay in loading state for more than 5 seconds.
+  // If the Supabase call hangs, assume no maintenance and unblock the app.
+  useEffect(() => {
+    if (!isLoading) return;
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 5000);
+    return () => clearTimeout(timer);
+  }, [isLoading]);
+
   const checkMaintenanceStatus = useCallback(async () => {
     try {
       // 1) Preferência: ler a configuração mais recente direto da tabela.

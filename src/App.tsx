@@ -108,12 +108,7 @@ function MaintenanceWrapper({ children }: { children: React.ReactNode }) {
   const isBarbershopSlug = (_segs.length === 1 || _segs.length === 2) &&
     !_reserved.includes(_segs[0]);
 
-  // If still loading, show nothing (to avoid flash)
-  if (isLoading) {
-    return null;
-  }
-
-  // Public routes (login, signup, etc.) are always accessible
+  // Public routes NEVER wait for maintenance check — render immediately
   if (isPublicRoute || isBarbershopSlug) {
     return (
       <div className="flex flex-col min-h-dvh">
@@ -122,6 +117,11 @@ function MaintenanceWrapper({ children }: { children: React.ReactNode }) {
         </div>
       </div>
     );
+  }
+
+  // For protected routes: if still loading maintenance status, show nothing
+  if (isLoading) {
+    return null;
   }
 
   // Allowed users can access everything
