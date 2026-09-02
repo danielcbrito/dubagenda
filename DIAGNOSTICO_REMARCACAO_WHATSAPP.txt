@@ -1,0 +1,29 @@
+DIAGNÓSTICO — REMARCAÇÃO E WHATSAPP
+Data: 2026-07-08
+
+Problema encontrado:
+- O cliente escolhia nova data/horário, mas o update direto em public.agendamentos era feito pelo frontend.
+- O trigger public.guard_client_appointment_updates bloqueia clientes de alterar data/hora e restaura OLD.data e OLD.hora.
+- Resultado: a tela parecia remarcar, mas o banco permanecia com a data/hora antiga.
+- Mesmo assim o frontend disparava o webhook manual, podendo enviar uma mensagem desconectada do estado real do banco.
+- A Edge Function send-webhook-event ainda aceitava mensagens legadas/genéricas para remarcacao_concluida.
+
+Correção aplicada:
+- A remarcação agora passa pela Edge Function existente cancel-appointment-client com action='reschedule'.
+- Essa action valida autenticação, propriedade do agendamento, status permitido, expediente, almoço, conflitos com agendamentos e pending_bookings.
+- A atualização de data/hora é feita server-side com service role, respeitando a regra de negócio centralizada.
+- O webhook de remarcação é enviado somente depois do banco confirmar a atualização.
+- send-webhook-event força a mensagem oficial para remarcacao_concluida/agendamento_remarcado, bloqueando a mensagem genérica antiga.
+
+Mensagem oficial de remarcação:
+🔄 *Agendamento Remarcado!*
+Olá {Nome}! Seu {Serviço} foi remarcado com sucesso para o dia {Data} às {Hora}.
+Nos vemos em breve! 💈
+
+Validações realizadas:
+- Schema da tabela public.agendamentos revisado.
+- Políticas RLS de public.agendamentos revisadas.
+- Triggers de public.agendamentos revisados.
+- Função public.guard_client_appointment_updates identificada como causa do bloqueio do update direto do cliente.
+- Edge Functions cancel-appointment-client e send-webhook-event publicadas com sucesso.
+- Teste não autenticado da action retornou 401, confirmando exigência de sessão válida.

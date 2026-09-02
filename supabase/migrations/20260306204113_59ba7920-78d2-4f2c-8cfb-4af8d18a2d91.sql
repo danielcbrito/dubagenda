@@ -1,0 +1,1 @@
+UPDATE public.profiles SET barbearia_preferida_id = '73d61f2f-b369-41f3-8915-8e6de52d6378' WHERE id = '65b929ae-b44a-4270-8f56-d2d38c16fd91' AND barbearia_preferida_id IS NULL;

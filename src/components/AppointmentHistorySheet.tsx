@@ -1,0 +1,167 @@
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Calendar, Clock, CheckCircle } from "lucide-react";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+
+interface AppointmentHistorySheetProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  userId?: string;
+}
+
+interface HistoryAppointment {
+  id: string;
+  data: string;
+  hora: string;
+  servico: { nome: string };
+  status: string;
+  preco?: number;
+  cupom_id?: string | null;
+  desconto_aplicado?: number | null;
+  preco_final?: number | null;
+  cupom?: { codigo: string } | null;
+}
+
+export function AppointmentHistorySheet({ 
+  open, 
+  onOpenChange, 
+  userId 
+}: AppointmentHistorySheetProps) {
+  const [appointments, setAppointments] = useState<HistoryAppointment[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (open && userId) {
+      loadHistory();
+    }
+  }, [open, userId]);
+
+  const loadHistory = async () => {
+    if (!userId) return;
+    
+    setLoading(true);
+    const { data } = await supabase
+      .from("agendamentos")
+      .select(`
+        id,
+        data,
+        hora,
+        status,
+        preco,
+        cupom_id,
+        desconto_aplicado,
+        preco_final,
+        servico:servicos(nome),
+        cupom:cupons(codigo)
+      `)
+      .eq("user_id", userId)
+      .in("status", ["completed", "cancelled_by_admin", "cancelled_by_user", "no_show"])
+      .order("data", { ascending: false });
+
+    setAppointments(data || []);
+    setLoading(false);
+  };
+
+  const completedCount = appointments.filter(a => a.status === "completed").length;
+
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent side="bottom" className="max-h-[85dvh] rounded-t-3xl flex flex-col min-h-0">
+        <SheetHeader className="flex-shrink-0 pr-8">
+          <SheetTitle className="text-lg">Histórico de Agendamentos</SheetTitle>
+          <SheetDescription className="text-xs">
+            {completedCount} {completedCount === 1 ? 'corte realizado' : 'cortes realizados'} no total
+          </SheetDescription>
+        </SheetHeader>
+
+        <div className="mt-4 flex-1 min-h-0 space-y-3 overflow-y-auto overscroll-contain touch-pan-y [webkit-overflow-scrolling:touch] pr-1 pb-[calc(env(safe-area-inset-bottom)+0.5rem)]">
+          {loading ? (
+            <div className="text-center py-8">
+              <p className="text-xs text-muted-foreground">Carregando...</p>
+            </div>
+          ) : appointments.length === 0 ? (
+            <div className="text-center py-8">
+              <Calendar className="w-12 h-12 mx-auto mb-3 text-muted-foreground opacity-50" />
+              <p className="text-xs text-muted-foreground">
+                Nenhum histórico encontrado
+              </p>
+            </div>
+          ) : (
+            appointments.map((apt) => {
+              const isCompleted = apt.status === "completed";
+              
+              return (
+                <Card 
+                  key={apt.id} 
+                  className={`p-4 border-border/50 ${isCompleted ? 'bg-gold/5' : ''}`}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        {isCompleted && <CheckCircle className="w-3 h-3 text-gold shrink-0" />}
+                        <p className="font-semibold text-sm truncate">{apt.servico.nome}</p>
+                      </div>
+                      <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                        <span className="flex items-center gap-1">
+                          <Calendar className="w-3 h-3" />
+                          {format(new Date(`${apt.data}T12:00:00`), "dd/MM/yyyy", { locale: ptBR })}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Clock className="w-3 h-3" />
+                          {apt.hora}
+                        </span>
+                      </div>
+                      {apt.preco && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(apt.preco))}
+                        </p>
+                      )}
+                      {apt.cupom_id && apt.cupom?.codigo && (
+                        <p className="text-[11px] text-emerald-500 font-medium mt-1">
+                          Cupom {apt.cupom.codigo} usado
+                          {apt.desconto_aplicado
+                            ? ` — economia de ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(apt.desconto_aplicado))}`
+                            : ""}
+                        </p>
+                      )}
+                    </div>
+                    <Badge 
+                      variant="outline" 
+                      className={`text-[10px] px-2 py-0.5 shrink-0 ${
+                        isCompleted 
+                          ? 'bg-gold/20 text-gold border-gold/30' 
+                          : apt.status === 'cancelled_by_user' || apt.status === 'cancelled_by_admin'
+                          ? 'bg-destructive/20 text-destructive border-destructive/30'
+                          : 'bg-muted text-muted-foreground'
+                      }`}
+                    >
+                      {isCompleted 
+                        ? 'Concluído' 
+                        : apt.status === 'cancelled_by_user' 
+                        ? 'Cancelado' 
+                        : apt.status === 'cancelled_by_admin'
+                        ? 'Cancelado pelo Admin'
+                        : apt.status === 'no_show'
+                        ? 'Faltou'
+                        : apt.status}
+                    </Badge>
+                  </div>
+                </Card>
+              );
+            })
+          )}
+        </div>
+      </SheetContent>
+    </Sheet>
+  );
+}

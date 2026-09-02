@@ -1,0 +1,2 @@
+ALTER TABLE public.whatsapp_verification_codes ADD COLUMN IF NOT EXISTS verification_token TEXT;
+CREATE INDEX IF NOT EXISTS idx_wvc_verification_token ON public.whatsapp_verification_codes(verification_token);

@@ -1,0 +1,1 @@
+UPDATE configuracoes_horario_barbeiro SET hora_almoco_inicio = '13:30', hora_almoco_fim = '14:30', updated_at = now() WHERE barbeiro_id = '767c51a7-7323-4933-8fc5-9a666f6baa7c';

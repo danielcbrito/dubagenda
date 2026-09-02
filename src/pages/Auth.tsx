@@ -1,0 +1,1171 @@
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { z } from "zod";
+import { Loader2, Eye, EyeOff, Mail } from "lucide-react";
+import { BackArrow } from "@/components/ui/back-arrow";
+import { SupportChatBubble } from "@/components/support/SupportChatBubble";
+import { motion, AnimatePresence } from "framer-motion";
+import { saveLastAccount } from "@/utils/lastAccount";
+import { getVerifiedAuthUser } from "@/utils/authSession";
+import { useViewportHeight } from "@/hooks/useViewportHeight";
+const emailSchema = z.string().trim().email("Email inválido").max(255);
+const passwordSchema = z.string().min(1, "Senha é obrigatória");
+
+type AuthStep = "email" | "password" | "magic_sent";
+
+// ─────────── Shared "One-Question" shell (module-scope, stable identity) ───────────
+interface AuthShellProps {
+  headerTitle: string;
+  title: string;
+  subtitle?: React.ReactNode;
+  stepKey: string;
+  children: React.ReactNode;
+  footer: React.ReactNode;
+  bottomHint?: React.ReactNode;
+  onBack: () => void;
+}
+
+const AuthShell: React.FC<AuthShellProps> = ({
+  headerTitle, title, subtitle, stepKey, children, footer, bottomHint, onBack,
+}) => {
+  const { height, offsetTop, keyboardOpen } = useViewportHeight();
+
+  // Estratégia de viewport dinâmico: o shell acompanha o teclado no iOS e Android
+  // sem sobrepor o campo de digitação e mantendo o botão perfeitamente visível.
+  return (
+    <div
+      className="fixed inset-x-0 top-0 flex flex-col overflow-hidden bg-background"
+      style={{
+        height,
+        transform: offsetTop ? `translateY(${offsetTop}px)` : undefined,
+        paddingTop: "env(safe-area-inset-top, 0px)",
+      }}
+    >
+      {/* Header minimalista — seta e título refinados */}
+      <div className="relative flex-shrink-0 flex items-center justify-center px-4 h-12">
+        <button
+          type="button"
+          onClick={onBack}
+          className="absolute left-3 p-2.5 -m-2 text-foreground/80 hover:text-foreground transition-colors"
+          aria-label="Voltar"
+        >
+          <BackArrow size={20} />
+        </button>
+        <span className="text-[14px] font-medium tracking-tight text-muted-foreground/90">
+          {headerTitle}
+        </span>
+      </div>
+
+      {/* Conteúdo principal (sem logo, 100% minimalista e focado) */}
+      <div className="flex-1 min-h-0 flex flex-col px-6 pt-4 sm:pt-7 overflow-y-auto overscroll-contain">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={stepKey}
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.18, ease: "easeOut" }}
+            className="w-full max-w-sm mx-auto"
+          >
+            <h1 className="text-[26px] sm:text-[28px] font-semibold text-foreground tracking-[-0.025em] leading-[1.2]">
+              {title}
+            </h1>
+            {subtitle && (
+              <p className="text-[14px] text-muted-foreground mt-2 mb-6 leading-relaxed">
+                {subtitle}
+              </p>
+            )}
+            {!subtitle && <div className="mb-6" />}
+            {children}
+          </motion.div>
+        </AnimatePresence>
+      </div>
+
+      {/* Footer / Botão Continuar — sobe suavemente com o teclado */}
+      <div
+        className="flex-shrink-0 px-6 space-y-3 w-full max-w-sm mx-auto transition-all duration-150"
+        style={{
+          paddingTop: keyboardOpen ? "0.6rem" : "1.25rem",
+          paddingBottom: keyboardOpen
+            ? "0.6rem"
+            : "calc(env(safe-area-inset-bottom, 0px) + 1.25rem)",
+        }}
+      >
+        {footer}
+        {!keyboardOpen && bottomHint && (
+          <p className="text-center text-[13px] text-muted-foreground">{bottomHint}</p>
+        )}
+      </div>
+
+      <SupportChatBubble />
+    </div>
+  );
+};
+
+interface ContinueButtonProps {
+  onClick?: () => void;
+  disabled?: boolean;
+  loading?: boolean;
+  label?: string;
+  type?: "button" | "submit";
+}
+
+const ContinueButtonBase: React.FC<ContinueButtonProps> = ({
+  onClick, disabled, loading, label = "Continuar", type = "submit",
+}) => (
+  <Button
+    type={type}
+    onClick={onClick}
+    className="w-full h-14 rounded-2xl text-[15px] font-medium tracking-tight bg-neutral-900 text-white dark:bg-white dark:text-neutral-950 hover:bg-neutral-800 dark:hover:bg-neutral-100 active:scale-[0.985] transition-all shadow-[0_4px_16px_rgba(0,0,0,0.06)] dark:shadow-[0_4px_16px_rgba(255,255,255,0.06)] disabled:bg-neutral-200/80 dark:disabled:bg-neutral-800/80 disabled:text-neutral-400 dark:disabled:text-neutral-500 disabled:shadow-none disabled:cursor-not-allowed disabled:active:scale-100"
+    disabled={disabled || loading}
+  >
+    {loading ? (
+      <span className="flex items-center gap-2">
+        <Loader2 className="w-4 h-4 animate-spin" />
+        Aguarde...
+      </span>
+    ) : (
+      label
+    )}
+  </Button>
+);
+
+const Auth = () => {
+
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const mode = searchParams.get("mode") || "login";
+  const signupOrigin = searchParams.get("origin") || "dub_exclusive";
+  const isSignup = mode === "signup";
+
+  const prefilledEmailParam = searchParams.get("email");
+  const [step, setStep] = useState<AuthStep>(
+    !isSignup && prefilledEmailParam ? "password" : "email"
+  );
+  const [email, setEmail] = useState("");
+  const [senha, setSenha] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [cooldownTimer, setCooldownTimer] = useState(0);
+  const [loginError, setLoginError] = useState<string | null>(null);
+
+  // Real-time duplicate detection state
+  const [emailExists, setEmailExists] = useState(false);
+  const [checkingEmail, setCheckingEmail] = useState(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+
+  // ── Signup multi-step: Nome → Email → WhatsApp → Senha → OTP ──
+  type SignupStep = "nome" | "email" | "phone" | "password" | "otp";
+  const [signupStep, setSignupStep] = useState<SignupStep>("nome");
+  const [nome, setNome] = useState("");
+  const [phoneDigits, setPhoneDigits] = useState(""); // BR digits (10 or 11, no country code)
+  const [otpCode, setOtpCode] = useState("");
+  const [otpToken, setOtpToken] = useState("");
+  const [otpCooldown, setOtpCooldown] = useState(0);
+  const [signupBusy, setSignupBusy] = useState(false);
+
+  useEffect(() => {
+    if (otpCooldown <= 0) return;
+    const t = setTimeout(() => setOtpCooldown(c => c - 1), 1000);
+    return () => clearTimeout(t);
+  }, [otpCooldown]);
+
+  const passwordRef = useRef<HTMLInputElement>(null);
+
+  // Auto-check session + prefill email from redirects
+  useEffect(() => {
+    const verified = searchParams.get("verified");
+    const prefilledEmail = searchParams.get("email");
+    const refCode = searchParams.get("ref");
+
+    // Persist referral code across the entire signup flow (Auth → CompletarPerfil → EscolherBarbearia).
+    // Kept in sessionStorage so it survives page reloads (e.g. email confirmation redirect).
+    if (refCode && refCode.trim().length > 0) {
+      const codeUp = refCode.trim().toUpperCase();
+      try {
+        sessionStorage.setItem("pending_referral_code", codeUp);
+
+        // Gera/recupera um session id estável por navegador para vincular
+        // o clique (anônimo) ao futuro cadastro do mesmo usuário.
+        let sid = localStorage.getItem("dub_ref_session_id") || "";
+        if (!sid) {
+          sid =
+            (crypto as any)?.randomUUID?.() ||
+            `sid_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+          localStorage.setItem("dub_ref_session_id", sid);
+        }
+        sessionStorage.setItem("pending_referral_session_id", sid);
+
+        // Registra o clique em tempo real (aparece como "Entrou no link"
+        // no painel de indicações do indicador). Silencioso em caso de erro.
+        supabase.rpc("registrar_click_indicacao", {
+          p_codigo: codeUp,
+          p_session_id: sid,
+        }).then(() => {}, () => {});
+      } catch {
+        /* ignore storage failures */
+      }
+    }
+
+    if (prefilledEmail) {
+      setEmail(prefilledEmail);
+    }
+
+    if (verified === "true" || verified === "whatsapp") {
+      toast.success("Conta confirmada com sucesso! Faça login para continuar.", { duration: 5000 });
+    }
+    getVerifiedAuthUser().then((user) => {
+      if (user?.email_confirmed_at) {
+        checkUserRoleAndRedirect(user.id);
+      }
+    });
+  }, [searchParams]);
+
+  // Cooldown timer
+  useEffect(() => {
+    if (cooldownTimer > 0) {
+      const t = setTimeout(() => setCooldownTimer(c => c - 1), 1000);
+      return () => clearTimeout(t);
+    }
+  }, [cooldownTimer]);
+
+  // Focus password when the accelerated login route opens directly in password step
+  useEffect(() => {
+    if (!isSignup && step === "password") {
+      setTimeout(() => passwordRef.current?.focus(), 350);
+    }
+  }, [isSignup, step]);
+
+  const checkUserRoleAndRedirect = async (userId: string) => {
+    const { data: roles } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", userId);
+
+    if (roles && roles.length > 0) {
+      const isAdmin = roles.some(r => r.role === "admin");
+      if (isAdmin) {
+        await supabase.auth.signOut();
+        toast.error("Este aplicativo é exclusivo para clientes. Acesse o app administrativo para gerenciar.", { duration: 5000 });
+        return;
+      }
+    }
+
+    // Fluxo "Agendar com essa barbearia": após confirmar o código o cliente
+    // vai direto para a escolha do profissional, sem passar pela home.
+    const nextTarget = searchParams.get("next") === "agendar" ? "/cliente/agendar" : "/cliente";
+
+    const preSelectedTenant = searchParams.get("tenant");
+    if (preSelectedTenant) {
+      const { data: tenantData } = await supabase
+        .from("tenants")
+        .select("nome")
+        .eq("id", preSelectedTenant)
+        .single();
+
+      const tenantNormalized = tenantData?.nome
+        ? tenantData.nome.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9]/g, "").toLowerCase()
+        : "";
+      const isDub = tenantNormalized === "barbeariadub";
+
+      await supabase
+        .from("profiles")
+        .update(isDub
+          ? { barbearia_preferida_id: preSelectedTenant, signup_origin: "dub_exclusive" }
+          : { barbearia_preferida_id: preSelectedTenant, signup_origin: "discover" })
+        .eq("id", userId);
+      navigate(nextTarget);
+      return;
+    }
+
+    const currentOrigin = searchParams.get("origin") || signupOrigin;
+    if (currentOrigin === "discover") {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("barbearia_preferida_id")
+        .eq("id", userId)
+        .single();
+      if (!profile?.barbearia_preferida_id) {
+        navigate("/escolher-barbearia");
+        return;
+      }
+    }
+
+    navigate(nextTarget);
+  };
+
+  // Email looks complete check
+  const emailLooksComplete = (() => {
+    const trimmed = email.trim();
+    if (trimmed.length < 5) return false;
+    const atIndex = trimmed.indexOf("@");
+    if (atIndex < 1) return false;
+    const domain = trimmed.slice(atIndex + 1);
+    return domain.includes(".") && domain.lastIndexOf(".") < domain.length - 1;
+  })();
+
+  // Real-time duplicate email check (signup mode only)
+  const checkEmailDuplicate = useCallback(async (emailValue: string) => {
+    try {
+      const validated = emailSchema.parse(emailValue);
+      setCheckingEmail(true);
+      const { data } = await supabase.functions.invoke("check-duplicate-signup", {
+        body: { email: validated },
+      });
+      if (data?.duplicateClientAccount || data?.duplicates?.includes("email")) {
+        setEmailExists(true);
+      } else {
+        setEmailExists(false);
+      }
+    } catch {
+      setEmailExists(false);
+    } finally {
+      setCheckingEmail(false);
+    }
+  }, []);
+
+  // Debounced email check on input change
+  useEffect(() => {
+    if (!isSignup) return;
+    setEmailExists(false);
+
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+
+    if (emailLooksComplete) {
+      debounceRef.current = setTimeout(() => {
+        checkEmailDuplicate(email);
+      }, 600);
+    }
+
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [email, isSignup, emailLooksComplete, checkEmailDuplicate]);
+
+  // Signup: send magic link
+  const handleMagicLink = async () => {
+    setIsLoading(true);
+    try {
+      const validated = emailSchema.parse(email);
+
+      // Double-check duplicate before sending
+      const { data: dupData, error: duplicateCheckError } = await supabase.functions.invoke("check-duplicate-signup", {
+        body: { email: validated },
+      });
+
+      if (duplicateCheckError) throw duplicateCheckError;
+
+      if (dupData?.duplicateClientAccount || dupData?.duplicates?.includes("email")) {
+        setEmailExists(true);
+        toast.error("Este email já possui uma conta. Faça login.", { duration: 4000 });
+        setIsLoading(false);
+        return;
+      }
+
+      const { error } = await supabase.auth.signInWithOtp({
+        email: validated,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
+          data: { signup_origin: signupOrigin },
+        },
+      });
+
+      if (error) {
+        if (error.message.includes("rate limit") || error.message.includes("only request this after")) {
+          const seconds = parseInt(error.message.match(/\d+/)?.[0] || "30");
+          setCooldownTimer(seconds);
+          toast.error(`Aguarde ${seconds} segundos antes de tentar novamente.`);
+        } else {
+          toast.error("Erro ao enviar link. Tente novamente.");
+        }
+        return;
+      }
+
+      setStep("magic_sent");
+      toast.success("Link de acesso enviado para seu email!");
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        toast.error(err.errors[0]?.message || "Email inválido");
+      } else {
+        toast.error("Não foi possível validar esse e-mail agora. Tente novamente.");
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Login: submit password
+  const handlePasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setLoginError(null);
+
+    try {
+      emailSchema.parse(email);
+      passwordSchema.parse(senha);
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password: senha,
+      });
+
+      if (error) {
+        const msg = error.message.includes("Invalid login")
+          ? "Email ou senha incorretos"
+          : error.message.includes("Email not confirmed")
+            ? "Seu e-mail ainda não foi confirmado. Verifique sua caixa de entrada ou tente recuperar a senha."
+            : "Erro ao fazer login";
+        setLoginError(msg);
+        toast.error(msg);
+        return;
+      }
+
+      if (data.user) {
+        if (!data.user.email_confirmed_at) {
+          toast.error("Seu e-mail ainda não foi confirmado. Verifique sua caixa de entrada ou tente recuperar a senha.");
+          return;
+        }
+        toast.success("Login realizado com sucesso");
+        // Persist non-sensitive metadata for "Entrar como <Nome>" quick-access card.
+        supabase
+          .from("profiles")
+          .select("nome, avatar_url")
+          .eq("id", data.user.id)
+          .maybeSingle()
+          .then(({ data: p }) => {
+            saveLastAccount({
+              nome: p?.nome ?? data.user.user_metadata?.nome ?? null,
+              email: data.user.email ?? email.trim(),
+              avatar_url: p?.avatar_url ?? null,
+            });
+          }, () => {});
+        await checkUserRoleAndRedirect(data.user.id);
+      }
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        toast.error(err.errors[0].message);
+      } else {
+        toast.error("Erro ao processar login");
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Signup form submit
+  const handleSignupSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (emailExists) {
+      // Redirect to login
+      navigate("/auth?mode=login&email=" + encodeURIComponent(email.trim()));
+      return;
+    }
+    handleMagicLink();
+  };
+
+  // ─── Signup por WhatsApp OTP ───────────────────────────────
+  const maskPhone = (digits: string) => {
+    const d = digits.replace(/\D/g, "").slice(0, 11);
+    if (d.length <= 2) return d.length ? `(${d}` : "";
+    if (d.length <= 7) return `(${d.slice(0, 2)}) ${d.slice(2)}`;
+    return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
+  };
+
+  const handleSendOtp = async () => {
+    const digits = phoneDigits.replace(/\D/g, "");
+    if (digits.length < 10 || digits.length > 11) {
+      toast.error("Informe um WhatsApp válido (DDD + número)");
+      return;
+    }
+    setSignupBusy(true);
+    try {
+      const existingUser = await getVerifiedAuthUser();
+      if (existingUser) {
+        await checkUserRoleAndRedirect(existingUser.id);
+        return;
+      }
+
+      const { data, error } = await supabase.functions.invoke("whatsapp-verification", {
+        body: { action: "signup_send", phone: digits },
+      });
+      if (error) throw error;
+      if (!data?.success) {
+        if (data?.cooldown_remaining) setOtpCooldown(data.cooldown_remaining);
+        toast.error(data?.error || "Não foi possível enviar o código");
+        return;
+      }
+      setOtpCode("");
+      setSignupStep("otp");
+      setOtpCooldown(60);
+      toast.success("Código enviado para seu WhatsApp");
+    } catch (err: any) {
+      const context = err?.context ? await err.context.text().catch(() => "") : "";
+      try {
+        const parsed = context ? JSON.parse(context) : null;
+        toast.error(parsed?.error || "Erro ao enviar o código. Tente novamente.");
+      } catch {
+        toast.error("Erro ao enviar o código. Tente novamente.");
+      }
+    } finally {
+      setSignupBusy(false);
+    }
+  };
+
+  const handleVerifyOtp = async () => {
+    if (!/^\d{6}$/.test(otpCode)) {
+      toast.error("Digite os 6 dígitos");
+      return;
+    }
+    setSignupBusy(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("whatsapp-verification", {
+        body: { action: "signup_verify", phone: phoneDigits.replace(/\D/g, ""), code: otpCode },
+      });
+      if (error) throw error;
+      if (!data?.success) {
+        toast.error(data?.error || "Código inválido");
+        return;
+      }
+      setOtpToken(data.verification_token);
+      // Verificado → cria a conta imediatamente e segue para o agendamento.
+      await handleCreateAccount(data.verification_token);
+    } catch {
+      toast.error("Erro ao verificar o código");
+    } finally {
+      setSignupBusy(false);
+    }
+  };
+
+  /** Etapa "Criar conta": valida os dados e dispara o código no WhatsApp. */
+  const handleStartSignup = async () => {
+    setSignupBusy(true);
+    try {
+      const validEmail = emailSchema.parse(email);
+      if (senha.length < 6) {
+        toast.error("A senha precisa ter ao menos 6 caracteres");
+        return;
+      }
+      const { data: dup } = await supabase.functions.invoke("check-duplicate-signup", {
+        body: { email: validEmail },
+      });
+      if (dup?.duplicateClientAccount || dup?.duplicates?.includes("email")) {
+        setEmailExists(true);
+        toast.error("Este email já possui uma conta. Faça login.");
+        setSignupStep("email");
+        return;
+      }
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        toast.error(err.errors[0]?.message || "Dados inválidos");
+        return;
+      }
+    } finally {
+      setSignupBusy(false);
+    }
+    await handleSendOtp();
+  };
+
+  const handleCreateAccount = async (token?: string) => {
+    const verificationToken = token || otpToken;
+    setSignupBusy(true);
+    try {
+      const validEmail = emailSchema.parse(email);
+      if (senha.length < 6) {
+        toast.error("A senha precisa ter ao menos 6 caracteres");
+        return;
+      }
+
+      const { data: dup } = await supabase.functions.invoke("check-duplicate-signup", {
+        body: { email: validEmail },
+      });
+      if (dup?.duplicateClientAccount || dup?.duplicates?.includes("email")) {
+        setEmailExists(true);
+        toast.error("Este email já possui uma conta. Faça login.");
+        return;
+      }
+
+      const phoneNormalized = "55" + phoneDigits.replace(/\D/g, "");
+
+      // Sanitiza nome: rejeita e-mails e strings sem letras (evita autofill/typo).
+      const rawNome = nome.trim();
+      const nomeLooksLikeEmail = /@/.test(rawNome) || /\.(com|net|org|br)(\b|$)/i.test(rawNome);
+      const nomeHasLetters = /[a-zA-ZÀ-ÿ]{2,}/.test(rawNome);
+      const nomeSanitized = (!rawNome || nomeLooksLikeEmail || !nomeHasLetters) ? "" : rawNome;
+
+      if (!nomeSanitized) {
+        toast.error("Digite seu nome corretamente (não use o e-mail).");
+        setSignupStep("nome");
+        return;
+      }
+
+      // Cria a conta via edge function (admin API) — sem envio de email de confirmação.
+      const { data: createRes, error: createErr } = await supabase.functions.invoke(
+        "whatsapp-verification",
+        {
+          body: {
+            action: "signup_create_account",
+            phone: phoneDigits.replace(/\D/g, ""),
+            verification_token: verificationToken,
+            email: validEmail,
+            password: senha,
+            signup_origin: signupOrigin,
+            nome: nomeSanitized,
+          },
+        }
+      );
+
+      if (createErr || !createRes?.success) {
+        const msg = createRes?.error || createErr?.message || "";
+        if (createRes?.code === "email_exists" || /already|exists|registered|já possui/i.test(msg)) {
+          setEmailExists(true);
+          toast.error("Este email já possui uma conta. Faça login.");
+        } else {
+          toast.error(msg || "Erro ao criar conta");
+        }
+        return;
+      }
+
+      const userId = createRes.user_id as string;
+
+      // Best-effort: garantir nome + CPF persistidos no profile (idempotente).
+      try {
+        await supabase
+          .from("profiles")
+          .update({ nome: nomeSanitized })
+          .eq("id", userId);
+      } catch {
+        /* ignore — perfil será completado depois se falhar */
+      }
+
+      // Registra a indicação imediatamente — não depende de CompletarPerfil.
+      try {
+        const pendingRef =
+          sessionStorage.getItem("pending_referral_code") ||
+          searchParams.get("ref") ||
+          "";
+        if (pendingRef) {
+          const sid =
+            sessionStorage.getItem("pending_referral_session_id") ||
+            localStorage.getItem("dub_ref_session_id") ||
+            null;
+          await supabase.rpc("registrar_indicacao", {
+            p_indicado_id: userId,
+            p_codigo: pendingRef.trim().toUpperCase(),
+            p_session_id: sid,
+          });
+          sessionStorage.removeItem("pending_referral_code");
+          sessionStorage.removeItem("pending_referral_session_id");
+        }
+      } catch (err) {
+        console.warn("Falha ao registrar indicação:", err);
+      }
+
+      // Login imediato com senha — sem passar por email de confirmação.
+      const { data: signInData, error: signInErr } = await supabase.auth.signInWithPassword({
+        email: validEmail,
+        password: senha,
+      });
+      if (signInErr || !signInData.session) {
+        toast.error("Conta criada. Faça login para continuar.");
+        navigate("/auth?mode=login&email=" + encodeURIComponent(validEmail));
+        return;
+      }
+      toast.success("Conta criada!");
+      await checkUserRoleAndRedirect(signInData.user.id);
+    } catch (err) {
+      if (err instanceof z.ZodError) toast.error(err.errors[0]?.message || "Dados inválidos");
+      else toast.error("Erro ao criar conta");
+    } finally {
+      setSignupBusy(false);
+    }
+  };
+
+
+  const handleGoogleLogin = async () => {
+    await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: `${window.location.origin}/auth/callback` },
+    });
+  };
+
+  const handleAppleLogin = async () => {
+    await supabase.auth.signInWithOAuth({
+      provider: "apple",
+      options: { redirectTo: `${window.location.origin}/auth/callback` },
+    });
+  };
+
+  const inputClasses =
+    "w-full h-14 bg-white/70 dark:bg-neutral-900/60 backdrop-blur-xl border border-neutral-200/90 dark:border-white/10 text-foreground placeholder:text-neutral-400 dark:placeholder:text-neutral-500 rounded-2xl px-5 text-[16px] shadow-[0_2px_16px_rgba(0,0,0,0.02)] dark:shadow-[0_2px_16px_rgba(0,0,0,0.2)] focus:bg-white/95 dark:focus:bg-neutral-900/90 focus:border-neutral-900/40 dark:focus:border-white/40 focus:ring-4 focus:ring-black/[0.03] dark:focus:ring-white/[0.04] focus-visible:ring-0 focus-visible:ring-offset-0 outline-none transition-all duration-200";
+
+  // Back handler with per-step logic
+  const handleBack = () => {
+    if (step === "magic_sent") {
+      setStep("email");
+      setSenha("");
+      setLoginError(null);
+      return;
+    }
+    if (isSignup) {
+      if (signupStep === "otp") return setSignupStep("password");
+      if (signupStep === "password") return setSignupStep("phone");
+      if (signupStep === "phone") return setSignupStep("email");
+      if (signupStep === "email") return setSignupStep("nome");
+      return navigate("/");
+    }
+    if (step === "password") {
+      setStep("email");
+      setSenha("");
+      setLoginError(null);
+      return;
+    }
+    navigate("/");
+  };
+
+  // Stable Shell/ContinueButton references — prevent full remount (and
+  // input focus loss / keyboard flicker) on every keystroke.
+  const handleBackRef = useRef(handleBack);
+  handleBackRef.current = handleBack;
+  const stableOnBack = useCallback(() => handleBackRef.current(), []);
+  const Shell = useMemo(() => {
+    const C: React.FC<{
+      headerTitle: string;
+      title: string;
+      subtitle?: React.ReactNode;
+      stepKey: string;
+      children: React.ReactNode;
+      footer: React.ReactNode;
+      bottomHint?: React.ReactNode;
+    }> = (props) => (
+      <AuthShell {...props} onBack={stableOnBack} />
+    );
+    return C;
+  }, [stableOnBack]);
+
+
+  const ContinueButton = ContinueButtonBase;
+
+
+
+  // ── Magic link sent screen ──
+  if (step === "magic_sent") {
+    return (
+      <Shell
+        headerTitle="Entrar"
+        stepKey="magic"
+        title="Verifique seu email"
+        subtitle={
+          <>
+            Enviamos um link de acesso para{" "}
+            <strong className="text-foreground">{email}</strong>.
+          </>
+        }
+        footer={
+          <Button
+            variant="outline"
+            className="w-full h-14 rounded-2xl text-[14px]"
+            onClick={handleBack}
+          >
+            Usar outro email
+          </Button>
+        }
+      >
+        <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center">
+          <Mail className="w-6 h-6 text-primary" />
+        </div>
+      </Shell>
+    );
+  }
+
+  // ─────────── SIGNUP FLOW ───────────
+  if (isSignup) {
+    const bottomLogin = (
+      <span className="text-muted-foreground">
+        Já tem uma conta?{" "}
+        <button
+          type="button"
+          onClick={() => navigate("/auth?mode=login")}
+          className="text-foreground font-semibold hover:underline transition-all ml-0.5"
+        >
+          Entrar
+        </button>
+      </span>
+    );
+
+    // Step: NOME
+    if (signupStep === "nome") {
+      const trimmed = nome.trim();
+      const looksLikeEmail = /@/.test(trimmed) || /\.(com|net|org|br)(\b|$)/i.test(trimmed);
+      const hasTwoLetters = /[a-zA-ZÀ-ÿ]{2,}/.test(trimmed);
+      const canContinue = trimmed.length >= 2 && !looksLikeEmail && hasTwoLetters;
+      return (
+        <Shell
+          headerTitle="Criar conta"
+          stepKey="s-nome"
+          title="Qual é o seu nome?"
+          subtitle="Como você quer ser chamado."
+          footer={
+            <ContinueButton
+              onClick={() => setSignupStep("email")}
+              type="button"
+              disabled={!canContinue}
+              label="Continuar"
+            />
+          }
+          bottomHint={bottomLogin}
+        >
+          <Input
+            name="given-name"
+            type="text"
+            required
+            autoFocus
+            value={nome}
+            onChange={(e) => setNome(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter" && canContinue) setSignupStep("email"); }}
+            className={inputClasses}
+            placeholder="Seu nome completo"
+            autoComplete="off"
+            autoCorrect="off"
+            spellCheck={false}
+            autoCapitalize="words"
+            enterKeyHint="next"
+            maxLength={80}
+            inputMode="text"
+          />
+          {trimmed.length >= 2 && looksLikeEmail && (
+            <p className="text-[12px] text-destructive mt-2.5 pl-1 font-medium">
+              Digite seu nome, não seu e-mail.
+            </p>
+          )}
+        </Shell>
+      );
+    }
+
+    // Step: PHONE
+    if (signupStep === "phone") {
+      return (
+        <Shell
+          headerTitle="Criar conta"
+          stepKey="s-phone"
+          title="Qual é o seu WhatsApp?"
+          subtitle="Enviaremos um código para verificar."
+          footer={
+            <ContinueButton
+              onClick={() => setSignupStep("password")}
+              type="button"
+              disabled={phoneDigits.length < 10}
+              label="Continuar"
+            />
+          }
+          bottomHint={bottomLogin}
+        >
+          <Input
+            name="phone"
+            type="tel"
+            required
+            autoFocus
+            value={maskPhone(phoneDigits)}
+            onChange={(e) => setPhoneDigits(e.target.value.replace(/\D/g, "").slice(0, 11))}
+            onKeyDown={(e) => { if (e.key === "Enter" && phoneDigits.length >= 10) setSignupStep("password"); }}
+            className={inputClasses}
+            placeholder="(11) 91234-5678"
+            autoComplete="off"
+            autoCorrect="off"
+            spellCheck={false}
+            inputMode="numeric"
+          />
+        </Shell>
+      );
+    }
+
+    // Step: OTP
+    if (signupStep === "otp") {
+      return (
+        <Shell
+          headerTitle="Criar conta"
+          stepKey="s-otp"
+          title="Digite o código"
+          subtitle={<>Enviamos um código de 6 dígitos para <strong className="text-foreground">{maskPhone(phoneDigits)}</strong>.</>}
+          footer={
+            <ContinueButton
+              onClick={handleVerifyOtp}
+              type="button"
+              disabled={otpCode.length !== 6}
+              loading={signupBusy}
+              label="Verificar"
+            />
+          }
+          bottomHint={
+            <button
+              type="button"
+              onClick={handleSendOtp}
+              disabled={otpCooldown > 0 || signupBusy}
+              className="text-primary font-semibold hover:text-primary/80 disabled:text-muted-foreground disabled:cursor-not-allowed transition-colors"
+            >
+              {otpCooldown > 0 ? `Reenviar código em ${otpCooldown}s` : "Reenviar código"}
+            </button>
+          }
+        >
+          <Input
+            name="otp"
+            type="text"
+            required
+            autoFocus
+            value={otpCode}
+            onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+            onKeyDown={(e) => { if (e.key === "Enter" && otpCode.length === 6) handleVerifyOtp(); }}
+            className={`${inputClasses} text-center tracking-[0.5em] text-[20px] font-semibold`}
+            placeholder="000000"
+            autoComplete="one-time-code"
+            autoCorrect="off"
+            spellCheck={false}
+            inputMode="numeric"
+            maxLength={6}
+          />
+        </Shell>
+      );
+    }
+
+    // Step: EMAIL
+    if (signupStep === "email") {
+      const canContinue = emailLooksComplete && !emailExists && !checkingEmail;
+      return (
+        <Shell
+          headerTitle="Criar conta"
+          stepKey="s-email"
+          title="Qual é o seu email?"
+          subtitle="Usaremos para você acessar sua conta."
+          footer={
+            <ContinueButton
+              onClick={() => setSignupStep("phone")}
+              type="button"
+              disabled={!canContinue}
+              label="Continuar"
+            />
+          }
+          bottomHint={bottomLogin}
+        >
+          <div className="relative">
+            <Input
+              name="dub_signup_email"
+              type="text"
+              required
+              autoFocus
+              value={email}
+              onChange={(e) => { setEmail(e.target.value); setEmailExists(false); }}
+              onKeyDown={(e) => { if (e.key === "Enter" && canContinue) setSignupStep("phone"); }}
+              className={inputClasses}
+              placeholder="seu@email.com"
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="none"
+              spellCheck={false}
+              inputMode="email"
+            />
+            {checkingEmail && (
+              <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+              </div>
+            )}
+          </div>
+          <AnimatePresence>
+            {emailExists && (
+              <motion.p
+                initial={{ opacity: 0, y: -4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                className="text-[12px] text-destructive font-medium mt-2 px-1"
+              >
+                Este email já possui uma conta.{" "}
+                <button
+                  type="button"
+                  onClick={() => navigate("/auth?mode=login&email=" + encodeURIComponent(email.trim()))}
+                  className="underline hover:no-underline"
+                >
+                  Entrar
+                </button>
+              </motion.p>
+            )}
+          </AnimatePresence>
+        </Shell>
+      );
+    }
+
+    // Step: PASSWORD
+    return (
+      <Shell
+        headerTitle="Criar conta"
+        stepKey="s-password"
+        title="Crie sua senha"
+        subtitle="Use pelo menos 6 caracteres."
+        footer={
+          <ContinueButton
+            onClick={handleStartSignup}
+            type="button"
+            disabled={senha.length < 6}
+            loading={signupBusy}
+            label="Criar conta"
+          />
+        }
+      >
+        <div className="relative">
+          <Input
+            name="senha"
+            type={showPassword ? "text" : "password"}
+            required
+            autoFocus
+            minLength={6}
+            value={senha}
+            onChange={(e) => setSenha(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && senha.length >= 6) {
+                handleStartSignup();
+              }
+            }}
+            className={`${inputClasses} pr-12`}
+            placeholder="Mínimo 6 caracteres"
+            autoComplete="off"
+            autoCorrect="off"
+            spellCheck={false}
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword(!showPassword)}
+            className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground/50 hover:text-foreground transition-colors"
+            aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
+          >
+            {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+          </button>
+        </div>
+      </Shell>
+    );
+  }
+
+  // ─────────── LOGIN FLOW ───────────
+  const bottomSignup = (
+    <span className="text-muted-foreground">
+      Não tem uma conta?{" "}
+      <button
+        type="button"
+        onClick={() => navigate("/escolher-barbearia")}
+        className="text-foreground font-semibold hover:underline transition-all ml-0.5"
+      >
+        Criar conta
+      </button>
+    </span>
+  );
+
+  // Step: EMAIL
+  if (step === "email") {
+    return (
+      <Shell
+        headerTitle="Entrar"
+        stepKey="l-email"
+        title="Qual é o seu email?"
+        subtitle="Use o email cadastrado para acessar sua conta."
+        footer={
+          <ContinueButton
+            onClick={() => setStep("password")}
+            type="button"
+            disabled={!emailLooksComplete}
+            label="Continuar"
+          />
+        }
+        bottomHint={bottomSignup}
+      >
+        <Input
+          name="dub_login_email"
+          type="text"
+          required
+          autoFocus
+          value={email}
+          onChange={(e) => { setEmail(e.target.value); setLoginError(null); }}
+          onKeyDown={(e) => { if (e.key === "Enter" && emailLooksComplete) setStep("password"); }}
+          className={inputClasses}
+          placeholder="seu@email.com"
+          autoComplete="off"
+          autoCorrect="off"
+          autoCapitalize="none"
+          spellCheck={false}
+          inputMode="email"
+        />
+      </Shell>
+    );
+  }
+
+  // Step: PASSWORD
+  return (
+    <Shell
+      headerTitle="Entrar"
+      stepKey="l-password"
+      title="Digite sua senha"
+      subtitle={<>Entrando como <strong className="text-foreground">{email}</strong></>}
+      footer={
+        <ContinueButton
+          onClick={() => handlePasswordSubmit({ preventDefault: () => {} } as React.FormEvent)}
+          type="button"
+          disabled={senha.length < 1}
+          loading={isLoading}
+          label="Entrar"
+        />
+      }
+      bottomHint={bottomSignup}
+    >
+      <div className="relative">
+        <Input
+          ref={passwordRef}
+          name="senha"
+          type={showPassword ? "text" : "password"}
+          required
+          autoFocus
+          value={senha}
+          onChange={(e) => { setSenha(e.target.value); setLoginError(null); }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && senha.length >= 1) {
+              handlePasswordSubmit({ preventDefault: () => {} } as React.FormEvent);
+            }
+          }}
+          className={`${inputClasses} pr-12`}
+          placeholder="Sua senha"
+          autoComplete="off"
+          autoCorrect="off"
+          spellCheck={false}
+        />
+        <button
+          type="button"
+          onClick={() => setShowPassword(!showPassword)}
+          className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground/50 hover:text-foreground transition-colors"
+          aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
+        >
+          {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+        </button>
+      </div>
+      <AnimatePresence>
+        {loginError && (
+          <motion.p
+            initial={{ opacity: 0, y: -4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            className="text-[12px] text-destructive font-medium mt-2 px-1"
+          >
+            {loginError}
+          </motion.p>
+        )}
+      </AnimatePresence>
+      <div className="mt-3">
+        <button
+          type="button"
+          onClick={() => navigate("/esqueci-senha")}
+          className="text-[13px] text-primary/80 hover:text-primary transition-colors font-medium"
+        >
+          Esqueci a senha
+        </button>
+      </div>
+    </Shell>
+  );
+};
+
+export default Auth;

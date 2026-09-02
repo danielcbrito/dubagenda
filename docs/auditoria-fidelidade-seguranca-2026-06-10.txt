@@ -1,0 +1,144 @@
+═══════════════════════════════════════════════════════════════
+AUDITORIA DE SEGURANÇA — PROGRAMA DE FIDELIDADE
+Data: 2026-06-10
+Responsável: Equipe técnica
+═══════════════════════════════════════════════════════════════
+
+## 1. PROBLEMA REPORTADO
+
+Clientes estavam obtendo cortes grátis recorrentes em curto espaço
+de tempo (ex.: cortou semana passada, 3 dias depois conseguiu outro
+corte grátis). Necessidade: vasculhar dados, identificar abuso, e
+endurecer o sistema contra burlas.
+
+## 2. VULNERABILIDADES IDENTIFICADAS
+
+### 2.1 RLS Permissiva em `agendamentos`
+- A policy `Users can update own appointments` permitia ao cliente
+  alterar QUALQUER campo do seu agendamento, inclusive:
+    - `status` (ex.: forçar para `completed`)
+    - `barbeiro_confirmou` (forçar pra true)
+    - `is_free`, `preco`, `payment_method`
+    - `ponto_liberado`
+- Isso permitia, via API direta com token do cliente, simular
+  conclusões e ganhar pontos sem que o barbeiro confirmasse.
+
+### 2.2 Lógica não-recorrente do programa
+- A função `award_loyalty_point` bloqueava novos pontos para
+  clientes que JÁ tivessem qualquer registro em `resgates` (mesmo
+  já usado). Resultado: clientes legítimos NÃO ganhavam ciclos novos.
+
+### 2.3 Ausência de anti-fraude diário
+- Não havia limite de pontos por dia. Cliente podia criar várias
+  conclusões no mesmo dia e ganhar múltiplos pontos artificialmente.
+
+### 2.4 Inserção de agendamentos `is_free` sem validação
+- Cliente podia inserir agendamento com `is_free=true` e
+  `payment_method` qualquer, contornando o gatilho de resgate.
+
+## 3. DADOS SUSPEITOS ENCONTRADOS
+
+Cliente `a46b3160-...` teve 6 finalizações no MESMO DIA (2026-04-11)
+e múltiplos dias com 3+ conclusões. Cliente `5f8930bc-...` com
+padrão similar. Vários clientes com 2-3 conclusões em datas
+isoladas (pode ser combo legítimo, mas marcado para auditoria).
+
+## 4. CORREÇÕES APLICADAS (Migration: hardening 2026-06-10)
+
+### 4.1 Trigger BEFORE UPDATE: `guard_client_appointment_updates`
+- Verifica se ator é admin / TI / barbeiro / dono do tenant.
+- Se for o CLIENTE, reverte silenciosamente alterações em:
+  status (exceto cancelled_by_user), barbeiro_confirmou,
+  is_free, ponto_liberado, preco, payment_method, etc.
+
+### 4.2 Trigger BEFORE INSERT: `guard_client_appointment_inserts`
+- Bloqueia inserção de agendamento com status finalizado por cliente.
+- Reverte `is_free=true` quando `payment_method` não é `resgate`/`plano`.
+- Força `barbeiro_confirmou=false` e `ponto_liberado=false`.
+
+### 4.3 Função `award_loyalty_point` — endurecida
+- Exige `barbeiro_confirmou=true` (não basta o status).
+- Anti-fraude: bloqueia 2º ponto no mesmo dia para o mesmo usuário.
+- Lógica recorrente: só bloqueia se houver resgate `available`
+  PENDENTE (após uso, ciclo reinicia naturalmente).
+- Usa `pontos_necessarios` da promoção do tenant.
+
+### 4.4 Função `consume_redemption_on_appointment_insert` — saneada
+- NULL-safe em pontos.
+- Loga tentativas bloqueadas em `loyalty_audit_logs`.
+
+### 4.5 Limpeza de dados
+- Pontos zerados para usuários com >2 conclusões no mesmo dia
+  (últimos 60 dias).
+- Resgates `available` marcados como `expired` para usuários com
+  >3 conclusões mesmo dia.
+- Auditoria de fraude inserida em `loyalty_audit_logs` (action
+  `fraud_detected`).
+
+## 5. FLUXO DE PONTUAÇÃO (atualizado)
+
+```
+[Cliente agenda] → [Barbeiro confirma] → [Atendimento ocorre]
+        ↓
+[Barbeiro marca status=completed] → trigger award_loyalty_point
+        ↓
+[Validações: corte? barbeiro confirmou? <1 ponto hoje? sem resgate aberto?]
+        ↓
+[+1 ponto] → [se chegou a N pontos: cria resgate available, 90d]
+```
+
+## 6. FLUXO DE RESGATE (atualizado)
+
+```
+[Cliente seleciona "Usar Corte Grátis" no agendamento]
+        ↓ (payment_method = 'resgate', is_free = true)
+[trigger consume_redemption_on_appointment_insert BEFORE INSERT]
+        ↓
+[Validações: serviço é corte? resgate available existe?]
+        ↓
+[Marca resgate como 'used' + zera pontos do usuário]
+        ↓ [Audit log: redemption_success]
+[Insert do agendamento prossegue]
+```
+
+## 7. CAMADAS DO SISTEMA
+
+### 7.1 Usuário (Client App)
+- Tela `ClienteAgendar` controla seleção de "Usar Corte Grátis".
+- Validações UX são opcionais — segurança é toda no DB.
+
+### 7.2 Frontend
+- src/pages/ClienteAgendar.tsx: usa `payment_method='resgate'`.
+
+### 7.3 Backend / Database (Supabase)
+- Tabelas: agendamentos, pontos, resgates, promocoes, loyalty_audit_logs.
+- Triggers: 4 novos/endurecidos (guard insert, guard update,
+  award_loyalty_point, consume_redemption_on_appointment_insert).
+- RLS: cliente só pode cancelar; tudo mais via barbeiro/admin.
+
+### 7.4 Serviços Externos
+- WhatsApp Webhook envia notificações de status com base nos triggers
+  (não impactado por esta auditoria).
+
+## 8. ERROR HANDLING
+
+- Tentativa de manipulação → trigger reverte silenciosamente.
+- Tentativa de cancelar com status final inválido → RAISE EXCEPTION.
+- Resgate sem disponibilidade → RAISE EXCEPTION + log
+  `redemption_blocked`.
+
+## 9. MONITORAMENTO
+
+Consultar regularmente:
+```sql
+SELECT * FROM public.loyalty_audit_logs
+WHERE action IN ('fraud_detected','award_blocked','redemption_blocked')
+ORDER BY created_at DESC LIMIT 100;
+```
+
+## 10. RECOMENDAÇÕES FUTURAS
+
+- Mover `consume_redemption` para Edge Function autenticada.
+- Adicionar rate-limit no `award_loyalty_point` por IP+device.
+- Tela admin para revisar `loyalty_audit_logs` em dashboard.
+═══════════════════════════════════════════════════════════════

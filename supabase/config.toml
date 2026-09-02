@@ -1,0 +1,56 @@
+project_id = "djtpzvujzmrrslirzwun"
+
+[functions.refund-payment]
+verify_jwt = false
+
+[functions.wallet-operations]
+verify_jwt = false
+
+[functions.create-checkout]
+verify_jwt = false
+
+[functions.verify-stripe-session]
+verify_jwt = false
+
+[functions.check-subscription]
+verify_jwt = false
+
+[functions.customer-portal]
+verify_jwt = false
+
+[functions.admin-reset-password]
+verify_jwt = false
+
+[functions.create-subscription-card]
+verify_jwt = false
+
+[functions.cleanup-pending-payments]
+verify_jwt = false
+
+[functions.wallet-pin]
+verify_jwt = false
+
+[functions.appointment-reminders]
+verify_jwt = false
+
+[functions.create-subscription-pix]
+verify_jwt = false
+
+[functions.check-subscription-pix]
+verify_jwt = false
+
+[functions.cancel-appointment-client]
+verify_jwt = false
+
+[functions.geocode-address]
+verify_jwt = false
+
+[functions.efi-webhook]
+verify_jwt = false
+
+[functions.ai-security-monitor]
+verify_jwt = false
+
+[functions.whatsapp-verification]
+verify_jwt = false
+

@@ -1,0 +1,1 @@
+CREATE POLICY "authenticated_read_tenant_unidades" ON public.tenant_unidades FOR SELECT TO authenticated USING (ativo = true);

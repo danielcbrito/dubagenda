@@ -1,0 +1,673 @@
+import { ArrowUp, Mic, StopCircle, Loader2, Paperclip, X, Plus, Clock, MessageSquarePlus, ExternalLink, FileText } from "lucide-react";
+import { useState, useRef, useEffect, useCallback } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { cn } from "@/lib/utils";
+import { motion, AnimatePresence } from "framer-motion";
+import { BotAvatar } from "./BotAvatar";
+import whatsappLogo from "@/assets/whatsapp-logo.png";
+import { composeMessageContent, isImageAttachment, parseMessageContent, type ChatAttachment } from "./chatMessageUtils";
+
+const ADMIN_WHATSAPP = "5511963390043";
+
+function AttachmentsRenderer({ attachments }: { attachments: ChatAttachment[] }) {
+  if (attachments.length === 0) return null;
+
+  const imageAttachments = attachments.filter(isImageAttachment);
+  const fileAttachments = attachments.filter((attachment) => !isImageAttachment(attachment));
+
+  return (
+    <div className="space-y-2">
+      {imageAttachments.length > 0 && (
+        <div className="grid grid-cols-2 gap-2">
+          {imageAttachments.map((attachment) => (
+            <a
+              key={attachment.url}
+              href={attachment.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block rounded-lg border border-border/50 overflow-hidden bg-card/60"
+            >
+              <img
+                src={attachment.url}
+                alt={attachment.name || "Anexo"}
+                loading="lazy"
+                className="w-full h-28 object-cover"
+              />
+            </a>
+          ))}
+        </div>
+      )}
+
+      {fileAttachments.length > 0 && (
+        <div className="space-y-1.5">
+          {fileAttachments.map((attachment) => (
+            <a
+              key={attachment.url}
+              href={attachment.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 rounded-lg border border-border/50 bg-card/60 px-2.5 py-2 text-[11px] text-foreground/80 no-underline"
+            >
+              <FileText className="h-3.5 w-3.5 text-muted-foreground" />
+              <span className="truncate flex-1">{attachment.name || "Arquivo anexado"}</span>
+              <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" />
+            </a>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Renders message content with WhatsApp escalation blocks */
+function MessageContent({ content }: { content: string }) {
+  const { text, attachments } = parseMessageContent(content);
+  const escalationRegex = /\[WHATSAPP_ESCALATION\]([\s\S]*?)\[\/WHATSAPP_ESCALATION\]/;
+  const match = text.match(escalationRegex);
+
+  if (!match) {
+    return (
+      <div className="space-y-2.5">
+        {text && <p className="text-[13px] leading-[1.75] text-foreground/85 whitespace-pre-wrap break-words">{text}</p>}
+        <AttachmentsRenderer attachments={attachments} />
+      </div>
+    );
+  }
+
+  const beforeBlock = text.slice(0, match.index).trim();
+  const afterBlock = text.slice((match.index || 0) + match[0].length).trim();
+  const messageText = match[1].trim();
+  const whatsappUrl = `https://wa.me/${ADMIN_WHATSAPP}?text=${encodeURIComponent(messageText)}`;
+
+  return (
+    <div className="space-y-3">
+      {beforeBlock && (
+        <p className="text-[13px] leading-[1.75] text-foreground/85 whitespace-pre-wrap break-words">{beforeBlock}</p>
+      )}
+      <motion.a
+        href={whatsappUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        initial={{ opacity: 0, y: 4 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
+        className="flex items-center gap-3 px-4 py-3 rounded-xl bg-emerald-500/10 dark:bg-emerald-500/15 border border-emerald-500/20 hover:bg-emerald-500/20 active:scale-[0.98] transition-all cursor-pointer no-underline"
+      >
+        <img src={whatsappLogo} alt="WhatsApp" className="w-7 h-7 shrink-0" />
+        <div className="flex-1 min-w-0">
+          <span className="text-[12px] font-semibold text-emerald-600 dark:text-emerald-400 block">Falar com Suporte Humano</span>
+          <span className="text-[10px] text-muted-foreground/60">Mensagem pronta — só enviar</span>
+        </div>
+        <ExternalLink className="w-3.5 h-3.5 text-emerald-500/60 shrink-0" />
+      </motion.a>
+      {afterBlock && (
+        <p className="text-[13px] leading-[1.75] text-foreground/85 whitespace-pre-wrap break-words">{afterBlock}</p>
+      )}
+      <AttachmentsRenderer attachments={attachments} />
+    </div>
+  );
+}
+
+interface Message {
+  role: "user" | "assistant";
+  content: string;
+  timestamp: Date;
+}
+
+interface ConversationSummary {
+  id: string;
+  created_at: string;
+  last_message_at: string;
+  preview: string;
+}
+
+export function SupportChatInterface() {
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [input, setInput] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(true);
+  const [conversationId, setConversationId] = useState<string | null>(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [showHistory, setShowHistory] = useState(false);
+  const [conversations, setConversations] = useState<ConversationSummary[]>([]);
+  const [loadingConversations, setLoadingConversations] = useState(false);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+
+  // Load user + active conversation
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          setUserId(user.id);
+          const { data: convs } = await supabase
+            .from('support_conversations')
+            .select('id, created_at')
+            .eq('user_id', user.id)
+            .eq('status', 'active')
+            .order('last_message_at', { ascending: false })
+            .limit(1);
+
+          if (convs && convs.length > 0) {
+            const convId = convs[0].id;
+            setConversationId(convId);
+            const { data: msgs } = await supabase
+              .from('support_messages')
+              .select('role, content, created_at')
+              .eq('conversation_id', convId)
+              .order('created_at', { ascending: true });
+
+            if (msgs && msgs.length > 0) {
+              setMessages(msgs.map(m => ({
+                role: m.role as "user" | "assistant",
+                content: m.content,
+                timestamp: new Date(m.created_at),
+              })));
+            }
+          }
+        }
+      } catch (e) {
+        console.error('Erro ao carregar histórico:', e);
+      } finally {
+        setIsLoadingHistory(false);
+      }
+    };
+    load();
+  }, []);
+
+  useEffect(() => {
+    if (scrollAreaRef.current) {
+      scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight;
+    }
+  }, [messages]);
+
+  // Load conversation history list
+  const loadConversationHistory = useCallback(async () => {
+    if (!userId) return;
+    setLoadingConversations(true);
+    try {
+      const { data: convs } = await supabase
+        .from('support_conversations')
+        .select('id, created_at, last_message_at')
+        .eq('user_id', userId)
+        .order('last_message_at', { ascending: false })
+        .limit(20);
+
+      if (convs) {
+        const summaries: ConversationSummary[] = [];
+        for (const conv of convs) {
+          const { data: firstMsg } = await supabase
+            .from('support_messages')
+            .select('content')
+            .eq('conversation_id', conv.id)
+            .eq('role', 'user')
+            .order('created_at', { ascending: true })
+            .limit(1);
+
+          summaries.push({
+            id: conv.id,
+            created_at: conv.created_at,
+            last_message_at: conv.last_message_at || conv.created_at,
+            preview: firstMsg?.[0]?.content?.slice(0, 60) || "Conversa sem mensagem",
+          });
+        }
+        setConversations(summaries);
+      }
+    } catch (e) {
+      console.error('Erro ao carregar conversas:', e);
+    } finally {
+      setLoadingConversations(false);
+    }
+  }, [userId]);
+
+  const openConversation = async (convId: string) => {
+    setConversationId(convId);
+    setShowHistory(false);
+    const { data: msgs } = await supabase
+      .from('support_messages')
+      .select('role, content, created_at')
+      .eq('conversation_id', convId)
+      .order('created_at', { ascending: true });
+
+    if (msgs) {
+      setMessages(msgs.map(m => ({
+        role: m.role as "user" | "assistant",
+        content: m.content,
+        timestamp: new Date(m.created_at),
+      })));
+    }
+  };
+
+  const startNewConversation = () => {
+    setMessages([]);
+    setConversationId(null);
+    setShowHistory(false);
+    toast.success("Nova conversa");
+  };
+
+  const adjustTextareaHeight = () => {
+    const textarea = textareaRef.current;
+    if (textarea) {
+      textarea.style.height = "auto";
+      textarea.style.height = `${Math.min(textarea.scrollHeight, 120)}px`;
+    }
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setInput(e.target.value);
+    adjustTextareaHeight();
+  };
+
+  // Recording
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+      mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) audioChunksRef.current.push(e.data); };
+      mediaRecorder.onstop = async () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: "audio/webm" });
+        stream.getTracks().forEach(t => t.stop());
+        try {
+          const reader = new FileReader();
+          reader.readAsDataURL(audioBlob);
+          reader.onloadend = async () => {
+            const base64 = (reader.result as string).split(',')[1];
+            const { data, error } = await supabase.functions.invoke("speech-to-text", { body: { audio: base64 } });
+            if (!error && data?.text) { setInput(data.text); adjustTextareaHeight(); }
+          };
+        } catch {}
+      };
+      mediaRecorder.start();
+      setIsRecording(true);
+    } catch {
+      toast.error("Não foi possível acessar o microfone");
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+    }
+  };
+
+  // Files
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    setSelectedFiles(prev => [...prev, ...files]);
+  };
+
+  const removeFile = (index: number) => {
+    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  // Send
+  const sendMessage = async (messageText?: string) => {
+    const textToSend = messageText || input.trim();
+    if (!textToSend && selectedFiles.length === 0) return;
+
+    // Upload files to Supabase Storage and keep attachment metadata
+    const uploadedAttachments: ChatAttachment[] = [];
+
+    if (selectedFiles.length > 0) {
+      for (const file of selectedFiles) {
+        try {
+          const ext = file.name.split('.').pop() || 'bin';
+          const filePath = `support/${conversationId || 'new'}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+          const { data: uploadData, error: uploadError } = await supabase.storage
+            .from('support-attachments')
+            .upload(filePath, file, { contentType: file.type });
+
+          if (!uploadError && uploadData) {
+            const { data: urlData } = supabase.storage
+              .from('support-attachments')
+              .getPublicUrl(uploadData.path);
+
+            uploadedAttachments.push({
+              name: file.name,
+              url: urlData.publicUrl,
+              mimeType: file.type || undefined,
+            });
+          }
+        } catch (e) {
+          console.error('Upload error:', e);
+        }
+      }
+    }
+
+    const content = composeMessageContent(textToSend, uploadedAttachments);
+
+    setMessages(prev => [...prev, { role: "user", content, timestamp: new Date() }]);
+    setInput("");
+    setSelectedFiles([]);
+    setIsLoading(true);
+    if (textareaRef.current) textareaRef.current.style.height = "auto";
+
+    try {
+      const { data, error } = await supabase.functions.invoke("ai-support-chat", {
+        body: {
+          message: content,
+          attachments: uploadedAttachments,
+          conversationId,
+          guestName: "Usuário",
+          guestEmail: "guest@example.com"
+        }
+      });
+      if (error) throw error;
+      setMessages(prev => [...prev, { role: "assistant", content: data.response, timestamp: new Date() }]);
+      if (data.conversationId && !conversationId) setConversationId(data.conversationId);
+    } catch {
+      toast.error("Erro ao enviar mensagem.");
+      setMessages(prev => prev.slice(0, -1));
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+  };
+
+  const canSend = input.trim() || selectedFiles.length > 0 || isRecording;
+
+  if (isLoadingHistory) {
+    return (
+      <div className="flex-1 flex items-center justify-center bg-background">
+        <Loader2 className="w-5 h-5 text-muted-foreground/40 animate-spin" />
+      </div>
+    );
+  }
+
+  const hasMessages = messages.length > 0 || isLoading;
+
+  // Format date for history
+  const formatDate = (dateStr: string) => {
+    const d = new Date(dateStr);
+    const now = new Date();
+    const diff = now.getTime() - d.getTime();
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    if (days === 0) return "Hoje";
+    if (days === 1) return "Ontem";
+    if (days < 7) return `${days} dias atrás`;
+    return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
+  };
+
+  return (
+    <div className="flex flex-col h-full bg-background">
+
+      {/* History drawer — slides from left, half width */}
+      <AnimatePresence>
+        {showHistory && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="absolute inset-0 z-30 bg-background/60 backdrop-blur-sm"
+              onClick={() => setShowHistory(false)}
+            />
+            {/* Drawer panel */}
+            <motion.div
+              initial={{ x: "-100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "-100%" }}
+              transition={{ type: "spring", damping: 28, stiffness: 300 }}
+              className="absolute top-0 left-0 bottom-0 z-40 w-[72%] max-w-[280px] bg-card border-r border-border/50 flex flex-col shadow-xl"
+            >
+              {/* Drawer header */}
+              <div className="flex items-center justify-between px-4 pt-5 pb-3">
+                <h3 className="text-[13px] font-semibold text-foreground uppercase tracking-wider">Conversas</h3>
+                <button
+                  onClick={() => setShowHistory(false)}
+                  className="h-7 w-7 rounded-full flex items-center justify-center text-muted-foreground/50 hover:text-foreground hover:bg-muted/40 transition-colors"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
+
+              {/* New conversation */}
+              <div className="px-3 mb-3">
+                <button
+                  onClick={startNewConversation}
+                  className="w-full flex items-center gap-2.5 px-3.5 py-3 rounded-xl bg-foreground/5 hover:bg-foreground/10 transition-colors text-left active:scale-[0.98]"
+                >
+                  <div className="h-7 w-7 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <MessageSquarePlus className="h-3.5 w-3.5 text-primary" />
+                  </div>
+                  <span className="text-[12px] font-semibold text-foreground tracking-wide">Nova conversa</span>
+                </button>
+              </div>
+
+              {/* Conversation list */}
+              <div className="flex-1 overflow-y-auto overscroll-contain px-3 pb-6">
+                {loadingConversations ? (
+                  <div className="flex justify-center py-8">
+                    <Loader2 className="w-4 h-4 text-muted-foreground/40 animate-spin" />
+                  </div>
+                ) : conversations.length === 0 ? (
+                  <p className="text-[11px] text-muted-foreground/40 text-center py-8">Nenhuma conversa</p>
+                ) : (
+                  <div className="space-y-1">
+                    {conversations.map((conv) => (
+                      <button
+                        key={conv.id}
+                        onClick={() => openConversation(conv.id)}
+                        className={cn(
+                          "w-full text-left px-3 py-2.5 rounded-lg transition-colors",
+                          "hover:bg-muted/40",
+                          conv.id === conversationId && "bg-muted/50 border border-border/40"
+                        )}
+                      >
+                        <p className="text-[12px] text-foreground/80 truncate leading-tight">{conv.preview}</p>
+                        <p className="text-[10px] text-muted-foreground/35 mt-0.5 tabular-nums">{formatDate(conv.last_message_at)}</p>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* Top bar — right-aligned controls, left space for back arrow */}
+      <div className="shrink-0 flex items-center justify-end gap-1 px-3 pt-3 pb-1">
+        <button
+          onClick={() => { setShowHistory(true); loadConversationHistory(); }}
+          className="h-9 w-9 rounded-full flex items-center justify-center text-muted-foreground/70 hover:text-foreground hover:bg-muted/40 active:scale-95 transition-all"
+          title="Histórico de conversas"
+        >
+          <Clock className="h-[18px] w-[18px]" strokeWidth={1.8} />
+        </button>
+        <button
+          onClick={startNewConversation}
+          className="h-9 w-9 rounded-full flex items-center justify-center text-muted-foreground/70 hover:text-foreground hover:bg-muted/40 active:scale-95 transition-all"
+          title="Nova conversa"
+        >
+          <Plus className="h-[18px] w-[18px]" strokeWidth={1.8} />
+        </button>
+      </div>
+
+      {/* Welcome or Messages */}
+      {!hasMessages ? (
+        <div className="flex-1 flex flex-col items-center justify-center px-6">
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+            className="text-center"
+          >
+            <div className="mb-4 flex justify-center">
+              <BotAvatar size="lg" />
+            </div>
+            <h2 className="text-lg font-display font-semibold text-foreground mb-1">
+              Como posso te ajudar?
+            </h2>
+            <p className="text-[12px] text-muted-foreground/50 leading-relaxed">
+              Estou aqui para resolver seu problema.
+            </p>
+          </motion.div>
+
+        </div>
+      ) : (
+        <div ref={scrollAreaRef} className="flex-1 overflow-y-auto overscroll-contain">
+          <div className="max-w-2xl mx-auto px-4 pt-2 pb-4">
+            <AnimatePresence mode="popLayout">
+              {messages.map((message, index) => {
+                const parsedMessage = parseMessageContent(message.content);
+
+                return (
+                  <motion.div
+                    key={index}
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className={cn("mb-4", message.role === "user" && "flex justify-end")}
+                  >
+                    {message.role === "user" ? (
+                      <div className="max-w-[80%]">
+                        <div className="rounded-2xl rounded-br-sm px-3.5 py-2.5 bg-muted/70 dark:bg-muted/40 text-foreground space-y-2.5">
+                          {parsedMessage.text && (
+                            <p className="text-[13px] leading-relaxed whitespace-pre-wrap break-words">{parsedMessage.text}</p>
+                          )}
+                          <AttachmentsRenderer attachments={parsedMessage.attachments} />
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex gap-2.5">
+                        <div className="shrink-0 mt-0.5">
+                          <BotAvatar size="sm" />
+                        </div>
+                        <div className="flex-1 min-w-0 pt-0.5">
+                          <MessageContent content={message.content} />
+                        </div>
+                      </div>
+                    )}
+                  </motion.div>
+                );
+              })}
+            </AnimatePresence>
+
+            {isLoading && (
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex gap-2.5 mb-4">
+                <div className="shrink-0 mt-0.5"><BotAvatar size="sm" /></div>
+                <div className="flex items-center gap-1.5 pt-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/30 animate-bounce" style={{ animationDelay: "0ms" }} />
+                  <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/30 animate-bounce" style={{ animationDelay: "150ms" }} />
+                  <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/30 animate-bounce" style={{ animationDelay: "300ms" }} />
+                </div>
+              </motion.div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Input area */}
+      <div className="shrink-0 px-3 pt-2" style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 1rem)" }}>
+        <div className="max-w-xl mx-auto">
+          {/* File previews */}
+          <AnimatePresence>
+            {selectedFiles.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 6 }}
+                className="mb-2 flex flex-wrap gap-1.5"
+              >
+                {selectedFiles.map((file, i) => (
+                  <div key={i} className="flex items-center gap-1.5 pl-2.5 pr-1.5 py-1 rounded-lg bg-muted/50 border border-border/40 text-[11px] text-muted-foreground">
+                    <span className="truncate max-w-[120px]">{file.name}</span>
+                    <button onClick={() => removeFile(i)} className="h-4 w-4 rounded-full flex items-center justify-center hover:bg-muted transition-colors">
+                      <X className="h-2.5 w-2.5" />
+                    </button>
+                  </div>
+                ))}
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Input pill */}
+          <div className={cn(
+            "flex items-end gap-1.5 px-1.5 py-1.5 rounded-[22px] transition-all duration-200",
+            "bg-card border border-border/60",
+            "shadow-soft"
+          )}>
+            {/* Hidden file input */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              accept="image/*,.pdf,.doc,.docx,.txt"
+              className="hidden"
+              onChange={handleFileSelect}
+            />
+            {/* Attach file — left side */}
+            <button
+              type="button"
+              className="h-10 w-10 rounded-full flex items-center justify-center shrink-0 text-muted-foreground/50 hover:text-muted-foreground hover:bg-muted/30 active:scale-95 transition-all"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isLoading}
+            >
+              <Paperclip className="h-[18px] w-[18px]" />
+            </button>
+
+            {/* Textarea */}
+            <textarea
+              ref={textareaRef}
+              value={input}
+              onChange={handleInputChange}
+              onKeyDown={handleKeyPress}
+              placeholder="Mensagem..."
+              disabled={isLoading}
+              className="flex-1 min-h-[40px] max-h-[120px] resize-none border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 px-0.5 py-2.5 text-[15px] text-foreground placeholder:text-muted-foreground focus:outline-none leading-snug"
+              rows={1}
+            />
+
+            {/* Mic + Send — right side */}
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                className={cn(
+                  "h-10 w-10 rounded-full flex items-center justify-center shrink-0 active:scale-95 transition-all duration-200",
+                  isRecording
+                    ? "text-destructive bg-destructive/10"
+                    : "text-muted-foreground/50 hover:text-muted-foreground hover:bg-muted/30"
+                )}
+                onClick={isRecording ? stopRecording : startRecording}
+                disabled={isLoading}
+              >
+                {isRecording ? <StopCircle className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
+              </button>
+
+              <button
+                type="button"
+                className={cn(
+                  "h-10 w-10 rounded-full flex items-center justify-center shrink-0 active:scale-95 transition-all duration-200",
+                  canSend
+                    ? "bg-foreground text-background"
+                    : "bg-muted/60 text-muted-foreground/20 cursor-not-allowed"
+                )}
+                onClick={() => sendMessage()}
+                disabled={isLoading || !canSend}
+              >
+                <ArrowUp className="h-[18px] w-[18px]" strokeWidth={2.5} />
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
