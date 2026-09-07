@@ -992,7 +992,7 @@ const Cliente = () => {
         />
 
         <div className="h-full overflow-y-auto overscroll-contain touch-pan-y scrollbar-hide [webkit-overflow-scrolling:touch]">
-          <div className="px-5 pt-[max(calc(env(safe-area-inset-top,0px)+1rem),2.5rem)] pb-36">
+          <div className="px-5 pt-[max(calc(env(safe-area-inset-top,0px)+0.75rem),1.25rem)] pb-36">
 
             {/* Header */}
             <div className="mb-4">

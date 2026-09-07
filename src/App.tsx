@@ -356,21 +356,15 @@ function AppRoutes() {
 
 function ThemeColorSync() {
   useEffect(() => {
-    const observer = new MutationObserver(() => {
-      const isDark = document.documentElement.classList.contains("dark");
-      const color = isDark ? "#0D0D0D" : "#FBFBFA";
+    const applyColor = () => {
       document
         .querySelectorAll('meta[name="theme-color"]')
-        .forEach((meta) => meta.setAttribute("content", color));
-    });
-    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
+        .forEach((meta) => meta.setAttribute("content", "#FBFBFA"));
+    };
 
-    // Set initial value
-    const isDark = document.documentElement.classList.contains("dark");
-    const color = isDark ? "#0D0D0D" : "#FBFBFA";
-    document
-      .querySelectorAll('meta[name="theme-color"]')
-      .forEach((meta) => meta.setAttribute("content", color));
+    applyColor();
+    const observer = new MutationObserver(applyColor);
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
 
     return () => observer.disconnect();
   }, []);
