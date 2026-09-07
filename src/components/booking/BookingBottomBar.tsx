@@ -54,7 +54,7 @@ export function BookingBottomBar({
                 </div>
                 <div className="flex items-baseline gap-1">
                   <span className="text-[10px] text-muted-foreground/50 font-medium">R$</span>
-                  <span className="text-[17px] font-bold text-foreground tabular-nums tracking-tight">
+                  <span className="text-[17px] font-medium text-foreground tabular-nums tracking-tight">
                     {totalPrice.toFixed(2).replace('.', ',')}
                   </span>
                 </div>
@@ -67,7 +67,7 @@ export function BookingBottomBar({
                 className={cn(
                   "w-full flex items-center justify-center gap-2",
                   "h-[50px] rounded-xl",
-                  "font-semibold text-[14px] text-primary-foreground",
+                  "font-medium text-[14px] text-primary-foreground",
                   "bg-primary",
                   "active:brightness-90 transition-all duration-150"
                 )}

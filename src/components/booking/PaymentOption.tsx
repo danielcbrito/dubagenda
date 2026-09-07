@@ -30,47 +30,47 @@ export function PaymentOption({
       onClick={disabled ? undefined : onSelect}
       disabled={disabled}
       className={cn(
-        "w-full text-left rounded-lg p-3 transition-all duration-200 border relative",
-        disabled && "opacity-50 cursor-not-allowed bg-muted border-border",
-        !disabled && highlight && "bg-gold/5 border-gold/30",
-        !disabled && !highlight && selected && "bg-primary/10 border-primary/50",
-        !disabled && !highlight && !selected && "bg-card border-border hover:bg-secondary"
+        "w-full text-left rounded-2xl p-3.5 transition-all duration-200 relative border",
+        disabled && "opacity-50 cursor-not-allowed bg-neutral-50 border-neutral-100",
+        !disabled && selected && "bg-neutral-50/80 border-neutral-200/70 shadow-xs",
+        !disabled && !selected && "bg-transparent border-transparent hover:bg-neutral-50/60"
       )}
     >
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex items-start gap-2.5 flex-1">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3 flex-1">
           {icon && (
-            <div className={cn("flex-shrink-0 mt-0.5", disabled && "grayscale")}>{icon}</div>
+            <div className={cn("flex-shrink-0 w-8 h-8 flex items-center justify-center", disabled && "grayscale")}>
+              {icon}
+            </div>
           )}
           <div className="flex-1">
             <div className="flex items-center gap-2">
-              <h3 className={cn("text-sm font-semibold mb-0.5", disabled ? "text-muted-foreground" : "text-foreground")}>
+              <h3 className={cn("text-[14px] font-medium tracking-tight", disabled ? "text-neutral-400" : "text-[#18181B]")}>
                 {title}
               </h3>
               {disabled && (
-                <span className="text-[10px] font-bold uppercase tracking-wider bg-muted-foreground/20 text-muted-foreground px-2 py-0.5 rounded-full">
+                <span className="text-[10px] font-medium uppercase tracking-wider bg-neutral-100 text-neutral-400 px-2 py-0.5 rounded-full">
                   {disabledLabel}
                 </span>
               )}
             </div>
-            <p className="text-xs text-muted-foreground">
-              {description}
-            </p>
+            {description && (
+              <p className="text-[12px] text-neutral-400 mt-0.5 font-normal">
+                {description}
+              </p>
+            )}
           </div>
         </div>
 
         <div className={cn(
-          "flex-shrink-0 w-4 h-4 rounded-full border-2 transition-all flex items-center justify-center mt-0.5",
-          disabled
-            ? "border-muted-foreground/20"
-            : selected 
-              ? highlight 
-                ? "bg-gold border-gold"
-                : "bg-primary border-primary"
-              : "border-muted-foreground/30"
+          "flex-shrink-0 w-[22px] h-[22px] rounded-full transition-all flex items-center justify-center",
+          disabled ? "border-2 border-neutral-200 bg-neutral-50" :
+          selected ? "bg-neutral-900" : "border-2 border-neutral-200 bg-transparent"
         )}>
           {selected && !disabled && (
-            <div className="w-1.5 h-1.5 bg-primary-foreground rounded-full" />
+            <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={4}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
           )}
         </div>
       </div>

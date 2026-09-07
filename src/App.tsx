@@ -41,6 +41,9 @@ const ClientePixCheckout = lazy(() => import("./pages/ClientePixCheckout"));
 const SubscriptionPixCheckout = lazy(() => import("./pages/SubscriptionPixCheckout"));
 const ClienteCarteira = lazy(() => import("./pages/ClienteCarteira"));
 const ClientePerfil = lazy(() => import("./pages/ClientePerfil"));
+const ClienteCupons = lazy(() => import("./pages/ClienteCupons"));
+const ClienteHistorico = lazy(() => import("./pages/ClienteHistorico"));
+const ClienteAvaliacoes = lazy(() => import("./pages/ClienteAvaliacoes"));
 const ClienteIndicacoes = lazy(() => import("./pages/ClienteIndicacoes"));
 const ConviteRedirect = lazy(() => import("./pages/ConviteRedirect"));
 const ClienteDadosPessoais = lazy(() => import("./pages/ClienteDadosPessoais"));
@@ -119,41 +122,41 @@ function MaintenanceWrapper({ children }: { children: React.ReactNode }) {
     );
   }
 
-  // For protected routes: if still loading maintenance status, show nothing
-  if (isLoading) {
-    return null;
-  }
-
-  // Allowed users can access everything
-  if (isAllowedUser) {
+  // Se o app NÃO está em modo de manutenção, renderiza direto (zero tela branca ou espera desnecessária)
+  if (!isMaintenanceMode) {
     return (
       <div className="flex flex-col min-h-dvh">
-      <div className="flex-1 flex flex-col min-h-0">
+        <div className="flex-1 flex flex-col min-h-0">
           {children}
         </div>
       </div>
     );
   }
 
-  // If user is authenticated but NOT allowed, and maintenance is active
-  if (isAuthenticated && isMaintenanceMode) {
+  // Modo manutenção ativo: se ainda está checando permissões do usuário, exibe loader com spinner em vez de tela branca
+  if (isLoading) {
+    return <PageLoader />;
+  }
+
+  // Allowed users can access everything even during maintenance
+  if (isAllowedUser) {
     return (
-      <MaintenanceScreen 
-        message={maintenanceMessage || undefined}
-        onExit={() => {
-          navigate('/');
-        }}
-      />
+      <div className="flex flex-col min-h-dvh">
+        <div className="flex-1 flex flex-col min-h-0">
+          {children}
+        </div>
+      </div>
     );
   }
 
-  // Normal flow
+  // If maintenance is active and user is not allowed
   return (
-    <div className="flex flex-col min-h-dvh">
-      <div className="flex-1 flex flex-col min-h-0">
-        {children}
-      </div>
-    </div>
+    <MaintenanceScreen 
+      message={maintenanceMessage || undefined}
+      onExit={() => {
+        navigate('/');
+      }}
+    />
   );
 }
 
@@ -231,7 +234,7 @@ function AuthRedirectGuard({ children }: { children: React.ReactNode }) {
     if (shouldRedirect) navigate('/cliente', { replace: true });
   }, [shouldRedirect, navigate]);
 
-  if (shouldRedirect) return null;
+  if (shouldRedirect) return <PageLoader />;
 
   return <>{children}</>;
 }
@@ -317,6 +320,9 @@ function AppRoutes() {
                 <Route path="/cliente/assinatura-pix" element={<SubscriptionPixCheckout />} />
                 <Route path="/cliente/carteira" element={<ClienteCarteira />} />
                 <Route path="/cliente/perfil" element={<ClientePerfil />} />
+                <Route path="/cliente/cupons" element={<ClienteCupons />} />
+                <Route path="/cliente/historico" element={<ClienteHistorico />} />
+                <Route path="/cliente/avaliacoes" element={<ClienteAvaliacoes />} />
                 <Route path="/cliente/indicacoes" element={<ClienteIndicacoes />} />
                 <Route path="/cliente/dados-pessoais" element={<ClienteDadosPessoais />} />
                 <Route path="/cliente/seguranca" element={<ClienteSeguranca />} />
@@ -352,7 +358,7 @@ function ThemeColorSync() {
   useEffect(() => {
     const observer = new MutationObserver(() => {
       const isDark = document.documentElement.classList.contains("dark");
-      const color = isDark ? "#0D0D0D" : "#F5F5F5";
+      const color = isDark ? "#0D0D0D" : "#FBFBFA";
       document
         .querySelectorAll('meta[name="theme-color"]')
         .forEach((meta) => meta.setAttribute("content", color));
@@ -361,7 +367,7 @@ function ThemeColorSync() {
 
     // Set initial value
     const isDark = document.documentElement.classList.contains("dark");
-    const color = isDark ? "#0D0D0D" : "#F5F5F5";
+    const color = isDark ? "#0D0D0D" : "#FBFBFA";
     document
       .querySelectorAll('meta[name="theme-color"]')
       .forEach((meta) => meta.setAttribute("content", color));

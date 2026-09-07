@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Calendar, Clock, Check, AlertCircle, X, Crown, Gift, Scissors, Store, Star } from "lucide-react";
+import { Calendar, Clock, Check, AlertCircle, X, Gift, Scissors, Store, Star } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { motion } from "framer-motion";
@@ -57,9 +57,9 @@ export function AppointmentCardPremium({
     if (status === "pending" && !barbeiroConfirmou) {
       return { 
         label: "Aguardando", 
-        color: "hsl(38 92% 50%)",
-        bgColor: "hsl(38 92% 50% / 0.08)",
-        borderColor: "hsl(38 92% 50% / 0.15)",
+        color: "#d97706",
+        bgColor: "rgba(245, 158, 11, 0.1)",
+        borderColor: "rgba(245, 158, 11, 0.2)",
         icon: Clock,
       };
     }
@@ -68,49 +68,49 @@ export function AppointmentCardPremium({
       case "confirmed":
         return { 
           label: "Confirmado", 
-          color: "hsl(160 60% 45%)",
-          bgColor: "hsl(160 60% 45% / 0.08)",
-          borderColor: "hsl(160 60% 45% / 0.15)",
+          color: "#059669",
+          bgColor: "rgba(16, 185, 129, 0.1)",
+          borderColor: "rgba(16, 185, 129, 0.2)",
           icon: Check,
         };
       case "completed":
         return { 
           label: "Concluído", 
           color: "#16a34a",
-          bgColor: "rgba(22, 163, 74, 0.12)",
-          borderColor: "rgba(22, 163, 74, 0.25)",
+          bgColor: "rgba(22, 163, 74, 0.1)",
+          borderColor: "rgba(22, 163, 74, 0.2)",
           icon: Check,
         };
       case "cancelled_by_admin":
         return { 
           label: "Cancelado", 
-          color: "hsl(var(--destructive))",
-          bgColor: "hsl(var(--destructive) / 0.06)",
-          borderColor: "hsl(var(--destructive) / 0.12)",
+          color: "#dc2626",
+          bgColor: "rgba(220, 38, 38, 0.08)",
+          borderColor: "rgba(220, 38, 38, 0.18)",
           icon: X,
         };
       case "cancelled_by_user":
         return { 
-          label: "Cancelado por você", 
-          color: "hsl(var(--destructive))",
-          bgColor: "hsl(var(--destructive) / 0.06)",
-          borderColor: "hsl(var(--destructive) / 0.12)",
+          label: "Cancelado", 
+          color: "#dc2626",
+          bgColor: "rgba(220, 38, 38, 0.08)",
+          borderColor: "rgba(220, 38, 38, 0.18)",
           icon: X,
         };
       case "no_show":
         return {
           label: "Faltou",
-          color: "hsl(var(--muted-foreground))",
-          bgColor: "hsl(var(--muted) / 0.08)",
-          borderColor: "hsl(var(--border) / 0.3)",
+          color: "#737373",
+          bgColor: "rgba(115, 115, 115, 0.1)",
+          borderColor: "rgba(115, 115, 115, 0.2)",
           icon: AlertCircle,
         };
       default:
         return { 
           label: status, 
-          color: "hsl(var(--muted-foreground))",
-          bgColor: "hsl(var(--muted) / 0.08)",
-          borderColor: "hsl(var(--border) / 0.3)",
+          color: "#737373",
+          bgColor: "rgba(115, 115, 115, 0.1)",
+          borderColor: "rgba(115, 115, 115, 0.2)",
           icon: Clock,
         };
     }
@@ -119,7 +119,6 @@ export function AppointmentCardPremium({
   const statusConfig = getStatusConfig(appointment.status, appointment.barbeiro_confirmou);
   const StatusIcon = statusConfig.icon;
   const isCancelled = appointment.status === "cancelled_by_user" || appointment.status === "cancelled_by_admin";
-  const isCancelledByAdmin = appointment.status === "cancelled_by_admin";
   const isAwaitingBarberApproval = appointment.status === "pending" && !appointment.barbeiro_confirmou;
   const rescheduleRequested = appointment.remarcacao_solicitada === true;
   const canCancel = (appointment.status === "pending" || appointment.status === "confirmed") && !isAwaitingBarberApproval && !rescheduleRequested;
@@ -138,102 +137,82 @@ export function AppointmentCardPremium({
   );
 
   const shopName = appointment.barbeiro?.tenant?.nome || "Barbearia DUB";
+  const appointmentDate = new Date(`${appointment.data}T12:00:00`);
 
   return (
     <>
       <motion.div
-        initial={{ opacity: 0, y: 6 }}
+        initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: index * 0.06, duration: 0.25 }}
-        className="rounded-xl overflow-hidden border border-border/60 bg-card active:scale-[0.99] transition-transform"
-        style={{ boxShadow: "0 1px 4px hsl(var(--foreground) / 0.06)" }}
+        transition={{ delay: index * 0.05, duration: 0.25 }}
+        className="relative mb-3 rounded-[24px] overflow-hidden bg-white border border-neutral-200/80 shadow-[0_4px_20px_rgba(0,0,0,0.05)] active:scale-[0.98] transition-transform"
       >
-        {/* Top accent bar with status color */}
-        <div className="h-[3px]" style={{ background: statusConfig.color }} />
-
-        <div className="px-4 pt-3 pb-3">
-          {/* Top row: Service + Date circle (top-right) */}
-          <div className="flex items-start justify-between gap-3 mb-0">
-            <h3 className="font-bold text-foreground text-[15px] leading-snug break-words flex-1 min-w-0">
-              {appointment.servico?.nome || "Serviço"}
-            </h3>
-            <div className="flex flex-col items-center flex-shrink-0">
-              <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground leading-none">
-                {format(new Date(`${appointment.data}T12:00:00`), "EEE", { locale: ptBR })}
-              </span>
-              <div
-                className="w-10 h-10 rounded-full flex items-center justify-center mt-0.5"
-                style={{ background: statusConfig.bgColor, border: `1.5px solid ${statusConfig.borderColor}` }}
-              >
-                <span className="text-[16px] font-bold tabular-nums" style={{ color: statusConfig.color }}>
-                  {format(new Date(`${appointment.data}T12:00:00`), "dd")}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Shop + Barber only */}
-          <div className="flex items-center gap-1.5 flex-wrap mb-1.5 -mt-4">
-            <div className="flex items-center gap-1 px-2 py-[3px] rounded-md bg-muted/70 border border-border/30">
-              <Store className="w-3 h-3 text-foreground/50" />
-              <span className="text-[10px] font-semibold text-foreground/70 truncate">{shopName}</span>
-            </div>
-            {appointment.barbeiro?.apelido && (
-              <div className="flex items-center gap-1 px-2 py-[3px] rounded-md bg-muted/70 border border-border/30">
-                <Scissors className="w-3 h-3 text-foreground/50" />
-                <span className="text-[10px] font-semibold text-foreground/70 truncate">{appointment.barbeiro.apelido}</span>
-              </div>
-            )}
-          </div>
-
-          {/* Bottom row: Time · Value ——— Status (right) */}
-          <div className="flex items-center gap-2.5 text-[11px] pt-2.5 mt-1 border-t border-border/20">
-            <div className="flex items-center gap-1">
-              <Clock className="w-3.5 h-3.5 text-foreground/40" />
-              <span className="font-semibold text-foreground/70 tabular-nums">{appointment.hora}</span>
-            </div>
-
-            <span className="text-border">·</span>
-
-            {isPlanAppointment ? (
-              <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-primary border border-primary/20 shadow-sm">
-                <Star className="w-3 h-3 text-primary-foreground fill-primary-foreground" />
-                <span className="text-[10px] font-bold text-primary-foreground uppercase tracking-wider">Plano</span>
-              </div>
-            ) : isFreeAppointment ? (
-              <div className="flex items-center gap-1">
-                <Gift className="w-3 h-3 text-secondary" />
-                <span className="text-[10px] font-bold text-secondary">Grátis</span>
-              </div>
-            ) : appointment.preco ? (
-              <div className="flex items-center gap-1.5">
-                <span className="font-bold text-foreground tabular-nums">
-                  R$ {appointment.preco.toFixed(2)}
-                </span>
-                {isPaid && (
-                  <span className="text-[8px] text-primary font-bold uppercase tracking-wider bg-primary/10 px-1 py-0.5 rounded">
-                    Pago
-                  </span>
-                )}
-              </div>
-            ) : null}
-
-            <span className="flex-1" />
-
-            {/* Status badge — bottom right */}
+        <div className="p-5">
+          {/* Top row: Status Badge + Date/Time */}
+          <div className="flex items-center justify-between mb-3">
             <div
-              className="flex items-center gap-1 px-2 py-[3px] rounded-md text-[8px] font-bold uppercase tracking-wider flex-shrink-0 max-w-[138px] justify-center text-center leading-tight"
-              style={{
-                background: statusConfig.bgColor,
-                color: statusConfig.color,
-                border: `1px solid ${statusConfig.borderColor}`,
-              }}
+              className="inline-flex items-center gap-1.5 text-[11px] font-medium tracking-tight"
+              style={{ color: statusConfig.color }}
             >
-              <StatusIcon className="w-2.5 h-2.5" />
+              <span
+                className="w-1.5 h-1.5 rounded-full"
+                style={{ backgroundColor: statusConfig.color }}
+              />
               {statusConfig.label}
             </div>
+
+            <div className="flex items-center gap-1.5 text-neutral-400">
+              <Calendar className="w-3.5 h-3.5" />
+              <span className="text-[12px] font-medium tracking-tight text-neutral-600">
+                {format(appointmentDate, "dd MMM", { locale: ptBR })}
+              </span>
+              <span>•</span>
+              <Clock className="w-3.5 h-3.5 text-neutral-400 ml-0.5" />
+              <span className="text-[12px] font-medium tracking-tight text-neutral-700">
+                {appointment.hora}
+              </span>
+            </div>
           </div>
 
+          {/* Center row: Service Name + Price */}
+          <div className="mb-2">
+            <h3 className="font-medium text-neutral-900 text-[16px] leading-snug tracking-tight mb-1">
+              {appointment.servico?.nome || "Serviço"}
+            </h3>
+
+            <div className="flex items-center gap-2">
+              {isPlanAppointment ? (
+                <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-neutral-900 shadow-sm text-white">
+                  <Star className="w-3 h-3 text-white fill-white" />
+                  <span className="text-[10px] font-semibold uppercase tracking-wider">Plano</span>
+                </div>
+              ) : isFreeAppointment ? (
+                <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-100 text-emerald-600">
+                  <Gift className="w-3 h-3" />
+                  <span className="text-[10px] font-semibold uppercase tracking-wider">Grátis</span>
+                </div>
+              ) : appointment.preco ? (
+                <div className="flex items-center gap-2">
+                  <span className="text-[13px] font-medium text-neutral-600 tabular-nums">
+                    R$ {appointment.preco.toFixed(2).replace('.', ',')}
+                  </span>
+                  {isPaid && (
+                    <span className="text-[9px] text-emerald-600 font-semibold uppercase tracking-wider bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-full">
+                      Pago
+                    </span>
+                  )}
+                </div>
+              ) : null}
+            </div>
+          </div>
+
+          {/* Shop + Barber text (apenas texto por escrito, minimalista) */}
+          <p className="text-[12px] text-neutral-400 font-normal">
+            <span>{shopName}</span>
+            {appointment.barbeiro?.apelido && (
+              <span> • {appointment.barbeiro.apelido}</span>
+            )}
+          </p>
         </div>
 
         {/* Action sections */}
@@ -241,15 +220,15 @@ export function AppointmentCardPremium({
           <div className="px-4 pb-4">
             {/* Reschedule banner */}
             {rescheduleRequested && !isCancelled && (
-              <div className="mt-1 p-2.5 rounded-lg bg-destructive/5 border border-destructive/10">
-                <div className="flex items-start gap-1.5">
-                  <AlertCircle className="w-3.5 h-3.5 text-destructive/60 mt-0.5 flex-shrink-0" />
+              <div className="mt-1 p-3 rounded-2xl bg-red-50/50 border border-red-100">
+                <div className="flex items-start gap-2">
+                  <AlertCircle className="w-3.5 h-3.5 text-red-500 mt-0.5 flex-shrink-0" />
                   <div className="flex-1">
-                    <p className="text-[11px] font-semibold text-destructive/70 mb-0.5">
+                    <p className="text-[11px] font-semibold text-red-600 mb-0.5">
                       Remarcação Solicitada
                     </p>
                     {appointment.motivo_remarcacao && (
-                      <p className="text-[10px] text-muted-foreground/50">
+                      <p className="text-[10px] text-neutral-500">
                         {appointment.motivo_remarcacao}
                       </p>
                     )}
@@ -258,7 +237,7 @@ export function AppointmentCardPremium({
                 <Button
                   onClick={() => setRescheduleModalOpen(true)}
                   size="sm"
-                  className="w-full mt-2 h-8 text-[11px]"
+                  className="w-full mt-2.5 h-9 text-[11px] rounded-xl bg-neutral-900 text-white hover:bg-neutral-800 font-medium"
                 >
                   <Calendar className="w-3 h-3 mr-1.5" />
                   Remarcar
@@ -266,15 +245,14 @@ export function AppointmentCardPremium({
               </div>
             )}
 
-
             {/* Actions */}
             {canCancel && !rescheduleRequested && (
-              <div className="flex gap-2 mt-1">
+              <div className="flex gap-2 pt-1">
                 <Button
                   onClick={() => setRescheduleModalOpen(true)}
                   size="sm"
                   variant="outline"
-                  className="flex-1 h-8 text-[11px] rounded-lg border-border/40"
+                  className="flex-1 h-9 text-[11px] font-medium rounded-xl border-neutral-200 bg-white/70 hover:bg-white text-neutral-700 shadow-none"
                 >
                   Remarcar
                 </Button>
@@ -282,7 +260,7 @@ export function AppointmentCardPremium({
                   onClick={() => setCancelModalOpen(true)}
                   size="sm"
                   variant="outline"
-                  className="flex-1 h-8 text-[11px] rounded-lg border-destructive/30 text-destructive hover:bg-destructive hover:text-destructive-foreground transition-colors"
+                  className="flex-1 h-9 text-[11px] font-medium rounded-xl border-red-200/60 bg-red-50/40 hover:bg-red-50 text-red-600 hover:text-red-700 shadow-none transition-colors"
                 >
                   Cancelar
                 </Button>

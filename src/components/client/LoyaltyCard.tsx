@@ -17,15 +17,14 @@ function ProgressStep({ filled, index }: { filled: boolean; index: number }) {
       className="flex-1 flex justify-center"
     >
       <div
-        className={`w-7 h-7 rounded-full flex items-center justify-center transition-all duration-300 ${
+        className={`w-7 h-7 sm:w-9 sm:h-9 rounded-full flex items-center justify-center transition-all duration-300 ${
           filled
-            ? "bg-primary"
-            : "bg-muted/50 border border-border"
+            ? "bg-neutral-900 shadow-sm scale-110"
+            : "bg-neutral-100 border border-neutral-200"
         }`}
-        style={filled ? { boxShadow: "0 0 8px hsl(var(--primary) / 0.25)" } : undefined}
       >
-        <Scissors className={`w-3 h-3 transition-colors ${
-          filled ? "text-primary-foreground" : "text-muted-foreground/40"
+        <Scissors className={`w-3 h-3 sm:w-4 sm:h-4 transition-colors ${
+          filled ? "text-white" : "text-neutral-400"
         }`} />
       </div>
     </motion.div>
@@ -35,7 +34,6 @@ function ProgressStep({ filled, index }: { filled: boolean; index: number }) {
 export function LoyaltyCard({ points, redemptions, pontosNecessarios = 8, onViewDetails }: LoyaltyCardProps) {
   // Se os pontos forem exatamente o necessário, mostramos todos preenchidos
   const currentCycleProgress = points === pontosNecessarios ? pontosNecessarios : (points % pontosNecessarios);
-  const cutsUntilFree = Math.max(0, pontosNecessarios - currentCycleProgress);
   const steps = Array.from({ length: pontosNecessarios }, (_, i) => i < currentCycleProgress);
   const progressPercent = Math.min(100, (currentCycleProgress / pontosNecessarios) * 100);
 
@@ -44,72 +42,47 @@ export function LoyaltyCard({ points, redemptions, pontosNecessarios = 8, onView
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35, ease: "easeOut" }}
-      className="relative rounded-xl border border-border bg-card"
-      style={{ boxShadow: "var(--shadow-card)" }}
+      className="relative rounded-2xl bg-white shadow-[0_2px_12px_rgba(0,0,0,0.04)] border border-neutral-200/60 overflow-hidden"
     >
-      <div className="p-4">
-        {/* Header */}
-        <div className="flex items-center justify-between gap-3 mb-3.5">
-          <div className="min-w-0 flex-1">
-            <p className="text-[8px] font-semibold text-muted-foreground/60 uppercase tracking-[0.2em] mb-0.5 truncate">
-              Fidelidade
-            </p>
-            <p className="text-foreground font-medium text-[13px] tracking-tight truncate">
-              {pontosNecessarios} cortes → 1 grátis
-            </p>
-          </div>
-
+      <button
+        onClick={onViewDetails}
+        className="w-full text-left p-5 sm:p-6 active:scale-[0.98] transition-transform"
+      >
+        <div className="flex items-center justify-between mb-4">
+          <span className="text-[12px] font-medium tracking-widest uppercase text-neutral-900">
+            Fidelidade
+          </span>
           {redemptions > 0 && (
-            <div className="shrink-0 px-2 py-0.5 rounded-md bg-primary/10 border border-primary/20">
-              <span className="text-primary text-[9px] font-bold tabular-nums">
-                {redemptions}x
+            <div className="px-2 py-0.5 rounded-md bg-emerald-500/15 border border-emerald-500/20 backdrop-blur-md">
+              <span className="text-emerald-700 text-[10px] font-medium tabular-nums">
+                {redemptions}x Disponível
               </span>
             </div>
           )}
         </div>
 
         {/* Progress Icons */}
-        <div className="flex items-center gap-1 mb-3">
+        <div className="flex items-center justify-between gap-0.5 sm:gap-1 mb-5">
           {steps.map((filled, index) => (
             <ProgressStep key={index} filled={filled} index={index} />
           ))}
         </div>
 
-        {/* Progress bar */}
-        <div className="mb-3">
-          <div className="h-[3px] rounded-full bg-muted overflow-hidden">
+        {/* Progress bar and text */}
+        <div className="flex items-center gap-3">
+          <div className="h-[6px] flex-1 rounded-full bg-neutral-100 overflow-hidden">
             <motion.div
               initial={{ width: 0 }}
               animate={{ width: `${progressPercent}%` }}
               transition={{ delay: 0.25, duration: 0.5, ease: "easeOut" }}
-              className="h-full rounded-full bg-primary"
+              className="h-full rounded-full bg-neutral-900"
             />
           </div>
+          <span className="text-[11px] font-medium text-neutral-600 whitespace-nowrap">
+            {currentCycleProgress} / {pontosNecessarios}
+          </span>
         </div>
-
-        {/* Status + details */}
-        <div className="flex items-center justify-between">
-          <p className="text-[11px] text-muted-foreground">
-            {cutsUntilFree === 0 ? (
-              <span className="text-primary font-semibold">Resgate disponível</span>
-            ) : (
-              <>
-                Faltam{" "}
-                <span className="text-foreground font-semibold tabular-nums">{cutsUntilFree}</span>
-                {" "}corte{cutsUntilFree > 1 ? "s" : ""}
-              </>
-            )}
-          </p>
-
-          <button
-            onClick={onViewDetails}
-            className="flex items-center gap-0.5 text-[10px] text-muted-foreground/60 hover:text-muted-foreground transition-colors group active:scale-95"
-          >
-            <span>Detalhes</span>
-            <ChevronRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
-          </button>
-        </div>
-      </div>
+      </button>
     </motion.div>
   );
 }

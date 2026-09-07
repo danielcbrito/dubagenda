@@ -9,7 +9,7 @@ export function StepIndicator({ currentStep, totalSteps, title, subtitle }: Step
   return (
     <div className="mb-8 text-center">
       <p className="text-zinc-400 text-sm mb-2">Etapa {currentStep} de {totalSteps}</p>
-      <h2 className="text-3xl font-bold text-white mb-3">
+      <h2 className="text-3xl font-medium text-white mb-3">
         {title}
       </h2>
       {subtitle && (

@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Search, SearchX, X, Map as MapIcon, Satellite, Locate } from "lucide-react";
+import { Search, SearchX, X, Map as MapIcon, Satellite, Locate, ArrowLeft, List, MapPin, SlidersHorizontal } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -21,7 +21,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { DiscoverMap } from "@/components/discover/DiscoverMap";
 import { DiscoverUnitCard } from "@/components/discover/DiscoverUnitCard";
-import { BottomSheet, SNAP_MID } from "@/components/discover/BottomSheet";
+import { BottomSheet, SNAP_MID, SNAP_FULL, SNAP_PEEK } from "@/components/discover/BottomSheet";
 import { getCache, setCache } from "@/utils/cache";
 import { getVerifiedAuthUser } from "@/utils/authSession";
 import type L from "leaflet";

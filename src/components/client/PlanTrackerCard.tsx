@@ -47,27 +47,27 @@ export function PlanTrackerCard({
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, ease: "easeOut" }}
-      className="rounded-2xl border border-border/50 bg-card overflow-hidden"
+      className="rounded-[24px] bg-white shadow-[0_2px_12px_rgba(0,0,0,0.03)] border border-neutral-100 overflow-hidden"
     >
-      <div className="p-4">
+      <div className="p-5">
         {/* Cash pending — subtle inline notice */}
         {cashPending && (
-          <div className="flex items-center gap-2 mb-3 px-3 py-2 rounded-lg bg-amber-500/8 border border-amber-500/15">
+          <div className="flex items-center gap-2 mb-4 px-3 py-2 rounded-xl bg-amber-50 border border-amber-100">
             <div className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />
-            <p className="text-[11px] text-muted-foreground">
+            <p className="text-[11px] text-amber-700 font-medium">
               Pagamento pendente na barbearia
             </p>
           </div>
         )}
 
         {/* Top row: Plan name + remaining badge */}
-        <div className="flex items-start justify-between mb-4">
+        <div className="flex items-start justify-between mb-5">
           <div className="min-w-0">
-            <h3 className="text-sm font-semibold text-foreground truncate">
+            <h3 className="text-[15px] font-medium text-neutral-900 truncate tracking-tight">
               {planName}
             </h3>
             {servicoNome && (
-              <p className="text-[11px] text-muted-foreground/60 mt-0.5 truncate">
+              <p className="text-[12px] text-neutral-500 mt-0.5 truncate">
                 {servicoNome}
               </p>
             )}
@@ -75,10 +75,10 @@ export function PlanTrackerCard({
 
           <div
             className={cn(
-              "px-2 py-0.5 rounded-md text-[11px] font-bold tabular-nums shrink-0 ml-3",
+              "px-2.5 py-1 rounded-lg text-[11px] font-medium tabular-nums shrink-0 ml-3 border",
               remaining > 0
-                ? "bg-emerald-500/10 text-emerald-400"
-                : "bg-destructive/10 text-destructive"
+                ? "bg-emerald-50 text-emerald-600 border-emerald-100"
+                : "bg-red-50 text-red-600 border-red-100"
             )}
           >
             {`${used}/${totalAppointments}`}
@@ -86,15 +86,15 @@ export function PlanTrackerCard({
         </div>
 
         {/* Clean progress bar */}
-        <div className="mb-3">
-          <div className="w-full h-1.5 rounded-full bg-muted-foreground/10 overflow-hidden">
+        <div className="mb-4">
+          <div className="w-full h-1.5 rounded-full bg-neutral-100 overflow-hidden">
             <motion.div
               initial={{ width: 0 }}
               animate={{ width: `${progress}%` }}
               transition={{ duration: 0.6, ease: "easeOut", delay: 0.15 }}
               className={cn(
                 "h-full rounded-full",
-                canRenew ? "bg-destructive" : "bg-emerald-400"
+                canRenew ? "bg-red-500" : "bg-neutral-900"
               )}
             />
           </div>
@@ -102,19 +102,19 @@ export function PlanTrackerCard({
 
         {/* Bottom info row */}
         <div className="flex items-center justify-between">
-          <p className="text-[11px] text-muted-foreground tabular-nums">
+          <p className="text-[12px] text-neutral-500 tabular-nums">
             {canRenew ? "Plano esgotado" : `Renova em ${formattedDate}`}
             {diasRestantes !== undefined && diasRestantes > 0 && !canRenew && (
-              <span className="text-muted-foreground/50"> · {diasRestantes}d</span>
+              <span className="text-neutral-400"> · {diasRestantes}d</span>
             )}
           </p>
 
           <button
             onClick={onViewDetails}
-            className="flex items-center gap-0.5 text-[11px] text-muted-foreground hover:text-foreground transition-colors group"
+            className="flex items-center gap-1 text-[11px] font-medium text-neutral-400 hover:text-neutral-900 transition-colors group"
           >
             <span>Detalhes</span>
-            <ChevronRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
+            <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
           </button>
         </div>
 

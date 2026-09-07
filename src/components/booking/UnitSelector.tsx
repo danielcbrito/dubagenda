@@ -109,19 +109,19 @@ export function UnitSelector({
                 <div className="flex items-center gap-2">
                   <span
                     className={cn(
-                      "text-[14px] font-semibold truncate",
+                      "text-[14px] font-medium truncate",
                       isSelected ? "text-foreground" : "text-foreground/80"
                     )}
                   >
                     {unit.nome}
                   </span>
                   {unit.is_sede && (
-                    <span className="text-[8px] font-bold uppercase tracking-wider bg-primary/10 text-primary px-1.5 py-0.5 rounded flex-shrink-0">
+                    <span className="text-[9px] font-medium bg-primary/10 text-primary px-1.5 py-0.5 rounded flex-shrink-0">
                       Sede
                     </span>
                   )}
                   {isPreferred && (
-                    <span className="text-[8px] font-bold uppercase tracking-wider bg-secondary/20 text-secondary-foreground px-1.5 py-0.5 rounded flex-shrink-0">
+                    <span className="text-[9px] font-medium bg-secondary/20 text-secondary-foreground px-1.5 py-0.5 rounded flex-shrink-0">
                       Fixa
                     </span>
                   )}

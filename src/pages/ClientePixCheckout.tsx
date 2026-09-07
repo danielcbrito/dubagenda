@@ -1,7 +1,8 @@
 import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Copy, Check, Loader2, AlertCircle, CheckCircle2, ChevronLeft } from "lucide-react";
+import { Copy, Check, Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
+import { BackArrow } from "@/components/ui/back-arrow";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
@@ -229,8 +230,8 @@ const ClientePixCheckout = () => {
   // Loading
   if (!pixData) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="w-5 h-5 text-muted-foreground animate-spin" />
+      <div className="min-h-screen bg-[#FBFBFA] flex items-center justify-center">
+        <Loader2 className="w-5 h-5 text-neutral-400 animate-spin" />
       </div>
     );
   }
@@ -238,36 +239,36 @@ const ClientePixCheckout = () => {
   // Pagamento confirmado
   if (paid) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center px-6">
+      <div className="min-h-screen bg-[#FBFBFA] flex items-center justify-center px-6">
         <motion.div
-          initial={{ scale: 0.8, opacity: 0 }}
+          initial={{ scale: 0.9, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={{ type: "spring", stiffness: 200, damping: 20 }}
-          className="text-center space-y-5 w-full max-w-xs"
+          className="text-center space-y-5 w-full max-w-xs rounded-[28px] bg-white border border-neutral-200/80 p-7 shadow-[0_4px_24px_rgba(0,0,0,0.04)]"
         >
-          <div className="relative w-20 h-20 mx-auto">
+          <div className="relative w-16 h-16 mx-auto">
             <motion.div
               className="absolute inset-0 rounded-full bg-emerald-500/20"
-              animate={{ scale: [1, 1.6], opacity: [0.5, 0] }}
+              animate={{ scale: [1, 1.5], opacity: [0.5, 0] }}
               transition={{ duration: 1.5, repeat: Infinity }}
             />
-            <div className="relative w-20 h-20 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
-              <CheckCircle2 className="w-9 h-9 text-emerald-500" />
+            <div className="relative w-16 h-16 rounded-full bg-emerald-50 border border-emerald-200 flex items-center justify-center">
+              <CheckCircle2 className="w-8 h-8 text-emerald-600" />
             </div>
           </div>
           <div>
-            <h2 className="text-lg font-bold text-foreground">Pagamento confirmado</h2>
-            <p className="text-sm text-muted-foreground mt-1">
-              Seu pagamento foi registrado com sucesso.
+            <h2 className="text-[20px] font-semibold text-neutral-900 tracking-tight">Pagamento confirmado</h2>
+            <p className="text-[13px] text-neutral-500 mt-1">
+              Seu agendamento foi confirmado com sucesso.
             </p>
           </div>
-          <div className="w-full h-1 bg-muted/50 rounded-full overflow-hidden">
+          <div className="w-full h-1.5 bg-neutral-100 rounded-full overflow-hidden">
             <motion.div
               className="h-full bg-emerald-500 rounded-full"
               style={{ width: `${progressPct}%` }}
             />
           </div>
-          <p className="text-xs text-muted-foreground">Redirecionando...</p>
+          <p className="text-[12px] text-neutral-400">Redirecionando...</p>
         </motion.div>
       </div>
     );
@@ -281,30 +282,30 @@ const ClientePixCheckout = () => {
     : "";
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      {/* Header */}
-      <header className="flex-shrink-0 px-4 pt-[max(env(safe-area-inset-top),0.75rem)] pb-3">
-        <div className="max-w-md mx-auto grid grid-cols-[auto_1fr_auto] items-center gap-2">
-          <button
-            onClick={goBack}
-            className="w-8 h-8 -ml-1 flex items-center justify-center text-primary active:scale-95 transition-transform"
-            aria-label="Voltar"
-          >
-            <ChevronLeft className="w-6 h-6" strokeWidth={2.5} />
-          </button>
-          <h1 className="text-center text-[13px] font-bold tracking-[0.18em] text-foreground uppercase">
-            Pagamento
-          </h1>
-          <button
-            onClick={goBack}
-            className="text-primary text-sm font-medium px-1 active:opacity-70 transition-opacity"
-          >
-            Ajuda
-          </button>
-        </div>
-      </header>
+    <div className="min-h-screen w-full bg-[#FBFBFA] flex flex-col relative">
+      {/* Header fixo — Seta + Ajuda (Exata mesma cor sólida do fundo #FBFBFA) */}
+      <div className="fixed top-0 left-0 right-0 z-50 bg-[#FBFBFA]">
+        <div className="max-w-2xl mx-auto px-4 pt-[max(env(safe-area-inset-top),0.75rem)] pb-3">
+          <div className="flex items-center justify-between">
+            <button
+              onClick={goBack}
+              aria-label="Voltar"
+              className="w-10 h-10 rounded-full bg-white border border-neutral-200/70 shadow-[0_2px_8px_rgba(0,0,0,0.04)] flex items-center justify-center text-neutral-900 active:scale-90 transition-transform cursor-pointer"
+            >
+              <BackArrow size={20} strokeWidth={2.2} />
+            </button>
 
-      <div className="flex-1 overflow-y-auto pb-32">
+            <button
+              onClick={goBack}
+              className="text-neutral-600 text-[13px] font-medium px-4 h-10 rounded-full bg-white border border-neutral-200/70 shadow-[0_2px_8px_rgba(0,0,0,0.04)] flex items-center active:scale-95 transition-transform"
+            >
+              Precisa de ajuda?
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex-1 overflow-y-auto pb-32 pt-20">
         <div className="max-w-md mx-auto w-full px-5">
           <AnimatePresence mode="wait">
             {expired ? (
@@ -313,20 +314,20 @@ const ClientePixCheckout = () => {
                 initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0 }}
-                className="text-center space-y-5 mt-16"
+                className="text-center space-y-5 mt-8"
               >
-                <div className="w-14 h-14 rounded-full bg-destructive/10 border border-destructive/20 flex items-center justify-center mx-auto">
-                  <AlertCircle className="w-6 h-6 text-destructive" />
+                <div className="w-16 h-16 rounded-full bg-red-50 border border-red-200 flex items-center justify-center mx-auto">
+                  <AlertCircle className="w-8 h-8 text-red-500" />
                 </div>
                 <div>
-                  <h2 className="text-base font-bold text-foreground">Tempo expirado</h2>
-                  <p className="text-sm text-muted-foreground mt-1">
+                  <h2 className="text-[24px] font-semibold text-neutral-900 tracking-tight">Tempo esgotado</h2>
+                  <p className="text-[13px] text-neutral-500 mt-1">
                     O tempo para pagamento se encerrou.
                   </p>
                 </div>
                 <button
                   onClick={handleCancel}
-                  className="w-full py-3 bg-primary text-primary-foreground font-semibold text-sm rounded-xl hover:bg-primary/90 transition-all active:scale-[0.98]"
+                  className="w-full flex items-center justify-center gap-2 h-[54px] rounded-full font-medium text-[15px] tracking-wide text-white bg-neutral-900 active:scale-[0.98] transition-all duration-300 shadow-[0_8px_30px_rgba(0,0,0,0.12)] mt-8"
                 >
                   Tentar novamente
                 </button>
@@ -337,113 +338,116 @@ const ClientePixCheckout = () => {
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0 }}
-                className="w-full"
+                className="w-full flex flex-col items-center"
               >
-                {/* Illustration — mãos segurando celular PIX + relógio */}
-                <div className="flex justify-center pt-4 pb-6">
+                {/* Title */}
+                <div className="mb-2 pt-1 text-center">
+                  <h2 className="text-[24px] sm:text-[25px] font-semibold text-neutral-900 tracking-tight leading-tight font-sans">
+                    Aguardando Pagamento
+                  </h2>
+                  <p className="text-[13px] text-neutral-500 mt-1">
+                    Copie o código PIX abaixo para finalizar.
+                  </p>
+                </div>
+
+                {/* Illustration */}
+                <div className="flex justify-center pt-2 pb-5">
                   <img
                     src={pixWaitingAsset.url}
                     alt="Aguardando pagamento PIX"
-                    width={240}
-                    height={240}
+                    width={180}
+                    height={180}
                     loading="lazy"
-                    className="w-[240px] h-[240px] object-contain"
+                    className="w-[180px] h-[180px] object-contain drop-shadow-sm"
                   />
                 </div>
 
-                {/* Title */}
-                <h2 className="text-center text-[18px] font-medium text-foreground tracking-tight">
-                  Aguardando pagamento
-                </h2>
-                <p className="text-center text-[13px] text-muted-foreground mt-2 leading-snug px-3">
-                  Copie o código abaixo e utilize o Pix Copia e Cola no aplicativo que você vai fazer o pagamento:
-                </p>
-
-                {/* Código copia e cola */}
-                <button
-                  onClick={handleCopy}
-                  className="mt-5 w-full rounded-xl border border-dashed border-border bg-background px-4 py-4 flex items-center gap-3 active:scale-[0.99] transition-transform"
-                >
-                  <span className="flex-1 text-left text-[15px] font-bold text-foreground truncate font-mono">
-                    {codePreview}
-                  </span>
-                  {copied ? (
-                    <Check className="w-5 h-5 text-emerald-500 flex-shrink-0" />
-                  ) : (
-                    <Copy className="w-5 h-5 text-primary flex-shrink-0" />
-                  )}
-                </button>
-
-                {/* Timer — sério, minimalista, fonte menor */}
-                <div className="mt-6">
-                  <p className="text-[11px] text-muted-foreground tracking-tight">
+                {/* Timer (Vermelho) */}
+                <div className="flex flex-col items-center mb-6">
+                  <p className="text-[12px] font-medium text-neutral-500">
                     O tempo para você pagar acaba em:
                   </p>
-                  <p className="text-[22px] font-semibold text-foreground tabular-nums mt-1 leading-none">
+                  <p className="text-[32px] font-bold text-red-500 tabular-nums mt-0.5 leading-none tracking-tight">
                     {timeLeft}
                   </p>
-                  <div className="mt-2 h-[3px] w-full bg-muted rounded-full overflow-hidden">
+                  <div className="mt-2.5 h-1.5 w-[180px] bg-red-100/80 rounded-full overflow-hidden">
                     <div
-                      className="h-full bg-primary rounded-full transition-[width] duration-500 ease-linear"
+                      className="h-full bg-red-500 rounded-full transition-[width] duration-500 ease-linear"
                       style={{ width: `${timerPct}%` }}
                     />
                   </div>
                 </div>
 
-                {/* Recibo cinza com borda serrilhada superior */}
-                <div className="mt-7 relative">
-                  <div
-                    className="h-2.5 w-full"
-                    style={{
-                      backgroundColor: "hsl(var(--muted))",
-                      WebkitMaskImage:
-                        "radial-gradient(circle at 6px 0, transparent 5px, black 5.5px)",
-                      maskImage:
-                        "radial-gradient(circle at 6px 0, transparent 5px, black 5.5px)",
-                      WebkitMaskSize: "12px 10px",
-                      maskSize: "12px 10px",
-                      WebkitMaskRepeat: "repeat-x",
-                      maskRepeat: "repeat-x",
-                    }}
-                  />
-                  <div className="bg-muted px-4 py-4 rounded-b-xl">
-                    <div className="flex items-start gap-3">
-                      <img
-                        src={logo}
-                        alt="Barbearia"
-                        className="w-11 h-11 rounded-full object-cover flex-shrink-0"
-                      />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[15px] font-semibold text-foreground truncate">
-                          {pixData.barberName ? `Barbeiro ${pixData.barberName}` : "Barbearia DUB"}
-                        </p>
-                        <p className="text-[13px] text-muted-foreground mt-0.5 truncate">
-                          {pixData.serviceName ?? "Agendamento"}
-                          {pixData.bookingDate && pixData.bookingTime
-                            ? ` • ${pixData.bookingDate} ${pixData.bookingTime}`
-                            : ""}
-                        </p>
-                      </div>
+                {/* Código copia e cola */}
+                <div className="w-full mb-4">
+                  <p className="text-[13px] font-medium text-neutral-500 mb-2 px-1">
+                    Código PIX Copia e Cola
+                  </p>
+                  <button
+                    onClick={handleCopy}
+                    className="w-full rounded-[20px] bg-white border border-neutral-200/80 shadow-[0_2px_12px_rgba(0,0,0,0.03)] p-4 flex items-center justify-between gap-3 active:scale-[0.99] transition-transform text-left"
+                  >
+                    <span className="flex-1 text-[13px] font-medium text-neutral-700 truncate font-mono">
+                      {codePreview}
+                    </span>
+                    <div className={cn(
+                      "flex-shrink-0 px-3.5 py-1.5 rounded-full text-[12px] font-semibold flex items-center gap-1.5 transition-colors",
+                      copied ? "bg-emerald-50 text-emerald-600 border border-emerald-200" : "bg-neutral-100 text-neutral-800"
+                    )}>
+                      {copied ? (
+                        <>
+                          <Check className="w-3.5 h-3.5" />
+                          Copiado!
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-3.5 h-3.5" />
+                          Copiar
+                        </>
+                      )}
                     </div>
-                    <div className="h-px bg-border/50 my-3" />
+                  </button>
+                </div>
+
+                {/* Resumo do Pedido (Estilo Order Summary da referência) */}
+                <div className="w-full mb-6">
+                  <p className="text-[13px] font-medium text-neutral-500 mb-2 px-1">
+                    Resumo do Pedido
+                  </p>
+                  <div className="rounded-[20px] bg-white border border-neutral-200/80 shadow-[0_2px_12px_rgba(0,0,0,0.03)] p-4 space-y-3">
+                    <div className="flex items-center justify-between text-[13px]">
+                      <span className="text-neutral-500">Profissional</span>
+                      <span className="text-neutral-900 font-medium">{pixData.barberName || "Barbearia"}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-[13px]">
+                      <span className="text-neutral-500">Serviço</span>
+                      <span className="text-neutral-900 font-medium">{pixData.serviceName ?? "Agendamento"}</span>
+                    </div>
+                    {pixData.bookingDate && pixData.bookingTime && (
+                      <div className="flex items-center justify-between text-[13px]">
+                        <span className="text-neutral-500">Data e Horário</span>
+                        <span className="text-neutral-900 font-medium">{pixData.bookingDate} às {pixData.bookingTime}</span>
+                      </div>
+                    )}
                     {pixData.serviceFee && pixData.serviceFee > 0 ? (
-                      <div className="flex items-center justify-between mb-1.5">
-                        <span className="text-[12px] text-muted-foreground">Taxa de serviço</span>
-                        <span className="text-[12px] text-muted-foreground tabular-nums">
+                      <div className="flex items-center justify-between text-[13px]">
+                        <span className="text-neutral-500">Taxa de serviço</span>
+                        <span className="text-neutral-900 font-medium tabular-nums">
                           R$ {pixData.serviceFee.toFixed(2).replace(".", ",")}
                         </span>
                       </div>
                     ) : null}
-                    <div className="flex items-center justify-between">
-                      <span className="text-[14px] text-foreground">Total</span>
-                      <span className="text-[15px] font-bold text-foreground tabular-nums">
+
+                    <div className="border-b border-dashed border-neutral-200 my-2" />
+
+                    <div className="flex items-center justify-between pt-0.5">
+                      <span className="text-[14px] font-medium text-neutral-900">Total a pagar</span>
+                      <span className="text-[18px] font-bold text-neutral-900 tabular-nums">
                         R$ {pixData.value.toFixed(2).replace(".", ",")}
                       </span>
                     </div>
                   </div>
                 </div>
-
-
 
               </motion.div>
             )}
@@ -451,21 +455,27 @@ const ClientePixCheckout = () => {
         </div>
       </div>
 
-      {/* Botão fixo inferior */}
+      {/* Botão fixo inferior com fade suave */}
       {!expired && (
-        <div className="fixed bottom-0 left-0 right-0 px-4 pt-3 pb-[max(env(safe-area-inset-bottom),1rem)] bg-gradient-to-t from-background via-background to-transparent">
-          <div className="max-w-md mx-auto">
-            <button
-              onClick={handleCopy}
-              className={cn(
-                "w-full h-12 rounded-md font-semibold text-[15px] transition-all active:scale-[0.98]",
-                copied
-                  ? "bg-emerald-500 text-white"
-                  : "bg-primary text-primary-foreground hover:bg-primary/90"
-              )}
-            >
-              {copied ? "Código copiado!" : "Copiar código"}
-            </button>
+        <div className="fixed bottom-0 left-0 right-0 z-40">
+          <div 
+            className="h-16 pointer-events-none"
+            style={{ background: "linear-gradient(to bottom, transparent, #FBFBFA)" }}
+          />
+          <div className="bg-[#FBFBFA] px-5 pb-safe">
+            <div className="pt-2 pb-5 max-w-md mx-auto">
+              <button
+                onClick={handleCopy}
+                className={cn(
+                  "w-full flex items-center justify-center gap-2 h-[54px] rounded-full font-medium text-[15px] tracking-wide text-white active:scale-[0.98] transition-all duration-300 shadow-[0_8px_30px_rgba(0,0,0,0.12)]",
+                  copied
+                    ? "bg-emerald-600"
+                    : "bg-neutral-900"
+                )}
+              >
+                {copied ? "Código copiado!" : "Copiar código PIX"}
+              </button>
+            </div>
           </div>
         </div>
       )}

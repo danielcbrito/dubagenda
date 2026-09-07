@@ -17,8 +17,8 @@ export function TimeSlot({ time, isSelected, isDisabled, onSelect }: TimeSlotPro
         "active:scale-[0.97]",
         isDisabled && "opacity-35 cursor-not-allowed",
         isSelected
-          ? "bg-primary text-primary-foreground border-primary shadow-[0_2px_12px_hsl(var(--primary)/0.2)]"
-          : "bg-card border-border/40 text-foreground hover:border-border"
+          ? "bg-neutral-900 text-white border-transparent shadow-[0_4px_12px_rgba(0,0,0,0.1)]"
+          : "bg-white border border-neutral-200/80 text-neutral-800 shadow-xs hover:border-neutral-300 active:bg-neutral-50"
       )}
     >
       {time}

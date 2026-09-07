@@ -2,15 +2,18 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { motion } from "framer-motion";
 import { NotificationBellPremium } from "./NotificationBellPremium";
+import { useNavigate } from "react-router-dom";
 
 interface ClientHeaderProps {
   profileName?: string;
   email?: string;
   userId?: string;
   realtimeConnected?: boolean;
+  shopName?: string;
 }
 
-export function ClientHeader({ profileName, userId }: ClientHeaderProps) {
+export function ClientHeader({ profileName, userId, shopName }: ClientHeaderProps) {
+  const navigate = useNavigate();
   const firstName = profileName ? String(profileName).split(" ")[0] : null;
   const initials = firstName ? firstName.charAt(0).toUpperCase() : "?";
   const today = new Date();
@@ -22,32 +25,33 @@ export function ClientHeader({ profileName, userId }: ClientHeaderProps) {
       initial={{ opacity: 0, y: -4 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, ease: "easeOut" }}
-      className="flex items-center justify-between"
+      className="flex flex-col w-full gap-2"
     >
-      <div className="flex-1 min-w-0">
-        <p className="text-[9px] font-medium text-muted-foreground/60 uppercase tracking-[0.18em] mb-0.5 truncate">
-          {dayOfWeek} · {formattedDate}
-        </p>
-        <h1 className="text-[15px] font-semibold text-foreground font-display tracking-tight leading-snug truncate">
+      {/* Top row: Date */}
+      <p className="text-[9px] font-medium text-neutral-400 uppercase tracking-[0.15em] truncate">
+        {dayOfWeek} · {formattedDate}
+      </p>
+
+      {/* Greeting Title + Shop pill on the same line */}
+      <div className="flex items-center justify-between w-full">
+        <h1 className="text-[22px] font-medium text-[#18181B] tracking-tight leading-none truncate pr-2">
           {firstName ? `Olá, ${firstName}` : "Olá"}
         </h1>
-      </div>
-
-      <div className="flex items-center gap-2 flex-shrink-0">
-        {userId && (
-          <NotificationBellPremium userId={userId} />
+        
+        {shopName && (
+          <div className="flex items-center gap-1.5 flex-shrink-0 bg-white shadow-sm px-3 py-1.5 rounded-full border border-neutral-200/60">
+            <span className="text-[11px] font-medium text-neutral-600 truncate max-w-[100px]">
+              {shopName}
+            </span>
+            <span className="text-[10px] text-neutral-300">•</span>
+            <button 
+              onClick={() => navigate('/escolher-barbearia')}
+              className="text-[11px] font-medium text-red-500 hover:underline active:opacity-70 transition-all flex-shrink-0"
+            >
+              Trocar
+            </button>
+          </div>
         )}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.08, duration: 0.2 }}
-          className="w-8 h-8 rounded-full flex items-center justify-center border border-border"
-          style={{ background: "hsl(var(--card))" }}
-        >
-          <span className="text-foreground/80 font-semibold text-[11px]">
-            {initials}
-          </span>
-        </motion.div>
       </div>
     </motion.div>
   );

@@ -16,13 +16,13 @@ import { PointsDetailModal } from "@/components/PointsDetailModal";
 import { PendingPaymentCard } from "@/components/PendingPaymentCard";
 import { MyPlansSheet } from "@/components/MyPlansSheet";
 import { SubscribePlanSheet } from "@/components/SubscribePlanSheet";
-import { MyProfileSheet } from "@/components/MyProfileSheet";
 import { WalletSheet } from "@/components/WalletSheet";
 import { AnnouncementDialog } from "@/components/AnnouncementDialog";
 import { CancelledAppointmentBanner } from "@/components/CancelledAppointmentBanner";
 import { AnnouncementModal } from "@/components/AnnouncementModal";
 
-import { AppointmentHistorySheet } from "@/components/AppointmentHistorySheet";
+
+
 
 // Premium components
 import { ClientHeader } from "@/components/client/ClientHeader";
@@ -434,12 +434,12 @@ const Cliente = () => {
   const shopBarbers = (shopQueryData?.shopBarbers ?? []).filter(b => !blockedBarberIds.includes(b.id));
 
   // ─── Remaining manual state ───
-  const [pointsModalOpen, setPointsModalOpen] = useState(false);
+      const [pointsModalOpen, setPointsModalOpen] = useState(false);
   const [plansSheetOpen, setPlansSheetOpen] = useState(false);
   const [subscribeSheetOpen, setSubscribeSheetOpen] = useState(false);
-  const [profileSheetOpen, setProfileSheetOpen] = useState(false);
+
   const [walletSheetOpen, setWalletSheetOpen] = useState(false);
-  const [historySheetOpen, setHistorySheetOpen] = useState(false);
+
   const [renewalDrawerOpen, setRenewalDrawerOpen] = useState(false);
   const [barberProfileOpen, setBarberProfileOpen] = useState<string | null>(null);
   const [reviewModalData, setReviewModalData] = useState<{
@@ -988,43 +988,26 @@ const Cliente = () => {
       <div className="flex-1 min-h-0 relative">
         <div
           className="absolute top-0 left-0 right-0 h-4 z-10 pointer-events-none"
-          style={{ background: "linear-gradient(to bottom, hsl(var(--background)), transparent)" }}
+          style={{ background: "linear-gradient(to bottom, #FBFBFA, transparent)" }}
         />
 
         <div className="h-full overflow-y-auto overscroll-contain touch-pan-y scrollbar-hide [webkit-overflow-scrolling:touch]">
-          <div className="px-5 pt-6 pb-6">
+          <div className="px-5 pt-[max(calc(env(safe-area-inset-top,0px)+1rem),2.5rem)] pb-36">
 
             {/* Header */}
-            <div className="mb-5">
+            <div className="mb-4">
               <ClientHeader
                 profileName={profile?.nome}
                 email={user?.email}
                 userId={user?.id}
                 realtimeConnected={realtimeConnected}
+                shopName={preferredShop?.nome}
               />
             </div>
 
-            {/* Barbershop Card or Onboarding */}
+            {/* Onboarding only if no shop is selected */}
             {!profileLoading && !!user && profileQueryData !== undefined && (
-              preferredShop ? (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="mb-5 flex items-center gap-2.5 px-1"
-                >
-                  <Store className="w-4 h-4 text-muted-foreground/40 flex-shrink-0" />
-                  <p className="text-[12px] text-muted-foreground/60 font-medium truncate flex-1">
-                    {preferredShop.nome}
-                  </p>
-                  <button
-                    onClick={() => navigate("/escolher-barbearia?mode=change")}
-                    className="text-[10px] text-primary font-semibold flex items-center gap-0.5 active:opacity-70 transition-opacity flex-shrink-0"
-                  >
-                    Trocar
-                    <ChevronRight className="w-3 h-3" />
-                  </button>
-                </motion.div>
-              ) : (
+              !preferredShop && (
                 <motion.div
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -1289,22 +1272,6 @@ const Cliente = () => {
         userId={user?.id}
       />
 
-      {/* My Profile Sheet */}
-      <MyProfileSheet
-        open={profileSheetOpen}
-        onOpenChange={setProfileSheetOpen}
-        userId={user?.id}
-        profile={profile}
-        onProfileUpdate={() => {
-          if (user) queryClient.invalidateQueries({ queryKey: ['cliente', 'profile', user.id] });
-        }}
-        credits={availableCredits}
-        points={points}
-        completedAppointments={completedAppointments}
-        redemptions={redemptions}
-        pontosNecessarios={pontosNecessarios}
-      />
-
       {/* Points Detail Modal */}
       {loyaltyEnabled && (
         <PointsDetailModal
@@ -1330,12 +1297,6 @@ const Cliente = () => {
       {/* Aviso de reajuste de valores */}
       
 
-      {/* History Sheet */}
-      <AppointmentHistorySheet
-        open={historySheetOpen}
-        onOpenChange={setHistorySheetOpen}
-        userId={user?.id}
-      />
 
       {/* Modal de Avaliação */}
       <BarberReviewModal

@@ -67,6 +67,13 @@ const AuthShell: React.FC<AuthShellProps> = ({
         <input type="password" autoComplete="current-password" tabIndex={-1} readOnly value="" />
       </div>
 
+      {/* Honeypot oculto — absorve detecção de autofill do Chrome Android,
+          impedindo a barra de sugestões de cartão/endereço no teclado. */}
+      <div aria-hidden="true" style={{ position: 'absolute', left: '-9999px', top: '-9999px', width: 0, height: 0, overflow: 'hidden', pointerEvents: 'none' }}>
+        <input type="text" autoComplete="username" tabIndex={-1} readOnly value="" />
+        <input type="password" autoComplete="current-password" tabIndex={-1} readOnly value="" />
+      </div>
+
       {/* Conteúdo principal (sem logo, 100% minimalista e focado) */}
       <div className="flex-1 min-h-0 flex flex-col px-6 pt-4 sm:pt-7 overflow-y-auto overscroll-contain">
         <AnimatePresence mode="wait">

@@ -147,6 +147,7 @@ const ClienteAgendar = () => {
   const [selectedTime, setSelectedTime] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState(1);
+  const [bookingSuccess, setBookingSuccess] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'pix' | 'wallet'>('cash');
   
 
@@ -454,7 +455,13 @@ const ClienteAgendar = () => {
         let tenantId: string | null = null;
         let userPreferredUnitId: string | null = null;
 
-        setProfileCpf(((profile as any)?.cpf || "").replace(/\D/g, "") || null);
+        const savedCpf = ((profile as any)?.cpf || "").replace(/\D/g, "");
+        if (savedCpf) {
+          setProfileCpf(savedCpf);
+          setCpfInput(formatCPF(savedCpf));
+        } else {
+          setProfileCpf(null);
+        }
 
         if (profile?.barbearia_preferida_id) {
           tenantId = profile.barbearia_preferida_id;
@@ -661,7 +668,7 @@ const ClienteAgendar = () => {
             sessionStorage.removeItem("isRescheduling");
             sessionStorage.removeItem("rescheduleAppointmentId");
             toast.success("Agendamento confirmado com sucesso!");
-            navigate("/cliente");
+            setBookingSuccess(true);
           } else {
             // Pagamento ainda pendente - mostrar mensagem e iniciar polling
             toast.info("Pagamento sendo processado. Aguarde a confirmação.");
@@ -1063,33 +1070,11 @@ const ClienteAgendar = () => {
       const monthStart = new Date(baseDate.getFullYear(), baseDate.getMonth(), 1);
       const monthEnd = new Date(baseDate.getFullYear(), baseDate.getMonth() + 1, 0);
       await loadClosedDates(monthStart, monthEnd);
-      refreshSlots();
     } catch (error) {
       console.error("[syncBookingData] Erro ao sincronizar dados:", error);
     }
-  }, [selectedBarber?.tenant_id, preferredShop?.id, selectedBarberId, selectedDate, isPlanFlow, loadClosedDates, refreshSlots]);
+  }, [selectedBarber?.tenant_id, preferredShop?.id, selectedBarberId, selectedDate, isPlanFlow, loadClosedDates]);
 
-  // ─── Canal Realtime: apenas agendamentos (conflitos de slot em tempo real) ───
-  useEffect(() => {
-    if (isInitializing) return;
-
-    const channel = supabase
-      .channel(`cliente-agendar-slots-${selectedBarberId ?? 'none'}`)
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'agendamentos',
-        ...(selectedBarberId ? { filter: `barbeiro_id=eq.${selectedBarberId}` } : {}),
-      }, () => {
-        // Outro cliente reservou/cancelou um slot → atualizar disponibilidade
-        refreshSlots();
-      })
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [isInitializing, selectedBarberId, refreshSlots]);
 
   // ─── Cupom pendente / obrigatório para este cliente neste tenant ───
   useEffect(() => {
@@ -1545,7 +1530,7 @@ const ClienteAgendar = () => {
         } else {
           toast.success("Agendamento criado! Pagamento debitado da carteira.");
         }
-        navigate("/cliente");
+        setBookingSuccess(true);
         return;
       }
 
@@ -1585,7 +1570,7 @@ const ClienteAgendar = () => {
       // Webhook de confirmação é enviado automaticamente pelo trigger do banco de dados
       
       toast.success("Agendamento criado! Pague na barbearia.");
-      navigate("/cliente");
+      setBookingSuccess(true);
     } catch (error: any) {
       console.error('Payment error:', error);
 
@@ -1692,7 +1677,7 @@ const ClienteAgendar = () => {
       // Webhook de confirmação é enviado automaticamente pelo trigger do banco de dados
 
       toast.success("Corte grátis resgatado com sucesso!");
-      navigate("/cliente");
+      setBookingSuccess(true);
     } catch (error: any) {
       console.error('Error creating appointment with redemption:', error);
       toast.error("Erro ao criar agendamento: " + (error.message || "Erro desconhecido"));
@@ -1789,7 +1774,7 @@ const ClienteAgendar = () => {
       setUseReferralCredit(false);
 
       toast.success("Corte grátis de indicação resgatado com sucesso!");
-      navigate("/cliente");
+      setBookingSuccess(true);
     } catch (error: any) {
       console.error('Error creating appointment with referral credit:', error);
       toast.error("Erro ao criar agendamento: " + (error.message || "Erro desconhecido"));
@@ -2004,7 +1989,7 @@ const ClienteAgendar = () => {
       // Webhook de confirmação é enviado automaticamente pelo trigger do banco de dados
 
       toast.success(`Agendamento criado! Usando seu ${activeSubscription.plano_nome}.`);
-      navigate("/cliente");
+      setBookingSuccess(true);
       } catch (error: any) {
       console.error('Error creating appointment with plan:', error);
 
@@ -2249,7 +2234,7 @@ const ClienteAgendar = () => {
       sessionStorage.removeItem('rescheduleAppointmentId');
 
       toast.success("Agendamento remarcado com sucesso!");
-      navigate("/cliente");
+      setBookingSuccess(true);
     } catch (error: any) {
       console.error("Error rescheduling:", error);
       toast.error("Erro ao remarcar: " + (error.message || "Erro desconhecido"));
@@ -2407,39 +2392,12 @@ const ClienteAgendar = () => {
   };
 
   const [profileCpf, setProfileCpf] = useState<string | null>(null);
-  const [showCpfDialog, setShowCpfDialog] = useState(false);
   const [cpfInput, setCpfInput] = useState("");
-  const [savingCpf, setSavingCpf] = useState(false);
-
-  const handleSaveCpf = async () => {
-    const digits = cpfInput.replace(/\D/g, "");
-    if (!validateCPF(digits)) {
-      toast.error("CPF inválido");
-      return;
-    }
-    setSavingCpf(true);
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Sessão expirada");
-      const { error } = await supabase.from("profiles").update({ cpf: digits }).eq("id", user.id);
-      if (error) throw error;
-      setProfileCpf(digits);
-      setShowCpfDialog(false);
-      setPaymentMethod('pix');
-    } catch {
-      toast.error("Não foi possível salvar seu CPF");
-    } finally {
-      setSavingCpf(false);
-    }
-  };
+  const [cpfError, setCpfError] = useState(false);
 
   /** Solicita o CPF apenas quando o cliente escolhe pagar via PIX. */
   const handleSelectPaymentMethod = (method: 'cash' | 'pix' | 'wallet') => {
-    if (method === 'pix' && !profileCpf) {
-      setCpfInput("");
-      setShowCpfDialog(true);
-      return;
-    }
+    setCpfError(false);
     // Se há corte grátis ativo, avisar (apenas na primeira troca) antes de mudar para método pago.
     if (useRedemption && canUseRedemption) {
       if (!loseWarningShownRef.current) {
@@ -2485,6 +2443,28 @@ const ClienteAgendar = () => {
       setLoseDialogContext('continue');
       setShowLoseRedemptionDialog(true);
       return;
+    }
+
+    const redemptionCoversAll = useRedemption && getTotalPrice() === 0;
+    const referralCoversAll = useReferralCredit && canUseReferralCredit && getTotalPrice() === 0;
+
+    if (paymentMethod === 'pix' && !redemptionCoversAll && !referralCoversAll) {
+      const digits = (cpfInput || "").replace(/\D/g, "");
+      if (digits.length !== 11 || !validateCPF(digits)) {
+        setCpfError(true);
+        toast.error("Informe um CPF válido para gerar o PIX.");
+        return;
+      }
+      
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user && digits !== profileCpf) {
+          await supabase.from("profiles").update({ cpf: digits }).eq("id", user.id);
+          setProfileCpf(digits);
+        }
+      } catch (err) {
+        console.error("Erro ao salvar CPF:", err);
+      }
     }
 
     if (paymentMethod === 'pix' || paymentMethod === 'card' || paymentMethod === 'cash') {
@@ -2578,6 +2558,14 @@ const ClienteAgendar = () => {
     exit: { opacity: 0, x: -20 }
   };
 
+  // Garante que o scroll sempre volte ao topo ao mudar de etapa, evitando títulos cortados/desaparecidos
+  useEffect(() => {
+    if (containerRef.current) {
+      containerRef.current.scrollTop = 0;
+    }
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+  }, [step]);
+
   // Loading gate — mesmo visual do PageLoader (Suspense) para transição seamless
   if (isInitializing) {
     return (
@@ -2596,7 +2584,7 @@ const ClienteAgendar = () => {
             <Clock className="w-10 h-10 text-destructive" />
           </div>
           
-          <h1 className="text-2xl font-bold text-foreground mb-3">
+          <h1 className="text-2xl font-medium text-foreground mb-3">
             Limite do Plano Atingido
           </h1>
           
@@ -2632,32 +2620,24 @@ const ClienteAgendar = () => {
   return (
     <div 
       ref={containerRef}
-      className="h-screen overflow-y-auto overscroll-contain bg-background"
-      style={{ WebkitOverflowScrolling: 'touch' }}
+      className="h-full w-full bg-[#FBFBFA] relative overflow-y-auto overscroll-contain touch-pan-y"
     >
-      {/* Header fixo — Seta + Dots */}
-      <div className="fixed top-0 left-0 right-0 z-50">
-        <div className="bg-background/90 backdrop-blur-xl">
-          <div className="max-w-2xl mx-auto px-4 py-3">
-            <div className="flex items-center justify-between">
-              <button 
-                onClick={handleBack}
-                className="w-8 h-8 flex items-center justify-center rounded-lg bg-card/60 hover:bg-card transition-all active:scale-90"
-              >
-                <BackArrow size={18} className="text-foreground/70" />
-              </button>
+      {/* Header fixo — Seta + Dots (Exata mesma cor sólida do fundo da tela: #FBFBFA) */}
+      <div className="fixed top-0 left-0 right-0 z-50 bg-[#FBFBFA]">
+        <div className="max-w-2xl mx-auto px-4 pt-[max(env(safe-area-inset-top),0.75rem)] pb-3">
+          <div className="flex items-center justify-between">
+            <button 
+              onClick={handleBack}
+              className="w-10 h-10 rounded-full bg-white border border-neutral-200/70 shadow-[0_2px_8px_rgba(0,0,0,0.04)] flex items-center justify-center text-neutral-900 active:scale-90 transition-transform cursor-pointer"
+            >
+              <BackArrow size={20} strokeWidth={2.2} />
+            </button>
 
-              <StepDots currentStep={currentDisplayStep} totalSteps={totalSteps} />
+            <StepDots currentStep={currentDisplayStep} totalSteps={totalSteps} />
 
-              <div className="w-8" />
-            </div>
+            <div className="w-10" />
           </div>
         </div>
-        {/* Fade mask — cards desaparecem suavemente ao rolar */}
-        <div 
-          className="h-8 pointer-events-none -mt-[1px]"
-          style={{ background: "linear-gradient(to bottom, hsl(var(--background) / 0.85), transparent)" }}
-        />
       </div>
 
       {/* Content */}
@@ -2671,16 +2651,13 @@ const ClienteAgendar = () => {
             animate="animate"
             exit="exit"
             transition={{ duration: 0.25 }}
-            className="min-h-screen pt-16 pb-32 px-4"
+            className="pt-16 pb-32 px-4 relative z-10"
           >
             <div className="max-w-2xl mx-auto">
               <div className="mb-6 pt-1">
-                <h2 className="text-xl font-semibold text-foreground">
-                  Seu Profissional
+                <h2 className="text-[24px] sm:text-[25px] font-semibold text-neutral-900 tracking-tight leading-tight font-sans">
+                  Escolha o profissional
                 </h2>
-                <p className="text-[12px] text-muted-foreground/60 mt-1">
-                  Quem vai cuidar de você hoje?
-                </p>
               </div>
 
               {barbers.length === 0 ? (
@@ -2713,16 +2690,6 @@ const ClienteAgendar = () => {
               isVisible={!!selectedBarber}
               onContinue={handleNextStep}
               label="Continuar"
-              subtitle={selectedBarber ? selectedBarber.apelido : ""}
-              icon={
-                selectedBarber?.foto_url ? (
-                  <img src={selectedBarber.foto_url} alt="" className="w-7 h-7 rounded-full object-cover" />
-                ) : (
-                  <div className="w-7 h-7 rounded-full bg-primary/30 flex items-center justify-center text-[11px] font-bold text-primary">
-                    {selectedBarber?.apelido?.charAt(0)}
-                  </div>
-                )
-              }
             />
           </motion.div>
         )}
@@ -2736,18 +2703,14 @@ const ClienteAgendar = () => {
             animate="animate"
             exit="exit"
             transition={{ duration: 0.25 }}
-            className="min-h-screen pt-16 pb-32 px-4"
+            className="pt-16 pb-32 px-4 relative z-10"
           >
             <div className="max-w-2xl mx-auto">
               <div className="mb-6 pt-1">
-                <h2 className="text-xl font-semibold text-foreground">
-                  O que deseja?
+                <h2 className="text-[24px] sm:text-[25px] font-semibold text-neutral-900 tracking-tight leading-tight font-sans">
+                  Escolha o serviço
                 </h2>
-                <p className="text-[12px] text-muted-foreground/60 mt-1">
-                  Selecione um ou mais serviços{selectedBarber ? ` • com ${selectedBarber.apelido}` : ''}
-                </p>
               </div>
-
               <div ref={servicesListRef} className="space-y-3">
                 {services.map((service) => (
                   <ServiceCard
@@ -2764,12 +2727,10 @@ const ClienteAgendar = () => {
                 ))}
               </div>
 
-              <BookingBottomBar
-                serviceCount={selectedServices.reduce((sum, s) => sum + (serviceQuantities[s.id] || 1), 0)}
-                totalDuration={getTotalDuration()}
-                totalPrice={getTotalPrice()}
-                onContinue={handleNextStep}
+              <FloatingActionBar
                 isVisible={selectedServices.length > 0}
+                onContinue={handleNextStep}
+                label="Continuar"
               />
             </div>
           </motion.div>
@@ -2784,33 +2745,14 @@ const ClienteAgendar = () => {
             animate="animate"
             exit="exit"
             transition={{ duration: 0.3 }}
-            className="min-h-screen pt-16 pb-24 px-4"
+            className="pt-16 pb-24 px-4 relative z-10"
           >
              <div className="max-w-2xl mx-auto">
-              {/* Título da Etapa */}
-              <div className="mb-8 pt-3">
-                <h2 className="text-xl font-semibold text-foreground">
+              <div className="mb-6 pt-1">
+                <h2 className="text-[24px] sm:text-[25px] font-semibold text-neutral-900 tracking-tight leading-tight font-sans">
                   Melhor dia pra você
                 </h2>
-                <p className="text-[12px] text-muted-foreground/60 mt-1.5">
-                  {isPlanFlow && activeSubscription ? (
-                    <>
-                      <span className="text-primary font-semibold">{activeSubscription.plano_nome}</span>
-                      {(() => {
-                        const serviceName = activeSubscription.servico?.nome || getFormattedServiceNames();
-                        return serviceName && serviceName.toLowerCase() !== activeSubscription.plano_nome?.toLowerCase()
-                          ? ` • ${serviceName}` : "";
-                      })()}
-                      {selectedBarber ? ` • ${selectedBarber.apelido}` : ""}
-                    </>
-                  ) : selectedBarber ? (
-                    <>com {selectedBarber.apelido}</>
-                  ) : (
-                    "Selecione o dia desejado"
-                  )}
-                </p>
               </div>
-
               <PremiumCalendar
                 selectedDate={selectedDate}
                 onSelectDate={(date) => { setSelectedDate(date); syncBookingData(); }}
@@ -2824,8 +2766,6 @@ const ClienteAgendar = () => {
               isVisible={!!selectedDate}
               onContinue={handleNextStep}
               label="Continuar"
-              subtitle={selectedDate ? format(selectedDate, "dd 'de' MMMM", { locale: ptBR }) : ""}
-              icon={<CalendarIcon className="w-4 h-4 text-primary" />}
             />
             </div>
           </motion.div>
@@ -2840,20 +2780,15 @@ const ClienteAgendar = () => {
             animate="animate"
             exit="exit"
             transition={{ duration: 0.3 }}
-            className="min-h-screen pt-16 pb-32 px-4"
+            className="pt-16 pb-32 px-4 relative z-10"
           >
             <div className="max-w-2xl mx-auto">
-              {/* Título da Etapa */}
               <div className="mb-6 pt-1">
-                <h2 className="text-xl font-semibold text-foreground">
+                <h2 className="text-[24px] sm:text-[25px] font-semibold text-neutral-900 tracking-tight leading-tight font-sans">
                   Que horas fica bom?
                 </h2>
-                <p className="text-[12px] text-muted-foreground/60 mt-1">
-                  {selectedDate ? format(selectedDate, "EEEE, d 'de' MMMM", { locale: ptBR }) : ""} • {selectedBarber?.apelido}
-                </p>
               </div>
-
-              {loadingSlots || !slotsHasLoaded ? (
+              {(loadingSlots && availableSlots.length === 0) || (!slotsHasLoaded && availableSlots.length === 0) ? (
                 <div className="bg-card border border-border rounded-2xl p-8 text-center">
                   <div className="w-12 h-12 rounded-full bg-primary/20 mx-auto flex items-center justify-center mb-4">
                     <Clock className="w-6 h-6 text-primary animate-spin" />
@@ -2946,13 +2881,10 @@ const ClienteAgendar = () => {
                     ))}
                   </div>
 
-                  {/* Premium Time Selection Bar */}
-                  <TimeSelectionBar
-                    selectedDate={selectedDate || null}
-                    selectedTime={selectedTime}
-                    formattedDate={selectedDate ? format(selectedDate, 'd/MM') : ''}
-                    onContinue={handleNextStep}
+                  <FloatingActionBar
                     isVisible={!!selectedTime}
+                    onContinue={handleNextStep}
+                    label="Continuar"
                     isLoading={loading}
                   />
                 </>
@@ -2961,7 +2893,6 @@ const ClienteAgendar = () => {
           </motion.div>
         )}
 
-        {/* Step 5: Pagamento (APENAS para usuários SEM plano) */}
         {step === 5 && !isRescheduling && !isPlanFlow && (
           <motion.div
             key="step-4"
@@ -2970,45 +2901,26 @@ const ClienteAgendar = () => {
             animate="animate"
             exit="exit"
             transition={{ duration: 0.3 }}
-            className="min-h-screen pt-24 pb-24 px-4"
+            className="pt-16 pb-36 px-4 relative z-10"
           >
             <div className="max-w-2xl mx-auto">
-              {/* Header removido — informações do barbeiro sobem para o topo */}
-
-
-              {/* Brand / Barbeiro row */}
-              <div className="flex items-center gap-3 mb-6 px-1">
-                <div className="w-11 h-11 rounded-full overflow-hidden bg-muted/20 flex items-center justify-center flex-shrink-0">
-                  {selectedBarber?.foto_url ? (
-                    <img src={selectedBarber.foto_url} alt={selectedBarber.apelido} className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full bg-primary/20 flex items-center justify-center text-[14px] font-bold text-primary">
-                      {selectedBarber?.apelido?.charAt(0)}
-                    </div>
-                  )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[15px] font-bold text-foreground leading-tight">
-                    {selectedBarber?.apelido}
-                  </p>
-                  <p className="text-[12px] text-primary/80 font-medium leading-tight mt-0.5">
-                    {getFormattedServiceNames()} • {getTotalDuration()} min
-                  </p>
-                </div>
+              <div className="mb-6 pt-1">
+                <h2 className="text-[24px] sm:text-[25px] font-semibold text-neutral-900 tracking-tight leading-tight font-sans">
+                  Pagamento
+                </h2>
               </div>
 
-              {/* Alerta de Assinatura Pendente */}
               {pendingSubscription && (
                 <motion.div
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
                   onClick={() => setPendingDrawerOpen(true)}
-                  className="mb-6 bg-primary/10 border border-primary/20 rounded-xl p-4 cursor-pointer relative overflow-hidden group"
+                  className="mb-5 bg-primary/10 border border-primary/20 rounded-2xl p-4 cursor-pointer relative overflow-hidden group"
                 >
                   <div className="flex items-center gap-3 relative z-10">
                     <Clock className="w-5 h-5 text-primary flex-shrink-0" />
                     <div className="flex-1 min-w-0">
-                      <p className="text-[12px] font-bold text-foreground">
+                      <p className="text-[12px] font-medium text-foreground">
                         {pendingSubscription.status === 'pending_renewal'
                           ? "Renovação de plano pendente"
                           : "Assinatura pendente detectada"}
@@ -3022,7 +2934,6 @@ const ClienteAgendar = () => {
                 </motion.div>
               )}
 
-              {/* Section: Forma de pagamento (linha única + sheet) */}
               {(() => {
                 const totalPrice = getTotalPrice();
                 const walletCoversAll = walletBalance >= totalPrice;
@@ -3030,26 +2941,11 @@ const ClienteAgendar = () => {
                 const walletDebit = Math.min(walletBalance, totalPrice);
                 const walletIsSelected = paymentMethod === 'wallet' && !useRedemption;
 
-                // Resumo da forma de pagamento selecionada.
-                // "Corte Grátis" só aparece como forma de pagamento quando cobre 100% do valor.
-                // Se houver remanescente (ex.: carrinho com 2 serviços), o cliente precisa escolher PIX/Carteira/Barbearia.
                 const redemptionCoversAll = useRedemption && totalPrice === 0;
                 const referralCoversAll = useReferralCredit && canUseReferralCredit && getTotalPrice() === 0;
-                const selectedSummary = redemptionCoversAll || referralCoversAll
-                  ? { icon: <Star className="w-5 h-5 fill-gold text-gold" />, label: "Corte Grátis", sub: "Benefício aplicado" }
-                  : paymentMethod === 'pix'
-                    ? { icon: <img src={pixIcon} alt="PIX" className="w-5 h-5 object-contain" />, label: "PIX", sub: "Confirmação instantânea" }
-                    : paymentMethod === 'wallet'
-                      ? { icon: <Wallet className="w-5 h-5 text-emerald-500" />, label: "Carteira", sub: `Saldo R$ ${walletBalance.toFixed(2).replace('.', ',')}` }
-                      : { icon: <Landmark className="w-5 h-5 text-foreground" />, label: "Pagar na Barbearia", sub: "Presencial no dia do atendimento" };
 
                 return (
-                  <div className="mb-2">
-                    <h3 className="text-[14px] font-semibold text-foreground mb-3">
-                      Forma de pagamento
-                    </h3>
-
-                    <div className="space-y-2">
+                  <div className="rounded-[22px] bg-white border border-neutral-200/80 shadow-[0_2px_12px_rgba(0,0,0,0.03)] p-2 space-y-1 mb-5">
                       {canUseReferralCredit && (
                         <PaymentOption
                           value="referral"
@@ -3071,22 +2967,60 @@ const ClienteAgendar = () => {
                           onSelect={handleToggleRedemption}
                           title="Corte Grátis Disponível!"
                           description={useRedemption
-                            ? "Benefício aplicado. Se houver outros serviços, escolha como pagar o restante."
-                            : "Toque para aplicar seu benefício. Se não usar agora, você perderá esta promoção."}
+                            ? "Benefício aplicado."
+                            : "Toque para aplicar seu benefício de fidelidade."}
                           highlight={true}
                           icon={<Star className={cn("w-5 h-5", useRedemption ? "fill-gold text-gold" : "text-muted-foreground/40")} />}
                         />
                       )}
 
                       {canReceivePix && (
-                        <PaymentOption
-                          value="pix"
-                          selected={paymentMethod === 'pix' && !redemptionCoversAll && !referralCoversAll}
-                          onSelect={() => handleSelectPaymentMethod('pix')}
-                          title="Pagar via PIX"
-                          description="Confirmação instantânea e segura"
-                          icon={<img src={pixIcon} alt="PIX" className={cn("w-5 h-5 object-contain", paymentMethod === 'pix' && !redemptionCoversAll && !referralCoversAll ? "" : "grayscale opacity-50")} />}
-                        />
+                        <div>
+                          <PaymentOption
+                            value="pix"
+                            selected={paymentMethod === 'pix' && !redemptionCoversAll && !referralCoversAll}
+                            onSelect={() => handleSelectPaymentMethod('pix')}
+                            title="PIX"
+                            description="Confirmação instantânea e segura"
+                            icon={<img src={pixIcon} alt="PIX" className="w-5 h-5 object-contain" />}
+                          />
+                          
+                          <AnimatePresence>
+                            {paymentMethod === 'pix' && !redemptionCoversAll && !referralCoversAll && (
+                              <motion.div
+                                initial={{ opacity: 0, height: 0 }}
+                                animate={{ opacity: 1, height: 'auto' }}
+                                exit={{ opacity: 0, height: 0 }}
+                                className="overflow-hidden px-1 pb-1 pt-1"
+                              >
+                                <div className={cn(
+                                  "p-3.5 rounded-xl transition-all",
+                                  cpfError 
+                                    ? "bg-red-50/90 border-2 border-red-500 shadow-[0_0_0_3px_rgba(239,68,68,0.15)]" 
+                                    : "bg-neutral-50/80 border border-neutral-200/70"
+                                )}>
+                                  <label className={cn("text-[11px] font-semibold block mb-1.5 transition-colors", cpfError ? "text-red-600" : "text-neutral-500")}>
+                                    {cpfError ? "Informe um CPF válido para continuar" : "CPF para emissão do PIX (obrigatório)"}
+                                  </label>
+                                  <input
+                                    type="text"
+                                    inputMode="numeric"
+                                    value={cpfInput}
+                                    onChange={(e) => {
+                                      setCpfInput(formatCPF(e.target.value));
+                                      if (cpfError) setCpfError(false);
+                                    }}
+                                    placeholder="000.000.000-00"
+                                    className={cn(
+                                      "w-full bg-transparent border-none outline-none text-[15px] font-medium placeholder:text-neutral-300 transition-colors",
+                                      cpfError ? "text-red-700 font-semibold" : "text-neutral-900"
+                                    )}
+                                  />
+                                </div>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+                        </div>
                       )}
 
                       {canReceivePix && walletBalance > 0 && (
@@ -3109,19 +3043,15 @@ const ClienteAgendar = () => {
                         icon={<Landmark className={cn("w-5 h-5", paymentMethod === 'cash' && !redemptionCoversAll && !referralCoversAll ? "text-primary" : "text-muted-foreground/40")} />}
                       />
 
-
-                    </div>
-
-                    {/* Breakdown carteira quando selecionada */}
                     <AnimatePresence>
                       {walletIsSelected && (
                         <motion.div
                           initial={{ opacity: 0, height: 0 }}
                           animate={{ opacity: 1, height: 'auto' }}
                           exit={{ opacity: 0, height: 0 }}
-                          className="overflow-hidden"
+                          className="overflow-hidden px-1 pb-1 pt-1"
                         >
-                          <div className="mt-2 rounded-xl border border-emerald-500/15 bg-emerald-500/[0.03] p-3.5 space-y-2.5">
+                          <div className="rounded-xl border border-emerald-500/15 bg-emerald-500/[0.04] p-3 space-y-2">
                             <div className="flex items-center justify-between">
                               <span className="text-[11px] text-muted-foreground/60">Valor do serviço</span>
                               <span className="text-[12px] font-medium text-foreground/70 tabular-nums">
@@ -3138,12 +3068,12 @@ const ClienteAgendar = () => {
                               {walletCoversAll ? (
                                 <>
                                   <span className="text-[11px] font-medium text-emerald-500/90">Coberto pela carteira</span>
-                                  <span className="text-[13px] font-bold text-emerald-500 tabular-nums">R$ 0,00</span>
+                                  <span className="text-[13px] font-medium text-emerald-500 tabular-nums">R$ 0,00</span>
                                 </>
                               ) : (
                                 <>
                                   <span className="text-[11px] font-medium text-foreground/70">Pagar na barbearia</span>
-                                  <span className="text-[13px] font-bold text-foreground tabular-nums">
+                                  <span className="text-[13px] font-medium text-foreground tabular-nums">
                                     R$ {walletRemainder.toFixed(2).replace('.', ',')}
                                   </span>
                                 </>
@@ -3157,73 +3087,90 @@ const ClienteAgendar = () => {
                 );
               })()}
 
-              {/* Divider */}
-              <div className="border-t border-border/40 my-5" />
-
-              {/* Cupom */}
               <div className="mb-5">
-                {appliedCoupon ? (
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2.5">
-                      <Tag className="w-4 h-4 text-foreground" />
-                      <div>
-                        <span className="text-[14px] font-semibold text-foreground">{appliedCoupon.code}</span>
-                        <span className="text-[11px] text-emerald-500 ml-2 font-medium">
-                          {appliedCoupon.tipo_desconto === "percentual"
-                            ? `-${appliedCoupon.valor_desconto}%`
-                            : `-R$ ${appliedCoupon.valor_desconto.toFixed(2).replace(".", ",")}`}
-                        </span>
-                      </div>
-                    </div>
-                    <button
-                      onClick={removeCoupon}
-                      className="text-[12px] text-primary hover:text-primary/80 font-medium"
-                    >
-                      Remover
-                    </button>
-                  </div>
-                ) : (
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2.5">
-                      <Tag className="w-4 h-4 text-foreground" />
-                      <span className="text-[14px] font-semibold text-foreground">Cupom</span>
-                    </div>
-                    <div className="relative">
-                      <input
-                        type="text"
-                        placeholder="INSERIR CÓDIGO"
-                        value={couponCode}
-                        onChange={(e) => {
-                          const val = e.target.value.toUpperCase();
-                          setCouponCode(val);
-                          if (val.trim().length >= 3) {
-                            clearTimeout((window as any).__couponDebounce);
-                            (window as any).__couponDebounce = setTimeout(() => {
-                              validateCoupon(val);
-                            }, 600);
-                          }
-                        }}
-                        className="text-right bg-transparent border-none outline-none text-[13px] text-primary placeholder:text-primary/70 font-medium uppercase tracking-wider w-44"
-                      />
-                      {validatingCoupon && (
-                        <div className="absolute right-0 top-1/2 -translate-y-1/2">
-                          <div className="w-3 h-3 border-2 border-primary/40 border-t-primary rounded-full animate-spin" />
-                        </div>
-                      )}
+                <p className="text-[13px] font-medium text-neutral-500 mb-2 px-1">
+                  Local do Atendimento
+                </p>
+                <div className="rounded-[20px] bg-white border border-neutral-200/80 shadow-[0_2px_12px_rgba(0,0,0,0.03)] p-3.5 flex items-center justify-between">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <MapPin className="w-5 h-5 text-neutral-700 flex-shrink-0" strokeWidth={1.8} />
+                    <div className="min-w-0">
+                      <p className="text-[14px] font-medium text-neutral-900 truncate">
+                        {preferredShop?.nome || "Barbearia DUB"}
+                      </p>
+                      <p className="text-[12px] text-neutral-500 truncate mt-0.5">
+                        {selectedBarber ? `${selectedBarber.apelido} • ` : ""}{selectedDate ? format(selectedDate, "dd 'de' MMM", { locale: ptBR }) : ""} às {selectedTime}
+                      </p>
                     </div>
                   </div>
-                )}
+                  <ChevronRight className="w-4 h-4 text-neutral-300 flex-shrink-0" />
+                </div>
               </div>
 
-              {/* Divider */}
-              <div className="border-t border-border/40 my-5" />
-
-              {/* Resumo de valores */}
               <div className="mb-5">
-                <h3 className="text-[14px] font-semibold text-foreground mb-3">
-                  Resumo de valores
-                </h3>
-                <div className="space-y-2.5">
+                <p className="text-[13px] font-medium text-neutral-500 mb-2 px-1">
+                  Cupom de Desconto
+                </p>
+                <div className="rounded-[20px] bg-white border border-neutral-200/80 shadow-[0_2px_12px_rgba(0,0,0,0.03)] p-3.5">
+                  {appliedCoupon ? (
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2.5">
+                        <Tag className="w-5 h-5 text-emerald-600 flex-shrink-0" strokeWidth={1.8} />
+                        <div>
+                          <span className="text-[14px] font-medium text-neutral-900">{appliedCoupon.code}</span>
+                          <span className="text-[12px] text-emerald-600 ml-2 font-semibold">
+                            {appliedCoupon.tipo_desconto === "percentual"
+                              ? `-${appliedCoupon.valor_desconto}%`
+                              : `-R$ ${appliedCoupon.valor_desconto.toFixed(2).replace(".", ",")}`}
+                          </span>
+                        </div>
+                      </div>
+                      <button
+                        onClick={removeCoupon}
+                        className="text-[12px] text-red-500 hover:text-red-600 font-medium px-2 py-1"
+                      >
+                        Remover
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2.5">
+                        <Tag className="w-5 h-5 text-neutral-500 flex-shrink-0" strokeWidth={1.8} />
+                        <span className="text-[14px] font-medium text-neutral-700">Código promocional</span>
+                      </div>
+                      <div className="relative">
+                        <input
+                          type="text"
+                          placeholder="INSERIR CÓDIGO"
+                          value={couponCode}
+                          onChange={(e) => {
+                            const val = e.target.value.toUpperCase();
+                            setCouponCode(val);
+                            if (val.trim().length >= 3) {
+                              clearTimeout((window as any).__couponDebounce);
+                              (window as any).__couponDebounce = setTimeout(() => {
+                                validateCoupon(val);
+                              }, 600);
+                            }
+                          }}
+                          className="text-right bg-neutral-50 px-3 py-1.5 rounded-lg border border-neutral-200/70 outline-none text-[12px] text-neutral-900 placeholder:text-neutral-400 font-medium w-36 uppercase focus:border-neutral-900 transition-colors"
+                        />
+                        {validatingCoupon && (
+                          <div className="absolute right-2 top-1/2 -translate-y-1/2">
+                            <div className="w-3 h-3 border-2 border-neutral-400 border-t-neutral-900 rounded-full animate-spin" />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="mb-6">
+                <p className="text-[13px] font-medium text-neutral-500 mb-2 px-1">
+                  Resumo
+                </p>
+                <div className="rounded-[20px] bg-white border border-neutral-200/80 shadow-[0_2px_12px_rgba(0,0,0,0.03)] p-4 space-y-3">
                   {(() => {
                     const redeemedCorte = useRedemption ? getCorteService() : undefined;
                     const referralCorte = useReferralCredit && canUseReferralCredit ? getCorteService() : undefined;
@@ -3234,56 +3181,66 @@ const ClienteAgendar = () => {
                       if (isRedeemed) redemptionApplied = true;
                       
                       const isReferralFree = !!referralCorte && s.id === referralCorte.id;
-                      
-                      // Se for resgate, o desconto é de apenas 1 unidade do serviço "Corte"
-                      // Se houver quantidade > 1, as demais são cobradas normalmente.
                       const lineTotal = isReferralFree
                         ? 0
                         : isRedeemed
                           ? s.preco * Math.max(0, qty - 1)
                           : s.preco * qty;
                       
-                      // Só exibe "(Grátis)" se o valor total da linha for zero (ou seja, qty=1 e isRedeemed)
                       const showFreeLabel = isReferralFree || (isRedeemed && qty === 1);
                       return (
-                        <div key={s.id} className="flex items-center justify-between gap-3">
-                          <span className="text-[13px] text-muted-foreground truncate">
+                        <div key={s.id} className="flex items-center justify-between text-[13px]">
+                          <span className="text-neutral-600 truncate">
                             {s.nome}{qty > 1 ? ` ×${qty}` : ""}{showFreeLabel ? " (Grátis)" : ""}
                           </span>
-                          <span className={cn("text-[13px] tabular-nums flex-shrink-0", showFreeLabel ? "text-emerald-500 font-medium" : "text-foreground")}>
+                          <span className={cn("tabular-nums font-medium flex-shrink-0", showFreeLabel ? "text-emerald-600" : "text-neutral-900")}>
                             R$ {lineTotal.toFixed(2).replace('.', ',')}
                           </span>
                         </div>
                       );
                     });
                   })()}
+
                   {availableCredits > 0 && (
-                    <div className="flex items-center justify-between">
-                      <span className="text-[13px] text-muted-foreground">Créditos do plano</span>
-                      <span className="text-[13px] text-emerald-500 tabular-nums">
+                    <div className="flex items-center justify-between text-[13px]">
+                      <span className="text-neutral-600">Créditos do plano</span>
+                      <span className="text-emerald-600 font-medium tabular-nums">
                         − R$ {Math.min(availableCredits, getTotalPrice()).toFixed(2).replace('.', ',')}
                       </span>
                     </div>
                   )}
+
+                  {appliedCoupon && getCouponDiscount() > 0 && (
+                    <div className="flex items-center justify-between text-[13px]">
+                      <span className="text-emerald-600 font-medium">Cupom ({appliedCoupon.code})</span>
+                      <span className="text-emerald-600 font-medium tabular-nums">
+                        − R$ {getCouponDiscount().toFixed(2).replace('.', ',')}
+                      </span>
+                    </div>
+                  )}
+
                   {(() => {
                     const redemptionCoversAll = useRedemption && getTotalPrice() === 0;
                     const referralCoversAll = useReferralCredit && canUseReferralCredit && getTotalPrice() === 0;
                     const coversAll = redemptionCoversAll || referralCoversAll;
                     const fee = coversAll ? 0 : getServiceFee(paymentMethod);
-                    const total = coversAll ? 0 : Math.max(0, getTotalPrice() - availableCredits) + fee;
+                    const total = coversAll ? 0 : Math.max(0, getTotalPrice() - availableCredits - getCouponDiscount()) + fee;
                     return (
                       <>
-                        {!coversAll && (
-                          <div className="flex items-center justify-between">
-                            <span className="text-[13px] text-muted-foreground">Taxa de serviço</span>
-                            <span className="text-[13px] text-foreground tabular-nums">
+                        {fee > 0 && (
+                          <div className="flex items-center justify-between text-[13px]">
+                            <span className="text-neutral-600">Taxa de serviço</span>
+                            <span className="text-neutral-900 font-medium tabular-nums">
                               R$ {fee.toFixed(2).replace('.', ',')}
                             </span>
                           </div>
                         )}
-                        <div className="flex items-center justify-between pt-2">
-                          <span className="text-[15px] font-bold text-foreground">Total</span>
-                          <span className={cn("text-[15px] font-bold tabular-nums", coversAll ? "text-emerald-500" : "text-foreground")}>
+
+                        <div className="border-b border-dashed border-neutral-200 my-2" />
+
+                        <div className="flex items-center justify-between pt-0.5">
+                          <span className="text-[14px] font-medium text-neutral-900">Total</span>
+                          <span className={cn("text-[18px] font-bold tabular-nums", coversAll ? "text-emerald-600" : "text-neutral-900")}>
                             R$ {total.toFixed(2).replace('.', ',')}
                           </span>
                         </div>
@@ -3306,41 +3263,37 @@ const ClienteAgendar = () => {
             animate="animate"
             exit="exit"
             transition={{ duration: 0.3 }}
-            className="min-h-screen pt-16 pb-24 px-4"
+            className="pt-16 pb-24 px-4 relative z-10"
           >
             <div className="max-w-2xl mx-auto">
-              {/* Título da Etapa */}
               <div className="mb-6 pt-1">
-                <h2 className="text-xl font-semibold text-foreground">
+                <h2 className="text-[24px] sm:text-[25px] font-semibold text-neutral-900 tracking-tight leading-tight font-sans">
                   Confirmar Agendamento
                 </h2>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Revise os detalhes do seu horário
-                </p>
               </div>
 
               {/* Card de resumo - Layout limpo para plano */}
-              <div className="bg-card border border-border rounded-2xl p-5 space-y-4 mb-6">
+              <div className="rounded-[20px] bg-white border border-neutral-200/80 shadow-[0_2px_12px_rgba(0,0,0,0.03)] p-5 space-y-4 mb-6">
                 <SummaryRow 
                   label="Serviço"
                   value={getFormattedServiceNames()}
                 />
                 
-                <div className="border-t border-border" />
+                <div className="border-t border-neutral-100" />
                 
                 <SummaryRow 
                   label="Duração"
                   value={`${getTotalDuration()} minutos`}
                 />
                 
-                <div className="border-t border-border" />
+                <div className="border-t border-neutral-100" />
                 
                 <SummaryRow 
                   label="Data"
                   value={selectedDate ? format(selectedDate, "dd 'de' MMMM 'de' yyyy", { locale: ptBR }) : ""}
                 />
                 
-                <div className="border-t border-border" />
+                <div className="border-t border-neutral-100" />
                 
                 <SummaryRow 
                   label="Horário"
@@ -3349,20 +3302,20 @@ const ClienteAgendar = () => {
               </div>
 
               {/* Card do Plano - Destaque elegante */}
-              <div className="bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/30 rounded-2xl p-5 mb-6">
+              <div className="rounded-[20px] bg-white border border-neutral-200/80 shadow-[0_2px_12px_rgba(0,0,0,0.03)] p-5 mb-6">
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
-                    <Check className="w-5 h-5 text-primary" />
+                  <div className="w-10 h-10 rounded-full bg-neutral-900 flex items-center justify-center">
+                    <Check className="w-5 h-5 text-white" />
                   </div>
                   <div>
-                    <p className="font-semibold text-foreground">{activeSubscription?.plano_nome}</p>
-                    <p className="text-sm text-muted-foreground">Plano ativo</p>
+                    <p className="font-semibold text-neutral-900">{activeSubscription?.plano_nome}</p>
+                    <p className="text-xs text-neutral-500">Plano ativo</p>
                   </div>
                 </div>
                 
-                <div className="flex justify-between items-center pt-3 border-t border-primary/20">
-                  <span className="text-sm text-muted-foreground">Agendamentos no plano</span>
-                  <span className="text-sm font-semibold text-foreground">
+                <div className="flex justify-between items-center pt-3 border-t border-neutral-100">
+                  <span className="text-sm text-neutral-500">Agendamentos no plano</span>
+                  <span className="text-sm font-semibold text-neutral-900">
                     {(activeSubscription?.agendamentos_usados || 0) + 1}/{activeSubscription?.limite_agendamentos_mes || 4}
                   </span>
                 </div>
@@ -3374,8 +3327,6 @@ const ClienteAgendar = () => {
                 label={processingPayment ? 'Agendando...' : 'Confirmar'}
                 isLoading={processingPayment}
                 loadingLabel="Agendando..."
-                icon={<Check className="w-4 h-4 text-primary" />}
-                subtitle={activeSubscription?.plano_nome}
               />
             </div>
           </motion.div>
@@ -3390,48 +3341,44 @@ const ClienteAgendar = () => {
             animate="animate"
             exit="exit"
             transition={{ duration: 0.3 }}
-            className="min-h-screen pt-16 pb-24 px-4"
+            className="pt-16 pb-28 px-4 relative z-10"
           >
             <div className="max-w-2xl mx-auto">
-              {/* Título da Etapa */}
               <div className="mb-6 pt-1">
-                <h2 className="text-xl font-semibold text-foreground">
+                <h2 className="text-[24px] sm:text-[25px] font-semibold text-neutral-900 tracking-tight leading-tight font-sans">
                   Tudo certo?
                 </h2>
-                <p className="text-[12px] text-muted-foreground/60 mt-1">
-                  Revise e confirme seu agendamento
-                </p>
               </div>
 
               {/* Card de resumo */}
-              <div className="bg-card border border-border rounded-2xl p-5 space-y-4 mb-6">
+              <div className="rounded-[20px] bg-white border border-neutral-200/80 shadow-[0_2px_12px_rgba(0,0,0,0.03)] p-5 space-y-4 mb-6">
                 <SummaryRow 
                   label="Serviço"
                   value={getFormattedServiceNames()}
                 />
 
-                <div className="border-t border-border" />
+                <div className="border-t border-neutral-100" />
 
                 <SummaryRow 
                   label="Duração"
                   value={`${getTotalDuration()} minutos`}
                 />
                 
-                <div className="border-t border-border" />
+                <div className="border-t border-neutral-100" />
                 
                 <SummaryRow 
                   label="Data"
                   value={selectedDate ? format(selectedDate, "dd 'de' MMMM 'de' yyyy", { locale: ptBR }) : ""}
                 />
                 
-                <div className="border-t border-border" />
+                <div className="border-t border-neutral-100" />
                 
                 <SummaryRow 
                   label="Horário"
                   value={`${selectedTime} → ${getEndTime()}`}
                 />
                 
-                <div className="border-t border-border" />
+                <div className="border-t border-neutral-100" />
                 
                 <SummaryRow 
                   label="Forma de Pagamento"
@@ -3447,25 +3394,25 @@ const ClienteAgendar = () => {
                 {/* Cupom aplicado */}
                 {appliedCoupon && getCouponDiscount() > 0 && (
                   <>
-                    <div className="border-t border-border" />
+                    <div className="border-t border-neutral-100" />
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-emerald-400 font-medium">
+                      <span className="text-sm text-emerald-600 font-medium">
                         Cupom {appliedCoupon.code}
                         {appliedCoupon.tipo_desconto === "percentual"
                           ? ` (${appliedCoupon.valor_desconto}%)`
                           : ""}
                       </span>
-                      <span className="text-sm font-semibold text-emerald-400">-R$ {getCouponDiscount().toFixed(2).replace('.', ',')}</span>
+                      <span className="text-sm font-semibold text-emerald-600">-R$ {getCouponDiscount().toFixed(2).replace('.', ',')}</span>
                     </div>
                   </>
                 )}
                 
-                <div className="border-t border-border mt-4 pt-4">
+                <div className="border-t border-dashed border-neutral-200 mt-4 pt-4">
                   <div className="flex items-center justify-between">
-                    <span className="text-[13px] font-medium text-muted-foreground">Total</span>
+                    <span className="text-[14px] font-medium text-neutral-900">Total</span>
                     <div className="flex items-baseline gap-1">
-                      <span className="text-[11px] text-muted-foreground/50">R$</span>
-                      <span className="text-lg font-bold text-foreground tabular-nums">
+                      <span className="text-[11px] text-neutral-500">R$</span>
+                      <span className="text-xl font-bold text-neutral-900 tabular-nums">
                         {Math.max(0, getTotalPrice() - availableCredits).toFixed(2).replace('.', ',')}
                       </span>
                     </div>
@@ -3479,8 +3426,6 @@ const ClienteAgendar = () => {
                 label={processingPayment ? 'Processando...' : 'Confirmar'}
                 isLoading={processingPayment}
                 loadingLabel="Processando..."
-                icon={<Check className="w-4 h-4 text-primary" />}
-                subtitle={`R$ ${Math.max(0, getTotalPrice() - availableCredits).toFixed(2).replace('.', ',')}`}
               />
             </div>
           </motion.div>
@@ -3495,29 +3440,32 @@ const ClienteAgendar = () => {
             animate="animate"
             exit="exit"
             transition={{ duration: 0.3 }}
-            className="min-h-screen pt-16 pb-24 px-4"
+            className="pt-16 pb-28 px-4 relative z-10"
           >
             <div className="max-w-2xl mx-auto">
-              {/* Título da Etapa */}
               <div className="mb-6 pt-1">
-                <h2 className="text-xl font-semibold text-foreground">
+                <h2 className="text-[24px] sm:text-[25px] font-semibold text-neutral-900 tracking-tight leading-tight font-sans">
                   Confirmar Remarcação
                 </h2>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Revise os novos dados
+                <p className="text-[13px] text-neutral-500 mt-1">
+                  Revise os novos dados.
                 </p>
               </div>
 
-              <div className="space-y-4 mb-6 px-1">
+              <div className="rounded-[20px] bg-white border border-neutral-200/80 shadow-[0_2px_12px_rgba(0,0,0,0.03)] p-5 space-y-4 mb-6">
                 <SummaryRow 
                   label="Nova Data"
                   value={selectedDate ? format(selectedDate, "dd 'de' MMMM 'de' yyyy", { locale: ptBR }) : ""}
                 />
 
+                <div className="border-t border-neutral-100" />
+
                 <SummaryRow 
                   label="Novo Horário"
                   value={`${selectedTime} → ${getEndTime()}`}
                 />
+
+                <div className="border-t border-neutral-100" />
 
                 <SummaryRow 
                   label="Serviço"
@@ -3533,8 +3481,6 @@ const ClienteAgendar = () => {
                 label={processingPayment ? 'Remarcando...' : 'Confirmar'}
                 isLoading={processingPayment}
                 loadingLabel="Remarcando..."
-                icon={<Check className="w-4 h-4 text-primary" />}
-                subtitle="Remarcação"
               />
             </div>
           </motion.div>
@@ -3564,83 +3510,19 @@ const ClienteAgendar = () => {
                     : 'Revisar pedido';
 
             return (
-          <motion.div
-            key="bar-payment"
-            initial={{ y: 40, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: 40, opacity: 0 }}
-            transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-            className="fixed bottom-0 left-0 right-0 z-40"
-          >
-            {/* Subtle top fade */}
-            <div 
-              className="h-16 pointer-events-none"
-              style={{ background: "linear-gradient(to bottom, transparent, hsl(var(--background)))" }}
-            />
-
-            {/* Bar content - estilo Sacola: CTA único full-width */}
-            <div className="bg-background border-t border-border/40 px-4 pb-safe">
-              <div className="pt-3 pb-4">
-                <motion.button
-                  onClick={handleProceedFromPayment}
-                  disabled={processingPayment}
-                  whileTap={{ scale: processingPayment ? 1 : 0.985 }}
-                  className={cn(
-                    "w-full flex items-center justify-center gap-2",
-                    "h-[52px] rounded-xl",
-                    "font-semibold text-[14px] text-primary-foreground",
-                    "bg-primary",
-                    "active:brightness-90 transition-all duration-150",
-                    processingPayment && "opacity-70 cursor-wait"
-                  )}
-                  style={{ boxShadow: "0 4px 16px hsl(var(--primary) / 0.25)" }}
-                >
-                  {processingPayment ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      <span>Processando...</span>
-                    </>
-                  ) : (
-                    <span>
-                      {actionLabel}
-                      {' • '}
-                      R$ {actionTotal.toFixed(2).replace('.', ',')}
-                    </span>
-                  )}
-                </motion.button>
-              </div>
-            </div>
-          </motion.div>
+              <FloatingActionBar
+                isVisible={true}
+                onContinue={handleProceedFromPayment}
+                label={actionLabel}
+                isLoading={processingPayment}
+                loadingLabel="Processando..."
+              />
             );
           })()
         )}
       </AnimatePresence>
 
-      {/* Diálogo: CPF necessário apenas para pagamento via PIX */}
-      <Dialog open={showCpfDialog} onOpenChange={setShowCpfDialog}>
-        <DialogContent className="max-w-[340px] rounded-2xl">
-          <DialogHeader>
-            <DialogTitle className="text-[16px]">Informe seu CPF</DialogTitle>
-            <DialogDescription className="text-[13px]">
-              O CPF é usado apenas para gerar a cobrança PIX.
-            </DialogDescription>
-          </DialogHeader>
-          <input
-            inputMode="numeric"
-            value={cpfInput}
-            onChange={(e) => setCpfInput(formatCPF(e.target.value))}
-            placeholder="000.000.000-00"
-            className="h-12 w-full rounded-xl border border-border bg-background px-4 text-[15px] tabular-nums outline-none focus:border-primary"
-          />
-          <Button
-            onClick={handleSaveCpf}
-            disabled={savingCpf || cpfInput.replace(/\D/g, "").length !== 11}
-            className="h-12 w-full rounded-xl text-[14px] font-semibold"
-          >
-            {savingCpf ? <Loader2 className="w-4 h-4 animate-spin" /> : "Continuar com PIX"}
-          </Button>
-        </DialogContent>
-      </Dialog>
+
 
 
 
@@ -3663,7 +3545,7 @@ const ClienteAgendar = () => {
           </button>
           <div className="p-7 text-center">
             <DialogHeader className="space-y-3">
-              <DialogTitle className="text-[19px] font-bold text-zinc-900 tracking-tight leading-tight">
+              <DialogTitle className="text-[19px] font-medium text-zinc-900 tracking-tight leading-tight">
                 Você tem um benefício pendente
               </DialogTitle>
               <DialogDescription className="text-[14px] leading-relaxed text-zinc-600 px-1">
@@ -3685,6 +3567,71 @@ const ClienteAgendar = () => {
           </div>
         </DialogContent>
       </Dialog>
+      {/* Drawer de Sucesso (Agendamento Concluído - Estilo Referência) */}
+      <AnimatePresence>
+        {bookingSuccess && (
+          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-black/60 backdrop-blur-[2px]"
+              onClick={() => navigate("/cliente")}
+            />
+            <motion.div
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={{ type: "spring", damping: 25, stiffness: 200 }}
+              className="relative w-full max-w-[390px] bg-white rounded-t-[36px] sm:rounded-[36px] px-6 pt-9 pb-8 text-center shadow-2xl z-10 mx-auto overflow-hidden"
+            >
+              {/* Badge 3D com partículas de confete sutis */}
+              <div className="relative mx-auto w-28 h-28 flex items-center justify-center mb-5">
+                {/* Partículas de confete flutuantes */}
+                <div className="w-1.5 h-1.5 rounded-full bg-neutral-400 absolute top-2 left-4 animate-pulse" />
+                <div className="w-1 h-1 rounded-full bg-neutral-500 absolute top-1 right-8" />
+                <div className="w-2 h-2 rounded-full bg-neutral-300 absolute bottom-4 left-2" />
+                <div className="w-1.5 h-1.5 rounded-full bg-neutral-400 absolute top-8 right-3" />
+                <div className="w-1 h-1 rounded-full bg-neutral-600 absolute bottom-2 right-6" />
+                <div className="w-1 h-1 rounded-full bg-neutral-300 absolute top-5 left-10" />
+
+                {/* Selo 3D Medalhão */}
+                <div className="w-[86px] h-[86px] rounded-full p-[7px] bg-gradient-to-b from-[#EEEEEE] via-[#DADADA] to-[#BCBCBC] shadow-[0_12px_24px_rgba(0,0,0,0.12),0_4px_8px_rgba(0,0,0,0.06)] flex items-center justify-center border border-white/70">
+                  <div className="w-full h-full rounded-full bg-gradient-to-b from-[#222222] to-[#0A0A0A] flex items-center justify-center shadow-inner relative overflow-hidden">
+                    {/* Brilho superior sutil */}
+                    <div className="absolute top-0 inset-x-0 h-1/2 bg-white/10 rounded-t-full pointer-events-none" />
+                    <Check className="w-8 h-8 text-white stroke-[3.2]" />
+                  </div>
+                </div>
+              </div>
+
+              <h2 className="text-[22px] sm:text-[23px] font-semibold text-neutral-900 mb-2 tracking-tight">
+                Agendamento Confirmado!
+              </h2>
+              <p className="text-[13px] text-neutral-400 font-normal leading-relaxed max-w-[270px] mx-auto mb-8">
+                Tudo pronto! Seu horário foi reservado com sucesso. Acompanhe os detalhes em Meus Agendamentos.
+              </p>
+              
+              {/* Botões de Ação estilo Checkout da Referência */}
+              <div className="space-y-3">
+                <button
+                  onClick={() => navigate("/cliente")}
+                  className="w-full flex items-center justify-center h-14 rounded-full font-medium tracking-wide text-[15px] text-white bg-[#18181B] hover:bg-black active:scale-[0.98] transition-all shadow-[0_4px_16px_rgba(0,0,0,0.1)]"
+                >
+                  Ir para o Início
+                </button>
+                <button
+                  onClick={() => navigate("/cliente/historico")}
+                  className="w-full flex items-center justify-center h-14 rounded-full font-medium tracking-wide text-[15px] text-neutral-800 bg-neutral-100 hover:bg-neutral-200/80 active:scale-[0.98] transition-all"
+                >
+                  Ver Meus Agendamentos
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
       {/* Pending Subscription Drawer */}
       <PendingSubscriptionDrawer
         open={pendingDrawerOpen}

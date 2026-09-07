@@ -1,15 +1,15 @@
 <!doctype html>
-<html lang="pt-BR" translate="no" style="background-color: #FFFFFF;">
+<html lang="pt-BR" translate="no" style="background-color: #FBFBFA;">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0, viewport-fit=cover, interactive-widget=resizes-content" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0, viewport-fit=cover, interactive-widget=resizes-visual" />
     <meta name="google-site-verification" content="owbb0rIgmzly9Z4ymfj0B9UAS2zpSSAwCaix9Gh7Gy8" />
 
-    <!-- Anti-flash branco/preto no iOS durante hidratação -->
+    <!-- Anti-flash no iOS durante hidratação -->
     <script>
       (function () {
         try {
-          var brand = '#FFFFFF';
+          var brand = '#FBFBFA';
           document.documentElement.style.backgroundColor = brand;
           if (document.body) document.body.style.backgroundColor = brand;
         } catch (e) {}
@@ -26,7 +26,7 @@
 
     <!-- iOS Safari fullscreen / PWA -->
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="DUB Agenda" />
     <meta name="apple-touch-fullscreen" content="yes" />
 
@@ -34,8 +34,10 @@
     <meta name="mobile-web-app-capable" content="yes" />
     <link rel="manifest" href="/manifest.webmanifest" />
 
-    <!-- Status bar color (Android Chrome / PWA) -->
-    <meta name="theme-color" content="#FFFFFF" />
+    <!-- Status bar color (Android Chrome / Safari / PWA) -->
+    <meta name="theme-color" content="#FBFBFA" />
+    <meta name="theme-color" content="#FBFBFA" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0A0A0A" media="(prefers-color-scheme: dark)" />
 
     <meta property="og:type" content="website" />
     <meta name="twitter:card" content="summary_large_image" />
@@ -83,7 +85,7 @@
   </script>
 </head>
 
-  <body class="notranslate" style="background-color: #FFFFFF;">
+  <body class="notranslate" style="background-color: #FBFBFA;">
     <!-- Meta Pixel Code -->
     <script>
     !function(f,b,e,v,n,t,s)

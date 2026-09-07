@@ -17,10 +17,12 @@ export function StepDots({ currentStep, totalSteps }: StepDotsProps) {
           <div
             key={stepNumber}
             className={cn(
-              "rounded-full transition-all duration-300",
-              isCompleted && "w-1.5 h-1.5 bg-primary/60",
-              isCurrent && "w-5 h-1.5 bg-primary",
-              !isCompleted && !isCurrent && "w-1.5 h-1.5 bg-muted-foreground/15"
+              "h-[3.5px] rounded-full transition-all duration-300",
+              isCurrent 
+                ? "w-6 bg-[#18181B]" 
+                : isCompleted 
+                  ? "w-3 bg-neutral-800" 
+                  : "w-2.5 bg-neutral-300"
             )}
           />
         );

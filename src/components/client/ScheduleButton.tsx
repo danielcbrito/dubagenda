@@ -14,13 +14,10 @@ export function ScheduleButton({ onClick }: ScheduleButtonProps) {
     >
       <button
         onClick={onClick}
-        className="relative w-full h-10 rounded-lg text-[12px] font-semibold tracking-wide overflow-hidden bg-primary/90 text-primary-foreground active:scale-[0.98] transition-transform"
-        style={{
-          boxShadow: "0 4px 14px -3px hsl(var(--primary) / 0.3)",
-        }}
+        className="w-full h-12 rounded-full text-[15px] font-medium tracking-tight bg-neutral-900 text-white hover:bg-neutral-800 active:scale-[0.98] transition-all"
       >
-        <div className="relative z-10 flex items-center justify-center gap-2">
-          <Calendar className="w-3.5 h-3.5" />
+        <div className="flex items-center justify-center gap-2">
+          <Calendar className="w-4 h-4 opacity-90" />
           <span>Agendar Horário</span>
         </div>
       </button>

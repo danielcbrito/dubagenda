@@ -17,15 +17,14 @@ interface HomeAdRotatorProps {
 }
 
 const EASE = [0.22, 1, 0.36, 1] as const;
-const SLIDE_DURATION = 0.85;
+const SLIDE_DURATION = 1.4;
 
 function AdSlide({ ad, onPress }: { ad: HomeAd; onPress: () => void }) {
   return (
     <button
       type="button"
       onClick={onPress}
-      className="relative w-full h-full text-left rounded-xl overflow-hidden bg-card active:scale-[0.99] transition-transform"
-      style={{ boxShadow: "var(--shadow-card)" }}
+      className="relative w-full h-full text-left rounded-[24px] overflow-hidden bg-neutral-900 active:scale-95 transition-transform shadow-[0_4px_20px_rgba(0,0,0,0.1)] border border-neutral-100"
     >
       {ad.imageUrl ? (
         <img
@@ -48,21 +47,21 @@ function AdSlide({ ad, onPress }: { ad: HomeAd; onPress: () => void }) {
       />
 
       <div className="relative h-full w-full flex flex-col justify-center px-4 py-3">
-        <p className="text-[9px] font-semibold uppercase tracking-[0.22em] text-primary-foreground/75">
+        <p className="text-[9px] font-medium uppercase tracking-[0.15em] text-primary-foreground/75">
           {ad.eyebrow}
         </p>
-        <p className="mt-1.5 pr-20 text-primary-foreground font-bold text-[17px] leading-[1.15] tracking-tight line-clamp-2">
+        <p className="mt-1.5 pr-20 text-primary-foreground font-medium text-[16px] leading-[1.2] tracking-normal line-clamp-2">
           {ad.titulo}
         </p>
         {ad.descricao ? (
-          <p className="mt-1 pr-20 text-[12px] leading-snug text-primary-foreground/85 line-clamp-1">
+          <p className="mt-1 pr-20 text-[12px] font-normal leading-snug text-primary-foreground/85 line-clamp-1">
             {ad.descricao}
           </p>
         ) : null}
       </div>
 
       {/* CTA minimalista no canto */}
-      <span className="absolute bottom-2.5 right-3 inline-flex items-center gap-0.5 text-[12px] font-semibold text-primary-foreground">
+      <span className="absolute bottom-2.5 right-3 inline-flex items-center gap-0.5 text-[12px] font-medium text-primary-foreground">
         {ad.ctaLabel}
         <ChevronRight className="w-3.5 h-3.5" />
       </span>
@@ -78,16 +77,15 @@ function AdSlide({ ad, onPress }: { ad: HomeAd; onPress: () => void }) {
 export function HomeAdRotator({
   children,
   ads,
-  baseDurationMs = 6500,
-  adDurationMs = 7000,
-  firstBaseDurationMs = 3500,
+  baseDurationMs = 6000,
+  adDurationMs = 6000,
+  firstBaseDurationMs = 6000,
 }: HomeAdRotatorProps) {
   const navigate = useNavigate();
   const [index, setIndex] = useState(0);
   const [loops, setLoops] = useState(0);
   const [paused, setPaused] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
-  const [readyIds, setReadyIds] = useState<string[]>([]);
   const timer = useRef<ReturnType<typeof setTimeout>>();
 
   const hasBase = !!children;
@@ -99,48 +97,14 @@ export function HomeAdRotator({
     [],
   );
 
-  // Pré-carrega as imagens: um anúncio só entra na fila depois de estar pronto,
-  // evitando o "flash" de card carregando na entrada do app.
-  useEffect(() => {
-    let alive = true;
-    ads.forEach((ad) => {
-      if (!ad.imageUrl) {
-        setReadyIds((prev) => (prev.includes(ad.id) ? prev : [...prev, ad.id]));
-        return;
-      }
-      const img = new Image();
-      img.decoding = "async";
-      img.src = ad.imageUrl;
-      const done = () => {
-        if (!alive) return;
-        setReadyIds((prev) => (prev.includes(ad.id) ? prev : [...prev, ad.id]));
-      };
-      if (img.complete) done();
-      else {
-        img.onload = done;
-        img.onerror = done;
-      }
-    });
-    return () => {
-      alive = false;
-    };
-  }, [ads]);
-
-  const visibleAds = useMemo(
-    () => ads.filter((ad) => readyIds.includes(ad.id)),
-    [ads, readyIds],
-  );
-
-  // slides: 0 = base (se existir) | demais = anúncios | último = clone do primeiro
-  // para permitir loop infinito sempre avançando para a frente.
-  const itemCount = hasBase ? visibleAds.length + 1 : visibleAds.length;
-  const totalSlides = itemCount > 1 ? itemCount + 1 : itemCount;
-
   useEffect(() => {
     setIndex(0);
     setLoops(0);
     setIsResetting(false);
-  }, [visibleAds.length, hasBase]);
+  }, [ads.length, hasBase]);
+
+  const itemCount = hasBase ? ads.length + 1 : ads.length;
+  const totalSlides = itemCount > 1 ? itemCount + 1 : itemCount;
 
   useEffect(() => {
     if (totalSlides <= 1 || paused || isResetting) return;
@@ -154,8 +118,6 @@ export function HomeAdRotator({
       setIndex((i) => {
         const next = i + 1;
         if (next >= totalSlides) {
-          // Chegou no clone do primeiro slide; reseta silenciosamente para o
-          // slide original sem animação, mantendo a sensação de movimento contínuo.
           setIsResetting(true);
           setLoops((l) => l + 1);
           return 0;
@@ -176,14 +138,12 @@ export function HomeAdRotator({
     firstBaseDurationMs,
   ]);
 
-  // Sai do estado de reset no próximo frame para reativar as transições.
   useEffect(() => {
     if (!isResetting) return;
     const raf = requestAnimationFrame(() => setIsResetting(false));
     return () => cancelAnimationFrame(raf);
   }, [isResetting]);
 
-  // Pausa quando a aba não está visível (economia + não "queima" impressão)
   useEffect(() => {
     const onVis = () => setPaused(document.hidden);
     document.addEventListener("visibilitychange", onVis);
@@ -206,48 +166,62 @@ export function HomeAdRotator({
   if (totalSlides === 0) return null;
 
   return (
-    <div
-      className="relative overflow-hidden rounded-xl"
-      onPointerDown={() => setPaused(true)}
-      onPointerUp={() => setPaused(false)}
-      onPointerLeave={() => setPaused(false)}
-    >
-      <motion.div
-        className="flex w-full items-stretch"
-        animate={{ x: `-${index * 100}%` }}
-        transition={
-          isResetting || reducedMotion
-            ? { duration: 0 }
-            : { duration: SLIDE_DURATION, ease: EASE }
-        }
-        style={{ willChange: "transform" }}
+    <div className="w-full">
+      <div
+        className="relative overflow-hidden rounded-[24px]"
+        onPointerDown={() => setPaused(true)}
+        onPointerUp={() => setPaused(false)}
+        onPointerLeave={() => setPaused(false)}
       >
-        {hasBase ? (
-          <div className="w-full shrink-0">{children}</div>
-        ) : null}
+        <motion.div
+          className="flex w-full items-stretch"
+          drag="x"
+          dragConstraints={{ left: 0, right: 0 }}
+          dragElastic={0.2}
+          onDragEnd={(e, { offset }) => {
+            const swipe = offset.x;
+            if (swipe < -50) {
+              setIndex((i) => Math.min(i + 1, totalSlides - 1));
+            } else if (swipe > 50) {
+              setIndex((i) => Math.max(i - 1, 0));
+            }
+          }}
+          animate={{ x: `-${index * 100}%` }}
+          transition={
+            isResetting || reducedMotion
+              ? { duration: 0 }
+              : { duration: SLIDE_DURATION, ease: EASE }
+          }
+          style={{ willChange: "transform" }}
+        >
+          {hasBase ? (
+            <div className="w-full shrink-0">{children}</div>
+          ) : null}
 
-        {visibleAds.map((ad) => (
-          <div
-            key={ad.id}
-            className={hasBase ? "w-full shrink-0" : "w-full shrink-0 h-[104px]"}
-          >
-            <AdSlide ad={ad} onPress={() => handleAdPress(ad)} />
-          </div>
-        ))}
+          {ads.map((ad) => (
+            <div
+              key={ad.id}
+              className={hasBase ? "w-full shrink-0" : "w-full shrink-0 h-[104px]"}
+            >
+              <AdSlide ad={ad} onPress={() => handleAdPress(ad)} />
+            </div>
+          ))}
 
-        {/* Clone do primeiro slide para loop infinito sempre à frente */}
-        {itemCount > 1 && hasBase ? (
-          <div className="w-full shrink-0">{children}</div>
-        ) : null}
-        {itemCount > 1 && !hasBase && visibleAds[0] ? (
-          <div
-            key={`${visibleAds[0].id}-clone`}
-            className="w-full shrink-0 h-[104px]"
-          >
-            <AdSlide ad={visibleAds[0]} onPress={() => handleAdPress(visibleAds[0])} />
-          </div>
-        ) : null}
-      </motion.div>
+          {/* Clone do primeiro slide para loop infinito sempre à frente */}
+          {itemCount > 1 && hasBase ? (
+            <div className="w-full shrink-0">{children}</div>
+          ) : null}
+          {itemCount > 1 && !hasBase && ads[0] ? (
+            <div
+              key={`${ads[0].id}-clone`}
+              className="w-full shrink-0 h-[104px]"
+            >
+              <AdSlide ad={ads[0]} onPress={() => handleAdPress(ads[0])} />
+            </div>
+          ) : null}
+        </motion.div>
+      </div>
+
     </div>
   );
 }

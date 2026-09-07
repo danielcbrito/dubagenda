@@ -26,21 +26,20 @@ export function SupportChatBubble() {
         <motion.button
           key="support-bubble"
           onClick={handleClick}
-          className="fixed right-4 z-40 flex items-center gap-2 h-9 pl-3 pr-3.5 rounded-full bg-foreground text-background shadow-md shadow-foreground/10 active:scale-95 transition-transform"
+          className="fixed right-4 z-40 flex items-center gap-2.5 h-11 pl-3.5 pr-4 rounded-full bg-white shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-neutral-200/60 active:scale-95 transition-transform"
           style={{
-            bottom: "calc(4rem + env(safe-area-inset-bottom, 0px) + 0.875rem)",
+            bottom: "calc(5.5rem + env(safe-area-inset-bottom, 0px))",
           }}
           initial={{ scale: 0, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           exit={{ scale: 0, opacity: 0 }}
           transition={{ duration: 0.3, type: "spring" }}
         >
-          <div className="relative">
-            <Headphones className="h-4 w-4" />
-            <div className="absolute -top-0.5 -right-0.5 h-[7px] w-[7px] rounded-full bg-emerald-400 border-[1.5px] border-foreground" />
+          <div className="relative flex items-center justify-center">
+            <Headphones className="h-5 w-5 text-neutral-800" strokeWidth={2.0} />
+            <div className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-emerald-500 border-2 border-white" />
           </div>
-
-          <span className="text-[11px] font-semibold tracking-wide">
+          <span className="text-[13px] font-semibold text-neutral-800 tracking-tight">
             Suporte
           </span>
         </motion.button>

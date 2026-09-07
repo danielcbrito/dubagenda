@@ -31,8 +31,8 @@ interface CompactFieldProps {
 function CompactField({ label, value, onChange, placeholder, required, maxLength, error, type = "text", className, disabled }: CompactFieldProps) {
   const isEmpty = required && !value.trim();
   return (
-    <div className={cn("space-y-1", className)}>
-      <label className="text-[9px] text-muted-foreground/60 uppercase tracking-[0.1em] font-medium">
+    <div className={cn("space-y-1.5", className)}>
+      <label className="text-[11px] text-neutral-500 font-medium uppercase tracking-wider">
         {label}{required && " *"}
       </label>
       <input
@@ -43,14 +43,14 @@ function CompactField({ label, value, onChange, placeholder, required, maxLength
         maxLength={maxLength}
         disabled={disabled}
         className={cn(
-          "w-full h-8 px-2.5 bg-muted/30 border rounded-lg text-[12px] text-foreground placeholder:text-muted-foreground",
-          "focus:outline-none focus:border-border/50 focus:ring-0 transition-colors",
-          isEmpty && !error ? "border-destructive/40" : "border-border/30",
-          error ? "border-destructive/60" : "",
+          "w-full h-11 px-4 bg-neutral-50 border rounded-xl text-[14px] text-[#18181B] placeholder:text-neutral-400 font-medium",
+          "focus:outline-none focus:border-neutral-300 focus:bg-white transition-colors",
+          isEmpty && !error ? "border-red-500/50" : "border-neutral-200",
+          error ? "border-red-500/50 focus:border-red-500" : "",
           disabled && "opacity-50 cursor-not-allowed"
         )}
       />
-      {error && <p className="text-[9px] text-destructive">{error}</p>}
+      {error && <p className="text-[11px] font-medium text-red-500">{error}</p>}
     </div>
   );
 }
@@ -68,26 +68,26 @@ function AccordionSection({ icon: Icon, title, subtitle, missingCount, children,
   const [open, setOpen] = useState(defaultOpen);
 
   return (
-    <div className="border-b border-border/20 last:border-b-0">
+    <div className="border-b border-neutral-100 last:border-b-0">
       <button
         onClick={() => setOpen(!open)}
-        className="w-full flex items-center gap-3 px-3.5 py-3 hover:bg-secondary/30 transition-colors"
+        className="w-full flex items-center gap-3 px-4 py-4 hover:bg-neutral-50 active:bg-neutral-100 transition-colors"
       >
-        <div className="w-7 h-7 rounded-md bg-muted/60 flex items-center justify-center flex-shrink-0">
-          <Icon className="h-3.5 w-3.5 text-muted-foreground" strokeWidth={1.8} />
+        <div className="w-10 h-10 rounded-xl bg-neutral-100 flex items-center justify-center flex-shrink-0">
+          <Icon className="h-4 w-4 text-neutral-500" strokeWidth={2} />
         </div>
         <div className="flex-1 text-left min-w-0">
-          <p className="text-[12px] font-medium text-foreground">{title}</p>
-          {subtitle && <p className="text-[10px] text-muted-foreground/60 truncate">{subtitle}</p>}
+          <p className="text-[14px] font-medium text-[#18181B]">{title}</p>
+          {subtitle && <p className="text-[12px] text-neutral-500 truncate mt-0.5">{subtitle}</p>}
         </div>
         {(missingCount ?? 0) > 0 && (
-          <span className="rounded-full bg-destructive text-destructive-foreground text-[9px] font-bold min-w-[18px] h-[18px] flex items-center justify-center px-1">
+          <span className="rounded-md bg-red-50 text-red-600 text-[10px] font-bold min-w-[20px] h-[20px] flex items-center justify-center px-1.5">
             {missingCount}
           </span>
         )}
         <ChevronRight
           className={cn(
-            "h-4 w-4 text-muted-foreground/50 transition-transform duration-200",
+            "h-4 w-4 text-neutral-300 transition-transform duration-200",
             open && "rotate-90"
           )}
         />
@@ -101,7 +101,7 @@ function AccordionSection({ icon: Icon, title, subtitle, missingCount, children,
             transition={{ duration: 0.2 }}
             className="overflow-hidden"
           >
-            <div className="px-3.5 pb-3.5 pt-1 space-y-2.5 border-t border-border/20">
+            <div className="px-4 pb-5 pt-1 space-y-4 border-t border-neutral-100">
               {children}
             </div>
           </motion.div>
@@ -263,26 +263,37 @@ export default function ClienteDadosPessoais() {
   }
 
   return (
-    <div className="min-h-screen pb-24">
-      {/* Header */}
-      <div className="flex items-center gap-3 px-4 pt-4 pb-3">
-        <button
-          onClick={() => navigate("/cliente/perfil")}
-          className="h-7 w-7 rounded-md bg-muted/40 flex items-center justify-center hover:bg-muted/60 transition-colors"
-        >
-          <BackArrow size={16} className="text-foreground" />
-        </button>
-        <h1 className="text-[14px] font-semibold tracking-tight text-foreground">Meus Dados</h1>
-      </div>
+    <div className="h-full w-full bg-[#FBFBFA] dark:bg-background relative overflow-y-auto overscroll-contain">
+      <div className="max-w-2xl mx-auto px-5 pt-[max(calc(env(safe-area-inset-top,0px)+1.5rem),2rem)] pb-32">
+        {/* Header no mesmo padrão do agendamento — Botão circular sem barra cortando */}
+        <div className="flex items-center justify-between mb-6">
+          <button
+            onClick={() => navigate("/cliente/perfil")}
+            className="w-10 h-10 rounded-full bg-white dark:bg-card border border-neutral-200/70 dark:border-border/60 shadow-[0_2px_8px_rgba(0,0,0,0.04)] flex items-center justify-center text-neutral-900 dark:text-foreground active:scale-90 transition-transform cursor-pointer"
+            aria-label="Voltar"
+          >
+            <BackArrow size={20} strokeWidth={2.2} />
+          </button>
+        </div>
 
-      {/* Name highlight card */}
-      <div className="mx-4 mb-4 px-4 py-3 rounded-lg bg-card border border-border/30 shadow-sm">
-        <p className="text-[9px] text-muted-foreground/40 uppercase tracking-[0.12em]">Nome completo</p>
-        <p className="text-[15px] font-semibold text-foreground mt-1">{form.nome || "—"}</p>
-      </div>
+        {/* Título da tela idêntico ao padrão de agendamento */}
+        <div className="mb-6">
+          <h1 className="text-[25px] sm:text-[27px] font-bold text-neutral-900 dark:text-foreground tracking-tight leading-tight font-sans">
+            Meus Dados
+          </h1>
+          <p className="text-[13px] text-neutral-500 dark:text-muted-foreground mt-1">
+            Informações cadastrais e dados de contato
+          </p>
+        </div>
 
-      {/* Accordions */}
-      <div className="mx-4 rounded-xl border border-border/30 bg-card shadow-sm overflow-hidden">
+        {/* Name highlight card */}
+        <div className="mb-4 px-5 py-4 rounded-2xl bg-white dark:bg-card border border-neutral-200/70 dark:border-border/60 shadow-[0_2px_8px_rgba(0,0,0,0.03)]">
+          <p className="text-[11px] text-neutral-400 font-medium uppercase tracking-wider">Nome completo</p>
+          <p className="text-[17px] font-semibold text-neutral-900 dark:text-foreground mt-1">{form.nome || "—"}</p>
+        </div>
+
+        {/* Accordions */}
+        <div className="rounded-2xl border border-neutral-200/70 dark:border-border/60 bg-white dark:bg-card shadow-[0_2px_8px_rgba(0,0,0,0.03)] overflow-hidden mb-6">
         {/* Identificação */}
         <AccordionSection
           icon={User}
@@ -338,18 +349,15 @@ export default function ClienteDadosPessoais() {
             <button
               onClick={handleSave}
               disabled={saving || !!cpfError || !!telefoneError}
-              className={cn(
-                "w-full h-10 rounded-xl text-[12px] font-semibold flex items-center justify-center gap-2 shadow-lg transition-all",
-                "bg-foreground text-background hover:bg-foreground/90 active:scale-[0.98]",
-                "disabled:opacity-50 disabled:cursor-not-allowed"
-              )}
+              className="w-full h-12 rounded-xl bg-neutral-900 text-white text-[14px] font-semibold flex items-center justify-center gap-2 shadow-lg disabled:opacity-50 active:scale-[0.98] transition-all"
             >
-              {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
               {saving ? "Salvando..." : "Salvar alterações"}
             </button>
           </motion.div>
         )}
       </AnimatePresence>
     </div>
-  );
+  </div>
+);
 }

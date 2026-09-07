@@ -36,18 +36,18 @@ export function FloatingActionBar({
           {/* Subtle top fade */}
           <div 
             className="h-16 pointer-events-none"
-            style={{ background: "linear-gradient(to bottom, transparent, hsl(var(--background)))" }}
+            style={{ background: "linear-gradient(to bottom, transparent, #FBFBFA)" }}
           />
 
           {/* Bar content */}
-          <div className="bg-background border-t border-border/40 px-5 pb-safe">
-            <div className="pt-3.5 pb-4 space-y-3">
+          <div className="bg-[#FBFBFA] px-5 pb-safe">
+            <div className="pt-4 pb-5 space-y-3">
               {/* Info row (optional) */}
               {(icon || subtitle) && (
                 <div className="flex items-center gap-2.5 px-0.5">
                   {icon && icon}
                   {subtitle && (
-                    <span className="text-[12px] text-muted-foreground/70">{subtitle}</span>
+                    <span className="text-[13px] font-medium text-neutral-600">{subtitle}</span>
                   )}
                 </div>
               )}
@@ -59,14 +59,14 @@ export function FloatingActionBar({
                 whileTap={{ scale: isLoading ? 1 : 0.985 }}
                 className={cn(
                   "w-full flex items-center justify-center gap-2",
-                  "h-[50px] rounded-xl",
-                  "font-semibold text-[14px] text-primary-foreground",
-                  "bg-primary",
-                  "active:brightness-90 transition-all duration-150",
+                  "h-[54px] rounded-full",
+                  "font-medium text-[15px] tracking-wide text-white",
+                  "bg-neutral-900",
+                  "active:scale-[0.98] transition-all duration-300",
                   isLoading && "opacity-70 cursor-wait"
                 )}
                 style={{
-                  boxShadow: "0 4px 16px hsl(var(--primary) / 0.25)"
+                  boxShadow: "0 8px 30px rgba(0,0,0,0.12)"
                 }}
               >
                 {isLoading ? (
@@ -75,10 +75,7 @@ export function FloatingActionBar({
                     <span>{loadingLabel}</span>
                   </>
                 ) : (
-                  <>
-                    <span>{label}</span>
-                    <ArrowRight className="w-4 h-4" />
-                  </>
+                  <span>{label}</span>
                 )}
               </motion.button>
             </div>

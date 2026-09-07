@@ -38,12 +38,12 @@ export function TimeSelectionBar({
           />
 
           {/* Bar content */}
-          <div className="bg-background border-t border-border/40 px-5 pb-safe">
+          <div className="bg-background px-5 pb-safe">
             <div className="pt-3.5 pb-4 space-y-3">
               {/* Info row */}
               <div className="flex items-center gap-2.5 px-0.5">
                 <Check className="w-4 h-4 text-success flex-shrink-0" />
-                <span className="text-[15px] font-bold text-foreground tabular-nums">{selectedTime}</span>
+                <span className="text-[15px] font-medium text-foreground tabular-nums">{selectedTime}</span>
                 <span className="text-[10px] text-muted-foreground/40">•</span>
                 <span className="text-[12px] text-muted-foreground/70">{formattedDate}</span>
               </div>
@@ -56,7 +56,7 @@ export function TimeSelectionBar({
                 className={cn(
                   "w-full flex items-center justify-center gap-2",
                   "h-[50px] rounded-xl",
-                  "font-semibold text-[14px] text-primary-foreground",
+                  "font-medium text-[15px] text-primary-foreground",
                   "bg-primary",
                   "active:brightness-90 transition-all duration-150",
                   isLoading && "opacity-70 cursor-wait"

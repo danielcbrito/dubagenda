@@ -187,16 +187,21 @@ export function useSlotAvailability(
     return () => clearInterval(interval);
   }, []);
 
-  // Ao mudar data/barbeiro/duração, resetar refs e slots para forçar load completo
-  // e evitar que a UI use dados stale do request anterior.
+  const prevDateBarberRef = useRef<string>('');
+  // Ao mudar data/barbeiro, resetar refs e slots para forçar load completo
+  // e evitar que a UI use dados stale do request anterior. Mantém slots visíveis se apenas re-renderizar.
   useEffect(() => {
-    isInitialLoadRef.current = true;
-    lastSlotsRef.current = [];
-    setSlots([]);
-    setOccupiedSlots([]);
-    setHasLoaded(false);
-    if (selectedDate && barbeiroId && serviceDuration > 0) {
-      setLoading(true);
+    const currentKey = `${selectedDateKey}_${barbeiroId ?? ''}`;
+    if (prevDateBarberRef.current !== currentKey) {
+      prevDateBarberRef.current = currentKey;
+      isInitialLoadRef.current = true;
+      lastSlotsRef.current = [];
+      setSlots([]);
+      setOccupiedSlots([]);
+      setHasLoaded(false);
+      if (selectedDate && barbeiroId && serviceDuration > 0) {
+        setLoading(true);
+      }
     }
   }, [selectedDateKey, barbeiroId, serviceDuration]);
 

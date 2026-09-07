@@ -34,31 +34,31 @@ export function BarberCard({ barber, isSelected, onSelect, rating, isPlanBarber 
   return (
     <>
       <motion.button
+        type="button"
         onClick={onSelect}
         whileTap={{ scale: 0.985 }}
         className={cn(
-          "w-full text-left rounded-xl p-3.5 transition-all duration-200 relative group",
-          "bg-card border",
+          "w-full text-left rounded-[24px] p-4 transition-all duration-300 relative group cursor-pointer",
           isSelected
-            ? "border-primary/25 shadow-[0_2px_12px_-4px_hsl(var(--primary)/0.12)]"
-            : "border-border/40 hover:border-border/80 hover:bg-card/80"
+            ? "border-neutral-900 bg-white shadow-[0_4px_20px_rgba(0,0,0,0.08)] ring-1 ring-neutral-900"
+            : "bg-white border border-neutral-200/80 hover:border-neutral-300 shadow-[0_2px_12px_rgba(0,0,0,0.03)]"
         )}
       >
         {/* Plan badge */}
         {isPlanBarber && (
           <div className="absolute top-3 right-3 flex items-center gap-1 bg-secondary/10 text-secondary px-2 py-0.5 rounded-full border border-secondary/15">
             <Crown className="w-2.5 h-2.5" />
-            <span className="text-[9px] font-semibold uppercase tracking-wider">Seu Plano</span>
+            <span className="text-[9px] font-medium">Seu Plano</span>
           </div>
         )}
 
         <div className="flex items-center gap-3.5">
           {/* Avatar */}
           <div className={cn(
-            "relative w-[52px] h-[52px] rounded-full overflow-hidden flex-shrink-0 transition-all duration-200",
+            "relative w-[56px] h-[56px] rounded-full overflow-hidden flex-shrink-0 transition-all duration-300",
             isSelected
-              ? "shadow-[0_0_0_1.5px_hsl(var(--primary)/0.18)]"
-              : ""
+              ? "shadow-[0_0_0_2px_#171717]"
+              : "ring-1 ring-neutral-100"
           )}>
             {barber.foto_url ? (
               <img
@@ -67,77 +67,66 @@ export function BarberCard({ barber, isSelected, onSelect, rating, isPlanBarber 
                 className="w-full h-full object-cover"
               />
             ) : (
-              <div className="w-full h-full bg-muted/30 flex items-center justify-center">
-                <User className="w-5 h-5 text-muted-foreground" />
+              <div className="w-full h-full bg-neutral-100 flex items-center justify-center">
+                <User className="w-5 h-5 text-neutral-400" />
               </div>
             )}
           </div>
 
           {/* Info */}
           <div className="flex-1 min-w-0">
-            <h3 className={cn(
-              "text-[14px] font-semibold truncate transition-colors",
-              isSelected ? "text-foreground" : "text-foreground"
-            )}>
+            <h3 className="text-[15px] font-medium text-neutral-900 truncate transition-colors">
               {barber.apelido}
             </h3>
 
             {/* Rating */}
             {rating && rating.count > 0 ? (
               <div className="flex items-center gap-2 mt-1">
-                <div className="flex items-center gap-0.5 bg-muted/40 px-1.5 py-0.5 rounded-md">
-                  <Star className="w-3 h-3 fill-primary text-primary" />
-                  <span className="text-[11px] font-semibold text-foreground tabular-nums">
+                <div className="flex items-center gap-1 bg-neutral-100 px-2 py-0.5 rounded-full">
+                  <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                  <span className="text-[12px] font-medium text-neutral-900 tabular-nums">
                     {rating.average.toFixed(1)}
                   </span>
                 </div>
                 <button
+                  type="button"
                   onClick={handleViewReviews}
-                  className="text-[11px] text-muted-foreground hover:text-foreground flex items-center gap-0.5 transition-colors"
+                  className="text-[12px] font-medium text-neutral-500 hover:text-neutral-900 flex items-center gap-0.5 transition-colors"
                 >
                   <span>{rating.count} avaliações</span>
-                  <ChevronRight className="w-3 h-3" />
+                  <ChevronRight className="w-3.5 h-3.5" />
                 </button>
               </div>
             ) : (
-              <p className="text-[11px] text-muted-foreground mt-1">
-                Profissional
+              <p className="text-[12px] font-medium text-neutral-500 mt-1">
+                Profissional disponível
               </p>
             )}
           </div>
 
-          {/* Selection Indicator */}
+          {/* Selection indicator */}
           <div className={cn(
-            "flex-shrink-0 w-6 h-6 rounded-full border transition-all duration-200 flex items-center justify-center",
+            "flex-shrink-0 w-6 h-6 rounded-full border-2 transition-all duration-300 flex items-center justify-center",
             isSelected 
-              ? "bg-primary border-primary"
-              : "border-muted-foreground/30 group-hover:border-muted-foreground/50",
-            isPlanBarber ? "mt-5" : ""
+              ? "bg-neutral-900 border-neutral-900"
+              : "border-neutral-200 group-hover:border-neutral-300"
           )}>
             {isSelected && (
-              <motion.div
-                initial={{ scale: 0, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ type: "spring", stiffness: 400, damping: 25 }}
-              >
-                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M2.5 6L5 8.5L9.5 4" stroke="hsl(var(--primary-foreground))" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </motion.div>
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                <path d="M2.5 6L5 8.5L9.5 4" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
             )}
           </div>
         </div>
       </motion.button>
 
-      {/* Profile Sheet */}
+      {/* Barber Profile Sheet */}
       <BarberProfileSheet
         open={showProfile}
-        onClose={() => setShowProfile(false)}
+        onOpenChange={setShowProfile}
         barberId={barber.id}
         barberName={barber.apelido}
         barberPhoto={barber.foto_url}
-        barberAvgRating={rating?.average ?? null}
-        barberTotalReviews={rating?.count || 0}
       />
     </>
   );

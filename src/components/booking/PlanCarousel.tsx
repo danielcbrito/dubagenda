@@ -1,17 +1,15 @@
-import { useCallback, useEffect, useState } from "react";
-import { motion } from "framer-motion";
+import { useCallback, useEffect, useState, useMemo } from "react";
 import useEmblaCarousel from "embla-carousel-react";
-import {
-  ArrowRight,
-  Calendar,
-  Check,
-  Lock,
-  MapPin,
-  Shield,
-} from "lucide-react";
+import { Check, MapPin, X } from "lucide-react";
+import { BackArrow } from "@/components/ui/back-arrow";
 import { cn } from "@/lib/utils";
 
-interface Plan {
+export interface PlanBenefit {
+  texto: string;
+  incluso: boolean;
+}
+
+export interface Plan {
   id: string;
   nome: string;
   descricao: string;
@@ -19,7 +17,6 @@ interface Plan {
   beneficios_json: any;
   limite_agendamentos_mes: number;
   tenant_id: string | null;
-  // Disponibilidade (opcionais — backward compatible)
   ativo?: boolean;
   controle_vagas_ativo?: boolean;
   vagas?: number | null;
@@ -39,6 +36,7 @@ interface PlanCarouselProps {
   selectedTenantId: string | null | "dub";
   selectedShopName: string;
   onChangeShop: () => void;
+  onBack?: () => void;
 }
 
 export function PlanCarousel({
@@ -49,349 +47,349 @@ export function PlanCarousel({
   hasActiveSubscription,
   selectedShopName,
   onChangeShop,
+  onBack,
 }: PlanCarouselProps) {
+  // ── Embla Carousel: exatamente 1 card por vez com snap centralizado ──
   const [emblaRef, emblaApi] = useEmblaCarousel({
     align: "center",
-    containScroll: false,
+    containScroll: "trimSnaps",
     loop: false,
     slidesToScroll: 1,
   });
 
-  const [scrollProgress, setScrollProgress] = useState<number[]>(
-    plans.map((_, i) => (i === 0 ? 1 : 0))
-  );
-
-  const onScroll = useCallback(() => {
-    if (!emblaApi) return;
-    const scrollSnaps = emblaApi.scrollSnapList();
-    const progress = emblaApi.scrollProgress();
-
-    const scales = scrollSnaps.map((snap) => {
-      const diff = Math.abs(progress - snap);
-      return Math.max(0, 1 - diff * 2.8);
-    });
-
-    setScrollProgress(scales);
-  }, [emblaApi]);
-
   useEffect(() => {
     if (!emblaApi) return;
-    emblaApi.on("scroll", onScroll);
-    emblaApi.on("reInit", onScroll);
-    emblaApi.on("select", () => {
+    const onSelect = () => {
       setCurrentPlanIndex(emblaApi.selectedScrollSnap());
-    });
-    onScroll();
-    return () => {
-      emblaApi.off("scroll", onScroll);
     };
-  }, [emblaApi, onScroll, setCurrentPlanIndex]);
+    emblaApi.on("select", onSelect);
+    emblaApi.on("reInit", onSelect);
+    return () => {
+      emblaApi.off("select", onSelect);
+      emblaApi.off("reInit", onSelect);
+    };
+  }, [emblaApi, setCurrentPlanIndex]);
 
-  const activePlan = plans[currentPlanIndex];
+  // Identifica o plano central em destaque (vidro escuro premium)
+  const featuredIndex = useMemo(() => {
+    if (plans.length === 0) return 0;
+    if (plans.length === 1) return 0;
+    if (plans.length === 2) return 1;
+    return 1;
+  }, [plans]);
 
   return (
-    <div className="flex-1 flex flex-col min-h-0">
+    <div className="relative flex-1 flex flex-col justify-between min-h-0 overflow-hidden select-none bg-transparent">
+      {/* ═══ Header Minimalista e Estratégico (Flutuante) ═══ */}
+      <div 
+        className="fixed top-0 left-0 right-0 z-50 pointer-events-none"
+        style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}
+      >
+        <div className="max-w-2xl mx-auto px-4 py-4">
+          <div className="flex items-center justify-between pointer-events-auto">
+            {onBack ? (
+              <button
+                type="button"
+                onClick={onBack}
+                aria-label="Voltar"
+                className="w-10 h-10 rounded-full bg-white/60 backdrop-blur-md border border-white/50 shadow-[0_2px_8px_rgba(0,0,0,0.04)] flex items-center justify-center text-neutral-900 active:scale-90 transition-transform cursor-pointer"
+              >
+                <BackArrow size={20} strokeWidth={2.2} />
+              </button>
+            ) : (
+              <div className="w-10 h-10" />
+            )}
 
-      {/* Shop selector — inline pill */}
-      <div className="flex-shrink-0 flex justify-center pt-1 pb-3">
-        <button
-          onClick={onChangeShop}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border/50 bg-card active:scale-[0.97] transition-transform"
-        >
-          <MapPin className="w-3 h-3 text-muted-foreground/50" />
-          <span className="text-[11px] font-medium text-foreground/80 truncate max-w-[160px]">
-            {selectedShopName}
-          </span>
-          <span className="text-[10px] font-semibold text-primary">Trocar</span>
-        </button>
+            {/* Traços indicadores */}
+            {plans.length > 1 && (
+              <div className="flex items-center gap-1.5">
+                {plans.map((_, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => emblaApi?.scrollTo(i)}
+                    aria-label={`Ir para plano ${i + 1}`}
+                    className={cn(
+                      "h-[3.5px] rounded-full transition-all duration-300 cursor-pointer",
+                      i === currentPlanIndex
+                        ? "w-6 bg-[#18181B]"
+                        : "w-2.5 bg-neutral-300"
+                    )}
+                  />
+                ))}
+              </div>
+            )}
+
+            <div className="w-10" />
+          </div>
+        </div>
       </div>
 
-      {/* Carousel — full height, no bg separation */}
-      <div className="flex-1 min-h-0 flex flex-col justify-center">
-        <div className="overflow-hidden" ref={emblaRef}>
-          <div className="flex">
+      <div className="flex-shrink-0 pt-14 px-4 z-10 w-full max-w-2xl mx-auto">
+        <div className="mb-2 pt-1 px-2">
+          <h2 className="text-[24px] sm:text-[25px] font-semibold text-[#18181B] tracking-tight leading-none font-sans">
+            Planos
+          </h2>
+        </div>
+      </div>
+
+      {/* ═══ Carrossel: Efeito Vidro Autêntico + Recorte Curvo nos Planos Populares ═══ */}
+      <div className="flex-1 min-h-0 flex flex-col justify-center my-auto py-2">
+        <div className="overflow-hidden w-full h-full flex items-center" ref={emblaRef}>
+          <div className="flex w-full h-full max-h-[550px] sm:max-h-[600px] items-center">
             {plans.map((plan, idx) => {
-              const progress = scrollProgress[idx] ?? 0;
-              const scale = 0.86 + progress * 0.14;
-              const opacity = 0.5 + progress * 0.5;
-              const benefits = Array.isArray(plan.beneficios_json)
-                ? plan.beneficios_json
-                : [];
+              const isSelected = idx === currentPlanIndex;
+              const isFeatured = idx === featuredIndex;
+
               const priceWhole = Math.floor(plan.preco_mensal);
-              const priceCents = (plan.preco_mensal % 1)
-                .toFixed(2)
-                .slice(2);
-              const isActive = progress > 0.7;
+              const priceCents = (plan.preco_mensal % 1).toFixed(2).slice(2);
+
               const indisponivel = !!plan.indisponivel;
               const inativo = !!plan.inativo;
               const esgotado = !!plan.esgotado;
-              const restantes = plan.vagas_restantes;
-              const lowStock =
-                !indisponivel &&
-                plan.controle_vagas_ativo &&
-                typeof restantes === "number" &&
-                restantes > 0 &&
-                restantes <= 3;
+
+              // Apenas os planos "Só Corte" e "Corte e Barba" / "Cabelo e Barba" recebem a curva e o Popular
+              const nomeLower = (plan.nome || "").toLowerCase();
+              const isPopular =
+                nomeLower.includes("só corte") ||
+                nomeLower.includes("so corte") ||
+                nomeLower.includes("corte e barba") ||
+                nomeLower.includes("cabelo e barba");
+
+              // Parse dos benefícios reais
+              const rawBenefits = Array.isArray(plan.beneficios_json)
+                ? plan.beneficios_json
+                : typeof plan.beneficios_json === "string"
+                ? JSON.parse(plan.beneficios_json || "[]")
+                : [];
+
+              const beneficios: PlanBenefit[] = [
+                {
+                  texto: `${plan.limite_agendamentos_mes} agendamento${plan.limite_agendamentos_mes > 1 ? "s" : ""} no mês`,
+                  incluso: true,
+                },
+                {
+                  texto: "Horário prioritário exclusivo no app",
+                  incluso: true,
+                },
+                ...rawBenefits.map((b: string) => ({
+                  texto: b,
+                  incluso: true,
+                })),
+              ];
+
+              if (!isFeatured && idx === 0 && plans.length > 1) {
+                beneficios.push(
+                  { texto: "Combo completo cabelo + barba", incluso: false },
+                  { texto: "Desconto cortesia em produtos", incluso: false }
+                );
+              }
 
               return (
                 <div
                   key={plan.id}
-                  className="flex-[0_0_76%] min-w-0 px-1.5"
-                  style={{
-                    transform: `scale(${scale})`,
-                    opacity,
-                    transition:
-                      "transform 0.18s ease-out, opacity 0.18s ease-out",
-                  }}
+                  className="flex-[0_0_100%] w-full min-w-0 px-8 sm:px-12 h-full max-h-[480px] sm:max-h-[540px] flex justify-center items-center"
                 >
-                  <div
-                    role="button"
-                    tabIndex={0}
-                    onClick={() => {
-                      if (indisponivel || hasActiveSubscription) return;
-                      if (idx !== currentPlanIndex) {
-                        emblaApi?.scrollTo(idx);
-                        return;
-                      }
-                      onSelectPlan(plan);
-                    }}
-                    className={cn(
-                      "rounded-2xl p-5 h-full flex flex-col relative cursor-pointer select-none",
-                      "border transition-opacity duration-300 active:scale-[0.98]",
-                      isActive
-                        ? "bg-card border-border/60 shadow-[0_2px_16px_rgba(0,0,0,0.05)]"
-                        : "bg-card/60 border-border/20",
-                      indisponivel && "opacity-30 pointer-events-none"
-                    )}
-                  >
-
-                    {/* Status badge — top right */}
-                    {(indisponivel || lowStock) && (
-                      <div className="absolute top-3 right-3 z-10">
-                        {inativo && (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-muted text-muted-foreground text-[9px] font-bold uppercase tracking-wider">
-                            <Lock className="w-2.5 h-2.5" />
-                            Indisponível
-                          </span>
-                        )}
-                        {!inativo && esgotado && (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-muted text-muted-foreground text-[9px] font-bold uppercase tracking-wider">
-                            Esgotado
-                          </span>
-                        )}
-                        {lowStock && (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-orange-500/15 text-orange-600 dark:text-orange-400 text-[9px] font-bold uppercase tracking-wider">
-                            Últimas {restantes} {restantes === 1 ? "vaga" : "vagas"}
-                          </span>
-                        )}
+                  <div className="relative w-full max-w-[390px] h-full">
+                    {/* Badge Popular: Posicionado com respiro no degrau recortado ("comeu o pedaço") */}
+                    {isPopular && (
+                      <div className="absolute top-2.5 right-6 z-20 flex items-center gap-1.5 pointer-events-none">
+                        <span className="text-[12px] font-medium tracking-normal text-neutral-900">
+                          Popular
+                        </span>
+                        <span className="w-2 h-2 rounded-full bg-[#16A34A] shadow-xs" />
                       </div>
                     )}
-                    {/* Plan name */}
-                    <div className="mb-1">
-                      <p
-                        className="text-muted-foreground/50 uppercase"
-                        style={{
-                          fontSize: "9px",
-                          fontWeight: 700,
-                          letterSpacing: "1.5px",
-                        }}
-                      >
-                        Plano
-                      </p>
-                      <h3
-                        className="text-foreground mt-1"
-                        style={{
-                          fontSize: "20px",
-                          fontWeight: 800,
-                          letterSpacing: "-0.5px",
-                          lineHeight: 1.2,
-                        }}
-                      >
-                        {plan.nome}
-                      </h3>
-                    </div>
 
-                    {plan.descricao && (
-                      <p
-                        className="text-muted-foreground/60 line-clamp-1"
-                        style={{ fontSize: "11px", lineHeight: 1.5 }}
-                      >
-                        {plan.descricao}
-                      </p>
-                    )}
+                    {/* SVG do Card: Curva recortada suave nos populares e bordas arredondadas nos demais */}
+                    <svg
+                      className="absolute inset-0 w-full h-full pointer-events-none"
+                      viewBox="0 0 380 540"
+                      preserveAspectRatio="none"
+                    >
+                      {isPopular ? (
+                        /* Curva orgânica com degrau ("comeu um pedaço") */
+                        <path
+                          d="M 28 0 L 210 0 C 228 0, 238 16, 248 26 C 258 36, 268 38, 282 38 L 352 38 C 368 38, 380 50, 380 66 L 380 512 C 380 528, 368 540, 352 540 L 28 540 C 12 540, 0 528, 0 512 L 0 28 C 0 12, 12 0, 28 0 Z"
+                          className={
+                            isFeatured
+                              ? "fill-[#141416]/85 stroke-white/20"
+                              : "fill-white/80 stroke-white/80"
+                          }
+                          strokeWidth="1.5"
+                        />
+                      ) : (
+                        /* Borda arredondada pura */
+                        <rect
+                          x="0.75"
+                          y="0.75"
+                          width="378.5"
+                          height="538.5"
+                          rx="32"
+                          className={
+                            isFeatured
+                              ? "fill-[#141416]/85 stroke-white/20"
+                              : "fill-white/80 stroke-white/80"
+                          }
+                          strokeWidth="1.5"
+                        />
+                      )}
+                    </svg>
 
-                    {/* Price — centered */}
-                    <div className="flex-1 flex flex-col items-center justify-center py-4">
-                      <div className="flex items-baseline">
-                        <span
-                          className="text-muted-foreground self-end mb-2.5"
-                          style={{ fontSize: "14px", fontWeight: 500 }}
-                        >
-                          R$
-                        </span>
-                        <span
-                          className="tabular-nums leading-none text-foreground"
-                          style={{
-                            fontSize: "54px",
-                            fontWeight: 900,
-                            letterSpacing: "-3px",
-                          }}
-                        >
-                          {priceWhole}
-                        </span>
-                        <div className="flex flex-col self-end mb-1 ml-0.5">
+                    {/* Conteúdo interno com vidro translúcido e espaçamento confortável */}
+                    <div
+                      className={cn(
+                        "w-full h-full p-5 sm:p-7 flex flex-col justify-between relative select-none transition-all duration-300",
+                        isFeatured ? "text-white" : "text-[#18181B]",
+                        indisponivel && "opacity-40 pointer-events-none"
+                      )}
+                    >
+                      {/* Top Content: Título, Preço, Descrição com Respiro e Benefícios */}
+                      <div className="relative z-10">
+                        {/* Nome do Plano (com margem para não colidir com o recorte) */}
+                        <div className={isPopular ? "pr-24" : "pr-4"}>
+                          <h2
+                            className={cn(
+                              "text-[22px] sm:text-[26px] font-medium tracking-tight leading-tight",
+                              isFeatured ? "text-white" : "text-[#18181B]"
+                            )}
+                          >
+                            {plan.nome}
+                          </h2>
+                        </div>
+
+                        {/* Preço em Destaque */}
+                        <div className="mt-5 flex items-baseline">
                           <span
-                            className="tabular-nums leading-none text-foreground/80"
-                            style={{ fontSize: "18px", fontWeight: 800 }}
+                            className={cn(
+                              "text-sm font-medium mr-1",
+                              isFeatured ? "text-neutral-300" : "text-neutral-500"
+                            )}
+                          >
+                            R$
+                          </span>
+                          <span
+                            className={cn(
+                              "text-3xl sm:text-5xl font-black tracking-tight leading-none",
+                              isFeatured ? "text-white" : "text-[#18181B]"
+                            )}
+                          >
+                            {priceWhole}
+                          </span>
+                          <span
+                            className={cn(
+                              "text-xl font-medium leading-none -ml-0.5",
+                              isFeatured ? "text-neutral-300" : "text-neutral-700"
+                            )}
                           >
                             ,{priceCents}
                           </span>
                           <span
-                            className="text-muted-foreground/50"
-                            style={{
-                              fontSize: "10px",
-                              fontWeight: 500,
-                              marginTop: "2px",
-                            }}
+                            className={cn(
+                              "text-xs font-medium ml-1.5",
+                              isFeatured ? "text-neutral-400" : "text-neutral-500"
+                            )}
                           >
-                            /mês
+                            / mês
                           </span>
+                        </div>
+
+                        {/* Descrição com bastante respiro (afastada do preço) */}
+                        <p
+                          className={cn(
+                            "text-[11px] sm:text-[13px] mt-3 sm:mt-5 line-clamp-2 leading-relaxed",
+                            isFeatured ? "text-neutral-400" : "text-neutral-500"
+                          )}
+                        >
+                          {plan.descricao || "Manutenção completa e atendimento personalizado para seu visual."}
+                        </p>
+
+                        {/* Divisória pontilhada fina com respiro generoso */}
+                        <div
+                          className={cn(
+                            "w-full border-b border-dotted my-3 sm:my-5",
+                            isFeatured ? "border-neutral-800" : "border-neutral-200/80"
+                          )}
+                        />
+
+                        {/* Lista de benefícios com marcadores circulares elegantes */}
+                        <div className="space-y-2.5 sm:space-y-3.5">
+                          {beneficios.slice(0, 5).map((ben, bIdx) => (
+                            <div key={bIdx} className="flex items-center gap-2.5">
+                              {ben.incluso ? (
+                                <div
+                                  className={cn(
+                                    "w-4 h-4 sm:w-5 sm:h-5 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-medium shadow-2xs",
+                                    isFeatured
+                                      ? "bg-white text-neutral-950"
+                                      : "bg-neutral-900 text-white"
+                                  )}
+                                >
+                                  <Check className="w-3 h-3 stroke-[3]" />
+                                </div>
+                              ) : (
+                                <div className="w-5 h-5 rounded-full flex items-center justify-center text-neutral-400 flex-shrink-0">
+                                  <X className="w-3.5 h-3.5 stroke-[2.5]" />
+                                </div>
+                              )}
+                              <span
+                                className={cn(
+                                  "text-xs sm:text-[13px] font-medium leading-tight truncate",
+                                  ben.incluso
+                                    ? isFeatured
+                                      ? "text-neutral-200"
+                                      : "text-neutral-800"
+                                    : isFeatured
+                                    ? "text-neutral-500 line-through font-normal"
+                                    : "text-neutral-400 line-through font-normal"
+                                )}
+                              >
+                                {ben.texto}
+                              </span>
+                            </div>
+                          ))}
                         </div>
                       </div>
 
-                      <p
-                        className="text-muted-foreground mt-2 text-center"
-                        style={{ fontSize: "10px", fontWeight: 500 }}
-                      >
-                        <span className="text-primary font-semibold">
-                          R${" "}
-                          {(plan.preco_mensal / 30)
-                            .toFixed(2)
-                            .replace(".", ",")}
-                          /dia
-                        </span>
-                        <span className="mx-1.5 text-border">·</span>
-                        Sem fidelidade
-                      </p>
-                    </div>
-
-                    {/* Divider */}
-                    <div className="border-t border-border/30 mb-3" />
-
-                    {/* Appointments */}
-                    <div className="flex items-center gap-3 mb-3 bg-foreground rounded-xl p-3">
-                      <div
-                        className="flex items-center justify-center flex-shrink-0 bg-primary rounded-[10px]"
-                        style={{ width: "34px", height: "34px" }}
-                      >
-                        <Calendar
-                          className="text-primary-foreground"
-                          strokeWidth={2}
-                          style={{ width: "16px", height: "16px" }}
-                        />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <span
-                          className="text-background block"
-                          style={{ fontSize: "12px", fontWeight: 700 }}
-                        >
-                          {plan.limite_agendamentos_mes} agendamento
-                          {plan.limite_agendamentos_mes > 1 ? "s" : ""}/mês
-                        </span>
-                        <span
-                          className="text-background/50"
-                          style={{ fontSize: "9px" }}
-                        >
-                          Horário prioritário
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Benefits */}
-                    {benefits.length > 0 && (
-                      <div>
-                        {benefits.slice(0, 3).map((b: string, i: number) => (
-                          <div
-                            key={i}
-                            className="flex items-center gap-2.5"
-                            style={{
-                              padding: "7px 0",
-                              borderBottom:
-                                i < Math.min(benefits.length, 3) - 1
-                                  ? "1px solid hsl(var(--border) / 0.25)"
-                                  : "none",
+                      {/* Botão de Ação na Base em Efeito Vidro (Glassmorphism) */}
+                      <div className="pt-6 mt-auto relative z-10">
+                        {isFeatured ? (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (indisponivel || hasActiveSubscription) return;
+                              onSelectPlan(plan);
                             }}
+                            disabled={indisponivel || hasActiveSubscription}
+                            className="w-full py-3 sm:py-4 rounded-full bg-white hover:bg-neutral-200 text-neutral-900 font-medium text-[13px] sm:text-sm active:scale-[0.98] transition-all flex items-center justify-center cursor-pointer shadow-md"
                           >
-                            <div
-                              className="flex items-center justify-center flex-shrink-0 rounded-md"
-                              style={{
-                                width: "18px",
-                                height: "18px",
-                                background: "hsl(142 76% 45% / 0.08)",
-                              }}
-                            >
-                              <Check
-                                strokeWidth={3}
-                                style={{ width: "10px", height: "10px", color: "#22A855" }}
-                              />
-                            </div>
-                            <span
-                              className="text-foreground/60"
-                              style={{ fontSize: "11px", fontWeight: 500 }}
-                            >
-                              {b}
-                            </span>
-                          </div>
-                        ))}
+                            {hasActiveSubscription ? "Plano Atual" : "Assinar este plano"}
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (indisponivel || hasActiveSubscription) return;
+                              onSelectPlan(plan);
+                            }}
+                            disabled={indisponivel || hasActiveSubscription}
+                            className="w-full py-3 sm:py-4 rounded-full bg-neutral-900 hover:bg-black text-white font-medium text-[13px] sm:text-sm shadow-md active:scale-[0.98] transition-all flex items-center justify-center cursor-pointer"
+                          >
+                            {hasActiveSubscription ? "Plano Atual" : "Assinar este plano"}
+                          </button>
+                        )}
                       </div>
-                    )}
-
-                  
+                    </div>
                   </div>
                 </div>
               );
             })}
           </div>
         </div>
-
-        {/* Dots */}
-        {plans.length > 1 && (
-          <div className="flex items-center justify-center gap-1.5 mt-3">
-            {plans.map((_, i) => (
-              <div
-                key={i}
-                className="rounded-full transition-all duration-200"
-                style={{
-                  width: i === currentPlanIndex ? "16px" : "4px",
-                  height: "4px",
-                  background:
-                    i === currentPlanIndex
-                      ? "hsl(var(--foreground))"
-                      : "hsl(var(--muted-foreground) / 0.2)",
-                  borderRadius: "2px",
-                }}
-              />
-            ))}
-          </div>
-        )}
       </div>
 
-      {/* Hint discreto — clique no plano para assinar */}
-      <div className="flex-shrink-0" style={{ padding: "6px 20px 10px" }}>
-        <p
-          className="text-center text-muted-foreground/40"
-          style={{ fontSize: "10px", fontWeight: 500 }}
-        >
-          {hasActiveSubscription
-            ? "Você já possui um plano ativo"
-            : activePlan?.inativo
-              ? "Plano indisponível"
-              : activePlan?.esgotado
-                ? "Vagas esgotadas"
-                : "Toque no plano para assinar"}
-        </p>
-      </div>
+      {/* Spacer para a base já que o texto foi movido para o topo */}
+      <div className="flex-shrink-0 pt-1 pb-3 text-center z-10" />
     </div>
   );
 }
-

@@ -1,5 +1,5 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, addMonths, subMonths, isToday, isBefore, startOfDay, isSameMonth, startOfWeek, endOfWeek } from "date-fns";
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, addMonths, subMonths, isBefore, startOfDay, isSameMonth, startOfWeek, endOfWeek } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { useState, useMemo, useEffect, useCallback } from "react";
@@ -60,32 +60,12 @@ export function PremiumCalendar({ selectedDate, onSelectDate, disabledDates = []
 
   const canGoPrev = !isBefore(subMonths(currentMonth, 1), startOfMonth(new Date()));
 
-  const weekDays = ["DOM", "SEG", "TER", "QUA", "QUI", "SEX", "SÁB"];
+  const weekDays = ["D", "S", "T", "Q", "Q", "S", "S"];
 
   return (
-    <div
-      className="w-full rounded-2xl overflow-hidden border border-border/30"
-      style={{
-        background: "hsl(var(--card))",
-        boxShadow: "0 4px 24px rgba(0,0,0,0.12), 0 1px 4px rgba(0,0,0,0.08)",
-      }}
-    >
+    <div className="w-full bg-white border border-neutral-200/80 shadow-[0_4px_20px_rgba(0,0,0,0.04)] rounded-3xl p-5 relative overflow-hidden">
       {/* Month header */}
-      <div className="flex items-center justify-between px-5 py-4">
-        <button
-          onClick={handlePrevMonth}
-          disabled={!canGoPrev}
-          className={cn(
-            "w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-200",
-            "active:scale-90",
-            canGoPrev
-              ? "text-foreground hover:bg-secondary/60"
-              : "opacity-15 cursor-not-allowed"
-          )}
-        >
-          <ChevronLeft className="w-5 h-5" />
-        </button>
-
+      <div className="flex items-center justify-between mb-6 px-2">
         <AnimatePresence mode="wait">
           <motion.h2
             key={currentMonth.toISOString()}
@@ -93,31 +73,38 @@ export function PremiumCalendar({ selectedDate, onSelectDate, disabledDates = []
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: direction > 0 ? -10 : 10 }}
             transition={{ duration: 0.2 }}
-            className="text-[15px] font-bold text-foreground capitalize tracking-wide"
+            className="text-[17px] font-medium text-foreground tracking-tight capitalize"
           >
             {format(currentMonth, "MMMM yyyy", { locale: ptBR })}
           </motion.h2>
         </AnimatePresence>
 
-        <button
-          onClick={handleNextMonth}
-          className={cn(
-            "w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-200",
-            "text-foreground hover:bg-secondary/60",
-            "active:scale-90"
-          )}
-        >
-          <ChevronRight className="w-5 h-5" />
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={handlePrevMonth}
+            disabled={!canGoPrev}
+            className={cn(
+              "w-8 h-8 rounded-full flex items-center justify-center transition-all duration-200",
+              canGoPrev ? "text-foreground hover:bg-neutral-200 active:scale-95" : "opacity-30 cursor-not-allowed"
+            )}
+          >
+            <ChevronLeft className="w-5 h-5" />
+          </button>
+          <button
+            type="button"
+            onClick={handleNextMonth}
+            className="w-8 h-8 rounded-full flex items-center justify-center text-foreground hover:bg-neutral-200 active:scale-95 transition-all duration-200"
+          >
+            <ChevronRight className="w-5 h-5" />
+          </button>
+        </div>
       </div>
 
-      {/* Divider */}
-      <div className="mx-5 h-px bg-border/20" />
-
       {/* Weekday labels */}
-      <div className="grid grid-cols-7 px-4 pt-4 pb-2">
+      <div className="grid grid-cols-7 mb-4">
         {weekDays.map((day, i) => (
-          <div key={i} className="text-center text-[9px] font-semibold text-muted-foreground/50 uppercase tracking-[0.15em]">
+          <div key={i} className="text-center text-[13px] font-medium text-foreground">
             {day}
           </div>
         ))}
@@ -132,44 +119,61 @@ export function PremiumCalendar({ selectedDate, onSelectDate, disabledDates = []
           animate={{ opacity: loading ? 0.4 : 1, x: 0 }}
           exit={{ opacity: 0, x: direction < 0 ? 30 : -30 }}
           transition={{ duration: 0.2, ease: "easeOut" }}
-          className={cn("grid grid-cols-7 gap-y-1 px-4 pb-5", loading && "pointer-events-none")}
+          className={cn("grid grid-cols-7 gap-y-3 gap-x-1", loading && "pointer-events-none")}
         >
           {calendarDays.map((day, idx) => {
             const isCurrentMonth = isSameMonth(day, currentMonth);
             const isSelected = selectedDate && isSameDay(day, selectedDate);
             const disabled = isDateDisabled(day);
-            const isCurrentDay = isToday(day);
 
             if (!isCurrentMonth) {
               return <div key={day.toISOString()} className="aspect-square" />;
             }
 
+            const isRedDot = day.getDate() % 4 === 0;
+
             return (
-              <motion.button
-                key={day.toISOString()}
-                initial={{ opacity: 0, scale: 0.88 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: idx * 0.005, duration: 0.15 }}
-                onClick={() => !disabled && onSelectDate(day)}
-                disabled={disabled}
-                whileTap={!disabled ? { scale: 0.88 } : undefined}
-                className={cn(
-                  "aspect-square rounded-xl flex flex-col items-center justify-center relative mx-auto w-full transition-all duration-200",
-                  disabled && "cursor-not-allowed",
-                  isSelected && "ring-[2.5px] ring-primary scale-[1.08]",
-                  !isSelected && !disabled && "hover:bg-secondary/50",
+              <div key={day.toISOString()} className="flex flex-col items-center">
+                <motion.button
+                  type="button"
+                  initial={{ opacity: 0, scale: 0.88 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: idx * 0.005, duration: 0.15 }}
+                  onClick={() => !disabled && onSelectDate(day)}
+                  disabled={disabled}
+                  whileTap={!disabled ? { scale: 0.9 } : undefined}
+                  className={cn(
+                    "w-[42px] h-[42px] rounded-full flex items-center justify-center transition-all duration-200",
+                    disabled
+                      ? "cursor-not-allowed bg-transparent text-neutral-300 shadow-none pointer-events-none select-none"
+                      : isSelected
+                        ? "cursor-pointer bg-neutral-900 text-white shadow-md font-medium"
+                        : "cursor-pointer bg-white text-neutral-900 hover:bg-neutral-100 shadow-sm font-medium"
+                  )}
+                >
+                  <span
+                    className={cn(
+                      "text-[15px]",
+                      disabled ? "text-neutral-300 font-normal" : "text-neutral-900 font-medium",
+                      isSelected && "text-white font-medium"
+                    )}
+                  >
+                    {format(day, "d")}
+                  </span>
+                </motion.button>
+
+                {/* Dots indicator */}
+                {!disabled && (
+                  <div className={cn(
+                    "w-1 h-1 rounded-full mt-1.5",
+                    isRedDot ? "bg-red-500" : "bg-emerald-500",
+                    isSelected && "opacity-0"
+                  )} />
                 )}
-              >
-                <span className={cn(
-                  "text-[15px] tabular-nums leading-none",
-                  isSelected && "font-extrabold text-primary",
-                  isCurrentMonth && isCurrentDay && !isSelected && !disabled && "font-black text-[hsl(0,85%,50%)] text-[16px]",
-                  isCurrentMonth && disabled && !isSelected && "text-muted-foreground/15 font-normal",
-                  isCurrentMonth && !disabled && !isSelected && !isCurrentDay && "font-semibold text-foreground",
-                )}>
-                  {format(day, "d")}
-                </span>
-              </motion.button>
+                {disabled && (
+                  <div className="w-1 h-1 mt-1.5 opacity-0" />
+                )}
+              </div>
             );
           })}
         </motion.div>
