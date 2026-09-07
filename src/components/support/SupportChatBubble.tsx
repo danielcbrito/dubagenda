@@ -28,7 +28,7 @@ export function SupportChatBubble() {
           onClick={handleClick}
           className="fixed right-4 z-40 flex items-center gap-2.5 h-11 pl-3.5 pr-4 rounded-full bg-white shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-neutral-200/60 active:scale-95 transition-transform"
           style={{
-            bottom: "calc(5.5rem + env(safe-area-inset-bottom, 0px))",
+            bottom: "calc(7rem + env(safe-area-inset-bottom, 0px))",
           }}
           initial={{ scale: 0, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}

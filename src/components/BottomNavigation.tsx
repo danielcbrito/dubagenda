@@ -1,7 +1,7 @@
 import { ShoppingCart, Scissors, User } from "lucide-react";
-import { motion } from "framer-motion";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useState, type SVGProps } from "react";
+import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 
 /** Facebook-style outlined house icon — same shape in every state, color changes only. */
@@ -11,10 +11,8 @@ function HomeIcon(props: SVGProps<SVGSVGElement>) {
       <path
         d="M12 3.4c.35 0 .69.13.96.36l7.5 6.57c.32.28.5.69.5 1.11v7.81A1.75 1.75 0 0 1 19.21 21H15.5a1 1 0 0 1-1-1v-4.5a2.5 2.5 0 1 0-5 0V20a1 1 0 0 1-1 1H4.79A1.75 1.75 0 0 1 3.04 19.25v-7.81c0-.42.18-.83.5-1.11l7.5-6.57c.27-.23.61-.36.96-.36z"
         stroke="currentColor"
-        strokeWidth="1.9"
         strokeLinejoin="round"
         strokeLinecap="round"
-        fill="none"
       />
     </svg>
   );
@@ -22,44 +20,47 @@ function HomeIcon(props: SVGProps<SVGSVGElement>) {
 
 interface NavItemProps {
   icon: React.ElementType;
-  label: string;
   isActive?: boolean;
   onClick: () => void;
-  filled?: boolean;
   badge?: number;
+  label: string;
 }
 
-function NavItem({ icon: Icon, label, isActive, onClick, filled, badge }: NavItemProps) {
+function NavItem({ icon: Icon, isActive, onClick, badge, label }: NavItemProps) {
   return (
-    <motion.button
-      whileTap={{ scale: 0.94 }}
+    <button
+      type="button"
       onClick={onClick}
-      className="relative flex flex-1 flex-col items-center justify-start gap-2 px-1 pt-2 pb-2"
+      aria-label={label}
+      className={cn(
+        "relative flex items-center justify-center h-[48px] cursor-pointer focus:outline-hidden transition-all duration-300 ease-in-out",
+        isActive ? "px-3 rounded-full bg-white text-black" : "w-[48px] rounded-full text-white bg-transparent"
+      )}
     >
-      <div className="relative">
+      <div className="relative flex items-center justify-center">
         <Icon
-          className={`h-[26px] w-[26px] transition-all duration-200 ${
-            isActive ? "text-primary" : "text-foreground"
-          }`}
-          strokeWidth={isActive ? 2.2 : 1.8}
-          fill={filled && isActive ? "currentColor" : "none"}
+          className={cn(
+            "relative z-10 w-[22px] h-[22px] transition-colors duration-200",
+            isActive ? "text-black stroke-[2.2]" : "text-white stroke-[1.8]"
+          )}
         />
         {typeof badge === "number" && badge > 0 && (
-          <span
-            className="absolute -top-1.5 -right-2 min-w-[18px] h-[18px] px-1 rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center tabular-nums leading-none ring-2 ring-background"
-          >
+          <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-[16px] px-1 rounded-full bg-[#DC2626] text-white text-[9px] font-black flex items-center justify-center leading-none z-20 shadow-xs ring-2 ring-[#0A0A0A]">
             {badge > 99 ? "99+" : badge}
           </span>
         )}
       </div>
-      <span
-        className={`text-[10px] leading-none tracking-wide transition-colors duration-200 ${
-          isActive ? "font-medium text-primary" : "font-normal text-foreground"
-        }`}
+      <div
+        className={cn(
+          "overflow-hidden transition-all duration-300 ease-in-out whitespace-nowrap",
+          isActive ? "max-w-[90px] ml-1.5 opacity-100" : "max-w-0 ml-0 opacity-0"
+        )}
       >
-        {label}
-      </span>
-    </motion.button>
+        <span className="text-[13px] font-medium block">
+          {label}
+        </span>
+      </div>
+    </button>
   );
 }
 
@@ -111,8 +112,6 @@ function useCartBadge() {
 
     window.addEventListener("storage", onStorage);
     window.addEventListener("dub:cart-changed", onCustom);
-    // Sem polling: o badge é atualizado por eventos ('storage' e 'dub:cart-changed')
-    // e ao voltar para o app.
     const onVisible = () => { if (document.visibilityState === "visible") recount(); };
     document.addEventListener("visibilitychange", onVisible);
 
@@ -127,7 +126,6 @@ function useCartBadge() {
   return count;
 }
 
-/** Fixed 4-tab bottom navigation for the client app. */
 export function BottomNavigation() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -136,39 +134,62 @@ export function BottomNavigation() {
   const isActive = (path: string) => location.pathname === path;
 
   return (
-    <nav
-      className="fixed bottom-0 left-0 right-0 z-[60] border-t border-border/30 bg-background/95 backdrop-blur-md"
-      style={{
-        paddingBottom: "env(safe-area-inset-bottom, 0px)",
-      }}
-    >
-      <div className="mx-auto flex h-16 w-full items-stretch justify-around">
-        <NavItem
-          icon={HomeIcon}
-          label="Início"
-          isActive={isActive("/cliente")}
-          onClick={() => navigate("/cliente")}
-        />
-        <NavItem
-          icon={ShoppingCart}
-          label="Loja"
-          badge={cartCount}
-          isActive={isActive("/cliente/loja")}
-          onClick={() => navigate("/cliente/loja")}
-        />
-        <NavItem
-          icon={Scissors}
-          label="Planos"
-          isActive={isActive("/cliente/assinar")}
-          onClick={() => navigate("/cliente/assinar")}
-        />
-        <NavItem
-          icon={User}
-          label="Perfil"
-          isActive={isActive("/cliente/perfil")}
-          onClick={() => navigate("/cliente/perfil")}
-        />
-      </div>
-    </nav>
+    <>
+      <nav
+        className="fixed bottom-0 left-0 right-0 z-[60] bg-[#0A0A0A]"
+        style={{
+          paddingBottom: "max(env(safe-area-inset-bottom, 0px), 28px)",
+        }}
+      >
+        {/* Inverted Corners (Curvinhas ao contrário nas laterais) */}
+        <div className="absolute -top-[20px] left-0 w-full flex justify-between pointer-events-none">
+          {/* Left Corner */}
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="text-[#0A0A0A]">
+            <path d="M0 24V0C0 13.2548 10.7452 24 24 24H0Z" fill="currentColor" />
+          </svg>
+          {/* Right Corner */}
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="text-[#0A0A0A]">
+            <path d="M24 24V0C24 13.2548 13.2548 24 0 24H24Z" fill="currentColor" />
+          </svg>
+        </div>
+
+        <div className="mx-auto flex h-[64px] w-full max-w-sm items-center justify-around px-2 pt-1 pb-1">
+          <NavItem
+            icon={HomeIcon}
+            label="Início"
+            isActive={isActive("/cliente")}
+            onClick={() => navigate("/cliente")}
+          />
+          <NavItem
+            icon={ShoppingCart}
+            label="Loja"
+            badge={cartCount}
+            isActive={isActive("/cliente/loja")}
+            onClick={() => navigate("/cliente/loja")}
+          />
+          <NavItem
+            icon={Scissors}
+            label="Planos"
+            isActive={isActive("/cliente/assinar")}
+            onClick={() => navigate("/cliente/assinar")}
+          />
+          <NavItem
+            icon={User}
+            label="Perfil"
+            isActive={isActive("/cliente/perfil")}
+            onClick={() => navigate("/cliente/perfil")}
+          />
+        </div>
+
+        {/* Overscroll protection for iOS Home Indicator & physical bottom */}
+        <div className="absolute top-full left-0 right-0 h-[250px] bg-[#0A0A0A] pointer-events-none" />
+      </nav>
+
+      {/* Persistent solid black filler for the absolute bottom edge of the phone */}
+      <div 
+        className="fixed -bottom-[120px] left-0 right-0 h-[150px] bg-[#0A0A0A] pointer-events-none z-[59]" 
+        aria-hidden="true" 
+      />
+    </>
   );
 }
