@@ -114,7 +114,7 @@ export default function ClienteHistorico() {
   };
 
   return (
-    <div className="h-full w-full bg-[#FBFBFA] dark:bg-background relative overflow-y-auto overscroll-contain">
+    <div className="h-full w-full bg-[#FFFFFF] dark:bg-background relative overflow-y-auto overscroll-contain">
       <div className="max-w-2xl mx-auto px-5 pt-[max(calc(env(safe-area-inset-top,0px)+1.5rem),2rem)] pb-32">
         {/* Header no mesmo padrão do agendamento — Botão circular sem barra cortando */}
         <div className="flex items-center justify-between mb-6">

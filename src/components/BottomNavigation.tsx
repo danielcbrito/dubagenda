@@ -136,24 +136,12 @@ export function BottomNavigation() {
   return (
     <>
       <nav
-        className="fixed bottom-0 left-0 right-0 z-[60] bg-[#0A0A0A]"
+        className="fixed bottom-0 left-0 right-0 z-[60] bg-[#0A0A0A] w-full shadow-2xl"
         style={{
-          paddingBottom: "max(env(safe-area-inset-bottom, 0px), 28px)",
+          paddingBottom: "max(env(safe-area-inset-bottom, 0px), 24px)",
         }}
       >
-        {/* Inverted Corners (Curvinhas ao contrário) */}
-        <div className="absolute -top-[20px] left-0 w-full flex justify-between pointer-events-none">
-          {/* Left Corner */}
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="text-[#0A0A0A]">
-            <path d="M0 24V0C0 13.2548 10.7452 24 24 24H0Z" fill="currentColor" />
-          </svg>
-          {/* Right Corner */}
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="text-[#0A0A0A]">
-            <path d="M24 24V0C24 13.2548 13.2548 24 0 24H24Z" fill="currentColor" />
-          </svg>
-        </div>
-
-        <div className="mx-auto flex h-[64px] w-full max-w-sm items-center justify-around px-2 pt-1 pb-1">
+        <div className="mx-auto flex h-[64px] w-full max-w-md items-center justify-around px-3 pt-1 pb-1">
           <NavItem
             icon={HomeIcon}
             label="Início"

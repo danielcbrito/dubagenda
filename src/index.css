@@ -55,7 +55,7 @@ html {
   -webkit-font-smoothing: antialiased;
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
-  background-color: #FBFBFA;
+  background-color: #FFFFFF;
 }
 
 
@@ -75,7 +75,7 @@ body {
   -webkit-overflow-scrolling: touch;
   margin: 0;
   padding: 0;
-  background-color: #FBFBFA;
+  background-color: #FFFFFF;
   -webkit-font-smoothing: antialiased;
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
@@ -89,7 +89,7 @@ body {
   position: fixed;
   inset: 0;
   overflow: hidden;
-  background-color: #FBFBFA;
+  background-color: #FFFFFF;
 }
 
 /* Variáveis de safe area para usar em todo app */

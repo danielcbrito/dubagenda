@@ -2620,10 +2620,10 @@ const ClienteAgendar = () => {
   return (
     <div 
       ref={containerRef}
-      className="h-full w-full bg-[#FBFBFA] relative overflow-y-auto overscroll-contain touch-pan-y"
+      className="h-full w-full bg-[#FFFFFF] relative overflow-y-auto overscroll-contain touch-pan-y"
     >
-      {/* Header fixo — Seta + Dots (Exata mesma cor sólida do fundo da tela: #FBFBFA) */}
-      <div className="fixed top-0 left-0 right-0 z-50 bg-[#FBFBFA]">
+      {/* Header fixo — Seta + Dots (Exata mesma cor sólida do fundo da tela: #FFFFFF) */}
+      <div className="fixed top-0 left-0 right-0 z-50 bg-[#FFFFFF]">
         <div className="max-w-2xl mx-auto px-4 pt-[max(env(safe-area-inset-top),0.75rem)] pb-3">
           <div className="flex items-center justify-between">
             <button 

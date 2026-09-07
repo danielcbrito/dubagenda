@@ -36,11 +36,11 @@ export function FloatingActionBar({
           {/* Subtle top fade */}
           <div 
             className="h-16 pointer-events-none"
-            style={{ background: "linear-gradient(to bottom, transparent, #FBFBFA)" }}
+            style={{ background: "linear-gradient(to bottom, transparent, #FFFFFF)" }}
           />
 
           {/* Bar content */}
-          <div className="bg-[#FBFBFA] px-5 pb-safe">
+          <div className="bg-[#FFFFFF] px-5 pb-safe">
             <div className="pt-4 pb-5 space-y-3">
               {/* Info row (optional) */}
               {(icon || subtitle) && (

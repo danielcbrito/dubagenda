@@ -499,12 +499,8 @@ const ClienteAssinar = () => {
           : undefined
       }
     >
-      {/* Background ambient orbs com cores estratégicas e suaves */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden z-0 bg-[#FBFBFA]">
-        <div className="absolute -top-[12%] -left-[10%] w-[420px] h-[420px] rounded-full bg-[#EAE8E3]/70 blur-[130px]" />
-        <div className="absolute top-[25%] -right-[15%] w-[380px] h-[380px] rounded-full bg-[#F5EBE1]/60 blur-[140px]" />
-        <div className="absolute -bottom-[10%] left-[15%] w-[380px] h-[380px] rounded-full bg-[#E5E9EC]/50 blur-[130px]" />
-      </div>
+      {/* Background limpo e 100% branco sem orbs cinzas */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden z-0 bg-white" />
 
       {/* Header — back arrow + step dots */}
       <div className="flex-shrink-0 px-4 pt-[max(env(safe-area-inset-top),0.75rem)] pb-2 relative z-10">

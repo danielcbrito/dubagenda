@@ -230,7 +230,7 @@ const ClientePixCheckout = () => {
   // Loading
   if (!pixData) {
     return (
-      <div className="min-h-screen bg-[#FBFBFA] flex items-center justify-center">
+      <div className="min-h-screen bg-[#FFFFFF] flex items-center justify-center">
         <Loader2 className="w-5 h-5 text-neutral-400 animate-spin" />
       </div>
     );
@@ -239,7 +239,7 @@ const ClientePixCheckout = () => {
   // Pagamento confirmado
   if (paid) {
     return (
-      <div className="min-h-screen bg-[#FBFBFA] flex items-center justify-center px-6">
+      <div className="min-h-screen bg-[#FFFFFF] flex items-center justify-center px-6">
         <motion.div
           initial={{ scale: 0.9, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
@@ -282,9 +282,9 @@ const ClientePixCheckout = () => {
     : "";
 
   return (
-    <div className="min-h-screen w-full bg-[#FBFBFA] flex flex-col relative">
-      {/* Header fixo — Seta + Ajuda (Exata mesma cor sólida do fundo #FBFBFA) */}
-      <div className="fixed top-0 left-0 right-0 z-50 bg-[#FBFBFA]">
+    <div className="min-h-screen w-full bg-[#FFFFFF] flex flex-col relative">
+      {/* Header fixo — Seta + Ajuda (Exata mesma cor sólida do fundo #FFFFFF) */}
+      <div className="fixed top-0 left-0 right-0 z-50 bg-[#FFFFFF]">
         <div className="max-w-2xl mx-auto px-4 pt-[max(env(safe-area-inset-top),0.75rem)] pb-3">
           <div className="flex items-center justify-between">
             <button
@@ -460,9 +460,9 @@ const ClientePixCheckout = () => {
         <div className="fixed bottom-0 left-0 right-0 z-40">
           <div 
             className="h-16 pointer-events-none"
-            style={{ background: "linear-gradient(to bottom, transparent, #FBFBFA)" }}
+            style={{ background: "linear-gradient(to bottom, transparent, #FFFFFF)" }}
           />
-          <div className="bg-[#FBFBFA] px-5 pb-safe">
+          <div className="bg-[#FFFFFF] px-5 pb-safe">
             <div className="pt-2 pb-5 max-w-md mx-auto">
               <button
                 onClick={handleCopy}

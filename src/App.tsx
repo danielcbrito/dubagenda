@@ -359,7 +359,7 @@ function ThemeColorSync() {
     const applyColor = () => {
       document
         .querySelectorAll('meta[name="theme-color"]')
-        .forEach((meta) => meta.setAttribute("content", "#FBFBFA"));
+        .forEach((meta) => meta.setAttribute("content", "#FFFFFF"));
     };
 
     applyColor();
