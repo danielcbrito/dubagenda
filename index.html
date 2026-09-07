@@ -1,19 +1,25 @@
 <!doctype html>
-<html lang="pt-BR" translate="no" style="background-color: #FFFFFF; color-scheme: light;">
+<html lang="pt-BR" translate="no" class="light" style="background-color: #FFFFFF; color-scheme: light;">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0, viewport-fit=cover, interactive-widget=resizes-visual" />
+    <meta name="theme-color" content="#FFFFFF" />
     <meta name="color-scheme" content="light" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0, viewport-fit=cover, interactive-widget=resizes-visual" />
     <meta name="supported-color-schemes" content="light" />
     <meta name="google-site-verification" content="owbb0rIgmzly9Z4ymfj0B9UAS2zpSSAwCaix9Gh7Gy8" />
 
-    <!-- Anti-flash no iOS durante hidratação -->
+    <!-- Anti-flash: força fundo branco + color-scheme light antes do React -->
     <script>
       (function () {
         try {
-          var brand = '#FFFFFF';
-          document.documentElement.style.backgroundColor = brand;
-          if (document.body) document.body.style.backgroundColor = brand;
+          var d = document.documentElement;
+          d.style.backgroundColor = '#FFFFFF';
+          d.style.colorScheme = 'light';
+          if (!d.classList.contains('light')) d.classList.add('light');
+          if (document.body) {
+            document.body.style.backgroundColor = '#FFFFFF';
+            document.body.style.colorScheme = 'light';
+          }
         } catch (e) {}
       })();
     </script>
@@ -36,8 +42,7 @@
     <meta name="mobile-web-app-capable" content="yes" />
     <link rel="manifest" href="/manifest.webmanifest" />
 
-    <!-- Status bar color (Android Chrome / Safari / PWA) -->
-    <meta name="theme-color" content="#FFFFFF" />
+    <!-- Force branco na barra de status mesmo com dark mode do sistema Android -->
     <meta name="theme-color" media="(prefers-color-scheme: light)" content="#FFFFFF" />
     <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#FFFFFF" />
 

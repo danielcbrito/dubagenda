@@ -356,17 +356,79 @@ function AppRoutes() {
 
 function ThemeColorSync() {
   useEffect(() => {
+    const FORCE_COLOR = "#FFFFFF";
+    let isApplying = false;
+
     const applyColor = () => {
-      document
-        .querySelectorAll('meta[name="theme-color"]')
-        .forEach((meta) => meta.setAttribute("content", "#FFFFFF"));
+      if (isApplying) return;
+      isApplying = true;
+
+      // Ensure color-scheme is light
+      document.documentElement.style.colorScheme = "light";
+      document.documentElement.style.backgroundColor = FORCE_COLOR;
+      if (document.body) {
+        document.body.style.backgroundColor = FORCE_COLOR;
+        document.body.style.colorScheme = "light";
+      }
+
+      // Update or create meta tags for plain, light, and dark schemes
+      const desiredMetas = [
+        { media: null, content: FORCE_COLOR },
+        { media: "(prefers-color-scheme: light)", content: FORCE_COLOR },
+        { media: "(prefers-color-scheme: dark)", content: FORCE_COLOR },
+      ];
+
+      const existingMetas = Array.from(
+        document.querySelectorAll('meta[name="theme-color"]')
+      );
+
+      desiredMetas.forEach(({ media, content }) => {
+        let meta = existingMetas.find((m) =>
+          media ? m.getAttribute("media") === media : !m.hasAttribute("media")
+        );
+        if (!meta) {
+          meta = document.createElement("meta");
+          meta.name = "theme-color";
+          if (media) meta.setAttribute("media", media);
+          document.head.prepend(meta);
+        }
+        if (meta.getAttribute("content") !== content) {
+          meta.setAttribute("content", content);
+        }
+      });
+
+      // Remove any extra theme-color metas that don't match
+      existingMetas.forEach((m) => {
+        const mMedia = m.getAttribute("media");
+        const isKnown =
+          !mMedia ||
+          mMedia === "(prefers-color-scheme: light)" ||
+          mMedia === "(prefers-color-scheme: dark)";
+        if (!isKnown) {
+          m.remove();
+        }
+      });
+
+      queueMicrotask(() => {
+        isApplying = false;
+      });
     };
 
     applyColor();
-    const observer = new MutationObserver(applyColor);
-    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
 
-    return () => observer.disconnect();
+    const headObserver = new MutationObserver(applyColor);
+    headObserver.observe(document.head, { childList: true, subtree: true });
+
+    const htmlObserver = new MutationObserver(applyColor);
+    htmlObserver.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["class", "style"],
+    });
+
+    return () => {
+      headObserver.disconnect();
+      htmlObserver.disconnect();
+    };
   }, []);
   return null;
 }
