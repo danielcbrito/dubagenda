@@ -379,8 +379,9 @@ function ThemeColorSync() {
       ];
 
       const existingMetas = Array.from(
-        document.querySelectorAll('meta[name="theme-color"]')
+        document.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]')
       );
+
 
       desiredMetas.forEach(({ media, content }) => {
         let meta = existingMetas.find((m) =>

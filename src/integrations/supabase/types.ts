@@ -466,6 +466,58 @@ export type Database = {
           },
         ]
       }
+      agente_config: {
+        Row: {
+          ativo: boolean
+          atualizado_em: string
+          barbeiro_id: string | null
+          criado_em: string
+          id: string
+          tenant_id: string | null
+          webhook_agente: string
+        }
+        Insert: {
+          ativo?: boolean
+          atualizado_em?: string
+          barbeiro_id?: string | null
+          criado_em?: string
+          id?: string
+          tenant_id?: string | null
+          webhook_agente?: string
+        }
+        Update: {
+          ativo?: boolean
+          atualizado_em?: string
+          barbeiro_id?: string | null
+          criado_em?: string
+          id?: string
+          tenant_id?: string | null
+          webhook_agente?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agente_config_barbeiro_id_fkey"
+            columns: ["barbeiro_id"]
+            isOneToOne: true
+            referencedRelation: "barbeiros"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agente_config_barbeiro_id_fkey"
+            columns: ["barbeiro_id"]
+            isOneToOne: true
+            referencedRelation: "barbeiros_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agente_config_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_actions_log: {
         Row: {
           action_name: string
@@ -2059,6 +2111,69 @@ export type Database = {
             columns: ["barbeiro_id"]
             isOneToOne: false
             referencedRelation: "barbeiros_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      configuracoes_horario_unidade: {
+        Row: {
+          aberto: boolean
+          created_at: string
+          delay_entre_servicos: number
+          dia_semana: number
+          hora_abertura: string
+          hora_almoco_fim: string | null
+          hora_almoco_inicio: string | null
+          hora_fechamento: string
+          id: string
+          slot_interval_minutes: number | null
+          tenant_id: string
+          unidade_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          aberto?: boolean
+          created_at?: string
+          delay_entre_servicos?: number
+          dia_semana: number
+          hora_abertura?: string
+          hora_almoco_fim?: string | null
+          hora_almoco_inicio?: string | null
+          hora_fechamento?: string
+          id?: string
+          slot_interval_minutes?: number | null
+          tenant_id: string
+          unidade_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          aberto?: boolean
+          created_at?: string
+          delay_entre_servicos?: number
+          dia_semana?: number
+          hora_abertura?: string
+          hora_almoco_fim?: string | null
+          hora_almoco_inicio?: string | null
+          hora_fechamento?: string
+          id?: string
+          slot_interval_minutes?: number | null
+          tenant_id?: string
+          unidade_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "configuracoes_horario_unidade_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "configuracoes_horario_unidade_unidade_id_fkey"
+            columns: ["unidade_id"]
+            isOneToOne: false
+            referencedRelation: "tenant_unidades"
             referencedColumns: ["id"]
           },
         ]
@@ -7005,6 +7120,16 @@ export type Database = {
       }
     }
     Functions: {
+      acumular_mensagem: {
+        Args: {
+          p_instance_name: string
+          p_mensagem: string
+          p_numero: string
+          p_session_id: string
+          p_timestamp: string
+        }
+        Returns: undefined
+      }
       add_wallet_credits: {
         Args: { p_amount: number; p_description?: string; p_user_id: string }
         Returns: number

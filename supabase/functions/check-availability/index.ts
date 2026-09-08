@@ -92,8 +92,38 @@ function minutesToTime(minutes: number): string {
   return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
 }
 
+// Busca a config semanal da UNIDADE (loja). Prioriza a unidade específica; depois o padrão do tenant.
+async function getUnidadeConfig(
+  supabase: any,
+  dayOfWeek: number,
+  tenantId?: string | null,
+  unidadeId?: string | null
+): Promise<any | null> {
+  if (unidadeId) {
+    const { data } = await supabase
+      .from('configuracoes_horario_unidade')
+      .select('*')
+      .eq('unidade_id', unidadeId)
+      .eq('dia_semana', dayOfWeek)
+      .maybeSingle();
+    if (data) return data;
+  }
+  if (tenantId) {
+    const { data } = await supabase
+      .from('configuracoes_horario_unidade')
+      .select('*')
+      .eq('tenant_id', tenantId)
+      .is('unidade_id', null)
+      .eq('dia_semana', dayOfWeek)
+      .maybeSingle();
+    if (data) return data;
+  }
+  return null;
+}
+
 // Helper function to get default business hours config
-async function getDefaultConfig(supabase: any, date: string, dayOfWeek: number, tenantId?: string | null): Promise<BusinessHoursConfig> {
+async function getDefaultConfig(supabase: any, date: string, dayOfWeek: number, tenantId?: string | null, unidadeId?: string | null): Promise<BusinessHoursConfig & { found?: boolean }> {
+
   // Primeiro: verificar exceção da barbearia atual para esta data.
   let exceptionQuery = supabase
     .from('horarios_excepcionais')
@@ -114,7 +144,24 @@ async function getDefaultConfig(supabase: any, date: string, dayOfWeek: number, 
       hora_fechamento: excecaoData.hora_fechamento || '20:00',
       hora_almoco_inicio: excecaoData.hora_almoco_inicio,
       hora_almoco_fim: excecaoData.hora_almoco_fim,
-      delay_entre_servicos: excecaoData.delay_entre_servicos || 0
+      delay_entre_servicos: excecaoData.delay_entre_servicos || 0,
+      found: true
+    };
+  }
+
+  // Config semanal da UNIDADE (loja) — tem prioridade sobre a config global legada
+  const unidadeConfig = await getUnidadeConfig(supabase, dayOfWeek, tenantId, unidadeId);
+  if (unidadeConfig) {
+    console.log(`[check-availability] CONFIG UNIDADE dia ${dayOfWeek}: ${unidadeConfig.hora_abertura}-${unidadeConfig.hora_fechamento} (aberto=${unidadeConfig.aberto})`);
+    return {
+      aberto: unidadeConfig.aberto ?? true,
+      hora_abertura: unidadeConfig.hora_abertura || '09:00',
+      hora_fechamento: unidadeConfig.hora_fechamento || '20:00',
+      hora_almoco_inicio: unidadeConfig.hora_almoco_inicio,
+      hora_almoco_fim: unidadeConfig.hora_almoco_fim,
+      delay_entre_servicos: unidadeConfig.delay_entre_servicos || 0,
+      slot_interval_minutes: normalizeSlotInterval(unidadeConfig.slot_interval_minutes),
+      found: true
     };
   }
 
@@ -139,15 +186,18 @@ async function getDefaultConfig(supabase: any, date: string, dayOfWeek: number, 
     hora_fechamento: configData.hora_fechamento,
     hora_almoco_inicio: configData.hora_almoco_inicio,
     hora_almoco_fim: configData.hora_almoco_fim,
-    delay_entre_servicos: configData.delay_entre_servicos || 0
+    delay_entre_servicos: configData.delay_entre_servicos || 0,
+    found: true
   } : {
     aberto: dayOfWeek !== 0,
     hora_abertura: '09:00',
     hora_fechamento: '21:00',
     hora_almoco_inicio: '13:00',
     hora_almoco_fim: '14:00',
-    delay_entre_servicos: 0
+    delay_entre_servicos: 0,
+    found: false
   };
+
 }
 
 async function resolveScopedBarberIds(
@@ -196,11 +246,12 @@ Deno.serve(async (req) => {
     const { date, duration, excludeAppointmentId, barbeiroId, barberId, barbeiro_id, barber_id, tenantId } = body;
     const resolvedBarbeiroId = barbeiroId ?? barberId ?? barbeiro_id ?? barber_id;
     let resolvedTenantId = tenantId;
+    let resolvedUnidadeId: string | null = null;
 
     if (resolvedBarbeiroId) {
       const { data: barberScope, error: barberScopeError } = await supabase
         .from('barbeiros')
-        .select('tenant_id')
+        .select('tenant_id, unidade_id')
         .eq('id', resolvedBarbeiroId)
         .maybeSingle();
       if (barberScopeError || !barberScope?.tenant_id) {
@@ -216,7 +267,9 @@ Deno.serve(async (req) => {
         });
       }
       resolvedTenantId = barberScope.tenant_id;
+      resolvedUnidadeId = barberScope.unidade_id ?? null;
     }
+
 
     console.log('='.repeat(70));
     console.log('[check-availability] INICIANDO VERIFICAÇÃO');
@@ -242,6 +295,8 @@ Deno.serve(async (req) => {
     // BUSCAR CONFIGURAÇÃO DE HORÁRIO
     // Prioridade: 1) Exceção do barbeiro, 2) Exceção geral, 3) Config do barbeiro, 4) Config geral
     let config: BusinessHoursConfig;
+    let barberConfigExplicit = false;
+
 
     if (resolvedBarbeiroId) {
       // Se barbeiro especificado, verificar exceções e config do barbeiro
@@ -254,6 +309,8 @@ Deno.serve(async (req) => {
 
       if (excecaoBarbeiroData) {
         console.log(`[check-availability] EXCEÇÃO DO BARBEIRO encontrada para ${date}`);
+        barberConfigExplicit = true;
+
         config = {
           aberto: excecaoBarbeiroData.aberto ?? true,
           hora_abertura: excecaoBarbeiroData.hora_abertura || '09:00',
@@ -299,6 +356,7 @@ Deno.serve(async (req) => {
               hora_abertura: configBarbeiroData.hora_abertura,
               hora_fechamento: configBarbeiroData.hora_fechamento,
             }));
+            barberConfigExplicit = true;
             config = {
               aberto: configBarbeiroData.aberto !== null ? configBarbeiroData.aberto : true,
               hora_abertura: configBarbeiroData.hora_abertura || '09:00',
@@ -309,43 +367,49 @@ Deno.serve(async (req) => {
               slot_interval_minutes: normalizeSlotInterval(configBarbeiroData.slot_interval_minutes)
             };
           } else {
-            console.log(`[check-availability] Sem config para barbeiro ${resolvedBarbeiroId} dia ${dayOfWeek}, usando global`);
-            // Fallback para config geral (já verifica horarios_excepcionais)
-            config = await getDefaultConfig(supabase, date, dayOfWeek, resolvedTenantId);
+            console.log(`[check-availability] Sem config para barbeiro ${resolvedBarbeiroId} dia ${dayOfWeek}, usando unidade/global`);
+            // Fallback: exceção → unidade → global legado
+            config = await getDefaultConfig(supabase, date, dayOfWeek, resolvedTenantId, resolvedUnidadeId);
           }
         }
       }
     } else {
-      // Sem barbeiro - usar config geral
-      config = await getDefaultConfig(supabase, date, dayOfWeek, resolvedTenantId);
+      // Sem barbeiro - usar config da unidade/global
+      config = await getDefaultConfig(supabase, date, dayOfWeek, resolvedTenantId, resolvedUnidadeId);
     }
 
     // ============================================
-    // CLAMP: Garantir que horário do barbeiro respeite os limites globais
-    // O horário global da barbearia é o limite máximo de funcionamento
+    // CLAMP: o horário da loja limita a janela do barbeiro (abertura/fechamento).
+    // Quando o barbeiro tem config própria para o dia, ela decide se ele atende ou não.
     // ============================================
     if (resolvedBarbeiroId) {
-      const globalConfig = await getDefaultConfig(supabase, date, dayOfWeek, resolvedTenantId);
-      
-      if (!globalConfig.aberto) {
+      const globalConfig = await getDefaultConfig(supabase, date, dayOfWeek, resolvedTenantId, resolvedUnidadeId);
+
+      if (!globalConfig.found) {
+        console.log('[check-availability] CLAMP ignorado: nenhuma config de loja cadastrada');
+      } else if (!globalConfig.aberto && !barberConfigExplicit) {
         config.aberto = false;
-        console.log(`[check-availability] CLAMP: Global FECHADO → barbeiro também fechado`);
+        console.log(`[check-availability] CLAMP: loja FECHADA → barbeiro sem config própria também fechado`);
       } else if (config.aberto) {
         const globalOpen = timeToMinutes(globalConfig.hora_abertura);
         const globalClose = timeToMinutes(globalConfig.hora_fechamento);
         const barberOpen = timeToMinutes(config.hora_abertura);
         const barberClose = timeToMinutes(config.hora_fechamento);
 
-        if (barberOpen < globalOpen) {
-          console.log(`[check-availability] CLAMP: Abertura ${config.hora_abertura} → ${globalConfig.hora_abertura} (global)`);
-          config.hora_abertura = globalConfig.hora_abertura;
-        }
-        if (barberClose > globalClose) {
-          console.log(`[check-availability] CLAMP: Fechamento ${config.hora_fechamento} → ${globalConfig.hora_fechamento} (global)`);
-          config.hora_fechamento = globalConfig.hora_fechamento;
+        if (globalConfig.aberto) {
+          if (barberOpen < globalOpen) {
+            console.log(`[check-availability] CLAMP: Abertura ${config.hora_abertura} → ${globalConfig.hora_abertura} (loja)`);
+            config.hora_abertura = globalConfig.hora_abertura;
+          }
+          if (barberClose > globalClose) {
+            console.log(`[check-availability] CLAMP: Fechamento ${config.hora_fechamento} → ${globalConfig.hora_fechamento} (loja)`);
+            config.hora_fechamento = globalConfig.hora_fechamento;
+          }
         }
       }
     }
+
+
 
     console.log(`[check-availability] Config FINAL do dia ${dayOfWeek}:`, JSON.stringify(config));
     console.log(`[check-availability] Horário: ${config.hora_abertura} - ${config.hora_fechamento}`);

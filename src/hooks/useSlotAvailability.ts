@@ -402,6 +402,17 @@ export function useSlotAvailability(
       }
 
       // 3) Config padrão do barbeiro
+      let barberConfigExplicit = configSource === 'EXCEÇÃO BARBEIRO';
+      let unidadeId: string | null = null;
+      if (barbeiroId) {
+        const { data: barberScope } = await supabase
+          .from('barbeiros')
+          .select('unidade_id')
+          .eq('id', barbeiroId)
+          .maybeSingle();
+        unidadeId = (barberScope as any)?.unidade_id ?? null;
+      }
+
       if (!sourceData && barbeiroId) {
         const { data } = await supabase
           .from('configuracoes_horario_barbeiro')
@@ -410,10 +421,41 @@ export function useSlotAvailability(
           .eq('dia_semana', dayOfWeek)
           .maybeSingle();
         // Corrigido: usar data diretamente sem checar aberto !== null (aberto pode ser false válido)
-        if (data) { sourceData = data; configSource = 'CONFIG BARBEIRO'; }
+        if (data) { sourceData = data; configSource = 'CONFIG BARBEIRO'; barberConfigExplicit = true; }
       }
 
-      // 4) Config global
+      // 4) Config da unidade (loja)
+      const loadUnidadeConfig = async () => {
+        if (unidadeId) {
+          const { data } = await supabase
+            .from('configuracoes_horario_unidade')
+            .select('*')
+            .eq('unidade_id', unidadeId)
+            .eq('dia_semana', dayOfWeek)
+            .maybeSingle();
+          if (data) return data;
+        }
+        if (tenantId) {
+          const { data } = await supabase
+            .from('configuracoes_horario_unidade')
+            .select('*')
+            .eq('tenant_id', tenantId)
+            .is('unidade_id', null)
+            .eq('dia_semana', dayOfWeek)
+            .maybeSingle();
+          if (data) return data;
+        }
+        return null;
+      };
+
+      const unidadeConfig = await loadUnidadeConfig();
+
+      if (!sourceData && unidadeConfig) {
+        sourceData = unidadeConfig;
+        configSource = 'CONFIG UNIDADE';
+      }
+
+      // 5) Config global legada
       if (!sourceData) {
         const { data } = await supabase
           .from('configuracoes_horario')
@@ -443,34 +485,39 @@ export function useSlotAvailability(
 
       console.log(`[useSlotAvailability FALLBACK] Config do dia ${dayOfWeek}: (${configSource})`, `${config.hora_abertura} - ${config.hora_fechamento}`);
 
-      // CLAMP: Garantir que horário do barbeiro respeite os limites globais
-      if (barbeiroId && configSource !== 'CONFIG GLOBAL' && configSource !== 'padrão global') {
-        const { data: globalData } = await supabase
-          .from('configuracoes_horario')
-          .select('*')
-          .eq('dia_semana', dayOfWeek)
-          .maybeSingle();
-        
-        if (globalData) {
-          if (globalData.aberto === false) {
+      // CLAMP: a loja limita a janela do barbeiro; se o barbeiro tem config própria, ela decide se atende
+      if (barbeiroId && configSource !== 'CONFIG GLOBAL' && configSource !== 'CONFIG UNIDADE' && configSource !== 'padrão global') {
+        let storeData: any = unidadeConfig;
+        if (!storeData) {
+          const { data: globalData } = await supabase
+            .from('configuracoes_horario')
+            .select('*')
+            .eq('dia_semana', dayOfWeek)
+            .maybeSingle();
+          storeData = globalData;
+        }
+
+        if (storeData) {
+          if (storeData.aberto === false && !barberConfigExplicit) {
             config.aberto = false;
-            console.log('[useSlotAvailability FALLBACK] CLAMP: Global FECHADO');
-          } else if (config.aberto) {
-            const globalOpenMin = timeToMinutes(globalData.hora_abertura || '09:00');
-            const globalCloseMin = timeToMinutes(globalData.hora_fechamento || '21:00');
+            console.log('[useSlotAvailability FALLBACK] CLAMP: loja FECHADA');
+          } else if (config.aberto && storeData.aberto !== false) {
+            const globalOpenMin = timeToMinutes(storeData.hora_abertura || '09:00');
+            const globalCloseMin = timeToMinutes(storeData.hora_fechamento || '21:00');
             const barberOpenMin = timeToMinutes(config.hora_abertura);
             const barberCloseMin = timeToMinutes(config.hora_fechamento);
             if (barberOpenMin < globalOpenMin) {
-              console.log(`[useSlotAvailability FALLBACK] CLAMP: Abertura ${config.hora_abertura} → ${globalData.hora_abertura}`);
-              config.hora_abertura = globalData.hora_abertura || '09:00';
+              console.log(`[useSlotAvailability FALLBACK] CLAMP: Abertura ${config.hora_abertura} → ${storeData.hora_abertura}`);
+              config.hora_abertura = storeData.hora_abertura || '09:00';
             }
             if (barberCloseMin > globalCloseMin) {
-              console.log(`[useSlotAvailability FALLBACK] CLAMP: Fechamento ${config.hora_fechamento} → ${globalData.hora_fechamento}`);
-              config.hora_fechamento = globalData.hora_fechamento || '21:00';
+              console.log(`[useSlotAvailability FALLBACK] CLAMP: Fechamento ${config.hora_fechamento} → ${storeData.hora_fechamento}`);
+              config.hora_fechamento = storeData.hora_fechamento || '21:00';
             }
           }
         }
       }
+
 
       if (!config.aberto) {
         console.log('[useSlotAvailability FALLBACK] Dia fechado');
