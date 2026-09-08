@@ -15,7 +15,8 @@ export interface BusinessHoursConfig {
  * 1) Exceção do barbeiro (horarios_excepcionais_barbeiro)
  * 2) Exceção global (horarios_excepcionais)
  * 3) Config padrão do barbeiro (configuracoes_horario_barbeiro)
- * 4) Config padrão global (configuracoes_horario)
+ * 4) Config da unidade/loja (configuracoes_horario_unidade)
+ * 5) Config padrão global legada (configuracoes_horario)
  */
 export function useBarberBusinessHours(date: Date, barbeiroId: string | null) {
   const [config, setConfig] = useState<BusinessHoursConfig | null>(null);
@@ -28,18 +29,21 @@ export function useBarberBusinessHours(date: Date, barbeiroId: string | null) {
       const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
       const dayOfWeek = date.getDay();
       let tenantId: string | null = null;
+      let unidadeId: string | null = null;
 
       if (barbeiroId) {
         const { data: barberScope } = await supabase
           .from("barbeiros")
-          .select("tenant_id")
+          .select("tenant_id, unidade_id")
           .eq("id", barbeiroId)
           .maybeSingle();
         tenantId = barberScope?.tenant_id ?? null;
+        unidadeId = (barberScope as any)?.unidade_id ?? null;
       }
 
       let sourceData: any = null;
       let configSource = "padrão global";
+      let barberConfigExplicit = false;
 
       // 1) Exceção do barbeiro
       if (barbeiroId) {
@@ -49,7 +53,7 @@ export function useBarberBusinessHours(date: Date, barbeiroId: string | null) {
           .eq("barbeiro_id", barbeiroId)
           .eq("data", dateStr)
           .maybeSingle();
-        if (data) { sourceData = data; configSource = "EXCEÇÃO BARBEIRO"; }
+        if (data) { sourceData = data; configSource = "EXCEÇÃO BARBEIRO"; barberConfigExplicit = true; }
       }
 
       // 2) Exceção global
@@ -71,10 +75,33 @@ export function useBarberBusinessHours(date: Date, barbeiroId: string | null) {
           .eq("barbeiro_id", barbeiroId)
           .eq("dia_semana", dayOfWeek)
           .maybeSingle();
-        if (data && data.aberto !== null) { sourceData = data; configSource = "CONFIG BARBEIRO"; }
+        if (data && data.aberto !== null) { sourceData = data; configSource = "CONFIG BARBEIRO"; barberConfigExplicit = true; }
       }
 
-      // 4) Config global
+      // 4) Config da unidade (loja)
+      let unidadeConfig: any = null;
+      if (unidadeId) {
+        const { data } = await supabase
+          .from("configuracoes_horario_unidade")
+          .select("*")
+          .eq("unidade_id", unidadeId)
+          .eq("dia_semana", dayOfWeek)
+          .maybeSingle();
+        unidadeConfig = data ?? null;
+      }
+      if (!unidadeConfig && tenantId) {
+        const { data } = await supabase
+          .from("configuracoes_horario_unidade")
+          .select("*")
+          .eq("tenant_id", tenantId)
+          .is("unidade_id", null)
+          .eq("dia_semana", dayOfWeek)
+          .maybeSingle();
+        unidadeConfig = data ?? null;
+      }
+      if (!sourceData && unidadeConfig) { sourceData = unidadeConfig; configSource = "CONFIG UNIDADE"; }
+
+      // 5) Config global legada
       if (!sourceData) {
         const { data } = await supabase
           .from("configuracoes_horario")
@@ -100,25 +127,29 @@ export function useBarberBusinessHours(date: Date, barbeiroId: string | null) {
         delay_entre_servicos: 10,
       };
 
-      // CLAMP: Garantir que horário do barbeiro respeite limites globais
-      if (barbeiroId && configSource !== "CONFIG GLOBAL" && configSource !== "padrão global") {
-        const { data: globalData } = await supabase
-          .from("configuracoes_horario")
-          .select("*")
-          .eq("dia_semana", dayOfWeek)
-          .maybeSingle();
-        
-        if (globalData) {
-          if (globalData.aberto === false) {
+      // CLAMP: a loja limita a janela do barbeiro (sem sobrescrever a decisão dele de atender)
+      if (barbeiroId && configSource !== "CONFIG GLOBAL" && configSource !== "CONFIG UNIDADE" && configSource !== "padrão global") {
+        let storeData: any = unidadeConfig;
+        if (!storeData) {
+          const { data: globalData } = await supabase
+            .from("configuracoes_horario")
+            .select("*")
+            .eq("dia_semana", dayOfWeek)
+            .maybeSingle();
+          storeData = globalData;
+        }
+
+        if (storeData) {
+          if (storeData.aberto === false && !barberConfigExplicit) {
             result.aberto = false;
-          } else {
+          } else if (storeData.aberto !== false) {
             const toMin = (t: string) => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
-            const gOpen = toMin(globalData.hora_abertura || "09:00");
-            const gClose = toMin(globalData.hora_fechamento || "21:00");
+            const gOpen = toMin(storeData.hora_abertura || "09:00");
+            const gClose = toMin(storeData.hora_fechamento || "21:00");
             const bOpen = toMin(result.hora_abertura);
             const bClose = toMin(result.hora_fechamento);
-            if (bOpen < gOpen) result.hora_abertura = (globalData.hora_abertura || "09:00").substring(0, 5);
-            if (bClose > gClose) result.hora_fechamento = (globalData.hora_fechamento || "21:00").substring(0, 5);
+            if (bOpen < gOpen) result.hora_abertura = (storeData.hora_abertura || "09:00").substring(0, 5);
+            if (bClose > gClose) result.hora_fechamento = (storeData.hora_fechamento || "21:00").substring(0, 5);
           }
         }
       }
@@ -134,3 +165,4 @@ export function useBarberBusinessHours(date: Date, barbeiroId: string | null) {
 
   return { config, loading, source };
 }
+
