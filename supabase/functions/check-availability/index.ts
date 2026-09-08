@@ -409,7 +409,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    }
+
 
     console.log(`[check-availability] Config FINAL do dia ${dayOfWeek}:`, JSON.stringify(config));
     console.log(`[check-availability] Horário: ${config.hora_abertura} - ${config.hora_fechamento}`);
