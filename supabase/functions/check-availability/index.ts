@@ -295,6 +295,8 @@ Deno.serve(async (req) => {
     // BUSCAR CONFIGURAÇÃO DE HORÁRIO
     // Prioridade: 1) Exceção do barbeiro, 2) Exceção geral, 3) Config do barbeiro, 4) Config geral
     let config: BusinessHoursConfig;
+    let barberConfigExplicit = false;
+
 
     if (resolvedBarbeiroId) {
       // Se barbeiro especificado, verificar exceções e config do barbeiro
