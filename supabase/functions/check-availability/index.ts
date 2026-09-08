@@ -246,11 +246,12 @@ Deno.serve(async (req) => {
     const { date, duration, excludeAppointmentId, barbeiroId, barberId, barbeiro_id, barber_id, tenantId } = body;
     const resolvedBarbeiroId = barbeiroId ?? barberId ?? barbeiro_id ?? barber_id;
     let resolvedTenantId = tenantId;
+    let resolvedUnidadeId: string | null = null;
 
     if (resolvedBarbeiroId) {
       const { data: barberScope, error: barberScopeError } = await supabase
         .from('barbeiros')
-        .select('tenant_id')
+        .select('tenant_id, unidade_id')
         .eq('id', resolvedBarbeiroId)
         .maybeSingle();
       if (barberScopeError || !barberScope?.tenant_id) {
@@ -266,7 +267,9 @@ Deno.serve(async (req) => {
         });
       }
       resolvedTenantId = barberScope.tenant_id;
+      resolvedUnidadeId = barberScope.unidade_id ?? null;
     }
+
 
     console.log('='.repeat(70));
     console.log('[check-availability] INICIANDO VERIFICAÇÃO');
