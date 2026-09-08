@@ -144,7 +144,24 @@ async function getDefaultConfig(supabase: any, date: string, dayOfWeek: number, 
       hora_fechamento: excecaoData.hora_fechamento || '20:00',
       hora_almoco_inicio: excecaoData.hora_almoco_inicio,
       hora_almoco_fim: excecaoData.hora_almoco_fim,
-      delay_entre_servicos: excecaoData.delay_entre_servicos || 0
+      delay_entre_servicos: excecaoData.delay_entre_servicos || 0,
+      found: true
+    };
+  }
+
+  // Config semanal da UNIDADE (loja) — tem prioridade sobre a config global legada
+  const unidadeConfig = await getUnidadeConfig(supabase, dayOfWeek, tenantId, unidadeId);
+  if (unidadeConfig) {
+    console.log(`[check-availability] CONFIG UNIDADE dia ${dayOfWeek}: ${unidadeConfig.hora_abertura}-${unidadeConfig.hora_fechamento} (aberto=${unidadeConfig.aberto})`);
+    return {
+      aberto: unidadeConfig.aberto ?? true,
+      hora_abertura: unidadeConfig.hora_abertura || '09:00',
+      hora_fechamento: unidadeConfig.hora_fechamento || '20:00',
+      hora_almoco_inicio: unidadeConfig.hora_almoco_inicio,
+      hora_almoco_fim: unidadeConfig.hora_almoco_fim,
+      delay_entre_servicos: unidadeConfig.delay_entre_servicos || 0,
+      slot_interval_minutes: normalizeSlotInterval(unidadeConfig.slot_interval_minutes),
+      found: true
     };
   }
 
@@ -169,15 +186,18 @@ async function getDefaultConfig(supabase: any, date: string, dayOfWeek: number, 
     hora_fechamento: configData.hora_fechamento,
     hora_almoco_inicio: configData.hora_almoco_inicio,
     hora_almoco_fim: configData.hora_almoco_fim,
-    delay_entre_servicos: configData.delay_entre_servicos || 0
+    delay_entre_servicos: configData.delay_entre_servicos || 0,
+    found: true
   } : {
     aberto: dayOfWeek !== 0,
     hora_abertura: '09:00',
     hora_fechamento: '21:00',
     hora_almoco_inicio: '13:00',
     hora_almoco_fim: '14:00',
-    delay_entre_servicos: 0
+    delay_entre_servicos: 0,
+    found: false
   };
+
 }
 
 async function resolveScopedBarberIds(
