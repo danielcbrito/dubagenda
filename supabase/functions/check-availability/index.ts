@@ -309,6 +309,8 @@ Deno.serve(async (req) => {
 
       if (excecaoBarbeiroData) {
         console.log(`[check-availability] EXCEÇÃO DO BARBEIRO encontrada para ${date}`);
+        barberConfigExplicit = true;
+
         config = {
           aberto: excecaoBarbeiroData.aberto ?? true,
           hora_abertura: excecaoBarbeiroData.hora_abertura || '09:00',
