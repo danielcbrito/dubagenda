@@ -123,11 +123,14 @@ export function BarberCard({ barber, isSelected, onSelect, rating, isPlanBarber 
       {/* Barber Profile Sheet */}
       <BarberProfileSheet
         open={showProfile}
-        onOpenChange={setShowProfile}
+        onClose={() => setShowProfile(false)}
         barberId={barber.id}
         barberName={barber.apelido}
         barberPhoto={barber.foto_url}
+        barberAvgRating={rating?.average ?? null}
+        barberTotalReviews={rating?.count ?? 0}
       />
+
     </>
   );
 }
