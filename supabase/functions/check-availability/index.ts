@@ -352,6 +352,7 @@ Deno.serve(async (req) => {
               hora_abertura: configBarbeiroData.hora_abertura,
               hora_fechamento: configBarbeiroData.hora_fechamento,
             }));
+            barberConfigExplicit = true;
             config = {
               aberto: configBarbeiroData.aberto !== null ? configBarbeiroData.aberto : true,
               hora_abertura: configBarbeiroData.hora_abertura || '09:00',
@@ -362,42 +363,48 @@ Deno.serve(async (req) => {
               slot_interval_minutes: normalizeSlotInterval(configBarbeiroData.slot_interval_minutes)
             };
           } else {
-            console.log(`[check-availability] Sem config para barbeiro ${resolvedBarbeiroId} dia ${dayOfWeek}, usando global`);
-            // Fallback para config geral (já verifica horarios_excepcionais)
-            config = await getDefaultConfig(supabase, date, dayOfWeek, resolvedTenantId);
+            console.log(`[check-availability] Sem config para barbeiro ${resolvedBarbeiroId} dia ${dayOfWeek}, usando unidade/global`);
+            // Fallback: exceção → unidade → global legado
+            config = await getDefaultConfig(supabase, date, dayOfWeek, resolvedTenantId, resolvedUnidadeId);
           }
         }
       }
     } else {
-      // Sem barbeiro - usar config geral
-      config = await getDefaultConfig(supabase, date, dayOfWeek, resolvedTenantId);
+      // Sem barbeiro - usar config da unidade/global
+      config = await getDefaultConfig(supabase, date, dayOfWeek, resolvedTenantId, resolvedUnidadeId);
     }
 
     // ============================================
-    // CLAMP: Garantir que horário do barbeiro respeite os limites globais
-    // O horário global da barbearia é o limite máximo de funcionamento
+    // CLAMP: o horário da loja limita a janela do barbeiro (abertura/fechamento).
+    // Quando o barbeiro tem config própria para o dia, ela decide se ele atende ou não.
     // ============================================
     if (resolvedBarbeiroId) {
-      const globalConfig = await getDefaultConfig(supabase, date, dayOfWeek, resolvedTenantId);
-      
-      if (!globalConfig.aberto) {
+      const globalConfig = await getDefaultConfig(supabase, date, dayOfWeek, resolvedTenantId, resolvedUnidadeId);
+
+      if (!globalConfig.found) {
+        console.log('[check-availability] CLAMP ignorado: nenhuma config de loja cadastrada');
+      } else if (!globalConfig.aberto && !barberConfigExplicit) {
         config.aberto = false;
-        console.log(`[check-availability] CLAMP: Global FECHADO → barbeiro também fechado`);
+        console.log(`[check-availability] CLAMP: loja FECHADA → barbeiro sem config própria também fechado`);
       } else if (config.aberto) {
         const globalOpen = timeToMinutes(globalConfig.hora_abertura);
         const globalClose = timeToMinutes(globalConfig.hora_fechamento);
         const barberOpen = timeToMinutes(config.hora_abertura);
         const barberClose = timeToMinutes(config.hora_fechamento);
 
-        if (barberOpen < globalOpen) {
-          console.log(`[check-availability] CLAMP: Abertura ${config.hora_abertura} → ${globalConfig.hora_abertura} (global)`);
-          config.hora_abertura = globalConfig.hora_abertura;
-        }
-        if (barberClose > globalClose) {
-          console.log(`[check-availability] CLAMP: Fechamento ${config.hora_fechamento} → ${globalConfig.hora_fechamento} (global)`);
-          config.hora_fechamento = globalConfig.hora_fechamento;
+        if (globalConfig.aberto) {
+          if (barberOpen < globalOpen) {
+            console.log(`[check-availability] CLAMP: Abertura ${config.hora_abertura} → ${globalConfig.hora_abertura} (loja)`);
+            config.hora_abertura = globalConfig.hora_abertura;
+          }
+          if (barberClose > globalClose) {
+            console.log(`[check-availability] CLAMP: Fechamento ${config.hora_fechamento} → ${globalConfig.hora_fechamento} (loja)`);
+            config.hora_fechamento = globalConfig.hora_fechamento;
+          }
         }
       }
+    }
+
     }
 
     console.log(`[check-availability] Config FINAL do dia ${dayOfWeek}:`, JSON.stringify(config));
