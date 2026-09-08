@@ -92,8 +92,38 @@ function minutesToTime(minutes: number): string {
   return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
 }
 
+// Busca a config semanal da UNIDADE (loja). Prioriza a unidade específica; depois o padrão do tenant.
+async function getUnidadeConfig(
+  supabase: any,
+  dayOfWeek: number,
+  tenantId?: string | null,
+  unidadeId?: string | null
+): Promise<any | null> {
+  if (unidadeId) {
+    const { data } = await supabase
+      .from('configuracoes_horario_unidade')
+      .select('*')
+      .eq('unidade_id', unidadeId)
+      .eq('dia_semana', dayOfWeek)
+      .maybeSingle();
+    if (data) return data;
+  }
+  if (tenantId) {
+    const { data } = await supabase
+      .from('configuracoes_horario_unidade')
+      .select('*')
+      .eq('tenant_id', tenantId)
+      .is('unidade_id', null)
+      .eq('dia_semana', dayOfWeek)
+      .maybeSingle();
+    if (data) return data;
+  }
+  return null;
+}
+
 // Helper function to get default business hours config
-async function getDefaultConfig(supabase: any, date: string, dayOfWeek: number, tenantId?: string | null): Promise<BusinessHoursConfig> {
+async function getDefaultConfig(supabase: any, date: string, dayOfWeek: number, tenantId?: string | null, unidadeId?: string | null): Promise<BusinessHoursConfig & { found?: boolean }> {
+
   // Primeiro: verificar exceção da barbearia atual para esta data.
   let exceptionQuery = supabase
     .from('horarios_excepcionais')
