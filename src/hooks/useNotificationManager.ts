@@ -59,10 +59,13 @@ export function useNotificationManager(userId: string | null) {
       try {
         const options: NotificationOptions = {
           body,
-          icon: "/logo-dub.png",
-          badge: "/logo-dub.png",
+          icon: "/notification-icon.png",
+          badge: "/notification-badge.png",
           tag: tag || `notif-${Date.now()}`,
           requireInteraction: false,
+          data: {
+            url: "/cliente",
+          },
         };
         const notification = new Notification(title, options);
 
@@ -76,9 +79,12 @@ export function useNotificationManager(userId: string | null) {
           navigator.serviceWorker.ready.then((reg) => {
             reg.showNotification(title, {
               body,
-              icon: "/logo-dub.png",
-              badge: "/logo-dub.png",
+              icon: "/notification-icon.png",
+              badge: "/notification-badge.png",
               tag: tag || `notif-${Date.now()}`,
+              data: {
+                url: "/cliente",
+              },
             });
           });
         }

@@ -154,7 +154,10 @@ export default function Login() {
 
       {/* Topo: logo */}
       <div className="flex-shrink-0 px-6 pt-6 flex items-center justify-between">
-        <img src={logoDub} alt="Dub" className="h-9 w-auto object-contain invert" />
+        <div className="flex items-center gap-2.5">
+          <img src={logoDub} alt="DUB Agenda" className="h-9 w-9 rounded-xl object-cover shadow-md" />
+          <span className="text-[17px] font-bold tracking-tight text-white">DUB Agenda</span>
+        </div>
         <button
           type="button"
           onClick={() => navigate("/")}

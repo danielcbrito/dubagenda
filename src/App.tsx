@@ -114,7 +114,7 @@ function MaintenanceWrapper({ children }: { children: React.ReactNode }) {
   // Public routes NEVER wait for maintenance check — render immediately
   if (isPublicRoute || isBarbershopSlug) {
     return (
-      <div className="flex flex-col min-h-dvh">
+      <div className="flex flex-col h-full min-h-0">
         <div className="flex-1 flex flex-col min-h-0">
           {children}
         </div>
@@ -125,7 +125,7 @@ function MaintenanceWrapper({ children }: { children: React.ReactNode }) {
   // Se o app NÃO está em modo de manutenção, renderiza direto (zero tela branca ou espera desnecessária)
   if (!isMaintenanceMode) {
     return (
-      <div className="flex flex-col min-h-dvh">
+      <div className="flex flex-col h-full min-h-0">
         <div className="flex-1 flex flex-col min-h-0">
           {children}
         </div>
@@ -141,7 +141,7 @@ function MaintenanceWrapper({ children }: { children: React.ReactNode }) {
   // Allowed users can access everything even during maintenance
   if (isAllowedUser) {
     return (
-      <div className="flex flex-col min-h-dvh">
+      <div className="flex flex-col h-full min-h-0">
         <div className="flex-1 flex flex-col min-h-0">
           {children}
         </div>

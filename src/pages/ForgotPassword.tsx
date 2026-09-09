@@ -183,7 +183,7 @@ const ForgotPassword = () => {
             animate={{ opacity: 1, y: 0 }}
             src={logoDub}
             alt="DUB"
-            className="w-14 h-14 object-contain mb-6 dark:invert"
+            className="w-14 h-14 rounded-2xl object-cover shadow-md mb-6"
           />
 
           <AnimatePresence mode="wait">

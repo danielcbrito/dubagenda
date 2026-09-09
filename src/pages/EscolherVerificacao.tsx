@@ -133,8 +133,8 @@ const EscolherVerificacao = () => {
         {/* Logo */}
         <div className="flex justify-center mb-6 sm:mb-8 animate-scale-in">
           <div className="relative">
-            <div className="absolute inset-0 bg-primary/20 blur-xl rounded-full" />
-            <img src={logoDub} alt="DUB" className="relative w-12 h-12 sm:w-16 sm:h-16 object-contain drop-shadow-2xl" />
+            <div className="absolute inset-0 bg-primary/20 blur-xl rounded-2xl" />
+            <img src={logoDub} alt="DUB" className="relative w-12 h-12 sm:w-16 sm:h-16 rounded-2xl object-cover drop-shadow-2xl" />
           </div>
         </div>
 

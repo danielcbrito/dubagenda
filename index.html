@@ -8,7 +8,7 @@
     <meta name="supported-color-schemes" content="light" />
     <meta name="google-site-verification" content="owbb0rIgmzly9Z4ymfj0B9UAS2zpSSAwCaix9Gh7Gy8" />
 
-    <!-- Anti-flash: força fundo branco + color-scheme light antes do React -->
+    <!-- Anti-flash + Detecção de iOS Safari em modo navegador -->
     <script>
       (function () {
         try {
@@ -19,6 +19,14 @@
           if (document.body) {
             document.body.style.backgroundColor = '#FFFFFF';
             document.body.style.colorScheme = 'light';
+          }
+          // Detecta Safari no iPhone/iPad quando executando no NAVEGADOR (fora do PWA instalado)
+          var ua = window.navigator.userAgent || '';
+          var isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+          var isStandalone = (window.navigator.standalone === true) || 
+            (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
+          if (isIOS && !isStandalone) {
+            d.classList.add('ios-safari-browser');
           }
         } catch (e) {}
       })();
@@ -53,8 +61,13 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Nunito:wght@400;600;700;800;900&family=Caveat:wght@600;700&family=Plus+Jakarta+Sans:ital,wght@0,400;0,700;0,900;1,700;1,900&display=swap" rel="stylesheet">
 
-    <link rel="icon" type="image/png" href="https://storage.googleapis.com/gpt-engineer-file-uploads/TqLHS6yMmlcD49zJhHO58WgMv8Z2/uploads/1764889000501-pixelcut-export (1).png">
-    <link rel="apple-touch-icon" sizes="512x512" href="/logo-dub.png" />
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon-180x180.png" />
+    <link rel="apple-touch-icon" sizes="152x152" href="/apple-touch-icon-152x152.png" />
+    <link rel="apple-touch-icon" sizes="167x167" href="/apple-touch-icon-167x167.png" />
 
   <meta name="description" content="DUB Agenda: agende cortes em barbearias premium, pague pelo app e acumule benefícios de fidelidade em segundos.">
   
@@ -72,7 +85,7 @@
     "@type": "Organization",
     "name": "DUB Agenda",
     "url": "https://dubagenda.lovable.app",
-    "logo": "https://storage.googleapis.com/gpt-engineer-file-uploads/TqLHS6yMmlcD49zJhHO58WgMv8Z2/uploads/1764889000501-pixelcut-export (1).png",
+    "logo": "https://dubagenda.lovable.app/icon-512.png",
     "description": "Plataforma premium de agendamento, pagamentos e fidelidade para barbearias."
   }
   </script>

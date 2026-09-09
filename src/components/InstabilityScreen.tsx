@@ -58,7 +58,7 @@ export function InstabilityScreen({ errorType = "app", onRetry }: InstabilityScr
           transition={{ duration: 0.3, delay: 0.1 }}
           src={logoDub}
           alt="Barbearia DUB"
-          className="w-16 h-16 object-contain mb-5"
+          className="w-16 h-16 rounded-2xl object-cover shadow-lg mb-5"
         />
 
         {/* Status badge */}

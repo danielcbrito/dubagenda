@@ -43,4 +43,26 @@ if ("serviceWorker" in navigator) {
   });
 }
 
+// Mantém classe do Safari iOS sincronizada
+if (typeof window !== "undefined") {
+  const syncSafariBrowserClass = () => {
+    const ua = navigator.userAgent || "";
+    const isIOS =
+      /iPad|iPhone|iPod/.test(ua) ||
+      (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+    const isStandalone =
+      ("standalone" in window.navigator && (window.navigator as any).standalone) ||
+      window.matchMedia("(display-mode: standalone)").matches;
+
+    if (isIOS && !isStandalone) {
+      document.documentElement.classList.add("ios-safari-browser");
+    } else {
+      document.documentElement.classList.remove("ios-safari-browser");
+    }
+  };
+
+  syncSafariBrowserClass();
+  window.matchMedia("(display-mode: standalone)").addEventListener?.("change", syncSafariBrowserClass);
+}
+
 createRoot(document.getElementById("root")!).render(<App />);

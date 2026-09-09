@@ -19,7 +19,7 @@ export function RootLayout() {
 
   return (
     <div
-      className="relative h-full h-dvh w-full touch-pan-y overflow-hidden bg-white antialiased flex flex-col"
+      className="relative h-full w-full touch-pan-y overflow-hidden bg-white antialiased flex flex-col"
     >
       {/* Background limpo e 100% branco sem orbs cinzas */}
       {isClientRoute && !path.startsWith("/cliente/agendar") && (

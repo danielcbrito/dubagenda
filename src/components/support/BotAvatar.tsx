@@ -13,7 +13,7 @@ export function BotAvatar({ size = "md" }: { size?: "sm" | "md" | "lg" }) {
   const s = sizeMap[size];
 
   return (
-    <div className={`${s.container} rounded-full bg-muted/80 flex items-center justify-center shrink-0`}>
+    <div className={`${s.container} rounded-full overflow-hidden bg-muted/80 flex items-center justify-center shrink-0`}>
       <img src={logoImage} alt="DUB" className={`${s.img} object-contain`} />
     </div>
   );

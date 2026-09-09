@@ -1,5 +1,5 @@
 // Service Worker for DUB Agenda PWA
-const CACHE_NAME = "dubagenda-pwa-v1";
+const CACHE_NAME = "dubagenda-pwa-v2";
 
 self.addEventListener("install", (event) => {
   self.skipWaiting();
@@ -26,5 +26,27 @@ self.addEventListener("fetch", (event) => {
   // Let browser handle requests normally with network first
   event.respondWith(
     fetch(event.request).catch(() => caches.match(event.request))
+  );
+});
+
+// Suporte a cliques em notificações de agendamentos
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const targetUrl = event.notification.data?.url || "/cliente";
+
+  event.waitUntil(
+    clients.matchAll({ type: "window", includeUncontrolled: true }).then((clientList) => {
+      for (const client of clientList) {
+        if (client.url && "focus" in client) {
+          if ("navigate" in client && targetUrl) {
+            client.navigate(targetUrl);
+          }
+          return client.focus();
+        }
+      }
+      if (clients.openWindow) {
+        return clients.openWindow(targetUrl);
+      }
+    })
   );
 });

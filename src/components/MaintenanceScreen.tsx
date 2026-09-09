@@ -38,7 +38,7 @@ export function MaintenanceScreen({ message, onExit }: MaintenanceScreenProps) {
           transition={{ duration: 0.3, delay: 0.1 }}
           src={logoDub}
           alt="Barbearia DUB"
-          className="w-20 h-20 object-contain mb-6"
+          className="w-20 h-20 rounded-2xl object-cover shadow-lg mb-6"
         />
 
         {/* Status indicator */}

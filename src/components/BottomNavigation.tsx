@@ -138,7 +138,7 @@ export function BottomNavigation() {
       <nav
         className="fixed bottom-0 left-0 right-0 z-[60] bg-[#0A0A0A]"
         style={{
-          paddingBottom: "max(env(safe-area-inset-bottom, 0px), 28px)",
+          paddingBottom: "var(--bottom-nav-pb, max(env(safe-area-inset-bottom, 0px), 28px))",
         }}
       >
         {/* Inverted Corners (Curvinhas ao contrário nas laterais) */}

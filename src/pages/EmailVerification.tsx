@@ -129,11 +129,11 @@ const EmailVerification = () => {
         {/* Logo at top - Floating */}
         <div className="flex justify-center mb-12 animate-scale-in">
           <div className="relative">
-            <div className="absolute inset-0 bg-primary/20 blur-xl rounded-full" />
+            <div className="absolute inset-0 bg-primary/20 blur-xl rounded-2xl" />
             <img 
               src={logoDub} 
               alt="DUB" 
-              className="relative w-16 h-16 object-contain drop-shadow-2xl"
+              className="relative w-16 h-16 rounded-2xl object-cover drop-shadow-2xl"
             />
           </div>
         </div>

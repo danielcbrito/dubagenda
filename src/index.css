@@ -83,8 +83,7 @@ body {
 
 #root {
   height: 100%;
-  min-height: 100vh;
-  min-height: 100dvh;
+  min-height: 100%;
   width: 100%;
   position: fixed;
   inset: 0;
@@ -94,15 +93,33 @@ body {
 
 /* Variáveis de safe area para usar em todo app */
 :root {
-  --sat: env(safe-area-inset-top);
-  --sab: env(safe-area-inset-bottom);
-  --sal: env(safe-area-inset-left);
-  --sar: env(safe-area-inset-right);
+  --sat: env(safe-area-inset-top, 0px);
+  --sab: env(safe-area-inset-bottom, 0px);
+  --sal: env(safe-area-inset-left, 0px);
+  --sar: env(safe-area-inset-right, 0px);
 
-  --safe-top: env(safe-area-inset-top);
-  --safe-bottom: env(safe-area-inset-bottom);
-  --safe-left: env(safe-area-inset-left);
-  --safe-right: env(safe-area-inset-right);
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+
+  --bottom-nav-pb: max(env(safe-area-inset-bottom, 0px), 28px);
+}
+
+/* 🍎 Otimização exclusiva para Safari no iPhone em modo NAVEGADOR
+   (quando o app NÃO foi adicionado à tela inicial como PWA).
+   No Safari do iPhone, env(safe-area-inset-top) resolve para 0px,
+   empurrando todo o layout para cima colado na barra do Safari.
+   Aqui fornecemos um respiro superior perfeito de 14px e balanceamos a navegação inferior. */
+html.ios-safari-browser {
+  --safari-top-offset: 14px;
+  --bottom-nav-pb: max(env(safe-area-inset-bottom, 0px), 14px);
+  --sat: max(env(safe-area-inset-top, 0px), 14px);
+  --safe-top: max(env(safe-area-inset-top, 0px), 14px);
+}
+
+html.ios-safari-browser #root {
+  padding-top: var(--safari-top-offset);
 }
 
 /* 🔤 Evita zoom automático do Safari em inputs (font-size mínimo 16px) */
