@@ -56,10 +56,15 @@ export function useNotificationManager(userId: string | null) {
       if (!("Notification" in window)) return;
       if (Notification.permission !== "granted") return;
 
+      const isAndroid = typeof navigator !== "undefined" && /Android/i.test(navigator.userAgent || "");
+
       try {
         const options: NotificationOptions = {
           body,
-          icon: "/notification-icon.png",
+          // No Android: ao omitir o icon (LargeIcon) e passar apenas o badge (SmallIcon),
+          // o Android renderiza a logo no lado ESQUERDO e NÃO duplica no lado direito!
+          // No Desktop (Windows/Mac): envia o icon para exibir o avatar grande.
+          ...(isAndroid ? {} : { icon: "/notification-icon.png" }),
           badge: "/notification-badge.png",
           tag: tag || `notif-${Date.now()}`,
           requireInteraction: false,
@@ -74,12 +79,14 @@ export function useNotificationManager(userId: string | null) {
           notification.close();
         };
       } catch {
-        // Fallback: SW notification
+        // Fallback: SW notification (usado no Android Chrome)
         if ("serviceWorker" in navigator && navigator.serviceWorker.controller) {
           navigator.serviceWorker.ready.then((reg) => {
             reg.showNotification(title, {
               body,
-              icon: "/notification-icon.png",
+              // No Android: omite 'icon' para que o sistema renderize apenas a logo do lado esquerdo
+              // e não coloque uma segunda logo no canto direito do card!
+              ...(isAndroid ? {} : { icon: "/notification-icon.png" }),
               badge: "/notification-badge.png",
               tag: tag || `notif-${Date.now()}`,
               data: {

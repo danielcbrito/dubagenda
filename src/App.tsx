@@ -1,7 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect } from "react";
 import { HelmetProvider } from "react-helmet-async";
 import { ThemeProvider } from "next-themes";
-import { SplashScreen } from "@/components/SplashScreen";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -434,31 +433,6 @@ function ThemeColorSync() {
   return null;
 }
 
-function AppWithSplash() {
-  // Splash só na primeira abertura da sessão do navegador — navegações
-  // internas e reloads na mesma sessão entram direto (zero espera).
-  const firstOpen = useRef(
-    typeof window !== "undefined" && !sessionStorage.getItem("dub_splash_shown")
-  );
-  const [showSplash, setShowSplash] = useState(firstOpen.current);
-
-  useEffect(() => {
-    if (!firstOpen.current) return;
-    sessionStorage.setItem("dub_splash_shown", "1");
-    const timer = setTimeout(() => setShowSplash(false), 900);
-    return () => clearTimeout(timer);
-  }, []);
-
-  return (
-    <>
-      <SplashScreen visible={showSplash} />
-      <BrowserRouter>
-        <AppRoutes />
-      </BrowserRouter>
-    </>
-  );
-}
-
 const App = () => (
   <HelmetProvider>
     <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} forcedTheme="light">
@@ -468,7 +442,9 @@ const App = () => (
           <TooltipProvider>
             <Toaster />
             <Sonner />
-            <AppWithSplash />
+            <BrowserRouter>
+              <AppRoutes />
+            </BrowserRouter>
           </TooltipProvider>
         </AuthProvider>
       </QueryClientProvider>

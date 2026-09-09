@@ -135,12 +135,27 @@ export function BottomNavigation() {
 
   return (
     <>
+      {/* Preenchimento contínuo 100% na cor da barra (#0A0A0A) para cobrir totalmente a área dos botões do celular */}
+      <div
+        className="fixed bottom-0 left-0 right-0 z-[59] bg-[#0A0A0A] pointer-events-none"
+        style={{
+          height: "max(calc(env(safe-area-inset-bottom, 0px) + 36px), 50px)",
+        }}
+        aria-hidden="true"
+      />
+
       <nav
         className="fixed bottom-0 left-0 right-0 z-[60] bg-[#0A0A0A]"
         style={{
-          paddingBottom: "var(--bottom-nav-pb, max(env(safe-area-inset-bottom, 0px), 28px))",
+          paddingBottom: "max(env(safe-area-inset-bottom, 0px), 28px)",
         }}
       >
+        {/* Sangria para baixo de 250px na cor #0A0A0A para eliminar qualquer fresta ou área branca abaixo da barra */}
+        <div
+          className="absolute top-full left-0 right-0 h-64 bg-[#0A0A0A] pointer-events-none"
+          aria-hidden="true"
+        />
+
         {/* Inverted Corners (Curvinhas ao contrário nas laterais) */}
         <div className="absolute -top-[20px] left-0 w-full flex justify-between pointer-events-none">
           {/* Left Corner */}

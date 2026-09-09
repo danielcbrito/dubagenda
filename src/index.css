@@ -113,7 +113,6 @@ body {
    Aqui fornecemos um respiro superior perfeito de 14px e balanceamos a navegação inferior. */
 html.ios-safari-browser {
   --safari-top-offset: 14px;
-  --bottom-nav-pb: max(env(safe-area-inset-bottom, 0px), 14px);
   --sat: max(env(safe-area-inset-top, 0px), 14px);
   --safe-top: max(env(safe-area-inset-top, 0px), 14px);
 }
