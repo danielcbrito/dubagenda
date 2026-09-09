@@ -61,10 +61,10 @@ export function useNotificationManager(userId: string | null) {
       try {
         const options: NotificationOptions = {
           body,
-          // No Android: ao omitir o icon (LargeIcon) e passar apenas o badge (SmallIcon),
-          // o Android renderiza a logo no lado ESQUERDO e NÃO duplica no lado direito!
-          // No Desktop (Windows/Mac): envia o icon para exibir o avatar grande.
-          ...(isAndroid ? {} : { icon: "/notification-icon.png" }),
+          // No Android: passa imagem 100% transparente como icon (LargeIcon) para evitar que o Chrome/Android
+          // gere o fallback de contato padrão (círculo cinza com a letra 'D').
+          // Assim, a esquerda fica 100% limpa (invisível) e apenas a logo na direita (badge) aparece!
+          icon: isAndroid ? "/transparent.png" : "/notification-icon.png",
           badge: "/notification-badge.png",
           tag: tag || `notif-${Date.now()}`,
           requireInteraction: false,
@@ -84,9 +84,8 @@ export function useNotificationManager(userId: string | null) {
           navigator.serviceWorker.ready.then((reg) => {
             reg.showNotification(title, {
               body,
-              // No Android: omite 'icon' para que o sistema renderize apenas a logo do lado esquerdo
-              // e não coloque uma segunda logo no canto direito do card!
-              ...(isAndroid ? {} : { icon: "/notification-icon.png" }),
+              // No Android: passa imagem 100% transparente para suprimir o círculo cinza com letra 'D'
+              icon: isAndroid ? "/transparent.png" : "/notification-icon.png",
               badge: "/notification-badge.png",
               tag: tag || `notif-${Date.now()}`,
               data: {
