@@ -58,41 +58,46 @@ export function useNotificationManager(userId: string | null) {
 
       const isAndroid = typeof navigator !== "undefined" && /Android/i.test(navigator.userAgent || "");
 
-      try {
-        const options: NotificationOptions = {
-          body,
-          // No Android: passa imagem 100% transparente como icon (LargeIcon) para evitar que o Chrome/Android
-          // gere o fallback de contato padrão (círculo cinza com a letra 'D').
-          // Assim, a esquerda fica 100% limpa (invisível) e apenas a logo na direita (badge) aparece!
-          icon: isAndroid ? "/transparent.png" : "/notification-icon.png",
-          badge: "/notification-badge.png",
-          tag: tag || `notif-${Date.now()}`,
-          requireInteraction: false,
-          data: {
-            url: "/cliente",
-          },
-        };
-        const notification = new Notification(title, options);
+      const options: NotificationOptions = {
+        body,
+        // No Android: passa imagem 100% transparente como icon (LargeIcon) para evitar que o Chrome/Android
+        // gere o fallback de contato padrão (círculo cinza com a letra 'D').
+        // Assim, a esquerda fica 100% limpa (invisível) e apenas a logo na direita (badge) aparece!
+        icon: isAndroid ? "/transparent.png" : "/notification-icon.png",
+        badge: "/notification-badge.png",
+        tag: tag || `notif-${Date.now()}`,
+        requireInteraction: false,
+        data: {
+          url: "/cliente",
+        },
+      };
 
-        notification.onclick = () => {
-          window.focus();
-          notification.close();
-        };
-      } catch {
-        // Fallback: SW notification (usado no Android Chrome)
-        if ("serviceWorker" in navigator && navigator.serviceWorker.controller) {
-          navigator.serviceWorker.ready.then((reg) => {
-            reg.showNotification(title, {
-              body,
-              // No Android: passa imagem 100% transparente para suprimir o círculo cinza com letra 'D'
-              icon: isAndroid ? "/transparent.png" : "/notification-icon.png",
-              badge: "/notification-badge.png",
-              tag: tag || `notif-${Date.now()}`,
-              data: {
-                url: "/cliente",
-              },
-            });
+      // No Android e navegadores modernos: prioriza o Service Worker para delegar diretamente ao WebAPK instalado
+      if ("serviceWorker" in navigator) {
+        navigator.serviceWorker.ready
+          .then((reg) => {
+            reg.showNotification(title, options);
+          })
+          .catch(() => {
+            try {
+              const notification = new Notification(title, options);
+              notification.onclick = () => {
+                window.focus();
+                notification.close();
+              };
+            } catch {
+              // ignore
+            }
           });
+      } else {
+        try {
+          const notification = new Notification(title, options);
+          notification.onclick = () => {
+            window.focus();
+            notification.close();
+          };
+        } catch {
+          // ignore
         }
       }
     },
