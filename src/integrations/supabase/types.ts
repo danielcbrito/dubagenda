@@ -518,6 +518,27 @@ export type Database = {
           },
         ]
       }
+      agente_webhook_global: {
+        Row: {
+          atualizado_em: string | null
+          atualizado_por: string | null
+          id: boolean
+          webhook_url: string | null
+        }
+        Insert: {
+          atualizado_em?: string | null
+          atualizado_por?: string | null
+          id?: boolean
+          webhook_url?: string | null
+        }
+        Update: {
+          atualizado_em?: string | null
+          atualizado_por?: string | null
+          id?: boolean
+          webhook_url?: string | null
+        }
+        Relationships: []
+      }
       ai_actions_log: {
         Row: {
           action_name: string

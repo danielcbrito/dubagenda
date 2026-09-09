@@ -271,7 +271,13 @@ Deno.serve(async (req) => {
       if (createErr || !created?.user) {
         const msg = (createErr?.message || "").toLowerCase();
         if (msg.includes("already") || msg.includes("registered") || msg.includes("exists")) {
-          return jsonResponse({ success: false, error: "Este email já possui uma conta", code: "email_exists" }, 409);
+          // 200 de propósito: o supabase-js descarta o corpo em respostas não-2xx,
+          // e o app precisa ler o code para orientar o cliente a fazer login.
+          return jsonResponse({
+            success: false,
+            error: "Este e-mail já está cadastrado. Faça login ou recupere a senha.",
+            code: "email_exists",
+          }, 200);
         }
         console.error("[signup_create_account] createUser failed", createErr);
         return jsonResponse({ success: false, error: "Erro ao criar conta" }, 500);

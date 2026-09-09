@@ -632,10 +632,24 @@ const Auth = () => {
       );
 
       if (createErr || !createRes?.success) {
-        const msg = createRes?.error || createErr?.message || "";
-        if (createRes?.code === "email_exists" || /already|exists|registered|já possui/i.test(msg)) {
+        // Em respostas não-2xx o supabase-js não entrega o corpo em `data`;
+        // lemos o JSON do erro para saber o motivo real.
+        let payload: any = createRes;
+        if (!payload && (createErr as any)?.context?.json) {
+          try {
+            payload = await (createErr as any).context.json();
+          } catch {
+            /* corpo não-JSON */
+          }
+        }
+        const msg = payload?.error || createErr?.message || "";
+        if (payload?.code === "email_exists" || /already|exists|registered|já (possui|está)/i.test(msg)) {
           setEmailExists(true);
-          toast.error("Este email já possui uma conta. Faça login.");
+          toast.error("Este e-mail já está cadastrado. Entre com sua senha ou use 'Esqueci minha senha'.", {
+            duration: 6000,
+          });
+          setSignupStep("email");
+          navigate("/auth?mode=login&email=" + encodeURIComponent(validEmail));
         } else {
           toast.error(msg || "Erro ao criar conta");
         }
