@@ -135,9 +135,9 @@ serve(async (req) => {
 
         duplicateClientAccount = (roles ?? []).some((entry) => entry.role === "cliente");
 
-        if (duplicateClientAccount) {
-          duplicates.push("email");
-        }
+        // O e-mail é único no Auth: se já existe QUALQUER conta com ele,
+        // a criação vai falhar mais à frente. Sinaliza já aqui.
+        duplicates.push("email");
 
         // Camada extra: identidade já usada em conta antiga (mesmo deletada)
         try {
