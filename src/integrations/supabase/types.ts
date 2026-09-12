@@ -3960,6 +3960,7 @@ export type Database = {
           id: string
           instance_name: string
           mensagem: string
+          mensagens_json: Json | null
           numero: string
           session_id: string | null
           timestamp: string
@@ -3968,6 +3969,7 @@ export type Database = {
           id?: string
           instance_name: string
           mensagem: string
+          mensagens_json?: Json | null
           numero: string
           session_id?: string | null
           timestamp?: string
@@ -3976,6 +3978,7 @@ export type Database = {
           id?: string
           instance_name?: string
           mensagem?: string
+          mensagens_json?: Json | null
           numero?: string
           session_id?: string | null
           timestamp?: string
@@ -7141,16 +7144,28 @@ export type Database = {
       }
     }
     Functions: {
-      acumular_mensagem: {
-        Args: {
-          p_instance_name: string
-          p_mensagem: string
-          p_numero: string
-          p_session_id: string
-          p_timestamp: string
-        }
-        Returns: undefined
-      }
+      acumular_mensagem:
+        | {
+            Args: {
+              p_instance_name: string
+              p_mensagem: string
+              p_numero: string
+              p_session_id: string
+              p_timestamp: string
+            }
+            Returns: undefined
+          }
+        | {
+            Args: {
+              p_instance_name: string
+              p_mensagem: string
+              p_message_id?: string
+              p_numero: string
+              p_session_id: string
+              p_timestamp: string
+            }
+            Returns: undefined
+          }
       add_wallet_credits: {
         Args: { p_amount: number; p_description?: string; p_user_id: string }
         Returns: number
