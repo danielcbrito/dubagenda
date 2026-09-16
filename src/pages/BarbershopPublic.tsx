@@ -43,6 +43,7 @@ import {
 import logoDub from "@/assets/logo-dub.png";
 import googleMapsIcon from "@/assets/google-maps-icon.png";
 import whatsappLogo from "@/assets/whatsapp-logo.png";
+import { setStatusBarTheme } from "@/utils/statusBar";
 import defaultBannerBg from "@/assets/barbershop-premium-bg.jpg";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { BarberProfileSheet } from "@/components/discover/BarberProfileSheet";
@@ -315,41 +316,25 @@ export default function BarbershopPublic() {
 
   // ── Immersive Status Bar (o banner sangra 100% até o topo por trás do relógio e bateria) ──
   useEffect(() => {
-    document.documentElement.classList.add("immersive-banner-active");
-
-    const prevHtmlBg = document.documentElement.style.backgroundColor;
-    const prevBodyBg = document.body?.style.backgroundColor;
+    document.documentElement.classList.add("immersive-active", "immersive-banner-active");
     document.documentElement.style.backgroundColor = "#000000";
+    document.documentElement.style.colorScheme = "dark";
     if (document.body) {
       document.body.style.backgroundColor = "#000000";
+      document.body.style.colorScheme = "dark";
     }
 
-    let appleMeta = document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]') as HTMLMetaElement | null;
-    const prevAppleStyle = appleMeta?.getAttribute("content") || "default";
-    if (!appleMeta) {
-      appleMeta = document.createElement("meta");
-      appleMeta.name = "apple-mobile-web-app-status-bar-style";
-      document.head.appendChild(appleMeta);
-    }
-    appleMeta.content = "black-translucent";
-
-    const themeMetas = document.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]');
-    themeMetas.forEach((meta) => {
-      meta.content = "#000000";
-    });
+    setStatusBarTheme("#000000", "black-translucent");
 
     return () => {
-      document.documentElement.classList.remove("immersive-banner-active");
-      document.documentElement.style.backgroundColor = prevHtmlBg || "#FFFFFF";
+      document.documentElement.classList.remove("immersive-active", "immersive-banner-active");
+      document.documentElement.style.backgroundColor = "#FFFFFF";
+      document.documentElement.style.colorScheme = "light";
       if (document.body) {
-        document.body.style.backgroundColor = prevBodyBg || "#FFFFFF";
+        document.body.style.backgroundColor = "#FFFFFF";
+        document.body.style.colorScheme = "light";
       }
-      if (appleMeta) {
-        appleMeta.content = prevAppleStyle;
-      }
-      themeMetas.forEach((meta) => {
-        meta.content = "#FFFFFF";
-      });
+      setStatusBarTheme("#FFFFFF", "default");
     };
   }, []);
 
@@ -1048,7 +1033,7 @@ export default function BarbershopPublic() {
   const formattedReviewCount = totalReviews > 0 ? totalReviews : 189;
 
   return (
-    <div className="barbershop-public-page relative flex flex-col bg-background h-full w-full overflow-y-auto overscroll-contain touch-pan-y">
+    <div className="barbershop-public-page relative flex flex-col bg-neutral-950 h-full w-full overflow-y-auto overscroll-contain touch-pan-y">
       <Helmet>
         <title>{pageTitle}</title>
         <meta name="description" content={pageDesc.slice(0, 160)} />
@@ -1061,7 +1046,7 @@ export default function BarbershopPublic() {
       <JsonLd id="localbusiness" data={localBusinessLd} />
 
       {/* ── Immersive Hero Banner: Sangra 100% até o topo por trás do relógio, wifi e bateria ── */}
-      <div className="relative w-full h-52 sm:h-60 overflow-hidden bg-neutral-950 select-none shrink-0">
+      <div className="relative w-full h-56 sm:h-64 overflow-hidden bg-neutral-950 select-none shrink-0">
         <img
           src={bannerUrl || defaultBannerBg}
           alt={`Banner ${tenant.nome}`}
@@ -1120,7 +1105,7 @@ export default function BarbershopPublic() {
       </div>
 
       {/* ── Main Scrollable Content ── */}
-      <main className="flex-1 pb-36">
+      <main className="flex-1 pb-36 bg-background">
         {/* ═══ Header Identity Section: Circular Shop Logo + Title + Slogan ═══ */}
         <div className="px-4 -mt-8 relative z-10 flex items-end gap-3.5">
           {/* Circular Shop Logo */}

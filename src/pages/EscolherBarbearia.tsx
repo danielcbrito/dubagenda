@@ -27,6 +27,7 @@ import { getCache, setCache } from "@/utils/cache";
 import { getVerifiedAuthUser } from "@/utils/authSession";
 import type L from "leaflet";
 import logoDub from "@/assets/logo-dub.png";
+import { setStatusBarTheme } from "@/utils/statusBar";
 
 // ── Types ──
 interface TenantJoin {
@@ -201,37 +202,25 @@ const EscolherBarbearia = () => {
 
   // ── Immersive Status Bar (o mapa sangra 100% até o topo por trás do relógio e bateria) ──
   useEffect(() => {
-    document.documentElement.classList.add("immersive-map-active");
-
-    const prevHtmlBg = document.documentElement.style.backgroundColor;
-    const prevBodyBg = document.body.style.backgroundColor;
+    document.documentElement.classList.add("immersive-active", "immersive-map-active");
     document.documentElement.style.backgroundColor = "#000000";
+    document.documentElement.style.colorScheme = "dark";
     if (document.body) {
       document.body.style.backgroundColor = "#000000";
+      document.body.style.colorScheme = "dark";
     }
 
-    let appleMeta = document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]') as HTMLMetaElement | null;
-    const prevAppleStyle = appleMeta?.getAttribute("content") || "default";
-    if (!appleMeta) {
-      appleMeta = document.createElement("meta");
-      appleMeta.name = "apple-mobile-web-app-status-bar-style";
-      document.head.appendChild(appleMeta);
-    }
-    appleMeta.content = "black-translucent";
+    setStatusBarTheme("#000000", "black-translucent");
 
     return () => {
-      document.documentElement.classList.remove("immersive-map-active");
-      document.documentElement.style.backgroundColor = prevHtmlBg || "#FFFFFF";
+      document.documentElement.classList.remove("immersive-active", "immersive-map-active");
+      document.documentElement.style.backgroundColor = "#FFFFFF";
+      document.documentElement.style.colorScheme = "light";
       if (document.body) {
-        document.body.style.backgroundColor = prevBodyBg || "#FFFFFF";
+        document.body.style.backgroundColor = "#FFFFFF";
+        document.body.style.colorScheme = "light";
       }
-      if (appleMeta) {
-        appleMeta.content = prevAppleStyle;
-      }
-      const themeMetas = document.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]');
-      themeMetas.forEach((meta) => {
-        meta.content = "#FFFFFF";
-      });
+      setStatusBarTheme("#FFFFFF", "default");
     };
   }, []);
 
@@ -239,10 +228,21 @@ const EscolherBarbearia = () => {
   useEffect(() => {
     const isFull = currentSheetSnap >= 0.85;
     const targetColor = isFull ? "#FFFFFF" : "#000000";
-    const themeMetas = document.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]');
-    themeMetas.forEach((meta) => {
-      meta.content = targetColor;
-    });
+    const targetStyle = isFull ? "default" : "black-translucent";
+    const targetScheme = isFull ? "light" : "dark";
+
+    document.documentElement.style.backgroundColor = targetColor;
+    document.documentElement.style.colorScheme = targetScheme;
+    if (document.body) {
+      document.body.style.backgroundColor = targetColor;
+      document.body.style.colorScheme = targetScheme;
+    }
+    if (isFull) {
+      document.documentElement.classList.remove("immersive-map-active");
+    } else {
+      document.documentElement.classList.add("immersive-map-active");
+    }
+    setStatusBarTheme(targetColor, targetStyle);
   }, [currentSheetSnap]);
 
   // ── iOS install banner ──

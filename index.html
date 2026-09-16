@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="pt-BR" translate="no" class="light" style="background-color: #FFFFFF; color-scheme: light;">
+<html lang="pt-BR" translate="no" class="light">
   <head>
     <meta charset="UTF-8" />
     <meta name="theme-color" content="#FFFFFF" />
@@ -8,18 +8,49 @@
     <meta name="supported-color-schemes" content="light" />
     <meta name="google-site-verification" content="owbb0rIgmzly9Z4ymfj0B9UAS2zpSSAwCaix9Gh7Gy8" />
 
-    <!-- Anti-flash + Detecção de iOS Safari em modo navegador -->
+    <!-- Anti-flash + Detecção de rotas imersivas e iOS Safari em modo navegador -->
     <script>
       (function () {
         try {
           var d = document.documentElement;
-          d.style.backgroundColor = '#FFFFFF';
-          d.style.colorScheme = 'light';
-          if (!d.classList.contains('light')) d.classList.add('light');
+          var p = window.location.pathname || '';
+          var segs = p.split('/').filter(Boolean);
+          var reserved = [
+            'cliente', 'suporte', 'admin', 'auth', 'barbearias', 'b', 'i',
+            'escolher-barbearia', 'escolher-verificacao', 'verificar-email',
+            'verificar-whatsapp', 'completar-perfil', 'esqueci-senha',
+            'resetar-senha', 'flowchart', 'responsive-preview', 'login', 'ajuda'
+          ];
+          var isImmersive = 
+            p.indexOf('/escolher-barbearia') !== -1 || 
+            p.indexOf('/b/') !== -1 || 
+            p.indexOf('/barbearia-dub') !== -1 || 
+            ((segs.length === 1 || segs.length === 2) && reserved.indexOf(segs[0]) === -1);
+
+          var brand = isImmersive ? '#000000' : '#FFFFFF';
+          var scheme = isImmersive ? 'dark' : 'light';
+
+          d.style.backgroundColor = brand;
+          d.style.colorScheme = scheme;
           if (document.body) {
-            document.body.style.backgroundColor = '#FFFFFF';
-            document.body.style.colorScheme = 'light';
+            document.body.style.backgroundColor = brand;
+            document.body.style.colorScheme = scheme;
           }
+
+          if (isImmersive) {
+            d.classList.add('immersive-active');
+            if (p.indexOf('/escolher-barbearia') !== -1) {
+              d.classList.add('immersive-map-active');
+            } else {
+              d.classList.add('immersive-banner-active');
+            }
+          } else {
+            if (!d.classList.contains('light')) d.classList.add('light');
+          }
+
+          var metaTheme = document.querySelector('meta[name="theme-color"]');
+          if (metaTheme) metaTheme.setAttribute('content', brand);
+
           // Detecta Safari no iPhone/iPad quando executando no NAVEGADOR (fora do PWA instalado)
           var ua = window.navigator.userAgent || '';
           var isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -40,7 +71,7 @@
     <link rel="canonical" href="https://dubagenda.lovable.app/" />
     <meta property="og:url" content="https://dubagenda.lovable.app/" />
 
-    <!-- iOS Safari fullscreen / PWA (permite que o mapa passe por trás do relógio e bateria) -->
+    <!-- iOS Safari fullscreen / PWA (permite que o mapa e banner passem 100% por trás do relógio e bateria) -->
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="DUB Agenda" />
@@ -49,10 +80,6 @@
     <!-- PWA Android / genérico -->
     <meta name="mobile-web-app-capable" content="yes" />
     <link rel="manifest" href="/manifest.webmanifest" />
-
-    <!-- Force branco na barra de status mesmo com dark mode do sistema Android -->
-    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#FFFFFF" />
-    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#FFFFFF" />
 
     <meta property="og:type" content="website" />
     <meta name="twitter:card" content="summary_large_image" />
@@ -105,7 +132,7 @@
   </script>
 </head>
 
-  <body class="notranslate" style="background-color: #FFFFFF; color-scheme: light;">
+  <body class="notranslate">
     <!-- Meta Pixel Code -->
     <script>
     !function(f,b,e,v,n,t,s)

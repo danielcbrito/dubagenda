@@ -20,6 +20,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { lazy, Suspense } from "react";
 import { SupportChatBubble } from "@/components/support/SupportChatBubble";
 import { getVerifiedAuthUser } from "@/utils/authSession";
+import { applyThemeForRoute } from "@/utils/statusBar";
 
 // Lazy-loaded routes for reduced initial bundle
 const Index = lazy(() => import("./pages/Index"));
@@ -289,11 +290,50 @@ function ScrollLockGuard() {
   return null;
 }
 
+function ThemeColorSync() {
+  const location = useLocation();
+
+  useEffect(() => {
+    let isApplying = false;
+
+    const apply = () => {
+      if (isApplying) return;
+      isApplying = true;
+      try {
+        applyThemeForRoute(location.pathname);
+      } finally {
+        queueMicrotask(() => {
+          isApplying = false;
+        });
+      }
+    };
+
+    apply();
+
+    const headObserver = new MutationObserver(apply);
+    headObserver.observe(document.head, { childList: true, subtree: true });
+
+    const htmlObserver = new MutationObserver(apply);
+    htmlObserver.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["class"],
+    });
+
+    return () => {
+      headObserver.disconnect();
+      htmlObserver.disconnect();
+    };
+  }, [location.pathname]);
+
+  return null;
+}
+
 function AppRoutes() {
   const { showRefreshOverlay, handleRefresh } = useRefreshRequired();
 
   return (
     <AuthSessionGuard>
+      <ThemeColorSync />
       {showRefreshOverlay && <RefreshRequiredScreen onRefresh={handleRefresh} />}
       <AuthRedirectGuard>
         <ScrollLockGuard />
@@ -325,26 +365,34 @@ function AppRoutes() {
                 <Route path="/cliente/avaliacoes" element={<ClienteAvaliacoes />} />
                 <Route path="/cliente/indicacoes" element={<ClienteIndicacoes />} />
                 <Route path="/cliente/dados-pessoais" element={<ClienteDadosPessoais />} />
+                <Route path="/cliente/notificacoes" element={<ClienteNotificacoes />} />
                 <Route path="/cliente/seguranca" element={<ClienteSeguranca />} />
+                <Route path="/cliente/suporte" element={<ClienteSuporte />} />
                 <Route path="/cliente/barbearia" element={<ClienteBarbearia />} />
                 <Route path="/cliente/loja" element={<StoreMaintenanceGate><ClienteLoja /></StoreMaintenanceGate>} />
                 <Route path="/cliente/barbeiro/:barberId/avaliacoes" element={<BarberReviews />} />
-                <Route path="/suporte" element={<SupportChat />} />
+                <Route path="/suporte" element={<Suporte />} />
                 <Route path="/escolher-barbearia" element={<EscolherBarbearia />} />
+                <Route path="/admin" element={<Admin />} />
                 <Route path="/admin/fix-coordinates" element={<AdminFixCoordinates />} />
                 <Route path="/admin/efi-credenciais" element={<AdminEfiCredenciais />} />
+                <Route path="/barbearias" element={<Barbearias />} />
+                <Route path="/barbearias/guia/:cidade" element={<BarbershopsCityGuide />} />
+                <Route path="/barbearias/:cidade" element={<BarbershopsCityGuide />} />
                 <Route path="/b/:slug/unidades" element={<BarbershopUnidades />} />
                 <Route path="/b/:slug/fotos" element={<BarbershopFotos />} />
                 <Route path="/b/:slug" element={<BarbershopPublic />} />
-                <Route path="/barbearias" element={<BarbershopsCityGuide />} />
-                <Route path="/barbearias/:cidade" element={<BarbershopsCityGuide />} />
+                <Route path="/i/:slug/:code" element={<InviteRedirect />} />
                 <Route path="/i/:code" element={<ConviteRedirect />} />
-                <Route path="/barbearia-dub/:code" element={<ConviteRedirect />} />
-                <Route path="/:slug/:code" element={<ConviteRedirect />} />
-                <Route path="/:slug/fotos" element={<BarbershopFotos />} />
+                <Route path="/barbearia-dub/fotos" element={<BarbershopFotos />} />
+                <Route path="/barbearia-dub/:code" element={<InviteRedirect />} />
+                <Route path="/barbearia-dub" element={<BarbershopPublic />} />
                 <Route path="/:slug" element={<BarbershopPublic />} />
+                <Route path="/:slug/fotos" element={<BarbershopFotos />} />
+                <Route path="/:slug/:code" element={<InviteRedirect />} />
                 <Route path="/flowchart" element={<Flowchart />} />
                 <Route path="/responsive-preview" element={<ResponsivePreview />} />
+                {/* Catch-all */}
                 <Route path="*" element={<NotFound />} />
               </Route>
             </Routes>
@@ -356,120 +404,9 @@ function AppRoutes() {
   );
 }
 
-function isImmersivePathname(pathname: string): boolean {
-  if (
-    pathname.startsWith("/escolher-barbearia") ||
-    pathname.startsWith("/b/") ||
-    pathname.startsWith("/barbearia-dub/")
-  ) {
-    return true;
-  }
-  const segs = pathname.split("/").filter(Boolean);
-  const reserved = [
-    "cliente", "suporte", "admin", "auth", "barbearias", "b", "i",
-    "escolher-barbearia", "escolher-verificacao", "verificar-email",
-    "verificar-whatsapp", "completar-perfil", "esqueci-senha",
-    "resetar-senha", "flowchart", "responsive-preview"
-  ];
-  if ((segs.length === 1 || segs.length === 2) && !reserved.includes(segs[0])) {
-    return true;
-  }
-  return false;
-}
-
-function ThemeColorSync() {
-  useEffect(() => {
-    const FORCE_COLOR = "#FFFFFF";
-    let isApplying = false;
-
-    const applyColor = () => {
-      if (isApplying) return;
-      const d = document.documentElement;
-      if (
-        d.classList.contains("immersive-map-active") ||
-        d.classList.contains("immersive-banner-active") ||
-        d.classList.contains("immersive-active") ||
-        isImmersivePathname(window.location.pathname)
-      ) {
-        return;
-      }
-      isApplying = true;
-
-      // Ensure color-scheme is light
-      document.documentElement.style.colorScheme = "light";
-      document.documentElement.style.backgroundColor = FORCE_COLOR;
-      if (document.body) {
-        document.body.style.backgroundColor = FORCE_COLOR;
-        document.body.style.colorScheme = "light";
-      }
-
-      // Update or create meta tags for plain, light, and dark schemes
-      const desiredMetas = [
-        { media: null, content: FORCE_COLOR },
-        { media: "(prefers-color-scheme: light)", content: FORCE_COLOR },
-        { media: "(prefers-color-scheme: dark)", content: FORCE_COLOR },
-      ];
-
-      const existingMetas = Array.from(
-        document.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]')
-      );
-
-
-      desiredMetas.forEach(({ media, content }) => {
-        let meta = existingMetas.find((m) =>
-          media ? m.getAttribute("media") === media : !m.hasAttribute("media")
-        );
-        if (!meta) {
-          meta = document.createElement("meta");
-          meta.name = "theme-color";
-          if (media) meta.setAttribute("media", media);
-          document.head.prepend(meta);
-        }
-        if (meta.getAttribute("content") !== content) {
-          meta.setAttribute("content", content);
-        }
-      });
-
-      // Remove any extra theme-color metas that don't match
-      existingMetas.forEach((m) => {
-        const mMedia = m.getAttribute("media");
-        const isKnown =
-          !mMedia ||
-          mMedia === "(prefers-color-scheme: light)" ||
-          mMedia === "(prefers-color-scheme: dark)";
-        if (!isKnown) {
-          m.remove();
-        }
-      });
-
-      queueMicrotask(() => {
-        isApplying = false;
-      });
-    };
-
-    applyColor();
-
-    const headObserver = new MutationObserver(applyColor);
-    headObserver.observe(document.head, { childList: true, subtree: true });
-
-    const htmlObserver = new MutationObserver(applyColor);
-    htmlObserver.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ["class", "style"],
-    });
-
-    return () => {
-      headObserver.disconnect();
-      htmlObserver.disconnect();
-    };
-  }, []);
-  return null;
-}
-
 const App = () => (
   <HelmetProvider>
     <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} forcedTheme="light">
-      <ThemeColorSync />
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
           <TooltipProvider>
