@@ -294,35 +294,7 @@ function ThemeColorSync() {
   const location = useLocation();
 
   useEffect(() => {
-    let isApplying = false;
-
-    const apply = () => {
-      if (isApplying) return;
-      isApplying = true;
-      try {
-        applyThemeForRoute(location.pathname);
-      } finally {
-        queueMicrotask(() => {
-          isApplying = false;
-        });
-      }
-    };
-
-    apply();
-
-    const headObserver = new MutationObserver(apply);
-    headObserver.observe(document.head, { childList: true, subtree: true });
-
-    const htmlObserver = new MutationObserver(apply);
-    htmlObserver.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ["class"],
-    });
-
-    return () => {
-      headObserver.disconnect();
-      htmlObserver.disconnect();
-    };
+    applyThemeForRoute(location.pathname);
   }, [location.pathname]);
 
   return null;
@@ -365,31 +337,24 @@ function AppRoutes() {
                 <Route path="/cliente/avaliacoes" element={<ClienteAvaliacoes />} />
                 <Route path="/cliente/indicacoes" element={<ClienteIndicacoes />} />
                 <Route path="/cliente/dados-pessoais" element={<ClienteDadosPessoais />} />
-                <Route path="/cliente/notificacoes" element={<ClienteNotificacoes />} />
                 <Route path="/cliente/seguranca" element={<ClienteSeguranca />} />
-                <Route path="/cliente/suporte" element={<ClienteSuporte />} />
                 <Route path="/cliente/barbearia" element={<ClienteBarbearia />} />
                 <Route path="/cliente/loja" element={<StoreMaintenanceGate><ClienteLoja /></StoreMaintenanceGate>} />
                 <Route path="/cliente/barbeiro/:barberId/avaliacoes" element={<BarberReviews />} />
-                <Route path="/suporte" element={<Suporte />} />
+                <Route path="/suporte" element={<SupportChat />} />
                 <Route path="/escolher-barbearia" element={<EscolherBarbearia />} />
-                <Route path="/admin" element={<Admin />} />
                 <Route path="/admin/fix-coordinates" element={<AdminFixCoordinates />} />
                 <Route path="/admin/efi-credenciais" element={<AdminEfiCredenciais />} />
-                <Route path="/barbearias" element={<Barbearias />} />
-                <Route path="/barbearias/guia/:cidade" element={<BarbershopsCityGuide />} />
-                <Route path="/barbearias/:cidade" element={<BarbershopsCityGuide />} />
                 <Route path="/b/:slug/unidades" element={<BarbershopUnidades />} />
                 <Route path="/b/:slug/fotos" element={<BarbershopFotos />} />
                 <Route path="/b/:slug" element={<BarbershopPublic />} />
-                <Route path="/i/:slug/:code" element={<InviteRedirect />} />
+                <Route path="/barbearias" element={<BarbershopsCityGuide />} />
+                <Route path="/barbearias/:cidade" element={<BarbershopsCityGuide />} />
                 <Route path="/i/:code" element={<ConviteRedirect />} />
-                <Route path="/barbearia-dub/fotos" element={<BarbershopFotos />} />
-                <Route path="/barbearia-dub/:code" element={<InviteRedirect />} />
-                <Route path="/barbearia-dub" element={<BarbershopPublic />} />
-                <Route path="/:slug" element={<BarbershopPublic />} />
+                <Route path="/barbearia-dub/:code" element={<ConviteRedirect />} />
+                <Route path="/:slug/:code" element={<ConviteRedirect />} />
                 <Route path="/:slug/fotos" element={<BarbershopFotos />} />
-                <Route path="/:slug/:code" element={<InviteRedirect />} />
+                <Route path="/:slug" element={<BarbershopPublic />} />
                 <Route path="/flowchart" element={<Flowchart />} />
                 <Route path="/responsive-preview" element={<ResponsivePreview />} />
                 {/* Catch-all */}

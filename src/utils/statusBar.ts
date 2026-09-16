@@ -26,7 +26,7 @@ export function isImmersiveRoute(pathname: string): boolean {
 
 /**
  * Utility to reliably sync mobile status bar color and style across iOS Safari, PWA, and Android Chrome.
- * Replaces all existing theme-color metas to force WebKit and Blink engines to update immediately.
+ * Only mutates the DOM if the current tags do not match desired values.
  */
 export function setStatusBarTheme(
   color: string,
@@ -41,33 +41,49 @@ export function setStatusBarTheme(
   if (!appleMeta) {
     appleMeta = document.createElement("meta");
     appleMeta.name = "apple-mobile-web-app-status-bar-style";
+    appleMeta.content = style;
     document.head.appendChild(appleMeta);
+  } else if (appleMeta.content !== style) {
+    appleMeta.content = style;
   }
-  appleMeta.content = style;
 
-  // 2. Remove all existing theme-color tags (WebKit ignores attribute mutation on existing tags)
+  // 2. Desired theme-color metas
+  const desired = [
+    { media: null, content: color },
+    { media: "(prefers-color-scheme: light)", content: color },
+    { media: "(prefers-color-scheme: dark)", content: color },
+  ];
+
   const existingMetas = Array.from(
-    document.querySelectorAll('meta[name="theme-color"]')
+    document.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]')
   );
+
+  let hasDiff = existingMetas.length !== desired.length;
+  if (!hasDiff) {
+    for (const d of desired) {
+      const match = existingMetas.find((m) =>
+        d.media ? m.getAttribute("media") === d.media : !m.hasAttribute("media")
+      );
+      if (!match || match.getAttribute("content") !== d.content) {
+        hasDiff = true;
+        break;
+      }
+    }
+  }
+
+  if (!hasDiff) {
+    return; // Already in desired state!
+  }
+
+  // Remove and recreate fresh meta tags so Mobile Safari evaluates them immediately
   existingMetas.forEach((m) => m.remove());
-
-  // 3. Prepend fresh theme-color metas for generic, light, and dark schemes
-  const newMeta = document.createElement("meta");
-  newMeta.name = "theme-color";
-  newMeta.content = color;
-  document.head.prepend(newMeta);
-
-  const lightMeta = document.createElement("meta");
-  lightMeta.name = "theme-color";
-  lightMeta.setAttribute("media", "(prefers-color-scheme: light)");
-  lightMeta.content = color;
-  document.head.prepend(lightMeta);
-
-  const darkMeta = document.createElement("meta");
-  darkMeta.name = "theme-color";
-  darkMeta.setAttribute("media", "(prefers-color-scheme: dark)");
-  darkMeta.content = color;
-  document.head.prepend(darkMeta);
+  desired.forEach(({ media, content }) => {
+    const meta = document.createElement("meta");
+    meta.name = "theme-color";
+    if (media) meta.setAttribute("media", media);
+    meta.content = content;
+    document.head.prepend(meta);
+  });
 }
 
 /**
@@ -86,12 +102,12 @@ export function applyThemeForRoute(pathname: string) {
 
   // 1. Synchronize classes on <html>
   if (isImmersive) {
-    d.classList.add("immersive-active");
+    if (!d.classList.contains("immersive-active")) d.classList.add("immersive-active");
     if (pathname.startsWith("/escolher-barbearia")) {
-      d.classList.add("immersive-map-active");
+      if (!d.classList.contains("immersive-map-active")) d.classList.add("immersive-map-active");
       d.classList.remove("immersive-banner-active");
     } else {
-      d.classList.add("immersive-banner-active");
+      if (!d.classList.contains("immersive-banner-active")) d.classList.add("immersive-banner-active");
       d.classList.remove("immersive-map-active");
     }
   } else {
@@ -99,11 +115,19 @@ export function applyThemeForRoute(pathname: string) {
   }
 
   // 2. Background color & color-scheme on <html> and <body>
-  d.style.backgroundColor = targetColor;
-  d.style.colorScheme = colorScheme;
+  if (d.style.backgroundColor !== targetColor) {
+    d.style.backgroundColor = targetColor;
+  }
+  if (d.style.colorScheme !== colorScheme) {
+    d.style.colorScheme = colorScheme;
+  }
   if (document.body) {
-    document.body.style.backgroundColor = targetColor;
-    document.body.style.colorScheme = colorScheme;
+    if (document.body.style.backgroundColor !== targetColor) {
+      document.body.style.backgroundColor = targetColor;
+    }
+    if (document.body.style.colorScheme !== colorScheme) {
+      document.body.style.colorScheme = colorScheme;
+    }
   }
 
   // 3. Status bar meta tags
