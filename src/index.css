@@ -131,12 +131,22 @@ html.ios-safari-browser #root {
   padding-top: var(--safari-top-offset);
 }
 
-/* 🗺️ No mapa imersivo (Escolher Barbearia), o mapa DEVE sangrar até o topo da tela por trás da barra de status (relógio e bateria) */
+/* 🗺️ & 💈 Páginas Imersivas (Mapa Escolher Barbearia e Perfil Público da Barbearia)
+   O mapa e o banner da barbearia DEVEM sangrar 100% até o topo da tela por trás da barra de status (relógio, wifi, bateria) */
+html.immersive-active,
+html.immersive-active body,
+html.immersive-active #root,
 html.immersive-map-active,
 html.immersive-map-active body,
 html.immersive-map-active #root,
+html.immersive-banner-active,
+html.immersive-banner-active body,
+html.immersive-banner-active #root,
+html.ios-safari-browser.immersive-active #root,
 html.ios-safari-browser.immersive-map-active #root,
-html.ios-safari-browser:has(#escolher-barbearia-container) #root {
+html.ios-safari-browser.immersive-banner-active #root,
+html.ios-safari-browser:has(#escolher-barbearia-container) #root,
+html.ios-safari-browser:has(.barbershop-public-page) #root {
   padding-top: 0 !important;
   background-color: transparent !important;
 }

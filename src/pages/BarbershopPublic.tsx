@@ -313,6 +313,46 @@ export default function BarbershopPublic() {
     }
   });
 
+  // ── Immersive Status Bar (o banner sangra 100% até o topo por trás do relógio e bateria) ──
+  useEffect(() => {
+    document.documentElement.classList.add("immersive-banner-active");
+
+    const prevHtmlBg = document.documentElement.style.backgroundColor;
+    const prevBodyBg = document.body?.style.backgroundColor;
+    document.documentElement.style.backgroundColor = "#000000";
+    if (document.body) {
+      document.body.style.backgroundColor = "#000000";
+    }
+
+    let appleMeta = document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]') as HTMLMetaElement | null;
+    const prevAppleStyle = appleMeta?.getAttribute("content") || "default";
+    if (!appleMeta) {
+      appleMeta = document.createElement("meta");
+      appleMeta.name = "apple-mobile-web-app-status-bar-style";
+      document.head.appendChild(appleMeta);
+    }
+    appleMeta.content = "black-translucent";
+
+    const themeMetas = document.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]');
+    themeMetas.forEach((meta) => {
+      meta.content = "#000000";
+    });
+
+    return () => {
+      document.documentElement.classList.remove("immersive-banner-active");
+      document.documentElement.style.backgroundColor = prevHtmlBg || "#FFFFFF";
+      if (document.body) {
+        document.body.style.backgroundColor = prevBodyBg || "#FFFFFF";
+      }
+      if (appleMeta) {
+        appleMeta.content = prevAppleStyle;
+      }
+      themeMetas.forEach((meta) => {
+        meta.content = "#FFFFFF";
+      });
+    };
+  }, []);
+
   const toggleFavorite = () => {
     if (!slug) return;
     try {
@@ -1008,7 +1048,7 @@ export default function BarbershopPublic() {
   const formattedReviewCount = totalReviews > 0 ? totalReviews : 189;
 
   return (
-    <div className="relative flex flex-col bg-background h-full w-full overflow-y-auto overscroll-contain touch-pan-y">
+    <div className="barbershop-public-page relative flex flex-col bg-background h-full w-full overflow-y-auto overscroll-contain touch-pan-y">
       <Helmet>
         <title>{pageTitle}</title>
         <meta name="description" content={pageDesc.slice(0, 160)} />
@@ -1020,18 +1060,18 @@ export default function BarbershopPublic() {
       </Helmet>
       <JsonLd id="localbusiness" data={localBusinessLd} />
 
-      {/* ── Compact Hero Banner (BEM MENOR, ~140px/h-36) com Botões Circulares Flutuantes ── */}
-      <div className="relative w-full h-36 sm:h-40 overflow-hidden bg-neutral-900 select-none shrink-0">
+      {/* ── Immersive Hero Banner: Sangra 100% até o topo por trás do relógio, wifi e bateria ── */}
+      <div className="relative w-full h-52 sm:h-60 overflow-hidden bg-neutral-950 select-none shrink-0">
         <img
           src={bannerUrl || defaultBannerBg}
           alt={`Banner ${tenant.nome}`}
-          className="w-full h-full object-cover brightness-[0.88]"
+          className="w-full h-full object-cover brightness-[0.92]"
         />
-        {/* Subtle gradient overlay to enhance readability of buttons & seamless blend */}
-        <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-transparent to-background/90" />
+        {/* Gradient escuro no topo para contraste e visibilidade perfeitos do relógio e bateria brancos */}
+        <div className="absolute inset-0 bg-gradient-to-b from-black/85 via-black/35 via-35% to-background" />
 
         {/* Floating Circular Nav Buttons directly over the banner */}
-        <div className="absolute top-[calc(env(safe-area-inset-top)+0.65rem)] inset-x-0 px-4 flex items-center justify-between z-20 pointer-events-auto">
+        <div className="absolute top-[calc(env(safe-area-inset-top,0px)+0.75rem)] inset-x-0 px-4 flex items-center justify-between z-20 pointer-events-auto">
           {/* Back button */}
           <button
             type="button"

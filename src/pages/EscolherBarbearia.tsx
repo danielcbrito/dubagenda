@@ -199,15 +199,15 @@ const EscolherBarbearia = () => {
   const isInviteMode = searchParams.get("mode") === "invite";
   const inviteRef = searchParams.get("ref") || "";
 
-  // ── Immersive Status Bar (o mapa sangra até o topo por trás do relógio e bateria) ──
+  // ── Immersive Status Bar (o mapa sangra 100% até o topo por trás do relógio e bateria) ──
   useEffect(() => {
     document.documentElement.classList.add("immersive-map-active");
 
     const prevHtmlBg = document.documentElement.style.backgroundColor;
     const prevBodyBg = document.body.style.backgroundColor;
-    document.documentElement.style.backgroundColor = "transparent";
+    document.documentElement.style.backgroundColor = "#000000";
     if (document.body) {
-      document.body.style.backgroundColor = "transparent";
+      document.body.style.backgroundColor = "#000000";
     }
 
     let appleMeta = document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]') as HTMLMetaElement | null;
@@ -228,15 +228,20 @@ const EscolherBarbearia = () => {
       if (appleMeta) {
         appleMeta.content = prevAppleStyle;
       }
+      const themeMetas = document.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]');
+      themeMetas.forEach((meta) => {
+        meta.content = "#FFFFFF";
+      });
     };
   }, []);
 
-  // Sincroniza a barra de status conforme o bottom sheet abre ou fecha
+  // Sincroniza a barra de status conforme o bottom sheet abre ou fecha (#000000 quando o mapa está visível, #FFFFFF em tela cheia)
   useEffect(() => {
     const isFull = currentSheetSnap >= 0.85;
+    const targetColor = isFull ? "#FFFFFF" : "#000000";
     const themeMetas = document.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]');
     themeMetas.forEach((meta) => {
-      meta.content = isFull ? "#FFFFFF" : "transparent";
+      meta.content = targetColor;
     });
   }, [currentSheetSnap]);
 
@@ -741,6 +746,14 @@ const EscolherBarbearia = () => {
         WebkitOverflowScrolling: 'touch',
       }}
     >
+      {/* ═══ Vinheta suave no topo do mapa para garantir contraste com o relógio, wifi e bateria brancos ═══ */}
+      <div
+        className={cn(
+          "absolute top-0 left-0 right-0 h-24 bg-gradient-to-b from-black/45 via-black/15 to-transparent pointer-events-none z-[580] transition-opacity duration-300",
+          isFullSnap ? "opacity-0" : "opacity-100"
+        )}
+      />
+
       {/* ═══ Top Search Bar (Floating over map; solid background connecting with sheet when expanded) ═══ */}
       <div
         id="search-header"

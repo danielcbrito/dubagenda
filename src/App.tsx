@@ -356,6 +356,27 @@ function AppRoutes() {
   );
 }
 
+function isImmersivePathname(pathname: string): boolean {
+  if (
+    pathname.startsWith("/escolher-barbearia") ||
+    pathname.startsWith("/b/") ||
+    pathname.startsWith("/barbearia-dub/")
+  ) {
+    return true;
+  }
+  const segs = pathname.split("/").filter(Boolean);
+  const reserved = [
+    "cliente", "suporte", "admin", "auth", "barbearias", "b", "i",
+    "escolher-barbearia", "escolher-verificacao", "verificar-email",
+    "verificar-whatsapp", "completar-perfil", "esqueci-senha",
+    "resetar-senha", "flowchart", "responsive-preview"
+  ];
+  if ((segs.length === 1 || segs.length === 2) && !reserved.includes(segs[0])) {
+    return true;
+  }
+  return false;
+}
+
 function ThemeColorSync() {
   useEffect(() => {
     const FORCE_COLOR = "#FFFFFF";
@@ -363,9 +384,12 @@ function ThemeColorSync() {
 
     const applyColor = () => {
       if (isApplying) return;
+      const d = document.documentElement;
       if (
-        document.documentElement.classList.contains("immersive-map-active") ||
-        window.location.pathname.startsWith("/escolher-barbearia")
+        d.classList.contains("immersive-map-active") ||
+        d.classList.contains("immersive-banner-active") ||
+        d.classList.contains("immersive-active") ||
+        isImmersivePathname(window.location.pathname)
       ) {
         return;
       }
