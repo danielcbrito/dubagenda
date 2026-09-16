@@ -91,11 +91,30 @@ const fetchShopData = async (tenantId: string) => {
 
 // ─── Profile query function (extracted for reuse) ───
 const fetchProfileData = async (userId: string) => {
-  const { data: prof, error } = await supabase.from("profiles").select("*").eq("id", userId).maybeSingle();
+  let { data: prof, error } = await supabase.from("profiles").select("*").eq("id", userId).maybeSingle();
   if (error) throw error;
+
+  // Perfil ausente NÃO invalida a sessão: recria a partir dos dados do Auth.
   if (!prof) {
-    await supabase.auth.signOut({ scope: "local" });
-    throw new Error("Sessão inválida. Entre novamente.");
+    const { data: authData } = await supabase.auth.getUser();
+    const meta = (authData?.user?.user_metadata ?? {}) as Record<string, any>;
+    const nome = (meta.nome || meta.full_name || meta.name || "").trim() || "Cliente";
+    const telefone = (meta.telefone || meta.phone || "").toString().replace(/\D/g, "") || null;
+
+    const { data: created } = await supabase
+      .from("profiles")
+      .insert({ id: userId, nome, telefone })
+      .select("*")
+      .maybeSingle();
+
+    if (created) {
+      prof = created;
+    } else {
+      const { data: retry } = await supabase.from("profiles").select("*").eq("id", userId).maybeSingle();
+      prof = retry ?? null;
+    }
+
+    if (!prof) throw new Error("Não foi possível carregar seu perfil. Tente novamente.");
   }
 
   let preferredShop: { id: string; nome: string } | null = null;
