@@ -57,6 +57,7 @@ const AdminFixCoordinates = lazy(() => import("./pages/AdminFixCoordinates"));
 const AdminEfiCredenciais = lazy(() => import("./pages/AdminEfiCredenciais"));
 const BarbershopPublic = lazy(() => import("./pages/BarbershopPublic"));
 const BarbershopUnidades = lazy(() => import("./pages/BarbershopUnidades"));
+const BarbershopFotos = lazy(() => import("./pages/BarbershopFotos"));
 const Flowchart = lazy(() => import("./pages/Flowchart"));
 const ResponsivePreview = lazy(() => import("./pages/ResponsivePreview"));
 const BarbershopsCityGuide = lazy(() => import("./pages/BarbershopsCityGuide"));
@@ -333,12 +334,14 @@ function AppRoutes() {
                 <Route path="/admin/fix-coordinates" element={<AdminFixCoordinates />} />
                 <Route path="/admin/efi-credenciais" element={<AdminEfiCredenciais />} />
                 <Route path="/b/:slug/unidades" element={<BarbershopUnidades />} />
+                <Route path="/b/:slug/fotos" element={<BarbershopFotos />} />
                 <Route path="/b/:slug" element={<BarbershopPublic />} />
                 <Route path="/barbearias" element={<BarbershopsCityGuide />} />
                 <Route path="/barbearias/:cidade" element={<BarbershopsCityGuide />} />
                 <Route path="/i/:code" element={<ConviteRedirect />} />
                 <Route path="/barbearia-dub/:code" element={<ConviteRedirect />} />
                 <Route path="/:slug/:code" element={<ConviteRedirect />} />
+                <Route path="/:slug/fotos" element={<BarbershopFotos />} />
                 <Route path="/:slug" element={<BarbershopPublic />} />
                 <Route path="/flowchart" element={<Flowchart />} />
                 <Route path="/responsive-preview" element={<ResponsivePreview />} />
@@ -360,6 +363,12 @@ function ThemeColorSync() {
 
     const applyColor = () => {
       if (isApplying) return;
+      if (
+        document.documentElement.classList.contains("immersive-map-active") ||
+        window.location.pathname.startsWith("/escolher-barbearia")
+      ) {
+        return;
+      }
       isApplying = true;
 
       // Ensure color-scheme is light

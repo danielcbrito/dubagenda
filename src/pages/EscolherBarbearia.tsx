@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Search, SearchX, X, Map as MapIcon, Satellite, Locate, ArrowLeft, List, MapPin, SlidersHorizontal } from "lucide-react";
+import { Search, SearchX, X, Map as MapIcon, Satellite, Locate, List, MapPin } from "lucide-react";
+import { BackArrow } from "@/components/ui/back-arrow";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -20,11 +21,12 @@ import {
 } from "@/lib/geocoding";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DiscoverMap } from "@/components/discover/DiscoverMap";
-import { DiscoverUnitCard } from "@/components/discover/DiscoverUnitCard";
-import { BottomSheet, SNAP_MID, SNAP_FULL, SNAP_PEEK } from "@/components/discover/BottomSheet";
+import { DiscoverUnitCard, type BarberSummary } from "@/components/discover/DiscoverUnitCard";
+import { BottomSheet, type BottomSheetRef, SNAP_MID, SNAP_FULL, SNAP_PEEK } from "@/components/discover/BottomSheet";
 import { getCache, setCache } from "@/utils/cache";
 import { getVerifiedAuthUser } from "@/utils/authSession";
 import type L from "leaflet";
+import logoDub from "@/assets/logo-dub.png";
 
 // ── Types ──
 interface TenantJoin {
@@ -70,6 +72,8 @@ interface UnitData {
   travelTime: string | null;
   travelMinutes: number | null;
   travelMode: "walking" | "driving" | null;
+  barbers?: BarberSummary[];
+  barbersCount?: number;
 }
 
 // ── Utils ──
@@ -136,14 +140,105 @@ const EscolherBarbearia = () => {
   
   const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
+  // Carousel scroll ref & mouse drag handlers
+  const carouselRef = useRef<HTMLDivElement>(null);
+  const isDraggingCarousel = useRef(false);
+  const carouselStartX = useRef(0);
+  const carouselScrollLeft = useRef(0);
+
+  const handleCarouselMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    isDraggingCarousel.current = true;
+    carouselStartX.current = e.pageX - (carouselRef.current?.offsetLeft || 0);
+    carouselScrollLeft.current = carouselRef.current?.scrollLeft || 0;
+  };
+
+  const handleCarouselMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!isDraggingCarousel.current || !carouselRef.current) return;
+    e.preventDefault();
+    const x = e.pageX - (carouselRef.current.offsetLeft || 0);
+    const walk = (x - carouselStartX.current) * 1.5;
+    carouselRef.current.scrollLeft = carouselScrollLeft.current - walk;
+  };
+
+  const handleCarouselMouseUp = () => {
+    isDraggingCarousel.current = false;
+  };
+
+  const handleCarouselWheel = (e: React.WheelEvent<HTMLDivElement>) => {
+    if (carouselRef.current && Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+      carouselRef.current.scrollLeft += e.deltaY;
+    }
+  };
+
   // Sheet snap state
+  const bottomSheetRef = useRef<BottomSheetRef>(null);
   const [currentSheetSnap, setCurrentSheetSnap] = useState(SNAP_MID);
+  const isFullSnap = currentSheetSnap >= 0.85;
+  const [isScrolled, setIsScrolled] = useState(false);
+  const [activeFilter, setActiveFilter] = useState<string>("near");
   const [showInstallBanner, setShowInstallBanner] = useState(false);
+
+  const handleListScroll = useCallback((scrollTop: number) => {
+    setIsScrolled((prev) => {
+      if (scrollTop > 35 && !prev) return true;
+      if (scrollTop <= 10 && prev) return false;
+      return prev;
+    });
+  }, []);
+
+  const dubUnit = useMemo(() => {
+    return allUnits.find(
+      (u) => normalizeText(u.brandSlug ?? "") === "barbeariadub" || normalizeText(u.brandName) === "barbeariadub"
+    );
+  }, [allUnits]);
+
+  const dubLogo = dubUnit?.brandLogo || "/barbearia-dub-logo.png";
 
   const isChangeMode = searchParams.get("mode") === "change";
   const isSearchMode = searchParams.get("mode") === "search";
   const isInviteMode = searchParams.get("mode") === "invite";
   const inviteRef = searchParams.get("ref") || "";
+
+  // ── Immersive Status Bar (o mapa sangra até o topo por trás do relógio e bateria) ──
+  useEffect(() => {
+    document.documentElement.classList.add("immersive-map-active");
+
+    const prevHtmlBg = document.documentElement.style.backgroundColor;
+    const prevBodyBg = document.body.style.backgroundColor;
+    document.documentElement.style.backgroundColor = "transparent";
+    if (document.body) {
+      document.body.style.backgroundColor = "transparent";
+    }
+
+    let appleMeta = document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]') as HTMLMetaElement | null;
+    const prevAppleStyle = appleMeta?.getAttribute("content") || "default";
+    if (!appleMeta) {
+      appleMeta = document.createElement("meta");
+      appleMeta.name = "apple-mobile-web-app-status-bar-style";
+      document.head.appendChild(appleMeta);
+    }
+    appleMeta.content = "black-translucent";
+
+    return () => {
+      document.documentElement.classList.remove("immersive-map-active");
+      document.documentElement.style.backgroundColor = prevHtmlBg || "#FFFFFF";
+      if (document.body) {
+        document.body.style.backgroundColor = prevBodyBg || "#FFFFFF";
+      }
+      if (appleMeta) {
+        appleMeta.content = prevAppleStyle;
+      }
+    };
+  }, []);
+
+  // Sincroniza a barra de status conforme o bottom sheet abre ou fecha
+  useEffect(() => {
+    const isFull = currentSheetSnap >= 0.85;
+    const themeMetas = document.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]');
+    themeMetas.forEach((meta) => {
+      meta.content = isFull ? "#FFFFFF" : "transparent";
+    });
+  }, [currentSheetSnap]);
 
   // ── iOS install banner ──
   useEffect(() => {
@@ -256,14 +351,33 @@ const EscolherBarbearia = () => {
           .eq("ativo", true),
         supabase
           .from("barbeiros")
-          .select("id, tenant_id")
+          .select("id, tenant_id, apelido, foto_url")
           .eq("ativo", true)
-          .is("deleted_at", null),
+          .is("deleted_at", null)
+          .order("apelido"),
       ]);
 
       if (error) {
         throw error;
       }
+
+      const barbersByTenant = new Map<string, BarberSummary[]>();
+      const globalBarbers: BarberSummary[] = [];
+
+      (barbers ?? []).forEach((b) => {
+        const item: BarberSummary = {
+          id: b.id,
+          apelido: b.apelido,
+          foto_url: b.foto_url,
+        };
+        if (b.tenant_id) {
+          const list = barbersByTenant.get(b.tenant_id) ?? [];
+          list.push(item);
+          barbersByTenant.set(b.tenant_id, list);
+        } else {
+          globalBarbers.push(item);
+        }
+      });
 
       let unitList: UnitData[] = (units ?? [])
         .filter((u) => {
@@ -273,6 +387,10 @@ const EscolherBarbearia = () => {
         .map((u) => {
           const t = u.tenant as unknown as TenantJoin;
           const persistedCoords = resolveStoredCoordinates(u.latitude, u.longitude);
+          const isDub = normalizeText(t?.slug ?? "") === "barbeariadub" || normalizeText(t?.nome ?? "") === "barbeariadub";
+          const tenantBarbers = u.tenant_id ? (barbersByTenant.get(u.tenant_id) ?? []) : [];
+          const unitBarbers = (isDub && tenantBarbers.length === 0) ? globalBarbers : tenantBarbers;
+
           const baseUnit: UnitData = {
             id: u.id,
             nome: u.nome,
@@ -300,6 +418,8 @@ const EscolherBarbearia = () => {
             travelTime: null,
             travelMinutes: null,
             travelMode: null,
+            barbers: unitBarbers,
+            barbersCount: unitBarbers.length,
           };
 
           const addressParts = buildAddressParts(baseUnit);
@@ -474,18 +594,35 @@ const EscolherBarbearia = () => {
       .sort((a, b) => (a.distance ?? Infinity) - (b.distance ?? Infinity));
   }, [allUnits, userLocation]);
 
-  // ── Filtered by search + map bounds ──
+  // ── Filtered by activeFilter + search + map bounds ──
   const searchFilteredUnits = useMemo(() => {
-    if (!search.trim()) return sortedUnits;
+    let list = sortedUnits;
+
+    if (activeFilter === "dub") {
+      list = list.filter((u) =>
+        (u.brandSlug ?? "").toLowerCase().includes("dub") ||
+        u.brandName.toLowerCase().includes("dub") ||
+        u.nome.toLowerCase().includes("dub")
+      );
+    } else if (activeFilter === "top") {
+      list = [...list].sort((a, b) => (b.is_sede ? 1 : 0) - (a.is_sede ? 1 : 0));
+    } else if (activeFilter === "sede") {
+      list = list.filter((u) => u.is_sede);
+    } else if (activeFilter === "walking") {
+      list = list.filter((u) => u.distance !== null && u.distance <= 1.5);
+    }
+
+    if (!search.trim()) return list;
 
     const q = search.toLowerCase();
-    return sortedUnits.filter(u =>
+    return list.filter((u) =>
       u.nome.toLowerCase().includes(q) ||
       u.brandName.toLowerCase().includes(q) ||
       (u.bairro && u.bairro.toLowerCase().includes(q)) ||
-      (u.cidade && u.cidade.toLowerCase().includes(q))
+      (u.cidade && u.cidade.toLowerCase().includes(q)) ||
+      (u.barbers && u.barbers.some((b) => b.apelido.toLowerCase().includes(q)))
     );
-  }, [sortedUnits, search]);
+  }, [sortedUnits, activeFilter, search]);
 
   const MIN_VISIBLE = 5;
 
@@ -550,15 +687,6 @@ const EscolherBarbearia = () => {
     setMapBounds(bounds);
   }, []);
 
-  // ── Select unit syncs map ↔ list ──
-  const handleSelectUnit = useCallback((id: string) => {
-    setSelectedUnitId((prev) => (prev === id ? null : id));
-    setTimeout(() => {
-      const el = cardRefs.current.get(id);
-      if (el) el.scrollIntoView({ behavior: "smooth", block: "nearest" });
-    }, 100);
-  }, []);
-
   const handleCardClick = useCallback((unit: UnitData) => {
     const slug = unit.brandSlug || unit.id;
     const fromParam = isChangeMode ? "change" : "discover";
@@ -585,12 +713,21 @@ const EscolherBarbearia = () => {
     navigate(`/${slug}?from=${fromParam}&unidade=${unit.id}`);
   }, [isChangeMode, isInviteMode, inviteRef, navigate]);
 
+  // ── Clicar na barbearia no mapa direciona direto para a página dela ──
+  const handleSelectUnit = useCallback((id: string) => {
+    const target = allUnits.find((u) => u.id === id);
+    if (target) {
+      handleCardClick(target);
+    }
+  }, [allUnits, handleCardClick]);
+
   const handleRecenter = useCallback(() => {
     setSelectedUnitId(null);
   }, []);
 
   return (
     <div
+      id="escolher-barbearia-container"
       style={{
         position: 'fixed',
         top: 0,
@@ -600,47 +737,142 @@ const EscolherBarbearia = () => {
         width: '100%',
         height: '100%',
         overflow: 'hidden',
-        background: 'hsl(var(--background))',
+        background: 'transparent',
         WebkitOverflowScrolling: 'touch',
       }}
     >
-      {/* ═══ Search bar — respeita safe area do iPhone ═══ */}
+      {/* ═══ Top Search Bar (Floating over map; solid background connecting with sheet when expanded) ═══ */}
       <div
-        className="z-[600]"
+        id="search-header"
+        className="z-[600] pointer-events-none"
         style={{
           position: 'absolute',
-          top: 'calc(env(safe-area-inset-top, 0px) + 12px)',
-          left: 'calc(env(safe-area-inset-left, 0px) + 16px)',
-          right: 'calc(env(safe-area-inset-right, 0px) + 16px)',
+          top: 0,
+          left: 0,
+          right: 0,
+          paddingTop: 'calc(env(safe-area-inset-top, 0px) + 14px)',
+          paddingBottom: isFullSnap && isScrolled ? '12px' : '10px',
+          paddingLeft: '16px',
+          paddingRight: '16px',
         }}
       >
-        <h1 className="sr-only">Buscar e descobrir barbearias próximas</h1>
-        <div className="relative">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/50" />
-          <input
-            ref={searchInputRef}
-            type="text"
-            placeholder="Buscar barbearias..."
-            aria-label="Buscar barbearias"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className={cn(
-              "w-full h-12 pl-11 pr-10 rounded-full text-[14px]",
-              "bg-card border border-border text-foreground",
-              "placeholder:text-muted-foreground",
-              "focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30",
-              "shadow-lg transition-all duration-150"
-            )}
-          />
-          {search && (
-            <button
-              onClick={() => setSearch("")}
-              aria-label="Limpar busca"
-              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground/40 active:scale-90 transition-transform"
-            >
-              <X className="w-4 h-4" />
-            </button>
+        {/* Fundo suave com blur que surge apenas quando a gaveta se transforma em tela cheia */}
+        <div
+          className={cn(
+            "absolute inset-0 bg-background/95 backdrop-blur-md border-b border-border/40 shadow-xs pointer-events-none transition-opacity duration-300 ease-out",
+            isFullSnap ? "opacity-100" : "opacity-0"
           )}
+        />
+
+        <div className="relative flex items-center gap-2.5 pointer-events-auto">
+          {/* Botão de Voltar para a tela anterior (Padrão clean BackArrow em V) */}
+          <button
+            type="button"
+            onClick={() => {
+              if (window.history.length > 1) {
+                navigate(-1);
+              } else {
+                navigate("/cliente");
+              }
+            }}
+            aria-label="Voltar para a tela anterior"
+            className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full border border-border/80 bg-background/95 text-foreground shadow-[0_2px_10px_rgba(0,0,0,0.08)] backdrop-blur-sm transition-transform active:scale-90"
+          >
+            <BackArrow size={20} strokeWidth={2.2} className="text-foreground -ml-0.5" />
+          </button>
+
+          {/* Cápsula de Busca Flutuante (Estilo Airbnb) */}
+          <div className="relative flex-1">
+            <h1 className="sr-only">Buscar e descobrir barbearias próximas</h1>
+            <div className="flex items-center w-full h-11 px-3.5 gap-2.5 rounded-full bg-background/95 border border-border/80 shadow-[0_2px_12px_rgba(0,0,0,0.08)] backdrop-blur-sm transition-all focus-within:ring-2 focus-within:ring-foreground/15">
+              <Search className="w-4 h-4 text-muted-foreground/70 flex-shrink-0" strokeWidth={1.8} />
+              <input
+                ref={searchInputRef}
+                type="text"
+                placeholder="Buscar barbearias..."
+                aria-label="Buscar barbearias"
+                value={search}
+                onFocus={() => {
+                  bottomSheetRef.current?.snapTo(SNAP_FULL);
+                }}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  if (e.target.value) {
+                    bottomSheetRef.current?.snapTo(SNAP_FULL);
+                  }
+                }}
+                className="w-full text-[13.5px] font-normal text-foreground placeholder:text-muted-foreground/60 bg-transparent outline-none border-none p-0 focus:ring-0"
+              />
+              {search && (
+                <button
+                  onClick={() => setSearch("")}
+                  aria-label="Limpar busca"
+                  className="text-muted-foreground/60 hover:text-foreground active:scale-90 transition-transform p-0.5"
+                >
+                  <X className="w-4 h-4" strokeWidth={1.8} />
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* ═══ Carrossel de Filtros Estratégico (Desaparece suave e leve ao rolar a lista sem engasgos) ═══ */}
+        <div
+          ref={carouselRef}
+          onMouseDown={handleCarouselMouseDown}
+          onMouseMove={handleCarouselMouseMove}
+          onMouseUp={handleCarouselMouseUp}
+          onMouseLeave={handleCarouselMouseUp}
+          onWheel={handleCarouselWheel}
+          className={cn(
+            "relative flex items-center gap-2 no-scrollbar touch-pan-x pointer-events-auto select-none cursor-grab active:cursor-grabbing overflow-x-auto overflow-y-hidden transition-all duration-300 ease-out",
+            search.trim() || (isFullSnap && isScrolled)
+              ? "max-h-0 opacity-0 -translate-y-2 pointer-events-none py-0 my-0"
+              : "max-h-12 opacity-100 translate-y-0 pt-2.5 pb-1 pointer-events-auto"
+          )}
+          style={{
+            WebkitOverflowScrolling: "touch",
+            overscrollBehaviorX: "contain",
+            scrollbarWidth: "none",
+            msOverflowStyle: "none",
+          }}
+        >
+          {[
+            { id: "near", label: "Mais perto de mim" },
+            { id: "dub", label: "Unidades DUB" },
+            { id: "top", label: "Melhor avaliadas" },
+            { id: "sede", label: "Matriz / Sedes" },
+            { id: "walking", label: "A pé (< 1.5 km)" },
+            { id: "all", label: "Todas" },
+          ].map((f) => {
+            const isActive = activeFilter === f.id;
+            return (
+              <button
+                key={f.id}
+                type="button"
+                onClick={() => setActiveFilter(f.id)}
+                className={cn(
+                  "flex-shrink-0 px-3.5 py-1.5 rounded-full text-[12.5px] transition-all active:scale-95 cursor-pointer whitespace-nowrap",
+                  isActive
+                    ? "border-[1.5px] border-foreground bg-background text-foreground font-semibold shadow-xs"
+                    : "border border-border/80 bg-background/90 text-muted-foreground font-normal hover:border-foreground/40 hover:text-foreground shadow-xs backdrop-blur-xs"
+                )}
+              >
+                {f.id === "dub" ? (
+                  <span className="flex items-center gap-1.5">
+                    <img
+                      src={dubLogo}
+                      alt="Barbearia DUB"
+                      className="w-4 h-4 rounded-full object-cover shrink-0 border border-black/10 dark:border-white/20 shadow-xs"
+                    />
+                    <span>Unidades DUB</span>
+                  </span>
+                ) : (
+                  f.label
+                )}
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -692,20 +924,34 @@ const EscolherBarbearia = () => {
 
       {/* ═══ Bottom Sheet ═══ */}
       <BottomSheet
-        onSnapChange={setCurrentSheetSnap}
+        ref={bottomSheetRef}
+        onSnapChange={(snap) => {
+          setCurrentSheetSnap(snap);
+          if (snap < 0.85) {
+            setIsScrolled(false);
+          }
+        }}
+        onScroll={handleListScroll}
         header={
-          <div className="px-5 pb-3 pt-1">
-            <p className="text-[14px] font-semibold text-foreground text-center">
+          <div
+            className="text-center px-5 pb-3 transition-[padding-top] duration-300 ease-out"
+            style={{
+              paddingTop: isFullSnap
+                ? 'calc(env(safe-area-inset-top, 0px) + 124px)'
+                : '8px',
+            }}
+          >
+            <h2 className="text-[14.5px] font-medium text-foreground tracking-normal">
               {isLoading
-                ? "Carregando..."
+                ? "Buscando barbearias..."
                 : inBoundsCount >= visibleUnits.length
-                  ? `${visibleUnits.length} barbearia${visibleUnits.length !== 1 ? "s" : ""} nesta área`
-                  : `${visibleUnits.length} barbearia${visibleUnits.length !== 1 ? "s" : ""} mais próximas`}
-            </p>
+                  ? `${visibleUnits.length} barbearia${visibleUnits.length !== 1 ? "s" : ""} por perto`
+                  : `Mais de ${visibleUnits.length} barbearia${visibleUnits.length !== 1 ? "s" : ""} próximas`}
+            </h2>
           </div>
         }
       >
-        <div className="px-4 pb-8">
+        <div className="px-4 pb-28">
           {isLoading ? (
             <div className="space-y-4">
               {[0, 1, 2].map(i => (
@@ -744,6 +990,7 @@ const EscolherBarbearia = () => {
                     index={index}
                     isSelected={unit.id === selectedUnitId}
                     onClick={() => handleCardClick(unit)}
+                    searchQuery={search}
                   />
                 </div>
               ))}
@@ -751,6 +998,37 @@ const EscolherBarbearia = () => {
           )}
         </div>
       </BottomSheet>
+
+      {/* ═══ Floating Toggle Button ("Ver lista" / "Ver mapa") ═══ */}
+      <div
+        className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[700] pointer-events-auto"
+        style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 24px)' }}
+      >
+        <button
+          type="button"
+          onClick={() => {
+            if (currentSheetSnap >= 0.85) {
+              bottomSheetRef.current?.snapTo(SNAP_MID);
+            } else {
+              bottomSheetRef.current?.snapTo(SNAP_FULL);
+            }
+          }}
+          className="flex items-center gap-2 bg-[#18181B] text-white px-5 py-2.5 rounded-full font-bold text-[13px] shadow-2xl active:scale-95 transition-transform"
+        >
+          {currentSheetSnap >= 0.85 ? (
+            <>
+              <MapIcon className="w-4 h-4" />
+              <span>Ver mapa</span>
+            </>
+          ) : (
+            <>
+              <List className="w-4 h-4" />
+              <span>Ver lista</span>
+            </>
+          )}
+        </button>
+      </div>
+
 
       {/* ═══ iOS Install Banner ═══ */}
       {showInstallBanner && (

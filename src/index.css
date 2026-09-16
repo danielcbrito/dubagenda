@@ -34,6 +34,16 @@
 @tailwind components;
 @tailwind utilities;
 
+.no-scrollbar::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+.no-scrollbar {
+  -ms-overflow-style: none !important;
+  scrollbar-width: none !important;
+}
+
 /* Reset base para fullscreen real no iOS */
 *, *::before, *::after {
   box-sizing: border-box;
@@ -119,6 +129,27 @@ html.ios-safari-browser {
 
 html.ios-safari-browser #root {
   padding-top: var(--safari-top-offset);
+}
+
+/* 🗺️ No mapa imersivo (Escolher Barbearia), o mapa DEVE sangrar até o topo da tela por trás da barra de status (relógio e bateria) */
+html.immersive-map-active,
+html.immersive-map-active body,
+html.immersive-map-active #root,
+html.ios-safari-browser.immersive-map-active #root,
+html.ios-safari-browser:has(#escolher-barbearia-container) #root {
+  padding-top: 0 !important;
+  background-color: transparent !important;
+}
+
+#escolher-barbearia-container {
+  position: fixed !important;
+  inset: 0 !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100vw !important;
+  height: 100dvh !important;
 }
 
 /* 🔤 Evita zoom automático do Safari em inputs (font-size mínimo 16px) */

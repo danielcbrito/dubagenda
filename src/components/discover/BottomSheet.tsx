@@ -3,10 +3,14 @@ import {
   useEffect,
   useLayoutEffect,
   useRef,
+  useState,
+  forwardRef,
+  useImperativeHandle,
   type MouseEvent as ReactMouseEvent,
   type ReactNode,
   type TouchEvent as ReactTouchEvent,
 } from "react";
+import { cn } from "@/lib/utils";
 import {
   ANIMATION_DURATION_MS,
   ANIMATION_EASING,
@@ -19,11 +23,16 @@ import {
   snapToTranslateY,
 } from "./bottomSheetPhysics";
 
+export interface BottomSheetRef {
+  snapTo: (snap: number) => void;
+}
+
 interface BottomSheetProps {
   children: ReactNode;
   header: ReactNode;
   initialSnap?: number;
   onSnapChange?: (snap: number) => void;
+  onScroll?: (scrollTop: number) => void;
 }
 
 type DragSource = "handle" | "content";
@@ -57,7 +66,11 @@ function getViewportHeight(): number {
   return window.visualViewport?.height ?? window.innerHeight;
 }
 
-export function BottomSheet({ children, header, initialSnap = SNAP_MID, onSnapChange }: BottomSheetProps) {
+export const BottomSheet = forwardRef<BottomSheetRef, BottomSheetProps>(function BottomSheet(
+  { children, header, initialSnap = SNAP_MID, onSnapChange, onScroll },
+  ref
+) {
+  const [isFullSnap, setIsFullSnap] = useState(initialSnap >= 0.85);
   const sheetRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const viewportHeightRef = useRef(getViewportHeight());
@@ -67,8 +80,7 @@ export function BottomSheet({ children, header, initialSnap = SNAP_MID, onSnapCh
   const animationFrameRef = useRef<number | null>(null);
   const gestureRef = useRef<GestureState>(INITIAL_GESTURE);
 
-  // ── Transform helpers ──
-
+  // ── Hardware-accelerated GPU translation only (Zero reflow during drag) ──
   const applyTranslateY = useCallback((translateY: number) => {
     const sheet = sheetRef.current;
     if (!sheet) return;
@@ -94,6 +106,7 @@ export function BottomSheet({ children, header, initialSnap = SNAP_MID, onSnapCh
     const targetTranslateY = snapToTranslateY(snap, viewportHeightRef.current);
     currentSnapRef.current = snap;
     currentTranslateYRef.current = targetTranslateY;
+    setIsFullSnap(snap >= 0.85);
 
     if (animationFrameRef.current !== null) {
       cancelAnimationFrame(animationFrameRef.current);
@@ -108,6 +121,10 @@ export function BottomSheet({ children, header, initialSnap = SNAP_MID, onSnapCh
       if (sheetRef.current) sheetRef.current.style.transition = "";
     }, { once: true });
   }, [onSnapChange]);
+
+  useImperativeHandle(ref, () => ({
+    snapTo: animateToSnap,
+  }), [animateToSnap]);
 
   // ── Viewport sync ──
 
@@ -176,9 +193,8 @@ export function BottomSheet({ children, header, initialSnap = SNAP_MID, onSnapCh
     return currentTranslateYRef.current <= snapToTranslateY(SNAP_FULL, viewportHeightRef.current) + 1;
   }, []);
 
-  const dragSheet = useCallback((clientY: number, allowScrollHandoff: boolean) => {
+  const dragSheet = useCallback((clientY: number) => {
     const g = gestureRef.current;
-    const list = listRef.current;
     if (!g.active) return;
 
     const minTY = snapToTranslateY(SNAP_FULL, viewportHeightRef.current);
@@ -187,9 +203,6 @@ export function BottomSheet({ children, header, initialSnap = SNAP_MID, onSnapCh
 
     if (rawTY < minTY) {
       applyTranslateY(minTY);
-      if (allowScrollHandoff && list) {
-        list.scrollTop = g.startScrollTop + (minTY - rawTY);
-      }
       return;
     }
 
@@ -208,10 +221,6 @@ export function BottomSheet({ children, header, initialSnap = SNAP_MID, onSnapCh
     const shouldSnap = g.mode !== "content";
     const velocityY = g.velocityY;
     gestureRef.current = { ...INITIAL_GESTURE };
-
-    // Re-enable list scrolling
-    const list = listRef.current;
-    if (list) list.style.overflow = "";
 
     if (!shouldSnap) return;
 
@@ -233,7 +242,7 @@ export function BottomSheet({ children, header, initialSnap = SNAP_MID, onSnapCh
     const clientY = e.touches[0].clientY;
     updateVelocity(clientY);
     e.preventDefault();
-    dragSheet(clientY, false);
+    dragSheet(clientY);
   }, [dragSheet, updateVelocity]);
 
   const handleHandleMouseDown = useCallback((e: ReactMouseEvent) => {
@@ -243,7 +252,7 @@ export function BottomSheet({ children, header, initialSnap = SNAP_MID, onSnapCh
     const onMove = (me: MouseEvent) => {
       if (!gestureRef.current.active) return;
       updateVelocity(me.clientY);
-      dragSheet(me.clientY, false);
+      dragSheet(me.clientY);
     };
     const onUp = () => {
       finishGesture();
@@ -291,15 +300,12 @@ export function BottomSheet({ children, header, initialSnap = SNAP_MID, onSnapCh
           g.mode = "content";
           return; // Let browser handle scroll natively
         }
-
-        // We're taking over — block native scroll
-        list.style.overflow = "hidden";
       }
 
       // ── Content mode: check for handoff to sheet ──
       if (g.mode === "content") {
         const deltaY = clientY - g.startY;
-        const atTop = (list.scrollTop) <= 0.5;
+        const atTop = list.scrollTop <= 0.5;
 
         if (deltaY > DRAG_DECISION_PX && atTop) {
           // User scrolled to top and is still pulling down → take over
@@ -307,7 +313,6 @@ export function BottomSheet({ children, header, initialSnap = SNAP_MID, onSnapCh
           g.startTranslateY = currentTranslateYRef.current;
           g.startY = clientY;
           g.startScrollTop = 0;
-          list.style.overflow = "hidden";
           list.scrollTop = 0;
         } else {
           return; // Let native scroll continue
@@ -316,7 +321,7 @@ export function BottomSheet({ children, header, initialSnap = SNAP_MID, onSnapCh
 
       // ── Sheet mode ──
       e.preventDefault();
-      dragSheet(clientY, true);
+      dragSheet(clientY);
     };
 
     const onTouchEnd = () => {
@@ -342,44 +347,45 @@ export function BottomSheet({ children, header, initialSnap = SNAP_MID, onSnapCh
   return (
     <div
       ref={sheetRef}
-      className="absolute left-0 right-0 z-[500] flex h-full flex-col rounded-t-[22px] bg-background will-change-transform"
+      className="absolute left-0 right-0 z-[500] flex h-full flex-col bg-background rounded-t-2xl shadow-[0_-8px_30px_rgba(0,0,0,0.12)] border-t border-border/40 will-change-transform"
       style={{
         top: 0,
-        boxShadow: "0 -8px 40px rgba(0,0,0,0.18), 0 -2px 6px rgba(0,0,0,0.08)",
-        borderTop: "1px solid hsl(var(--border) / 0.4)",
-        contain: "layout paint style",
         backfaceVisibility: "hidden",
+        WebkitBackfaceVisibility: "hidden",
       }}
     >
       {/* ── Drag handle ── */}
       <div
-        className="flex flex-shrink-0 select-none items-center justify-center pt-3 pb-1.5 cursor-grab active:cursor-grabbing"
-        style={{ touchAction: "none" }}
+        className="flex flex-shrink-0 select-none items-center justify-center cursor-grab active:cursor-grabbing overflow-hidden h-7 pt-2.5 pb-1.5 transition-opacity duration-200"
+        style={{
+          touchAction: "none",
+          opacity: isFullSnap ? 0 : 1,
+          pointerEvents: isFullSnap ? "none" : "auto",
+        }}
         onTouchStart={handleHandleTouchStart}
         onTouchMove={handleHandleTouchMove}
         onTouchEnd={finishGesture}
         onTouchCancel={finishGesture}
         onMouseDown={handleHandleMouseDown}
       >
-        <div className="h-[5px] w-9 rounded-full bg-muted-foreground/20" />
+        <div className="h-1 w-9 rounded-full bg-muted-foreground/25" />
       </div>
 
-      {/* ── Header ── */}
-      <div className="flex-shrink-0">{header}</div>
-
-      {/* ── Scrollable content ── */}
+      {/* ── Scrollable content (Header + Cards scroll together) ── */}
       <div
         ref={listRef}
+        onScroll={(e) => onScroll?.(e.currentTarget.scrollTop)}
         className="flex-1 min-h-0 overflow-y-auto overscroll-contain"
         style={{
           WebkitOverflowScrolling: "touch",
           overscrollBehaviorY: "contain",
         }}
       >
+        {header}
         {children}
       </div>
     </div>
   );
-}
+});
 
 export { SNAP_PEEK, SNAP_MID, SNAP_FULL };

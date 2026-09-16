@@ -36,6 +36,7 @@ interface MapUnit {
   latitude: number | null;
   longitude: number | null;
   brandName: string;
+  barbersCount?: number;
 }
 
 interface DiscoverMapProps {
@@ -65,78 +66,69 @@ function buildClientIcon() {
   });
 }
 
-const PIN_ICON_WIDTH = 40;
-const PIN_SVG_HEIGHT = 52;
-const PIN_TOTAL_HEIGHT = 76; // svg + label
+const SHOP_WIDTH = 64;
+const SHOP_HEIGHT = 42;
 
 function buildBarberIcon(
   label: string,
-  selected: boolean,
-  _markerOffset: { x: number; y: number },
+  _selected: boolean,
+  markerOffset: { x: number; y: number },
   zoom: number
 ) {
-  const truncated = label.length > 20 ? `${label.slice(0, 19)}…` : label;
+  const truncated = label.length > 22 ? `${label.slice(0, 21)}…` : label;
 
-  // Zoom muito afastado: só um pontinho
+  // Zoom muito afastado (< 10): indicador compacto vermelho da marca
   if (zoom < 10) {
     return L.divIcon({
-      html: `<div style="width:8px;height:8px;background:#111;border-radius:50%;border:1.5px solid white;"></div>`,
-      iconSize: [8, 8],
-      iconAnchor: [4, 4],
+      html: `<div style="width:10px;height:10px;background:#B2101D;border-radius:50%;border:2px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.35);"></div>`,
+      iconSize: [10, 10],
+      iconAnchor: [5 - markerOffset.x, 5 - markerOffset.y],
       className: "barber-pin-clean",
     });
   }
 
-  const bg = selected ? "#111" : "#fff";
-  const border = selected ? "2.5px solid #fff" : "2.5px solid #111";
-  const shadow = selected ? "0 4px 14px rgba(0,0,0,0.35)" : "0 4px 12px rgba(0,0,0,0.2)";
-  const ringFill = selected ? "#111" : "#fff";
-
-  const pinHtml = `
-    <div style="display:flex;flex-direction:column;align-items:center;">
-      <!-- Pin gota estilo Google Maps -->
-      <svg width="40" height="52" viewBox="0 0 40 52" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter:drop-shadow(${shadow});">
-        <path d="M20 0C9 0 0 9 0 20c0 13.5 20 32 20 32s20-18.5 20-32C40 9 31 0 20 0Z" fill="${bg}" stroke="${selected ? '#fff' : '#222'}" stroke-width="1.5"/>
-        <!-- tesoura vermelha centralizada -->
-        <g transform="translate(8, 6)">
-          <path d="M5 2 L12 12" stroke="#E53E3E" stroke-width="2.2" stroke-linecap="round"/>
-          <path d="M19 2 L12 12" stroke="#E53E3E" stroke-width="2.2" stroke-linecap="round"/>
-          <path d="M12 12 L5.5 19" stroke="#E53E3E" stroke-width="2" stroke-linecap="round"/>
-          <path d="M12 12 L18.5 19" stroke="#E53E3E" stroke-width="2" stroke-linecap="round"/>
-          <circle cx="5" cy="19.5" r="2.5" stroke="#E53E3E" stroke-width="1.8" fill="${ringFill}"/>
-          <circle cx="19" cy="19.5" r="2.5" stroke="#E53E3E" stroke-width="1.8" fill="${ringFill}"/>
-          <circle cx="12" cy="12" r="1.8" fill="#E53E3E"/>
-          <circle cx="12" cy="12" r="0.7" fill="${ringFill}"/>
-        </g>
-      </svg>
+  // Miniatura 3D Realista da Barbearia (Casa 3D isométrica branca com barber poles)
+  const pinImgHtml = `
+    <div style="position:relative;width:${SHOP_WIDTH}px;height:${SHOP_HEIGHT}px;display:flex;align-items:center;justify-content:center;transition:transform 0.15s ease-out;cursor:pointer;">
+      <img
+        src="/barbershop-3d-pin.png"
+        alt="${truncated}"
+        style="width:${SHOP_WIDTH}px;height:${SHOP_HEIGHT}px;object-fit:contain;filter:drop-shadow(0 4px 10px rgba(0,0,0,0.3));pointer-events:none;"
+      />
+    </div>
   `;
 
-  // Zoom médio: pin sem label
+  // Zoom médio (10..12): Barbearia 3D sem tag flutuante
   if (zoom < 13) {
     return L.divIcon({
-      html: `${pinHtml}</div>`,
+      html: pinImgHtml,
       className: "barber-pin-clean",
-      iconSize: [PIN_ICON_WIDTH, PIN_SVG_HEIGHT],
-      iconAnchor: [PIN_ICON_WIDTH / 2, PIN_SVG_HEIGHT],
-      popupAnchor: [0, -PIN_SVG_HEIGHT],
+      iconSize: [SHOP_WIDTH, SHOP_HEIGHT],
+      iconAnchor: [SHOP_WIDTH / 2 - markerOffset.x, SHOP_HEIGHT - 2 - markerOffset.y],
+      popupAnchor: [0, -SHOP_HEIGHT],
     });
   }
 
-  // Zoom próximo: pin + label
-  const labelBg = selected ? "#111" : "#fff";
-  const labelColor = selected ? "#fff" : "#111";
-  const labelBorder = selected ? "none" : "1.5px solid #e0e0e0";
+  // Zoom próximo (>= 13): Tag flutuante com nome da barbearia sempre clean branca
+  const labelBg = "#FFFFFF";
+  const labelColor = "#0A0A0A";
+  const labelBorder = "1px solid rgba(0,0,0,0.12)";
+
+  const totalHeight = SHOP_HEIGHT + 24;
 
   return L.divIcon({
     html: `
-      ${pinHtml}
-        <div style="background:${labelBg};color:${labelColor};border:${labelBorder};border-radius:20px;padding:4px 10px;font-family:system-ui,sans-serif;font-size:10px;font-weight:700;white-space:nowrap;margin-top:2px;box-shadow:0 2px 8px rgba(0,0,0,0.12);max-width:120px;overflow:hidden;text-overflow:ellipsis;">${truncated}</div>
+      <div style="display:flex;flex-direction:column;align-items:center;pointer-events:auto;cursor:pointer;">
+        <div style="background:${labelBg};color:${labelColor};border:${labelBorder};border-radius:20px;padding:3px 9px;font-family:system-ui,-apple-system,sans-serif;font-size:10.5px;font-weight:700;white-space:nowrap;margin-bottom:2px;box-shadow:0 3px 8px rgba(0,0,0,0.16);display:inline-flex;align-items:center;max-width:145px;pointer-events:none;">
+          <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${truncated}</span>
+        </div>
+        ${pinImgHtml}
       </div>
     `,
     className: "barber-pin-clean",
-    iconSize: [PIN_ICON_WIDTH, PIN_TOTAL_HEIGHT],
-    iconAnchor: [PIN_ICON_WIDTH / 2, PIN_SVG_HEIGHT],
-    popupAnchor: [0, -PIN_SVG_HEIGHT],
+    iconSize: [SHOP_WIDTH, totalHeight],
+    iconAnchor: [SHOP_WIDTH / 2 - markerOffset.x, totalHeight - 2 - markerOffset.y],
+    popupAnchor: [0, -(totalHeight - 2)],
   });
 }
 
@@ -203,6 +195,7 @@ export function DiscoverMap({
           markerOffsetX: markerOffset.x,
           markerOffsetY: markerOffset.y,
           displayLabel: getDiscoverUnitDisplayName(unit.brandName, unit.nome),
+          barbersCount: unit.barbersCount,
         };
       })
     );
@@ -294,10 +287,15 @@ export function DiscoverMap({
 
     markerUnits.forEach((unit) => {
       const marker = L.marker([unit.markerLatitude, unit.markerLongitude], {
-        icon: buildBarberIcon(unit.displayLabel, unit.id === selectedId, {
-          x: unit.markerOffsetX,
-          y: unit.markerOffsetY,
-        }, currentZoom),
+        icon: buildBarberIcon(
+          unit.displayLabel,
+          unit.id === selectedId,
+          {
+            x: unit.markerOffsetX,
+            y: unit.markerOffsetY,
+          },
+          currentZoom
+        ),
         zIndexOffset: unit.id === selectedId ? 900 : 500,
       })
         .on("click", () => onSelectUnit(unit.id))
