@@ -44,6 +44,7 @@ import logoDub from "@/assets/logo-dub.png";
 import googleMapsIcon from "@/assets/google-maps-icon.png";
 import whatsappLogo from "@/assets/whatsapp-logo.png";
 import { setStatusBarTheme } from "@/utils/statusBar";
+import { getCache, setCache } from "@/utils/cache";
 import defaultBannerBg from "@/assets/barbershop-premium-bg.jpg";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { BarberProfileSheet } from "@/components/discover/BarberProfileSheet";
