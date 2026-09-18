@@ -3,6 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="theme-color" content="#FFFFFF" />
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#FFFFFF" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#FFFFFF" />
     <meta name="color-scheme" content="light" />
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0, viewport-fit=cover, interactive-widget=resizes-visual" />
     <meta name="supported-color-schemes" content="light" />
@@ -38,18 +40,23 @@
           }
 
           if (isImmersive) {
-            d.classList.add('immersive-active');
+            d.classList.remove('light');
+            d.classList.add('dark', 'immersive-active');
             if (p.indexOf('/escolher-barbearia') !== -1) {
               d.classList.add('immersive-map-active');
             } else {
               d.classList.add('immersive-banner-active');
             }
           } else {
+            d.classList.remove('dark', 'immersive-active', 'immersive-map-active', 'immersive-banner-active');
             if (!d.classList.contains('light')) d.classList.add('light');
           }
 
-          var metaTheme = document.querySelector('meta[name="theme-color"]');
-          if (metaTheme) metaTheme.setAttribute('content', brand);
+          var metaThemes = document.querySelectorAll('meta[name="theme-color"]');
+          metaThemes.forEach(function (m) {
+            m.setAttribute('content', brand);
+            m.content = brand;
+          });
 
           // Detecta Safari no iPhone/iPad quando executando no NAVEGADOR (fora do PWA instalado)
           var ua = window.navigator.userAgent || '';

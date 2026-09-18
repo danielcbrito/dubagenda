@@ -47,43 +47,36 @@ export function setStatusBarTheme(
     appleMeta.content = style;
   }
 
-  // 2. Desired theme-color metas
-  const desired = [
-    { media: null, content: color },
-    { media: "(prefers-color-scheme: light)", content: color },
-    { media: "(prefers-color-scheme: dark)", content: color },
-  ];
-
-  const existingMetas = Array.from(
-    document.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]')
-  );
-
-  let hasDiff = existingMetas.length !== desired.length;
-  if (!hasDiff) {
-    for (const d of desired) {
-      const match = existingMetas.find((m) =>
-        d.media ? m.getAttribute("media") === d.media : !m.hasAttribute("media")
-      );
-      if (!match || match.getAttribute("content") !== d.content) {
-        hasDiff = true;
-        break;
+  // 2. Android Chrome / PWA / WebKit theme-color
+  // CRITICAL: Mutate existing meta tags in place with setAttribute('content', color) and .content = color.
+  // NEVER remove existing meta tags, as removing them breaks Android Chromium's C++ WebContentsObserver,
+  // causing Android to revert to the PWA manifest theme_color (#FFFFFF) and stay permanently white.
+  const existingMetas = document.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]');
+  if (existingMetas.length > 0) {
+    existingMetas.forEach((m) => {
+      if (m.getAttribute("content") !== color) {
+        m.setAttribute("content", color);
       }
-    }
+      if (m.content !== color) {
+        m.content = color;
+      }
+    });
+  } else {
+    // If none exist, create default + scheme variations
+    const desired = [
+      { media: null, content: color },
+      { media: "(prefers-color-scheme: light)", content: color },
+      { media: "(prefers-color-scheme: dark)", content: color },
+    ];
+    desired.forEach(({ media, content }) => {
+      const meta = document.createElement("meta");
+      meta.name = "theme-color";
+      if (media) meta.setAttribute("media", media);
+      meta.setAttribute("content", content);
+      meta.content = content;
+      document.head.appendChild(meta);
+    });
   }
-
-  if (!hasDiff) {
-    return; // Already in desired state!
-  }
-
-  // Remove and recreate fresh meta tags so Mobile Safari evaluates them immediately
-  existingMetas.forEach((m) => m.remove());
-  desired.forEach(({ media, content }) => {
-    const meta = document.createElement("meta");
-    meta.name = "theme-color";
-    if (media) meta.setAttribute("media", media);
-    meta.content = content;
-    document.head.prepend(meta);
-  });
 }
 
 /**
