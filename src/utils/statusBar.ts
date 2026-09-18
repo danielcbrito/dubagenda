@@ -51,22 +51,14 @@ export function setStatusBarTheme(
   // 2. Android Chrome / PWA / WebKit theme-color
   // Em navegadores baseados em Chromium/Android, remover e reinserir força o repaint nativo da barra de status
   const existingMetas = document.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]');
-  let needsRepaint = existingMetas.length === 0;
-  existingMetas.forEach((m) => {
-    if (m.getAttribute("content") !== color || m.content !== color) {
-      needsRepaint = true;
-    }
-  });
+  existingMetas.forEach((m) => m.remove());
 
-  if (needsRepaint) {
-    existingMetas.forEach((m) => m.remove());
-    const meta = document.createElement("meta");
-    meta.name = "theme-color";
-    meta.id = "theme-color-meta";
-    meta.setAttribute("content", color);
-    meta.content = color;
-    document.head.appendChild(meta);
-  }
+  const meta = document.createElement("meta");
+  meta.name = "theme-color";
+  meta.id = "theme-color-meta";
+  meta.setAttribute("content", color);
+  meta.content = color;
+  document.head.appendChild(meta);
 
   // 3. Color scheme meta tag (crucial para ícones da barra de status claros vs escuros)
   let colorSchemeMeta = document.querySelector(

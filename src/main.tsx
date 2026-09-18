@@ -34,12 +34,23 @@ window.addEventListener("vite:preloadError", (e) => {
   reloadOnce();
 });
 
-// Register Service Worker for PWA installability
+// Register Service Worker for PWA installability + auto-reload on new deploy
 if ("serviceWorker" in navigator) {
+  let refreshing = false;
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    if (!refreshing) {
+      refreshing = true;
+      window.location.reload();
+    }
+  });
+
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("/sw.js").catch(() => {
-      // SW registration failed, ignore silently
-    });
+    navigator.serviceWorker
+      .register("/sw.js")
+      .then((reg) => {
+        reg.update().catch(() => {});
+      })
+      .catch(() => {});
   });
 }
 
