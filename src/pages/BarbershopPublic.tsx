@@ -562,6 +562,7 @@ export default function BarbershopPublic() {
       });
 
       setBarbers(enrichedBarbers);
+      if (slug) setCache(`shop:public:barbers:${slug}`, enrichedBarbers, 15);
     } catch (err) {
       console.error("Error loading barbers:", err);
     } finally {
