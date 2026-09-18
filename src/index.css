@@ -99,6 +99,8 @@ body {
   inset: 0;
   overflow: hidden;
   background-color: #FFFFFF;
+  display: flex;
+  flex-direction: column;
 }
 
 /* Variáveis de safe area para usar em todo app */
@@ -175,8 +177,15 @@ html:has(.barbershop-public-page) #root {
   left: 0 !important;
   right: 0 !important;
   bottom: 0 !important;
-  width: 100vw !important;
-  height: 100dvh !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 100vh !important;
+  min-height: 100dvh !important;
+  max-height: -webkit-fill-available !important;
+  overflow: hidden !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: none !important;
 }
 
 /* 🔤 Evita zoom automático do Safari em inputs (font-size mínimo 16px) */
@@ -456,29 +465,21 @@ body {
     font-size: 13px;
     font-weight: 400;
     letter-spacing: 0.01em;
-    min-height: 100vh;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
     -webkit-text-size-adjust: 100%;
     text-size-adjust: 100%;
     background: hsl(var(--background));
-    background-attachment: scroll;
   }
 
   /* ☀️ Light mode body background — limpo e definido */
   .light body,
   body.light {
     background: hsl(var(--background));
-    background-attachment: scroll;
   }
   
-  #root {
-    min-height: 100vh;
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-  }
+  /* #root é controlado fora de @layer (linhas 94-102) com position:fixed + inset:0 */
 
   /* TIPOGRAFIA — Hierarquia com font-display */
   h1, h2, h3 {

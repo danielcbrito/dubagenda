@@ -28,8 +28,8 @@ export function RootLayout() {
         isImmersive ? "bg-transparent" : "bg-white"
       )}
     >
-      {/* Background limpo e 100% branco sem orbs cinzas */}
-      {isClientRoute && !path.startsWith("/cliente/agendar") && (
+      {/* Background limpo e 100% branco sem orbs cinzas — esconde em rotas imersivas (mapa/perfil público) */}
+      {isClientRoute && !path.startsWith("/cliente/agendar") && !isImmersive && (
         <div className="fixed inset-0 pointer-events-none overflow-hidden z-0 bg-white" />
       )}
 
