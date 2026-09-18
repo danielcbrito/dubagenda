@@ -1034,8 +1034,8 @@ export default function BarbershopPublic() {
         : undefined,
   };
 
-  const formattedRating = (avgRating || 4.9).toFixed(1);
-  const formattedReviewCount = totalReviews > 0 ? totalReviews : 189;
+  const formattedRating = (avgRating ?? (isDubTenantContent ? 4.9 : 5)).toFixed(1);
+  const formattedReviewCount = totalReviews > 0 ? totalReviews : isDubTenantContent ? 189 : 0;
 
   return (
     <div className="barbershop-public-page relative flex flex-col bg-neutral-950 h-full w-full overflow-y-auto overscroll-contain touch-pan-y">
