@@ -30,7 +30,8 @@ export function isImmersiveRoute(pathname: string): boolean {
  */
 export function setStatusBarTheme(
   color: string,
-  style: "black-translucent" | "default" = "black-translucent"
+  style: "black-translucent" | "default" = "black-translucent",
+  colorScheme: "dark" | "light" = color === "#000000" ? "dark" : "light"
 ) {
   if (typeof document === "undefined") return;
 
@@ -48,9 +49,6 @@ export function setStatusBarTheme(
   }
 
   // 2. Android Chrome / PWA / WebKit theme-color
-  // CRITICAL: Mutate existing meta tags in place with setAttribute('content', color) and .content = color.
-  // NEVER remove existing meta tags, as removing them breaks Android Chromium's C++ WebContentsObserver,
-  // causing Android to revert to the PWA manifest theme_color (#FFFFFF) and stay permanently white.
   const existingMetas = document.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]');
   if (existingMetas.length > 0) {
     existingMetas.forEach((m) => {
@@ -62,20 +60,27 @@ export function setStatusBarTheme(
       }
     });
   } else {
-    // If none exist, create default + scheme variations
-    const desired = [
-      { media: null, content: color },
-      { media: "(prefers-color-scheme: light)", content: color },
-      { media: "(prefers-color-scheme: dark)", content: color },
-    ];
-    desired.forEach(({ media, content }) => {
-      const meta = document.createElement("meta");
-      meta.name = "theme-color";
-      if (media) meta.setAttribute("media", media);
-      meta.setAttribute("content", content);
-      meta.content = content;
-      document.head.appendChild(meta);
-    });
+    const meta = document.createElement("meta");
+    meta.name = "theme-color";
+    meta.id = "theme-color-meta";
+    meta.setAttribute("content", color);
+    meta.content = color;
+    document.head.appendChild(meta);
+  }
+
+  // 3. Color scheme meta tag (crucial for Android status bar icons white vs dark)
+  let colorSchemeMeta = document.querySelector(
+    'meta[name="color-scheme"]'
+  ) as HTMLMetaElement | null;
+  if (!colorSchemeMeta) {
+    colorSchemeMeta = document.createElement("meta");
+    colorSchemeMeta.name = "color-scheme";
+    colorSchemeMeta.id = "color-scheme-meta";
+    document.head.appendChild(colorSchemeMeta);
+  }
+  if (colorSchemeMeta.content !== colorScheme) {
+    colorSchemeMeta.setAttribute("content", colorScheme);
+    colorSchemeMeta.content = colorScheme;
   }
 }
 
@@ -124,6 +129,6 @@ export function applyThemeForRoute(pathname: string) {
   }
 
   // 3. Status bar meta tags
-  setStatusBarTheme(targetColor, targetStyle);
+  setStatusBarTheme(targetColor, targetStyle, colorScheme);
 }
 

@@ -751,10 +751,10 @@ const EscolherBarbearia = () => {
         WebkitOverflowScrolling: 'touch',
       }}
     >
-      {/* ═══ Vinheta suave no topo do mapa para garantir contraste com o relógio, wifi e bateria brancos ═══ */}
+      {/* ═══ Vinheta suave no topo do mapa para garantir contraste e fusão perfeita com a barra de status preta ═══ */}
       <div
         className={cn(
-          "absolute top-0 left-0 right-0 h-24 bg-gradient-to-b from-black/45 via-black/15 to-transparent pointer-events-none z-[580] transition-opacity duration-300",
+          "absolute top-0 left-0 right-0 h-24 bg-gradient-to-b from-black via-black/35 to-transparent pointer-events-none z-[580] transition-opacity duration-300",
           isFullSnap ? "opacity-0" : "opacity-100"
         )}
       />

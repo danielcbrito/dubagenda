@@ -6,9 +6,10 @@
   "id": "/",
   "scope": "/",
   "display": "standalone",
+  "display_override": ["standalone"],
   "orientation": "portrait",
-  "background_color": "#B2101D",
-  "theme_color": "#FFFFFF",
+  "background_color": "#000000",
+  "theme_color": "#000000",
   "lang": "pt-BR",
   "categories": ["lifestyle", "business", "utilities"],
   "icons": [
