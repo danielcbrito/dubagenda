@@ -92,27 +92,15 @@ export function setStatusBarTheme(
 export function applyThemeForRoute(pathname: string) {
   if (typeof document === "undefined") return;
 
-  const isImmersive = isImmersiveRoute(pathname);
-  const targetColor = isImmersive ? "#000000" : "#FFFFFF";
-  const targetStyle = isImmersive ? "black-translucent" : "default";
-  const colorScheme = isImmersive ? "dark" : "light";
+  const targetColor = "#FFFFFF";
+  const targetStyle = "default";
+  const colorScheme = "light";
   const d = document.documentElement;
 
-  // 1. Synchronize classes on <html>
-  if (isImmersive) {
-    if (!d.classList.contains("immersive-active")) d.classList.add("immersive-active");
-    if (pathname.startsWith("/escolher-barbearia")) {
-      if (!d.classList.contains("immersive-map-active")) d.classList.add("immersive-map-active");
-      d.classList.remove("immersive-banner-active");
-    } else {
-      if (!d.classList.contains("immersive-banner-active")) d.classList.add("immersive-banner-active");
-      d.classList.remove("immersive-map-active");
-    }
-  } else {
-    d.classList.remove("immersive-active", "immersive-map-active", "immersive-banner-active");
-  }
+  d.classList.remove("immersive-active", "immersive-map-active", "immersive-banner-active", "dark");
+  if (!d.classList.contains("light")) d.classList.add("light");
 
-  // 2. Background color & color-scheme on <html> and <body>
+  // Background color & color-scheme on <html> and <body>
   if (d.style.backgroundColor !== targetColor) {
     d.style.backgroundColor = targetColor;
   }
@@ -128,7 +116,7 @@ export function applyThemeForRoute(pathname: string) {
     }
   }
 
-  // 3. Status bar meta tags
+  // Status bar meta tags
   setStatusBarTheme(targetColor, targetStyle, colorScheme);
 }
 

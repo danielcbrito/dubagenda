@@ -2,33 +2,19 @@
 <html lang="pt-BR" translate="no" class="light">
   <head>
     <meta charset="UTF-8" />
-    <meta name="theme-color" content="#000000" id="theme-color-meta" />
-    <meta name="color-scheme" content="light dark" id="color-scheme-meta" />
+    <meta name="theme-color" content="#FFFFFF" id="theme-color-meta" />
+    <meta name="color-scheme" content="light" id="color-scheme-meta" />
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0, viewport-fit=cover, interactive-widget=resizes-visual" />
-    <meta name="supported-color-schemes" content="light dark" />
+    <meta name="supported-color-schemes" content="light" />
     <meta name="google-site-verification" content="owbb0rIgmzly9Z4ymfj0B9UAS2zpSSAwCaix9Gh7Gy8" />
 
-    <!-- Anti-flash + Detecção de rotas imersivas e iOS Safari em modo navegador -->
+    <!-- Anti-flash + Detecção de iOS Safari em modo navegador -->
     <script>
       (function () {
         try {
           var d = document.documentElement;
-          var p = window.location.pathname || '';
-          var segs = p.split('/').filter(Boolean);
-          var reserved = [
-            'cliente', 'suporte', 'admin', 'auth', 'barbearias', 'b', 'i',
-            'escolher-barbearia', 'escolher-verificacao', 'verificar-email',
-            'verificar-whatsapp', 'completar-perfil', 'esqueci-senha',
-            'resetar-senha', 'flowchart', 'responsive-preview', 'login', 'ajuda'
-          ];
-          var isImmersive = 
-            p.indexOf('/escolher-barbearia') !== -1 || 
-            p.indexOf('/b/') !== -1 || 
-            p.indexOf('/barbearia-dub') !== -1 || 
-            ((segs.length === 1 || segs.length === 2) && reserved.indexOf(segs[0]) === -1);
-
-          var brand = isImmersive ? '#000000' : '#FFFFFF';
-          var scheme = isImmersive ? 'dark' : 'light';
+          var brand = '#FFFFFF';
+          var scheme = 'light';
 
           d.style.backgroundColor = brand;
           d.style.colorScheme = scheme;
@@ -37,18 +23,8 @@
             document.body.style.colorScheme = scheme;
           }
 
-          if (isImmersive) {
-            d.classList.remove('light');
-            d.classList.add('dark', 'immersive-active');
-            if (p.indexOf('/escolher-barbearia') !== -1) {
-              d.classList.add('immersive-map-active');
-            } else {
-              d.classList.add('immersive-banner-active');
-            }
-          } else {
-            d.classList.remove('dark', 'immersive-active', 'immersive-map-active', 'immersive-banner-active');
-            if (!d.classList.contains('light')) d.classList.add('light');
-          }
+          d.classList.remove('dark', 'immersive-active', 'immersive-map-active', 'immersive-banner-active');
+          if (!d.classList.contains('light')) d.classList.add('light');
 
           var metaTheme = document.querySelector('meta[name="theme-color"]');
           if (metaTheme) {

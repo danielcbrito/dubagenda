@@ -8,8 +8,8 @@
   "display": "standalone",
   "display_override": ["standalone"],
   "orientation": "portrait",
-  "background_color": "#000000",
-  "theme_color": "#000000",
+  "background_color": "#B2101D",
+  "theme_color": "#FFFFFF",
   "lang": "pt-BR",
   "categories": ["lifestyle", "business", "utilities"],
   "icons": [

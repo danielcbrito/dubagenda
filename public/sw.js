@@ -1,5 +1,5 @@
 // Service Worker for DUB Agenda PWA
-const CACHE_NAME = "dubagenda-pwa-v9";
+const CACHE_NAME = "dubagenda-pwa-v10";
 
 self.addEventListener("install", (event) => {
   self.skipWaiting();

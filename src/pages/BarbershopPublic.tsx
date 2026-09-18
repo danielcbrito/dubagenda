@@ -1045,15 +1045,15 @@ export default function BarbershopPublic() {
       </Helmet>
       <JsonLd id="localbusiness" data={localBusinessLd} />
 
-      {/* ── Immersive Hero Banner: Sangra 100% até o topo por trás do relógio, wifi e bateria ── */}
-      <div className="relative w-full h-56 sm:h-64 overflow-hidden bg-neutral-950 select-none shrink-0">
+      {/* ── Immersive Hero Banner: Imagem limpa e natural, sangra para o topo sem faixa branca ── */}
+      <div className="relative w-full h-56 sm:h-64 overflow-hidden bg-background select-none shrink-0">
         <img
           src={bannerUrl || defaultBannerBg}
           alt={`Banner ${tenant.nome}`}
-          className="w-full h-full object-cover brightness-[0.92]"
+          className="absolute -top-20 left-0 w-full h-[calc(100%+80px)] object-cover"
         />
-        {/* Gradient escuro no topo para contraste e visibilidade perfeitos do relógio e bateria brancos */}
-        <div className="absolute inset-0 bg-gradient-to-b from-black/85 via-black/35 via-35% to-background" />
+        {/* Transição suave apenas na base do banner para o conteúdo da página */}
+        <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent pointer-events-none" />
 
         {/* Floating Circular Nav Buttons directly over the banner */}
         <div className="absolute top-[calc(env(safe-area-inset-top,0px)+0.75rem)] inset-x-0 px-4 flex items-center justify-between z-20 pointer-events-auto">

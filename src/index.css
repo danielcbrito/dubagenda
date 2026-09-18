@@ -135,39 +135,23 @@ html.ios-safari-browser:not(.immersive-active):not(.immersive-map-active):not(.i
 
 /* 🗺️ & 💈 Páginas Imersivas (Mapa Escolher Barbearia e Perfil Público da Barbearia)
    O mapa e o banner da barbearia DEVEM sangrar 100% até o topo da tela por trás da barra de status (relógio, wifi, bateria) */
-html.immersive-active,
-html.immersive-map-active,
-html.immersive-banner-active,
 html:has(#escolher-barbearia-container),
 html:has(.barbershop-public-page) {
-  background-color: #000000 !important;
-  color-scheme: dark !important;
+  background-color: #FFFFFF !important;
+  color-scheme: light !important;
 }
 
-html.immersive-active body,
-html.immersive-map-active body,
-html.immersive-banner-active body,
 html:has(#escolher-barbearia-container) body,
 html:has(.barbershop-public-page) body {
-  background-color: #000000 !important;
-  color-scheme: dark !important;
+  background-color: #FFFFFF !important;
+  color-scheme: light !important;
   padding-top: 0 !important;
   margin-top: 0 !important;
 }
 
-html.immersive-active #root,
-html.immersive-map-active #root,
-html.immersive-banner-active #root,
-html.ios-safari-browser.immersive-active #root,
-html.ios-safari-browser.immersive-map-active #root,
-html.ios-safari-browser.immersive-banner-active #root,
-html.ios-safari-browser:has(#escolher-barbearia-container) #root,
-html.ios-safari-browser:has(.barbershop-public-page) #root,
-html:has(#escolher-barbearia-container) #root,
-html:has(.barbershop-public-page) #root {
+html #root {
   padding-top: 0 !important;
   margin-top: 0 !important;
-  background-color: transparent !important;
 }
 
 #escolher-barbearia-container {
@@ -183,6 +167,7 @@ html:has(.barbershop-public-page) #root {
   min-height: 100dvh !important;
   max-height: -webkit-fill-available !important;
   overflow: hidden !important;
+  overscroll-behavior: none !important;
   margin: 0 !important;
   padding: 0 !important;
   border: none !important;

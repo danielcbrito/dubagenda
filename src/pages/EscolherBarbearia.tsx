@@ -745,19 +745,16 @@ const EscolherBarbearia = () => {
         // @ts-ignore – CSS property not yet in React CSSProperties but critical for iOS Safari
         minHeight: '100dvh',
         overflow: 'hidden',
-        background: '#000000',
+        background: '#E5E3DF',
         margin: 0,
         padding: 0,
+        overscrollBehavior: 'none',
+        // @ts-ignore
+        overscrollBehaviorY: 'none',
         WebkitOverflowScrolling: 'touch',
       }}
     >
-      {/* ═══ Vinheta suave no topo do mapa para garantir contraste e fusão perfeita com a barra de status preta ═══ */}
-      <div
-        className={cn(
-          "absolute top-0 left-0 right-0 h-24 bg-gradient-to-b from-black via-black/35 to-transparent pointer-events-none z-[580] transition-opacity duration-300",
-          isFullSnap ? "opacity-0" : "opacity-100"
-        )}
-      />
+
 
       {/* ═══ Top Search Bar (Floating over map; solid background connecting with sheet when expanded) ═══ */}
       <div
@@ -894,8 +891,8 @@ const EscolherBarbearia = () => {
         </div>
       </div>
 
-      {/* ═══ Map — full screen behind sheet ═══ */}
-      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 0 }}>
+      {/* ═══ Map — full screen behind sheet (sangra para cima absorvendo qualquer pull/overscroll) ═══ */}
+      <div style={{ position: 'absolute', top: '-160px', left: 0, right: 0, bottom: 0, height: 'calc(100% + 160px)', zIndex: 0 }}>
         {!isLoading && (
           <DiscoverMap
             units={searchFilteredUnits}
