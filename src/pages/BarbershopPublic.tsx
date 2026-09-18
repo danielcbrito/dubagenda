@@ -761,7 +761,9 @@ export default function BarbershopPublic() {
     return map;
   }, [reviewsList]);
 
-  // Unified reviews array (combining real Supabase reviews + curated verified reviews)
+  const isDubTenantContent = tenant ? normalizeText(tenant.nome) === "barbeariadub" : false;
+
+  // Unified reviews array (curated DUB reviews só valem para a própria DUB)
   const allReviews: ReviewDisplay[] = useMemo(() => {
     if (reviewsList.length > 0) {
       const mapped: ReviewDisplay[] = reviewsList.map((r: any, idx: number) => ({
