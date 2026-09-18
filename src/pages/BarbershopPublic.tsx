@@ -506,13 +506,15 @@ export default function BarbershopPublic() {
       return;
     }
 
-    setTenant(applyTenantFallbacks(data as TenantInfo, slug));
+    const resolvedTenant = applyTenantFallbacks(data as TenantInfo, slug);
+    setTenant(resolvedTenant);
     setLoading(false);
+    if (slug) setCache(`shop:public:${slug}`, resolvedTenant, 30);
     loadBarbers(data.id);
   };
 
   const loadBarbers = async (tenantId: string) => {
-    setLoadingBarbers(true);
+    setLoadingBarbers(barbers.length === 0);
     try {
       const { data: barberData } = await supabase
         .from("barbeiros")
