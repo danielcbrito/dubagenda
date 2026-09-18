@@ -92,28 +92,47 @@ export function setStatusBarTheme(
 export function applyThemeForRoute(pathname: string) {
   if (typeof document === "undefined") return;
 
-  const targetColor = "#FFFFFF";
-  const targetStyle = "default";
-  const colorScheme = "light";
+  const isImmersive = isImmersiveRoute(pathname);
+  const targetColor = isImmersive ? "#000000" : "#FFFFFF";
+  const targetStyle = isImmersive ? "black-translucent" : "default";
+  const colorScheme = isImmersive ? "dark" : "light";
   const d = document.documentElement;
 
-  d.classList.remove("immersive-active", "immersive-map-active", "immersive-banner-active", "dark");
-  if (!d.classList.contains("light")) d.classList.add("light");
-
-  // Background color & color-scheme on <html> and <body>
-  if (d.style.backgroundColor !== targetColor) {
-    d.style.backgroundColor = targetColor;
+  if (isImmersive) {
+    d.classList.add("immersive-active");
+    if (pathname.startsWith("/escolher-barbearia")) {
+      d.classList.add("immersive-map-active");
+      d.classList.remove("immersive-banner-active");
+    } else {
+      d.classList.add("immersive-banner-active");
+      d.classList.remove("immersive-map-active");
+    }
+    d.classList.remove("light");
+  } else {
+    d.classList.remove("immersive-active", "immersive-map-active", "immersive-banner-active", "dark");
+    if (!d.classList.contains("light")) d.classList.add("light");
   }
+
+  // Background color on <html> and <body> (transparent on immersive routes so map/banner bleeds 100% to the top)
+  if (isImmersive) {
+    d.style.backgroundColor = "transparent";
+    if (document.body) {
+      document.body.style.backgroundColor = "transparent";
+    }
+  } else {
+    if (d.style.backgroundColor !== targetColor) {
+      d.style.backgroundColor = targetColor;
+    }
+    if (document.body && document.body.style.backgroundColor !== targetColor) {
+      document.body.style.backgroundColor = targetColor;
+    }
+  }
+
   if (d.style.colorScheme !== colorScheme) {
     d.style.colorScheme = colorScheme;
   }
-  if (document.body) {
-    if (document.body.style.backgroundColor !== targetColor) {
-      document.body.style.backgroundColor = targetColor;
-    }
-    if (document.body.style.colorScheme !== colorScheme) {
-      document.body.style.colorScheme = colorScheme;
-    }
+  if (document.body && document.body.style.colorScheme !== colorScheme) {
+    document.body.style.colorScheme = colorScheme;
   }
 
   // Status bar meta tags
