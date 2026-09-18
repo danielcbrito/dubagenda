@@ -44,6 +44,7 @@ import logoDub from "@/assets/logo-dub.png";
 import googleMapsIcon from "@/assets/google-maps-icon.png";
 import whatsappLogo from "@/assets/whatsapp-logo.png";
 import { setStatusBarTheme } from "@/utils/statusBar";
+import { getCache, setCache } from "@/utils/cache";
 import defaultBannerBg from "@/assets/barbershop-premium-bg.jpg";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { BarberProfileSheet } from "@/components/discover/BarberProfileSheet";
@@ -279,9 +280,13 @@ export default function BarbershopPublic() {
   const isFromDiscover = fromContext === "discover" || fromContext === "change";
   const isChangeMode = fromContext === "change";
 
-  const [tenant, setTenant] = useState<TenantInfo | null>(null);
-  const [barbers, setBarbers] = useState<Barber[]>([]);
-  const [loading, setLoading] = useState(true);
+  // Cache síncrono: se a barbearia já foi vista nesta sessão, a página abre sem spinner.
+  const cachedTenant = slug ? getCache<TenantInfo>(`shop:public:${slug}`) : null;
+  const cachedBarbers = slug ? getCache<Barber[]>(`shop:public:barbers:${slug}`) : null;
+
+  const [tenant, setTenant] = useState<TenantInfo | null>(cachedTenant);
+  const [barbers, setBarbers] = useState<Barber[]>(cachedBarbers ?? []);
+  const [loading, setLoading] = useState(!cachedTenant);
   const [loadingBarbers, setLoadingBarbers] = useState(false);
   const [notFound, setNotFound] = useState(false);
   const [avgRating, setAvgRating] = useState<number | null>(null);
@@ -423,7 +428,8 @@ export default function BarbershopPublic() {
   }, [slug]);
 
   const loadTenant = async () => {
-    setLoading(true);
+    // Já existe dado em cache? Revalida em silêncio, sem tela de carregamento.
+    if (!tenant) setLoading(true);
 
     let { data } = await supabase
       .from("tenants")
@@ -500,13 +506,15 @@ export default function BarbershopPublic() {
       return;
     }
 
-    setTenant(applyTenantFallbacks(data as TenantInfo, slug));
+    const resolvedTenant = applyTenantFallbacks(data as TenantInfo, slug);
+    setTenant(resolvedTenant);
     setLoading(false);
+    if (slug) setCache(`shop:public:${slug}`, resolvedTenant, 30);
     loadBarbers(data.id);
   };
 
   const loadBarbers = async (tenantId: string) => {
-    setLoadingBarbers(true);
+    setLoadingBarbers(barbers.length === 0);
     try {
       const { data: barberData } = await supabase
         .from("barbeiros")
@@ -554,6 +562,7 @@ export default function BarbershopPublic() {
       });
 
       setBarbers(enrichedBarbers);
+      if (slug) setCache(`shop:public:barbers:${slug}`, enrichedBarbers, 15);
     } catch (err) {
       console.error("Error loading barbers:", err);
     } finally {
@@ -761,7 +770,9 @@ export default function BarbershopPublic() {
     return map;
   }, [reviewsList]);
 
-  // Unified reviews array (combining real Supabase reviews + curated verified reviews)
+  const isDubTenantContent = tenant ? normalizeText(tenant.nome) === "barbeariadub" : false;
+
+  // Unified reviews array (curated DUB reviews só valem para a própria DUB)
   const allReviews: ReviewDisplay[] = useMemo(() => {
     if (reviewsList.length > 0) {
       const mapped: ReviewDisplay[] = reviewsList.map((r: any, idx: number) => ({
@@ -774,20 +785,23 @@ export default function BarbershopPublic() {
         servico_id: r.servico_id || r.service_id || null,
       }));
 
-      if (mapped.length < 10) {
+      if (isDubTenantContent && mapped.length < 10) {
         return [...mapped, ...DEFAULT_DUB_REVIEWS.slice(mapped.length)];
       }
       return mapped;
     }
-    return DEFAULT_DUB_REVIEWS;
-  }, [reviewsList]);
+    return isDubTenantContent ? DEFAULT_DUB_REVIEWS : [];
+  }, [reviewsList, isDubTenantContent]);
 
-  // Combines authentic database photos with curated haircut photos
+  /**
+   * Apenas o portfólio real desta barbearia. As fotos curadas pertencem à
+   * Barbearia DUB e não podem vazar para outras barbearias.
+   */
   const displayPhotos = useMemo(() => {
     const dbUrls = portfolioImages.map((img) => img.image_url);
-    const combined = [...dbUrls, ...FALLBACK_CUTS];
+    const combined = isDubTenantContent ? [...dbUrls, ...FALLBACK_CUTS] : dbUrls;
     return Array.from(new Set(combined));
-  }, [portfolioImages]);
+  }, [portfolioImages, isDubTenantContent]);
 
   // Maximum of 6 photos in the carousel + 'Ver mais' button if > 6
   const carouselPhotos = useMemo(() => displayPhotos.slice(0, 6), [displayPhotos]);
@@ -1029,8 +1043,8 @@ export default function BarbershopPublic() {
         : undefined,
   };
 
-  const formattedRating = (avgRating || 4.9).toFixed(1);
-  const formattedReviewCount = totalReviews > 0 ? totalReviews : 189;
+  const formattedRating = (avgRating ?? (isDubTenantContent ? 4.9 : 5)).toFixed(1);
+  const formattedReviewCount = totalReviews > 0 ? totalReviews : isDubTenantContent ? 189 : 0;
 
   return (
     <div className="barbershop-public-page relative flex flex-col bg-neutral-950 h-full w-full overflow-y-auto overscroll-contain touch-pan-y">
@@ -1189,7 +1203,8 @@ export default function BarbershopPublic() {
           </button>
         </div>
 
-        {/* ═══ Horizontal Photo Carousel (Máximo de 6 fotos + Botão 'Ver mais' se houver mais de 6) ═══ */}
+        {/* ═══ Horizontal Photo Carousel — só fotos do portfólio desta barbearia ═══ */}
+        {carouselPhotos.length > 0 && (
         <div className="mt-6 px-4 overflow-x-auto flex gap-3 no-scrollbar scroll-smooth snap-x">
           {carouselPhotos.map((url, i) => (
             <div
@@ -1223,6 +1238,7 @@ export default function BarbershopPublic() {
             </div>
           )}
         </div>
+        )}
 
         {/* ═══ Ver Unidades Row (if multiple units) ═══ */}
         {unidadesCount != null && unidadesCount >= 2 && (
@@ -1377,7 +1393,8 @@ export default function BarbershopPublic() {
           )}
         </div>
 
-        {/* ═══ Customer Reviews Section (Abaixo dos Serviços — Exatamente 3 avaliações + Botão 'Ver mais') ═══ */}
+        {/* ═══ Customer Reviews Section — somente avaliações reais desta barbearia ═══ */}
+        {allReviews.length > 0 && (
         <div ref={reviewsRef} className="mt-8 px-4">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
@@ -1451,6 +1468,7 @@ export default function BarbershopPublic() {
             </button>
           </div>
         </div>
+        )}
 
         {/* ═══ Profissionais Section ═══ */}
         <div className="mt-8 px-4">
