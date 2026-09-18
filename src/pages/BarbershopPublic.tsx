@@ -317,14 +317,14 @@ export default function BarbershopPublic() {
   // ── Immersive Status Bar (o banner sangra 100% até o topo por trás do relógio e bateria) ──
   useEffect(() => {
     document.documentElement.classList.add("immersive-active", "immersive-banner-active");
-    document.documentElement.style.backgroundColor = "#000000";
+    document.documentElement.style.backgroundColor = "#171717";
     document.documentElement.style.colorScheme = "dark";
     if (document.body) {
-      document.body.style.backgroundColor = "#000000";
+      document.body.style.backgroundColor = "#171717";
       document.body.style.colorScheme = "dark";
     }
 
-    setStatusBarTheme("#000000", "black-translucent");
+    setStatusBarTheme("#171717", "black-translucent", "dark");
 
     return () => {
       document.documentElement.classList.remove("immersive-active", "immersive-banner-active");
@@ -334,7 +334,7 @@ export default function BarbershopPublic() {
         document.body.style.backgroundColor = "#FFFFFF";
         document.body.style.colorScheme = "light";
       }
-      setStatusBarTheme("#FFFFFF", "default");
+      setStatusBarTheme("#FFFFFF", "default", "light");
     };
   }, []);
 
@@ -1046,7 +1046,7 @@ export default function BarbershopPublic() {
       <JsonLd id="localbusiness" data={localBusinessLd} />
 
       {/* ── Immersive Hero Banner: Imagem limpa e natural, sangra para o topo sem faixa branca ── */}
-      <div className="relative w-full h-56 sm:h-64 overflow-hidden bg-background select-none shrink-0">
+      <div className="relative w-full h-56 sm:h-64 overflow-hidden bg-neutral-950 select-none shrink-0">
         <img
           src={bannerUrl || defaultBannerBg}
           alt={`Banner ${tenant.nome}`}

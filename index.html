@@ -8,13 +8,18 @@
     <meta name="supported-color-schemes" content="light" />
     <meta name="google-site-verification" content="owbb0rIgmzly9Z4ymfj0B9UAS2zpSSAwCaix9Gh7Gy8" />
 
-    <!-- Anti-flash + Detecção de iOS Safari em modo navegador -->
+    <!-- Anti-flash + Detecção de rotas imersivas (mapa e barbearia) + Safari iOS -->
     <script>
       (function () {
         try {
           var d = document.documentElement;
-          var brand = '#FFFFFF';
-          var scheme = 'light';
+          var path = window.location.pathname || '';
+          var isMap = path.indexOf('/escolher-barbearia') === 0;
+          var isBanner = path.indexOf('/b/') === 0 || path.indexOf('/barbearia-dub') === 0;
+          var isImmersive = isMap || isBanner;
+
+          var brand = isMap ? '#E5E3DF' : (isBanner ? '#171717' : '#FFFFFF');
+          var scheme = isBanner ? 'dark' : 'light';
 
           d.style.backgroundColor = brand;
           d.style.colorScheme = scheme;
@@ -23,8 +28,15 @@
             document.body.style.colorScheme = scheme;
           }
 
-          d.classList.remove('dark', 'immersive-active', 'immersive-map-active', 'immersive-banner-active');
-          if (!d.classList.contains('light')) d.classList.add('light');
+          if (isImmersive) {
+            d.classList.add('immersive-active');
+            if (isMap) d.classList.add('immersive-map-active');
+            if (isBanner) d.classList.add('immersive-banner-active');
+            d.classList.remove('light');
+          } else {
+            d.classList.remove('dark', 'immersive-active', 'immersive-map-active', 'immersive-banner-active');
+            if (!d.classList.contains('light')) d.classList.add('light');
+          }
 
           var metaTheme = document.querySelector('meta[name="theme-color"]');
           if (metaTheme) {
@@ -42,7 +54,7 @@
           var isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
           var isStandalone = (window.navigator.standalone === true) || 
             (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
-          if (isIOS && !isStandalone) {
+          if (isIOS && !isStandalone && !isImmersive) {
             d.classList.add('ios-safari-browser');
           }
         } catch (e) {}

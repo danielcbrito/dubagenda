@@ -203,14 +203,14 @@ const EscolherBarbearia = () => {
   // ── Immersive Status Bar (o mapa sangra 100% até o topo por trás do relógio e bateria) ──
   useEffect(() => {
     document.documentElement.classList.add("immersive-active", "immersive-map-active");
-    document.documentElement.style.backgroundColor = "#000000";
-    document.documentElement.style.colorScheme = "dark";
+    document.documentElement.style.backgroundColor = "#E5E3DF";
+    document.documentElement.style.colorScheme = "light";
     if (document.body) {
-      document.body.style.backgroundColor = "#000000";
-      document.body.style.colorScheme = "dark";
+      document.body.style.backgroundColor = "#E5E3DF";
+      document.body.style.colorScheme = "light";
     }
 
-    setStatusBarTheme("#000000", "black-translucent");
+    setStatusBarTheme("#E5E3DF", "black-translucent", "light");
 
     return () => {
       document.documentElement.classList.remove("immersive-active", "immersive-map-active");
@@ -220,16 +220,16 @@ const EscolherBarbearia = () => {
         document.body.style.backgroundColor = "#FFFFFF";
         document.body.style.colorScheme = "light";
       }
-      setStatusBarTheme("#FFFFFF", "default");
+      setStatusBarTheme("#FFFFFF", "default", "light");
     };
   }, []);
 
-  // Sincroniza a barra de status conforme o bottom sheet abre ou fecha (#000000 quando o mapa está visível, #FFFFFF em tela cheia)
+  // Sincroniza a barra de status conforme o bottom sheet abre ou fecha (#E5E3DF quando o mapa está visível, #FFFFFF em tela cheia)
   useEffect(() => {
     const isFull = currentSheetSnap >= 0.85;
-    const targetColor = isFull ? "#FFFFFF" : "#000000";
+    const targetColor = isFull ? "#FFFFFF" : "#E5E3DF";
     const targetStyle = isFull ? "default" : "black-translucent";
-    const targetScheme = isFull ? "light" : "dark";
+    const targetScheme = "light";
 
     document.documentElement.style.backgroundColor = targetColor;
     document.documentElement.style.colorScheme = targetScheme;
@@ -242,7 +242,7 @@ const EscolherBarbearia = () => {
     } else {
       document.documentElement.classList.add("immersive-map-active");
     }
-    setStatusBarTheme(targetColor, targetStyle);
+    setStatusBarTheme(targetColor, targetStyle, targetScheme);
   }, [currentSheetSnap]);
 
   // ── iOS install banner ──

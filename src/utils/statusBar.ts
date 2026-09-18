@@ -49,17 +49,17 @@ export function setStatusBarTheme(
   }
 
   // 2. Android Chrome / PWA / WebKit theme-color
+  // Em navegadores baseados em Chromium/Android, remover e reinserir força o repaint nativo da barra de status
   const existingMetas = document.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]');
-  if (existingMetas.length > 0) {
-    existingMetas.forEach((m) => {
-      if (m.getAttribute("content") !== color) {
-        m.setAttribute("content", color);
-      }
-      if (m.content !== color) {
-        m.content = color;
-      }
-    });
-  } else {
+  let needsRepaint = existingMetas.length === 0;
+  existingMetas.forEach((m) => {
+    if (m.getAttribute("content") !== color || m.content !== color) {
+      needsRepaint = true;
+    }
+  });
+
+  if (needsRepaint) {
+    existingMetas.forEach((m) => m.remove());
     const meta = document.createElement("meta");
     meta.name = "theme-color";
     meta.id = "theme-color-meta";
@@ -68,7 +68,7 @@ export function setStatusBarTheme(
     document.head.appendChild(meta);
   }
 
-  // 3. Color scheme meta tag (crucial for Android status bar icons white vs dark)
+  // 3. Color scheme meta tag (crucial para ícones da barra de status claros vs escuros)
   let colorSchemeMeta = document.querySelector(
     'meta[name="color-scheme"]'
   ) as HTMLMetaElement | null;
@@ -86,21 +86,25 @@ export function setStatusBarTheme(
 
 /**
  * Centralized theme applier:
- * Enforces the exact same background, classes, color-scheme, and status bar
- * across the entire app depending on whether the route is immersive or standard.
+ * No mapa: usa a cor idêntica ao canvas do Google Maps (#E5E3DF) para fusão invisível sem faixa branca ou preta.
+ * No perfil da barbearia: usa o tom neutro/escuro (#171717) para fundir perfeitamente com a foto de capa.
+ * Nas demais páginas: branco (#FFFFFF).
  */
 export function applyThemeForRoute(pathname: string) {
   if (typeof document === "undefined") return;
 
-  const isImmersive = isImmersiveRoute(pathname);
-  const targetColor = isImmersive ? "#000000" : "#FFFFFF";
+  const isMap = pathname.startsWith("/escolher-barbearia");
+  const isBanner = pathname.startsWith("/b/") || pathname.startsWith("/barbearia-dub") || (isImmersiveRoute(pathname) && !isMap);
+  const isImmersive = isMap || isBanner;
+
+  const targetColor = isMap ? "#E5E3DF" : (isBanner ? "#171717" : "#FFFFFF");
   const targetStyle = isImmersive ? "black-translucent" : "default";
-  const colorScheme = isImmersive ? "dark" : "light";
+  const colorScheme = isBanner ? "dark" : "light";
   const d = document.documentElement;
 
   if (isImmersive) {
     d.classList.add("immersive-active");
-    if (pathname.startsWith("/escolher-barbearia")) {
+    if (isMap) {
       d.classList.add("immersive-map-active");
       d.classList.remove("immersive-banner-active");
     } else {
@@ -113,19 +117,10 @@ export function applyThemeForRoute(pathname: string) {
     if (!d.classList.contains("light")) d.classList.add("light");
   }
 
-  // Background color on <html> and <body> (transparent on immersive routes so map/banner bleeds 100% to the top)
-  if (isImmersive) {
-    d.style.backgroundColor = "transparent";
-    if (document.body) {
-      document.body.style.backgroundColor = "transparent";
-    }
-  } else {
-    if (d.style.backgroundColor !== targetColor) {
-      d.style.backgroundColor = targetColor;
-    }
-    if (document.body && document.body.style.backgroundColor !== targetColor) {
-      document.body.style.backgroundColor = targetColor;
-    }
+  // Define a cor de fundo exata em html e body para que puxar (overscroll) revele a cor do mapa, NUNCA branco
+  d.style.backgroundColor = targetColor;
+  if (document.body) {
+    document.body.style.backgroundColor = targetColor;
   }
 
   if (d.style.colorScheme !== colorScheme) {
