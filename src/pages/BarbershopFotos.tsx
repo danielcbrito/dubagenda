@@ -97,12 +97,17 @@ export default function BarbershopFotos() {
     staleTime: 5 * 60 * 1000,
   });
 
-  // Combine database images with fallback cuts
+  /**
+   * Somente a própria barbearia. As fotos curadas (FALLBACK_CUTS) pertencem à
+   * Barbearia DUB e NUNCA devem aparecer em outra barbearia.
+   */
+  const isDubTenant = tenant ? normalizeText(tenant.nome) === "barbeariadub" : false;
+
   const allPhotos = useMemo(() => {
     const dbUrls = portfolioImages.map((img) => img.image_url);
-    const combined = [...dbUrls, ...FALLBACK_CUTS];
+    const combined = isDubTenant ? [...dbUrls, ...FALLBACK_CUTS] : dbUrls;
     return Array.from(new Set(combined));
-  }, [portfolioImages]);
+  }, [portfolioImages, isDubTenant]);
 
   const shopName = tenant?.nome || "Barbearia";
   const pageTitle = `Fotos e Cortes — ${shopName} | DUB Agenda`;
