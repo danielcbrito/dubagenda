@@ -279,9 +279,13 @@ export default function BarbershopPublic() {
   const isFromDiscover = fromContext === "discover" || fromContext === "change";
   const isChangeMode = fromContext === "change";
 
-  const [tenant, setTenant] = useState<TenantInfo | null>(null);
-  const [barbers, setBarbers] = useState<Barber[]>([]);
-  const [loading, setLoading] = useState(true);
+  // Cache síncrono: se a barbearia já foi vista nesta sessão, a página abre sem spinner.
+  const cachedTenant = slug ? getCache<TenantInfo>(`shop:public:${slug}`) : null;
+  const cachedBarbers = slug ? getCache<Barber[]>(`shop:public:barbers:${slug}`) : null;
+
+  const [tenant, setTenant] = useState<TenantInfo | null>(cachedTenant);
+  const [barbers, setBarbers] = useState<Barber[]>(cachedBarbers ?? []);
+  const [loading, setLoading] = useState(!cachedTenant);
   const [loadingBarbers, setLoadingBarbers] = useState(false);
   const [notFound, setNotFound] = useState(false);
   const [avgRating, setAvgRating] = useState<number | null>(null);
