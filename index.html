@@ -2,9 +2,7 @@
 <html lang="pt-BR" translate="no" class="light">
   <head>
     <meta charset="UTF-8" />
-    <meta name="theme-color" content="#FFFFFF" />
-    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#FFFFFF" />
-    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#FFFFFF" />
+    <meta name="theme-color" content="#FFFFFF" id="theme-color-meta" />
     <meta name="color-scheme" content="light" />
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0, viewport-fit=cover, interactive-widget=resizes-visual" />
     <meta name="supported-color-schemes" content="light" />
@@ -52,11 +50,11 @@
             if (!d.classList.contains('light')) d.classList.add('light');
           }
 
-          var metaThemes = document.querySelectorAll('meta[name="theme-color"]');
-          metaThemes.forEach(function (m) {
-            m.setAttribute('content', brand);
-            m.content = brand;
-          });
+          var metaTheme = document.querySelector('meta[name="theme-color"]');
+          if (metaTheme) {
+            metaTheme.setAttribute('content', brand);
+            metaTheme.content = brand;
+          }
 
           // Detecta Safari no iPhone/iPad quando executando no NAVEGADOR (fora do PWA instalado)
           var ua = window.navigator.userAgent || '';
