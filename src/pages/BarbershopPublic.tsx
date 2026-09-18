@@ -1194,7 +1194,8 @@ export default function BarbershopPublic() {
           </button>
         </div>
 
-        {/* ═══ Horizontal Photo Carousel (Máximo de 6 fotos + Botão 'Ver mais' se houver mais de 6) ═══ */}
+        {/* ═══ Horizontal Photo Carousel — só fotos do portfólio desta barbearia ═══ */}
+        {carouselPhotos.length > 0 && (
         <div className="mt-6 px-4 overflow-x-auto flex gap-3 no-scrollbar scroll-smooth snap-x">
           {carouselPhotos.map((url, i) => (
             <div
