@@ -776,20 +776,23 @@ export default function BarbershopPublic() {
         servico_id: r.servico_id || r.service_id || null,
       }));
 
-      if (mapped.length < 10) {
+      if (isDubTenantContent && mapped.length < 10) {
         return [...mapped, ...DEFAULT_DUB_REVIEWS.slice(mapped.length)];
       }
       return mapped;
     }
-    return DEFAULT_DUB_REVIEWS;
-  }, [reviewsList]);
+    return isDubTenantContent ? DEFAULT_DUB_REVIEWS : [];
+  }, [reviewsList, isDubTenantContent]);
 
-  // Combines authentic database photos with curated haircut photos
+  /**
+   * Apenas o portfólio real desta barbearia. As fotos curadas pertencem à
+   * Barbearia DUB e não podem vazar para outras barbearias.
+   */
   const displayPhotos = useMemo(() => {
     const dbUrls = portfolioImages.map((img) => img.image_url);
-    const combined = [...dbUrls, ...FALLBACK_CUTS];
+    const combined = isDubTenantContent ? [...dbUrls, ...FALLBACK_CUTS] : dbUrls;
     return Array.from(new Set(combined));
-  }, [portfolioImages]);
+  }, [portfolioImages, isDubTenantContent]);
 
   // Maximum of 6 photos in the carousel + 'Ver mais' button if > 6
   const carouselPhotos = useMemo(() => displayPhotos.slice(0, 6), [displayPhotos]);
