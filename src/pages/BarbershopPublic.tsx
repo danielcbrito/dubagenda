@@ -1229,6 +1229,7 @@ export default function BarbershopPublic() {
             </div>
           )}
         </div>
+        )}
 
         {/* ═══ Ver Unidades Row (if multiple units) ═══ */}
         {unidadesCount != null && unidadesCount >= 2 && (
