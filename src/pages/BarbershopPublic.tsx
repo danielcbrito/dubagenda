@@ -1384,7 +1384,8 @@ export default function BarbershopPublic() {
           )}
         </div>
 
-        {/* ═══ Customer Reviews Section (Abaixo dos Serviços — Exatamente 3 avaliações + Botão 'Ver mais') ═══ */}
+        {/* ═══ Customer Reviews Section — somente avaliações reais desta barbearia ═══ */}
+        {allReviews.length > 0 && (
         <div ref={reviewsRef} className="mt-8 px-4">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
