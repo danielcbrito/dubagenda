@@ -428,7 +428,8 @@ export default function BarbershopPublic() {
   }, [slug]);
 
   const loadTenant = async () => {
-    setLoading(true);
+    // Já existe dado em cache? Revalida em silêncio, sem tela de carregamento.
+    if (!tenant) setLoading(true);
 
     let { data } = await supabase
       .from("tenants")
