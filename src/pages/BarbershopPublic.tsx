@@ -1459,6 +1459,7 @@ export default function BarbershopPublic() {
             </button>
           </div>
         </div>
+        )}
 
         {/* ═══ Profissionais Section ═══ */}
         <div className="mt-8 px-4">
