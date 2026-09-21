@@ -1,0 +1,55 @@
+DIAGNÓSTICO — Cliente 98fbea52-f64e-4cd4-86a1-8e5bf4ef6a2a
+Data: 21/09/2026
+================================================================
+
+1. IDENTIFICAÇÃO (Camada Usuário)
+- Auth: rodrigosouza050505@gmail.com (provider: email)
+- Conta criada: 09/09/2026 15:02 | Último login: 21/09/2026 18:47
+- Perfil: nome "rodrigocarlos", telefone 11962887417
+- Barbearia preferida: 73d61f2f-... (Barbearia DUB)
+
+2. REGISTROS ENCONTRADOS (Camada Banco de Dados)
+Assinatura da0ec369-9a1b-48fb-bdb8-9ef2687f976e
+- Plano: 9f619374-... (Corte e Sobrancelha, 4 usos/mês)
+- Criada 09/09/2026 15:17 | status = active
+- payment_method = cash | cash_payment_confirmed = FALSE
+- usos_ciclo_atual = 3 | ciclo 09/09 → 09/10/2026
+
+Agendamentos (todos criado_por = "cliente", tipo = plano, preço 0,00)
+- dea11932-... 09/09 15:00 (criado 09/09 15:18)
+- c4033c6e-... 21/09 15:00 (criado 09/09 15:48)
+- 81a28f1b-... 30/09 15:30 (criado 21/09 18:38)
+Registros de uso: 3 em plano_agendamentos_usos
+Sem pagamentos, sem cobranças Pix/Woovi, sem carteira, sem resgates.
+
+3. CAUSA RAIZ
+Não houve geração automática/fantasma. Os registros vieram do próprio
+app do cliente (criado_por = "cliente", sessão autenticada dele, com
+login ativo no momento das criações). O que permitiu isso foi uma falha
+de regra de negócio:
+
+a) Assinatura em dinheiro é criada em ClienteAssinar.tsx já com
+   status "active" e cash_payment_confirmed = false — ou seja, plano
+   liberado antes de qualquer pagamento.
+b) A trava documentada de "só 1 uso até o barbeiro confirmar o
+   dinheiro" existia apenas para status = 'pending_cash'. Como o
+   registro nasce 'active', a trava nunca era aplicada.
+c) Pior: o gatilho consume_plan_use_on_appointment_insert, ao detectar
+   limite esgotado, fazia RETURN NEW — permitia o agendamento SEM
+   registrar consumo. Resultado: agendamentos por plano ilimitados e
+   gratuitos.
+
+4. CORREÇÕES APLICADAS
+- Excluídos do banco: 3 agendamentos, 3 registros de uso do plano,
+  1 notificação de lembrete e a assinatura da0ec369-....
+- Gatilho consume_plan_use_on_appointment_insert reescrito:
+  * plano em dinheiro não confirmado (status active + 
+    cash_payment_confirmed = false) → limite de 1 uso;
+  * limite esgotado → exceção PLANO_SEM_CREDITOS (agendamento bloqueado);
+  * sem assinatura ativa → exceção PLANO_INEXISTENTE;
+  * administração/TI e service_role seguem podendo registrar manualmente.
+
+5. RECOMENDAÇÃO PENDENTE (decisão do dono)
+Avaliar criar assinaturas em dinheiro com status 'pending_cash' em vez
+de 'active', para deixar explícito na interface que o plano aguarda
+confirmação de pagamento pelo barbeiro.
