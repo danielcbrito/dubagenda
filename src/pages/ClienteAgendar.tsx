@@ -785,6 +785,9 @@ const ClienteAgendar = () => {
 
         .eq("user_id", uid)
         .eq("status", "active")
+        // Várias assinaturas "active" podem coexistir (renovações antigas):
+        // prioriza a de vencimento mais distante, evitando pegar um ciclo já vencido.
+        .order("next_billing_date", { ascending: false, nullsFirst: false })
         .order("created_at", { ascending: false })
         .limit(1);
 
