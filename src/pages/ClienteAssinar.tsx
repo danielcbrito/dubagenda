@@ -428,7 +428,7 @@ const ClienteAssinar = () => {
         navigate(`/cliente/agendar?barber=${selectedBarber.id}`);
       } else if (selectedPaymentMethod === "card") {
         const { data, error } = await supabase.functions.invoke('create-subscription-card', {
-          body: { planoId: selectedPlan.id, barbeiroId: selectedBarber.id }
+          body: { planoId: selectedPlan.id, barbeiroId: selectedBarber.id, renew: isReplacing }
         });
         if (error) throw error;
         if (data?.error) throw new Error(data.error);
@@ -438,7 +438,7 @@ const ClienteAssinar = () => {
         }
       } else {
         const { data, error } = await supabase.functions.invoke('create-subscription-pix', {
-          body: { planoId: selectedPlan.id, barbeiroId: selectedBarber.id }
+          body: { planoId: selectedPlan.id, barbeiroId: selectedBarber.id, renew: isReplacing }
         });
         if (error) throw error;
         if (data?.success) {
