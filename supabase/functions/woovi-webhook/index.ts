@@ -206,6 +206,13 @@ Deno.serve(async (req) => {
           updates.cash_payment_confirmed = null;
         }
         await admin.from("assinaturas").update(updates).eq("id", subId);
+        // Renovação: encerra a assinatura anterior do cliente (mantém histórico, não apaga)
+        await admin
+          .from("assinaturas")
+          .update({ status: "cancelled", updated_at: new Date().toISOString() })
+          .eq("user_id", sub.user_id)
+          .eq("status", "active")
+          .neq("id", subId);
         await admin.from("pagamentos").insert({
           user_id: sub.user_id,
           assinatura_id: subId,
