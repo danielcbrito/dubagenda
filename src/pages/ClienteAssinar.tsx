@@ -399,22 +399,24 @@ const ClienteAssinar = () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) { toast.error("Você precisa estar logado"); navigate("/auth"); return; }
 
-      // In renewal/change mode, remove the old active subscription before creating new one
-      if (isRenewalMode || isChangeMode) {
-        await supabase.from('assinaturas').delete().eq('user_id', session.user.id).eq('status', 'active');
-      }
+      // Renovação/troca: a assinatura antiga NUNCA é apagada antes do novo plano
+      // ser criado com sucesso — evita o cliente ficar sem plano se algo falhar.
+      const isReplacing = isRenewalMode || isChangeMode;
 
       if (selectedPaymentMethod === "cash") {
         await supabase.from('assinaturas').delete().eq('user_id', session.user.id).in('status', ['suspended', 'pending_cash']);
-        await supabase.from('assinaturas').delete().eq('user_id', session.user.id).eq('status', 'active').eq('cash_payment_confirmed', false);
         const nextBilling = new Date();
         nextBilling.setMonth(nextBilling.getMonth() + 1);
         const nextBillingStr = `${nextBilling.getFullYear()}-${String(nextBilling.getMonth() + 1).padStart(2, '0')}-${String(nextBilling.getDate()).padStart(2, '0')}`;
-        const { error: insertError } = await supabase.from('assinaturas').insert({
+        const { data: newSub, error: insertError } = await supabase.from('assinaturas').insert({
           user_id: session.user.id, plano_id: selectedPlan.id, barbeiro_id: selectedBarber.id,
           status: 'active' as any, payment_method: 'cash' as any, cash_payment_confirmed: false, next_billing_date: nextBillingStr,
-        });
+        }).select('id').single();
         if (insertError) throw insertError;
+        // Só agora remove as assinaturas ativas anteriores
+        await supabase.from('assinaturas').delete()
+          .eq('user_id', session.user.id).eq('status', 'active').neq('id', newSub.id)
+          .or(isReplacing ? 'id.not.is.null' : 'cash_payment_confirmed.eq.false');
         // Enviar notificação de assinatura cash (não bloqueia o fluxo)
         sendAssinaturaCashCriadaEvent({
           cliente_id: session.user.id,
@@ -426,7 +428,7 @@ const ClienteAssinar = () => {
         navigate(`/cliente/agendar?barber=${selectedBarber.id}`);
       } else if (selectedPaymentMethod === "card") {
         const { data, error } = await supabase.functions.invoke('create-subscription-card', {
-          body: { planoId: selectedPlan.id, barbeiroId: selectedBarber.id }
+          body: { planoId: selectedPlan.id, barbeiroId: selectedBarber.id, renew: isReplacing }
         });
         if (error) throw error;
         if (data?.error) throw new Error(data.error);
@@ -436,7 +438,7 @@ const ClienteAssinar = () => {
         }
       } else {
         const { data, error } = await supabase.functions.invoke('create-subscription-pix', {
-          body: { planoId: selectedPlan.id, barbeiroId: selectedBarber.id }
+          body: { planoId: selectedPlan.id, barbeiroId: selectedBarber.id, renew: isReplacing }
         });
         if (error) throw error;
         if (data?.success) {
