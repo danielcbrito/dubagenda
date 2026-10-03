@@ -148,25 +148,26 @@ serve(async (req) => {
     // Resolver API key + URL base (sub-conta do barbeiro ou principal)
     const { apiKey: asaasApiKey, baseUrl: ASAAS_BASE_URL, isSubAccount } = await resolveAsaasConfig(supabaseAdmin, barbeiroId, globalAsaasKey);
 
-    // Buscar dados do plano
+    // Buscar dados do plano (inativo é permitido para quem já é assinante dele — renovação)
     const { data: plano, error: planoError } = await supabaseAdmin
       .from("planos")
-      .select("id, nome, preco_mensal")
+      .select("id, nome, preco_mensal, ativo")
       .eq("id", planoId)
-      .eq("ativo", true)
-      .single();
-
-    if (planoError || !plano) throw new Error("Plano não encontrado ou inativo");
-
-    // Verificar se já tem assinatura ativa
-    const { data: existingSub } = await supabaseAdmin
-      .from("assinaturas")
-      .select("id")
-      .eq("user_id", user.id)
-      .eq("status", "active")
       .maybeSingle();
 
-    if (existingSub) throw new Error("Você já possui uma assinatura ativa");
+    if (planoError || !plano) throw new Error("Plano não encontrado");
+
+    const { data: ownSubs } = await supabaseAdmin
+      .from("assinaturas")
+      .select("id, plano_id, status")
+      .eq("user_id", user.id);
+    const isExistingSubscriber = (ownSubs || []).some((s: any) => s.plano_id === planoId);
+    if (plano.ativo === false && !isExistingSubscriber) {
+      throw new Error("Este plano não está mais disponível para novas assinaturas");
+    }
+
+    const otherActive = (ownSubs || []).some((s: any) => s.status === "active" && s.plano_id !== planoId);
+    if (otherActive && !body?.renew) throw new Error("Você já possui uma assinatura ativa");
 
     // Deletar assinaturas "suspended" anteriores
     await supabaseAdmin
