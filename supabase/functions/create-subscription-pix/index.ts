@@ -67,27 +67,23 @@ Deno.serve(async (req) => {
       );
     }
 
-    // 2. Buscar plano (inativo é permitido para quem já é assinante dele — renovação)
+    // 2. Buscar plano
     const { data: plano, error: planoError } = await admin
       .from("planos")
-      .select("id, nome, preco_mensal, ativo")
+      .select("id, nome, preco_mensal")
       .eq("id", planoId)
-      .maybeSingle();
-    if (planoError || !plano) throw new Error("Plano não encontrado");
+      .eq("ativo", true)
+      .single();
+    if (planoError || !plano) throw new Error("Plano não encontrado ou inativo");
 
-    const { data: ownSubs } = await admin
+    // 3. Garantir que não há assinatura ativa
+    const { data: existingSub } = await admin
       .from("assinaturas")
-      .select("id, plano_id, status")
-      .eq("user_id", userId);
-    const isExistingSubscriber = (ownSubs || []).some((s: any) => s.plano_id === planoId);
-    if (plano.ativo === false && !isExistingSubscriber) {
-      throw new Error("Este plano não está mais disponível para novas assinaturas");
-    }
-
-    // 3. Assinatura ativa só bloqueia se for de OUTRO plano (renovação do mesmo é permitida;
-    //    a antiga é encerrada pelo webhook quando o Pix for pago)
-    const otherActive = (ownSubs || []).some((s: any) => s.status === "active" && s.plano_id !== planoId);
-    if (otherActive && !body?.renew) throw new Error("Você já possui uma assinatura ativa");
+      .select("id")
+      .eq("user_id", userId)
+      .eq("status", "active")
+      .maybeSingle();
+    if (existingSub) throw new Error("Você já possui uma assinatura ativa");
 
     // Limpar suspended anteriores
     await admin
