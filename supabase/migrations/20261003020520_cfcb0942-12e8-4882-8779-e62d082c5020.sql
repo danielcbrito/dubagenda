@@ -1,0 +1,1 @@
+REVOKE EXECUTE ON FUNCTION public.protect_plan_delete_with_subscribers() FROM PUBLIC, anon, authenticated;
