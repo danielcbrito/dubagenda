@@ -1,6 +1,6 @@
 
-## Renovação de planos encerrados (2026-10-02)
-- [x] Assinantes antigos renovam qualquer plano desativado; novos clientes bloqueados
-- [x] Exclusão de plano com assinantes vira desativação (sem apagar assinaturas)
-- [x] Recriar "Plano só corte" e restaurar assinaturas apagadas (Samuel, Pedro Oliveira, Henri)
-- [x] Varredura completa: preço "só corte" R$ 89,90 (plano-modelo só corte) e +5 clientes restaurados
+## Planos removidos — aguardando recriação pelos barbeiros (2026-10-03)
+- [x] Apagados os 3 planos da DUB (só corte, corte e sobrancelha, corte e barba) e todas as 32 assinaturas
+- [x] Barbearia está sem nenhum plano; barbeiros vão recriar os planos (desativados) do zero
+- [ ] Quando os planos novos existirem: encaixar cada cliente no plano/serviço equivalente para renovação (mapear pelo histórico de assinaturas antigas)
+- Mantidos no código: renovação permitida para plano inativo (só assinante existente), proteção contra apagar plano com assinantes, edge functions de assinatura ajustadas
