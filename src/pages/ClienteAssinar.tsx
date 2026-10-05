@@ -34,6 +34,7 @@ import { BottomNavigation } from "@/components/BottomNavigation";
 
 import { PaymentOption } from "@/components/booking/PaymentOption";
 import { enrichPlansWithAvailability, type PlanWithAvailability } from "@/hooks/usePlansAvailability";
+import { MeuPlanoView, type MeuPlanoSub } from "@/components/plano/MeuPlanoView";
 
 type Plan = PlanWithAvailability;
 
@@ -165,6 +166,9 @@ const ClienteAssinar = () => {
   const [step, setStep] = useState(0);
   const [hasActiveSubscription, setHasActiveSubscription] = useState(false);
   const [currentPlanIndex, setCurrentPlanIndex] = useState(0);
+  const [mySub, setMySub] = useState<MeuPlanoSub | null>(null);
+  const [showMyPlan, setShowMyPlan] = useState(false);
+  const [checkingMyPlan, setCheckingMyPlan] = useState(true);
 
   const { ratings } = useBarberRatings(barbers.map(b => b.id));
 
@@ -195,7 +199,24 @@ const ClienteAssinar = () => {
   }, [canPayOnline]);
 
   // ─── Init ─────────────────────────────────
+  const loadMySub = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) { setCheckingMyPlan(false); return; }
+    const { data } = await supabase
+      .from("assinaturas")
+      .select("id, status, next_billing_date, ciclo_fim, usos_ciclo_atual, user_id, plano:planos(nome, preco_mensal, limite_agendamentos_mes, servico:servicos!planos_servico_id_fkey(nome))")
+      .eq("user_id", session.user.id)
+      .in("status", ["active", "past_due", "pending_renewal", "suspended"] as any)
+      .order("next_billing_date", { ascending: false, nullsFirst: false })
+      .limit(1)
+      .maybeSingle();
+    if (data?.plano) { setMySub(data as any); setShowMyPlan(true); }
+    setCheckingMyPlan(false);
+  };
+
   useEffect(() => {
+    if (!isRenewalMode && !isChangeMode && !resumePlanId) loadMySub();
+    else setCheckingMyPlan(false);
     loadTenants();
     if (!isRenewalMode && !isChangeMode) {
       checkActiveSubscription();
@@ -491,6 +512,25 @@ const ClienteAssinar = () => {
   // Na etapa de Planos a barra de navegação global fica visível,
   // então o conteúdo é encurtado e a seta de voltar é ocultada.
   const showBottomNav = step === 2;
+
+  if (checkingMyPlan) {
+    return (
+      <div className="fixed inset-0 flex items-center justify-center bg-background">
+        <div className="w-7 h-7 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+        <BottomNavigation />
+      </div>
+    );
+  }
+
+  if (showMyPlan && mySub) {
+    return (
+      <MeuPlanoView
+        sub={mySub}
+        onRenovado={() => { void loadMySub(); }}
+        onVerPlanos={() => setShowMyPlan(false)}
+      />
+    );
+  }
 
   return (
     <div
