@@ -1,0 +1,56 @@
+DIAGNOSTICO E CORRECAO - PLANOS DUB (2026-10-05)
+==================================================
+
+SINTOMAS RELATADOS
+- Clientes com plano nao conseguiam renovar / plano nao aparecia.
+- Clientes agendaram corte avulso em vez do plano.
+- Barbeiro recebia "PLANO_INEXISTENTE" ao confirmar o corte.
+
+CAUSAS
+1. Na recriacao dos planos (03/10) so 9 ex-assinantes foram reencaixados; os
+   clientes que estavam com plano EM DIA (13) ficaram sem assinatura. Dos 9, so o
+   Samuel martins permaneceu (ele renovou). Resultado: 1 assinatura no banco.
+2. Gatilho consume_plan_use_on_appointment_insert rodava tambem em UPDATE de status.
+   Ao confirmar um agendamento de plano de cliente sem assinatura, o barbeiro (que
+   nao era considerado privilegiado) recebia PLANO_INEXISTENTE.
+3. enforce_plan_booking_within_period tambem revalidava no UPDATE.
+4. renew-subscription exigia todos os usos do ciclo mesmo com o ciclo vencido.
+
+CORRECOES (BANCO)
+- consume_plan_use: em UPDATE, agendamento que ja era plano nao revalida;
+  barbeiro do agendamento e dono da barbearia sao privilegiados.
+- enforce_plan_booking_within_period: nao bloqueia confirmar/concluir/cancelar,
+  nem acoes do barbeiro/dono/admin.
+- plano_servicos: cada plano DUB ligado ao seu servico.
+
+CORRECOES (EDGE FUNCTION)
+- renew-subscription: permite renovar se o ciclo venceu OU se os usos acabaram.
+
+RECONSTRUCAO DAS ASSINATURAS
+Fonte: system_logs (eventos assinatura_cash_criada / plano_ativado) + agendamentos
+pagos com plano. Ciclo = data da ultima ativacao/renovacao; sem evento = primeiro
+corte de plano apos intervalo. Usos = cortes de plano no ciclo (sem cancelados/no-show).
+
+Em dia (ciclo -> vencimento, usos):
+- Tiago da silva          Corte e Barba        02/10 -> 02/11  4/4 (cortes ja marcados ate 29/10)
+- Wilson Ferreira         Corte e Sobrancelha  01/10 -> 01/11  1
+- Gabriel Pilger          Corte e Sobrancelha  28/09 -> 28/10  1
+- Thiago Almeida Borges   Corte e Barba        19/09 -> 19/10  2
+- Hugo santana            Corte e Barba        19/09 -> 19/10  1
+- Kaique Silvio           Corte e Sobrancelha  15/09 -> 15/10  4 (inclui corte de hoje convertido)
+- Luis Paulo Favero       Corte e Barba        12/09 -> 12/10  2
+- Henri                   Plano so corte       11/09 -> 11/10  2 (inclui encaixe 03/10 convertido)
+- Samuel dos Santos Souza Corte e Barba        11/09 -> 11/10  3
+- Pedro Oliveira          Plano so corte       10/09 -> 10/10  2
+- Gutemberg Almeida       Corte e Barba        09/09 -> 09/10  3
+- Felipe araujo           Corte e Barba        04/09 -> 04/10  3 (vencido ontem -> renovar)
+- Samuel martins amaral   Plano so corte       03/10 -> 03/11  1 (ja existia; dinheiro aguardando barbeiro)
+
+Vencidos (opcao de renovar): Lipe, Lucas Alcantara, Luis Guilherme, Diogo Santana,
+Jefferson Alves, Joao Vitor.
+
+Fora de proposito: rodrigocarlos (plano em dinheiro nunca pago, caso de fraude).
+
+AGENDAMENTOS CONVERTIDOS AVULSO -> PLANO
+- 84e8e511 Henri 03/10 Corte (encaixe R$35)
+- dd8c8be4 Kaique 05/10 Corte + Sobrancelha (R$35)
