@@ -513,6 +513,25 @@ const ClienteAssinar = () => {
   // então o conteúdo é encurtado e a seta de voltar é ocultada.
   const showBottomNav = step === 2;
 
+  if (checkingMyPlan) {
+    return (
+      <div className="fixed inset-0 flex items-center justify-center bg-background">
+        <div className="w-7 h-7 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+        <BottomNavigation />
+      </div>
+    );
+  }
+
+  if (showMyPlan && mySub) {
+    return (
+      <MeuPlanoView
+        sub={mySub}
+        onRenovado={() => { void loadMySub(); }}
+        onVerPlanos={() => setShowMyPlan(false)}
+      />
+    );
+  }
+
   return (
     <div
       className="fixed inset-0 flex flex-col bg-background"
