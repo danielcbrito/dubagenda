@@ -115,30 +115,31 @@ serve(async (req) => {
     if (subError || !sub) throw new Error("Assinatura não encontrada");
     if (sub.status !== "active") throw new Error("Assinatura não está ativa");
 
-    // Verificar que usou todos os serviços (usando a mesma fonte de verdade: RPC)
+    // Pode renovar quando: ciclo venceu OU todos os serviços do ciclo foram usados
     const limite = sub.plano?.limite_agendamentos_mes || 4;
-    
-    // Calculate cycle dates for accurate usage count
     const nextBillingDate = sub.next_billing_date;
-    let realUsageCount = sub.usos_ciclo_atual || 0; // fallback
-    
-    if (nextBillingDate) {
+    let realUsageCount = sub.usos_ciclo_atual || 0;
+
+    const todayStrSP = new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString().split("T")[0];
+    const cycleExpired = !!nextBillingDate && todayStrSP > nextBillingDate;
+
+    if (nextBillingDate && !cycleExpired) {
       const cycleStart = new Date(`${nextBillingDate}T12:00:00`);
       cycleStart.setMonth(cycleStart.getMonth() - 1);
       const cycleStartDate = cycleStart.toISOString().split('T')[0];
-      
+
       const { data: rpcCount, error: rpcError } = await supabaseAdmin.rpc('count_subscription_uses_in_cycle', {
         p_assinatura_id: sub.id,
         p_cycle_start: cycleStartDate,
         p_cycle_end: nextBillingDate,
       });
-      
+
       if (!rpcError && rpcCount !== null) {
-        realUsageCount = Number(rpcCount);
+        realUsageCount = Math.max(realUsageCount, Number(rpcCount));
       }
     }
-    
-    if (realUsageCount < limite) {
+
+    if (!cycleExpired && realUsageCount < limite) {
       throw new Error(`Ainda restam ${limite - realUsageCount} serviço(s) para usar antes de renovar`);
     }
 
