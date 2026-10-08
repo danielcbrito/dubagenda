@@ -22,7 +22,8 @@ Deno.serve(async (req) => {
     const windowStart = new Date(now.getTime() + 50 * 60 * 1000);
     const windowEnd = new Date(now.getTime() + 70 * 60 * 1000);
 
-    const todayStr = now.toISOString().split("T")[0];
+    // Horários dos agendamentos estão em horário de Brasília (UTC-3)
+    const todayStr = new Date(now.getTime() - 3 * 60 * 60 * 1000).toISOString().split("T")[0];
 
     // Buscar agendamentos de hoje com status pendente ou confirmado
     const { data: appointments, error: aptError } = await supabase
@@ -51,9 +52,7 @@ Deno.serve(async (req) => {
 
     for (const apt of appointments) {
       // Calcular horário do agendamento
-      const [h, m] = apt.hora.split(":").map(Number);
-      const aptTime = new Date(now);
-      aptTime.setHours(h, m, 0, 0);
+      const aptTime = new Date(`${apt.data}T${String(apt.hora).slice(0, 5)}:00-03:00`);
 
       // Verificar se está dentro da janela de 1 hora
       if (aptTime < windowStart || aptTime > windowEnd) continue;
@@ -78,7 +77,7 @@ Deno.serve(async (req) => {
         .insert({
           user_id: apt.user_id,
           tipo: "lembrete",
-          titulo: "⏰ Seu horário é em breve!",
+          titulo: "Seu horário é em breve",
           mensagem: `${serviceName}${barberName ? ` com ${barberName}` : ""} às ${apt.hora}. Vai comparecer? Caso precise, remarque ou cancele pelo app.`,
           agendamento_id: apt.id,
           lida: false,
@@ -86,6 +85,15 @@ Deno.serve(async (req) => {
 
       if (!notifError) {
         sentCount++;
+        // Lembrete por WhatsApp (via n8n)
+        const hora = String(apt.hora).slice(0, 5);
+        const msg = `Olá! Lembrete: seu horário de ${serviceName}${barberName ? ` com ${barberName}` : ""} é hoje às ${hora}. Te esperamos!`;
+        const { error: waError } = await supabase.rpc("send_agendamento_whatsapp_webhook", {
+          p_agendamento_id: apt.id,
+          p_kind: "lembrete_1h",
+          p_msg: msg,
+        });
+        if (waError) console.error(`WhatsApp reminder error for ${apt.id}:`, waError);
         console.log(`Reminder sent for appointment ${apt.id}`);
       } else {
         console.error(`Error sending reminder for ${apt.id}:`, notifError);
