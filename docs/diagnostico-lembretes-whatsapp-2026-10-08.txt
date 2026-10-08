@@ -1,0 +1,22 @@
+DIAGNÓSTICO — LEMBRETES DE AGENDAMENTO NÃO CHEGAVAM NO WHATSAPP (2026-10-08)
+
+Sintoma: nenhum lembrete de WhatsApp registrado em agendamento_lembretes_log nos últimos 60 dias
+(só confirmações e cancelamentos).
+
+Causas
+1. Agendador "send-appointment-reminders" (a cada 10 min) chamava uma função com cabeçalho de
+   autorização vazio (app.settings.service_role_key não existe) -> HTTP 401 em todas as execuções.
+   A função também exige "internal caller" e seu código não está no repositório.
+2. A função "appointment-reminders" (essa funcionava) só criava a notificação dentro do app, nunca enviava WhatsApp.
+3. "appointment-reminders" calculava o horário em UTC: em horário de Brasília (UTC-3) a janela de 1h ficava errada
+   e, depois das 21h, a data também.
+
+Correções
+- appointment-reminders: data e hora interpretadas em UTC-3; depois de criar a notificação no app, chama
+  public.send_agendamento_whatsapp_webhook(agendamento, 'lembrete_1h', mensagem) -> n8n -> Evolution API.
+  O registro em notificacoes evita lembrete duplicado.
+- Agendador quebrado send-appointment-reminders removido (nunca funcionou). Fica só appointment-reminders-cron (*/10).
+
+Fluxo: cron 10 min -> appointment-reminders -> agendamentos de hoje entre 50 e 70 min à frente
+-> notificacoes (app) + webhook WhatsApp -> log em agendamento_lembretes_log (kind = lembrete_1h).
+Erro: sem telefone, instância ou webhook -> log de erro, sem quebrar o envio dos outros.
