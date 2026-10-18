@@ -6889,6 +6889,10 @@ export type Database = {
         Returns: Json
       }
       normalize_br_phone: { Args: { p_phone: string }; Returns: string }
+      owns_cancellation_debt: {
+        Args: { p_barber: string; p_client: string; p_tenant: string }
+        Returns: boolean
+      }
       pix_signal_bank_opened: {
         Args: { p_charge_id: string }
         Returns: undefined
