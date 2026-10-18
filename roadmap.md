@@ -10,3 +10,8 @@
 ## Pagamento por barbeiro
 - [x] Consultar configuração individual, ocultar métodos desativados e ajustar seleção.
 - [x] Sincronizar alterações de configuração em tempo real e testar as regras.
+
+## Taxa de cancelamento e bloqueio
+- [ ] Registrar taxa privada e atômica no cancelamento, sem duplicação.
+- [ ] Bloquear cliente com débito pendente e integrar PIX confirmado com desbloqueio.
+- [ ] Testar regras e documentar fluxos e limitações.
