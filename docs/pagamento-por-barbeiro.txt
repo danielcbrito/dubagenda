@@ -1,0 +1,46 @@
+PAGAMENTO POR BARBEIRO — 18/10/2026
+
+USUÁRIO
+O pagamento do agendamento exibe somente PIX e pagamento presencial permitidos
+pelo profissional. Ao desativar uma opção selecionada, outra válida é escolhida.
+Se nenhuma opção estiver disponível, não se permite concluir um pagamento comum.
+Planos, fidelidade e créditos que cobrem integralmente o serviço permanecem separados.
+
+FRONTEND
+useBarberPaymentOptions consulta informacoes_empresa por tenant_id e pela chave
+formas_pagamento_<barbeiro_id>. Valores ausentes, inválidos ou não booleanos mantêm
+os padrões PIX=true e barbearia=true. Falhas de leitura não liberam pagamentos.
+O canal UPDATE filtra a chave, valida o tenant no evento e é removido no cleanup.
+Após conexão/reconexão, há nova consulta para eliminar eventos perdidos.
+Respostas antigas não substituem eventos mais recentes nem outro profissional.
+PIX continua exigindo a capacidade já existente do gateway do barbeiro.
+Carteira parcial não é oferecida quando o saldo restante exigiria pagamento
+presencial desativado. Carteira integral permanece independente da opção PIX.
+
+BACKEND N8N / SERVIÇOS EXTERNOS
+Nenhuma alteração em N8N, cobranças, notificações ou gateways.
+Este ajuste é de consulta/apresentação e proteção do envio pela tela;
+não adiciona validação dos métodos nas funções de cobrança do servidor.
+
+BANCO SUPABASE
+informacoes_empresa foi adicionada à publicação supabase_realtime.
+Nenhuma política de acesso ou configuração de profissional foi alterada.
+Leitura pública permanece limitada pelas políticas existentes (ativo=true).
+
+FLUXO
+Barbeiro selecionado -> consulta isolada -> métodos disponíveis -> escolha válida
+UPDATE da configuração -> estado local -> ajuste automático -> envio protegido
+Erro de consulta -> aviso local -> não concluir pagamento comum
+Nenhum método -> aviso local -> benefícios integrais permanecem utilizáveis
+
+VERIFICAÇÃO
+Testes cobrem padrões, JSON inválido, valores booleanos, desativação individual,
+substituição automática, preservação da escolha e ausência de métodos disponíveis.
+Teste autenticado do agendamento completo não disponível neste projeto externo.
+Não alterar configuração real de profissionais apenas para simular eventos.
+
+DIAGNÓSTICO ADICIONAL
+A regeneração dos tipos expôs um erro anterior na consulta opcional anuncios_app,
+ausente no esquema atual. A consulta existente foi mantida usando o tipo genérico
+do SDK; não foram criadas tabelas nem modificados os anúncios.
+O banco possui 96 avisos de segurança anteriores à migração; revisão separada.
