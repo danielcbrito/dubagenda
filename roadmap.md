@@ -8,5 +8,5 @@
 - [x] Cortes avulsos do Henri (03/10) e Kaique (05/10) convertidos para plano
 
 ## Pagamento por barbeiro
-- [ ] Consultar configuração individual, ocultar métodos desativados e ajustar seleção.
-- [ ] Sincronizar alterações de configuração em tempo real e testar as regras.
+- [x] Consultar configuração individual, ocultar métodos desativados e ajustar seleção.
+- [x] Sincronizar alterações de configuração em tempo real e testar as regras.

@@ -47,6 +47,8 @@ import { UnitSelector } from "@/components/booking/UnitSelector";
 import { NextAvailableDateButton } from "@/components/booking/NextAvailableDateButton";
 import { useBlockedBarbers } from "@/hooks/useBlockedBarbers";
 import { useWalletStatus } from "@/hooks/useWalletStatus";
+import { useBarberPaymentOptions } from "@/hooks/useBarberPaymentOptions";
+import { resolveBookingPaymentMethod, type BookingPaymentMethod } from "@/lib/barber-payment-options";
 import { PendingSubscriptionDrawer } from "@/components/client/PendingSubscriptionDrawer";
 import { usePendingSubscription } from "@/hooks/usePendingSubscription";
 import { useCancelSubscriptionMutation } from "@/hooks/useClientMutations";
@@ -148,7 +150,7 @@ const ClienteAgendar = () => {
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState(1);
   const [bookingSuccess, setBookingSuccess] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'pix' | 'wallet'>('cash');
+  const [paymentMethod, setPaymentMethod] = useState<BookingPaymentMethod | null>('cash');
   
 
   const [walletBalance, setWalletBalance] = useState(0);
@@ -294,6 +296,9 @@ const ClienteAgendar = () => {
 
   // Fonte única do barbeiro selecionado (fallback para assinatura vinculada)
   const selectedBarberId = selectedBarber?.id || activeSubscription?.barbeiro_id || null;
+  const paymentTenantId = selectedBarber?.tenant_id ?? activeSubscription?.barbeiro?.tenant_id ?? preferredShop?.id ?? null;
+  const { pixHabilitado, barbeariaHabilitado, loading: paymentOptionsLoading, error: paymentOptionsError } =
+    useBarberPaymentOptions(selectedBarberId, paymentTenantId);
 
   // Status da carteira do barbeiro (legado Efí): define se podemos oferecer Carteira do app
   const { canReceivePix: canReceivePixWallet } = useWalletStatus(selectedBarberId);
@@ -317,15 +322,6 @@ const ClienteAgendar = () => {
   // PIX disponível se o barbeiro tem chave Woovi (novo) ou carteira Efí ativa (legado)
   const canReceivePix = !!barberWooviKey || canReceivePixWallet;
 
-  // Auto-seleciona método de pagamento: PIX se o barbeiro aceitar, senão "pagar na barbearia".
-  useEffect(() => {
-    if (canReceivePix) {
-      if (paymentMethod === 'cash') setPaymentMethod('pix');
-    } else if (paymentMethod === 'pix' || paymentMethod === 'wallet') {
-      setPaymentMethod('cash');
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [canReceivePix, selectedBarberId]);
   const availabilityTenantId = selectedBarber?.tenant_id ?? (preferredShop?.id ?? null);
 
   const { 
@@ -1357,6 +1353,12 @@ const ClienteAgendar = () => {
       return;
     }
 
+    if (paymentOptionsLoading || paymentOptionsError || !paymentMethod || !availablePaymentMethods[paymentMethod]) {
+      toast.error("Escolha uma forma de pagamento disponível para este profissional.");
+      setStep(5);
+      return;
+    }
+
     setProcessingPayment(true);
 
     try {
@@ -2344,6 +2346,20 @@ const ClienteAgendar = () => {
     return Math.max(0, afterRedemption - getCouponDiscount());
   };
 
+  const pixAvailable = canReceivePix && pixHabilitado;
+  const walletAvailable = canReceivePix && walletBalance > 0 && !paymentOptionsLoading && !paymentOptionsError &&
+    (barbeariaHabilitado || walletBalance >= Math.max(0, getTotalPrice() - availableCredits));
+  const availablePaymentMethods = {
+    pix: pixAvailable, cash: barbeariaHabilitado, wallet: walletAvailable, card: false,
+  };
+
+  // Preserva a escolha válida e nunca mantém um método desativado.
+  useEffect(() => {
+    setPaymentMethod(current => resolveBookingPaymentMethod(current, {
+      pix: pixAvailable, cash: barbeariaHabilitado, wallet: walletAvailable, card: false,
+    }));
+  }, [pixAvailable, barbeariaHabilitado, walletAvailable]);
+
   const canUseRedemption = !hasActiveRedemptionAppointment && availableRedemptions.length > 0 && !!getCorteService();
   // Pré-seleciona o corte grátis quando disponível, mas o cliente PODE optar por não usar.
   // Se ele seguir sem aplicar, será avisado e perderá a promoção (resgate consumido).
@@ -2400,6 +2416,7 @@ const ClienteAgendar = () => {
 
   /** Solicita o CPF apenas quando o cliente escolhe pagar via PIX. */
   const handleSelectPaymentMethod = (method: 'cash' | 'pix' | 'wallet') => {
+    if (!availablePaymentMethods[method]) return;
     setCpfError(false);
     // Se há corte grátis ativo, avisar (apenas na primeira troca) antes de mudar para método pago.
     if (useRedemption && canUseRedemption) {
@@ -2485,7 +2502,7 @@ const ClienteAgendar = () => {
 
     // Troca de método de pagamento
     if (loseDialogContext === 'switch' && pendingPaymentMethod) {
-      setPaymentMethod(pendingPaymentMethod);
+      setPaymentMethod(resolveBookingPaymentMethod(pendingPaymentMethod, availablePaymentMethods));
       setPendingPaymentMethod(null);
       return;
     }
@@ -2977,7 +2994,18 @@ const ClienteAgendar = () => {
                         />
                       )}
 
-                      {canReceivePix && (
+                      {paymentOptionsLoading && (
+                        <p role="status" className="flex items-center gap-2 p-3.5 text-sm text-muted-foreground">
+                          <Loader2 className="h-4 w-4 animate-spin" /> Carregando pagamento...
+                        </p>
+                      )}
+                      {paymentOptionsError && (
+                        <p role="alert" className="p-3.5 text-sm text-destructive">Não foi possível consultar as formas de pagamento. Tente novamente em instantes.</p>
+                      )}
+                      {!paymentOptionsLoading && !paymentOptionsError && !pixAvailable && !barbeariaHabilitado && !walletAvailable && (
+                        <p role="status" className="p-3.5 text-sm text-muted-foreground">Nenhuma forma de pagamento disponível para este profissional.</p>
+                      )}
+                      {pixAvailable && (
                         <div>
                           <PaymentOption
                             value="pix"
@@ -3026,7 +3054,7 @@ const ClienteAgendar = () => {
                         </div>
                       )}
 
-                      {canReceivePix && walletBalance > 0 && (
+                      {walletAvailable && (
                         <PaymentOption
                           value="wallet"
                           selected={paymentMethod === 'wallet' && !redemptionCoversAll && !referralCoversAll}
@@ -3037,14 +3065,14 @@ const ClienteAgendar = () => {
                         />
                       )}
 
-                      <PaymentOption
+                      {barbeariaHabilitado && <PaymentOption
                         value="cash"
                         selected={paymentMethod === 'cash' && !redemptionCoversAll && !referralCoversAll}
                         onSelect={() => handleSelectPaymentMethod('cash')}
                         title="Pagar na Barbearia"
                         description="Pagamento presencial no dia"
                         icon={<Landmark className={cn("w-5 h-5", paymentMethod === 'cash' && !redemptionCoversAll && !referralCoversAll ? "text-primary" : "text-muted-foreground/40")} />}
-                      />
+                      />}
 
                     <AnimatePresence>
                       {walletIsSelected && (
@@ -3494,7 +3522,7 @@ const ClienteAgendar = () => {
 
       {/* Floating Bottom Bar — Step 5 Pagamento */}
       <AnimatePresence>
-        {step === 5 && !isRescheduling && !isPlanFlow && paymentMethod && (
+        {step === 5 && !isRescheduling && !isPlanFlow && (paymentMethod || getTotalPrice() === 0) && (
           (() => {
             const redemptionCoversAll = useRedemption && getTotalPrice() === 0;
             const referralCoversAll = useReferralCredit && canUseReferralCredit && getTotalPrice() === 0;
