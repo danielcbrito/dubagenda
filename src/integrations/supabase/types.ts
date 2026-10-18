@@ -6540,6 +6540,15 @@ export type Database = {
           total_saques: number
         }[]
       }
+      cancellation_fee_amount: {
+        Args: {
+          p_config: Json
+          p_now: string
+          p_price: number
+          p_start: string
+        }
+        Returns: number
+      }
       check_barbeiro_email_exists: {
         Args: { p_email: string }
         Returns: boolean
@@ -6743,6 +6752,7 @@ export type Database = {
         }[]
       }
       get_meus_pedidos_loja: { Args: { p_cliente_id: string }; Returns: Json }
+      get_my_cancellation_debts: { Args: never; Returns: Json }
       get_next_available_date: {
         Args: {
           p_barbeiro_id: string
@@ -6891,6 +6901,10 @@ export type Database = {
         Args: { p_profile_id: string }
         Returns: boolean
       }
+      quote_client_cancellation: {
+        Args: { p_appointment: string; p_user: string }
+        Returns: Json
+      }
       refresh_barber_home_snapshot: {
         Args: { p_barbeiro_id: string }
         Returns: undefined
@@ -6926,6 +6940,10 @@ export type Database = {
       set_financial_pin: {
         Args: { p_current_pin?: string; p_new_pin: string }
         Returns: boolean
+      }
+      settle_cancellation_debt: {
+        Args: { p_cents: number; p_correlation: string }
+        Returns: Json
       }
       store_create_order_with_reservations: {
         Args: {
