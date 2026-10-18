@@ -16,3 +16,7 @@
 - [x] Bloquear cliente com débito pendente e integrar PIX confirmado com desbloqueio.
 - [x] Testar regras e documentar fluxos e limitações.
 - [ ] Validar cancelamento e pagamento real autenticado: sessão indisponível no Supabase externo.
+
+## Liberação manual da taxa
+- [ ] Atualizar bloqueio imediatamente em liberação manual, dispensa ou exclusão autorizada, preservando outras dívidas.
+- [ ] Incluir nome e telefone do cliente nos novos débitos e testar/documentar.
