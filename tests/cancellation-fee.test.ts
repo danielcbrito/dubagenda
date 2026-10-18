@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import { strictEqual, throws, deepStrictEqual } from 'node:assert';
 import { calculateCancellationFee, verifiedDebtPayment } from '../supabase/functions/_shared/cancellation-fee';
-import { readPendingDebts } from '../src/lib/cancellation-debt';
+import { applyDebtRelease, readPendingDebts } from '../src/lib/cancellation-debt';
 const config = { habilitado: true, tipo: 'porcentagem' as const, valor: 20, horas_antecedencia: 0 };
 test('20% de R$ 50,00 são R$ 10,00', () => strictEqual(calculateCancellationFee(config, 50, 0, 0), 10));
 test('taxa fixa R$ 15,00 independe do serviço', () => strictEqual(calculateCancellationFee({ ...config, tipo: 'fixo', valor: 15 }, 50, 0, 0), 15));
@@ -21,4 +21,32 @@ test('somente débito próprio pendente bloqueia', () => {
   deepStrictEqual(readPendingDebts([row], 'u'), [row]);
   deepStrictEqual(readPendingDebts([row], 'other'), []);
   deepStrictEqual(readPendingDebts([{ ...row, debito: { ...row.debito, status: 'pago' } }], 'u'), []);
+});
+
+const debt = { row_id: 1, tenant_id: 'tenant', debito: { id: 'd', cliente_id: 'u', barbeiro_id: 'b', agendamento_id: 'a', valor_taxa: 15, status: 'pendente' } };
+const releaseEvent = (status: string) => ({ eventType: 'UPDATE', new: { id: 1, tenant_id: 'tenant', categoria: 'debitos_cliente', chave: 'debito_cancelamento_u', valor: JSON.stringify({ ...debt.debito, status }) } });
+for (const status of ['pago', 'dispensado', 'liberado_manual']) {
+  test(`${status} libera imediatamente o débito correspondente`, () => {
+    deepStrictEqual(applyDebtRelease([debt], releaseEvent(status), 'u'), []);
+    deepStrictEqual(readPendingDebts([{ ...debt, debito: { ...debt.debito, status } }], 'u'), []);
+  });
+}
+test('DELETE com apenas chave primária remove só o débito excluído', () => {
+  const other = { ...debt, row_id: 2, tenant_id: 'other-tenant' };
+  deepStrictEqual(applyDebtRelease([debt, other], { eventType: 'DELETE', old: { id: 1 } }, 'u'), [other]);
+  deepStrictEqual(applyDebtRelease([debt], { eventType: 'DELETE', old: { id: 3 } }, 'u'), [debt]);
+});
+test('liberação de outro tenant ou cliente não remove dívida própria', () => {
+  const event = releaseEvent('liberado_manual');
+  deepStrictEqual(applyDebtRelease([debt], { ...event, new: { ...event.new, tenant_id: 'other' } }, 'u'), [debt]);
+  deepStrictEqual(applyDebtRelease([debt], { ...event, new: { ...event.new, valor: JSON.stringify({ ...debt.debito, cliente_id: 'other', status: 'dispensado' }) } }, 'u'), [debt]);
+});
+test('evento inválido e status pendente não desbloqueiam', () => {
+  const event = releaseEvent('pendente');
+  deepStrictEqual(applyDebtRelease([debt], event, 'u'), [debt]);
+  deepStrictEqual(applyDebtRelease([debt], { ...event, new: { ...event.new, valor: '{invalid' } }, 'u'), [debt]);
+});
+test('liberação mantém bloqueio por outra dívida pendente', () => {
+  const other = { ...debt, row_id: 2, tenant_id: 'other' };
+  deepStrictEqual(applyDebtRelease([debt, other], releaseEvent('dispensado'), 'u'), [other]);
 });
