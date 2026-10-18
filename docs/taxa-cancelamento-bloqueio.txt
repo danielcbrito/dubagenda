@@ -1,0 +1,105 @@
+TAXA DE CANCELAMENTO E BLOQUEIO — 18/10/2026
+
+USUÁRIO
+O checkout já respeita PIX e pagamento presencial do profissional, com atualização
+em tempo real e substituição automática da escolha desativada.
+Ao abrir Cancelar Agendamento, consulta-se a taxa no servidor e mostra-se o valor
+antes da confirmação. A taxa pendente bloqueia as páginas /cliente, sem fechar
+o aviso; o cliente pode gerar PIX, copiar o código e aguardar confirmação.
+Nenhuma taxa foi ativada para profissionais e nenhum cliente real foi cobrado.
+Não existem regras taxa_cancelamento_* cadastradas na consulta desta entrega.
+
+FRONTEND
+CancelAppointmentModal consulta cancellation-debt/action=quote por appointmentId.
+useCancellationDebt lê get_my_cancellation_debts com a sessão atual, acompanha
+INSERT/UPDATE/DELETE da chave debito_cancelamento_<cliente> e consulta novamente
+após conexão, reconexão, foco e cancelamento. Sem cache persistente de débitos.
+CancellationDebtGate usa dialog modal em tela inteira, z=9999, sem fechar ou
+Escape. Alteração confirmada de status remove o bloqueio após nova leitura.
+Consulta de confirmação PIX a cada 15s recupera pagamentos se o webhook atrasar.
+Falhas de rede não removem uma dívida já conhecida nem criam bloqueio de erro.
+
+BANCO SUPABASE
+Débito permanece em informacoes_empresa, categoria debitos_cliente, chave
+debito_cancelamento_<cliente>, isolado por tenant_id do profissional.
+O índice real é chave + categoria + tenant; onConflict:'chave' não é válido.
+Um trigger registra taxa na mesma transação da mudança de status, cobrindo também
+cancelamentos por atualização direta. Bloqueio consultivo por cliente serializa
+cancelamento e novas reservas. Não substitui débito pendente do mesmo tenant.
+Transições repetidas não cobram novamente. Taxas anteriores pagas permanecem
+referenciadas pelas cobranças Woovi; a chave do cliente passa a representar o
+novo débito quando houver outro cancelamento após quitação.
+SELECT público exclui débitos através de política restritiva; cliente lê somente
+a própria chave. Nenhum browser, incluindo painel, pode inserir, alterar ou
+apagar débitos. RPC de quitação acessível apenas a service_role.
+Agendamentos e pending_bookings recusam INSERT para usuário com dívida, incluindo
+operações service_role; não depende da tela para proteger novos agendamentos.
+REPLICA IDENTITY FULL aplicada a informacoes_empresa; já estava no Realtime.
+
+REGRA DE TAXA
+Sem regra ativa: habilitado=false, tipo=porcentagem, valor=20, antecedência=0.
+Percentual: round(preco do agendamento * valor / 100, 2).
+Fixo: round(valor, 2). Não soma taxa de serviço de pagamento.
+Antecedência=0: cobra qualquer cancelamento elegível com taxa positiva.
+Antecedência>0: só cobra dentro dessa quantidade de horas antes do agendamento.
+Horário interpretado em America/Sao_Paulo. Valores negativos, percentual >100,
+JSON inválido ou regras duplicadas impedem cancelamento, em vez de cobrar errado.
+Taxa é independente dos reembolsos já existentes; não altera essa política.
+Taxa percentual de serviço com preco=0 é zero; fixa positiva permanece fixa.
+
+BACKEND / SERVIÇOS EXTERNOS
+cancellation-debt autentica via Supabase getUser, valida propriedade do débito,
+valor e tenant no servidor. Cria cobrança sem reservar horário.
+PIX usa Woovi e a subconta do barbeiro com woovi_pix_key; credencial existente
+ID_DO_APLICATIVO_WOOVI. Sem chave Woovi válida, mostra indisponibilidade e não
+inventa QR Code nem chave. Efí/Asaas não foram adicionados a esta cobrança.
+Cobrança possui purpose=cancellation_debt e vincula debt_id/tenant_id/cliente.
+Chave de idempotência por débito/janela de 30min evita cobranças concorrentes.
+Antes de gerar outra cobrança, consulta tentativas anteriores, inclusive PIX
+pagos tardiamente. Tentativa expirada pode ser renovada.
+woovi-webhook verifica pagamento com GET autenticado à API Woovi antes da
+quitação: correlationID, status COMPLETED/ACTIVE_PAID e centavos exatos.
+Payload do webhook, clique do cliente e status local não bastam para quitar.
+settle_cancellation_debt trava cobrança e débito, valida IDs e valor e atualiza
+ambos atomicamente. Webhook repetido é idempotente.
+Nenhuma alteração de N8N: notificações de cancelamento continuam no fluxo atual.
+cancel-appointment-client impede dois pedidos concorrentes de cancelar/refundar
+o mesmo agendamento usando atualização condicional pending/confirmed.
+Reembolsos antigos continuam fora da transação do débito; revisão separada.
+
+DIAGRAMA DE SEQUÊNCIA
+Cliente -> Modal: cancelar
+Modal -> cancellation-debt: quote(appointmentId)
+Servidor -> Supabase: dono + tenant + regra + preço + horário
+Cliente -> cancel-appointment-client: confirmar
+Servidor -> Supabase: cancelar com status condicional
+Supabase -> Trigger: taxa + débito na mesma transação
+Realtime -> Tela: bloquear
+Cliente -> cancellation-debt: gerar PIX
+Servidor -> Woovi: cobrança da taxa com destinatário validado
+Woovi -> webhook: evento
+Webhook -> Woovi: verificar status/valor/identificador
+Webhook -> Supabase: quitar dívida e cobrança atomicamente
+Realtime -> Tela: nova consulta -> liberar
+
+CAMINHOS DE ERRO
+Configuração inválida -> operação recusada, sem cancelamento parcial da taxa.
+Dívida existente -> novo cancelamento com taxa recusado para não apagar dívida.
+Gateway indisponível -> aviso dentro do bloqueio, botão de nova tentativa.
+Webhook perdido -> consulta periódica ao gateway confirma pagamento.
+Valor/identificador divergente -> não quitar e não liberar.
+Falha de consulta -> manter estado conhecido e tentar novamente.
+
+VERIFICAÇÃO
+18 testes Bun passaram: 9 pagamentos + 9 taxa, janela e bloqueio.
+4 testes Deno passaram, incluindo confirmação via consulta ao gateway simulada.
+Asserções SQL da migração passaram: percentual 20% de 50=10, fixo=15,
+desativado=0 e fora de janela=0. Nenhum dado real foi criado nesses testes.
+Navegador isolado 1280x1800 e 393x852: tela inteira, Escape ignorado,
+botões PIX/Copia e Cola e remoção após status pago simulados.
+A imagem de teste é um marcador DUB, não um QR pagável.
+Fluxo autenticado com cancelamento e pagamento real NÃO verificado: Supabase
+externo sem sessão de teste disponível. Não gerar cobrança real sem autorização.
+Funções cancellation-debt, cancel-appointment-client e woovi-webhook implantadas.
+Tela dos clientes ainda exige publicação do aplicativo; não publicada aqui.
+96 avisos de segurança anteriores continuam e requerem revisão separada.

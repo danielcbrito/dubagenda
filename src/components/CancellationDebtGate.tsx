@@ -50,7 +50,7 @@ export function CancellationDebtGate() {
   return createPortal(<>
     <div className="fixed inset-0 z-[9998] bg-background" />
     <Dialog open>
-      <DialogContent className="fixed inset-0 z-[9999] m-0 h-dvh w-screen max-w-none translate-x-0 translate-y-0 rounded-none border-0 bg-background p-6 flex flex-col items-center justify-center overflow-y-auto overscroll-contain [&>button]:hidden"
+      <DialogContent className="fixed inset-0 z-[9999] m-0 h-dvh max-h-none w-screen max-w-none translate-x-0 translate-y-0 rounded-none border-0 bg-background p-6 flex flex-col items-center justify-center overflow-y-auto overscroll-contain [&>button]:hidden [&>div.pointer-events-none]:hidden"
         onEscapeKeyDown={e => e.preventDefault()} onPointerDownOutside={e => e.preventDefault()} onInteractOutside={e => e.preventDefault()}>
         <div className="w-full max-w-sm space-y-6 text-center">
           <DialogTitle className="text-xl font-semibold text-foreground">Aplicativo temporariamente bloqueado.</DialogTitle>

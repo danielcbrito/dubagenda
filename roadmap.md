@@ -12,6 +12,7 @@
 - [x] Sincronizar alterações de configuração em tempo real e testar as regras.
 
 ## Taxa de cancelamento e bloqueio
-- [ ] Registrar taxa privada e atômica no cancelamento, sem duplicação.
-- [ ] Bloquear cliente com débito pendente e integrar PIX confirmado com desbloqueio.
-- [ ] Testar regras e documentar fluxos e limitações.
+- [x] Registrar taxa privada e atômica no cancelamento, sem duplicação.
+- [x] Bloquear cliente com débito pendente e integrar PIX confirmado com desbloqueio.
+- [x] Testar regras e documentar fluxos e limitações.
+- [ ] Validar cancelamento e pagamento real autenticado: sessão indisponível no Supabase externo.
