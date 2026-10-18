@@ -44,3 +44,23 @@ A regeneração dos tipos expôs um erro anterior na consulta opcional anuncios_
 ausente no esquema atual. A consulta existente foi mantida usando o tipo genérico
 do SDK; não foram criadas tabelas nem modificados os anúncios.
 O banco possui 96 avisos de segurança anteriores à migração; revisão separada.
+
+REVERIFICAÇÃO — 18/10/2026, APÓS RELATO COM IMAGEM
+Comparadas todas as chaves de pagamento em informacoes_empresa e os dados do
+profissional. Existe uma configuração individual: Túlio, mesmo tenant da DUB,
+PIX=true e barbearia=false, ativa. Não há configuração duplicada nem divergência
+de tenant para esse profissional. Nenhuma alteração de dados foi necessária.
+
+Consultados 106 arquivos JavaScript da versão publicada dubagenda.lovable.app.
+O arquivo ClienteAgendar-Bk6Xm9Ee.js contém Pagar na Barbearia, mas não contém
+formas_pagamento_ nem booking-payment-options:. Portanto a versão publicada
+ainda usa o pagamento anterior, sem consultar a configuração individual.
+
+Verificação isolada em navegador contra o banco real usando o hook e PaymentOption
+atuais: pixHabilitado=true, barbeariaHabilitado=false, loading=false, error=false.
+O botão PIX aparece e o botão Pagar na Barbearia não existe nessa renderização.
+Isso não equivale a um agendamento autenticado completo; esse acesso continua
+indisponível para a verificação automatizada neste Supabase externo.
+
+A correção já existente precisa ser publicada para chegar aos clientes.
+Não publicar automaticamente sem solicitação explícita do usuário.
