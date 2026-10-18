@@ -1,6 +1,6 @@
 import { describe, test } from 'node:test';
 import { deepStrictEqual as equal } from 'node:assert';
-import { parseBarberPaymentOptions, resolveBookingPaymentMethod } from './barber-payment-options';
+import { parseBarberPaymentOptions, resolveBookingPaymentMethod } from '../src/lib/barber-payment-options';
 
 describe('configuração de pagamento do barbeiro', () => {
   test('ausência de configuração habilita PIX e pagamento presencial', () => {
