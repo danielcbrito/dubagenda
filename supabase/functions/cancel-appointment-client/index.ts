@@ -413,7 +413,10 @@ serve(async (req) => {
         status: "cancelled_by_user",
         visivel_para_usuario: false,
       })
-      .eq("id", appointmentId);
+      .eq("id", appointmentId)
+      .in('status', ['pending', 'confirmed'])
+      .select('id')
+      .single();
 
     if (updateError) throw updateError;
 

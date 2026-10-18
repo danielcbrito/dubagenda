@@ -2,6 +2,7 @@ import { Outlet, useLocation } from "react-router-dom";
 import { BottomNavigation } from "@/components/BottomNavigation";
 import { cn } from "@/lib/utils";
 import { isImmersiveRoute } from "@/utils/statusBar";
+import { CancellationDebtGate } from '@/components/CancellationDebtGate';
 
 /** Mobile-first root layout: centered container with fixed bottom nav on client routes. */
 export function RootLayout() {
@@ -37,6 +38,7 @@ export function RootLayout() {
         <Outlet />
       </div>
       {shouldShowNav && <BottomNavigation />}
+      {isClientRoute && <CancellationDebtGate />}
     </div>
   );
 }

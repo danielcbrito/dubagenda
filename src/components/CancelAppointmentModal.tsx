@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -9,6 +9,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import { useCancelAppointment } from "@/hooks/useClientMutations";
+import { supabase } from '@/integrations/supabase/client';
 
 interface CancelAppointmentModalProps {
   open: boolean;
@@ -43,6 +44,17 @@ export function CancelAppointmentModal({
   appointmentMeta,
 }: CancelAppointmentModalProps) {
   const { cancelAppointment, cancelling } = useCancelAppointment();
+  const [quote, setQuote] = useState<{ id: string; fee: number; error: boolean } | null>(null);
+  useEffect(() => {
+    if (!open) return;
+    let disposed = false;
+    setQuote(null);
+    void supabase.functions.invoke('cancellation-debt', { body: { action: 'quote', appointmentId } }).then(({ data, error }) => {
+      if (!disposed) setQuote({ id: appointmentId, fee: Number(data?.valor_taxa) || 0, error: Boolean(error || data?.error) });
+    }).catch(() => { if (!disposed) setQuote({ id: appointmentId, fee: 0, error: true }); });
+    return () => { disposed = true; };
+  }, [open, appointmentId]);
+  const quoteReady = quote?.id === appointmentId;
 
   // Detect credit-based payment
   const isPaidWithCredit = paymentMethod === 'credit' || 
@@ -93,15 +105,18 @@ export function CancelAppointmentModal({
         </div>
 
         <div className="px-6 pb-6 space-y-4">
+          {!quoteReady && <p className="text-sm text-muted-foreground text-center">Consultando taxa de cancelamento...</p>}
+          {quoteReady && quote.error && <p role="alert" className="text-sm text-destructive text-center">Não foi possível consultar a taxa. Feche e tente novamente.</p>}
+          {quoteReady && quote.fee > 0 && <p className="text-sm text-foreground text-center leading-relaxed">Este cancelamento gera uma taxa de <strong>{quote.fee.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</strong>. O aplicativo ficará bloqueado até o pagamento PIX ser confirmado.</p>}
           {refundAmount > 0 && (
             <div className="p-3.5 bg-emerald-500/10 dark:bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-[13px] text-emerald-700 dark:text-emerald-400 leading-relaxed text-center">
-              💰 <strong>R$ {refundAmount.toFixed(2)}</strong> será adicionado ao saldo da sua carteira.
+              <strong>R$ {refundAmount.toFixed(2)}</strong> será adicionado ao saldo da sua carteira.
             </div>
           )}
 
           <Button
             onClick={handleCancelDefinitely}
-            disabled={cancelling}
+            disabled={cancelling || !quoteReady || quote?.error}
             className="w-full h-[50px] rounded-xl text-[15px] font-semibold"
             variant="destructive"
           >
