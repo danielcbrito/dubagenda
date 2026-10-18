@@ -18,5 +18,6 @@
 - [ ] Validar cancelamento e pagamento real autenticado: sessão indisponível no Supabase externo.
 
 ## Liberação manual da taxa
-- [ ] Atualizar bloqueio imediatamente em liberação manual, dispensa ou exclusão autorizada, preservando outras dívidas.
-- [ ] Incluir nome e telefone do cliente nos novos débitos e testar/documentar.
+- [x] Atualizar bloqueio imediatamente em liberação manual, dispensa ou exclusão autorizada, preservando outras dívidas; testes unitários e simulação visual passaram.
+- [x] Incluir nome e telefone do cliente nos novos débitos; função conferida no banco e limitações documentadas.
+- [ ] Validar botão Liberar cliente real: painel do barbeiro fora deste app; exige operação autorizada no servidor, pois escrita direta continua proibida.
