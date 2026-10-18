@@ -42,6 +42,9 @@ verify_jwt = false
 [functions.cancel-appointment-client]
 verify_jwt = false
 
+[functions.cancellation-debt]
+verify_jwt = false
+
 [functions.geocode-address]
 verify_jwt = false
 

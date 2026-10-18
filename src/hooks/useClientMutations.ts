@@ -34,6 +34,8 @@ export function useCancelAppointment() {
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
 
+      window.dispatchEvent(new Event('cancellation-debt-changed'));
+
       // Optimistic: remove from local state immediately
       onOptimisticRemove?.(appointmentId);
 
