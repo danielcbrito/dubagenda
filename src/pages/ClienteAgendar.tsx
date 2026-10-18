@@ -322,19 +322,6 @@ const ClienteAgendar = () => {
   // PIX disponível se o barbeiro tem chave Woovi (novo) ou carteira Efí ativa (legado)
   const canReceivePix = !!barberWooviKey || canReceivePixWallet;
 
-  const pixAvailable = canReceivePix && pixHabilitado;
-  const walletAvailable = canReceivePix && walletBalance > 0 &&
-    (barbeariaHabilitado || walletBalance >= getTotalPrice());
-  const availablePaymentMethods = {
-    pix: pixAvailable, cash: barbeariaHabilitado, wallet: walletAvailable, card: false,
-  };
-
-  // Preserva a escolha válida e nunca mantém um método desativado.
-  useEffect(() => {
-    setPaymentMethod(current => resolveBookingPaymentMethod(current, {
-      pix: pixAvailable, cash: barbeariaHabilitado, wallet: walletAvailable, card: false,
-    }));
-  }, [pixAvailable, barbeariaHabilitado, walletAvailable]);
   const availabilityTenantId = selectedBarber?.tenant_id ?? (preferredShop?.id ?? null);
 
   const { 
@@ -2358,6 +2345,20 @@ const ClienteAgendar = () => {
     const afterRedemption = getBaseTotalBeforeCoupon();
     return Math.max(0, afterRedemption - getCouponDiscount());
   };
+
+  const pixAvailable = canReceivePix && pixHabilitado;
+  const walletAvailable = canReceivePix && walletBalance > 0 && !paymentOptionsLoading && !paymentOptionsError &&
+    (barbeariaHabilitado || walletBalance >= Math.max(0, getTotalPrice() - availableCredits));
+  const availablePaymentMethods = {
+    pix: pixAvailable, cash: barbeariaHabilitado, wallet: walletAvailable, card: false,
+  };
+
+  // Preserva a escolha válida e nunca mantém um método desativado.
+  useEffect(() => {
+    setPaymentMethod(current => resolveBookingPaymentMethod(current, {
+      pix: pixAvailable, cash: barbeariaHabilitado, wallet: walletAvailable, card: false,
+    }));
+  }, [pixAvailable, barbeariaHabilitado, walletAvailable]);
 
   const canUseRedemption = !hasActiveRedemptionAppointment && availableRedemptions.length > 0 && !!getCorteService();
   // Pré-seleciona o corte grátis quando disponível, mas o cliente PODE optar por não usar.

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import adPlansImage from "@/assets/ad-plans.jpg";
 
 export type HomeAdKind = "plans" | "app";
@@ -88,7 +89,7 @@ export function useHomeAds(
 
     const [planosRes, anunciosRes] = await Promise.all([
       planosPromise,
-      supabase
+      (supabase as SupabaseClient)
         .from("anuncios_app")
         .select("id, titulo, descricao, imagem_path, cta_label, cta_target, cta_tipo, ordem")
         .eq("ativo", true)

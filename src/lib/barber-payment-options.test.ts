@@ -1,32 +1,33 @@
-import { describe, expect, test } from 'bun:test';
+import { describe, test } from 'node:test';
+import { deepStrictEqual as equal } from 'node:assert';
 import { parseBarberPaymentOptions, resolveBookingPaymentMethod } from './barber-payment-options';
 
 describe('configuração de pagamento do barbeiro', () => {
   test('ausência de configuração habilita PIX e pagamento presencial', () => {
-    expect(parseBarberPaymentOptions(null)).toEqual({ pix: true, barbearia: true });
+    equal(parseBarberPaymentOptions(null), { pix: true, barbearia: true });
   });
   test('JSON inválido mantém os dois padrões habilitados', () => {
-    expect(parseBarberPaymentOptions('{')).toEqual({ pix: true, barbearia: true });
+    equal(parseBarberPaymentOptions('{'), { pix: true, barbearia: true });
   });
   test('somente booleanos alteram os padrões', () => {
-    expect(parseBarberPaymentOptions('{"pix":"false","barbearia":0}')).toEqual({ pix: true, barbearia: true });
+    equal(parseBarberPaymentOptions('{"pix":"false","barbearia":0}'), { pix: true, barbearia: true });
   });
   test('PIX desativado permanece falso', () => {
-    expect(parseBarberPaymentOptions('{"pix":false}').pix).toBe(false);
+    equal(parseBarberPaymentOptions('{"pix":false}').pix, false);
   });
   test('pagamento presencial desativado permanece falso', () => {
-    expect(parseBarberPaymentOptions('{"barbearia":false}').barbearia).toBe(false);
+    equal(parseBarberPaymentOptions('{"barbearia":false}').barbearia, false);
   });
   test('PIX desativado troca para pagamento presencial', () => {
-    expect(resolveBookingPaymentMethod('pix', { pix: false, cash: true, wallet: false, card: false })).toBe('cash');
+    equal(resolveBookingPaymentMethod('pix', { pix: false, cash: true, wallet: false, card: false }), 'cash');
   });
   test('presencial desativado troca para PIX', () => {
-    expect(resolveBookingPaymentMethod('cash', { pix: true, cash: false, wallet: false, card: false })).toBe('pix');
+    equal(resolveBookingPaymentMethod('cash', { pix: true, cash: false, wallet: false, card: false }), 'pix');
   });
   test('não seleciona métodos quando todos estão indisponíveis', () => {
-    expect(resolveBookingPaymentMethod('cash', { pix: false, cash: false, wallet: false, card: false })).toBeNull();
+    equal(resolveBookingPaymentMethod('cash', { pix: false, cash: false, wallet: false, card: false }), null);
   });
   test('mantém a escolha se ainda estiver habilitada', () => {
-    expect(resolveBookingPaymentMethod('cash', { pix: true, cash: true, wallet: false, card: false })).toBe('cash');
+    equal(resolveBookingPaymentMethod('cash', { pix: true, cash: true, wallet: false, card: false }), 'cash');
   });
 });
