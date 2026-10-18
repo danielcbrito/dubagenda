@@ -103,3 +103,45 @@ externo sem sessão de teste disponível. Não gerar cobrança real sem autoriza
 Funções cancellation-debt, cancel-appointment-client e woovi-webhook implantadas.
 Tela dos clientes ainda exige publicação do aplicativo; não publicada aqui.
 96 avisos de segurança anteriores continuam e requerem revisão separada.
+
+ATUALIZAÇÃO — LIBERAÇÃO MANUAL — 18/10/2026
+USUÁRIO
+Débito liberado_manual ou dispensado remove o bloqueio imediatamente ao chegar
+o evento autorizado. DELETE remove apenas o débito identificado pelo ID; outra
+dívida pendente mantém o bloqueio. Novos débitos incluem nome e telefone do perfil.
+
+FRONTEND
+useCancellationDebt aplica a liberação antes de consultar novamente o servidor.
+Eventos UPDATE exigem chave, categoria, cliente, ID e tenant correspondentes.
+DELETE aceita chave primária, pois RLS pode omitir outros campos do registro antigo.
+Consultas iniciadas antes do evento são invalidadas para evitar bloqueio obsoleto.
+Reconexão, foco e consulta periódica continuam reconciliando o estado.
+
+BANCO SUPABASE
+record_client_cancellation_debt lê profiles.nome/telefone pelo NEW.user_id e grava
+cliente_nome/cliente_telefone na mesma transação da criação do débito.
+Perfil ausente ou campos vazios ficam como string vazia, sem inventar contato.
+Nenhum débito antigo foi alterado. Guardas existentes bloqueiam apenas pendente;
+dispensado/liberado_manual não impedem novos agendamentos.
+
+BACKEND / N8N / SERVIÇOS EXTERNOS
+Não foram alterados pagamentos, webhook, N8N nem o aplicativo do barbeiro.
+IMPORTANTE: as políticas existentes proíbem alterar ou excluir débito pelo browser,
+inclusive pelo barbeiro. O botão Liberar cliente deve usar operação autorizada
+no servidor, validando profissional/tenant; escrita direta pelo painel é recusada.
+Esta atualização não cria nem abre permissões para esse botão no outro aplicativo.
+
+SEQUÊNCIA / ERROS
+Barbeiro -> servidor autorizado -> atualizar status ou excluir débito
+Supabase -> Realtime -> remover débito correspondente -> nova consulta
+Falha/permissão recusada no painel -> status não muda -> bloqueio permanece
+Evento malformado/outro tenant -> não liberar -> consultar novamente
+Outro débito pendente -> manter bloqueio para esse débito
+
+VERIFICAÇÃO
+Testes cobrem pago, dispensado, liberado_manual, DELETE com ID apenas, isolamento,
+status pendente, JSON inválido e preservação de outra dívida. Verificação do banco
+confirma função atualizada, Realtime ativo e REPLICA IDENTITY FULL.
+Liberação real pelo painel do barbeiro e cancelamento real autenticado não foram
+verificados: Supabase externo sem sessão gerenciada e painel fora deste aplicativo.
+96 alertas de segurança anteriores permanecem; revisão separada, sem novos alertas.

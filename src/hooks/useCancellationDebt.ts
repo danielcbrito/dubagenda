@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { readPendingDebts, type CancellationDebt } from '@/lib/cancellation-debt';
+import { applyDebtRelease, readPendingDebts, type CancellationDebt } from '@/lib/cancellation-debt';
 
 export function useCancellationDebt(userId: string | undefined) {
   const [state, setState] = useState<{ userId?: string; debts: CancellationDebt[] }>({ debts: [] });
@@ -17,7 +17,14 @@ export function useCancellationDebt(userId: string | undefined) {
     };
     const onChange = () => { void load(); };
     const channel = supabase.channel(`client-cancellation-debt:${userId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'informacoes_empresa', filter: `chave=eq.debito_cancelamento_${userId}` }, onChange)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'informacoes_empresa', filter: `chave=eq.debito_cancelamento_${userId}` }, payload => {
+        // Invalidate reads started before this authoritative event so they cannot re-block the client.
+        ++revision;
+        setState(current => current.userId === userId
+          ? { userId, debts: applyDebtRelease(current.debts, payload, userId) }
+          : current);
+        onChange();
+      })
       .subscribe(status => { if (status === 'SUBSCRIBED') void load(); });
     void load();
     window.addEventListener('cancellation-debt-changed', onChange);

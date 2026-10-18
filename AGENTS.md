@@ -5,3 +5,4 @@
 - Record cancellation debt in an appointment status trigger within the same transaction; this covers direct writes as well as Edge Functions and prevents duplicate fees.
 - Keep cancellation debts private in company information, deny browser mutations, and settle only via a service-only RPC after an authoritative gateway lookup; this prevents financial data leaks and forged payment confirmations.
 - Enforce pending cancellation debts on appointment and booking-hold inserts, including service-role writes; this makes the client overlay non-authoritative and prevents API bypasses.
+- Apply authoritative debt release events by row and tenant before revalidation, invalidating older reads; this unlocks immediately without clearing unrelated debts or allowing stale reads to restore a released block.
