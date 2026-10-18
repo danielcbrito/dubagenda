@@ -3,6 +3,7 @@
 // confirmando o pending_booking correspondente como agendamento real.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { confirmDebtPayment } from '../_shared/debt-payment.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -60,6 +61,13 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ ok: true, missing: true }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    }
+
+    if (localCharge.metadata?.purpose === 'cancellation_debt') {
+      const appId = Deno.env.get('ID_DO_APLICATIVO_WOOVI');
+      if (!appId) throw new Error('PIX indisponível');
+      const paid = await confirmDebtPayment(admin, localCharge, appId);
+      return new Response(JSON.stringify({ ok: true, paid }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
     // Idempotência: se já processada, ignora silenciosamente
