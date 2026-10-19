@@ -20,7 +20,7 @@
 ## Liberação manual da taxa
 - [x] Atualizar bloqueio imediatamente em liberação manual, dispensa ou exclusão autorizada, preservando outras dívidas; testes unitários e simulação visual passaram.
 - [x] Incluir nome e telefone do cliente nos novos débitos; função conferida no banco e limitações documentadas.
-- [ ] Validar botão Liberar cliente real: painel do barbeiro fora deste app; exige operação autorizada no servidor, pois escrita direta continua proibida.
+- [ ] Validar botão Liberar cliente com sessão real: painel do barbeiro fora deste app; leitura e dispensa autorizadas no banco já corrigidas, mas sessão do painel indisponível.
 
 ## Correção do bloqueio após liberação
 - [x] Liberar o único débito ainda pendente (Pablo), conforme solicitação; confirmado zero pendentes após a alteração.
