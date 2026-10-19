@@ -23,5 +23,5 @@
 - [ ] Validar botão Liberar cliente real: painel do barbeiro fora deste app; exige operação autorizada no servidor, pois escrita direta continua proibida.
 
 ## Correção do bloqueio após liberação
-- [ ] Liberar o único débito ainda pendente identificado no banco, conforme solicitação, sem afetar outros clientes.
-- [ ] Comparar integração do painel do barbeiro e corrigir acesso/liberação autorizada sem permitir auto-liberação do cliente.
+- [x] Liberar o único débito ainda pendente (Pablo), conforme solicitação; confirmado zero pendentes após a alteração.
+- [x] Comparar integração do painel; corrigir leitura e liberação pelo profissional vinculado via RLS e trigger de campos imutáveis, sem auto-liberação do cliente.
