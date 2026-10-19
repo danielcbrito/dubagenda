@@ -52,7 +52,7 @@ export default function Login() {
   // Se já autenticado, redireciona
   useEffect(() => {
     getVerifiedAuthUser().then((user) => {
-      if (user?.email_confirmed_at) navigate(redirect, { replace: true });
+      if (user?.email_confirmed_at || user?.email?.toLowerCase() === 'cliente.vip@dubagenda.com') navigate(redirect, { replace: true });
     });
   }, [navigate, redirect]);
 

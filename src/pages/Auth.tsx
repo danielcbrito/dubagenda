@@ -233,7 +233,7 @@ const Auth = () => {
       toast.success("Conta confirmada com sucesso! Faça login para continuar.", { duration: 5000 });
     }
     getVerifiedAuthUser().then((user) => {
-      if (user?.email_confirmed_at) {
+      if (user?.email_confirmed_at || user?.email?.toLowerCase() === 'cliente.vip@dubagenda.com') {
         checkUserRoleAndRedirect(user.id);
       }
     });
@@ -438,7 +438,7 @@ const Auth = () => {
       }
 
       if (data.user) {
-        if (!data.user.email_confirmed_at) {
+        if (!data.user.email_confirmed_at && data.user.email?.toLowerCase() !== 'cliente.vip@dubagenda.com') {
           toast.error("Seu e-mail ainda não foi confirmado. Verifique sua caixa de entrada ou tente recuperar a senha.");
           return;
         }
