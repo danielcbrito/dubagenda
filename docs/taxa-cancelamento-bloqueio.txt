@@ -126,10 +126,9 @@ dispensado/liberado_manual não impedem novos agendamentos.
 
 BACKEND / N8N / SERVIÇOS EXTERNOS
 Não foram alterados pagamentos, webhook, N8N nem o aplicativo do barbeiro.
-IMPORTANTE: as políticas existentes proíbem alterar ou excluir débito pelo browser,
-inclusive pelo barbeiro. O botão Liberar cliente deve usar operação autorizada
-no servidor, validando profissional/tenant; escrita direta pelo painel é recusada.
-Esta atualização não cria nem abre permissões para esse botão no outro aplicativo.
+Na primeira entrega as políticas proibiam alterações pelo painel do barbeiro.
+Na correção de 18/10 abaixo, liberação direta autorizada foi habilitada com RLS
+e trigger que preserva todos os dados financeiros e de identificação.
 
 SEQUÊNCIA / ERROS
 Barbeiro -> servidor autorizado -> atualizar status ou excluir débito
@@ -145,3 +144,44 @@ confirma função atualizada, Realtime ativo e REPLICA IDENTITY FULL.
 Liberação real pelo painel do barbeiro e cancelamento real autenticado não foram
 verificados: Supabase externo sem sessão gerenciada e painel fora deste aplicativo.
 96 alertas de segurança anteriores permanecem; revisão separada, sem novos alertas.
+
+CORREÇÃO DA INTEGRAÇÃO DO PAINEL — 18/10/2026
+USUÁRIO
+Pablo Silva Ferreira tinha a única taxa pendente: R$ 5,00, registro 114.
+Conforme solicitação, passou a liberado_manual; leitura posterior confirmou zero
+débitos pendentes. Não marcou pagamento, não excluiu histórico nem cobrou ninguém.
+
+FRONTEND DO BARBEIRO (SNAPSHOT SOMENTE LEITURA)
+BarbeirosDUB/src/lib/barberCancellationFee.ts: fetchBarberPendingCancellationDebts
+consulta informacoes_empresa por categoria=debitos_cliente e ativo=true.
+dispenseCancellationDebt consulta a chave do cliente e muda status para
+liberado_manual, ativo=false. Ignora erros e retorna sucesso mesmo sem atualizar.
+O painel não tinha autorização para ler o débito nem fazer essa alteração; a
+tela vazia era divergência de acesso, não prova de liberação. Não editar o outro
+projeto aqui. Ainda recomenda-se tratar erros e incluir tenant nas consultas lá.
+
+BANCO / AUTENTICAÇÃO
+owns_cancellation_debt usa SECURITY INVOKER, auth.uid() e barbeiros.user_id.
+Exige mesmo tenant, profissional ativo e não excluído; proíbe auto-liberação.
+RLS permite leitura/atualização somente das dívidas desse profissional.
+guard_barber_debt_release permite apenas pendente -> liberado_manual/dispensado
+ou repetição idempotente do mesmo status. Permite ativo/data de liberação, mas
+impede mudar valor, cliente, profissional, tenant, categoria ou marcar como pago.
+Clients continuam sem permissões de inserção, exclusão ou liberação de dívidas.
+Pagamento confirmado continua exclusivo da rotina service_role/Woovi.
+
+FLUXO / ERROS
+Barbeiro autenticado -> consulta suas dívidas -> Liberar cliente -> RLS + trigger
+-> status atualizado -> Realtime/consulta do cliente -> bloqueio removido.
+Outro profissional/tenant/cliente -> operação recusada. Valor ou status pago
+forjado -> operação recusada. Sem Realtime -> próxima consulta reconcilia.
+N8N e gateways não foram alterados.
+
+TESTES / LIMITAÇÕES
+Asserções SQL de profissional correto, tenant incorreto e auto-liberação passaram.
+tests/barber-debt-release.sql passou via ferramenta de migração: repetição autorizada,
+valor adulterado e pagamento forjado. Escritas do teste desfeitas por subtransação.
+25 testes Bun anteriores continuam passando. Não houve teste real do botão do
+outro app com sessão autenticada; snapshot é somente leitura. Liberação de Pablo
+confirmada no banco, mas tela autenticada dele não verificada nesta sessão.
+96 alertas antigos permanecem; alerta novo removido usando SECURITY INVOKER.
