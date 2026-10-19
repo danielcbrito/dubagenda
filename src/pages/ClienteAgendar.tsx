@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { BackArrow } from "@/components/ui/back-arrow";
 import { supabase } from "@/integrations/supabase/client";
@@ -7,7 +7,7 @@ import logoDub from "@/assets/logo-dub.png";
 import pixIcon from "@/assets/pix-icon.png";
 import { toast } from "sonner";
 import { ptBR } from "date-fns/locale";
-import { format, eachDayOfInterval, getDay } from "date-fns";
+import { format, eachDayOfInterval, getDay, startOfMonth, endOfMonth } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useSlotAvailability } from "@/hooks/useSlotAvailability";
 import { motion, AnimatePresence } from "framer-motion";
@@ -93,6 +93,7 @@ interface ActiveSubscription {
   barbeiro_id: string | null;
   barbeiro: Barber | null;
   servicos: Service[]; // Adicionado: lista de serviços permitidos pelo plano
+  plano?: any;
 }
 
 
@@ -234,6 +235,52 @@ const ClienteAgendar = () => {
     activeSubscription.servicos.some(s => s.id === selectedServices?.[0]?.id) &&
     activeSubscription.agendamentos_usados < activeSubscription.limite_agendamentos_mes;
 
+  // Barbearia VIP Exclusive tenant ID oficial
+  const BARBEARIA_VIP_TENANT_ID = '5e825363-70ff-4abe-9143-9e87758437e7';
+
+  // Identifica se o agendamento atual com plano possui restrição de dias da semana (ex: Barbearia VIP -> Terça, Quarta e Quinta)
+  const isVipRestrictedPlan = useMemo(() => {
+    const hasActiveSub = isPlanFlow || (!!activeSubscription && activeSubscription.status === 'active');
+    if (!hasActiveSub) return false;
+
+    const currentTenantId = 
+      selectedBarber?.tenant_id || 
+      activeSubscription?.barbeiro?.tenant_id || 
+      (activeSubscription?.plano as any)?.tenant_id ||
+      preferredShop?.id || 
+      boot.ctx?.tenantId;
+
+    const isVipTenant = 
+      currentTenantId === BARBEARIA_VIP_TENANT_ID ||
+      /barbearia\s+vip/i.test(preferredShop?.nome || '') ||
+      /vip\s+exclusive/i.test(preferredShop?.nome || '') ||
+      /barbearia\s+vip/i.test(activeSubscription?.plano_nome || '') ||
+      /plano\s+vip/i.test(activeSubscription?.plano_nome || '');
+
+    const planDesc = ((activeSubscription?.plano as any)?.descricao || '').toLowerCase();
+    const rawBenefits = (activeSubscription?.plano as any)?.beneficios_json;
+    const planBenefits = Array.isArray(rawBenefits)
+      ? rawBenefits.join(' ').toLowerCase()
+      : typeof rawBenefits === 'string'
+        ? rawBenefits.toLowerCase()
+        : '';
+
+    const specifiesTueWedThu = 
+      (planDesc.includes('terça') && planDesc.includes('quinta')) ||
+      (planBenefits.includes('terça') && planBenefits.includes('quinta')) ||
+      (planDesc.includes('terca') && planDesc.includes('quinta')) ||
+      (planBenefits.includes('terca') && planBenefits.includes('quinta'));
+
+    return isVipTenant || specifiesTueWedThu;
+  }, [
+    isPlanFlow,
+    activeSubscription,
+    selectedBarber?.tenant_id,
+    preferredShop?.id,
+    preferredShop?.nome,
+    boot.ctx?.tenantId
+  ]);
+
 
   // Barbeiros bloqueados para este cliente
   const { blockedIds: blockedBarberIds } = useBlockedBarbers();
@@ -324,13 +371,15 @@ const ClienteAgendar = () => {
 
   const availabilityTenantId = selectedBarber?.tenant_id ?? (preferredShop?.id ?? null);
 
+  const isDateAllowedForPlan = !isVipRestrictedPlan || (selectedDate && [2, 3, 4].includes(selectedDate.getDay()));
+
   const { 
     slots: availableSlots, 
     loading: loadingSlots, 
     hasLoaded: slotsHasLoaded,
     refreshSlots
   } = useSlotAvailability(
-    selectedDate, 
+    isDateAllowedForPlan ? selectedDate : undefined, 
     totalDuration,
     isRescheduling ? rescheduleAppointmentId : null,
     selectedBarberId,
@@ -869,6 +918,7 @@ const ClienteAgendar = () => {
         servicos: servicosDoPlano,
         barbeiro_id: subscription.barbeiro_id || null,
         barbeiro: barbeiroRes.data as Barber | null,
+        plano: planoData,
       };
 
 
@@ -991,6 +1041,19 @@ const ClienteAgendar = () => {
       for (const c of (barberConfigResult.data || [])) {
         weekdayOpenMap[c.dia_semana] = c.aberto !== false;
       }
+
+      // Se for conta vinculada à Barbearia VIP com plano ativo,
+      // SOMENTE terça (2), quarta (3) e quinta (4) podem ficar abertos!
+      // Domingo (0), Segunda (1), Sexta (5) e Sábado (6) são fechados obrigatoriamente.
+      if (isVipRestrictedPlan) {
+        const allowedVipDays = [2, 3, 4];
+        [0, 1, 2, 3, 4, 5, 6].forEach((dow) => {
+          if (!allowedVipDays.includes(dow)) {
+            weekdayOpenMap[dow] = false;
+          }
+        });
+      }
+
       const weeklyClosedDays: number[] = Object.entries(weekdayOpenMap)
         .filter(([, open]) => !open)
         .map(([dow]) => Number(dow));
@@ -1009,7 +1072,10 @@ const ClienteAgendar = () => {
         const dateStr = format(day, 'yyyy-MM-dd');
         const dayOfWeek = getDay(day);
 
-        if (dateStr in exceptionMap) {
+        // Se for plano restrito, qualquer dia fora de terça/quarta/quinta é forçadamente fechado
+        if (isVipRestrictedPlan && ![2, 3, 4].includes(dayOfWeek)) {
+          closed.push(day);
+        } else if (dateStr in exceptionMap) {
           if (!exceptionMap[dateStr]) closed.push(day);
         } else if (weeklyClosedDays.includes(dayOfWeek)) {
           closed.push(day);
@@ -1023,7 +1089,25 @@ const ClienteAgendar = () => {
     } finally {
       setClosedDatesLoading(false);
     }
-  }, [selectedBarber?.tenant_id, selectedBarberId, preferredShop?.id]);
+  }, [selectedBarber?.tenant_id, selectedBarberId, preferredShop?.id, isVipRestrictedPlan]);
+
+  // Re-sincroniza dias fechados quando a restrição do plano VIP for detectada/alterada
+  useEffect(() => {
+    const baseDate = selectedDate || new Date();
+    const monthStart = startOfMonth(baseDate);
+    const monthEnd = endOfMonth(baseDate);
+    void loadClosedDates(monthStart, monthEnd);
+  }, [isVipRestrictedPlan, loadClosedDates]);
+
+  // Se a data selecionada atualmente não for permitida pelo plano VIP, reseta a seleção
+  useEffect(() => {
+    if (selectedDate && isVipRestrictedPlan) {
+      const dow = selectedDate.getDay();
+      if (![2, 3, 4].includes(dow)) {
+        setSelectedDate(undefined);
+      }
+    }
+  }, [selectedDate, isVipRestrictedPlan]);
 
   // ─── syncBookingData: recarrega serviços, barbeiros e dias fechados ───
   // Chamado on-demand (ao entrar no passo 3 e ao selecionar data), não mais via Realtime
@@ -1262,6 +1346,14 @@ const ClienteAgendar = () => {
       if (!selectedDate) {
         toast.error("Selecione uma data");
         return;
+      }
+      if (isVipRestrictedPlan) {
+        const dow = selectedDate.getDay();
+        if (![2, 3, 4].includes(dow)) {
+          toast.error("Agendamentos com o seu plano são permitidos exclusivamente às terças, quartas e quintas-feiras.");
+          setSelectedDate(undefined);
+          return;
+        }
       }
       setStep(4);
       return;
@@ -1916,6 +2008,14 @@ const ClienteAgendar = () => {
       return;
     }
 
+    if (isVipRestrictedPlan && selectedDate) {
+      const dow = selectedDate.getDay();
+      if (![2, 3, 4].includes(dow)) {
+        toast.error("Agendamentos com o seu plano são permitidos exclusivamente de terça a quinta-feira.");
+        return;
+      }
+    }
+
     setProcessingPayment(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -1940,7 +2040,10 @@ const ClienteAgendar = () => {
           hora: bookingTime,
           duracao: totalDuration,
           userId: session.user.id,
-          barberId: selectedBarberId
+          barberId: selectedBarberId,
+          tipoAgendamento: 'plano',
+          planoId: activeSubscription.plano_id,
+          assinaturaId: activeSubscription.id,
         }
       });
 
@@ -2773,6 +2876,23 @@ const ClienteAgendar = () => {
                   Melhor dia pra você
                 </h2>
               </div>
+
+              {isVipRestrictedPlan && (
+                <div className="mb-4 px-4 py-3 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-amber-500/20 flex items-center justify-center shrink-0">
+                    <Crown className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-semibold text-amber-900 dark:text-amber-200">
+                      Agendamento Exclusivo ({activeSubscription?.plano_nome || "Plano VIP"})
+                    </p>
+                    <p className="text-[11px] text-amber-800/80 dark:text-amber-300/80">
+                      Disponível exclusivamente de <strong className="font-semibold text-amber-900 dark:text-amber-200">terça a quinta-feira</strong>.
+                    </p>
+                  </div>
+                </div>
+              )}
+
               <PremiumCalendar
                 selectedDate={selectedDate}
                 onSelectDate={(date) => { setSelectedDate(date); syncBookingData(); }}

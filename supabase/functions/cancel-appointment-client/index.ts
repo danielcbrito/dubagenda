@@ -194,6 +194,7 @@ async function handleReschedule(params: {
     .from("agendamentos")
     .select(`
       id, user_id, barbeiro_id, servico_id, data, hora, duracao, status, preco,
+      tipo_agendamento, payment_method,
       servicos:servico_id (nome),
       barbeiros:barbeiro_id (apelido, tenant_id)
     `)
@@ -206,6 +207,18 @@ async function handleReschedule(params: {
     return jsonResponse({ error: `Agendamento com status '${appointment.status}' não pode ser remarcado` }, 400);
   }
   if (!appointment.barbeiro_id) return jsonResponse({ error: "Agendamento sem profissional vinculado não pode ser remarcado" }, 400);
+
+  const isPlanAppointment = (appointment as any).tipo_agendamento === 'plano' || (appointment as any).payment_method === 'plano';
+  const barberTenantId = (appointment as any).barbeiros?.tenant_id;
+  if (isPlanAppointment && barberTenantId === '5e825363-70ff-4abe-9143-9e87758437e7') {
+    const targetDow = new Date(`${data}T12:00:00`).getDay();
+    if (![2, 3, 4].includes(targetDow)) {
+      return jsonResponse({
+        error: "Agendamentos com plano nesta barbearia são permitidos exclusivamente de terça a quinta-feira.",
+        code: "VIP_PLAN_DAY_RESTRICTED"
+      }, 400);
+    }
+  }
 
   const durationToUse = duracao || appointment.duracao;
   const availability = await validateRescheduleAvailability({

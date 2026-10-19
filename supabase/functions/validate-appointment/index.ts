@@ -13,6 +13,9 @@ interface AppointmentRequest {
   barberId?: string; // compatibilidade atual
   barbeiroId?: string; // compatibilidade retroativa
   excludeAppointmentId?: string; // Para reagendamentos - excluir o agendamento atual
+  tipoAgendamento?: string;
+  planoId?: string;
+  assinaturaId?: string;
 }
 
 interface BusinessHoursConfig {
@@ -51,11 +54,11 @@ Deno.serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const { data, hora, duracao, userId, barberId, barbeiroId, excludeAppointmentId }: AppointmentRequest = await req.json();
+    const { data, hora, duracao, userId, barberId, barbeiroId, excludeAppointmentId, tipoAgendamento, planoId, assinaturaId }: AppointmentRequest = await req.json();
     const resolvedBarberId = barberId ?? barbeiroId;
     let tenantId: string | null = null;
     
-    console.log('[validate-appointment] Iniciando validação:', { data, hora, duracao, userId, barberId: resolvedBarberId, excludeAppointmentId });
+    console.log('[validate-appointment] Iniciando validação:', { data, hora, duracao, userId, barberId: resolvedBarberId, excludeAppointmentId, tipoAgendamento, planoId });
 
     if (!resolvedBarberId) {
       return new Response(
@@ -74,6 +77,40 @@ Deno.serve(async (req) => {
     // Parse the date and get day of week
     const appointmentDate = new Date(data + 'T12:00:00'); // Parse as local date
     const dayOfWeek = appointmentDate.getDay();
+
+    // ============================================
+    // VALIDAÇÃO EXCLUSIVA: BARBEARIA VIP & PLANOS RESTRICTOS
+    // Contas com plano na Barbearia VIP Exclusive só podem agendar terça (2), quarta (3) e quinta (4)
+    // ============================================
+    const isVipTenant = tenantId === '5e825363-70ff-4abe-9143-9e87758437e7';
+    let isPlanBooking = tipoAgendamento === 'plano' || !!planoId || !!assinaturaId;
+
+    if (!isPlanBooking && userId) {
+      const { data: userSub } = await supabase
+        .from('assinaturas')
+        .select('id, status, plano_id, plano:planos(tenant_id, nome)')
+        .eq('user_id', userId)
+        .eq('status', 'active')
+        .limit(1)
+        .maybeSingle();
+
+      if (userSub && ((userSub.plano as any)?.tenant_id === '5e825363-70ff-4abe-9143-9e87758437e7' || isVipTenant)) {
+        isPlanBooking = true;
+      }
+    }
+
+    if (isPlanBooking && (isVipTenant || planoId === 'ce9b4790-8dda-4ae4-89fc-91147a104c08')) {
+      if (![2, 3, 4].includes(dayOfWeek)) {
+        console.log('[validate-appointment] Rejeitado: Agendamento de plano VIP fora de terça, quarta e quinta. Dia:', dayOfWeek);
+        return new Response(
+          JSON.stringify({
+            valid: false,
+            message: 'Agendamentos com plano nesta barbearia são permitidos exclusivamente às terças, quartas e quintas-feiras.'
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+        );
+      }
+    }
 
     // ============================================
     // BUSCAR CONFIGURAÇÕES DE HORÁRIO DO BANCO

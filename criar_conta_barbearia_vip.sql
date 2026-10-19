@@ -183,3 +183,40 @@ LEFT JOIN public.assinaturas a ON a.user_id = u.id AND a.status = 'active'
 LEFT JOIN public.planos pl ON pl.id = a.plano_id
 LEFT JOIN public.barbeiros b ON b.id = a.barbeiro_id
 WHERE lower(u.email) = lower('cliente.vip@dubagenda.com');
+
+-- 5. TRIGGER DE RESTRIÇÃO: Garantir que agendamentos com plano na Barbearia VIP Exclusive sejam SEMPRE de terça a quinta-feira
+CREATE OR REPLACE FUNCTION public.enforce_plano_allowed_weekdays()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'public'
+AS $function$
+DECLARE
+  v_tenant_id uuid;
+  v_dow int;
+BEGIN
+  IF NEW.tipo_agendamento = 'plano' OR COALESCE(NEW.payment_method, '') = 'plano' THEN
+    SELECT tenant_id INTO v_tenant_id FROM public.barbeiros WHERE id = NEW.barbeiro_id;
+    IF v_tenant_id IS NULL THEN
+      SELECT barbearia_preferida_id INTO v_tenant_id FROM public.profiles WHERE id = NEW.user_id;
+    END IF;
+
+    IF v_tenant_id = '5e825363-70ff-4abe-9143-9e87758437e7'::uuid THEN
+      v_dow := EXTRACT(DOW FROM NEW.data)::int;
+      -- 0=Dom, 1=Seg, 2=Ter, 3=Qua, 4=Qui, 5=Sex, 6=Sáb
+      IF v_dow NOT IN (2, 3, 4) THEN
+        RAISE EXCEPTION 'Agendamentos com plano na Barbearia VIP são permitidos exclusivamente às terças, quartas e quintas-feiras.';
+      END IF;
+    END IF;
+  END IF;
+
+  RETURN NEW;
+END;
+$function$;
+
+DROP TRIGGER IF EXISTS trg_enforce_plano_allowed_weekdays ON public.agendamentos;
+CREATE TRIGGER trg_enforce_plano_allowed_weekdays
+BEFORE INSERT OR UPDATE OF data, tipo_agendamento, payment_method ON public.agendamentos
+FOR EACH ROW
+EXECUTE FUNCTION public.enforce_plano_allowed_weekdays();
+
