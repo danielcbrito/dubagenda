@@ -28,9 +28,10 @@ window.addEventListener("unhandledrejection", (e) => {
   const msg = (e?.reason?.message || String(e?.reason || "")) as string;
   if (isChunkLoadError(msg)) reloadOnce();
 });
-// Vite emits this specifically for failed dynamic import preloads
-window.addEventListener("vite:preloadError", (e) => {
-  e.preventDefault();
+// Vite emits this specifically for failed dynamic import preloads.
+// Do NOT call preventDefault(): it makes the dynamic import resolve to
+// `undefined`, and React.lazy then crashes reading `.default` (blank screen).
+window.addEventListener("vite:preloadError", () => {
   reloadOnce();
 });
 
