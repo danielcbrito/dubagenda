@@ -1,0 +1,1 @@
+ALTER FUNCTION public.owns_cancellation_debt(uuid,text,text) SECURITY INVOKER;
