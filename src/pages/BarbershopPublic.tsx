@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { Helmet } from "react-helmet-async";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -269,6 +269,62 @@ function formatCurrency(val: number): string {
   }).format(val);
 }
 
+interface FormattedScheduleGroup {
+  label: string;
+  hours: string;
+  isOpen: boolean;
+}
+
+function formatGroupedSchedule(
+  hours: Array<{ dia_semana: number; aberto: boolean; hora_abertura: string; hora_fechamento: string }>
+): FormattedScheduleGroup[] {
+  if (!hours || hours.length === 0) return [];
+
+  // Ordenação de Segunda a Domingo (padrão Brasil)
+  const daysOrder = [1, 2, 3, 4, 5, 6, 0];
+  const dayNames: Record<number, string> = {
+    1: 'Segunda',
+    2: 'Terça',
+    3: 'Quarta',
+    4: 'Quinta',
+    5: 'Sexta',
+    6: 'Sábado',
+    0: 'Domingo',
+  };
+
+  const dayInfo = daysOrder.map((dow) => {
+    const found = hours.find((h) => h.dia_semana === dow);
+    const isOpen = found ? found.aberto : dow !== 0;
+    const openTime = found?.hora_abertura ? found.hora_abertura.substring(0, 5) : '09:00';
+    const closeTime = found?.hora_fechamento ? found.hora_fechamento.substring(0, 5) : '20:00';
+    const timeStr = isOpen ? `${openTime} – ${closeTime}` : 'Fechado';
+    return { dow, name: dayNames[dow], isOpen, timeStr };
+  });
+
+  const groups: FormattedScheduleGroup[] = [];
+  let currentGroup: { start: string; end: string; timeStr: string; isOpen: boolean; count: number } | null = null;
+
+  for (const day of dayInfo) {
+    if (!currentGroup) {
+      currentGroup = { start: day.name, end: day.name, timeStr: day.timeStr, isOpen: day.isOpen, count: 1 };
+    } else if (currentGroup.timeStr === day.timeStr) {
+      currentGroup.end = day.name;
+      currentGroup.count += 1;
+    } else {
+      const label = currentGroup.count === 1 ? currentGroup.start : `${currentGroup.start} a ${currentGroup.end}`;
+      groups.push({ label, hours: currentGroup.timeStr, isOpen: currentGroup.isOpen });
+      currentGroup = { start: day.name, end: day.name, timeStr: day.timeStr, isOpen: day.isOpen, count: 1 };
+    }
+  }
+
+  if (currentGroup) {
+    const label = currentGroup.count === 1 ? currentGroup.start : `${currentGroup.start} a ${currentGroup.end}`;
+    groups.push({ label, hours: currentGroup.timeStr, isOpen: currentGroup.isOpen });
+  }
+
+  return groups;
+}
+
 export default function BarbershopPublic() {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
@@ -285,6 +341,8 @@ export default function BarbershopPublic() {
   const cachedBarbers = slug ? getCache<Barber[]>(`shop:public:barbers:${slug}`) : null;
 
   const [tenant, setTenant] = useState<TenantInfo | null>(cachedTenant);
+  const [businessHours, setBusinessHours] = useState<Array<{ dia_semana: number; aberto: boolean; hora_abertura: string; hora_fechamento: string }>>([]);
+  const groupedSchedule = useMemo(() => formatGroupedSchedule(businessHours), [businessHours]);
   const [barbers, setBarbers] = useState<Barber[]>(cachedBarbers ?? []);
   const [loading, setLoading] = useState(!cachedTenant);
   const [loadingBarbers, setLoadingBarbers] = useState(false);
@@ -512,6 +570,65 @@ export default function BarbershopPublic() {
     if (slug) setCache(`shop:public:${slug}`, resolvedTenant, 30);
     loadBarbers(data.id);
   };
+
+  const loadBusinessHours = useCallback(async (tenantId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from("configuracoes_horario_unidade")
+        .select("dia_semana, aberto, hora_abertura, hora_fechamento")
+        .eq("tenant_id", tenantId)
+        .order("dia_semana");
+
+      if (!error && data && data.length > 0) {
+        setBusinessHours(data);
+        return;
+      }
+
+      const { data: globalData } = await supabase
+        .from("configuracoes_horario")
+        .select("dia_semana, aberto, hora_abertura, hora_fechamento")
+        .order("dia_semana");
+      if (globalData) setBusinessHours(globalData);
+    } catch (err) {
+      console.error("Erro ao carregar horários da barbearia:", err);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!tenant?.id) return;
+    loadBusinessHours(tenant.id);
+
+    const channel = supabase
+      .channel(`public-shop-hours-${tenant.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'configuracoes_horario_unidade',
+          filter: `tenant_id=eq.${tenant.id}`
+        },
+        () => {
+          loadBusinessHours(tenant.id);
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'configuracoes_horario'
+        },
+        () => {
+          loadBusinessHours(tenant.id);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [tenant?.id, loadBusinessHours]);
 
   const loadBarbers = async (tenantId: string) => {
     setLoadingBarbers(barbers.length === 0);
@@ -1590,18 +1707,29 @@ export default function BarbershopPublic() {
               </p>
             </div>
             <div className="space-y-2 text-[12.5px]">
-              <div className="flex justify-between items-center">
-                <span className="text-foreground font-medium">Segunda a Sexta</span>
-                <span className="text-muted-foreground font-medium">08:00 – 20:00</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-foreground font-medium">Sábado</span>
-                <span className="text-muted-foreground font-medium">08:00 – 20:00</span>
-              </div>
-              <div className="flex justify-between items-center text-muted-foreground/70">
-                <span>Domingo</span>
-                <span>Fechado</span>
-              </div>
+              {groupedSchedule.length > 0 ? (
+                groupedSchedule.map((group, idx) => (
+                  <div
+                    key={idx}
+                    className={cn(
+                      "flex justify-between items-center",
+                      !group.isOpen && "text-muted-foreground/70"
+                    )}
+                  >
+                    <span className={group.isOpen ? "text-foreground font-medium" : ""}>
+                      {group.label}
+                    </span>
+                    <span className={group.isOpen ? "text-muted-foreground font-medium" : ""}>
+                      {group.hours}
+                    </span>
+                  </div>
+                ))
+              ) : (
+                <div className="py-2 flex items-center gap-2 text-xs text-muted-foreground">
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  <span>Carregando horários...</span>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -1673,18 +1801,42 @@ export default function BarbershopPublic() {
                 Horário de Funcionamento
               </p>
               <div className="rounded-xl bg-secondary/40 border border-border/40 p-3.5 space-y-2 text-[12.5px]">
-                <div className="flex justify-between items-center">
-                  <span className="text-foreground font-medium">Segunda a Sexta</span>
-                  <span className="text-muted-foreground">08:00 – 20:00</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-foreground font-medium">Sábado</span>
-                  <span className="text-muted-foreground">08:00 – 20:00</span>
-                </div>
-                <div className="flex justify-between items-center text-muted-foreground/70">
-                  <span>Domingo</span>
-                  <span>Fechado</span>
-                </div>
+                {businessHours.length > 0 ? (
+                  [1, 2, 3, 4, 5, 6, 0].map((dow) => {
+                    const dayNames: Record<number, string> = {
+                      1: 'Segunda-feira',
+                      2: 'Terça-feira',
+                      3: 'Quarta-feira',
+                      4: 'Quinta-feira',
+                      5: 'Sexta-feira',
+                      6: 'Sábado',
+                      0: 'Domingo',
+                    };
+                    const h = businessHours.find((item) => item.dia_semana === dow);
+                    const aberto = h ? h.aberto : dow !== 0;
+                    const abertura = h?.hora_abertura ? h.hora_abertura.substring(0, 5) : '09:00';
+                    const fechamento = h?.hora_fechamento ? h.hora_fechamento.substring(0, 5) : '20:00';
+                    return (
+                      <div
+                        key={dow}
+                        className={cn(
+                          "flex justify-between items-center",
+                          !aberto && "text-muted-foreground/70"
+                        )}
+                      >
+                        <span className={aberto ? "text-foreground font-medium" : ""}>
+                          {dayNames[dow]}
+                        </span>
+                        <span>{aberto ? `${abertura} – ${fechamento}` : 'Fechado'}</span>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="py-2 flex items-center gap-2 text-xs text-muted-foreground">
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span>Carregando horários...</span>
+                  </div>
+                )}
               </div>
             </div>
 

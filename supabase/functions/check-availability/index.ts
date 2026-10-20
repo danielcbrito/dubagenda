@@ -36,6 +36,7 @@ interface BusinessHoursConfig {
   delay_entre_servicos: number;
   /** Intervalo da grade de horários (minutos) configurado pelo profissional */
   slot_interval_minutes?: number | null;
+  updated_at?: string | null;
 }
 
 /** Normaliza o intervalo da grade: aceita apenas valores plausíveis (5–120 min) */
@@ -113,8 +114,9 @@ async function getUnidadeConfig(
       .from('configuracoes_horario_unidade')
       .select('*')
       .eq('tenant_id', tenantId)
-      .is('unidade_id', null)
       .eq('dia_semana', dayOfWeek)
+      .order('unidade_id', { nullsFirst: false })
+      .limit(1)
       .maybeSingle();
     if (data) return data;
   }
@@ -145,7 +147,8 @@ async function getDefaultConfig(supabase: any, date: string, dayOfWeek: number, 
       hora_almoco_inicio: excecaoData.hora_almoco_inicio,
       hora_almoco_fim: excecaoData.hora_almoco_fim,
       delay_entre_servicos: excecaoData.delay_entre_servicos || 0,
-      found: true
+      found: true,
+      updated_at: excecaoData.updated_at || null
     };
   }
 
@@ -161,7 +164,8 @@ async function getDefaultConfig(supabase: any, date: string, dayOfWeek: number, 
       hora_almoco_fim: unidadeConfig.hora_almoco_fim,
       delay_entre_servicos: unidadeConfig.delay_entre_servicos || 0,
       slot_interval_minutes: normalizeSlotInterval(unidadeConfig.slot_interval_minutes),
-      found: true
+      found: true,
+      updated_at: unidadeConfig.updated_at || null
     };
   }
 
@@ -187,7 +191,8 @@ async function getDefaultConfig(supabase: any, date: string, dayOfWeek: number, 
     hora_almoco_inicio: configData.hora_almoco_inicio,
     hora_almoco_fim: configData.hora_almoco_fim,
     delay_entre_servicos: configData.delay_entre_servicos || 0,
-    found: true
+    found: true,
+    updated_at: configData.updated_at || null
   } : {
     aberto: dayOfWeek !== 0,
     hora_abertura: '09:00',
@@ -195,7 +200,8 @@ async function getDefaultConfig(supabase: any, date: string, dayOfWeek: number, 
     hora_almoco_inicio: '13:00',
     hora_almoco_fim: '14:00',
     delay_entre_servicos: 0,
-    found: false
+    found: false,
+    updated_at: null
   };
 
 }
@@ -296,6 +302,7 @@ Deno.serve(async (req) => {
     // Prioridade: 1) Exceção do barbeiro, 2) Exceção geral, 3) Config do barbeiro, 4) Config geral
     let config: BusinessHoursConfig;
     let barberConfigExplicit = false;
+    let configBarbeiroData: any = null;
 
 
     if (resolvedBarbeiroId) {
@@ -341,12 +348,13 @@ Deno.serve(async (req) => {
           };
         } else {
           // Buscar config padrão do barbeiro
-          const { data: configBarbeiroData } = await supabase
+          const { data: barberData } = await supabase
             .from('configuracoes_horario_barbeiro')
             .select('*')
             .eq('barbeiro_id', resolvedBarbeiroId)
             .eq('dia_semana', dayOfWeek)
             .maybeSingle();
+          configBarbeiroData = barberData;
 
           if (configBarbeiroData) {
             console.log(`[check-availability] Config do barbeiro ${resolvedBarbeiroId} para dia ${dayOfWeek}:`, JSON.stringify({
@@ -364,7 +372,8 @@ Deno.serve(async (req) => {
               hora_almoco_inicio: configBarbeiroData.hora_almoco_inicio || null,
               hora_almoco_fim: configBarbeiroData.hora_almoco_fim || null,
               delay_entre_servicos: configBarbeiroData.delay_entre_servicos || 0,
-              slot_interval_minutes: normalizeSlotInterval(configBarbeiroData.slot_interval_minutes)
+              slot_interval_minutes: normalizeSlotInterval(configBarbeiroData.slot_interval_minutes),
+              updated_at: configBarbeiroData.updated_at || null
             };
           } else {
             console.log(`[check-availability] Sem config para barbeiro ${resolvedBarbeiroId} dia ${dayOfWeek}, usando unidade/global`);
@@ -379,32 +388,33 @@ Deno.serve(async (req) => {
     }
 
     // ============================================
-    // CLAMP: o horário da loja limita a janela do barbeiro (abertura/fechamento).
-    // Quando o barbeiro tem config própria para o dia, ela decide se ele atende ou não.
+    // ISOLAMENTO DE EXPEDIENTE:
+    // Se a barbearia estiver fechada no dia, o barbeiro não atende (dia fechado).
+    // Se a barbearia estiver aberta:
+    // - Se a unidade foi atualizada mais recentemente que o barbeiro, prevalece a unidade.
+    // - Se o barbeiro tem horário pessoal explícito atualizado, o horário dele é respeitado integralmente.
+    // - Se não tem horário explícito, herda o horário da barbearia.
     // ============================================
     if (resolvedBarbeiroId) {
       const globalConfig = await getDefaultConfig(supabase, date, dayOfWeek, resolvedTenantId, resolvedUnidadeId);
 
       if (!globalConfig.found) {
-        console.log('[check-availability] CLAMP ignorado: nenhuma config de loja cadastrada');
-      } else if (!globalConfig.aberto && !barberConfigExplicit) {
+        console.log('[check-availability] Nenhuma config de loja cadastrada');
+      } else if (!globalConfig.aberto) {
         config.aberto = false;
-        console.log(`[check-availability] CLAMP: loja FECHADA → barbeiro sem config própria também fechado`);
-      } else if (config.aberto) {
-        const globalOpen = timeToMinutes(globalConfig.hora_abertura);
-        const globalClose = timeToMinutes(globalConfig.hora_fechamento);
-        const barberOpen = timeToMinutes(config.hora_abertura);
-        const barberClose = timeToMinutes(config.hora_fechamento);
-
-        if (globalConfig.aberto) {
-          if (barberOpen < globalOpen) {
-            console.log(`[check-availability] CLAMP: Abertura ${config.hora_abertura} → ${globalConfig.hora_abertura} (loja)`);
-            config.hora_abertura = globalConfig.hora_abertura;
-          }
-          if (barberClose > globalClose) {
-            console.log(`[check-availability] CLAMP: Fechamento ${config.hora_fechamento} → ${globalConfig.hora_fechamento} (loja)`);
-            config.hora_fechamento = globalConfig.hora_fechamento;
-          }
+        console.log(`[check-availability] Loja FECHADA → dia fechado`);
+      } else if (!barberConfigExplicit) {
+        config.hora_abertura = globalConfig.hora_abertura;
+        config.hora_fechamento = globalConfig.hora_fechamento;
+      } else if (globalConfig.updated_at && configBarbeiroData?.updated_at) {
+        const unitUpdated = new Date(globalConfig.updated_at).getTime();
+        const barberUpdated = new Date(configBarbeiroData.updated_at).getTime();
+        if (unitUpdated > barberUpdated) {
+          console.log(`[check-availability] Config da unidade é mais recente que horário pessoal do barbeiro (${globalConfig.updated_at} > ${configBarbeiroData.updated_at}). Atualizando horário para ${globalConfig.hora_abertura} - ${globalConfig.hora_fechamento}`);
+          config.hora_abertura = globalConfig.hora_abertura;
+          config.hora_fechamento = globalConfig.hora_fechamento;
+          if (globalConfig.hora_almoco_inicio) config.hora_almoco_inicio = globalConfig.hora_almoco_inicio;
+          if (globalConfig.hora_almoco_fim) config.hora_almoco_fim = globalConfig.hora_almoco_fim;
         }
       }
     }

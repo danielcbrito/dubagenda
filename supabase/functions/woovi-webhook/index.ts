@@ -115,6 +115,16 @@ Deno.serve(async (req) => {
         if (!apptErr && appt) {
           agendamentoId = appt.id;
           await admin.from("pending_bookings").delete().eq("id", pb.id);
+
+          // Quitar dívidas pendentes de cancelamento/falta do cliente vinculadas a este pagamento
+          try {
+            await admin.rpc("settle_client_debts", {
+              p_client_id: pb.user_id,
+              p_correlation: correlationID,
+            });
+          } catch (settleErr) {
+            console.warn("[woovi-webhook] Erro ao quitar débitos do cliente:", settleErr);
+          }
         } else {
           // Detecta conflito de slot (unique constraint) → faz refund automático para a carteira do cliente
           const isConflict =

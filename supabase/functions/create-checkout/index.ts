@@ -37,8 +37,42 @@ async function checkTimeSlotAvailability(
   const appointmentDate = new Date(data + "T12:00:00");
   const dayOfWeek = appointmentDate.getDay();
 
-  let config: any = null;
+  let tenantId: string | null = null;
+  if (barbeiro_id) {
+    const { data: barberScope } = await supabase
+      .from("barbeiros")
+      .select("tenant_id")
+      .eq("id", barbeiro_id)
+      .maybeSingle();
+    tenantId = barberScope?.tenant_id ?? null;
+  }
 
+  let storeConfig: any = null;
+  if (tenantId) {
+    const { data: unitConfig } = await supabase
+      .from("configuracoes_horario_unidade")
+      .select("*")
+      .eq("tenant_id", tenantId)
+      .eq("dia_semana", dayOfWeek)
+      .order("unidade_id", { nullsFirst: false })
+      .limit(1)
+      .maybeSingle();
+    if (unitConfig) storeConfig = unitConfig;
+  }
+  if (!storeConfig) {
+    const { data: globalConfig } = await supabase
+      .from("configuracoes_horario")
+      .select("*")
+      .eq("dia_semana", dayOfWeek)
+      .maybeSingle();
+    if (globalConfig) storeConfig = globalConfig;
+  }
+
+  if (storeConfig && storeConfig.aberto === false) {
+    return { available: false, message: "A barbearia não funciona neste dia." };
+  }
+
+  let config: any = null;
   if (barbeiro_id) {
     const { data: barbeiroConfig } = await supabase
       .from("configuracoes_horario_barbeiro")
@@ -46,16 +80,20 @@ async function checkTimeSlotAvailability(
       .eq("barbeiro_id", barbeiro_id)
       .eq("dia_semana", dayOfWeek)
       .maybeSingle();
-    if (barbeiroConfig) config = barbeiroConfig;
+    if (barbeiroConfig) {
+      if (barbeiroConfig.aberto === false) {
+        return { available: false, message: "O profissional não atende neste dia." };
+      }
+      config = barbeiroConfig;
+    }
+  }
+
+  if (!config && storeConfig) {
+    config = storeConfig;
   }
 
   if (!config) {
-    const { data: globalConfig } = await supabase
-      .from("configuracoes_horario")
-      .select("*")
-      .eq("dia_semana", dayOfWeek)
-      .maybeSingle();
-    config = globalConfig || {
+    config = {
       aberto: dayOfWeek !== 0,
       hora_abertura: "09:00",
       hora_fechamento: "21:00",

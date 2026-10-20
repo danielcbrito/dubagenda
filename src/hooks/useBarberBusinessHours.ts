@@ -68,38 +68,69 @@ export function useBarberBusinessHours(date: Date, barbeiroId: string | null) {
       }
 
       // 3) Config padrão do barbeiro
-      if (!sourceData && barbeiroId) {
+      let barberDayConfig: any = null;
+      if (barbeiroId) {
         const { data } = await supabase
           .from("configuracoes_horario_barbeiro")
           .select("*")
           .eq("barbeiro_id", barbeiroId)
           .eq("dia_semana", dayOfWeek)
           .maybeSingle();
-        if (data && data.aberto !== null) { sourceData = data; configSource = "CONFIG BARBEIRO"; barberConfigExplicit = true; }
+        barberDayConfig = data;
       }
 
       // 4) Config da unidade (loja)
-      let unidadeConfig: any = null;
-      if (unidadeId) {
-        const { data } = await supabase
-          .from("configuracoes_horario_unidade")
-          .select("*")
-          .eq("unidade_id", unidadeId)
-          .eq("dia_semana", dayOfWeek)
-          .maybeSingle();
-        unidadeConfig = data ?? null;
+      const loadUnidadeConfig = async () => {
+        if (unidadeId) {
+          const { data } = await supabase
+            .from("configuracoes_horario_unidade")
+            .select("*")
+            .eq("unidade_id", unidadeId)
+            .eq("dia_semana", dayOfWeek)
+            .maybeSingle();
+          if (data) return data;
+        }
+        if (tenantId) {
+          const { data } = await supabase
+            .from("configuracoes_horario_unidade")
+            .select("*")
+            .eq("tenant_id", tenantId)
+            .eq("dia_semana", dayOfWeek)
+            .order("unidade_id", { nullsFirst: false })
+            .limit(1)
+            .maybeSingle();
+          if (data) return data;
+        }
+        return null;
+      };
+
+      const unidadeConfig = await loadUnidadeConfig();
+
+      if (!sourceData) {
+        if (unidadeConfig && unidadeConfig.aberto === false) {
+          sourceData = unidadeConfig;
+          configSource = "CONFIG UNIDADE (FECHADA)";
+        } else if (barberDayConfig && unidadeConfig) {
+          const barberUpdated = barberDayConfig.updated_at ? new Date(barberDayConfig.updated_at).getTime() : 0;
+          const unitUpdated = unidadeConfig.updated_at ? new Date(unidadeConfig.updated_at).getTime() : 0;
+
+          if (unitUpdated > barberUpdated) {
+            sourceData = unidadeConfig;
+            configSource = "CONFIG UNIDADE (mais recente)";
+          } else {
+            sourceData = barberDayConfig;
+            configSource = "CONFIG BARBEIRO (mais recente)";
+            barberConfigExplicit = true;
+          }
+        } else if (barberDayConfig && barberDayConfig.aberto !== null) {
+          sourceData = barberDayConfig;
+          configSource = "CONFIG BARBEIRO";
+          barberConfigExplicit = true;
+        } else if (unidadeConfig) {
+          sourceData = unidadeConfig;
+          configSource = "CONFIG UNIDADE";
+        }
       }
-      if (!unidadeConfig && tenantId) {
-        const { data } = await supabase
-          .from("configuracoes_horario_unidade")
-          .select("*")
-          .eq("tenant_id", tenantId)
-          .is("unidade_id", null)
-          .eq("dia_semana", dayOfWeek)
-          .maybeSingle();
-        unidadeConfig = data ?? null;
-      }
-      if (!sourceData && unidadeConfig) { sourceData = unidadeConfig; configSource = "CONFIG UNIDADE"; }
 
       // 5) Config global legada
       if (!sourceData) {
@@ -127,7 +158,7 @@ export function useBarberBusinessHours(date: Date, barbeiroId: string | null) {
         delay_entre_servicos: 10,
       };
 
-      // CLAMP: a loja limita a janela do barbeiro (sem sobrescrever a decisão dele de atender)
+      // ISOLAMENTO DE EXPEDIENTE: se a loja estiver fechada naquele dia, permanece fechado
       if (barbeiroId && configSource !== "CONFIG GLOBAL" && configSource !== "CONFIG UNIDADE" && configSource !== "padrão global") {
         let storeData: any = unidadeConfig;
         if (!storeData) {
@@ -139,18 +170,8 @@ export function useBarberBusinessHours(date: Date, barbeiroId: string | null) {
           storeData = globalData;
         }
 
-        if (storeData) {
-          if (storeData.aberto === false && !barberConfigExplicit) {
-            result.aberto = false;
-          } else if (storeData.aberto !== false) {
-            const toMin = (t: string) => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
-            const gOpen = toMin(storeData.hora_abertura || "09:00");
-            const gClose = toMin(storeData.hora_fechamento || "21:00");
-            const bOpen = toMin(result.hora_abertura);
-            const bClose = toMin(result.hora_fechamento);
-            if (bOpen < gOpen) result.hora_abertura = (storeData.hora_abertura || "09:00").substring(0, 5);
-            if (bClose > gClose) result.hora_fechamento = (storeData.hora_fechamento || "21:00").substring(0, 5);
-          }
+        if (storeData && storeData.aberto === false) {
+          result.aberto = false;
         }
       }
 
@@ -161,6 +182,49 @@ export function useBarberBusinessHours(date: Date, barbeiroId: string | null) {
     };
 
     fetchConfig();
+
+    const channel = supabase
+      .channel(`barber-hours-rt-${barbeiroId || 'all'}-${date.toISOString().slice(0, 10)}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'configuracoes_horario_unidade',
+        },
+        () => {
+          console.log('[useBarberBusinessHours] Realtime update on configuracoes_horario_unidade');
+          fetchConfig();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'configuracoes_horario_barbeiro',
+        },
+        () => {
+          console.log('[useBarberBusinessHours] Realtime update on configuracoes_horario_barbeiro');
+          fetchConfig();
+        }
+      )
+      .subscribe();
+
+    const handleFocus = () => {
+      fetchConfig();
+    };
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') fetchConfig();
+    };
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleVisibility);
+      supabase.removeChannel(channel);
+    };
   }, [date, barbeiroId]);
 
   return { config, loading, source };

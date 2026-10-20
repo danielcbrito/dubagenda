@@ -304,8 +304,190 @@ export function useSlotAvailability(
       // ============================================
       // PARTIAL UPDATE: Atualizar apenas slots que mudaram
       // ============================================
-      const responseSlots = data.slots;
+      let responseSlots = data.slots;
       const responseOccupied = data.occupiedSlots;
+
+      // ============================================
+      // ISOLAMENTO DE EXPEDIENTE PESSOAL DO PROFISSIONAL E MULTI-TENANT:
+      // Se a Edge Function remota foi limitada pela loja legada (ex: fechamento às 20:00 ou abertura às 09:00),
+      // ou se o barbeiro/barbearia teve seus horários alterados no painel,
+      // sincronizamos os slots reais com a configuração mais recente (unidade ou barbeiro).
+      // ============================================
+      if (barbeiroId || tenantId) {
+        try {
+          const dateObj = new Date(dateStr + 'T12:00:00');
+          const dayOfWeek = dateObj.getDay();
+
+          // 1) Checar exceção do barbeiro para a data
+          let excBarberData: any = null;
+          if (barbeiroId) {
+            const { data } = await supabase
+              .from('horarios_excepcionais_barbeiro')
+              .select('*')
+              .eq('barbeiro_id', barbeiroId)
+              .eq('data', dateStr)
+              .maybeSingle();
+            excBarberData = data;
+          }
+
+          // 2) Checar exceção da barbearia para a data
+          let excGlobalData: any = null;
+          let globalExceptionQuery = supabase
+            .from('horarios_excepcionais')
+            .select('*')
+            .eq('data', dateStr);
+          if (tenantId) globalExceptionQuery = globalExceptionQuery.eq('tenant_id', tenantId);
+          const { data: gExc } = await globalExceptionQuery.maybeSingle();
+          excGlobalData = gExc;
+
+          // 3) Checar config semanal da unidade (loja)
+          let unidadeConfig: any = null;
+          if (tenantId) {
+            const { data: uData } = await supabase
+              .from('configuracoes_horario_unidade')
+              .select('*')
+              .eq('tenant_id', tenantId)
+              .eq('dia_semana', dayOfWeek)
+              .order('unidade_id', { nullsFirst: false })
+              .limit(1)
+              .maybeSingle();
+            unidadeConfig = uData;
+          }
+
+          // 4) Checar config semanal pessoal do barbeiro
+          let barberDayConfig: any = null;
+          if (barbeiroId) {
+            const { data: bcData } = await supabase
+              .from('configuracoes_horario_barbeiro')
+              .select('*')
+              .eq('barbeiro_id', barbeiroId)
+              .eq('dia_semana', dayOfWeek)
+              .maybeSingle();
+            barberDayConfig = bcData;
+          }
+
+          // 5) Resolver a configuração efetiva com base em frescor (updated_at) e hierarquia
+          let effectiveConfig: any = null;
+          let configSource = 'nenhuma';
+
+          if (excBarberData) {
+            effectiveConfig = excBarberData;
+            configSource = 'EXCEÇÃO BARBEIRO';
+          } else if (excGlobalData) {
+            effectiveConfig = excGlobalData;
+            configSource = 'EXCEÇÃO BARBEARIA';
+          } else if (unidadeConfig && unidadeConfig.aberto === false) {
+            // Loja expressamente fechada naquele dia -> fechado
+            effectiveConfig = { aberto: false };
+            configSource = 'BARBEARIA FECHADA';
+          } else if (barberDayConfig && unidadeConfig) {
+            const barberUpdated = barberDayConfig.updated_at ? new Date(barberDayConfig.updated_at).getTime() : 0;
+            const unitUpdated = unidadeConfig.updated_at ? new Date(unidadeConfig.updated_at).getTime() : 0;
+
+            if (unitUpdated > barberUpdated) {
+              effectiveConfig = unidadeConfig;
+              configSource = 'CONFIG UNIDADE (mais recente)';
+            } else {
+              effectiveConfig = barberDayConfig;
+              configSource = 'CONFIG BARBEIRO (mais recente)';
+            }
+          } else if (barberDayConfig) {
+            effectiveConfig = barberDayConfig;
+            configSource = 'CONFIG BARBEIRO';
+          } else if (unidadeConfig) {
+            effectiveConfig = unidadeConfig;
+            configSource = 'CONFIG UNIDADE';
+          }
+
+          if (effectiveConfig && effectiveConfig.aberto === false) {
+            responseSlots = [];
+          } else if (effectiveConfig && effectiveConfig.aberto !== false) {
+            const barberOpenMin = timeToMinutes(effectiveConfig.hora_abertura || '09:00');
+            const barberCloseMin = timeToMinutes(effectiveConfig.hora_fechamento || '20:00');
+
+            const firstSlot = responseSlots.length > 0 ? responseSlots[0] : null;
+            const firstSlotStartMin = firstSlot ? timeToMinutes(firstSlot.time) : -1;
+            const lastSlot = responseSlots.length > 0 ? responseSlots[responseSlots.length - 1] : null;
+            const lastSlotEndMin = lastSlot ? timeToMinutes(lastSlot.time) + serviceDuration : -1;
+
+            // Sincroniza se o início mudou (ex: 00:40/00:45 vs 09:00), o fim mudou (ex: 23:55 vs 20:00),
+            // ou se a Edge Function retornou 0 slots mas a barbearia/barbeiro está aberta
+            const needsSync =
+              responseSlots.length === 0 ||
+              firstSlotStartMin !== barberOpenMin ||
+              lastSlotEndMin !== barberCloseMin;
+
+            if (needsSync && barberCloseMin > barberOpenMin) {
+              console.log(`[useSlotAvailability] Sincronizando slots com ${configSource}: ${effectiveConfig.hora_abertura} - ${effectiveConfig.hora_fechamento}`);
+
+              let tenantSlotInterval: number | null = null;
+              if (tenantId) {
+                const { data: tData } = await supabase
+                  .from('tenants')
+                  .select('slot_interval_minutes')
+                  .eq('id', tenantId)
+                  .maybeSingle();
+                tenantSlotInterval = normalizeSlotInterval(tData?.slot_interval_minutes);
+              }
+              const slotInterval =
+                normalizeSlotInterval(effectiveConfig.slot_interval_minutes) ?? tenantSlotInterval ?? 30;
+
+              const lunchStart = effectiveConfig.hora_almoco_inicio ? timeToMinutes(effectiveConfig.hora_almoco_inicio) : null;
+              const lunchEnd = effectiveConfig.hora_almoco_fim ? timeToMinutes(effectiveConfig.hora_almoco_fim) : null;
+              const lunchEndWithBuffer = lunchEnd !== null ? lunchEnd + 10 : null;
+
+              const brasilNow = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
+              const todayStr = `${brasilNow.getFullYear()}-${String(brasilNow.getMonth() + 1).padStart(2, '0')}-${String(brasilNow.getDate()).padStart(2, '0')}`;
+              const isToday = dateStr === todayStr;
+              const currentMinutes = brasilNow.getHours() * 60 + brasilNow.getMinutes();
+              const minAdvance = isToday ? currentMinutes + MINIMUM_ADVANCE_MINUTES : 0;
+
+              const dynamicSlots: TimeSlot[] = [];
+
+              for (let s = barberOpenMin; s < barberCloseMin; s += slotInterval) {
+                const timeStr = minutesToTime(s);
+                const sEnd = s + serviceDuration;
+
+                if (sEnd > barberCloseMin) continue;
+
+                if (lunchStart !== null && lunchEndWithBuffer !== null && s < lunchEndWithBuffer && sEnd > lunchStart) {
+                  dynamicSlots.push({
+                    time: timeStr,
+                    available: false,
+                    blockedReason: s < (lunchEnd ?? 0) ? 'lunch' : 'lunch_buffer'
+                  });
+                  continue;
+                }
+
+                if (isToday && s < minAdvance) {
+                  dynamicSlots.push({ time: timeStr, available: false, blockedReason: 'minimum_advance' });
+                  continue;
+                }
+
+                let isBlocked = false;
+                for (const occ of responseOccupied) {
+                  const occStart = timeToMinutes(occ.hora);
+                  const occEnd = occStart + occ.duracao;
+                  if (s < occEnd && sEnd > occStart) {
+                    isBlocked = true;
+                    break;
+                  }
+                }
+
+                dynamicSlots.push({
+                  time: timeStr,
+                  available: !isBlocked,
+                  blockedReason: isBlocked ? 'occupied' : undefined
+                });
+              }
+
+              responseSlots = dynamicSlots;
+            }
+          }
+        } catch (syncErr) {
+          console.warn('[useSlotAvailability] Falha ao sincronizar horário do barbeiro:', syncErr);
+        }
+      }
 
       if (isInitialLoadRef.current || forceFullUpdate || lastSlotsRef.current.length === 0) {
         // Primeiro load ou força update: substituir tudo
@@ -413,15 +595,15 @@ export function useSlotAvailability(
         unidadeId = (barberScope as any)?.unidade_id ?? null;
       }
 
-      if (!sourceData && barbeiroId) {
+      let barberDayConfig: any = null;
+      if (barbeiroId) {
         const { data } = await supabase
           .from('configuracoes_horario_barbeiro')
           .select('*')
           .eq('barbeiro_id', barbeiroId)
           .eq('dia_semana', dayOfWeek)
           .maybeSingle();
-        // Corrigido: usar data diretamente sem checar aberto !== null (aberto pode ser false válido)
-        if (data) { sourceData = data; configSource = 'CONFIG BARBEIRO'; barberConfigExplicit = true; }
+        barberDayConfig = data;
       }
 
       // 4) Config da unidade (loja)
@@ -440,8 +622,9 @@ export function useSlotAvailability(
             .from('configuracoes_horario_unidade')
             .select('*')
             .eq('tenant_id', tenantId)
-            .is('unidade_id', null)
             .eq('dia_semana', dayOfWeek)
+            .order('unidade_id', { nullsFirst: false })
+            .limit(1)
             .maybeSingle();
           if (data) return data;
         }
@@ -450,9 +633,30 @@ export function useSlotAvailability(
 
       const unidadeConfig = await loadUnidadeConfig();
 
-      if (!sourceData && unidadeConfig) {
-        sourceData = unidadeConfig;
-        configSource = 'CONFIG UNIDADE';
+      if (!sourceData) {
+        if (unidadeConfig && unidadeConfig.aberto === false) {
+          sourceData = unidadeConfig;
+          configSource = 'CONFIG UNIDADE (FECHADA)';
+        } else if (barberDayConfig && unidadeConfig) {
+          const barberUpdated = barberDayConfig.updated_at ? new Date(barberDayConfig.updated_at).getTime() : 0;
+          const unitUpdated = unidadeConfig.updated_at ? new Date(unidadeConfig.updated_at).getTime() : 0;
+
+          if (unitUpdated > barberUpdated) {
+            sourceData = unidadeConfig;
+            configSource = 'CONFIG UNIDADE (mais recente)';
+          } else {
+            sourceData = barberDayConfig;
+            configSource = 'CONFIG BARBEIRO (mais recente)';
+            barberConfigExplicit = true;
+          }
+        } else if (barberDayConfig && barberDayConfig.aberto !== null) {
+          sourceData = barberDayConfig;
+          configSource = 'CONFIG BARBEIRO';
+          barberConfigExplicit = true;
+        } else if (unidadeConfig) {
+          sourceData = unidadeConfig;
+          configSource = 'CONFIG UNIDADE';
+        }
       }
 
       // 5) Config global legada
@@ -485,7 +689,7 @@ export function useSlotAvailability(
 
       console.log(`[useSlotAvailability FALLBACK] Config do dia ${dayOfWeek}: (${configSource})`, `${config.hora_abertura} - ${config.hora_fechamento}`);
 
-      // CLAMP: a loja limita a janela do barbeiro; se o barbeiro tem config própria, ela decide se atende
+      // ISOLAMENTO DE EXPEDIENTE: se a loja estiver fechada naquele dia, permanece fechado
       if (barbeiroId && configSource !== 'CONFIG GLOBAL' && configSource !== 'CONFIG UNIDADE' && configSource !== 'padrão global') {
         let storeData: any = unidadeConfig;
         if (!storeData) {
@@ -497,24 +701,9 @@ export function useSlotAvailability(
           storeData = globalData;
         }
 
-        if (storeData) {
-          if (storeData.aberto === false && !barberConfigExplicit) {
-            config.aberto = false;
-            console.log('[useSlotAvailability FALLBACK] CLAMP: loja FECHADA');
-          } else if (config.aberto && storeData.aberto !== false) {
-            const globalOpenMin = timeToMinutes(storeData.hora_abertura || '09:00');
-            const globalCloseMin = timeToMinutes(storeData.hora_fechamento || '21:00');
-            const barberOpenMin = timeToMinutes(config.hora_abertura);
-            const barberCloseMin = timeToMinutes(config.hora_fechamento);
-            if (barberOpenMin < globalOpenMin) {
-              console.log(`[useSlotAvailability FALLBACK] CLAMP: Abertura ${config.hora_abertura} → ${storeData.hora_abertura}`);
-              config.hora_abertura = storeData.hora_abertura || '09:00';
-            }
-            if (barberCloseMin > globalCloseMin) {
-              console.log(`[useSlotAvailability FALLBACK] CLAMP: Fechamento ${config.hora_fechamento} → ${storeData.hora_fechamento}`);
-              config.hora_fechamento = storeData.hora_fechamento || '21:00';
-            }
-          }
+        if (storeData && storeData.aberto === false) {
+          config.aberto = false;
+          console.log('[useSlotAvailability FALLBACK] Barbearia FECHADA');
         }
       }
 
@@ -759,6 +948,30 @@ export function useSlotAvailability(
           loadSlots(false);
         }
       )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'configuracoes_horario_unidade'
+        },
+        (payload) => {
+          console.log('[Realtime] Mudança em configuracoes_horario_unidade:', payload.eventType);
+          loadSlots(true);
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'configuracoes_horario_barbeiro'
+        },
+        (payload) => {
+          console.log('[Realtime] Mudança em configuracoes_horario_barbeiro:', payload.eventType);
+          loadSlots(true);
+        }
+      )
       .subscribe((status) => {
         console.log(`[Realtime] Status do canal:`, status);
       });
@@ -770,8 +983,21 @@ export function useSlotAvailability(
       loadSlots(false);
     }, 30000);
 
+    // Recarregar imediatamente ao retornar à aba/janela (ex: barbeiro alterou no outro app)
+    const handleWindowFocus = () => {
+      loadSlots(true);
+    };
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        loadSlots(true);
+      }
+    };
+    window.addEventListener('focus', handleWindowFocus);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
+      window.removeEventListener('focus', handleWindowFocus);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
       if (channelRef.current) {
         supabase.removeChannel(channelRef.current);
         channelRef.current = null;
@@ -831,6 +1057,19 @@ export function useSlotAvailability(
           .select('delay_entre_servicos')
           .eq('barbeiro_id', barbeiroId)
           .eq('dia_semana', dayOfWeek)
+          .maybeSingle();
+        if (data) delayConfig = data;
+      }
+
+      // Fallback para config da unidade
+      if (!delayConfig && tenantId) {
+        const { data } = await supabase
+          .from('configuracoes_horario_unidade')
+          .select('delay_entre_servicos')
+          .eq('tenant_id', tenantId)
+          .eq('dia_semana', dayOfWeek)
+          .order('unidade_id', { nullsFirst: false })
+          .limit(1)
           .maybeSingle();
         if (data) delayConfig = data;
       }

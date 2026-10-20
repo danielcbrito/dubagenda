@@ -73,6 +73,33 @@ async function checkTimeSlotAvailability(
     if (excGlobal) { config = excGlobal; configSource = 'exceção global'; }
   }
 
+  // 2.5) Config base da barbearia / unidade (prioridade multi-tenant sobre global legado)
+  let storeConfig: any = null;
+  if (tenantId) {
+    const { data: unitConfig } = await supabase
+      .from('configuracoes_horario_unidade')
+      .select('*')
+      .eq('tenant_id', tenantId)
+      .eq('dia_semana', dayOfWeek)
+      .order('unidade_id', { nullsFirst: false })
+      .limit(1)
+      .maybeSingle();
+    if (unitConfig) storeConfig = unitConfig;
+  }
+  if (!storeConfig) {
+    const { data: globalConfig } = await supabase
+      .from('configuracoes_horario')
+      .select('*')
+      .eq('dia_semana', dayOfWeek)
+      .maybeSingle();
+    if (globalConfig) storeConfig = globalConfig;
+  }
+
+  // Se a barbearia estiver fechada neste dia, agendamento não é permitido
+  if (storeConfig && storeConfig.aberto === false) {
+    return { available: false, message: 'A barbearia não funciona neste dia.' };
+  }
+
   if (!config && barbeiro_id) {
     // 3) Config padrão do barbeiro
     const { data: barbeiroConfig } = await supabase
@@ -81,18 +108,22 @@ async function checkTimeSlotAvailability(
       .eq('barbeiro_id', barbeiro_id)
       .eq('dia_semana', dayOfWeek)
       .maybeSingle();
-    if (barbeiroConfig) { config = barbeiroConfig; configSource = 'config barbeiro'; }
+    if (barbeiroConfig) {
+      if (barbeiroConfig.aberto === false) {
+        return { available: false, message: 'O profissional não atende neste dia.' };
+      }
+      config = barbeiroConfig;
+      configSource = 'config barbeiro';
+    }
+  }
+
+  if (!config && storeConfig) {
+    config = storeConfig;
+    configSource = 'config unidade';
   }
 
   if (!config) {
-    // 4) Config global
-    const { data: globalConfig } = await supabase
-      .from('configuracoes_horario')
-      .select('*')
-      .eq('dia_semana', dayOfWeek)
-      .maybeSingle();
-
-    config = globalConfig || {
+    config = {
       aberto: dayOfWeek !== 0,
       hora_abertura: '09:00',
       hora_fechamento: '21:00',
@@ -100,13 +131,18 @@ async function checkTimeSlotAvailability(
       hora_almoco_fim: '14:00',
       delay_entre_servicos: 10
     };
-    if (globalConfig) configSource = 'config global';
+    configSource = 'default fallback';
+  }
+
+  // ISOLAMENTO DE EXPEDIENTE: Se a barbearia estiver fechada no dia, dia permanece fechado
+  if (storeConfig && storeConfig.aberto === false) {
+    config.aberto = false;
   }
 
   console.log(`[checkTimeSlotAvailability] Config dia ${dayOfWeek} (${configSource}${barbeiro_id ? `, barbeiro: ${barbeiro_id}` : ''}): ${config.hora_abertura}-${config.hora_fechamento}`);
 
   if (!config.aberto) {
-    return { available: false, message: 'A barbearia não funciona neste dia.' };
+    return { available: false, message: 'O profissional não atende neste dia.' };
   }
 
   const OPEN_MINUTES = timeToMinutes(config.hora_abertura);
@@ -300,6 +336,17 @@ serve(async (req) => {
       });
 
       if (consumeError) throw consumeError;
+    }
+
+    if (metodo === 'wallet') {
+      try {
+        await supabase.rpc('settle_client_debts', {
+          p_client_id: user.id,
+          p_correlation: `wallet-${appointment.id}`,
+        });
+      } catch (errDebt) {
+        console.warn('[create-payment] Falha ao quitar débitos via carteira:', errDebt);
+      }
     }
 
     // Google Calendar sync (non-blocking) — só dispara se o barbeiro conectou

@@ -52,6 +52,8 @@ import { resolveBookingPaymentMethod, type BookingPaymentMethod } from "@/lib/ba
 import { PendingSubscriptionDrawer } from "@/components/client/PendingSubscriptionDrawer";
 import { usePendingSubscription } from "@/hooks/usePendingSubscription";
 import { useCancelSubscriptionMutation } from "@/hooks/useClientMutations";
+import { useCancellationDebt } from "@/hooks/useCancellationDebt";
+import { getPendingDebtTotal } from "@/lib/cancellation-debt";
 
 
 
@@ -158,6 +160,8 @@ const ClienteAgendar = () => {
   const [processingPayment, setProcessingPayment] = useState(false);
   const [availableCredits, setAvailableCredits] = useState(0);
   const [userId, setUserId] = useState<string | null>(null);
+  const { debts: cancellationDebts } = useCancellationDebt(userId ?? undefined);
+  const pendingDebtTotal = useMemo(() => getPendingDebtTotal(cancellationDebts), [cancellationDebts]);
   const [pendingDrawerOpen, setPendingDrawerOpen] = useState(false);
   const hasAutoOpenedPendingRef = useRef<string | null>(null);
   const { cancelSubscription, cancelling: isCancelingSubscription } = useCancelSubscriptionMutation();
@@ -240,8 +244,9 @@ const ClienteAgendar = () => {
 
   // Identifica se o agendamento atual com plano possui restrição de dias da semana (ex: Barbearia VIP -> Terça, Quarta e Quinta)
   const isVipRestrictedPlan = useMemo(() => {
-    const hasActiveSub = isPlanFlow || (!!activeSubscription && activeSubscription.status === 'active');
-    if (!hasActiveSub) return false;
+    // Aplica restrição de plano exclusivamente quando o cliente estiver no fluxo de plano
+    if (!isPlanFlow) return false;
+    if (!activeSubscription || activeSubscription.status !== 'active') return false;
 
     const currentTenantId = 
       selectedBarber?.tenant_id || 
@@ -999,11 +1004,16 @@ const ClienteAgendar = () => {
     });
   };
 
+  const visibleMonthRangeRef = useRef<{ start: Date; end: Date }>({
+    start: startOfMonth(new Date()),
+    end: endOfMonth(new Date()),
+  });
+
   /**
    * Carrega os dias fechados para o mês visível no calendário.
    */
-  
   const loadClosedDates = useCallback(async (monthStart: Date, monthEnd: Date) => {
+    visibleMonthRangeRef.current = { start: monthStart, end: monthEnd };
     setClosedDatesLoading(true);
     try {
       const barbeiroId = selectedBarberId || null;
@@ -1011,9 +1021,10 @@ const ClienteAgendar = () => {
       const endStr = format(monthEnd, 'yyyy-MM-dd');
       const allDays = eachDayOfInterval({ start: monthStart, end: monthEnd });
 
-      // Parallelizar TODAS as queries: SEMPRE buscar config global + (config barbeiro) + exceções.
-      // Config do barbeiro tem prioridade dia-a-dia, mas dias não configurados pelo barbeiro
-      // usam o global (assim domingo fechado no global é respeitado mesmo sem linha do barbeiro).
+      // Parallelizar TODAS as queries: SEMPRE buscar config da unidade/loja + config global + (config barbeiro) + exceções.
+      // A base são os horários da barbearia (configuracoes_horario_unidade), com fallback para configuracoes_horario.
+      // Se um barbeiro estiver selecionado: se a barbearia estiver aberta naquele dia, respeita o horário pessoal do barbeiro.
+      // Se a barbearia estiver fechada, o dia permanece fechado.
       const tenantId = selectedBarber?.tenant_id ?? preferredShop?.id ?? null;
       let globalExceptionQuery = supabase
         .from('horarios_excepcionais')
@@ -1022,27 +1033,77 @@ const ClienteAgendar = () => {
         .lte('data', endStr);
       if (tenantId) globalExceptionQuery = globalExceptionQuery.eq('tenant_id', tenantId);
 
-      const [globalConfigResult, barberConfigResult, globalExcResult, barberExcResult] = await Promise.all([
+      const unitConfigPromise = tenantId
+        ? supabase
+            .from('configuracoes_horario_unidade')
+            .select('dia_semana, aberto, unidade_id, updated_at')
+            .eq('tenant_id', tenantId)
+            .order('unidade_id', { nullsFirst: false })
+        : Promise.resolve({ data: null as { dia_semana: number; aberto: boolean; unidade_id?: string | null; updated_at?: string | null }[] | null });
+
+      const [globalConfigResult, unitConfigResult, barberConfigResult, globalExcResult, barberExcResult] = await Promise.all([
         supabase.from('configuracoes_horario').select('dia_semana, aberto'),
+        unitConfigPromise,
         barbeiroId
-          ? supabase.from('configuracoes_horario_barbeiro').select('dia_semana, aberto').eq('barbeiro_id', barbeiroId)
-          : Promise.resolve({ data: null as { dia_semana: number; aberto: boolean }[] | null }),
+          ? supabase.from('configuracoes_horario_barbeiro').select('dia_semana, aberto, updated_at').eq('barbeiro_id', barbeiroId)
+          : Promise.resolve({ data: null as { dia_semana: number; aberto: boolean; updated_at?: string | null }[] | null }),
         globalExceptionQuery,
         barbeiroId
           ? supabase.from('horarios_excepcionais_barbeiro').select('data, aberto').eq('barbeiro_id', barbeiroId).gte('data', startStr).lte('data', endStr)
           : Promise.resolve({ data: null as { data: string; aberto: boolean }[] | null }),
       ]);
 
-      // Construir mapa weekday → aberto começando pelo global e sobrescrevendo com o do barbeiro
+      // Construir mapa weekday → aberto:
+      // 1. Base: padrão global legado
       const weekdayOpenMap: Record<number, boolean> = {};
       for (const c of globalConfigResult.data || []) {
         weekdayOpenMap[c.dia_semana] = c.aberto !== false;
       }
-      for (const c of (barberConfigResult.data || [])) {
-        weekdayOpenMap[c.dia_semana] = c.aberto !== false;
+      
+      // Indexar unitConfigs e barberConfigs por dia da semana
+      const unitConfigMap = new Map<number, any>();
+      for (const c of (unitConfigResult.data || [])) {
+        if (!unitConfigMap.has(c.dia_semana)) {
+          unitConfigMap.set(c.dia_semana, c);
+        }
       }
 
-      // Se for conta vinculada à Barbearia VIP com plano ativo,
+      const barberConfigMap = new Map<number, any>();
+      if (barbeiroId && barberConfigResult.data) {
+        for (const c of barberConfigResult.data) {
+          barberConfigMap.set(c.dia_semana, c);
+        }
+      }
+
+      // Mesclagem com base em frescor (updated_at) entre unidade e barbeiro
+      for (let dow = 0; dow <= 6; dow++) {
+        const unitConf = unitConfigMap.get(dow);
+        const barberConf = barberConfigMap.get(dow);
+
+        if (unitConf && barberConf) {
+          const unitUpdated = unitConf.updated_at ? new Date(unitConf.updated_at).getTime() : 0;
+          const barberUpdated = barberConf.updated_at ? new Date(barberConf.updated_at).getTime() : 0;
+
+          if (unitUpdated > barberUpdated) {
+            weekdayOpenMap[dow] = unitConf.aberto !== false;
+          } else {
+            // Se o horário pessoal for mais recente, respeita o barbeiro contanto que a unidade não tenha fechado o dia depois
+            if (unitConf.aberto === false) {
+              weekdayOpenMap[dow] = false;
+            } else {
+              weekdayOpenMap[dow] = barberConf.aberto !== false;
+            }
+          }
+        } else if (unitConf) {
+          weekdayOpenMap[dow] = unitConf.aberto !== false;
+        } else if (barberConf) {
+          if (weekdayOpenMap[dow] !== false) {
+            weekdayOpenMap[dow] = barberConf.aberto !== false;
+          }
+        }
+      }
+
+      // Se for conta vinculada à Barbearia VIP com plano ativo no fluxo de plano,
       // SOMENTE terça (2), quarta (3) e quinta (4) podem ficar abertos!
       // Domingo (0), Segunda (1), Sexta (5) e Sábado (6) são fechados obrigatoriamente.
       if (isVipRestrictedPlan) {
@@ -1090,6 +1151,65 @@ const ClienteAgendar = () => {
       setClosedDatesLoading(false);
     }
   }, [selectedBarber?.tenant_id, selectedBarberId, preferredShop?.id, isVipRestrictedPlan]);
+
+  // Sincronização em tempo real dos horários da barbearia e barbeiro
+  useEffect(() => {
+    const tenantId = selectedBarber?.tenant_id ?? preferredShop?.id ?? null;
+    if (!tenantId) return;
+
+    const channel = supabase
+      .channel(`cliente-agendar-realtime-horarios-${tenantId}-${selectedBarberId || 'all'}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'configuracoes_horario_unidade',
+          filter: `tenant_id=eq.${tenantId}`
+        },
+        () => {
+          console.log('[Realtime] configuracoes_horario_unidade alterada, recarregando...');
+          loadClosedDates(visibleMonthRangeRef.current.start, visibleMonthRangeRef.current.end);
+          refreshSlots();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'configuracoes_horario_barbeiro'
+        },
+        () => {
+          console.log('[Realtime] configuracoes_horario_barbeiro alterada, recarregando...');
+          loadClosedDates(visibleMonthRangeRef.current.start, visibleMonthRangeRef.current.end);
+          refreshSlots();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [selectedBarber?.tenant_id, preferredShop?.id, selectedBarberId, loadClosedDates, refreshSlots]);
+
+  // Sincronização automática ao focar na janela / voltar para a aba
+  useEffect(() => {
+    const handleFocusOrVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        const baseDate = selectedDate || new Date();
+        loadClosedDates(startOfMonth(baseDate), endOfMonth(baseDate));
+        refreshSlots();
+      }
+    };
+
+    window.addEventListener('focus', handleFocusOrVisibility);
+    document.addEventListener('visibilitychange', handleFocusOrVisibility);
+    return () => {
+      window.removeEventListener('focus', handleFocusOrVisibility);
+      document.removeEventListener('visibilitychange', handleFocusOrVisibility);
+    };
+  }, [loadClosedDates, refreshSlots, selectedDate]);
 
   // Re-sincroniza dias fechados quando a restrição do plano VIP for detectada/alterada
   useEffect(() => {
@@ -1428,19 +1548,19 @@ const ClienteAgendar = () => {
     const totalPrice = getTotalPrice();
     const finalPrice = Math.max(0, totalPrice - availableCredits);
     const serviceFee = getServiceFee(paymentMethod);
-    const chargeAmount = finalPrice + serviceFee;
+    const chargeAmount = finalPrice + serviceFee + pendingDebtTotal;
 
-    if (useReferralCredit && referralCredits > 0) {
+    if (useReferralCredit && referralCredits > 0 && pendingDebtTotal === 0) {
       await createAppointmentWithReferralCredit();
       return;
     }
 
-    if (totalPrice === 0 && useRedemption) {
+    if (totalPrice === 0 && useRedemption && pendingDebtTotal === 0) {
       await createAppointmentWithRedemption();
       return;
     }
 
-    if (finalPrice === 0) {
+    if (finalPrice === 0 && pendingDebtTotal === 0) {
       await createAppointmentWithCredits(totalPrice);
       return;
     }
@@ -1492,9 +1612,12 @@ const ClienteAgendar = () => {
         }
       }
 
-
-
-
+      if (pendingDebtTotal > 0) {
+        const debtMsg = `Taxa pendente inclusa: R$ ${pendingDebtTotal.toFixed(2).replace('.', ',')}`;
+        finalObservacoes = finalObservacoes 
+          ? `${finalObservacoes} | ${debtMsg}`
+          : debtMsg;
+      }
 
       const bookingData = {
         servico_id: mainService.id,
@@ -1632,8 +1755,14 @@ const ClienteAgendar = () => {
       }
 
       // === Pagamento na Barbearia (cash) ===
+      const cashAmount = finalPrice + pendingDebtTotal;
+      const cashBookingData = {
+        ...bookingData,
+        preco: cashAmount,
+      };
+
       const payload: any = {
-        bookingData,
+        bookingData: cashBookingData,
         metodo: 'cash',
         creditsUsed: Math.min(availableCredits, totalPrice),
         rescheduleFromId: isRescheduling ? rescheduleAppointmentId : undefined,
@@ -1666,7 +1795,11 @@ const ClienteAgendar = () => {
       
       // Webhook de confirmação é enviado automaticamente pelo trigger do banco de dados
       
-      toast.success("Agendamento criado! Pague na barbearia.");
+      if (pendingDebtTotal > 0) {
+        toast.success(`Agendamento criado! Total de R$ ${cashAmount.toFixed(2).replace('.', ',')} a pagar na barbearia (inclui taxa pendente).`);
+      } else {
+        toast.success("Agendamento criado! Pague na barbearia.");
+      }
       setBookingSuccess(true);
     } catch (error: any) {
       console.error('Payment error:', error);
@@ -3375,7 +3508,9 @@ const ClienteAgendar = () => {
                     const referralCoversAll = useReferralCredit && canUseReferralCredit && getTotalPrice() === 0;
                     const coversAll = redemptionCoversAll || referralCoversAll;
                     const fee = coversAll ? 0 : getServiceFee(paymentMethod);
-                    const total = coversAll ? 0 : Math.max(0, getTotalPrice() - availableCredits - getCouponDiscount()) + fee;
+                    const total = coversAll
+                      ? pendingDebtTotal
+                      : Math.max(0, getTotalPrice() - availableCredits - getCouponDiscount()) + fee + pendingDebtTotal;
                     return (
                       <>
                         {fee > 0 && (
@@ -3387,11 +3522,20 @@ const ClienteAgendar = () => {
                           </div>
                         )}
 
+                        {pendingDebtTotal > 0 && (
+                          <div className="flex items-center justify-between text-[13px] text-amber-600 dark:text-amber-500 font-medium bg-amber-500/10 px-2.5 py-1.5 rounded-lg border border-amber-500/20">
+                            <span className="truncate pr-2">Taxa pendente anterior (cancelamento/falta)</span>
+                            <span className="font-bold tabular-nums shrink-0">
+                              + R$ {pendingDebtTotal.toFixed(2).replace('.', ',')}
+                            </span>
+                          </div>
+                        )}
+
                         <div className="border-b border-dashed border-neutral-200 my-2" />
 
                         <div className="flex items-center justify-between pt-0.5">
                           <span className="text-[14px] font-medium text-neutral-900">Total</span>
-                          <span className={cn("text-[18px] font-bold tabular-nums", coversAll ? "text-emerald-600" : "text-neutral-900")}>
+                          <span className={cn("text-[18px] font-bold tabular-nums", coversAll && pendingDebtTotal === 0 ? "text-emerald-600" : "text-neutral-900")}>
                             R$ {total.toFixed(2).replace('.', ',')}
                           </span>
                         </div>
@@ -3648,9 +3792,9 @@ const ClienteAgendar = () => {
             const referralCoversAll = useReferralCredit && canUseReferralCredit && getTotalPrice() === 0;
             const coversAll = redemptionCoversAll || referralCoversAll;
             const actionTotal = coversAll
-              ? 0
-              : Math.max(0, getTotalPrice() - availableCredits) + getServiceFee(paymentMethod);
-            const actionLabel = coversAll
+              ? pendingDebtTotal
+              : Math.max(0, getTotalPrice() - availableCredits) + getServiceFee(paymentMethod) + pendingDebtTotal;
+            const actionLabel = coversAll && pendingDebtTotal === 0
               ? 'Confirmar'
               : paymentMethod === 'pix'
                 ? 'Gerar PIX'

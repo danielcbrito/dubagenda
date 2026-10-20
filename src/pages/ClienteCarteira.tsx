@@ -5,13 +5,17 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
   AlertCircle,
+  AlertTriangle,
   ArrowDownLeft,
   ArrowDownToLine,
   ArrowUpRight,
+  Check,
   CheckCircle2,
   ChevronLeft,
+  Copy,
   Eye,
   EyeOff,
+  Info,
   Loader2,
   Receipt,
   ShieldCheck,
@@ -23,6 +27,15 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { BackArrow } from "@/components/ui/back-arrow";
+import { useCancellationDebt } from "@/hooks/useCancellationDebt";
+import { getPendingDebtTotal, getPendingDebtItems, type CancellationDebtItem } from "@/lib/cancellation-debt";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 interface WalletTransaction {
   id: string;
@@ -162,6 +175,18 @@ export default function ClienteCarteira() {
   const [view, setView] = useState<View>("home");
   const [result, setResult] = useState<RefundResult | null>(null);
 
+  const [userId, setUserId] = useState<string | null>(null);
+  const { debts: cancellationDebts, refresh: refreshDebts } = useCancellationDebt(userId ?? undefined);
+  const pendingDebtTotal = useMemo(() => getPendingDebtTotal(cancellationDebts), [cancellationDebts]);
+  const pendingDebtItems = useMemo(() => getPendingDebtItems(cancellationDebts), [cancellationDebts]);
+
+  // Pix quittance modal state
+  const [pixModalOpen, setPixModalOpen] = useState(false);
+  const [pixData, setPixData] = useState<{ br_code: string; qr_code_image?: string; expires_at?: string } | null>(null);
+  const [generatingPix, setGeneratingPix] = useState(false);
+  const [pixError, setPixError] = useState("");
+  const [copiedPix, setCopiedPix] = useState(false);
+
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
@@ -171,6 +196,7 @@ export default function ClienteCarteira() {
         navigate("/auth?mode=login");
         return;
       }
+      setUserId(user.id);
 
       const [profileRes, balanceRes, txRes, previewRes] = await Promise.all([
         supabase.from("profiles").select("nome, avatar_url").eq("id", user.id).maybeSingle(),
@@ -196,6 +222,59 @@ export default function ClienteCarteira() {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  // Polling automático da confirmação do PIX da taxa
+  useEffect(() => {
+    if (!pixModalOpen || !cancellationDebts[0]) return;
+    const debtRow = cancellationDebts[0];
+    let disposed = false;
+    const timer = setInterval(async () => {
+      try {
+        const { data } = await supabase.functions.invoke("cancellation-debt", {
+          body: { action: "status", rowId: debtRow.row_id },
+        });
+        if (!disposed && data?.paid) {
+          toast.success("Pagamento confirmado! Sua pendência foi quitada.");
+          setPixModalOpen(false);
+          refreshDebts();
+          loadData();
+        }
+      } catch (err) {
+        console.warn("Polling debt payment status failed:", err);
+      }
+    }, 8000);
+
+    return () => {
+      disposed = true;
+      clearInterval(timer);
+    };
+  }, [pixModalOpen, cancellationDebts, refreshDebts, loadData]);
+
+  const handleOpenDebtPix = async () => {
+    const debtRow = cancellationDebts[0];
+    if (!debtRow || generatingPix) return;
+    setGeneratingPix(true);
+    setPixError("");
+    setPixModalOpen(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("cancellation-debt", {
+        body: { action: "create", rowId: debtRow.row_id },
+      });
+      if (error || data?.error) throw new Error(data?.error || error?.message || "Erro ao gerar PIX");
+      if (data?.paid) {
+        toast.success("Pendência já quitada!");
+        setPixModalOpen(false);
+        refreshDebts();
+        loadData();
+        return;
+      }
+      setPixData(data);
+    } catch (err: any) {
+      setPixError(err.message || "Não foi possível gerar o código PIX.");
+    } finally {
+      setGeneratingPix(false);
+    }
+  };
 
   const totals = useMemo(() => {
     return transactions.reduce(
@@ -325,6 +404,64 @@ export default function ClienteCarteira() {
                   Solicitar reembolso
                 </Button>
               </section>
+
+              {/* Seção de Taxas e Pendências (Cancelamento / Falta) */}
+              {pendingDebtTotal > 0 && (
+                <section className="mt-5 rounded-2xl bg-amber-500/[0.08] border border-amber-500/25 p-4 space-y-3.5 shadow-sm">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-2.5 text-amber-600 dark:text-amber-400">
+                      <div className="w-9 h-9 rounded-xl bg-amber-500/15 flex items-center justify-center shrink-0">
+                        <AlertTriangle className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Taxa Pendente</p>
+                        <p className="text-2xl font-bold tabular-nums text-foreground mt-0.5">
+                          {brl(pendingDebtTotal)}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <p className="text-[12px] text-muted-foreground leading-relaxed">
+                    Este valor será somado automaticamente no total do seu próximo agendamento (via Pix ou na barbearia), ou você pode regularizá-lo agora via Pix:
+                  </p>
+
+                  {/* Lista detalhada de taxas pendentes */}
+                  <div className="space-y-2 pt-2 border-t border-amber-500/15">
+                    {pendingDebtItems.map((item, idx) => (
+                      <div key={item.id || idx} className="flex items-center justify-between text-xs py-1">
+                        <div className="min-w-0 pr-2">
+                          <p className="font-semibold text-foreground truncate">
+                            {item.motivo === 'falta' ? 'Falta / Não comparecimento' : 'Cancelamento com menos de 2h'}
+                          </p>
+                          <p className="text-[10px] text-muted-foreground">
+                            {item.barbeiro_nome ? `Profissional: ${item.barbeiro_nome}` : 'Barbearia'}
+                            {item.created_at ? ` • ${format(new Date(item.created_at), 'dd/MM/yyyy', { locale: ptBR })}` : ''}
+                          </p>
+                        </div>
+                        <span className="font-bold tabular-nums text-amber-600 dark:text-amber-400 shrink-0">
+                          {brl(item.valor_taxa)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+
+                  <Button
+                    onClick={handleOpenDebtPix}
+                    disabled={generatingPix}
+                    className="w-full h-11 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-semibold text-xs tracking-tight transition-all"
+                  >
+                    {generatingPix ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Gerando PIX...
+                      </>
+                    ) : (
+                      "Pagar taxa agora via Pix"
+                    )}
+                  </Button>
+                </section>
+              )}
 
 
 
@@ -460,6 +597,76 @@ export default function ClienteCarteira() {
           </div>
         )}
       </div>
+
+      {/* Modal de Quitação de Taxa Pendente via PIX */}
+      <Dialog open={pixModalOpen} onOpenChange={setPixModalOpen}>
+        <DialogContent className="sm:max-w-[380px] rounded-2xl border-border bg-background p-6">
+          <DialogHeader className="text-center space-y-1.5">
+            <DialogTitle className="text-lg font-bold text-foreground">
+              Pagar Taxa Pendente via Pix
+            </DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground">
+              Escaneie o QR Code ou copie o código Pix abaixo para quitar sua pendência.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 pt-2 text-center">
+            <p className="text-2xl font-bold tabular-nums text-foreground">
+              {brl(pendingDebtTotal)}
+            </p>
+
+            {generatingPix && (
+              <div className="py-12 flex flex-col items-center justify-center gap-2 text-muted-foreground">
+                <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                <p className="text-xs">Gerando QR Code PIX...</p>
+              </div>
+            )}
+
+            {pixError && (
+              <div className="p-3 rounded-xl bg-destructive/10 border border-destructive/20 text-xs text-destructive">
+                {pixError}
+              </div>
+            )}
+
+            {pixData && !generatingPix && (
+              <>
+                {pixData.qr_code_image && (
+                  <div className="p-3 bg-white rounded-xl inline-block mx-auto border border-border shadow-sm">
+                    <img
+                      src={pixData.qr_code_image.startsWith("data:") ? pixData.qr_code_image : `data:image/png;base64,${pixData.qr_code_image}`}
+                      alt="QR Code Pix"
+                      className="w-48 h-48 object-contain"
+                    />
+                  </div>
+                )}
+
+                <Button
+                  onClick={async () => {
+                    try {
+                      await navigator.clipboard.writeText(pixData.br_code);
+                      setCopiedPix(true);
+                      toast.success("Código PIX copiado!");
+                      setTimeout(() => setCopiedPix(false), 3000);
+                    } catch {
+                      toast.error("Erro ao copiar código PIX.");
+                    }
+                  }}
+                  variant="outline"
+                  className="w-full h-11 rounded-xl text-xs font-semibold gap-2"
+                >
+                  {copiedPix ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
+                  {copiedPix ? "Código PIX Copiado!" : "Copiar Código Pix Copia e Cola"}
+                </Button>
+
+                <p className="text-[11px] text-muted-foreground flex items-center justify-center gap-1.5 pt-1">
+                  <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-500" />
+                  Aguardando confirmação do pagamento...
+                </p>
+              </>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

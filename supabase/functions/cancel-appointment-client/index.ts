@@ -48,6 +48,16 @@ async function resolveBusinessHours(supabase: any, date: string, barberId: strin
   const dayOfWeek = new Date(`${date}T12:00:00`).getDay();
   let configData: any = null;
 
+  let tenantId: string | null = null;
+  if (barberId) {
+    const { data: barberScope } = await supabase
+      .from("barbeiros")
+      .select("tenant_id")
+      .eq("id", barberId)
+      .maybeSingle();
+    tenantId = barberScope?.tenant_id ?? null;
+  }
+
   const { data: barberException } = await supabase
     .from("horarios_excepcionais_barbeiro")
     .select("*")
@@ -57,11 +67,12 @@ async function resolveBusinessHours(supabase: any, date: string, barberId: strin
   configData = barberException;
 
   if (!configData) {
-    const { data: globalException } = await supabase
+    let globalExceptionQuery = supabase
       .from("horarios_excepcionais")
       .select("*")
-      .eq("data", date)
-      .maybeSingle();
+      .eq("data", date);
+    if (tenantId) globalExceptionQuery = globalExceptionQuery.eq("tenant_id", tenantId);
+    const { data: globalException } = await globalExceptionQuery.maybeSingle();
     configData = globalException;
   }
 
@@ -73,6 +84,18 @@ async function resolveBusinessHours(supabase: any, date: string, barberId: strin
       .eq("dia_semana", dayOfWeek)
       .maybeSingle();
     if (barberConfig && barberConfig.aberto !== null) configData = barberConfig;
+  }
+
+  if (!configData && tenantId) {
+    const { data: unitConfig } = await supabase
+      .from("configuracoes_horario_unidade")
+      .select("*")
+      .eq("tenant_id", tenantId)
+      .eq("dia_semana", dayOfWeek)
+      .order("unidade_id", { nullsFirst: false })
+      .limit(1)
+      .maybeSingle();
+    if (unitConfig) configData = unitConfig;
   }
 
   if (!configData) {
@@ -433,10 +456,52 @@ serve(async (req) => {
 
     if (updateError) throw updateError;
 
+    // 4.1 Determinar taxa de cancelamento baseada na regra do sistema (grátis > 2h, cobra < 2h)
+    let feeApplied = 0;
+    let debtRecorded = false;
+    const aptDateTime = new Date(`${appointment.data}T${appointment.hora}`).getTime();
+    const isFree = (aptDateTime - Date.now()) > 2 * 3600000;
+
+    if (!isFree && appointment.barbeiro_id) {
+      try {
+        const { data: barber } = await supabase
+          .from('barbeiros')
+          .select('tenant_id, apelido')
+          .eq('id', appointment.barbeiro_id)
+          .maybeSingle();
+
+        if (barber?.tenant_id) {
+          const { data: configRow } = await supabase
+            .from('informacoes_empresa')
+            .select('valor')
+            .eq('tenant_id', barber.tenant_id)
+            .eq('chave', `taxa_cancelamento_${appointment.barbeiro_id}`)
+            .eq('ativo', true)
+            .maybeSingle();
+
+          if (configRow?.valor) {
+            const config = typeof configRow.valor === 'string' ? JSON.parse(configRow.valor) : configRow.valor;
+            if (config.habilitado) {
+              let basePrice = Number(appointment.preco) || 0;
+              if (basePrice <= 0 && appointment.servico_id) {
+                const { data: svc } = await supabase.from('servicos').select('preco').eq('id', appointment.servico_id).maybeSingle();
+                basePrice = Number(svc?.preco) || 0;
+              }
+
+              if (basePrice > 0) {
+                const { calculateCancellationFee } = await import('../_shared/cancellation-fee.ts');
+                feeApplied = calculateCancellationFee(config, basePrice, aptDateTime, Date.now(), false);
+              }
+            }
+          }
+        }
+      } catch (errFee) {
+        console.warn('[cancel-appointment-client] Erro ao calcular taxa de cancelamento:', errFee);
+      }
+    }
+
     // Se o agendamento usou de verdade um Corte Grátis, cancelar deve liberar
-    // o mesmo benefício para o cliente remarcar. O fallback por appointment_id
-    // cobre agendamentos em que usado_redemption_id não foi gravado, mas o
-    // resgate ficou corretamente vinculado em resgates.appointment_id.
+    // o mesmo benefício para o cliente remarcar.
     let redemptionId = appointment.usado_redemption_id as string | null;
 
     if (!redemptionId) {
@@ -473,14 +538,18 @@ serve(async (req) => {
       });
     }
 
-    // 5. Crédito na carteira interna (PIX, cartão ou crédito do app)
-    //    Para PIX, guardamos os metadados Woovi para uso posterior no saque.
+    // 5. Processamento financeiro:
+    //    - Pagamento via Pix / Gateway / Crédito: desconta a taxa de cancelamento do estorno.
+    //    - Pagamento na Barbearia / Sem pré-pagamento: registra a taxa como dívida do cliente na carteira/financeiro.
     let refundedAmount = 0;
     let creditedToWallet = false;
 
-    if (!isNeverRefundable && !appointment.is_free && amount > 0 &&
-        (isPaidWithCredit || isPaidViaGateway)) {
-      refundedAmount = amount;
+    const isPrepaid = !isNeverRefundable && !appointment.is_free && amount > 0 &&
+      (isPaidWithCredit || isPaidViaGateway);
+
+    if (isPrepaid) {
+      // Reembolso com desconto da taxa de cancelamento
+      refundedAmount = Math.max(0, amount - feeApplied);
 
       let wooviMeta: Record<string, unknown> | null = null;
       let descSuffix = "";
@@ -510,6 +579,8 @@ serve(async (req) => {
             woovi_subPixKey: subPixKey,
             woovi_value_centavos: charge.value_centavos ?? Math.round(amount * 100),
             agendamento_id: appointmentId,
+            taxa_descontada: feeApplied,
+            valor_original: amount,
           };
           descSuffix = " (PIX)";
         }
@@ -522,48 +593,77 @@ serve(async (req) => {
         descSuffix = " (Cartão)";
       }
 
-      // Credita no saldo da carteira
-      const { data: currentBalance } = await supabase
-        .rpc("get_or_create_wallet_balance", { p_user_id: callerUserId });
+      if (refundedAmount > 0) {
+        // Credita o valor líquido no saldo da carteira
+        const { data: currentBalance } = await supabase
+          .rpc("get_or_create_wallet_balance", { p_user_id: callerUserId });
 
-      await supabase
-        .from("wallet_balances")
-        .update({ balance: (currentBalance || 0) + refundedAmount })
-        .eq("user_id", callerUserId);
+        await supabase
+          .from("wallet_balances")
+          .update({ balance: (currentBalance || 0) + refundedAmount })
+          .eq("user_id", callerUserId);
 
-      await supabase.from("wallet_transactions").insert({
-        user_id: callerUserId,
-        type: "refund",
-        amount: refundedAmount,
-        status: "completed",
-        description: `Estorno de cancelamento${descSuffix} - R$ ${refundedAmount.toFixed(2)}`,
-        metadata: wooviMeta,
-      });
+        const txDesc = feeApplied > 0
+          ? `Estorno de cancelamento${descSuffix} (taxa de R$ ${feeApplied.toFixed(2)} descontada) - R$ ${refundedAmount.toFixed(2)}`
+          : `Estorno integral de cancelamento${descSuffix} - R$ ${refundedAmount.toFixed(2)}`;
 
-      creditedToWallet = true;
+        await supabase.from("wallet_transactions").insert({
+          user_id: callerUserId,
+          type: "refund",
+          amount: refundedAmount,
+          status: "completed",
+          description: txDesc,
+          metadata: wooviMeta,
+        });
+
+        creditedToWallet = true;
+      }
+
+      // Se a taxa for maior que o valor pago (caso raro), registra a diferença como dívida
+      if (feeApplied > amount) {
+        const remainingDebt = feeApplied - amount;
+        await recordClientDebt(supabase, callerUserId, appointment, remainingDebt);
+        debtRecorded = true;
+      }
+    } else if (feeApplied > 0) {
+      // Pagamento na barbearia (presencial) ou sem pré-pagamento: taxa vira dívida pendente acumulada
+      await recordClientDebt(supabase, callerUserId, appointment, feeApplied);
+      debtRecorded = true;
     }
 
+    // 6. Criar notificação detalhada para o cliente
+    let notificationTitle = "Agendamento cancelado";
+    let notificationMsg = "Seu agendamento foi cancelado com sucesso.";
 
-    // 5. Create notification
+    if (feeApplied > 0 && creditedToWallet) {
+      notificationTitle = "Agendamento cancelado com taxa";
+      notificationMsg = `Cancelamento com menos de 2h de antecedência. Taxa de R$ ${feeApplied.toFixed(2).replace('.', ',')} descontada. Reembolso líquido de R$ ${refundedAmount.toFixed(2).replace('.', ',')} creditado na sua carteira.`;
+    } else if (feeApplied > 0 && debtRecorded) {
+      notificationTitle = "Taxa de cancelamento registrada";
+      notificationMsg = `Cancelamento com menos de 2h de antecedência. Taxa de cancelamento: R$ ${feeApplied.toFixed(2).replace('.', ',')}. Este valor foi registrado e será somado no seu próximo agendamento.`;
+    } else if (creditedToWallet) {
+      notificationTitle = "Cancelamento gratuito realizado";
+      notificationMsg = `Seu agendamento foi cancelado gratuitamente. R$ ${refundedAmount.toFixed(2).replace('.', ',')} foi creditado integralmente na sua carteira.`;
+    } else if (isFree) {
+      notificationTitle = "Cancelamento gratuito confirmado";
+      notificationMsg = "Seu agendamento foi cancelado gratuitamente (mais de 2 horas antes do horário).";
+    }
+
     await supabase.from("notificacoes").insert({
       user_id: callerUserId,
-      tipo: "cancelamento",
-      titulo: "Agendamento cancelado",
-      mensagem: creditedToWallet
-        ? `Seu agendamento foi cancelado. R$ ${refundedAmount.toFixed(2)} foi creditado na sua carteira.`
-        : "Seu agendamento foi cancelado com sucesso.",
+      tipo: feeApplied > 0 ? "taxa_cancelamento" : "cancelamento",
+      titulo: notificationTitle,
+      mensagem: notificationMsg,
       agendamento_id: appointmentId,
     });
-
-    // 6. Notificações automáticas via triggers de banco de dados
-    // O trigger trg_notify_appointment_cancelled_whatsapp enviará o WhatsApp automaticamente
-    // ao detectar a mudança de status para 'cancelled_by_user'.
-    // Removemos a chamada manual para evitar duplicidade de mensagens.
 
     return new Response(
       JSON.stringify({
         success: true,
         refundedAmount,
+        feeApplied,
+        debtRecorded,
+        freeCancellation: isFree || feeApplied === 0,
         appointmentId,
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
@@ -576,3 +676,94 @@ serve(async (req) => {
     );
   }
 });
+
+/**
+ * Função auxiliar para registrar dívida pendente acumulada na tabela informacoes_empresa
+ */
+async function recordClientDebt(supabase: any, userId: string, appointment: any, feeAmount: number) {
+  try {
+    const { data: barber } = await supabase
+      .from('barbeiros')
+      .select('tenant_id, apelido')
+      .eq('id', appointment.barbeiro_id)
+      .maybeSingle();
+
+    if (!barber?.tenant_id) return;
+
+    const { data: existingRow } = await supabase
+      .from('informacoes_empresa')
+      .select('id, valor')
+      .eq('tenant_id', barber.tenant_id)
+      .eq('categoria', 'debitos_cliente')
+      .eq('chave', `debito_cancelamento_${userId}`)
+      .maybeSingle();
+
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('nome, telefone')
+      .eq('id', userId)
+      .maybeSingle();
+
+    const newItem = {
+      id: crypto.randomUUID(),
+      agendamento_id: appointment.id,
+      barbeiro_id: appointment.barbeiro_id,
+      barbeiro_nome: barber.apelido || 'Barbeiro',
+      motivo: 'cancelamento_tardio',
+      valor_taxa: feeAmount,
+      valor_servico_original: appointment.preco || 0,
+      status: 'pendente',
+      created_at: new Date().toISOString(),
+      tenant_id: barber.tenant_id,
+    };
+
+    if (existingRow && existingRow.valor) {
+      let existingVal = typeof existingRow.valor === 'string' ? JSON.parse(existingRow.valor) : existingRow.valor;
+      let itens = Array.isArray(existingVal.itens) ? existingVal.itens : [existingVal];
+      itens.push(newItem);
+
+      const totalPendente = itens
+        .filter((it: any) => it.status === 'pendente')
+        .reduce((sum: number, it: any) => sum + (Number(it.valor_taxa) || 0), 0);
+
+      existingVal = {
+        ...existingVal,
+        total_pendente: totalPendente,
+        valor_taxa: totalPendente,
+        status: totalPendente > 0 ? 'pendente' : 'pago',
+        itens,
+        updated_at: new Date().toISOString(),
+      };
+
+      await supabase.from('informacoes_empresa').update({
+        valor: JSON.stringify(existingVal),
+        ativo: true,
+        atualizado_em: new Date().toISOString(),
+      }).eq('id', existingRow.id);
+    } else {
+      const debtData = {
+        id: crypto.randomUUID(),
+        cliente_id: userId,
+        cliente_nome: profile?.nome || '',
+        cliente_telefone: profile?.telefone || '',
+        total_pendente: feeAmount,
+        valor_taxa: feeAmount,
+        status: 'pendente',
+        itens: [newItem],
+        tenant_id: barber.tenant_id,
+        created_at: new Date().toISOString(),
+      };
+
+      await supabase.from('informacoes_empresa').insert({
+        tenant_id: barber.tenant_id,
+        chave: `debito_cancelamento_${userId}`,
+        categoria: 'debitos_cliente',
+        valor: JSON.stringify(debtData),
+        ativo: true,
+      });
+    }
+  } catch (err) {
+    console.error('[cancel-appointment-client] Erro ao gravar dívida acumulada:', err);
+  }
+}
+

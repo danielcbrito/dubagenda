@@ -114,7 +114,11 @@ Deno.serve(async (req) => {
 
     // ============================================
     // BUSCAR CONFIGURAÇÕES DE HORÁRIO DO BANCO
-    // Prioridade: 1) Exceção barbeiro, 2) Exceção global, 3) Config barbeiro, 4) Config global
+    // Prioridade:
+    // 1) Exceção do barbeiro
+    // 2) Exceção da barbearia (tenant)
+    // 3) Horário base da barbearia (configuracoes_horario_unidade -> fallback configuracoes_horario)
+    // 4) Horário do barbeiro (configuracoes_horario_barbeiro), respeitando limites da barbearia
     // ============================================
     let configData: any = null;
     let configError: any = null;
@@ -133,7 +137,8 @@ Deno.serve(async (req) => {
       }
     }
 
-    // 2) Exceção global para esta data
+    // 2) Exceção da barbearia para esta data
+    let storeException: any = null;
     if (!configData) {
       let globalExceptionQuery = supabase
         .from('horarios_excepcionais')
@@ -142,12 +147,51 @@ Deno.serve(async (req) => {
       if (tenantId) globalExceptionQuery = globalExceptionQuery.eq('tenant_id', tenantId);
       const result = await globalExceptionQuery.maybeSingle();
       if (result.data) {
-        console.log('[validate-appointment] EXCEÇÃO GLOBAL encontrada');
+        console.log('[validate-appointment] EXCEÇÃO DA BARBEARIA encontrada');
+        storeException = result.data;
         configData = result.data;
       }
     }
 
-    // 3) Config padrão do barbeiro para o dia da semana
+    // 3) Horário base da barbearia (configuracoes_horario_unidade -> fallback configuracoes_horario)
+    let storeConfig: any = storeException;
+    if (!storeConfig && tenantId) {
+      const result = await supabase
+        .from('configuracoes_horario_unidade')
+        .select('*')
+        .eq('tenant_id', tenantId)
+        .eq('dia_semana', dayOfWeek)
+        .order('unidade_id', { nullsFirst: false })
+        .limit(1)
+        .maybeSingle();
+      if (result.data) {
+        storeConfig = result.data;
+      }
+    }
+    if (!storeConfig) {
+      const result = await supabase
+        .from('configuracoes_horario')
+        .select('*')
+        .eq('dia_semana', dayOfWeek)
+        .maybeSingle();
+      if (result.data) {
+        storeConfig = result.data;
+      }
+    }
+
+    // Se a barbearia estiver fechada neste dia, agendamento é rejeitado
+    if (storeConfig && storeConfig.aberto === false) {
+      console.log('[validate-appointment] Rejeitado: Barbearia fechada neste dia');
+      return new Response(
+        JSON.stringify({
+          valid: false,
+          message: 'A barbearia não funciona neste dia.'
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+      );
+    }
+
+    // 4) Config padrão do barbeiro para o dia da semana
     if (!configData && resolvedBarberId) {
       const result = await supabase
         .from('configuracoes_horario_barbeiro')
@@ -161,15 +205,9 @@ Deno.serve(async (req) => {
       configError = result.error;
     }
 
-    // 4) Config global do dia da semana
-    if (!configData) {
-      const result = await supabase
-        .from('configuracoes_horario')
-        .select('*')
-        .eq('dia_semana', dayOfWeek)
-        .maybeSingle();
-      configData = result.data;
-      configError = result.error;
+    // 5) Fallback para a config da barbearia
+    if (!configData && storeConfig) {
+      configData = storeConfig;
     }
 
     if (configError) {
@@ -193,6 +231,11 @@ Deno.serve(async (req) => {
       delay_entre_servicos: 10
     };
 
+    // ISOLAMENTO DE EXPEDIENTE: Se a barbearia estiver fechada no dia, rejeita agendamento.
+    if (storeConfig && storeConfig.aberto === false) {
+      config.aberto = false;
+    }
+
     console.log(`[validate-appointment] Config do dia ${dayOfWeek}:`, JSON.stringify(config));
 
     // Check if day is closed
@@ -201,7 +244,7 @@ Deno.serve(async (req) => {
       return new Response(
         JSON.stringify({ 
           valid: false, 
-          message: 'A barbearia não funciona neste dia.' 
+          message: 'O profissional não atende neste dia.' 
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
       );

@@ -1,73 +1,64 @@
-import { useEffect, useState } from 'react';
-import { createPortal } from 'react-dom';
-import { Loader2 } from 'lucide-react';
+import { useState } from 'react';
+import { AlertCircle, ChevronRight, X, Wallet } from 'lucide-react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthProvider';
 import { useCancellationDebt } from '@/hooks/useCancellationDebt';
-import { supabase } from '@/integrations/supabase/client';
-import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
-import { toast } from 'sonner';
+import { getPendingDebtTotal } from '@/lib/cancellation-debt';
+import { motion, AnimatePresence } from 'framer-motion';
 
-type Pix = { br_code: string; qr_code_image?: string; expires_at?: string };
-
+/**
+ * Banner informativo não-bloqueante sobre dívidas de cancelamento/falta.
+ * Não bloqueia a tela; apenas informa o cliente de forma elegante que o valor
+ * será somado ao próximo agendamento ou pode ser pago na carteira.
+ */
 export function CancellationDebtGate() {
   const { user } = useAuth();
-  const { debts, refresh } = useCancellationDebt(user?.id);
-  const debt = debts[0];
-  const [pix, setPix] = useState<{ id: string; data: Pix } | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
-  useEffect(() => {
-    if (!debt) return;
-    let disposed = false;
-    const timer = window.setInterval(async () => {
-      const { data } = await supabase.functions.invoke('cancellation-debt', { body: { action: 'status', rowId: debt.row_id } });
-      if (!disposed && data?.paid) refresh();
-    }, 15000);
-    return () => { disposed = true; window.clearInterval(timer); };
-  }, [debt?.row_id, refresh]);
+  const { debts } = useCancellationDebt(user?.id);
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [dismissed, setDismissed] = useState(false);
 
-  const generatePix = async () => {
-    if (!debt || busy) return;
-    setBusy(true);
-    setError('');
-    try {
-      const { data, error: requestError } = await supabase.functions.invoke('cancellation-debt', { body: { action: 'create', rowId: debt.row_id } });
-      if (requestError) {
-        const detail = await requestError.context?.json?.().catch(() => null);
-        throw new Error(detail?.error ?? 'Não foi possível gerar o PIX. Tente novamente.');
-      }
-      if (data?.error) throw new Error(data.error);
-      if (data?.paid) { refresh(); return; }
-      if (!data?.br_code) throw new Error('PIX indisponível.');
-      setPix({ id: debt.debito.id, data });
-    } catch (e) { setError(e instanceof Error ? e.message : 'Não foi possível gerar o PIX.'); }
-    finally { setBusy(false); }
-  };
-  if (!debt) return null;
-  const currentPix = pix?.id === debt.debito.id ? pix.data : null;
-  // O backdrop também cobre portais e controles que estejam fora do layout.
-  return createPortal(<>
-    <div className="fixed inset-0 z-[9998] bg-background" />
-    <Dialog open>
-      <DialogContent className="fixed inset-0 z-[9999] m-0 h-dvh max-h-none w-screen max-w-none translate-x-0 translate-y-0 rounded-none border-0 bg-background p-6 flex flex-col items-center justify-center overflow-y-auto overscroll-contain [&>button]:hidden [&>div.pointer-events-none]:hidden"
-        onEscapeKeyDown={e => e.preventDefault()} onPointerDownOutside={e => e.preventDefault()} onInteractOutside={e => e.preventDefault()}>
-        <div className="w-full max-w-sm space-y-6 text-center">
-          <DialogTitle className="text-xl font-semibold text-foreground">Aplicativo temporariamente bloqueado.</DialogTitle>
-          <DialogDescription className="text-base text-muted-foreground">Você possui uma taxa de cancelamento pendente.</DialogDescription>
-          <p className="text-3xl font-semibold tabular-nums text-foreground">{debt.debito.valor_taxa.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
-          {currentPix?.qr_code_image && <img src={currentPix.qr_code_image} alt="QR Code PIX da taxa de cancelamento" className="w-60 h-60 object-contain mx-auto bg-card" />}
-          {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
-          <Button className="w-full min-h-12 text-base" disabled={busy} onClick={generatePix}>
-            {busy ? <Loader2 className="h-5 w-5 animate-spin" /> : currentPix ? 'Atualizar QR Code PIX' : 'Gerar QR Code PIX'}
-          </Button>
-          {currentPix && <Button variant="outline" className="w-full min-h-12 whitespace-normal text-base" onClick={async () => {
-            try { await navigator.clipboard.writeText(currentPix.br_code); toast.success('Código PIX copiado.'); }
-            catch { setError('Não foi possível copiar. Selecione o código abaixo.'); }
-          }}>Copiar código Pix Copia e Cola</Button>}
-          {currentPix && <textarea readOnly aria-label="Código PIX Copia e Cola" value={currentPix.br_code} className="w-full h-20 resize-none rounded-md border border-border bg-muted p-3 text-xs text-foreground" />}
-        </div>
-      </DialogContent>
-    </Dialog>
-  </>, document.body);
+  // Não exibe se o usuário estiver na própria carteira ou no agendamento (onde o resumo já exibe)
+  const isExcludedRoute =
+    location.pathname.startsWith('/cliente/carteira') ||
+    location.pathname.startsWith('/cliente/agendar');
+
+  const totalPendente = getPendingDebtTotal(debts);
+
+  if (dismissed || isExcludedRoute || totalPendente <= 0) {
+    return null;
+  }
+
+  const formattedTotal = totalPendente.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+  return (
+    <AnimatePresence>
+      <motion.aside
+        initial={{ y: -40, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        exit={{ y: -40, opacity: 0 }}
+        aria-label="Aviso de taxa pendente"
+        className="fixed top-0 left-0 right-0 z-[40] bg-amber-500 text-amber-950 px-4 py-2.5 shadow-md flex items-center justify-between gap-3 text-xs font-medium"
+      >
+        <button
+          onClick={() => navigate('/cliente/carteira')}
+          className="flex-1 flex items-center gap-2 text-left truncate hover:opacity-90 transition-opacity"
+        >
+          <AlertCircle className="w-4 h-4 shrink-0 text-amber-950" />
+          <span className="truncate">
+            Você tem <strong>{formattedTotal}</strong> em taxa pendente (será somada no seu próximo agendamento).
+          </span>
+          <ChevronRight className="w-3.5 h-3.5 shrink-0 opacity-70" />
+        </button>
+
+        <button
+          onClick={() => setDismissed(true)}
+          className="p-1 rounded hover:bg-amber-600/20 active:scale-95 transition-colors"
+          aria-label="Fechar aviso de taxa pendente"
+        >
+          <X className="w-3.5 h-3.5" />
+        </button>
+      </motion.aside>
+    </AnimatePresence>
+  );
 }

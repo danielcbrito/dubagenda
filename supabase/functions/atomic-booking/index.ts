@@ -97,6 +97,18 @@ Deno.serve(async (req) => {
       if (barberConfig) resolvedConfig = barberConfig;
     }
 
+    if (!resolvedConfig && tenantId) {
+      const { data: unitConfig } = await supabase
+        .from('configuracoes_horario_unidade')
+        .select('*')
+        .eq('tenant_id', tenantId)
+        .eq('dia_semana', dayOfWeek)
+        .order('unidade_id', { nullsFirst: false })
+        .limit(1)
+        .maybeSingle();
+      if (unitConfig) resolvedConfig = unitConfig;
+    }
+
     if (!resolvedConfig) {
       const { data: globalConfig } = await supabase
         .from('configuracoes_horario')
@@ -129,6 +141,17 @@ Deno.serve(async (req) => {
       const { data: globalExc } = await globalExceptionQuery.maybeSingle();
 
       let globalRef: any = globalExc;
+      if (!globalRef && tenantId) {
+        const { data: unitCfg } = await supabase
+          .from('configuracoes_horario_unidade')
+          .select('*')
+          .eq('tenant_id', tenantId)
+          .eq('dia_semana', dayOfWeek)
+          .order('unidade_id', { nullsFirst: false })
+          .limit(1)
+          .maybeSingle();
+        globalRef = unitCfg;
+      }
       if (!globalRef) {
         const { data: globalCfg } = await supabase
           .from('configuracoes_horario')
