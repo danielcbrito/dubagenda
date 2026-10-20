@@ -31,6 +31,7 @@ interface MeuPlanoViewProps {
 /** Tela do plano do assinante: situação atual + renovação em destaque */
 export function MeuPlanoView({ sub, onRenovado, onVerPlanos }: MeuPlanoViewProps) {
   const [open, setOpen] = useState(false);
+  const navigate = useNavigate();
 
   const fim = sub.ciclo_fim || sub.next_billing_date;
   const fimDate = fim ? new Date(`${fim}T23:59:59`) : null;
