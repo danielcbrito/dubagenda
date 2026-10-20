@@ -288,6 +288,13 @@ export function AppointmentCardPremium({
         userId={userId || ""}
         paymentMethod={(appointment as any).payment_method}
         observacoes={appointment.observacoes}
+        appointmentMeta={{
+          servico: appointment.servico?.nome,
+          data: appointment.data,
+          hora: appointment.hora,
+          preco: amount,
+          barbeiro_id: (appointment as any).barbeiro_id,
+        }}
         onSuccess={() => {
           setCancelModalOpen(false);
           onCancel?.();

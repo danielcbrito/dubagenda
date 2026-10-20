@@ -6654,10 +6654,6 @@ export type Database = {
           transacao_id: string
         }[]
       }
-      dispensar_debito_cliente: {
-        Args: { p_cliente_id: string; p_item_id?: string; p_motivo?: string }
-        Returns: Json
-      }
       ensure_default_loyalty_promotion: {
         Args: { p_tenant_id: string }
         Returns: undefined
@@ -6694,10 +6690,6 @@ export type Database = {
         Returns: Json
       }
       get_barber_home_bundle: { Args: { p_barbeiro_id: string }; Returns: Json }
-      get_barber_pending_debts: {
-        Args: { p_barbeiro_id: string }
-        Returns: Json
-      }
       get_blocked_barber_ids: { Args: { p_user_id: string }; Returns: string[] }
       get_client_campaigns: { Args: { p_tenant_id?: string }; Returns: Json }
       get_client_home_bundle: { Args: never; Returns: Json }
@@ -6890,10 +6882,6 @@ export type Database = {
       is_ip_allowed_maintenance: { Args: { p_ip: string }; Returns: boolean }
       is_tenant_owner_by_tenant: {
         Args: { p_tenant_id: string }
-        Returns: boolean
-      }
-      is_tenant_staff: {
-        Args: { _tenant_id: string; _user_id?: string }
         Returns: boolean
       }
       mark_available_redemption_as_used: {

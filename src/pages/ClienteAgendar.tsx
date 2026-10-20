@@ -1684,6 +1684,7 @@ const ClienteAgendar = () => {
           expiresAt: data.expires_at,
           value: chargeAmount,
           serviceFee,
+          pendingDebtTotal: pendingDebtTotal || 0,
           serviceName: serviceNames,
           barberName: barbers.find(b => b.id === selectedBarberId)?.apelido,
           bookingDate: format(selectedDate, "dd/MM/yyyy"),
@@ -2981,12 +2982,43 @@ const ClienteAgendar = () => {
                     isPlanService={!!activeSubscription?.servico_id && activeSubscription.servico_id === service.id}
                   />
                 ))}
+
+                {/* Taxa de cancelamento anterior (exibida no mesmo padrão dos serviços) */}
+                {pendingDebtTotal > 0 && (
+                  <div className="w-full rounded-[24px] p-4 transition-all duration-200 border bg-white border-neutral-200/80 shadow-[0_2px_12px_rgba(0,0,0,0.02)] select-none">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-[15px] font-semibold text-neutral-900 mb-0.5 tracking-tight">
+                          Taxa de cancelamento anterior
+                        </h3>
+                        <p className="text-[12px] text-neutral-500 mb-2.5 line-clamp-2 leading-relaxed">
+                          Referente ao cancelamento anterior. Será somada automaticamente ao agendamento.
+                        </p>
+                        <div className="flex items-center gap-3">
+                          <span className="text-[14px] font-semibold text-neutral-900 tabular-nums">
+                            R$ {pendingDebtTotal.toFixed(2).replace('.', ',')}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex-shrink-0 flex items-center gap-1.5 mt-0.5">
+                        <div className="w-8 h-8 rounded-full bg-neutral-900 text-white flex items-center justify-center">
+                          <Check className="w-4 h-4 stroke-[2.5]" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <FloatingActionBar
                 isVisible={selectedServices.length > 0}
                 onContinue={handleNextStep}
                 label="Continuar"
+                subtitle={
+                  pendingDebtTotal > 0 && selectedServices.length > 0
+                    ? `Total: R$ ${(selectedServices.reduce((sum, s) => sum + s.preco * (serviceQuantities[s.id] || 1), 0) + pendingDebtTotal).toFixed(2).replace('.', ',')}`
+                    : undefined
+                }
               />
             </div>
           </motion.div>
@@ -3523,10 +3555,10 @@ const ClienteAgendar = () => {
                         )}
 
                         {pendingDebtTotal > 0 && (
-                          <div className="flex items-center justify-between text-[13px] text-amber-600 dark:text-amber-500 font-medium bg-amber-500/10 px-2.5 py-1.5 rounded-lg border border-amber-500/20">
-                            <span className="truncate pr-2">Taxa pendente anterior (cancelamento/falta)</span>
-                            <span className="font-bold tabular-nums shrink-0">
-                              + R$ {pendingDebtTotal.toFixed(2).replace('.', ',')}
+                          <div className="flex items-center justify-between text-[13px]">
+                            <span className="text-neutral-600 truncate">Taxa de cancelamento anterior</span>
+                            <span className="tabular-nums font-medium flex-shrink-0 text-neutral-900">
+                              R$ {pendingDebtTotal.toFixed(2).replace('.', ',')}
                             </span>
                           </div>
                         )}

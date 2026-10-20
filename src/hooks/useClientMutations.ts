@@ -49,7 +49,7 @@ export function useCancelAppointment() {
       onSuccess?.();
     } catch (err: any) {
       console.error("Cancel appointment error:", err);
-      toast.error("Erro ao cancelar agendamento. Tente novamente.");
+      toast.error(err?.message || "Erro ao cancelar agendamento. Tente novamente.");
     } finally {
       setCancelling(false);
     }

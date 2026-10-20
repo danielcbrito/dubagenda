@@ -649,13 +649,17 @@ serve(async (req) => {
       notificationMsg = "Seu agendamento foi cancelado gratuitamente (mais de 2 horas antes do horário).";
     }
 
-    await supabase.from("notificacoes").insert({
-      user_id: callerUserId,
-      tipo: feeApplied > 0 ? "taxa_cancelamento" : "cancelamento",
-      titulo: notificationTitle,
-      mensagem: notificationMsg,
-      agendamento_id: appointmentId,
-    });
+    try {
+      await supabase.from("notificacoes").insert({
+        user_id: callerUserId,
+        tipo: feeApplied > 0 ? "taxa_cancelamento" : "cancelamento",
+        titulo: notificationTitle,
+        mensagem: notificationMsg,
+        agendamento_id: appointmentId,
+      });
+    } catch (notifErr) {
+      console.warn("[cancel-appointment-client] Falha não impeditiva ao registrar notificação:", notifErr);
+    }
 
     return new Response(
       JSON.stringify({
