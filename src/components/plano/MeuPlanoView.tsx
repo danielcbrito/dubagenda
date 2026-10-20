@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -30,6 +31,7 @@ interface MeuPlanoViewProps {
 /** Tela do plano do assinante: situação atual + renovação em destaque */
 export function MeuPlanoView({ sub, onRenovado, onVerPlanos }: MeuPlanoViewProps) {
   const [open, setOpen] = useState(false);
+  const navigate = useNavigate();
 
   const fim = sub.ciclo_fim || sub.next_billing_date;
   const fimDate = fim ? new Date(`${fim}T23:59:59`) : null;
@@ -98,7 +100,7 @@ export function MeuPlanoView({ sub, onRenovado, onVerPlanos }: MeuPlanoViewProps
 
           <div className="space-y-3">
             <button
-              onClick={() => setOpen(true)}
+              onClick={() => navigate("/cliente/assinar?mode=renew")}
               className="w-full h-14 rounded-xl bg-primary text-primary-foreground text-base font-bold active:scale-[0.98] transition-transform"
             >
               Renovar plano · R$ {preco.toFixed(2).replace(".", ",")}
