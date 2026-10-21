@@ -134,7 +134,7 @@ export function CancelAppointmentModal({
           const { data: rpcData, error: rpcError } = await supabase
             .rpc('quote_client_cancellation', { p_appointment: appointmentId, p_user: userId });
 
-          if (!rpcError && rpcData && !rpcData.error) {
+          if (!rpcError && rpcData && typeof rpcData === 'object' && !Array.isArray(rpcData) && !rpcData.error) {
             quoteData = rpcData;
           }
         }

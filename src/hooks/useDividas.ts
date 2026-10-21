@@ -1,5 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import type { SupabaseClient } from '@supabase/supabase-js';
+
+// Legacy optional resources are not included in the generated database schema.
+const legacyDebtClient: SupabaseClient = supabase;
 
 export interface DividaItem {
   id: string;
@@ -33,7 +37,7 @@ export function useDividas(userId: string | undefined) {
 
     try {
       // 1. Tentar RPC otimizada primeiro
-      const { data: rpcData, error: rpcError } = await supabase.rpc('consultar_minhas_dividas');
+      const { data: rpcData, error: rpcError } = await legacyDebtClient.rpc('consultar_minhas_dividas');
 
       if (!rpcError && Array.isArray(rpcData) && rpcData.length > 0) {
         setPendingDebt(rpcData[0] as DividaItem);
@@ -42,7 +46,7 @@ export function useDividas(userId: string | undefined) {
       }
 
       // 2. Fallback direto via consulta na tabela dividas
-      const { data, error } = await supabase
+      const { data, error } = await legacyDebtClient
         .from('dividas')
         .select(`
           id,
