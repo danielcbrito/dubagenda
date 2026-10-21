@@ -1,0 +1,30 @@
+CADASTRO WHATSAPP — 21/10/2026
+
+USUÁRIO
+Sintoma: "Erro ao gerar código" antes de criar a conta.
+
+FRONTEND
+Auth.tsx chama whatsapp-verification com action signup_send.
+Nenhuma alteração no fluxo de cadastro ou confirmação de e-mail.
+Corrigidos dois erros de tipagem preexistentes que impediam a compilação:
+verificação do JSON da cotação e acesso tipado separado a recursos legados de dívidas.
+
+BACKEND / N8N
+Logs de 20:37–20:39 UTC: PGRST205 ao gravar whatsapp_signup_otp.
+A função falhava antes de enviar ao webhook N8N. Não era erro de geração aleatória.
+Mantido fluxo: telefone -> código -> N8N -> WhatsApp -> validação -> token -> conta.
+
+BANCO SUPABASE
+to_regclass confirmou tabela ausente, apesar de migration histórica no repositório.
+Restaurada estrutura compatível com a função existente.
+RLS habilitada; permissões anon/authenticated explicitamente revogadas,
+pois o banco tinha permissões padrão que concediam acesso automaticamente.
+service_role mantém acesso. Nenhum código real foi consultado ou exposto.
+Teste de gravação de seis dígitos e validade passou em subtransação desfeita.
+
+SERVIÇOS EXTERNOS E VALIDAÇÃO
+signup_verify publicado respondeu "Código expirado. Solicite um novo." para
+entrada de teste inexistente, sem falha de tabela e sem enviar WhatsApp.
+Recebimento real, validação do OTP e criação final da conta não verificados:
+aguardam nova tentativa do cliente; não foi usado telefone de terceiros.
+107 alertas de segurança anteriores à correção permanecem fora deste escopo.
