@@ -16,7 +16,19 @@ Deno.serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Buscar agendamentos que acontecem daqui a ~1 hora (janela de 50-70 min)
+    // 1. Processar lembretes de 3 horas antes (Push + WhatsApp Evolution API)
+    try {
+      const { data: res3h, error: err3h } = await supabase.rpc("processar_lembretes_3h_antes");
+      if (err3h) {
+        console.warn("[appointment-reminders] Aviso ao rodar processar_lembretes_3h_antes:", err3h);
+      } else {
+        console.log("[appointment-reminders] Resultado lembretes 3h:", res3h);
+      }
+    } catch (e3h) {
+      console.warn("[appointment-reminders] Erro ao chamar processar_lembretes_3h_antes:", e3h);
+    }
+
+    // 2. Buscar agendamentos que acontecem daqui a ~1 hora (janela de 50-70 min)
     const now = new Date();
     const oneHourFromNow = new Date(now.getTime() + 60 * 60 * 1000);
     const windowStart = new Date(now.getTime() + 50 * 60 * 1000);

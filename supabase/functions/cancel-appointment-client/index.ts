@@ -457,6 +457,7 @@ serve(async (req) => {
     if (updateError) throw updateError;
 
     // 4.1 Determinar taxa de cancelamento baseada na regra do sistema (grátis > 2h, cobra < 2h)
+    // Regra: Se o cliente cancelar dentro de 2 horas antes -> cobra taxa automática de 20% do valor do serviço agendado
     let feeApplied = 0;
     let debtRecorded = false;
     const aptDateTime = new Date(`${appointment.data}T${appointment.hora}`).getTime();
@@ -464,36 +465,15 @@ serve(async (req) => {
 
     if (!isFree && appointment.barbeiro_id) {
       try {
-        const { data: barber } = await supabase
-          .from('barbeiros')
-          .select('tenant_id, apelido')
-          .eq('id', appointment.barbeiro_id)
-          .maybeSingle();
+        let basePrice = Number(appointment.preco) || 0;
+        if (basePrice <= 0 && appointment.servico_id) {
+          const { data: svc } = await supabase.from('servicos').select('preco').eq('id', appointment.servico_id).maybeSingle();
+          basePrice = Number(svc?.preco) || 0;
+        }
 
-        if (barber?.tenant_id) {
-          const { data: configRow } = await supabase
-            .from('informacoes_empresa')
-            .select('valor')
-            .eq('tenant_id', barber.tenant_id)
-            .eq('chave', `taxa_cancelamento_${appointment.barbeiro_id}`)
-            .eq('ativo', true)
-            .maybeSingle();
-
-          if (configRow?.valor) {
-            const config = typeof configRow.valor === 'string' ? JSON.parse(configRow.valor) : configRow.valor;
-            if (config.habilitado) {
-              let basePrice = Number(appointment.preco) || 0;
-              if (basePrice <= 0 && appointment.servico_id) {
-                const { data: svc } = await supabase.from('servicos').select('preco').eq('id', appointment.servico_id).maybeSingle();
-                basePrice = Number(svc?.preco) || 0;
-              }
-
-              if (basePrice > 0) {
-                const { calculateCancellationFee } = await import('../_shared/cancellation-fee.ts');
-                feeApplied = calculateCancellationFee(config, basePrice, aptDateTime, Date.now(), false);
-              }
-            }
-          }
+        if (basePrice > 0) {
+          // Taxa = 20% do valor do serviço agendado
+          feeApplied = Math.round(basePrice * 0.20 * 100) / 100;
         }
       } catch (errFee) {
         console.warn('[cancel-appointment-client] Erro ao calcular taxa de cancelamento:', errFee);
@@ -686,88 +666,38 @@ serve(async (req) => {
  */
 async function recordClientDebt(supabase: any, userId: string, appointment: any, feeAmount: number) {
   try {
-    const { data: barber } = await supabase
-      .from('barbeiros')
-      .select('tenant_id, apelido')
-      .eq('id', appointment.barbeiro_id)
-      .maybeSingle();
+    const valorTotal = Math.round(Number(feeAmount) * 100) / 100;
+    const valorBarbeiro = Math.round(valorTotal * 0.50 * 100) / 100;
+    const valorPlataforma = Math.round((valorTotal - valorBarbeiro) * 100) / 100;
 
-    if (!barber?.tenant_id) return;
-
-    const { data: existingRow } = await supabase
-      .from('informacoes_empresa')
-      .select('id, valor')
-      .eq('tenant_id', barber.tenant_id)
-      .eq('categoria', 'debitos_cliente')
-      .eq('chave', `debito_cancelamento_${userId}`)
-      .maybeSingle();
-
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('nome, telefone')
-      .eq('id', userId)
-      .maybeSingle();
-
-    const newItem = {
-      id: crypto.randomUUID(),
-      agendamento_id: appointment.id,
+    // 1. Inserir registro na nova tabela oficial dividas
+    const { error: dividaErr } = await supabase.from('dividas').insert({
+      cliente_id: userId,
       barbeiro_id: appointment.barbeiro_id,
-      barbeiro_nome: barber.apelido || 'Barbeiro',
-      motivo: 'cancelamento_tardio',
-      valor_taxa: feeAmount,
-      valor_servico_original: appointment.preco || 0,
+      agendamento_id: appointment.id,
+      valor_total: valorTotal,
+      valor_barbeiro: valorBarbeiro,
+      valor_plataforma: valorPlataforma,
       status: 'pendente',
-      created_at: new Date().toISOString(),
-      tenant_id: barber.tenant_id,
-    };
+      criado_em: new Date().toISOString(),
+    });
 
-    if (existingRow && existingRow.valor) {
-      let existingVal = typeof existingRow.valor === 'string' ? JSON.parse(existingRow.valor) : existingRow.valor;
-      let itens = Array.isArray(existingVal.itens) ? existingVal.itens : [existingVal];
-      itens.push(newItem);
-
-      const totalPendente = itens
-        .filter((it: any) => it.status === 'pendente')
-        .reduce((sum: number, it: any) => sum + (Number(it.valor_taxa) || 0), 0);
-
-      existingVal = {
-        ...existingVal,
-        total_pendente: totalPendente,
-        valor_taxa: totalPendente,
-        status: totalPendente > 0 ? 'pendente' : 'pago',
-        itens,
-        updated_at: new Date().toISOString(),
-      };
-
-      await supabase.from('informacoes_empresa').update({
-        valor: JSON.stringify(existingVal),
-        ativo: true,
-        atualizado_em: new Date().toISOString(),
-      }).eq('id', existingRow.id);
+    if (dividaErr) {
+      console.error('[cancel-appointment-client] Erro ao inserir na tabela dividas:', dividaErr);
     } else {
-      const debtData = {
-        id: crypto.randomUUID(),
-        cliente_id: userId,
-        cliente_nome: profile?.nome || '',
-        cliente_telefone: profile?.telefone || '',
-        total_pendente: feeAmount,
-        valor_taxa: feeAmount,
-        status: 'pendente',
-        itens: [newItem],
-        tenant_id: barber.tenant_id,
-        created_at: new Date().toISOString(),
-      };
-
-      await supabase.from('informacoes_empresa').insert({
-        tenant_id: barber.tenant_id,
-        chave: `debito_cancelamento_${userId}`,
-        categoria: 'debitos_cliente',
-        valor: JSON.stringify(debtData),
-        ativo: true,
-      });
+      console.log(`[cancel-appointment-client] Dívida registrada na tabela dividas para cliente ${userId}, valor: R$ ${valorTotal}`);
     }
+
+    // 2. Notificação no app
+    await supabase.from('notificacoes').insert({
+      user_id: userId,
+      tipo: 'taxa_cancelamento',
+      titulo: 'Taxa de cancelamento registrada',
+      mensagem: `Cancelamento com menos de 2h de antecedência. Taxa de R$ ${valorTotal.toFixed(2).replace('.', ',')} registrada. Pague para continuar agendando.`,
+      agendamento_id: appointment.id,
+    });
   } catch (err) {
-    console.error('[cancel-appointment-client] Erro ao gravar dívida acumulada:', err);
+    console.error('[cancel-appointment-client] Erro ao gravar dívida na tabela dividas:', err);
   }
 }
 

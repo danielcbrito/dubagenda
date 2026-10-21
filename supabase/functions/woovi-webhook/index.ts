@@ -47,6 +47,36 @@ Deno.serve(async (req) => {
       });
     }
 
+    // 0. Tratamento prioritário de quitação de taxa de cancelamento (divida-<id>)
+    if (correlationID.startsWith('divida-')) {
+      const dividaId = correlationID.slice(7);
+      console.log(`[woovi-webhook] Processando pagamento de taxa de cancelamento da dívida: ${dividaId}`);
+
+      const { data: quitResult, error: quitError } = await admin.rpc('quitar_divida', {
+        p_divida_id: dividaId,
+        p_pix_id: correlationID,
+      });
+
+      if (quitError) {
+        console.error('[woovi-webhook] Erro ao executar quitar_divida:', quitError);
+        // Fallback: atualizar status direto na tabela dividas
+        await admin
+          .from('dividas')
+          .update({ status: 'pago', pago_em: new Date().toISOString(), pix_id: correlationID })
+          .eq('id', dividaId);
+      }
+
+      await admin
+        .from('woovi_charges')
+        .update({ status: 'PAID' })
+        .eq('correlation_id', correlationID);
+
+      return new Response(
+        JSON.stringify({ ok: true, paid: true, dividaId, result: quitResult }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // 1. Buscar cobrança local
     const { data: localCharge } = await admin
       .from("woovi_charges")
