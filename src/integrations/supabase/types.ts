@@ -6358,6 +6358,39 @@ export type Database = {
           },
         ]
       }
+      whatsapp_signup_otp: {
+        Row: {
+          attempts: number
+          code: string
+          created_at: string
+          expires_at: string
+          id: string
+          phone: string
+          verification_token: string | null
+          verified_at: string | null
+        }
+        Insert: {
+          attempts?: number
+          code: string
+          created_at?: string
+          expires_at: string
+          id?: string
+          phone: string
+          verification_token?: string | null
+          verified_at?: string | null
+        }
+        Update: {
+          attempts?: number
+          code?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          phone?: string
+          verification_token?: string | null
+          verified_at?: string | null
+        }
+        Relationships: []
+      }
       whatsapp_verification_codes: {
         Row: {
           attempts: number | null
