@@ -29,6 +29,9 @@ import { Button } from "@/components/ui/button";
 import { BackArrow } from "@/components/ui/back-arrow";
 import { useCancellationDebt } from "@/hooks/useCancellationDebt";
 import { getPendingDebtTotal, getPendingDebtItems, type CancellationDebtItem } from "@/lib/cancellation-debt";
+import { useDividas } from "@/hooks/useDividas";
+import { DebtPaymentModal } from "@/components/DebtPaymentModal";
+import { QrCode } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -179,6 +182,8 @@ export default function ClienteCarteira() {
   const { debts: cancellationDebts, refresh: refreshDebts } = useCancellationDebt(userId ?? undefined);
   const pendingDebtTotal = useMemo(() => getPendingDebtTotal(cancellationDebts), [cancellationDebts]);
   const pendingDebtItems = useMemo(() => getPendingDebtItems(cancellationDebts), [cancellationDebts]);
+  const { pendingDebt, hasDebt, refresh: refreshDividas } = useDividas(userId ?? undefined);
+  const [debtPaymentModalOpen, setDebtPaymentModalOpen] = useState(false);
 
   // Pix quittance modal state
   const [pixModalOpen, setPixModalOpen] = useState(false);
@@ -405,62 +410,65 @@ export default function ClienteCarteira() {
                 </Button>
               </section>
 
-              {/* Seção de Taxas e Pendências (Cancelamento / Falta) */}
-              {pendingDebtTotal > 0 && (
-                <section className="mt-5 rounded-2xl bg-amber-500/[0.08] border border-amber-500/25 p-4 space-y-3.5 shadow-sm">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-center gap-2.5 text-amber-600 dark:text-amber-400">
-                      <div className="w-9 h-9 rounded-xl bg-amber-500/15 flex items-center justify-center shrink-0">
-                        <AlertTriangle className="w-5 h-5" />
-                      </div>
-                      <div>
-                        <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Taxa Pendente</p>
-                        <p className="text-2xl font-bold tabular-nums text-foreground mt-0.5">
-                          {brl(pendingDebtTotal)}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
+              {/* Seção de Taxas e Pendências (Cancelamento) */}
+              {((hasDebt && pendingDebt) || pendingDebtTotal > 0) && (
+                (() => {
+                  const activeDebt = pendingDebt;
+                  const rawDate = activeDebt?.agendamento_data || activeDebt?.criado_em;
+                  let formattedDate = '';
+                  try {
+                    if (/^\d{4}-\d{2}-\d{2}$/.test(rawDate || '')) {
+                      const [y, m, d] = (rawDate || '').split('-');
+                      formattedDate = `${d}/${m}/${y}`;
+                    } else if (rawDate) {
+                      formattedDate = new Date(rawDate).toLocaleDateString('pt-BR', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric',
+                      });
+                    }
+                  } catch {
+                    formattedDate = rawDate || '';
+                  }
 
-                  <p className="text-[12px] text-muted-foreground leading-relaxed">
-                    Este valor será somado automaticamente no total do seu próximo agendamento (via Pix ou na barbearia), ou você pode regularizá-lo agora via Pix:
-                  </p>
+                  const displayTotal = activeDebt ? Number(activeDebt.valor_total) : pendingDebtTotal;
 
-                  {/* Lista detalhada de taxas pendentes */}
-                  <div className="space-y-2 pt-2 border-t border-amber-500/15">
-                    {pendingDebtItems.map((item, idx) => (
-                      <div key={item.id || idx} className="flex items-center justify-between text-xs py-1">
-                        <div className="min-w-0 pr-2">
-                          <p className="font-semibold text-foreground truncate">
-                            {item.motivo === 'falta' ? 'Falta / Não comparecimento' : 'Cancelamento com menos de 2h'}
-                          </p>
-                          <p className="text-[10px] text-muted-foreground">
-                            {item.barbeiro_nome ? `Profissional: ${item.barbeiro_nome}` : 'Barbearia'}
-                            {item.created_at ? ` • ${format(new Date(item.created_at), 'dd/MM/yyyy', { locale: ptBR })}` : ''}
-                          </p>
+                  return (
+                    <section className="mt-5 rounded-2xl bg-amber-500/[0.08] border border-amber-500/25 p-4 space-y-3.5 shadow-sm">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-center gap-2.5 text-amber-600 dark:text-amber-400">
+                          <div className="w-9 h-9 rounded-xl bg-amber-500/15 flex items-center justify-center shrink-0">
+                            <AlertTriangle className="w-5 h-5" />
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Pendência Financeira</p>
+                            <p className="text-2xl font-bold tabular-nums text-foreground mt-0.5">
+                              {brl(displayTotal)}
+                            </p>
+                          </div>
                         </div>
-                        <span className="font-bold tabular-nums text-amber-600 dark:text-amber-400 shrink-0">
-                          {brl(item.valor_taxa)}
-                        </span>
                       </div>
-                    ))}
-                  </div>
 
-                  <Button
-                    onClick={handleOpenDebtPix}
-                    disabled={generatingPix}
-                    className="w-full h-11 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-semibold text-xs tracking-tight transition-all"
-                  >
-                    {generatingPix ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Gerando PIX...
-                      </>
-                    ) : (
-                      "Pagar taxa agora via Pix"
-                    )}
-                  </Button>
-                </section>
+                      <p className="text-[13px] text-foreground/90 font-medium leading-relaxed">
+                        Você tem uma pendência de <strong className="text-amber-700 dark:text-amber-400 font-bold tabular-nums">{brl(displayTotal)}</strong> referente ao cancelamento do dia <strong className="text-foreground font-semibold">{formattedDate || 'anterior'}</strong>. Pague para continuar agendando.
+                      </p>
+
+                      <Button
+                        onClick={() => {
+                          if (activeDebt) {
+                            setDebtPaymentModalOpen(true);
+                          } else {
+                            handleOpenDebtPix();
+                          }
+                        }}
+                        className="w-full h-11 rounded-xl bg-neutral-900 hover:bg-neutral-800 text-white dark:bg-neutral-100 dark:hover:bg-white dark:text-neutral-900 font-semibold text-xs tracking-tight transition-all active:scale-[0.98] flex items-center justify-center gap-2 shadow-sm"
+                      >
+                        <QrCode className="w-4 h-4" />
+                        Pagar agora
+                      </Button>
+                    </section>
+                  );
+                })()
               )}
 
 
@@ -667,6 +675,18 @@ export default function ClienteCarteira() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Novo Modal Oficial de Quitação de Dívida / Taxa com Woovi Split e Real-time */}
+      <DebtPaymentModal
+        open={debtPaymentModalOpen}
+        onOpenChange={setDebtPaymentModalOpen}
+        divida={pendingDebt}
+        onPaymentSuccess={() => {
+          refreshDividas();
+          refreshDebts();
+          loadData();
+        }}
+      />
     </div>
   );
 }

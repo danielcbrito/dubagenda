@@ -52,8 +52,9 @@ import { resolveBookingPaymentMethod, type BookingPaymentMethod } from "@/lib/ba
 import { PendingSubscriptionDrawer } from "@/components/client/PendingSubscriptionDrawer";
 import { usePendingSubscription } from "@/hooks/usePendingSubscription";
 import { useCancelSubscriptionMutation } from "@/hooks/useClientMutations";
-import { useCancellationDebt } from "@/hooks/useCancellationDebt";
-import { getPendingDebtTotal } from "@/lib/cancellation-debt";
+import { useDividas } from "@/hooks/useDividas";
+import { DebtPaymentModal } from "@/components/DebtPaymentModal";
+import { QrCode, AlertTriangle as AlertTriangleIcon } from "lucide-react";
 
 
 
@@ -160,8 +161,9 @@ const ClienteAgendar = () => {
   const [processingPayment, setProcessingPayment] = useState(false);
   const [availableCredits, setAvailableCredits] = useState(0);
   const [userId, setUserId] = useState<string | null>(null);
-  const { debts: cancellationDebts } = useCancellationDebt(userId ?? undefined);
-  const pendingDebtTotal = useMemo(() => getPendingDebtTotal(cancellationDebts), [cancellationDebts]);
+  const { pendingDebt, hasDebt, refresh: refreshDividas } = useDividas(userId ?? undefined);
+  const [debtModalOpen, setDebtModalOpen] = useState(false);
+  const pendingDebtTotal = 0;
   const [pendingDrawerOpen, setPendingDrawerOpen] = useState(false);
   const hasAutoOpenedPendingRef = useRef<string | null>(null);
   const { cancelSubscription, cancelling: isCancelingSubscription } = useCancelSubscriptionMutation();
@@ -1548,19 +1550,19 @@ const ClienteAgendar = () => {
     const totalPrice = getTotalPrice();
     const finalPrice = Math.max(0, totalPrice - availableCredits);
     const serviceFee = getServiceFee(paymentMethod);
-    const chargeAmount = finalPrice + serviceFee + pendingDebtTotal;
+    const chargeAmount = finalPrice + serviceFee;
 
-    if (useReferralCredit && referralCredits > 0 && pendingDebtTotal === 0) {
+    if (useReferralCredit && referralCredits > 0) {
       await createAppointmentWithReferralCredit();
       return;
     }
 
-    if (totalPrice === 0 && useRedemption && pendingDebtTotal === 0) {
+    if (totalPrice === 0 && useRedemption) {
       await createAppointmentWithRedemption();
       return;
     }
 
-    if (finalPrice === 0 && pendingDebtTotal === 0) {
+    if (finalPrice === 0) {
       await createAppointmentWithCredits(totalPrice);
       return;
     }
@@ -1756,7 +1758,7 @@ const ClienteAgendar = () => {
       }
 
       // === Pagamento na Barbearia (cash) ===
-      const cashAmount = finalPrice + pendingDebtTotal;
+      const cashAmount = finalPrice;
       const cashBookingData = {
         ...bookingData,
         preco: cashAmount,
@@ -2874,6 +2876,85 @@ const ClienteAgendar = () => {
     );
   }
 
+  if (hasDebt && pendingDebt) {
+    const rawDate = pendingDebt.agendamento_data || pendingDebt.criado_em;
+    let formattedDate = '';
+    try {
+      if (/^\d{4}-\d{2}-\d{2}$/.test(rawDate || '')) {
+        const [y, m, d] = (rawDate || '').split('-');
+        formattedDate = `${d}/${m}/${y}`;
+      } else {
+        formattedDate = new Date(rawDate || '').toLocaleDateString('pt-BR', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric',
+        });
+      }
+    } catch {
+      formattedDate = rawDate || '';
+    }
+
+    const valorFormatado = Number(pendingDebt.valor_total || 0).toLocaleString('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+    });
+
+    return (
+      <div className="min-h-screen w-full bg-white flex flex-col items-center justify-center p-6 text-center select-none">
+        <div className="w-full max-w-sm mx-auto space-y-6">
+          <div className="w-16 h-16 rounded-3xl bg-amber-500/10 border border-amber-500/25 text-amber-600 flex items-center justify-center mx-auto shadow-sm">
+            <AlertTriangleIcon className="w-8 h-8 stroke-[2.2]" />
+          </div>
+
+          <div className="space-y-2.5">
+            <h1 className="text-xl font-bold tracking-tight text-neutral-900">
+              Pendência financeira
+            </h1>
+            <p className="text-[14.5px] text-neutral-600 leading-relaxed font-normal">
+              Você tem uma pendência de{' '}
+              <strong className="text-amber-700 font-bold tabular-nums">
+                {valorFormatado}
+              </strong>{' '}
+              referente ao cancelamento do dia{' '}
+              <strong className="text-neutral-900 font-semibold">{formattedDate}</strong>.
+            </p>
+            <p className="text-[13px] text-neutral-500">
+              Pague para continuar agendando.
+            </p>
+          </div>
+
+          <div className="space-y-2.5 pt-3">
+            <Button
+              onClick={() => setDebtModalOpen(true)}
+              className="w-full h-12 text-[14px] font-semibold bg-neutral-900 text-white hover:bg-neutral-800 rounded-xl shadow-sm transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+            >
+              <QrCode className="w-4 h-4" />
+              Pagar agora
+            </Button>
+
+            <Button
+              variant="ghost"
+              onClick={() => navigate('/cliente')}
+              className="w-full h-10 text-[13px] text-neutral-500 hover:text-neutral-900 rounded-xl"
+            >
+              Voltar ao início
+            </Button>
+          </div>
+        </div>
+
+        <DebtPaymentModal
+          open={debtModalOpen}
+          onOpenChange={setDebtModalOpen}
+          divida={pendingDebt}
+          onPaymentSuccess={() => {
+            refreshDividas();
+            setDebtModalOpen(false);
+          }}
+        />
+      </div>
+    );
+  }
+
   return (
     <div 
       ref={containerRef}
@@ -2982,43 +3063,12 @@ const ClienteAgendar = () => {
                     isPlanService={!!activeSubscription?.servico_id && activeSubscription.servico_id === service.id}
                   />
                 ))}
-
-                {/* Taxa de cancelamento anterior (exibida no mesmo padrão dos serviços) */}
-                {pendingDebtTotal > 0 && (
-                  <div className="w-full rounded-[24px] p-4 transition-all duration-200 border bg-white border-neutral-200/80 shadow-[0_2px_12px_rgba(0,0,0,0.02)] select-none">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex-1 min-w-0">
-                        <h3 className="text-[15px] font-semibold text-neutral-900 mb-0.5 tracking-tight">
-                          Taxa de cancelamento anterior
-                        </h3>
-                        <p className="text-[12px] text-neutral-500 mb-2.5 line-clamp-2 leading-relaxed">
-                          Referente ao cancelamento anterior. Será somada automaticamente ao agendamento.
-                        </p>
-                        <div className="flex items-center gap-3">
-                          <span className="text-[14px] font-semibold text-neutral-900 tabular-nums">
-                            R$ {pendingDebtTotal.toFixed(2).replace('.', ',')}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="flex-shrink-0 flex items-center gap-1.5 mt-0.5">
-                        <div className="w-8 h-8 rounded-full bg-neutral-900 text-white flex items-center justify-center">
-                          <Check className="w-4 h-4 stroke-[2.5]" />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
               </div>
 
               <FloatingActionBar
                 isVisible={selectedServices.length > 0}
                 onContinue={handleNextStep}
                 label="Continuar"
-                subtitle={
-                  pendingDebtTotal > 0 && selectedServices.length > 0
-                    ? `Total: R$ ${(selectedServices.reduce((sum, s) => sum + s.preco * (serviceQuantities[s.id] || 1), 0) + pendingDebtTotal).toFixed(2).replace('.', ',')}`
-                    : undefined
-                }
               />
             </div>
           </motion.div>
@@ -3541,8 +3591,8 @@ const ClienteAgendar = () => {
                     const coversAll = redemptionCoversAll || referralCoversAll;
                     const fee = coversAll ? 0 : getServiceFee(paymentMethod);
                     const total = coversAll
-                      ? pendingDebtTotal
-                      : Math.max(0, getTotalPrice() - availableCredits - getCouponDiscount()) + fee + pendingDebtTotal;
+                      ? 0
+                      : Math.max(0, getTotalPrice() - availableCredits - getCouponDiscount()) + fee;
                     return (
                       <>
                         {fee > 0 && (
@@ -3553,21 +3603,11 @@ const ClienteAgendar = () => {
                             </span>
                           </div>
                         )}
-
-                        {pendingDebtTotal > 0 && (
-                          <div className="flex items-center justify-between text-[13px]">
-                            <span className="text-neutral-600 truncate">Taxa de cancelamento anterior</span>
-                            <span className="tabular-nums font-medium flex-shrink-0 text-neutral-900">
-                              R$ {pendingDebtTotal.toFixed(2).replace('.', ',')}
-                            </span>
-                          </div>
-                        )}
-
                         <div className="border-b border-dashed border-neutral-200 my-2" />
 
                         <div className="flex items-center justify-between pt-0.5">
                           <span className="text-[14px] font-medium text-neutral-900">Total</span>
-                          <span className={cn("text-[18px] font-bold tabular-nums", coversAll && pendingDebtTotal === 0 ? "text-emerald-600" : "text-neutral-900")}>
+                          <span className={cn("text-[18px] font-bold tabular-nums", coversAll ? "text-emerald-600" : "text-neutral-900")}>
                             R$ {total.toFixed(2).replace('.', ',')}
                           </span>
                         </div>
@@ -3824,9 +3864,9 @@ const ClienteAgendar = () => {
             const referralCoversAll = useReferralCredit && canUseReferralCredit && getTotalPrice() === 0;
             const coversAll = redemptionCoversAll || referralCoversAll;
             const actionTotal = coversAll
-              ? pendingDebtTotal
-              : Math.max(0, getTotalPrice() - availableCredits) + getServiceFee(paymentMethod) + pendingDebtTotal;
-            const actionLabel = coversAll && pendingDebtTotal === 0
+              ? 0
+              : Math.max(0, getTotalPrice() - availableCredits) + getServiceFee(paymentMethod);
+            const actionLabel = coversAll
               ? 'Confirmar'
               : paymentMethod === 'pix'
                 ? 'Gerar PIX'

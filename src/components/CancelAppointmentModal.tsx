@@ -99,6 +99,21 @@ export function CancelAppointmentModal({
               vaiGerarDivida: false,
               error: false,
             };
+          } else {
+            const fee20 = Math.round(amount * 0.20 * 100) / 100;
+            return {
+              id: appointmentId,
+              fee: fee20,
+              isFree: false,
+              horasRestantes: Math.max(0, Math.round(hoursLeft * 10) / 10),
+              originalPrice: amount,
+              isPrepaid,
+              valorPago: amount,
+              refundAmount: 0,
+              vaiDescontarReembolso: false,
+              vaiGerarDivida: true,
+              error: false,
+            };
           }
         }
       } catch {
@@ -283,7 +298,7 @@ export function CancelAppointmentModal({
                       <strong className="text-foreground font-semibold">{brl(quote.refundAmount)}</strong> na carteira.
                     </>
                   ) : (
-                    <>Taxa pendente somada no seu próximo agendamento.</>
+                    <>Taxa de 20% registrada como pendência. Pague para continuar agendando.</>
                   )}
                 </p>
               </motion.div>
