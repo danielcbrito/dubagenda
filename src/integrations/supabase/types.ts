@@ -152,6 +152,7 @@ export type Database = {
           barbeiro_id: string | null
           cancelado_em: string | null
           cliente_confirmou: boolean | null
+          cliente_nome: string | null
           created_at: string | null
           criado_por: string | null
           cupom_id: string | null
@@ -184,6 +185,7 @@ export type Database = {
           barbeiro_id?: string | null
           cancelado_em?: string | null
           cliente_confirmou?: boolean | null
+          cliente_nome?: string | null
           created_at?: string | null
           criado_por?: string | null
           cupom_id?: string | null
@@ -216,6 +218,7 @@ export type Database = {
           barbeiro_id?: string | null
           cancelado_em?: string | null
           cliente_confirmou?: boolean | null
+          cliente_nome?: string | null
           created_at?: string | null
           criado_por?: string | null
           cupom_id?: string | null
@@ -7154,6 +7157,10 @@ export type Database = {
           produto_id: string
           sold_qty: number
         }[]
+      }
+      update_agendamento_cliente_nome: {
+        Args: { p_agendamento_id: string; p_cliente_nome: string }
+        Returns: boolean
       }
       use_credits_atomic: {
         Args: { p_amount: number; p_appointment_id: string; p_user_id: string }
