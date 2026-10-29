@@ -1,0 +1,28 @@
+RENOVAÇÃO PAGA NA BARBEARIA — TIAGO DA SILVA
+Data: 29/10/2026
+
+USUÁRIO
+O solicitante confirmou que Tiago pagou uma nova mensalidade na barbearia.
+
+FRONTEND
+Nenhuma alteração no aplicativo. Agendamento pela conta do cliente não testado.
+
+BACKEND N8N / SERVIÇOS EXTERNOS
+Nenhuma cobrança criada e nenhum webhook enviado.
+
+BANCO SUPABASE
+Cliente: d1de638f-a01d-45d0-87ee-fcd5bfa00c99
+Assinatura: 0726c063-b9e2-4c9f-a03e-e0c46926356e
+Tenant DUB: 73d61f2f-b369-41f3-8915-8e6de52d6378
+Plano: Corte e Barba. Profissional vinculado preservado.
+Antes: ativo, dinheiro confirmado, 4 cortes usados, vencimento 02/11/2026.
+Após: ativo, dinheiro confirmado, 0 de 4 cortes usados,
+ciclo 29/10/2026 a 28/11/2026, total_renovacoes=1.
+A renovação inicia imediatamente, conforme a regra do projeto.
+Somente essa assinatura foi alterada; histórico de atendimentos preservado.
+Leitura posterior confirmou pagamento, status, contador e datas.
+
+SEGURANÇA / ERROS
+A alteração exigiu ID da assinatura, cliente, tenant através do plano
+e valores anteriores do ciclo/contador/renovações para evitar duplicação.
+Não foi criado plano novo nem alterada a configuração de outros clientes.
