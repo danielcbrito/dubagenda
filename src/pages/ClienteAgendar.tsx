@@ -3719,10 +3719,21 @@ const ClienteAgendar = () => {
 
               {/* Card de resumo */}
               <div className="rounded-[20px] bg-white border border-neutral-200/80 shadow-[0_2px_12px_rgba(0,0,0,0.03)] p-5 space-y-4 mb-6">
-                <SummaryRow 
+                <SummaryRow
                   label="Serviço"
                   value={getFormattedServiceNames()}
                 />
+
+                {/* Taxa de cancelamento pendente (não removível pelo cliente) */}
+                {hasDebt && pendingDebtTotal > 0 && (
+                  <>
+                    <div className="border-t border-neutral-100" />
+                    <SummaryRow
+                      label="Taxa de cancelamento"
+                      value={`R$ ${pendingDebtTotal.toFixed(2).replace('.', ',')}`}
+                    />
+                  </>
+                )}
 
                 <div className="border-t border-neutral-100" />
 
@@ -3834,10 +3845,21 @@ const ClienteAgendar = () => {
 
                 <div className="border-t border-neutral-100" />
 
-                <SummaryRow 
+                <SummaryRow
                   label="Serviço"
                   value={selectedServices[0]?.nome || ""}
                 />
+
+                {/* Taxa de cancelamento pendente (não removível pelo cliente) */}
+                {hasDebt && pendingDebtTotal > 0 && (
+                  <>
+                    <div className="border-t border-neutral-100" />
+                    <SummaryRow
+                      label="Taxa de cancelamento"
+                      value={`R$ ${pendingDebtTotal.toFixed(2).replace('.', ',')}`}
+                    />
+                  </>
+                )}
               </div>
 
 
