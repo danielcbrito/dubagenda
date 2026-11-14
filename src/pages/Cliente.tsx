@@ -2,10 +2,11 @@ import { useEffect, useState, useRef, useMemo, useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Calendar, Crown, Store, ChevronRight, Scissors, MapPin, Search, Clock, Star } from "lucide-react";
+import { Calendar, Crown, Store, ChevronRight, Scissors, MapPin, Search, Clock, Star, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { useDataError } from "@/hooks/useDataError";
 import { useBlockedBarbers } from "@/hooks/useBlockedBarbers";
+import { useDividas } from "@/hooks/useDividas";
 
 import { supabase } from "@/integrations/supabase/client";
 import { getVerifiedAuthUser } from "@/utils/authSession";
@@ -365,6 +366,9 @@ const Cliente = () => {
 
   // Auth síncrona: usuário disponível no primeiro render (sem waterfall de rede).
   const { user, hydrated, verified } = useAuth();
+
+  // Dívida de taxa de cancelamento pendente (exibida na tela inicial + cobrada ao agendar)
+  const { pendingDebt, hasDebt, refresh: refreshDividas } = useDividas(user?.id);
 
   // Aquece o cache da tela de agendamento (profissionais/serviços/unidades)
   useEffect(() => {
@@ -1184,6 +1188,45 @@ const Cliente = () => {
                 </motion.div>
               )}
             </AnimatePresence>
+
+            {/* Dívida de Cancelamento Pendente */}
+            {hasDebt && pendingDebt && (
+              <AnimatePresence>
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 10 }}
+                  className="mb-4"
+                >
+                  <div className="rounded-[24px] overflow-hidden bg-amber-50 border border-amber-200/60 shadow-[0_4px_20px_rgba(0,0,0,0.05)]">
+                    <div className="p-4 sm:p-5">
+                      <div className="flex items-start gap-3">
+                        <AlertTriangle className="w-5 h-5 text-amber-600 mt-0.5 shrink-0" />
+                        <div className="flex-1">
+                          <p className="text-[10px] font-semibold text-amber-600 uppercase tracking-[0.2em] mb-1">
+                            Pendência Financeira
+                          </p>
+                          <h3 className="font-medium text-neutral-900 text-[15px] leading-snug mb-2">
+                            Taxa de cancelamento pendente de R$ {Number(pendingDebt.valor_total || 0).toFixed(2).replace('.', ',')}
+                          </h3>
+                          <p className="text-[12px] text-neutral-600 mb-3">
+                            Você possui uma taxa de cancelamento não paga. Quite este valor para continuar agendando serviços.
+                          </p>
+                          <button
+                            onClick={() => {
+                              navigate('/cliente/carteira');
+                            }}
+                            className="w-full py-2 px-4 rounded-xl bg-amber-600 text-white text-sm font-medium hover:bg-amber-700 transition-all"
+                          >
+                            Pagar Agora
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              </AnimatePresence>
+            )}
 
             {/* Pending Review Banners */}
             {eligibleReviews.length > 0 && (
