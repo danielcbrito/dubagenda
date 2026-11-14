@@ -177,6 +177,7 @@ const ClienteAgendar = () => {
     ? `${debtDate.slice(8, 10)}/${debtDate.slice(5, 7)}/${debtDate.slice(0, 4)}`
     : '';
   const [pendingDrawerOpen, setPendingDrawerOpen] = useState(false);
+  const [showDebtCard, setShowDebtCard] = useState(true);
   const hasAutoOpenedPendingRef = useRef<string | null>(null);
   const { cancelSubscription, cancelling: isCancelingSubscription } = useCancelSubscriptionMutation();
   const [hasAutoOpenedThisSession, setHasAutoOpenedThisSession] = useState(false);
@@ -3632,26 +3633,48 @@ const ClienteAgendar = () => {
                 </div>
               </div>
 
-              {/* Card: taxa de cancelamento só pode ser paga via PIX */}
-              {combinedHasDebt && combinedPendingDebtTotal > 0 && (
+              {/* Card: taxa de cancelamento só pode ser paga via PIX (estilo modal, ref. Image #16) */}
+              {combinedHasDebt && combinedPendingDebtTotal > 0 && showDebtCard && (
                 <div className="mb-6">
-                  <div className="rounded-[20px] bg-orange-50 border border-orange-200 shadow-[0_2px_12px_rgba(234,179,8,0.1)] p-4 space-y-3">
-                    <div className="flex items-start gap-3">
-                      <Zap className="w-5 h-5 text-orange-600 shrink-0 mt-0.5" />
-                      <div className="flex-1">
-                        <p className="text-[13px] font-semibold text-orange-900 leading-relaxed">
-                          Esta taxa de cancelamento{" "}
-                          <span className="block text-[11px] font-medium text-orange-600 mt-0.5">
-                            somente pode ser paga via PIX
-                          </span>{" "}
-                          não é possível quitar presencialmente na barbearia.
-                        </p>
-                      </div>
+                  <div className="relative bg-white border border-orange-200 shadow-lg rounded-[24px] p-5 overflow-hidden">
+                    {/* Close button (X) — canto superior direito */}
+                    <button
+                      onClick={() => setShowDebtCard(false)}
+                      className="absolute top-3 right-3 p-1.5 text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 rounded-full transition-colors"
+                      aria-label="Fechar"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+
+                    {/* Cabeçalho */}
+                    <div className="mb-4">
+                      <h3 className="text-[16px] font-semibold text-neutral-900 mb-1">
+                        Taxa de Cancelamento
+                      </h3>
+                      <p className="text-[13px] text-neutral-500">
+                        Esta taxa somente pode ser paga via{" "}
+                        <span className="font-semibold text-orange-600">PIX</span>.
+                      </p>
                     </div>
+
+                    {/* Valor pendente */}
+                    <div className="bg-orange-50 border border-orange-100 rounded-xl p-3 mb-4">
+                      <p className="text-[12px] text-orange-700 font-medium mb-1">
+                        Valor pendente:
+                      </p>
+                      <p className="text-[18px] font-bold text-orange-900 tabular-nums">
+                        R$ {combinedPendingDebtTotal.toFixed(2).replace(".", ",")}
+                      </p>
+                      <p className="text-[11px] text-orange-600 mt-2">
+                        Não é possível quitar presencialmente na barbearia.
+                      </p>
+                    </div>
+
+                    {/* Botão de ação */}
                     <Button
                       onClick={handlePayDebtOnlyPix}
                       disabled={processingPayment}
-                      className="w-full h-[44px] rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-semibold text-[14px] transition-all border-none disabled:opacity-60"
+                      className="w-full h-[48px] rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-semibold text-[14px] transition-all border-none disabled:opacity-60"
                     >
                       {processingPayment ? "Gerando PIX..." : "Pagar somente a taxa"}
                     </Button>
