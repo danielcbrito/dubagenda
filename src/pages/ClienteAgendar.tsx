@@ -163,7 +163,7 @@ const ClienteAgendar = () => {
   const [userId, setUserId] = useState<string | null>(null);
   const { pendingDebt, hasDebt, refresh: refreshDividas } = useDividas(userId ?? undefined);
   const [debtModalOpen, setDebtModalOpen] = useState(false);
-  const pendingDebtTotal = 0;
+  const pendingDebtTotal = Number(pendingDebt?.valor_total || 0);
   const [pendingDrawerOpen, setPendingDrawerOpen] = useState(false);
   const hasAutoOpenedPendingRef = useRef<string | null>(null);
   const { cancelSubscription, cancelling: isCancelingSubscription } = useCancelSubscriptionMutation();
@@ -2582,7 +2582,7 @@ const ClienteAgendar = () => {
 
   const getTotalPrice = () => {
     const afterRedemption = getBaseTotalBeforeCoupon();
-    return Math.max(0, afterRedemption - getCouponDiscount());
+    return Math.max(0, afterRedemption - getCouponDiscount()) + pendingDebtTotal;
   };
 
   const pixAvailable = canReceivePix && pixHabilitado;
