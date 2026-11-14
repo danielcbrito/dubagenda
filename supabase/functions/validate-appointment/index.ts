@@ -34,6 +34,18 @@ function timeToMinutes(time: string): number {
 }
 
 /**
+ * Normaliza um valor de horário (HH:mm ou HH:mm:ss) para HH:mm.
+ * Preserva null/undefined.
+ */
+function normalizeTimeValue(
+  time: string | null | undefined
+): string | null | undefined {
+  if (time == null) return time;
+  const parts = String(time).split(":");
+  return `${parts[0].padStart(2, "0")}:${parts[1].padStart(2, "0")}`;
+}
+
+/**
  * Edge Function para validação ATÔMICA de disponibilidade de horário.
  * 
  * Esta função é CRÍTICA para evitar agendamentos duplicados.
@@ -230,6 +242,13 @@ Deno.serve(async (req) => {
       hora_almoco_fim: '14:00',
       delay_entre_servicos: 10
     };
+
+    // Normaliza formatos de horário (HH:mm:ss -> HH:mm) para consistência
+    // entre comparações numéricas e mensagens de erro exibidas ao cliente.
+    config.hora_abertura = normalizeTimeValue(config.hora_abertura);
+    config.hora_fechamento = normalizeTimeValue(config.hora_fechamento);
+    config.hora_almoco_inicio = normalizeTimeValue(config.hora_almoco_inicio);
+    config.hora_almoco_fim = normalizeTimeValue(config.hora_almoco_fim);
 
     // ISOLAMENTO DE EXPEDIENTE: Se a barbearia estiver fechada no dia, rejeita agendamento.
     if (storeConfig && storeConfig.aberto === false) {

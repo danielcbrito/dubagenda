@@ -15,6 +15,18 @@ function timeToMinutes(time: string): number {
 }
 
 /**
+ * Normaliza um valor de horário (HH:mm ou HH:mm:ss) para HH:mm.
+ * Preserva null/undefined para não quebrar comparações que já lidam com nulos.
+ */
+function normalizeTimeValue(
+  time: string | null | undefined
+): string | null | undefined {
+  if (time == null) return time;
+  const parts = String(time).split(":");
+  return `${parts[0].padStart(2, "0")}:${parts[1].padStart(2, "0")}`;
+}
+
+/**
  * Verifica disponibilidade do horário de forma atômica
  * Usa configurações do banco de dados
  */
@@ -133,6 +145,13 @@ async function checkTimeSlotAvailability(
     };
     configSource = 'default fallback';
   }
+
+  // Normaliza formatos de horário (HH:mm:ss -> HH:mm) para consistência
+  // entre comparações numéricas e mensagens de erro exibidas ao cliente.
+  config.hora_abertura = normalizeTimeValue(config.hora_abertura);
+  config.hora_fechamento = normalizeTimeValue(config.hora_fechamento);
+  config.hora_almoco_inicio = normalizeTimeValue(config.hora_almoco_inicio);
+  config.hora_almoco_fim = normalizeTimeValue(config.hora_almoco_fim);
 
   // ISOLAMENTO DE EXPEDIENTE: Se a barbearia estiver fechada no dia, dia permanece fechado
   if (storeConfig && storeConfig.aberto === false) {
