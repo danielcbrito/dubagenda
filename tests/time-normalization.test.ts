@@ -16,8 +16,8 @@ function normalizeTimeValue(
   time: string | null | undefined
 ): string | null | undefined {
   if (time == null) return time;
-  const parts = String(time).split(":");
-  return `${parts[0].padStart(2, "0")}:${parts[1].padStart(2, "0")}`;
+  const [hours = "00", minutes = "00"] = String(time).split(":");
+  return `${hours.padStart(2, "0")}:${minutes.padStart(2, "0")}`;
 }
 
 /**
@@ -66,6 +66,12 @@ test("normalizeTimeValue mantém HH:mm inalterado", () => {
   assert.strictEqual(normalizeTimeValue("08:00"), "08:00");
   assert.strictEqual(normalizeTimeValue("19:00"), "19:00");
   assert.strictEqual(normalizeTimeValue("18:30"), "18:30");
+});
+
+test("normalizeTimeValue normaliza entrada de uma única parte para HH:mm", () => {
+  assert.strictEqual(normalizeTimeValue("08"), "08:00");
+  assert.strictEqual(normalizeTimeValue("9"), "09:00");
+  assert.strictEqual(normalizeTimeValue("18"), "18:00");
 });
 
 test("normalizeTimeValue preserva null e undefined", () => {

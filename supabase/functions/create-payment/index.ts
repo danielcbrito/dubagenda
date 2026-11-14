@@ -22,8 +22,8 @@ function normalizeTimeValue(
   time: string | null | undefined
 ): string | null | undefined {
   if (time == null) return time;
-  const parts = String(time).split(":");
-  return `${parts[0].padStart(2, "0")}:${parts[1].padStart(2, "0")}`;
+  const [hours = "00", minutes = "00"] = String(time).split(":");
+  return `${hours.padStart(2, "0")}:${minutes.padStart(2, "0")}`;
 }
 
 /**
@@ -148,10 +148,13 @@ async function checkTimeSlotAvailability(
 
   // Normaliza formatos de horário (HH:mm:ss -> HH:mm) para consistência
   // entre comparações numéricas e mensagens de erro exibidas ao cliente.
-  config.hora_abertura = normalizeTimeValue(config.hora_abertura);
-  config.hora_fechamento = normalizeTimeValue(config.hora_fechamento);
-  config.hora_almoco_inicio = normalizeTimeValue(config.hora_almoco_inicio);
-  config.hora_almoco_fim = normalizeTimeValue(config.hora_almoco_fim);
+  config = {
+    ...config,
+    hora_abertura: normalizeTimeValue(config.hora_abertura),
+    hora_fechamento: normalizeTimeValue(config.hora_fechamento),
+    hora_almoco_inicio: normalizeTimeValue(config.hora_almoco_inicio),
+    hora_almoco_fim: normalizeTimeValue(config.hora_almoco_fim),
+  };
 
   // ISOLAMENTO DE EXPEDIENTE: Se a barbearia estiver fechada no dia, dia permanece fechado
   if (storeConfig && storeConfig.aberto === false) {

@@ -110,10 +110,13 @@ async function resolveBusinessHours(supabase: any, date: string, barberId: strin
   // Normaliza formatos de horário (HH:mm:ss -> HH:mm) para consistência
   // entre comparações numéricas e mensagens de erro exibidas ao cliente.
   if (configData) {
-    configData.hora_abertura = normalizeTime(configData.hora_abertura);
-    configData.hora_fechamento = normalizeTime(configData.hora_fechamento);
-    configData.hora_almoco_inicio = normalizeTime(configData.hora_almoco_inicio);
-    configData.hora_almoco_fim = normalizeTime(configData.hora_almoco_fim);
+    configData = {
+      ...configData,
+      hora_abertura: normalizeTime(configData.hora_abertura),
+      hora_fechamento: normalizeTime(configData.hora_fechamento),
+      hora_almoco_inicio: normalizeTime(configData.hora_almoco_inicio),
+      hora_almoco_fim: normalizeTime(configData.hora_almoco_fim),
+    };
   }
 
   return configData

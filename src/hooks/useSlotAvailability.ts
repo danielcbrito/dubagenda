@@ -313,6 +313,7 @@ export function useSlotAvailability(
       // ou se o barbeiro/barbearia teve seus horários alterados no painel,
       // sincronizamos os slots reais com a configuração mais recente (unidade ou barbeiro).
       // ============================================
+      let barberCloseMin: number | null = null;
       if (barbeiroId || tenantId) {
         try {
           const dateObj = new Date(dateStr + 'T12:00:00');
@@ -403,7 +404,7 @@ export function useSlotAvailability(
             responseSlots = [];
           } else if (effectiveConfig && effectiveConfig.aberto !== false) {
             const barberOpenMin = timeToMinutes(effectiveConfig.hora_abertura || '09:00');
-            const barberCloseMin = timeToMinutes(effectiveConfig.hora_fechamento || '20:00');
+            barberCloseMin = timeToMinutes(effectiveConfig.hora_fechamento || '20:00');
 
             const firstSlot = responseSlots.length > 0 ? responseSlots[0] : null;
             const firstSlotStartMin = firstSlot ? timeToMinutes(firstSlot.time) : -1;
@@ -483,10 +484,24 @@ export function useSlotAvailability(
 
               responseSlots = dynamicSlots;
             }
+          } else {
+            // Nenhuma configuração de expediente encontrada — usar padrão
+            // para permitir filtragem por horário de fechamento.
+            barberCloseMin = timeToMinutes('20:00');
           }
         } catch (syncErr) {
           console.warn('[useSlotAvailability] Falha ao sincronizar horário do barbeiro:', syncErr);
         }
+      }
+
+      // Always-on defense-in-depth: never show slots whose service would
+      // extend past the barber's closing time, regardless of whether slots
+      // came from the Edge Function or were generated locally.
+      if (barberCloseMin !== null && serviceDuration > 0 && responseSlots) {
+        responseSlots = responseSlots.filter((slot) => {
+          const slotStart = timeToMinutes(slot.time);
+          return slotStart + serviceDuration <= barberCloseMin;
+        });
       }
 
       if (isInitialLoadRef.current || forceFullUpdate || lastSlotsRef.current.length === 0) {
