@@ -54,9 +54,7 @@ import { usePendingSubscription } from "@/hooks/usePendingSubscription";
 import { useCancelSubscriptionMutation } from "@/hooks/useClientMutations";
 import { useDividas } from "@/hooks/useDividas";
 import { useCancellationDebt } from "@/hooks/useCancellationDebt";
-import { DebtPaymentModal } from "@/components/DebtPaymentModal";
 import { getPendingDebtTotal } from "@/lib/cancellation-debt";
-import { QrCode, AlertTriangle as AlertTriangleIcon } from "lucide-react";
 
 
 
@@ -163,9 +161,8 @@ const ClienteAgendar = () => {
   const [processingPayment, setProcessingPayment] = useState(false);
   const [availableCredits, setAvailableCredits] = useState(0);
   const [userId, setUserId] = useState<string | null>(null);
-  const { pendingDebt, hasDebt, refresh: refreshDividas } = useDividas(userId ?? undefined);
-  const { debts: cancellationDebts, refresh: refreshCancellationDebts } = useCancellationDebt(userId ?? undefined);
-  const [debtModalOpen, setDebtModalOpen] = useState(false);
+  const { pendingDebt, hasDebt } = useDividas(userId ?? undefined);
+  const { debts: cancellationDebts } = useCancellationDebt(userId ?? undefined);
   const pendingDebtTotal = Number(pendingDebt?.valor_total || 0);
   const cancellationDebtsTotal = getPendingDebtTotal(cancellationDebts);
   const combinedHasDebt = hasDebt || cancellationDebts.length > 0;
@@ -2878,99 +2875,6 @@ const ClienteAgendar = () => {
             Voltar para Início
           </button>
         </div>
-      </div>
-    );
-  }
-
-  if (combinedHasDebt) {
-    const debtFromDividas = pendingDebt;
-    const debtFromInfo = cancellationDebts.length > 0 ? cancellationDebts[0].debito : null;
-
-    const rawDate =
-      debtFromDividas?.agendamento_data ||
-      debtFromDividas?.criado_em ||
-      debtFromInfo?.itens?.[0]?.created_at ||
-      '';
-    const valorTotal =
-      debtFromDividas?.valor_total ||
-      debtFromInfo?.total_pendente ||
-      debtFromInfo?.valor_taxa ||
-      0;
-
-    let formattedDate = '';
-    try {
-      if (/^\d{4}-\d{2}-\d{2}$/.test(rawDate || '')) {
-        const [y, m, d] = (rawDate || '').split('-');
-        formattedDate = `${d}/${m}/${y}`;
-      } else {
-        formattedDate = new Date(rawDate || '').toLocaleDateString('pt-BR', {
-          day: '2-digit',
-          month: '2-digit',
-          year: 'numeric',
-        });
-      }
-    } catch {
-      formattedDate = rawDate || '';
-    }
-
-    const valorFormatado = Number(valorTotal || 0).toLocaleString('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-    });
-
-    return (
-      <div className="min-h-screen w-full bg-white flex flex-col items-center justify-center p-6 text-center select-none">
-        <div className="w-full max-w-sm mx-auto space-y-6">
-          <div className="w-16 h-16 rounded-3xl bg-amber-500/10 border border-amber-500/25 text-amber-600 flex items-center justify-center mx-auto shadow-sm">
-            <AlertTriangleIcon className="w-8 h-8 stroke-[2.2]" />
-          </div>
-
-          <div className="space-y-2.5">
-            <h1 className="text-xl font-bold tracking-tight text-neutral-900">
-              Pendência financeira
-            </h1>
-            <p className="text-[14.5px] text-neutral-600 leading-relaxed font-normal">
-              Você tem uma pendência de{' '}
-              <strong className="text-amber-700 font-bold tabular-nums">
-                {valorFormatado}
-              </strong>{' '}
-              referente ao cancelamento do dia{' '}
-              <strong className="text-neutral-900 font-semibold">{formattedDate}</strong>.
-            </p>
-            <p className="text-[13px] text-neutral-500">
-              Pague para continuar agendando.
-            </p>
-          </div>
-
-          <div className="space-y-2.5 pt-3">
-            <Button
-              onClick={() => setDebtModalOpen(true)}
-              className="w-full h-12 text-[14px] font-semibold bg-neutral-900 text-white hover:bg-neutral-800 rounded-xl shadow-sm transition-all active:scale-[0.98] flex items-center justify-center gap-2"
-            >
-              <QrCode className="w-4 h-4" />
-              Pagar agora
-            </Button>
-
-            <Button
-              variant="ghost"
-              onClick={() => navigate('/cliente')}
-              className="w-full h-10 text-[13px] text-neutral-500 hover:text-neutral-900 rounded-xl"
-            >
-              Voltar ao início
-            </Button>
-          </div>
-        </div>
-
-        <DebtPaymentModal
-          open={debtModalOpen}
-          onOpenChange={setDebtModalOpen}
-          divida={debtFromDividas}
-          onPaymentSuccess={() => {
-            refreshDividas();
-            refreshCancellationDebts();
-            setDebtModalOpen(false);
-          }}
-        />
       </div>
     );
   }
