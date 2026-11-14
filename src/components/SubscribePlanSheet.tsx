@@ -18,6 +18,7 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { parsePlanBenefits } from "@/lib/plan-benefits";
 
 interface Plan {
   id: string;
@@ -52,7 +53,7 @@ function PlanCard({
   onSelect: () => void;
   index: number;
 }) {
-  const benefits = Array.isArray(plan.beneficios_json) ? plan.beneficios_json : [];
+  const benefits = parsePlanBenefits(plan.beneficios_json);
   const PlanIcon = planIcons[index % planIcons.length];
 
   return (
@@ -139,7 +140,7 @@ function PlanDetailSlide({
   index: number;
   onContinue: () => void;
 }) {
-  const benefits = Array.isArray(plan.beneficios_json) ? plan.beneficios_json : [];
+  const benefits = parsePlanBenefits(plan.beneficios_json);
   const PlanIcon = planIcons[index % planIcons.length];
   const isFirst = index === 0;
 
@@ -199,34 +200,36 @@ function PlanDetailSlide({
       </div>
 
       {/* Middle — Benefits list */}
-      <motion.div
-        initial={{ opacity: 0, y: 16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.25 }}
-        className="flex-1 min-h-0 overflow-y-auto overscroll-contain py-6"
-      >
-        <div className="rounded-2xl border border-border/40 bg-card p-5 space-y-4">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">
-            TUDO QUE VOCÊ RECEBE
-          </p>
-          <div className="space-y-3">
-            {benefits.map((benefit: string, i: number) => (
-              <motion.div 
-                key={i} 
-                className="flex items-start gap-3"
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.3 + i * 0.05 }}
-              >
-                <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-primary" />
-                </div>
-                <span className="text-[14px] text-foreground/85 leading-snug font-medium">{benefit}</span>
-              </motion.div>
-            ))}
+      {benefits.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.25 }}
+          className="flex-1 min-h-0 overflow-y-auto overscroll-contain py-6"
+        >
+          <div className="rounded-2xl border border-border/40 bg-card p-5 space-y-4">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">
+              TUDO QUE VOCÊ RECEBE
+            </p>
+            <div className="space-y-3">
+              {benefits.map((benefit: string, i: number) => (
+                <motion.div
+                  key={i}
+                  className="flex items-start gap-3"
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.3 + i * 0.05 }}
+                >
+                  <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-primary" />
+                  </div>
+                  <span className="text-[14px] text-foreground/85 leading-snug font-medium">{benefit}</span>
+                </motion.div>
+              ))}
+            </div>
           </div>
-        </div>
-      </motion.div>
+        </motion.div>
+      )}
 
       {/* Bottom — Continue */}
       <motion.div

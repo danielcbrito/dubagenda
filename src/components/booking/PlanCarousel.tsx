@@ -3,6 +3,7 @@ import useEmblaCarousel from "embla-carousel-react";
 import { Check, MapPin, X } from "lucide-react";
 import { BackArrow } from "@/components/ui/back-arrow";
 import { cn } from "@/lib/utils";
+import { parsePlanBenefits } from "@/lib/plan-benefits";
 
 export interface PlanBenefit {
   texto: string;
@@ -156,12 +157,8 @@ export function PlanCarousel({
                 nomeLower.includes("corte e barba") ||
                 nomeLower.includes("cabelo e barba");
 
-              // Parse dos benefícios reais
-              const rawBenefits = Array.isArray(plan.beneficios_json)
-                ? plan.beneficios_json
-                : typeof plan.beneficios_json === "string"
-                ? JSON.parse(plan.beneficios_json || "[]")
-                : [];
+              // Parse dos benefícios reais (strings vazias/em branco são filtradas)
+              const rawBenefits = parsePlanBenefits(plan.beneficios_json);
 
               const beneficios: PlanBenefit[] = [
                 {
