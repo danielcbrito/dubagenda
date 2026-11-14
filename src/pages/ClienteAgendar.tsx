@@ -167,6 +167,15 @@ const ClienteAgendar = () => {
   const cancellationDebtsTotal = getPendingDebtTotal(cancellationDebts);
   const combinedHasDebt = hasDebt || cancellationDebts.length > 0;
   const combinedPendingDebtTotal = pendingDebtTotal + cancellationDebtsTotal;
+
+  const rawDebtDate =
+    pendingDebt?.agendamento_data ||
+    pendingDebt?.criado_em ||
+    (cancellationDebts.length > 0 ? cancellationDebts[0].debito?.itens?.[0]?.created_at : '');
+  const debtDate = rawDebtDate ? String(rawDebtDate).slice(0, 10) : '';
+  const formattedDebtDate = debtDate
+    ? `${debtDate.slice(8, 10)}/${debtDate.slice(5, 7)}/${debtDate.slice(0, 4)}`
+    : '';
   const [pendingDrawerOpen, setPendingDrawerOpen] = useState(false);
   const hasAutoOpenedPendingRef = useRef<string | null>(null);
   const { cancelSubscription, cancelling: isCancelingSubscription } = useCancelSubscriptionMutation();
@@ -3654,7 +3663,7 @@ const ClienteAgendar = () => {
                     <div className="border-t border-neutral-100" />
                     <SummaryRow
                       label="Taxa de cancelamento"
-                      value={`R$ ${combinedPendingDebtTotal.toFixed(2).replace('.', ',')}`}
+                      value={`dia ${formattedDebtDate} • R$ ${combinedPendingDebtTotal.toFixed(2).replace('.', ',')}`}
                     />
                   </>
                 )}
@@ -3780,7 +3789,7 @@ const ClienteAgendar = () => {
                     <div className="border-t border-neutral-100" />
                     <SummaryRow
                       label="Taxa de cancelamento"
-                      value={`R$ ${combinedPendingDebtTotal.toFixed(2).replace('.', ',')}`}
+                      value={`dia ${formattedDebtDate} • R$ ${combinedPendingDebtTotal.toFixed(2).replace('.', ',')}`}
                     />
                   </>
                 )}
