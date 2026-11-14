@@ -17,6 +17,7 @@ interface PixCheckoutData {
   expiresAt: string;
   value: number;
   serviceFee?: number;
+  pendingDebtTotal?: number;
   serviceName?: string;
   barberName?: string;
   bookingDate?: string;
@@ -434,6 +435,15 @@ const ClientePixCheckout = () => {
                         <span className="text-neutral-500">Taxa de serviço</span>
                         <span className="text-neutral-900 font-medium tabular-nums">
                           R$ {pixData.serviceFee.toFixed(2).replace(".", ",")}
+                        </span>
+                      </div>
+                    ) : null}
+
+                    {pixData.pendingDebtTotal && pixData.pendingDebtTotal > 0 ? (
+                      <div className="flex items-center justify-between text-[13px]">
+                        <span className="text-neutral-500">Taxa de cancelamento anterior</span>
+                        <span className="text-neutral-900 font-medium tabular-nums">
+                          R$ {pixData.pendingDebtTotal.toFixed(2).replace(".", ",")}
                         </span>
                       </div>
                     ) : null}

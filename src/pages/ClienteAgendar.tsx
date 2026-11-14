@@ -52,8 +52,9 @@ import { resolveBookingPaymentMethod, type BookingPaymentMethod } from "@/lib/ba
 import { PendingSubscriptionDrawer } from "@/components/client/PendingSubscriptionDrawer";
 import { usePendingSubscription } from "@/hooks/usePendingSubscription";
 import { useCancelSubscriptionMutation } from "@/hooks/useClientMutations";
-import { useCancellationDebt } from "@/hooks/useCancellationDebt";
-import { getPendingDebtTotal } from "@/lib/cancellation-debt";
+import { useDividas } from "@/hooks/useDividas";
+import { DebtPaymentModal } from "@/components/DebtPaymentModal";
+import { QrCode, AlertTriangle as AlertTriangleIcon } from "lucide-react";
 
 
 
@@ -160,8 +161,9 @@ const ClienteAgendar = () => {
   const [processingPayment, setProcessingPayment] = useState(false);
   const [availableCredits, setAvailableCredits] = useState(0);
   const [userId, setUserId] = useState<string | null>(null);
-  const { debts: cancellationDebts } = useCancellationDebt(userId ?? undefined);
-  const pendingDebtTotal = useMemo(() => getPendingDebtTotal(cancellationDebts), [cancellationDebts]);
+  const { pendingDebt, hasDebt, refresh: refreshDividas } = useDividas(userId ?? undefined);
+  const [debtModalOpen, setDebtModalOpen] = useState(false);
+  const pendingDebtTotal = 0;
   const [pendingDrawerOpen, setPendingDrawerOpen] = useState(false);
   const hasAutoOpenedPendingRef = useRef<string | null>(null);
   const { cancelSubscription, cancelling: isCancelingSubscription } = useCancelSubscriptionMutation();
@@ -1548,19 +1550,19 @@ const ClienteAgendar = () => {
     const totalPrice = getTotalPrice();
     const finalPrice = Math.max(0, totalPrice - availableCredits);
     const serviceFee = getServiceFee(paymentMethod);
-    const chargeAmount = finalPrice + serviceFee + pendingDebtTotal;
+    const chargeAmount = finalPrice + serviceFee;
 
-    if (useReferralCredit && referralCredits > 0 && pendingDebtTotal === 0) {
+    if (useReferralCredit && referralCredits > 0) {
       await createAppointmentWithReferralCredit();
       return;
     }
 
-    if (totalPrice === 0 && useRedemption && pendingDebtTotal === 0) {
+    if (totalPrice === 0 && useRedemption) {
       await createAppointmentWithRedemption();
       return;
     }
 
-    if (finalPrice === 0 && pendingDebtTotal === 0) {
+    if (finalPrice === 0) {
       await createAppointmentWithCredits(totalPrice);
       return;
     }
@@ -1684,6 +1686,7 @@ const ClienteAgendar = () => {
           expiresAt: data.expires_at,
           value: chargeAmount,
           serviceFee,
+          pendingDebtTotal: pendingDebtTotal || 0,
           serviceName: serviceNames,
           barberName: barbers.find(b => b.id === selectedBarberId)?.apelido,
           bookingDate: format(selectedDate, "dd/MM/yyyy"),
@@ -1755,7 +1758,7 @@ const ClienteAgendar = () => {
       }
 
       // === Pagamento na Barbearia (cash) ===
-      const cashAmount = finalPrice + pendingDebtTotal;
+      const cashAmount = finalPrice;
       const cashBookingData = {
         ...bookingData,
         preco: cashAmount,
@@ -2873,6 +2876,85 @@ const ClienteAgendar = () => {
     );
   }
 
+  if (hasDebt && pendingDebt) {
+    const rawDate = pendingDebt.agendamento_data || pendingDebt.criado_em;
+    let formattedDate = '';
+    try {
+      if (/^\d{4}-\d{2}-\d{2}$/.test(rawDate || '')) {
+        const [y, m, d] = (rawDate || '').split('-');
+        formattedDate = `${d}/${m}/${y}`;
+      } else {
+        formattedDate = new Date(rawDate || '').toLocaleDateString('pt-BR', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric',
+        });
+      }
+    } catch {
+      formattedDate = rawDate || '';
+    }
+
+    const valorFormatado = Number(pendingDebt.valor_total || 0).toLocaleString('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+    });
+
+    return (
+      <div className="min-h-screen w-full bg-white flex flex-col items-center justify-center p-6 text-center select-none">
+        <div className="w-full max-w-sm mx-auto space-y-6">
+          <div className="w-16 h-16 rounded-3xl bg-amber-500/10 border border-amber-500/25 text-amber-600 flex items-center justify-center mx-auto shadow-sm">
+            <AlertTriangleIcon className="w-8 h-8 stroke-[2.2]" />
+          </div>
+
+          <div className="space-y-2.5">
+            <h1 className="text-xl font-bold tracking-tight text-neutral-900">
+              Pendência financeira
+            </h1>
+            <p className="text-[14.5px] text-neutral-600 leading-relaxed font-normal">
+              Você tem uma pendência de{' '}
+              <strong className="text-amber-700 font-bold tabular-nums">
+                {valorFormatado}
+              </strong>{' '}
+              referente ao cancelamento do dia{' '}
+              <strong className="text-neutral-900 font-semibold">{formattedDate}</strong>.
+            </p>
+            <p className="text-[13px] text-neutral-500">
+              Pague para continuar agendando.
+            </p>
+          </div>
+
+          <div className="space-y-2.5 pt-3">
+            <Button
+              onClick={() => setDebtModalOpen(true)}
+              className="w-full h-12 text-[14px] font-semibold bg-neutral-900 text-white hover:bg-neutral-800 rounded-xl shadow-sm transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+            >
+              <QrCode className="w-4 h-4" />
+              Pagar agora
+            </Button>
+
+            <Button
+              variant="ghost"
+              onClick={() => navigate('/cliente')}
+              className="w-full h-10 text-[13px] text-neutral-500 hover:text-neutral-900 rounded-xl"
+            >
+              Voltar ao início
+            </Button>
+          </div>
+        </div>
+
+        <DebtPaymentModal
+          open={debtModalOpen}
+          onOpenChange={setDebtModalOpen}
+          divida={pendingDebt}
+          onPaymentSuccess={() => {
+            refreshDividas();
+            setDebtModalOpen(false);
+          }}
+        />
+      </div>
+    );
+  }
+
   return (
     <div 
       ref={containerRef}
@@ -3509,8 +3591,8 @@ const ClienteAgendar = () => {
                     const coversAll = redemptionCoversAll || referralCoversAll;
                     const fee = coversAll ? 0 : getServiceFee(paymentMethod);
                     const total = coversAll
-                      ? pendingDebtTotal
-                      : Math.max(0, getTotalPrice() - availableCredits - getCouponDiscount()) + fee + pendingDebtTotal;
+                      ? 0
+                      : Math.max(0, getTotalPrice() - availableCredits - getCouponDiscount()) + fee;
                     return (
                       <>
                         {fee > 0 && (
@@ -3521,21 +3603,11 @@ const ClienteAgendar = () => {
                             </span>
                           </div>
                         )}
-
-                        {pendingDebtTotal > 0 && (
-                          <div className="flex items-center justify-between text-[13px] text-amber-600 dark:text-amber-500 font-medium bg-amber-500/10 px-2.5 py-1.5 rounded-lg border border-amber-500/20">
-                            <span className="truncate pr-2">Taxa pendente anterior (cancelamento/falta)</span>
-                            <span className="font-bold tabular-nums shrink-0">
-                              + R$ {pendingDebtTotal.toFixed(2).replace('.', ',')}
-                            </span>
-                          </div>
-                        )}
-
                         <div className="border-b border-dashed border-neutral-200 my-2" />
 
                         <div className="flex items-center justify-between pt-0.5">
                           <span className="text-[14px] font-medium text-neutral-900">Total</span>
-                          <span className={cn("text-[18px] font-bold tabular-nums", coversAll && pendingDebtTotal === 0 ? "text-emerald-600" : "text-neutral-900")}>
+                          <span className={cn("text-[18px] font-bold tabular-nums", coversAll ? "text-emerald-600" : "text-neutral-900")}>
                             R$ {total.toFixed(2).replace('.', ',')}
                           </span>
                         </div>
@@ -3792,9 +3864,9 @@ const ClienteAgendar = () => {
             const referralCoversAll = useReferralCredit && canUseReferralCredit && getTotalPrice() === 0;
             const coversAll = redemptionCoversAll || referralCoversAll;
             const actionTotal = coversAll
-              ? pendingDebtTotal
-              : Math.max(0, getTotalPrice() - availableCredits) + getServiceFee(paymentMethod) + pendingDebtTotal;
-            const actionLabel = coversAll && pendingDebtTotal === 0
+              ? 0
+              : Math.max(0, getTotalPrice() - availableCredits) + getServiceFee(paymentMethod);
+            const actionLabel = coversAll
               ? 'Confirmar'
               : paymentMethod === 'pix'
                 ? 'Gerar PIX'

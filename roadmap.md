@@ -1,3 +1,8 @@
+## Cadastro WhatsApp (2026-10-21)
+- [x] Restaurar whatsapp_signup_otp ausente no banco e restringir acesso ao serviço.
+- [x] Testar gravação com rollback e consulta pela função publicada sem enviar mensagem a terceiros.
+- [ ] Confirmar recebimento do código no WhatsApp: aguarda nova tentativa do cliente, sem telefone de teste autorizado.
+
 ## Planos DUB recriados e clientes encaixados (2026-10-03)
 - [x] Recriados os 3 planos DESATIVADOS: só corte R$ 94,90, Corte e Sobrancelha R$ 99,90, Corte e Barba R$ 129,90, limite 4 usos/mês
 
