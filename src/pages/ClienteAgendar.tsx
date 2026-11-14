@@ -1859,6 +1859,74 @@ const ClienteAgendar = () => {
     }
   };
 
+  /** Gera um cobrança PIX apenas para o valor da taxa de cancelamento pendente */
+  const handlePayDebtOnlyPix = async () => {
+    if (!selectedBarberId || !selectedDate || !selectedTime) {
+      toast.error("Dados do agendamento inválidos");
+      return;
+    }
+
+    setProcessingPayment(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error("Você precisa estar logado");
+        navigate("/auth");
+        return;
+      }
+
+      const useWoovi = !!barberWooviKey;
+      const fnName = useWoovi ? 'woovi-create-charge' : 'efi-create-pix-charge';
+      const bookingTime = normalizeTimeValue(selectedTime);
+      const mainService = getCorteService() || selectedServices[0];
+      const serviceNames = selectedServices.map(s => s.nome).join(", ");
+
+      const { data, error } = await supabase.functions.invoke(fnName, {
+        body: {
+          barbeiro_id: selectedBarberId,
+          valor: combinedPendingDebtTotal,
+          descricao: `Taxa de cancelamento - ${formattedDebtDate}`,
+          servico_id: mainService.id,
+          data: format(selectedDate, 'yyyy-MM-dd'),
+          hora: bookingTime,
+          duracao: totalDuration,
+          observacoes: `Pagamento apenas da taxa de cancelamento pendente. Serviço: ${serviceNames}`,
+          payDebtOnly: true,
+        },
+      });
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      sessionStorage.setItem('pix_checkout_data', JSON.stringify({
+        pixQrCode: data.qr_code_image?.replace(/^data:image\/png;base64,/, '') ?? '',
+        pixPayload: data.br_code,
+        pendingBookingId: data.pending_booking_id,
+        asaasPaymentId: data.charge_id ?? data.txid,
+        provider: useWoovi ? 'woovi' : 'efi',
+        txid: data.txid,
+        correlationId: data.correlation_id,
+        chargeId: data.charge_id,
+        expiresAt: data.expires_at,
+        value: combinedPendingDebtTotal,
+        serviceFee: 0,
+        pendingDebtTotal: combinedPendingDebtTotal,
+        serviceName: serviceNames,
+        barberName: barbers.find(b => b.id === selectedBarberId)?.apelido,
+        bookingDate: format(selectedDate, "dd/MM/yyyy"),
+        bookingTime: bookingTime,
+        payDebtOnly: true,
+      }));
+
+      navigate('/cliente/pix-checkout');
+    } catch (error: any) {
+      console.error('Debt Pix payment error:', error);
+      toast.error("Erro ao gerar PIX da taxa: " + (error.message || "Erro desconhecido"));
+    } finally {
+      setProcessingPayment(false);
+    }
+  };
+
   const createAppointmentWithRedemption = async () => {
     setProcessingPayment(true);
     try {
@@ -2600,16 +2668,18 @@ const ClienteAgendar = () => {
   const pixAvailable = canReceivePix && pixHabilitado;
   const walletAvailable = canReceivePix && walletBalance > 0 && !paymentOptionsLoading && !paymentOptionsError &&
     (barbeariaHabilitado || walletBalance >= Math.max(0, getTotalPrice() - availableCredits));
+  // Quando há taxa de cancelamento pendente, o cliente só pode pagar via PIX — não pode pagar na barbearia.
+  const cashAvailable = barbeariaHabilitado && combinedPendingDebtTotal === 0;
   const availablePaymentMethods = {
-    pix: pixAvailable, cash: barbeariaHabilitado, wallet: walletAvailable, card: false,
+    pix: pixAvailable, cash: cashAvailable, wallet: walletAvailable, card: false,
   };
 
   // Preserva a escolha válida e nunca mantém um método desativado.
   useEffect(() => {
     setPaymentMethod(current => resolveBookingPaymentMethod(current, {
-      pix: pixAvailable, cash: barbeariaHabilitado, wallet: walletAvailable, card: false,
+      pix: pixAvailable, cash: cashAvailable, wallet: walletAvailable, card: false,
     }));
-  }, [pixAvailable, barbeariaHabilitado, walletAvailable]);
+  }, [pixAvailable, cashAvailable, walletAvailable, combinedPendingDebtTotal]);
 
   const canUseRedemption = !hasActiveRedemptionAppointment && availableRedemptions.length > 0 && !!getCorteService();
   // Pré-seleciona o corte grátis quando disponível, mas o cliente PODE optar por não usar.
@@ -3333,7 +3403,7 @@ const ClienteAgendar = () => {
                         />
                       )}
 
-                      {barbeariaHabilitado && <PaymentOption
+                      {cashAvailable && <PaymentOption
                         value="cash"
                         selected={paymentMethod === 'cash' && !redemptionCoversAll && !referralCoversAll}
                         onSelect={() => handleSelectPaymentMethod('cash')}
@@ -3478,14 +3548,14 @@ const ClienteAgendar = () => {
                       const qty = serviceQuantities[s.id] || 1;
                       const isRedeemed = !!redeemedCorte && s.id === redeemedCorte.id && !redemptionApplied;
                       if (isRedeemed) redemptionApplied = true;
-                      
+
                       const isReferralFree = !!referralCorte && s.id === referralCorte.id;
                       const lineTotal = isReferralFree
                         ? 0
                         : isRedeemed
                           ? s.preco * Math.max(0, qty - 1)
                           : s.preco * qty;
-                      
+
                       const showFreeLabel = isReferralFree || (isRedeemed && qty === 1);
                       return (
                         <div key={s.id} className="flex items-center justify-between text-[13px]">
@@ -3499,6 +3569,18 @@ const ClienteAgendar = () => {
                       );
                     });
                   })()}
+
+                  {/* Taxa de cancelamento pendente (não removível pelo cliente) — destaque com borda laranja */}
+                  {combinedHasDebt && combinedPendingDebtTotal > 0 && (
+                    <div className="flex items-center justify-between text-[13px] border-t border-orange-200 pt-2 bg-orange-50/50 rounded-lg p-2">
+                      <span className="text-orange-900 truncate font-semibold">
+                        Taxa de cancelamento{formattedDebtDate ? `, dia ${formattedDebtDate}` : ""}
+                      </span>
+                      <span className="text-orange-900 font-bold tabular-nums">
+                        R$ {combinedPendingDebtTotal.toFixed(2).replace('.', ',')}
+                      </span>
+                    </div>
+                  )}
 
                   {availableCredits > 0 && (
                     <div className="flex items-center justify-between text-[13px]">
@@ -3549,6 +3631,33 @@ const ClienteAgendar = () => {
                   })()}
                 </div>
               </div>
+
+              {/* Card: taxa de cancelamento só pode ser paga via PIX */}
+              {combinedHasDebt && combinedPendingDebtTotal > 0 && (
+                <div className="mb-6">
+                  <div className="rounded-[20px] bg-orange-50 border border-orange-200 shadow-[0_2px_12px_rgba(234,179,8,0.1)] p-4 space-y-3">
+                    <div className="flex items-start gap-3">
+                      <Zap className="w-5 h-5 text-orange-600 shrink-0 mt-0.5" />
+                      <div className="flex-1">
+                        <p className="text-[13px] font-semibold text-orange-900 leading-relaxed">
+                          Esta taxa de cancelamento{" "}
+                          <span className="block text-[11px] font-medium text-orange-600 mt-0.5">
+                            somente pode ser paga via PIX
+                          </span>{" "}
+                          não é possível quitar presencialmente na barbearia.
+                        </p>
+                      </div>
+                    </div>
+                    <Button
+                      onClick={handlePayDebtOnlyPix}
+                      disabled={processingPayment}
+                      className="w-full h-[44px] rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-semibold text-[14px] transition-all border-none disabled:opacity-60"
+                    >
+                      {processingPayment ? "Gerando PIX..." : "Pagar somente a taxa"}
+                    </Button>
+                  </div>
+                </div>
+              )}
 
             </div>
           </motion.div>
