@@ -53,7 +53,9 @@ import { PendingSubscriptionDrawer } from "@/components/client/PendingSubscripti
 import { usePendingSubscription } from "@/hooks/usePendingSubscription";
 import { useCancelSubscriptionMutation } from "@/hooks/useClientMutations";
 import { useDividas } from "@/hooks/useDividas";
+import { useCancellationDebt } from "@/hooks/useCancellationDebt";
 import { DebtPaymentModal } from "@/components/DebtPaymentModal";
+import { getPendingDebtTotal } from "@/lib/cancellation-debt";
 import { QrCode, AlertTriangle as AlertTriangleIcon } from "lucide-react";
 
 
@@ -162,8 +164,12 @@ const ClienteAgendar = () => {
   const [availableCredits, setAvailableCredits] = useState(0);
   const [userId, setUserId] = useState<string | null>(null);
   const { pendingDebt, hasDebt, refresh: refreshDividas } = useDividas(userId ?? undefined);
+  const { debts: cancellationDebts, refresh: refreshCancellationDebts } = useCancellationDebt(userId ?? undefined);
   const [debtModalOpen, setDebtModalOpen] = useState(false);
   const pendingDebtTotal = Number(pendingDebt?.valor_total || 0);
+  const cancellationDebtsTotal = getPendingDebtTotal(cancellationDebts);
+  const combinedHasDebt = hasDebt || cancellationDebts.length > 0;
+  const combinedPendingDebtTotal = pendingDebtTotal + cancellationDebtsTotal;
   const [pendingDrawerOpen, setPendingDrawerOpen] = useState(false);
   const hasAutoOpenedPendingRef = useRef<string | null>(null);
   const { cancelSubscription, cancelling: isCancelingSubscription } = useCancelSubscriptionMutation();
@@ -1614,9 +1620,9 @@ const ClienteAgendar = () => {
         }
       }
 
-      if (pendingDebtTotal > 0) {
-        const debtMsg = `Taxa pendente inclusa: R$ ${pendingDebtTotal.toFixed(2).replace('.', ',')}`;
-        finalObservacoes = finalObservacoes 
+      if (combinedPendingDebtTotal > 0) {
+        const debtMsg = `Taxa pendente inclusa: R$ ${combinedPendingDebtTotal.toFixed(2).replace('.', ',')}`;
+        finalObservacoes = finalObservacoes
           ? `${finalObservacoes} | ${debtMsg}`
           : debtMsg;
       }
@@ -1686,7 +1692,7 @@ const ClienteAgendar = () => {
           expiresAt: data.expires_at,
           value: chargeAmount,
           serviceFee,
-          pendingDebtTotal: pendingDebtTotal || 0,
+          pendingDebtTotal: combinedPendingDebtTotal || 0,
           serviceName: serviceNames,
           barberName: barbers.find(b => b.id === selectedBarberId)?.apelido,
           bookingDate: format(selectedDate, "dd/MM/yyyy"),
@@ -1798,7 +1804,7 @@ const ClienteAgendar = () => {
       
       // Webhook de confirmação é enviado automaticamente pelo trigger do banco de dados
       
-      if (pendingDebtTotal > 0) {
+      if (combinedPendingDebtTotal > 0) {
         toast.success(`Agendamento criado! Total de R$ ${cashAmount.toFixed(2).replace('.', ',')} a pagar na barbearia (inclui taxa pendente).`);
       } else {
         toast.success("Agendamento criado! Pague na barbearia.");
@@ -2582,7 +2588,7 @@ const ClienteAgendar = () => {
 
   const getTotalPrice = () => {
     const afterRedemption = getBaseTotalBeforeCoupon();
-    return Math.max(0, afterRedemption - getCouponDiscount()) + pendingDebtTotal;
+    return Math.max(0, afterRedemption - getCouponDiscount()) + combinedPendingDebtTotal;
   };
 
   const pixAvailable = canReceivePix && pixHabilitado;
@@ -2876,8 +2882,21 @@ const ClienteAgendar = () => {
     );
   }
 
-  if (hasDebt && pendingDebt) {
-    const rawDate = pendingDebt.agendamento_data || pendingDebt.criado_em;
+  if (combinedHasDebt) {
+    const debtFromDividas = pendingDebt;
+    const debtFromInfo = cancellationDebts.length > 0 ? cancellationDebts[0].debito : null;
+
+    const rawDate =
+      debtFromDividas?.agendamento_data ||
+      debtFromDividas?.criado_em ||
+      debtFromInfo?.itens?.[0]?.created_at ||
+      '';
+    const valorTotal =
+      debtFromDividas?.valor_total ||
+      debtFromInfo?.total_pendente ||
+      debtFromInfo?.valor_taxa ||
+      0;
+
     let formattedDate = '';
     try {
       if (/^\d{4}-\d{2}-\d{2}$/.test(rawDate || '')) {
@@ -2894,7 +2913,7 @@ const ClienteAgendar = () => {
       formattedDate = rawDate || '';
     }
 
-    const valorFormatado = Number(pendingDebt.valor_total || 0).toLocaleString('pt-BR', {
+    const valorFormatado = Number(valorTotal || 0).toLocaleString('pt-BR', {
       style: 'currency',
       currency: 'BRL',
     });
@@ -2945,9 +2964,10 @@ const ClienteAgendar = () => {
         <DebtPaymentModal
           open={debtModalOpen}
           onOpenChange={setDebtModalOpen}
-          divida={pendingDebt}
+          divida={debtFromDividas}
           onPaymentSuccess={() => {
             refreshDividas();
+            refreshCancellationDebts();
             setDebtModalOpen(false);
           }}
         />
@@ -3725,12 +3745,12 @@ const ClienteAgendar = () => {
                 />
 
                 {/* Taxa de cancelamento pendente (não removível pelo cliente) */}
-                {hasDebt && pendingDebtTotal > 0 && (
+                {combinedHasDebt && combinedPendingDebtTotal > 0 && (
                   <>
                     <div className="border-t border-neutral-100" />
                     <SummaryRow
                       label="Taxa de cancelamento"
-                      value={`R$ ${pendingDebtTotal.toFixed(2).replace('.', ',')}`}
+                      value={`R$ ${combinedPendingDebtTotal.toFixed(2).replace('.', ',')}`}
                     />
                   </>
                 )}
@@ -3851,12 +3871,12 @@ const ClienteAgendar = () => {
                 />
 
                 {/* Taxa de cancelamento pendente (não removível pelo cliente) */}
-                {hasDebt && pendingDebtTotal > 0 && (
+                {combinedHasDebt && combinedPendingDebtTotal > 0 && (
                   <>
                     <div className="border-t border-neutral-100" />
                     <SummaryRow
                       label="Taxa de cancelamento"
-                      value={`R$ ${pendingDebtTotal.toFixed(2).replace('.', ',')}`}
+                      value={`R$ ${combinedPendingDebtTotal.toFixed(2).replace('.', ',')}`}
                     />
                   </>
                 )}
