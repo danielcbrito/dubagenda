@@ -33,6 +33,8 @@ interface CancelAppointmentModalProps {
   };
 }
 
+const quoteCache = new Map<string, QuoteState>();
+
 interface QuoteState {
   id: string;
   fee: number;
