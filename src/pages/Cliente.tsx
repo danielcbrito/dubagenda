@@ -31,8 +31,8 @@ import { LoyaltyCard } from "@/components/client/LoyaltyCard";
 import { PlanTrackerCard } from "@/components/client/PlanTrackerCard";
 import { HomeAdRotator } from "@/components/client/HomeAdRotator";
 import { useHomeAds } from "@/hooks/useHomeAds";
+import { PlanExpiredView } from "@/components/client/PlanExpiredView";
 import { PlanExpiredBanner } from "@/components/client/PlanExpiredBanner";
-import { PlanRenewalDrawer } from "@/components/client/PlanRenewalDrawer";
 import { PendingSubscriptionDrawer } from "@/components/client/PendingSubscriptionDrawer";
 import { ScheduleButton } from "@/components/client/ScheduleButton";
 import { AppointmentCardPremium } from "@/components/client/AppointmentCardPremium";
@@ -211,7 +211,7 @@ const fetchLoyaltyData = async (userId: string, tenantId: string | null) => {
     // Fetch active subscription in same parallel batch
     supabase
       .from("assinaturas")
-      .select("id, status, next_billing_date, plano_id, barbeiro_id, payment_method, cash_payment_confirmed, ciclo_inicio, ciclo_fim, usos_ciclo_atual, plano:planos(nome, limite_agendamentos_mes, preco_mensal, servico:servicos!planos_servico_id_fkey(nome))")
+      .select("id, status, next_billing_date, plano_id, barbeiro_id, payment_method, cash_payment_confirmed, ciclo_inicio, ciclo_fim, usos_ciclo_atual, plano:planos(id, nome, descricao, limite_agendamentos_mes, preco_mensal, beneficios_json, servico:servicos!planos_servico_id_fkey(nome))")
       .eq("user_id", userId)
       .eq("status", "active")
       .order("created_at", { ascending: false })
@@ -292,7 +292,7 @@ const fetchLoyaltyData = async (userId: string, tenantId: string | null) => {
       // Re-fetch active sub after renewal
       const { data: recoveredSub } = await supabase
         .from("assinaturas")
-        .select("id, status, next_billing_date, plano_id, barbeiro_id, payment_method, cash_payment_confirmed, ciclo_inicio, ciclo_fim, usos_ciclo_atual, plano:planos(nome, limite_agendamentos_mes, preco_mensal, servico:servicos!planos_servico_id_fkey(nome))")
+        .select("id, status, next_billing_date, plano_id, barbeiro_id, payment_method, cash_payment_confirmed, ciclo_inicio, ciclo_fim, usos_ciclo_atual, plano:planos(id, nome, descricao, limite_agendamentos_mes, preco_mensal, beneficios_json, servico:servicos!planos_servico_id_fkey(nome))")
         .eq("user_id", userId)
         .eq("status", "active")
         .order("created_at", { ascending: false })
@@ -331,7 +331,7 @@ const fetchLoyaltyData = async (userId: string, tenantId: string | null) => {
 
     const { data: expiredSub } = await supabase
       .from("assinaturas")
-      .select("id, status, plano_id, updated_at, next_billing_date, plano:planos(nome)")
+      .select("id, status, plano_id, updated_at, next_billing_date, plano:planos(id, nome, descricao, limite_agendamentos_mes, preco_mensal, beneficios_json, servico:servicos(nome))")
       .eq("user_id", userId)
       .eq("status", "cancelled")
       .not("next_billing_date", "is", null)
@@ -464,6 +464,7 @@ const Cliente = () => {
   const [walletSheetOpen, setWalletSheetOpen] = useState(false);
 
   const [renewalDrawerOpen, setRenewalDrawerOpen] = useState(false);
+  const [expiredViewOpen, setExpiredViewOpen] = useState(false);
   const [barberProfileOpen, setBarberProfileOpen] = useState<string | null>(null);
   const [reviewModalData, setReviewModalData] = useState<{
     appointmentId: string;
@@ -557,6 +558,15 @@ const Cliente = () => {
       setPendingDrawerOpen(true);
     }
   }, [pendingSubscription, dataLoaded, hasAutoOpenedThisSession]);
+
+  // Auto-show expired plan view when subscription is expired
+  const expiredViewShownRef = useRef(false);
+  useEffect(() => {
+    if (expiredSubscription && !pendingSubscription && dataLoaded && !expiredViewShownRef.current) {
+      expiredViewShownRef.current = true;
+      setExpiredViewOpen(true);
+    }
+  }, [expiredSubscription, pendingSubscription, dataLoaded]);
 
   const handleCancelSubscription = async () => {
     cancelSubscription(() => {
@@ -1130,9 +1140,9 @@ const Cliente = () => {
                       />
                     ) : !pendingSubscription && expiredSubscription ? (
                       <PlanExpiredBanner
-                        key="expired-sub"
+                        key="expired-sub-banner"
                         planName={(expiredSubscription as any).plano?.nome || "Plano"}
-                        onRenew={() => setPlansSheetOpen(true)}
+                        onRenew={() => setExpiredViewOpen(true)}
                       />
                     ) : (
                       /* Card de fidelidade + anúncios rotativos no mesmo espaço */
@@ -1387,14 +1397,33 @@ const Cliente = () => {
         }}
       />
 
-      {/* Plan Renewal Drawer */}
-      <PlanRenewalDrawer
-        open={renewalDrawerOpen}
-        onOpenChange={setRenewalDrawerOpen}
-        planName={(activeSubscription as any)?.plano?.nome || "Meu Plano"}
-        planPrice={(activeSubscription as any)?.plano?.preco_mensal}
-        serviceName={(activeSubscription as any)?.plano?.servico?.nome}
-      />
+      {/* Plan Expired View — Booksy-inspired renewal screen para assinatura expirada */}
+      {!pendingSubscription && expiredSubscription && (
+        <PlanExpiredView
+          open={expiredViewOpen}
+          onOpenChange={setExpiredViewOpen}
+          planName={(expiredSubscription as any).plano?.nome || "Plano"}
+          planPrice={(expiredSubscription as any).plano?.preco_mensal}
+          serviceName={(expiredSubscription as any).plano?.servico?.nome}
+          planDescription={(expiredSubscription as any).plano?.descricao}
+          planBenefits={(expiredSubscription as any).plano?.beneficios_json}
+          planLimitAppointments={(expiredSubscription as any).plano?.limite_agendamentos_mes}
+        />
+      )}
+
+      {/* Plan Expired View — Booksy-inspired renewal screen (replaces PlanRenewalDrawer "RESUMO DA RENOVAÇÃO") */}
+      {activeSubscription && (
+        <PlanExpiredView
+          open={renewalDrawerOpen}
+          onOpenChange={setRenewalDrawerOpen}
+          planName={(activeSubscription as any)?.plano?.nome || "Meu Plano"}
+          planPrice={(activeSubscription as any)?.plano?.preco_mensal}
+          serviceName={(activeSubscription as any)?.plano?.servico?.nome}
+          planDescription={(activeSubscription as any)?.plano?.descricao}
+          planBenefits={(activeSubscription as any)?.plano?.beneficios_json}
+          planLimitAppointments={(activeSubscription as any)?.plano?.limite_agendamentos_mes}
+        />
+      )}
 
       {/* Pending Subscription Drawer */}
       <PendingSubscriptionDrawer

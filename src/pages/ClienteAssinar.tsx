@@ -10,6 +10,7 @@ import {
   Calendar,
   Check, 
   ChevronLeft,
+  ChevronRight,
   CreditCard,
   Loader2,
   MapPin,
@@ -236,30 +237,35 @@ const ClienteAssinar = () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) { setStep(1); return; }
 
-      // Get active subscription with plan details
-      const { data: activeSub } = await supabase
+      // Carrega a assinatura mais recente do cliente, incluindo planos expirados/cancelados,
+      // para permitir a renovação (escolha de barbeiro → pagamento → renovado).
+      const { data: sub } = await supabase
         .from("assinaturas")
         .select("*, plano:planos(*)")
         .eq("user_id", session.user.id)
-        .eq("status", "active")
+        .in("status", ["active", "cancelled", "past_due", "suspended", "pending_renewal", "expired"] as any)
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();
 
-      if (!activeSub?.plano) {
-        toast.error("Nenhum plano ativo encontrado");
+      const rawPlano = Array.isArray(sub?.plano) ? sub?.plano[0] : sub?.plano;
+
+      if (!rawPlano) {
+        // Fallback: se não achar pelo status, tenta carregar qualquer plano ativo da barbearia
+        toast.error("Nenhum plano encontrado para renovar");
         navigate("/cliente");
         return;
       }
 
-      const tenantId = activeSub.plano.tenant_id;
+      const tenantId = rawPlano.tenant_id;
       const key = tenantId || "dub";
       setSelectedTenantId(key);
-      const [enrichedActive] = await enrichPlansWithAvailability([activeSub.plano]);
-      setSelectedPlan(enrichedActive ?? null);
+      const [enrichedActive] = await enrichPlansWithAvailability([rawPlano]);
+      setSelectedPlan(enrichedActive ?? rawPlano);
       await loadPlansForTenant(tenantId);
       await loadBarbersForTenant(tenantId);
-      setStep(3); // Go straight to barber selection
+      // Nenhum barbeiro é pré-selecionado: o cliente escolhe livremente tocando em um.
+      setStep(3); // Vá direto para a escolha do barbeiro
     } catch (err) {
       console.error("Erro ao iniciar renovação:", err);
       setStep(1);
@@ -344,6 +350,7 @@ const ClienteAssinar = () => {
     else { query = query.is('tenant_id', null); }
     const { data } = await query;
     setBarbers(data || []);
+    return data || [];
   };
 
   useEffect(() => {
@@ -365,8 +372,8 @@ const ClienteAssinar = () => {
         const enriched = await enrichPlansWithAvailability(nextPlans || []);
         setPlans(enriched);
         setBarbers(nextBarbers || []);
-        setSelectedPlan((prev) => prev ? enriched.find((p) => p.id === prev.id) || null : null);
-        setSelectedBarber((prev) => prev ? (nextBarbers || []).find((b) => b.id === prev.id) || null : null);
+        setSelectedPlan((prev) => prev ? enriched.find((p) => p.id === prev.id) || prev : null);
+        setSelectedBarber((prev) => prev ? (nextBarbers || []).find((b) => b.id === prev.id) || prev : null);
       } catch (error) {
         console.error('Erro ao sincronizar dados:', error);
       }
@@ -381,6 +388,13 @@ const ClienteAssinar = () => {
       .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, [selectedTenantId]);
+
+  // Recuperação de segurança para evitar tela branca no step 4
+  useEffect(() => {
+    if (step === 4 && !selectedPlan && plans.length > 0) {
+      setSelectedPlan(plans[0]);
+    }
+  }, [step, selectedPlan, plans]);
 
   // ─── Handlers ─────────────────────────────
   const handleSelectShop = async (tenantId: string | null) => {
@@ -506,7 +520,7 @@ const ClienteAssinar = () => {
       : step === 2
         ? "Nossos Planos"
         : step === 3
-          ? "Escolha seu barbeiro"
+          ? "Seu barbeiro"
           : "Forma de pagamento";
 
   // Na etapa de Planos a barra de navegação global fica visível,
@@ -544,9 +558,9 @@ const ClienteAssinar = () => {
       {/* Background limpo e 100% branco sem orbs cinzas */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden z-0 bg-white" />
 
-      {/* Header — back arrow + step dots */}
+      {/* Header — back arrow + title */}
       <div className="flex-shrink-0 px-4 pt-[max(env(safe-area-inset-top),0.75rem)] pb-2 relative z-10">
-        <div className="max-w-2xl mx-auto flex items-center justify-between">
+        <div className="max-w-2xl mx-auto flex items-center gap-3">
           {!showBottomNav && (
             <button
               onClick={handleBack}
@@ -558,7 +572,9 @@ const ClienteAssinar = () => {
 
           {/* Title for non-carousel steps */}
           {step !== 2 && (
-            <span className="text-sm font-semibold text-foreground">{headerTitle}</span>
+            <span className="text-[18px] sm:text-[20px] font-bold text-neutral-900 tracking-tight">
+              {headerTitle}
+            </span>
           )}
         </div>
       </div>
@@ -566,7 +582,7 @@ const ClienteAssinar = () => {
 
       {/* Content area */}
       <div className="flex-1 min-h-0 overflow-hidden">
-        <AnimatePresence mode="wait">
+        <AnimatePresence>
 
           {/* Loading */}
           {step === 0 && (
@@ -653,8 +669,10 @@ const ClienteAssinar = () => {
             <motion.div key="step3" initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -16 }}
               className="h-full overflow-y-auto overscroll-contain px-4 pb-28">
               <div className="max-w-2xl mx-auto">
-                <div className="mb-5 pt-1">
-                  <h2 className="text-xl font-semibold text-foreground">Seu Barbeiro</h2>
+                <div className="mb-6 pt-3">
+                  <h2 className="text-[24px] font-bold text-neutral-900 tracking-tight leading-none mb-1">
+                      Seu Barbeiro
+                    </h2>
                   <p className="text-sm text-muted-foreground mt-1">Escolha o profissional exclusivo do seu plano</p>
                 </div>
 
@@ -667,7 +685,7 @@ const ClienteAssinar = () => {
                   <div className="space-y-2">
                     {barbers.map((barber, index) => (
                       <motion.div key={barber.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.04 }}>
-                        <BarberCard barber={barber} isSelected={selectedBarber?.id === barber.id} onSelect={() => setSelectedBarber(barber)} rating={ratings[barber.id]} />
+                        <BarberCard barber={barber} isSelected={false} showSelectionIndicator={false} onSelect={() => { setSelectedBarber(barber); setStep(4); }} rating={ratings[barber.id]} />
                       </motion.div>
                     ))}
                   </div>
@@ -676,160 +694,116 @@ const ClienteAssinar = () => {
             </motion.div>
           )}
 
-          {/* ═══ Step 4: Pagamento ═══ */}
-          {step === 4 && selectedPlan && (
-            <motion.div key="step4" initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -16 }}
-              className="h-full overflow-y-auto overscroll-contain px-4 pb-28">
-              <div className="max-w-2xl mx-auto">
-                <div className="mb-6 pt-1">
-                  <h2 className="text-xl font-semibold text-foreground">Pagamento</h2>
-                  <p className="text-sm text-muted-foreground mt-1">Escolha como deseja pagar</p>
-                </div>
-
-                {/* Summary */}
-                <div className="bg-card border border-border/40 rounded-xl p-4 mb-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-[13px] font-medium text-foreground">{selectedPlan.nome}</p>
-                      <p className="text-[11px] text-muted-foreground mt-0.5">{selectedShopName} • Renovação automática</p>
-                    </div>
-                    <p className="text-base font-bold text-foreground tabular-nums">
-                      R$ {selectedPlan.preco_mensal.toFixed(2).replace('.', ',')}
-                    </p>
+          {/* ═══ Step 4: Pagamento (mesmo design do fluxo de agendamento) ═══ */}
+          {step === 4 && (
+            !selectedPlan ? (
+              <motion.div key="step4-loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                className="flex items-center justify-center h-full">
+                <div className="w-7 h-7 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+              </motion.div>
+            ) : (
+              <motion.div key="step4" initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -16 }}
+                className="h-full overflow-y-auto overscroll-contain px-4 pb-28 relative z-10">
+                <div className="max-w-2xl mx-auto">
+                  <div className="mb-6 pt-3">
+                    <h2 className="text-[24px] sm:text-[25px] font-semibold text-neutral-900 tracking-tight leading-tight font-sans">
+                      Forma de pagamento
+                    </h2>
                   </div>
-                  {selectedBarber && (
-                    <div className="flex items-center gap-2 mt-3 pt-3 border-t border-border/30">
-                      <div className="w-6 h-6 rounded-full overflow-hidden bg-muted/20 flex items-center justify-center flex-shrink-0">
-                        {selectedBarber.foto_url ? (
-                          <img src={selectedBarber.foto_url} alt={selectedBarber.apelido} className="w-full h-full object-cover" />
-                        ) : (
-                          <User className="w-3.5 h-3.5 text-muted-foreground/40" />
-                        )}
+
+                  <div className="rounded-[22px] bg-white border border-neutral-200/80 shadow-[0_2px_12px_rgba(0,0,0,0.03)] p-2 space-y-1 mb-5">
+                    {canPayOnline && (
+                      <>
+                        <PaymentOption
+                          value="pix"
+                          selected={selectedPaymentMethod === "pix"}
+                          onSelect={() => setSelectedPaymentMethod("pix")}
+                          title="Pix"
+                          description="Confirmação instantânea • Sem taxa"
+                          highlight={true}
+                          icon={<img src={pixIcon} alt="PIX" className="w-5 h-5 object-contain" />}
+                        />
+
+                        <PaymentOption
+                          value="card"
+                          selected={selectedPaymentMethod === "card"}
+                          onSelect={() => setSelectedPaymentMethod("card")}
+                          title="Cartão"
+                          description="Crédito ou débito • Checkout seguro"
+                          icon={<CreditCard className={cn("w-5 h-5", selectedPaymentMethod === "card" ? "text-primary" : "text-muted-foreground/40")} />}
+                        />
+                      </>
+                    )}
+
+                    <PaymentOption
+                      value="cash"
+                      selected={selectedPaymentMethod === "cash"}
+                      onSelect={() => setSelectedPaymentMethod("cash")}
+                      title="Dinheiro"
+                      description={canPayOnline ? "Pague presencialmente • Barbeiro confirma" : "Este barbeiro só aceita pagamento na barbearia"}
+                      icon={<Banknote className={cn("w-5 h-5", selectedPaymentMethod === "cash" ? "text-primary" : "text-muted-foreground/40")} />}
+                    />
+                  </div>
+
+                  <div className="mb-5">
+                    <p className="text-[13px] font-medium text-neutral-500 mb-2 px-1">Resumo</p>
+                    <div className="rounded-[20px] bg-white border border-neutral-200/80 shadow-[0_2px_12px_rgba(0,0,0,0.03)] p-4 space-y-3">
+                      <div className="flex items-center justify-between text-[13px]">
+                        <span className="text-neutral-600">{selectedPlan.nome}</span>
+                        <span className="text-neutral-900 font-medium">{selectedShopName} • Renovação automática</span>
                       </div>
-                      <p className="text-[12px] text-muted-foreground">
-                        Barbeiro: <span className="font-medium text-foreground">{selectedBarber.apelido}</span>
-                      </p>
+                      {(selectedPaymentMethod === 'pix' || selectedPaymentMethod === 'card') && (
+                        <div className="flex items-center justify-between text-[13px]">
+                          <span className="text-neutral-600">Taxa de serviço</span>
+                          <span className="text-neutral-900 font-medium tabular-nums">R$ 0,90</span>
+                        </div>
+                      )}
+                      <div className="border-t border-neutral-100 pt-3 flex items-center justify-between">
+                        <span className="text-[14px] font-medium text-neutral-900">Total</span>
+                        <span className="text-[18px] font-bold text-neutral-900 tabular-nums">
+                          R$ {((selectedPlan?.preco_mensal ?? 0) + ((selectedPaymentMethod === 'pix' || selectedPaymentMethod === 'card') ? 0.9 : 0)).toFixed(2).replace('.', ',')}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {selectedBarber && (
+                    <div className="mb-5">
+                      <p className="text-[13px] font-medium text-neutral-500 mb-2 px-1">Profissional</p>
+                      <div className="rounded-[20px] bg-white border border-neutral-200/80 shadow-[0_2px_12px_rgba(0,0,0,0.03)] p-3.5 flex items-center justify-between">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="w-7 h-7 rounded-full overflow-hidden bg-muted/20 flex items-center justify-center flex-shrink-0">
+                            {selectedBarber.foto_url ? (
+                              <img src={selectedBarber.foto_url} alt={selectedBarber.apelido} className="w-full h-full object-cover" />
+                            ) : (
+                              <User className="w-3.5 h-3.5 text-muted-foreground/40" />
+                            )}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-[14px] font-medium text-neutral-900 truncate">{selectedBarber.apelido}</p>
+                            <p className="text-[12px] text-neutral-500 truncate mt-0.5">Barbeiro do seu plano</p>
+                          </div>
+                        </div>
+                        <ChevronRight className="w-4 h-4 text-neutral-300 flex-shrink-0" />
+                      </div>
                     </div>
                   )}
+
+                  <div className="flex items-center justify-center gap-1.5 mt-6">
+                    <Shield className="w-3 h-3 text-muted-foreground/40" />
+                    <span className="text-[10px] text-muted-foreground/40 uppercase tracking-wider font-medium">
+                      Pagamento Criptografado
+                    </span>
+                  </div>
                 </div>
-
-                {/* Payment methods */}
-                <div className="space-y-3 mb-4">
-                  {canPayOnline && (
-                    <>
-                      <PaymentOption
-                        value="pix"
-                        selected={selectedPaymentMethod === "pix"}
-                        onSelect={() => setSelectedPaymentMethod("pix")}
-                        title="Pix"
-                        description="Confirmação instantânea • Sem taxa"
-                        highlight={true}
-                        icon={<img src={pixIcon} alt="PIX" className="w-5 h-5 object-contain" />}
-                      />
-
-                      <PaymentOption
-                        value="card"
-                        selected={selectedPaymentMethod === "card"}
-                        onSelect={() => setSelectedPaymentMethod("card")}
-                        title="Cartão"
-                        description="Crédito ou débito • Checkout seguro"
-                        icon={<CreditCard className={cn("w-5 h-5", selectedPaymentMethod === "card" ? "text-primary" : "text-muted-foreground/40")} />}
-                      />
-                    </>
-                  )}
-
-                  <PaymentOption
-                    value="cash"
-                    selected={selectedPaymentMethod === "cash"}
-                    onSelect={() => setSelectedPaymentMethod("cash")}
-                    title="Dinheiro"
-                    description={canPayOnline ? "Pague presencialmente • Barbeiro confirma" : "Este barbeiro só aceita pagamento na barbearia"}
-                    icon={<Banknote className={cn("w-5 h-5", selectedPaymentMethod === "cash" ? "text-primary" : "text-muted-foreground/40")} />}
-                  />
-                </div>
-
-                <div className="flex items-center justify-center gap-1.5 mt-6">
-                  <Shield className="w-3 h-3 text-muted-foreground/40" />
-                  <span className="text-[10px] text-muted-foreground/40 uppercase tracking-wider font-medium">
-                    Pagamento Criptografado
-                  </span>
-                </div>
-              </div>
-            </motion.div>
+              </motion.div>
+            )
           )}
         </AnimatePresence>
       </div>
 
       {/* ═══ Floating Bottom Bars (Steps 3 & 4) ═══ */}
       <AnimatePresence>
-        {step === 3 && selectedBarber && (!hasActiveSubscription || isRenewalMode || isChangeMode) && (
-          <motion.div
-            key="bar-step3"
-            initial={{ y: 40, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: 40, opacity: 0 }}
-            transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-            className="fixed bottom-0 left-0 right-0 z-40"
-          >
-            {/* Subtle top fade */}
-            <div 
-              className="h-16 pointer-events-none"
-              style={{ background: "linear-gradient(to bottom, transparent, hsl(var(--background)))" }}
-            />
-
-            {/* Bar content */}
-            <div className="bg-background border-t border-border/40 px-5 pb-safe">
-              <div className="pt-3.5 pb-4 space-y-3">
-                {/* Info row */}
-                <div className="flex items-center justify-between px-0.5">
-                  <div className="flex items-center gap-2.5">
-                    {selectedBarber?.foto_url ? (
-                      <img src={selectedBarber.foto_url} alt="" className="w-7 h-7 rounded-full object-cover" />
-                    ) : (
-                      <div className="w-7 h-7 rounded-full bg-primary/30 flex items-center justify-center text-[11px] font-bold text-primary">
-                        {selectedBarber?.apelido?.charAt(0)}
-                      </div>
-                    )}
-                    <div className="flex flex-col">
-                      <span className="text-[10px] text-muted-foreground/60 leading-none mb-0.5">
-                        {selectedPlan?.nome}
-                      </span>
-                      <span className="text-[13px] font-semibold text-foreground leading-none">
-                        {selectedBarber?.apelido}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-[10px] text-muted-foreground/50 font-medium">R$</span>
-                    <span className="text-[17px] font-bold text-foreground tabular-nums tracking-tight">
-                      {selectedPlan?.preco_mensal.toFixed(2).replace('.', ',')}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Full-width CTA */}
-                <motion.button
-                  onClick={handleProceedToPayment}
-                  whileTap={{ scale: 0.985 }}
-                  className={cn(
-                    "w-full flex items-center justify-center gap-2",
-                    "h-[50px] rounded-xl",
-                    "font-semibold text-[14px] text-primary-foreground",
-                    "bg-primary",
-                    "active:brightness-90 transition-all duration-150"
-                  )}
-                  style={{
-                    boxShadow: "0 4px 16px hsl(var(--primary) / 0.25)"
-                  }}
-                >
-                  <span>Continuar</span>
-                  <ArrowRight className="w-4 h-4" />
-                </motion.button>
-              </div>
-            </div>
-          </motion.div>
-        )}
-
         {step === 4 && selectedPaymentMethod && (!hasActiveSubscription || isRenewalMode || isChangeMode) && (
           <motion.div
             key="bar-step4"

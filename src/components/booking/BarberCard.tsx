@@ -21,9 +21,10 @@ interface BarberCardProps {
   onSelect: () => void;
   rating?: BarberRating | null;
   isPlanBarber?: boolean;
+  showSelectionIndicator?: boolean;
 }
 
-export function BarberCard({ barber, isSelected, onSelect, rating, isPlanBarber }: BarberCardProps) {
+export function BarberCard({ barber, isSelected, onSelect, rating, isPlanBarber, showSelectionIndicator = true }: BarberCardProps) {
   const [showProfile, setShowProfile] = useState(false);
 
   const handleViewReviews = (e: React.MouseEvent) => {
@@ -104,19 +105,20 @@ export function BarberCard({ barber, isSelected, onSelect, rating, isPlanBarber 
             )}
           </div>
 
-          {/* Selection indicator */}
-          <div className={cn(
-            "flex-shrink-0 w-6 h-6 rounded-full border-2 transition-all duration-300 flex items-center justify-center",
-            isSelected 
-              ? "bg-neutral-900 border-neutral-900"
-              : "border-neutral-200 group-hover:border-neutral-300"
-          )}>
-            {isSelected && (
-              <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                <path d="M2.5 6L5 8.5L9.5 4" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            )}
-          </div>
+          {showSelectionIndicator && (
+            <div className={cn(
+              "flex-shrink-0 w-6 h-6 rounded-full border-2 transition-all duration-300 flex items-center justify-center",
+              isSelected
+                ? "bg-neutral-900 border-neutral-900"
+                : "border-neutral-200 group-hover:border-neutral-300"
+            )}>
+              {isSelected && (
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                  <path d="M2.5 6L5 8.5L9.5 4" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              )}
+            </div>
+          )}
         </div>
       </motion.button>
 

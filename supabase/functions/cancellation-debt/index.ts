@@ -57,17 +57,75 @@ Deno.serve(async (req) => {
         : new Date(`${apt.data}T${apt.hora}`).getTime();
 
       const now = Date.now();
-      const twoHoursMs = 2 * 60 * 60 * 1000;
-      const isWithin2Hours = now > (inicioEm - twoHoursMs);
+
+      // Buscar configuração de taxa de cancelamento do barbeiro (chave específica do barbeiro)
+      let horasAntecedencia = 2;
+      let taxaConfig: any = null;
+
+      if (apt.barbeiro_id) {
+        const { data: configRow } = await admin
+          .from('informacoes_empresa')
+          .select('valor, ativo')
+          .eq('chave', `taxa_cancelamento_${apt.barbeiro_id}`)
+          .eq('ativo', true)
+          .order('id', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        // Fallback: configuração geral da barbearia (tenant)
+        if (!configRow) {
+          const { data: barberInfo } = await admin
+            .from('barbeiros')
+            .select('tenant_id')
+            .eq('id', apt.barbeiro_id)
+            .maybeSingle();
+
+          if (barberInfo?.tenant_id) {
+            const { data: tenantConfig } = await admin
+              .from('informacoes_empresa')
+              .select('valor, ativo')
+              .eq('tenant_id', barberInfo.tenant_id)
+              .eq('chave', 'taxa_cancelamento')
+              .eq('ativo', true)
+              .order('id', { ascending: false })
+              .limit(1)
+              .maybeSingle();
+
+            if (tenantConfig) configRow = tenantConfig;
+          }
+        }
+
+        if (configRow) {
+          try {
+            taxaConfig = typeof configRow.valor === 'string' ? JSON.parse(configRow.valor) : configRow.valor;
+            horasAntecedencia = Number(taxaConfig?.horas_antecedencia) || 2;
+          } catch (e) {
+            console.warn('[cancellation-debt] Erro ao parsear config de taxa:', e);
+          }
+        }
+      }
+
+      const isWithinWindow = now > (inicioEm - horasAntecedencia * 3600000);
 
       const originalPrice = Number(apt.preco) || Number((apt.servico as any)?.preco) || 0;
-      const fee = isWithin2Hours ? Math.round(originalPrice * 0.20 * 100) / 100 : 0;
-      const feeBarber = isWithin2Hours ? Math.round(fee * 0.50 * 100) / 100 : 0;
-      const feePlatform = Math.round((fee - feeBarber) * 100) / 100;
+      let fee = 0;
+      let feeBarber = 0;
+      let feePlatform = 0;
+
+      if (isWithinWindow && taxaConfig?.habilitado && originalPrice > 0) {
+        if (taxaConfig.tipo === 'fixo') {
+          fee = Number(taxaConfig.valor) || 0;
+        } else {
+          const pct = Number(taxaConfig.valor) || 0;
+          fee = Math.round(originalPrice * pct / 100 * 100) / 100;
+        }
+        feeBarber = Math.round(fee * 0.50 * 100) / 100;
+        feePlatform = Math.round((fee - feeBarber) * 100) / 100;
+      }
 
       return json({
-        dentro_2h: isWithin2Hours,
-        isFree: !isWithin2Hours,
+        dentro_2h: isWithinWindow,
+        isFree: !isWithinWindow || fee === 0,
         valor_servico_original: originalPrice,
         valor_taxa: fee,
         valor_barbeiro: feeBarber,

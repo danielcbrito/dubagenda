@@ -1,6 +1,5 @@
-import { AlertTriangle, ArrowRight } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { motion } from "framer-motion";
-import { Button } from "@/components/ui/button";
 
 interface PlanExpiredBannerProps {
   planName: string;
@@ -10,34 +9,31 @@ interface PlanExpiredBannerProps {
 export function PlanExpiredBanner({ planName, onRenew }: PlanExpiredBannerProps) {
   return (
     <motion.div
-      initial={{ opacity: 0, y: -10 }}
+      initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      className="rounded-xl p-4 border border-yellow-500/30"
-      style={{
-        background: "linear-gradient(135deg, rgba(251,191,36,0.1), rgba(245,158,11,0.05))",
-      }}
+      className="rounded-2xl p-5 border border-neutral-200/80 bg-white shadow-[0_2px_12px_rgba(0,0,0,0.03)]"
     >
       <div className="flex items-start gap-3">
-        <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 bg-yellow-500/20">
-          <AlertTriangle className="w-4 h-4 text-yellow-400" />
-        </div>
+        <div className="w-2.5 h-2.5 rounded-full bg-[#DC2626] mt-1.5 shrink-0" />
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-yellow-300">
+          <p className="text-[14px] font-semibold text-neutral-900 tracking-tight">
             Plano expirado
           </p>
-          <p className="text-xs text-yellow-200/60 mt-0.5">
-            Seu <span className="font-medium">{planName}</span> venceu. Renove para continuar aproveitando os benefícios.
+          <p className="text-[13px] text-neutral-600 mt-0.5 leading-relaxed">
+            Seu <span className="font-semibold text-neutral-900">{planName}</span> venceu. Renove para continuar agendando e aproveitando os benefícios exclusivos.
           </p>
-          <Button
-            size="sm"
+          <button
+            type="button"
             onClick={onRenew}
-            className="mt-2.5 h-8 text-xs bg-yellow-500 hover:bg-yellow-400 text-black font-semibold rounded-lg group"
+            className="mt-3.5 h-10 px-4 text-[13.5px] bg-[#18181B] hover:bg-neutral-900 text-white font-semibold rounded-xl flex items-center gap-1.5 active:scale-[0.98] transition-all cursor-pointer shadow-xs"
           >
-            Renovar plano
-            <ArrowRight className="w-3.5 h-3.5 ml-1 group-hover:translate-x-0.5 transition-transform" />
-          </Button>
+            Renovar agora
+            <ArrowRight className="w-3.5 h-3.5 ml-0.5" />
+          </button>
         </div>
       </div>
     </motion.div>
   );
 }
+
+export default PlanExpiredBanner;

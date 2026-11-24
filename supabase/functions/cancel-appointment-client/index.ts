@@ -468,29 +468,83 @@ serve(async (req) => {
 
     if (updateError) throw updateError;
 
-    // 4.1 Determinar taxa de cancelamento baseada na regra do sistema (grátis > 2h, cobra < 2h)
-    // Regra: Se o cliente cancelar dentro de 2 horas antes -> cobra taxa automática de 20% do valor do serviço agendado
+    // 4.1 Determinar taxa de cancelamento baseada na configuração do barbeiro
+    // Regra: Se o barbeiro não configurou taxa, não cobra nada. Se configurou, usa o valor/tipo configurado.
     let feeApplied = 0;
     let debtRecorded = false;
-    const aptDateTime = new Date(`${appointment.data}T${appointment.hora}`).getTime();
-    const isFree = (aptDateTime - Date.now()) > 2 * 3600000;
+    let taxaConfig: any = null;
 
-    if (!isFree && appointment.barbeiro_id) {
+    const aptDateTime = new Date(`${appointment.data}T${appointment.hora}`).getTime();
+
+    if (appointment.barbeiro_id) {
       try {
-        let basePrice = Number(appointment.preco) || 0;
-        if (basePrice <= 0 && appointment.servico_id) {
-          const { data: svc } = await supabase.from('servicos').select('preco').eq('id', appointment.servico_id).maybeSingle();
-          basePrice = Number(svc?.preco) || 0;
+        // Buscar configuração de taxa de cancelamento do barbeiro (chave específica do barbeiro)
+        const { data: configRow } = await supabase
+          .from('informacoes_empresa')
+          .select('valor, ativo')
+          .eq('chave', `taxa_cancelamento_${appointment.barbeiro_id}`)
+          .eq('ativo', true)
+          .order('id', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        // Fallback: configuração geral da barbearia (tenant)
+        if (!configRow) {
+          const { data: barberInfo } = await supabase
+            .from('barbeiros')
+            .select('tenant_id')
+            .eq('id', appointment.barbeiro_id)
+            .maybeSingle();
+
+          if (barberInfo?.tenant_id) {
+            const { data: tenantConfig } = await supabase
+              .from('informacoes_empresa')
+              .select('valor, ativo')
+              .eq('tenant_id', barberInfo.tenant_id)
+              .eq('chave', 'taxa_cancelamento')
+              .eq('ativo', true)
+              .order('id', { ascending: false })
+              .limit(1)
+              .maybeSingle();
+
+            if (tenantConfig) configRow = tenantConfig;
+          }
         }
 
-        if (basePrice > 0) {
-          // Taxa = 20% do valor do serviço agendado
-          feeApplied = Math.round(basePrice * 0.20 * 100) / 100;
+        if (configRow) {
+          try {
+            taxaConfig = typeof configRow.valor === 'string' ? JSON.parse(configRow.valor) : configRow.valor;
+          } catch (e) {
+            console.warn('[cancel-appointment-client] Erro ao parsear config de taxa:', e);
+          }
+        }
+
+        const horasAntecedencia = Number(taxaConfig?.horas_antecedencia) || 2;
+        const isWithinWindow = (aptDateTime - Date.now()) <= horasAntecedencia * 3600000;
+
+        if (isWithinWindow && taxaConfig?.habilitado) {
+          let basePrice = Number(appointment.preco) || 0;
+          if (basePrice <= 0 && appointment.servico_id) {
+            const { data: svc } = await supabase.from('servicos').select('preco').eq('id', appointment.servico_id).maybeSingle();
+            basePrice = Number(svc?.preco) || 0;
+          }
+
+          if (basePrice > 0) {
+            if (taxaConfig.tipo === 'fixo') {
+              feeApplied = Number(taxaConfig.valor) || 0;
+            } else {
+              // porcentagem
+              const pct = Number(taxaConfig.valor) || 0;
+              feeApplied = Math.round(basePrice * pct / 100 * 100) / 100;
+            }
+          }
         }
       } catch (errFee) {
         console.warn('[cancel-appointment-client] Erro ao calcular taxa de cancelamento:', errFee);
       }
     }
+
+    const isFree = feeApplied === 0;
 
     // Se o agendamento usou de verdade um Corte Grátis, cancelar deve liberar
     // o mesmo benefício para o cliente remarcar.

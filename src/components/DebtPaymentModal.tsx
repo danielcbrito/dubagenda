@@ -263,7 +263,7 @@ export function DebtPaymentModal({
 
               {/* Valor em destaque */}
               <div className="py-2.5 px-4 rounded-2xl bg-muted/40 border border-border/50 flex items-center justify-between">
-                <span className="text-xs font-medium text-muted-foreground">Valor da taxa (20%):</span>
+                <span className="text-xs font-medium text-muted-foreground">Valor da taxa:</span>
                 <span className="text-base font-bold text-foreground tabular-nums">
                   {valorFormatado}
                 </span>

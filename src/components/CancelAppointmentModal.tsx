@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -49,9 +49,6 @@ interface QuoteState {
 
 const brl = (val: number) => `R$ ${Number(val || 0).toFixed(2).replace('.', ',')}`;
 
-// Cache em memória para eliminar latência em reaberturas e evitar loading repetido
-const quoteCache = new Map<string, QuoteState>();
-
 export function CancelAppointmentModal({
   open,
   onOpenChange,
@@ -74,65 +71,11 @@ export function CancelAppointmentModal({
 
   const isPrepaid = isPaid || isPaidWithCredit || paymentMethod === 'pix' || paymentMethod === 'card' || paymentMethod === 'credit_card';
 
-  // 1. Cálculo instantâneo no cliente (Zero Latency):
-  // Se faltam mais de 2 horas para o horário agendado, pela regra do sistema o cancelamento é 100% gratuito.
-  const optimisticInitialQuote = useMemo<QuoteState | null>(() => {
-    if (quoteCache.has(appointmentId)) {
-      return quoteCache.get(appointmentId)!;
-    }
-    if (appointmentMeta?.data && appointmentMeta?.hora) {
-      try {
-        const aptTime = new Date(`${appointmentMeta.data}T${appointmentMeta.hora}`).getTime();
-        if (!isNaN(aptTime)) {
-          const hoursLeft = (aptTime - Date.now()) / 3600000;
-          if (hoursLeft >= 2) {
-            return {
-              id: appointmentId,
-              fee: 0,
-              isFree: true,
-              horasRestantes: Math.round(hoursLeft * 10) / 10,
-              originalPrice: amount,
-              isPrepaid,
-              valorPago: amount,
-              refundAmount: isPrepaid ? amount : 0,
-              vaiDescontarReembolso: false,
-              vaiGerarDivida: false,
-              error: false,
-            };
-          } else {
-            const fee20 = Math.round(amount * 0.20 * 100) / 100;
-            return {
-              id: appointmentId,
-              fee: fee20,
-              isFree: false,
-              horasRestantes: Math.max(0, Math.round(hoursLeft * 10) / 10),
-              originalPrice: amount,
-              isPrepaid,
-              valorPago: amount,
-              refundAmount: 0,
-              vaiDescontarReembolso: false,
-              vaiGerarDivida: true,
-              error: false,
-            };
-          }
-        }
-      } catch {
-        // Fallback para background fetch
-      }
-    }
-    return null;
-  }, [appointmentId, appointmentMeta?.data, appointmentMeta?.hora, amount, isPrepaid]);
-
-  const [quote, setQuote] = useState<QuoteState | null>(optimisticInitialQuote);
+  const [quote, setQuote] = useState<QuoteState | null>(null);
 
   useEffect(() => {
     if (!open) return;
     let disposed = false;
-
-    // Se já temos quote no cache ou calculado optimistamente para >2h, usa imediatamente sem loading
-    if (optimisticInitialQuote && optimisticInitialQuote.id === appointmentId) {
-      setQuote(optimisticInitialQuote);
-    }
 
     async function loadQuote() {
       try {
@@ -219,7 +162,7 @@ export function CancelAppointmentModal({
     return () => {
       disposed = true;
     };
-  }, [open, appointmentId, amount, isPrepaid, userId, optimisticInitialQuote]);
+  }, [open, appointmentId, amount, isPrepaid, userId]);
 
   const quoteReady = quote?.id === appointmentId;
 
@@ -228,7 +171,6 @@ export function CancelAppointmentModal({
       appointmentId,
       appointmentMeta: appointmentMeta || { preco: amount },
       onSuccess: () => {
-        quoteCache.delete(appointmentId);
         onSuccess();
         onOpenChange(false);
       },
@@ -298,7 +240,7 @@ export function CancelAppointmentModal({
                       <strong className="text-foreground font-semibold">{brl(quote.refundAmount)}</strong> na carteira.
                     </>
                   ) : (
-                    <>Taxa de 20% registrada como pendência. Pague para continuar agendando.</>
+                    <>Taxa de cancelamento registrada como pendência. Pague para continuar agendando.</>
                   )}
                 </p>
               </motion.div>

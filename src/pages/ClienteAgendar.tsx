@@ -2851,8 +2851,12 @@ const ClienteAgendar = () => {
       return;
     }
 
-    // Step 2 (Serviço) — volta para barbeiro
+    // Step 2 (Serviço) — volta para barbeiro (ou home se o plano já definiu o barbeiro)
     if (step === 2) {
+      if (isPlanFlow && activeSubscription?.barbeiro) {
+        navigate("/cliente");
+        return;
+      }
       setStep(1);
       return;
     }
@@ -2878,7 +2882,7 @@ const ClienteAgendar = () => {
 
   // Build visible steps for the current flow (unit step removed — always skip)
   const visibleSteps = (() => {
-    const skipBarber = (isPlanFlow && activeSubscription?.barbeiro) || isRescheduling;
+    const skipBarber = isPlanFlow || isRescheduling;
     const skipService = (isPlanFlow && activeSubscription?.servico_id) || isRescheduling;
 
     const steps: number[] = [];
@@ -2984,8 +2988,8 @@ const ClienteAgendar = () => {
 
       {/* Content */}
       <AnimatePresence mode="wait">
-        {/* STEP 1: ESCOLHER BARBEIRO */}
-        {step === 1 && (
+        {/* STEP 1: ESCOLHER BARBEIRO (apenas clientes sem plano) */}
+        {step === 1 && !isPlanFlow && (
           <motion.div
             key="step-1-barber"
             variants={pageVariants}
@@ -2993,7 +2997,7 @@ const ClienteAgendar = () => {
             animate="animate"
             exit="exit"
             transition={{ duration: 0.25 }}
-            className="pt-16 pb-32 px-4 relative z-10"
+            className="pt-16 pb-24 px-4 relative z-10"
           >
             <div className="max-w-2xl mx-auto">
               <div className="mb-6 pt-1">
@@ -3019,6 +3023,7 @@ const ClienteAgendar = () => {
                       onSelect={() => {
                         setSelectedBarber(barber);
                         loadBarberCustomDurations(barber.id);
+                        setStep(2);
                       }}
                       rating={barberRatings[barber.id] || null}
                       isPlanBarber={activeSubscription?.barbeiro_id === barber.id}
@@ -3027,12 +3032,6 @@ const ClienteAgendar = () => {
                 </div>
               )}
             </div>
-
-            <FloatingActionBar
-              isVisible={!!selectedBarber}
-              onContinue={handleNextStep}
-              label="Continuar"
-            />
           </motion.div>
         )}
 
