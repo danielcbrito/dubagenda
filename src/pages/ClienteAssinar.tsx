@@ -243,7 +243,7 @@ const ClienteAssinar = () => {
         .from("assinaturas")
         .select("*, plano:planos(*)")
         .eq("user_id", session.user.id)
-        .in("status", ["active", "cancelled", "past_due", "suspended", "pending_renewal", "expired"] as any)
+        .in("status", ["active", "cancelled", "past_due", "suspended", "pending_renewal", "pending_cash"] as any)
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();
