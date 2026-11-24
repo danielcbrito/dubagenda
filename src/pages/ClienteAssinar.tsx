@@ -2,23 +2,16 @@ import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { sendAssinaturaCashCriadaEvent } from "@/lib/webhookService";
-import { Button } from "@/components/ui/button";
 import { BackArrow } from "@/components/ui/back-arrow";
 import { 
   ArrowRight,
-  Banknote,
-  Calendar,
   Check, 
-  ChevronLeft,
   ChevronRight,
-  CreditCard,
   Loader2,
   MapPin,
   Scissors,
-  Shield,
   Star,
   User,
-  Wallet,
   Landmark,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -27,9 +20,14 @@ import { cn } from "@/lib/utils";
 
 import pixIcon from "@/assets/pix-icon.png";
 import logoDub from "@/assets/logo-dub.png";
-import scissorsDecor from "@/assets/scissors-decorative.png";
 import { BarberCard } from "@/components/booking/BarberCard";
 import { useBarberRatings } from "@/hooks/useBarberRatings";
+import { useBarberPaymentOptions } from "@/hooks/useBarberPaymentOptions";
+import { resolveBookingPaymentMethod } from "@/lib/barber-payment-options";
+import { getServiceFee } from "@/lib/payment-fees";
+import { formatCPF, validateCPF } from "@/lib/validators";
+import { StepDots } from "@/components/booking/StepDots";
+import { FloatingActionBar } from "@/components/booking/FloatingActionBar";
 import { PlanCarousel } from "@/components/booking/PlanCarousel";
 import { BottomNavigation } from "@/components/BottomNavigation";
 
@@ -160,11 +158,17 @@ const ClienteAssinar = () => {
   const [selectedTenantId, setSelectedTenantId] = useState<string | null | "dub">(null);
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
   const [selectedBarber, setSelectedBarber] = useState<Barber | null>(null);
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<"pix" | "card" | "cash" | null>("pix");
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<"pix" | "cash" | null>("pix");
+
+  // CPF (obrigatório para emissão do PIX, idêntico ao fluxo de agendamento)
+  const [profileCpf, setProfileCpf] = useState<string | null>(null);
+  const [cpfInput, setCpfInput] = useState("");
+  const [cpfError, setCpfError] = useState(false);
 
   // UI
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState(0);
+  const [visitedStep1, setVisitedStep1] = useState(false);
   const [hasActiveSubscription, setHasActiveSubscription] = useState(false);
   const [currentPlanIndex, setCurrentPlanIndex] = useState(0);
   const [mySub, setMySub] = useState<MeuPlanoSub | null>(null);
@@ -173,33 +177,79 @@ const ClienteAssinar = () => {
 
   const { ratings } = useBarberRatings(barbers.map(b => b.id));
 
+  // Opções de pagamento habilitadas pelo barbeiro/unidade (idêntico ao agendamento)
+  const effectivePaymentTenantId = selectedBarber?.tenant_id ?? (selectedTenantId && selectedTenantId !== "dub" ? selectedTenantId : null);
+  const {
+    pixHabilitado,
+    barbeariaHabilitado,
+    loading: barberPaymentOptsLoading,
+    error: barberPaymentOptsError,
+  } = useBarberPaymentOptions(selectedBarber?.id || null, effectivePaymentTenantId);
+
   // Woovi: barbeiro tem subconta cadastrada? Se não, só permite pagamento na barbearia.
   const [barberWooviKey, setBarberWooviKey] = useState<string | null>(null);
+  const [barberWooviLoading, setBarberWooviLoading] = useState(false);
   useEffect(() => {
-    if (!selectedBarber?.id) { setBarberWooviKey(null); return; }
+    if (!selectedBarber?.id) {
+      setBarberWooviKey(null);
+      setBarberWooviLoading(false);
+      return;
+    }
     let cancelled = false;
+    setBarberWooviLoading(true);
     (async () => {
-      const { data } = await supabase
-        .from('barbeiros')
-        .select('woovi_pix_key')
-        .eq('id', selectedBarber.id)
-        .maybeSingle();
-      if (!cancelled) setBarberWooviKey((data?.woovi_pix_key as string | null) ?? null);
+      try {
+        const { data } = await supabase
+          .from('barbeiros')
+          .select('woovi_pix_key')
+          .eq('id', selectedBarber.id)
+          .maybeSingle();
+        if (!cancelled) setBarberWooviKey((data?.woovi_pix_key as string | null) ?? null);
+      } finally {
+        if (!cancelled) setBarberWooviLoading(false);
+      }
     })();
     return () => { cancelled = true; };
   }, [selectedBarber?.id]);
-  const canPayOnline = !!barberWooviKey;
 
-  // Auto-seleciona PIX quando barbeiro aceita pagamento online; senão força "cash".
+  const isPaymentConfigLoading = barberWooviLoading || (!!effectivePaymentTenantId && barberPaymentOptsLoading);
+  const pixAvailable = !!barberWooviKey && (!effectivePaymentTenantId || (!barberPaymentOptsError && pixHabilitado));
+  const cashAvailable = !effectivePaymentTenantId || (!barberPaymentOptsError && barbeariaHabilitado);
+
+  // Preserva a escolha válida e desabilita Cartão (card: false)
   useEffect(() => {
-    if (canPayOnline) {
-      if (selectedPaymentMethod === 'cash') setSelectedPaymentMethod('pix');
-    } else if (selectedPaymentMethod === 'pix' || selectedPaymentMethod === 'card') {
-      setSelectedPaymentMethod('cash');
-    }
-  }, [canPayOnline]);
+    if (isPaymentConfigLoading) return;
+    const resolved = resolveBookingPaymentMethod(selectedPaymentMethod, {
+      pix: pixAvailable,
+      cash: cashAvailable,
+      wallet: false,
+      card: false,
+    });
+    setSelectedPaymentMethod(resolved === 'pix' || resolved === 'cash' ? resolved : null);
+  }, [isPaymentConfigLoading, pixAvailable, cashAvailable]);
 
   // ─── Init ─────────────────────────────────
+  const loadProfileCpf = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("cpf")
+        .eq("id", session.user.id)
+        .maybeSingle();
+      const savedCpf = ((profile as any)?.cpf || "").replace(/\D/g, "");
+      if (savedCpf) {
+        setProfileCpf(savedCpf);
+        setCpfInput(formatCPF(savedCpf));
+      } else {
+        setProfileCpf(null);
+      }
+    } catch (err) {
+      console.error("Erro ao carregar CPF do perfil:", err);
+    }
+  };
+
   const loadMySub = async () => {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) { setCheckingMyPlan(false); return; }
@@ -216,6 +266,7 @@ const ClienteAssinar = () => {
   };
 
   useEffect(() => {
+    loadProfileCpf();
     if (!isRenewalMode && !isChangeMode && !resumePlanId) loadMySub();
     else setCheckingMyPlan(false);
     loadTenants();
@@ -414,6 +465,7 @@ const ClienteAssinar = () => {
     setSelectedBarber(null);
     setPlans([]);
     setBarbers([]);
+    setVisitedStep1(true);
     setStep(1);
   };
 
@@ -422,9 +474,29 @@ const ClienteAssinar = () => {
     setStep(3);
   };
 
-  const handleProceedToPayment = () => {
-    if (!selectedBarber) { toast.error("Selecione um barbeiro"); return; }
-    setStep(4);
+  const handleProceedFromPayment = async () => {
+    if (!selectedPlan || !selectedPaymentMethod || !selectedBarber) return;
+
+    if (selectedPaymentMethod === "pix") {
+      const digits = (cpfInput || "").replace(/\D/g, "");
+      if (digits.length !== 11 || !validateCPF(digits)) {
+        setCpfError(true);
+        toast.error("Informe um CPF válido para gerar o PIX.");
+        return;
+      }
+
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user && digits !== profileCpf) {
+          await supabase.from("profiles").update({ cpf: digits }).eq("id", user.id);
+          setProfileCpf(digits);
+        }
+      } catch (err) {
+        console.error("Erro ao salvar CPF:", err);
+      }
+    }
+
+    await handlePayment();
   };
 
   const handlePayment = async () => {
@@ -461,21 +533,12 @@ const ClienteAssinar = () => {
         }).catch(() => {});
         toast.success("Plano ativado! Agende seu primeiro corte.");
         navigate(`/cliente/agendar?barber=${selectedBarber.id}`);
-      } else if (selectedPaymentMethod === "card") {
-        const { data, error } = await supabase.functions.invoke('create-subscription-card', {
-          body: { planoId: selectedPlan.id, barbeiroId: selectedBarber.id, renew: isReplacing }
-        });
-        if (error) throw error;
-        if (data?.error) throw new Error(data.error);
-        if (data?.url) {
-          sessionStorage.setItem("subscription_barber_id", selectedBarber.id);
-          window.location.href = data.url;
-        }
       } else {
         const { data, error } = await supabase.functions.invoke('create-subscription-pix', {
           body: { planoId: selectedPlan.id, barbeiroId: selectedBarber.id, renew: isReplacing }
         });
         if (error) throw error;
+        if (data?.error) throw new Error(data.error);
         if (data?.success) {
           sessionStorage.setItem("subscription_barber_id", selectedBarber.id);
           sessionStorage.setItem("pix_checkout_data", JSON.stringify({
@@ -496,15 +559,26 @@ const ClienteAssinar = () => {
       }
     } catch (error: any) {
       console.error('Payment error:', error);
-      toast.error(error.message || "Erro ao processar pagamento");
+      let errorMessage = error?.message || "";
+      try {
+        if (error?.context && typeof error.context.json === 'function') {
+          const body = await error.context.json();
+          if (body?.error) errorMessage = body.error;
+        }
+      } catch {}
+      toast.error(errorMessage || "Erro ao processar pagamento");
     } finally {
       setLoading(false);
     }
   };
 
   const handleBack = () => {
-    if (step === 4) { setStep(3); setSelectedPaymentMethod("pix"); }
-    else if (step === 3) { setStep(2); setSelectedBarber(null); }
+    setCpfError(false);
+    if (step === 4) { setStep(3); }
+    else if (step === 3) {
+      if (isRenewalMode) { navigate("/cliente"); }
+      else { setStep(2); setSelectedBarber(null); }
+    }
     else if (step === 2) { navigate("/cliente"); }
     else { navigate("/cliente"); }
   };
@@ -513,15 +587,19 @@ const ClienteAssinar = () => {
     ? "Barbearia DUB"
     : tenants.find(t => t.id === selectedTenantId)?.nome || "";
 
-  const headerTitle = step === 0
-    ? "Carregando..."
-    : step === 1
-      ? "Escolha a barbearia"
-      : step === 2
-        ? "Nossos Planos"
-        : step === 3
-          ? "Seu barbeiro"
-          : "Forma de pagamento";
+  const visibleSteps = isRenewalMode || resumePlanId
+    ? [3, 4]
+    : visitedStep1 || step === 1
+      ? [1, 2, 3, 4]
+      : [2, 3, 4];
+  const totalSteps = visibleSteps.length;
+  const currentDisplayStep = Math.max(1, visibleSteps.indexOf(step) + 1);
+
+  const pageVariants = {
+    initial: { opacity: 0, x: 20 },
+    animate: { opacity: 1, x: 0 },
+    exit: { opacity: 0, x: -20 }
+  };
 
   // Na etapa de Planos a barra de navegação global fica visível,
   // então o conteúdo é encurtado e a seta de voltar é ocultada.
@@ -548,41 +626,38 @@ const ClienteAssinar = () => {
 
   return (
     <div
-      className="fixed inset-0 flex flex-col bg-background"
+      className="fixed inset-0 flex flex-col bg-[#FFFFFF]"
       style={
         showBottomNav
           ? { paddingBottom: "calc(4rem + env(safe-area-inset-bottom, 0px))" }
           : undefined
       }
     >
-      {/* Background limpo e 100% branco sem orbs cinzas */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden z-0 bg-white" />
+      {/* Header fixo — Seta circular + Dots (100% idêntico ao fluxo de agendamento) */}
+      {step !== 2 && step !== 0 && (
+        <div className="fixed top-0 left-0 right-0 z-50 bg-[#FFFFFF]">
+          <div className="max-w-2xl mx-auto px-4 pt-[max(env(safe-area-inset-top),0.75rem)] pb-3">
+            <div className="flex items-center justify-between">
+              <button
+                type="button"
+                onClick={handleBack}
+                aria-label="Voltar"
+                className="w-10 h-10 rounded-full bg-white border border-neutral-200/70 shadow-[0_2px_8px_rgba(0,0,0,0.04)] flex items-center justify-center text-neutral-900 active:scale-90 transition-transform cursor-pointer focus:outline-none"
+              >
+                <BackArrow size={20} strokeWidth={2.2} />
+              </button>
 
-      {/* Header — back arrow + title */}
-      <div className="flex-shrink-0 px-4 pt-[max(env(safe-area-inset-top),0.75rem)] pb-2 relative z-10">
-        <div className="max-w-2xl mx-auto flex items-center gap-3">
-          {!showBottomNav && (
-            <button
-              onClick={handleBack}
-              className="flex items-center justify-center active:scale-95 transition-transform"
-            >
-              <BackArrow size={24} className="text-foreground" />
-            </button>
-          )}
+              <StepDots currentStep={currentDisplayStep} totalSteps={totalSteps} />
 
-          {/* Title for non-carousel steps */}
-          {step !== 2 && (
-            <span className="text-[18px] sm:text-[20px] font-bold text-neutral-900 tracking-tight">
-              {headerTitle}
-            </span>
-          )}
+              <div className="w-10" />
+            </div>
+          </div>
         </div>
-      </div>
-
+      )}
 
       {/* Content area */}
-      <div className="flex-1 min-h-0 overflow-hidden">
-        <AnimatePresence>
+      <div className="flex-1 min-h-0 overflow-hidden relative z-10">
+        <AnimatePresence mode="wait">
 
           {/* Loading */}
           {step === 0 && (
@@ -594,12 +669,21 @@ const ClienteAssinar = () => {
 
           {/* ═══ Step 1: Barbearia ═══ */}
           {step === 1 && (
-            <motion.div key="step1" initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 16 }}
-              className="h-full overflow-y-auto overscroll-contain px-4 pb-20">
+            <motion.div
+              key="step1"
+              variants={pageVariants}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              transition={{ duration: 0.25 }}
+              className="h-full overflow-y-auto overscroll-contain pt-[calc(max(env(safe-area-inset-top,0px),0.75rem)+3.25rem)] pb-20 px-4 relative z-10"
+            >
               <div className="max-w-2xl mx-auto space-y-2.5">
-                <div className="mb-4">
-                  <h2 className="text-xl font-semibold text-foreground">Sua Barbearia</h2>
-                  <p className="text-sm text-muted-foreground mt-1">Selecione onde deseja assinar o plano</p>
+                <div className="mb-6 pt-1">
+                  <h2 className="text-[24px] sm:text-[25px] font-semibold text-neutral-900 tracking-tight leading-tight font-sans">
+                    Sua Barbearia
+                  </h2>
+                  <p className="text-[13px] text-neutral-500 mt-1">Selecione onde deseja assinar o plano</p>
                 </div>
 
                 <BarbershopCard isDub isSelected={false} onSelect={() => handleSelectShop(null)} disabled={hasActiveSubscription && !isChangeMode} />
@@ -666,14 +750,23 @@ const ClienteAssinar = () => {
 
           {/* ═══ Step 3: Barbeiro ═══ */}
           {step === 3 && (
-            <motion.div key="step3" initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -16 }}
-              className="h-full overflow-y-auto overscroll-contain px-4 pb-28">
+            <motion.div
+              key="step3"
+              variants={pageVariants}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              transition={{ duration: 0.25 }}
+              className="h-full overflow-y-auto overscroll-contain pt-[calc(max(env(safe-area-inset-top,0px),0.75rem)+3.25rem)] pb-24 px-4 relative z-10"
+            >
               <div className="max-w-2xl mx-auto">
-                <div className="mb-6 pt-3">
-                  <h2 className="text-[24px] font-bold text-neutral-900 tracking-tight leading-none mb-1">
-                      Seu Barbeiro
-                    </h2>
-                  <p className="text-sm text-muted-foreground mt-1">Escolha o profissional exclusivo do seu plano</p>
+                <div className="mb-6 pt-1">
+                  <h2 className="text-[24px] sm:text-[25px] font-semibold text-neutral-900 tracking-tight leading-tight font-sans">
+                    Seu barbeiro
+                  </h2>
+                  <p className="text-[13px] text-neutral-500 mt-1">
+                    Escolha o profissional exclusivo do seu plano
+                  </p>
                 </div>
 
                 {barbers.length === 0 ? (
@@ -682,10 +775,20 @@ const ClienteAssinar = () => {
                     <p className="text-sm font-medium text-muted-foreground">Nenhum barbeiro disponível</p>
                   </div>
                 ) : (
-                  <div className="space-y-2">
+                  <div className="space-y-2.5">
                     {barbers.map((barber, index) => (
                       <motion.div key={barber.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.04 }}>
-                        <BarberCard barber={barber} isSelected={false} showSelectionIndicator={false} onSelect={() => { setSelectedBarber(barber); setStep(4); }} rating={ratings[barber.id]} />
+                        <BarberCard
+                          barber={barber}
+                          isSelected={selectedBarber?.id === barber.id}
+                          showSelectionIndicator={false}
+                          onSelect={() => {
+                            setSelectedBarber(barber);
+                            setCpfError(false);
+                            setStep(4);
+                          }}
+                          rating={ratings[barber.id]}
+                        />
                       </motion.div>
                     ))}
                   </div>
@@ -694,7 +797,7 @@ const ClienteAssinar = () => {
             </motion.div>
           )}
 
-          {/* ═══ Step 4: Pagamento (mesmo design do fluxo de agendamento) ═══ */}
+          {/* ═══ Step 4: Forma de pagamento (100% idêntico ao fluxo de agendamento normal) ═══ */}
           {step === 4 && (
             !selectedPlan ? (
               <motion.div key="step4-loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
@@ -702,99 +805,173 @@ const ClienteAssinar = () => {
                 <div className="w-7 h-7 border-2 border-primary border-t-transparent rounded-full animate-spin" />
               </motion.div>
             ) : (
-              <motion.div key="step4" initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -16 }}
-                className="h-full overflow-y-auto overscroll-contain px-4 pb-28 relative z-10">
+              <motion.div
+                key="step4"
+                variants={pageVariants}
+                initial="initial"
+                animate="animate"
+                exit="exit"
+                transition={{ duration: 0.3 }}
+                className="h-full overflow-y-auto overscroll-contain pt-[calc(max(env(safe-area-inset-top,0px),0.75rem)+3.25rem)] pb-36 px-4 relative z-10"
+              >
                 <div className="max-w-2xl mx-auto">
-                  <div className="mb-6 pt-3">
+                  <div className="mb-6 pt-1">
                     <h2 className="text-[24px] sm:text-[25px] font-semibold text-neutral-900 tracking-tight leading-tight font-sans">
                       Forma de pagamento
                     </h2>
                   </div>
 
                   <div className="rounded-[22px] bg-white border border-neutral-200/80 shadow-[0_2px_12px_rgba(0,0,0,0.03)] p-2 space-y-1 mb-5">
-                    {canPayOnline && (
-                      <>
+                    {isPaymentConfigLoading && (
+                      <p role="status" className="flex items-center gap-2 p-3.5 text-sm text-muted-foreground">
+                        <Loader2 className="h-4 w-4 animate-spin" /> Carregando pagamento...
+                      </p>
+                    )}
+
+                    {!isPaymentConfigLoading && !pixAvailable && !cashAvailable && (
+                      <p role="status" className="p-3.5 text-sm text-muted-foreground">
+                        Nenhuma forma de pagamento disponível para este profissional.
+                      </p>
+                    )}
+
+                    {!isPaymentConfigLoading && pixAvailable && (
+                      <div>
                         <PaymentOption
                           value="pix"
                           selected={selectedPaymentMethod === "pix"}
-                          onSelect={() => setSelectedPaymentMethod("pix")}
-                          title="Pix"
-                          description="Confirmação instantânea • Sem taxa"
-                          highlight={true}
+                          onSelect={() => {
+                            setCpfError(false);
+                            setSelectedPaymentMethod("pix");
+                          }}
+                          title="PIX"
+                          description="Confirmação instantânea e segura"
                           icon={<img src={pixIcon} alt="PIX" className="w-5 h-5 object-contain" />}
                         />
 
-                        <PaymentOption
-                          value="card"
-                          selected={selectedPaymentMethod === "card"}
-                          onSelect={() => setSelectedPaymentMethod("card")}
-                          title="Cartão"
-                          description="Crédito ou débito • Checkout seguro"
-                          icon={<CreditCard className={cn("w-5 h-5", selectedPaymentMethod === "card" ? "text-primary" : "text-muted-foreground/40")} />}
-                        />
-                      </>
+                        <AnimatePresence>
+                          {selectedPaymentMethod === "pix" && (
+                            <motion.div
+                              initial={{ opacity: 0, height: 0 }}
+                              animate={{ opacity: 1, height: "auto" }}
+                              exit={{ opacity: 0, height: 0 }}
+                              className="overflow-hidden px-1 pb-1 pt-1"
+                            >
+                              <div
+                                className={cn(
+                                  "p-3.5 rounded-xl transition-all",
+                                  cpfError
+                                    ? "bg-red-50/90 border-2 border-red-500 shadow-[0_0_0_3px_rgba(239,68,68,0.15)]"
+                                    : "bg-neutral-50/80 border border-neutral-200/70"
+                                )}
+                              >
+                                <label
+                                  className={cn(
+                                    "text-[11px] font-semibold block mb-1.5 transition-colors",
+                                    cpfError ? "text-red-600" : "text-neutral-500"
+                                  )}
+                                >
+                                  {cpfError ? "Informe um CPF válido para continuar" : "CPF para emissão do PIX (obrigatório)"}
+                                </label>
+                                <input
+                                  type="text"
+                                  inputMode="numeric"
+                                  value={cpfInput}
+                                  onChange={(e) => {
+                                    setCpfInput(formatCPF(e.target.value));
+                                    if (cpfError) setCpfError(false);
+                                  }}
+                                  placeholder="000.000.000-00"
+                                  className={cn(
+                                    "w-full bg-transparent border-none outline-none text-[15px] font-medium placeholder:text-neutral-300 transition-colors",
+                                    cpfError ? "text-red-700 font-semibold" : "text-neutral-900"
+                                  )}
+                                />
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </div>
                     )}
 
-                    <PaymentOption
-                      value="cash"
-                      selected={selectedPaymentMethod === "cash"}
-                      onSelect={() => setSelectedPaymentMethod("cash")}
-                      title="Dinheiro"
-                      description={canPayOnline ? "Pague presencialmente • Barbeiro confirma" : "Este barbeiro só aceita pagamento na barbearia"}
-                      icon={<Banknote className={cn("w-5 h-5", selectedPaymentMethod === "cash" ? "text-primary" : "text-muted-foreground/40")} />}
-                    />
+                    {!isPaymentConfigLoading && cashAvailable && (
+                      <PaymentOption
+                        value="cash"
+                        selected={selectedPaymentMethod === "cash"}
+                        onSelect={() => {
+                          setCpfError(false);
+                          setSelectedPaymentMethod("cash");
+                        }}
+                        title="Pagar na Barbearia"
+                        description={pixAvailable ? "Pagamento presencial no dia" : "Este barbeiro só aceita pagamento na barbearia"}
+                        icon={<Landmark className={cn("w-5 h-5", selectedPaymentMethod === "cash" ? "text-primary" : "text-muted-foreground/40")} />}
+                      />
+                    )}
                   </div>
 
                   <div className="mb-5">
-                    <p className="text-[13px] font-medium text-neutral-500 mb-2 px-1">Resumo</p>
-                    <div className="rounded-[20px] bg-white border border-neutral-200/80 shadow-[0_2px_12px_rgba(0,0,0,0.03)] p-4 space-y-3">
-                      <div className="flex items-center justify-between text-[13px]">
-                        <span className="text-neutral-600">{selectedPlan.nome}</span>
-                        <span className="text-neutral-900 font-medium">{selectedShopName} • Renovação automática</span>
-                      </div>
-                      {(selectedPaymentMethod === 'pix' || selectedPaymentMethod === 'card') && (
-                        <div className="flex items-center justify-between text-[13px]">
-                          <span className="text-neutral-600">Taxa de serviço</span>
-                          <span className="text-neutral-900 font-medium tabular-nums">R$ 0,90</span>
+                    <p className="text-[13px] font-medium text-neutral-500 mb-2 px-1">
+                      Local do Atendimento
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setStep(3)}
+                      className="w-full text-left rounded-[20px] bg-white border border-neutral-200/80 shadow-[0_2px_12px_rgba(0,0,0,0.03)] p-3.5 flex items-center justify-between active:scale-[0.99] transition-transform cursor-pointer"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <MapPin className="w-5 h-5 text-neutral-700 flex-shrink-0" strokeWidth={1.8} />
+                        <div className="min-w-0">
+                          <p className="text-[14px] font-medium text-neutral-900 truncate">
+                            {selectedShopName || "Barbearia DUB"}
+                          </p>
+                          <p className="text-[12px] text-neutral-500 truncate mt-0.5">
+                            {selectedBarber ? `${selectedBarber.apelido} • ` : ""}{selectedPlan.nome}
+                          </p>
                         </div>
-                      )}
-                      <div className="border-t border-neutral-100 pt-3 flex items-center justify-between">
-                        <span className="text-[14px] font-medium text-neutral-900">Total</span>
-                        <span className="text-[18px] font-bold text-neutral-900 tabular-nums">
-                          R$ {((selectedPlan?.preco_mensal ?? 0) + ((selectedPaymentMethod === 'pix' || selectedPaymentMethod === 'card') ? 0.9 : 0)).toFixed(2).replace('.', ',')}
-                        </span>
                       </div>
-                    </div>
+                      <ChevronRight className="w-4 h-4 text-neutral-300 flex-shrink-0" />
+                    </button>
                   </div>
 
-                  {selectedBarber && (
-                    <div className="mb-5">
-                      <p className="text-[13px] font-medium text-neutral-500 mb-2 px-1">Profissional</p>
-                      <div className="rounded-[20px] bg-white border border-neutral-200/80 shadow-[0_2px_12px_rgba(0,0,0,0.03)] p-3.5 flex items-center justify-between">
-                        <div className="flex items-center gap-3 min-w-0">
-                          <div className="w-7 h-7 rounded-full overflow-hidden bg-muted/20 flex items-center justify-center flex-shrink-0">
-                            {selectedBarber.foto_url ? (
-                              <img src={selectedBarber.foto_url} alt={selectedBarber.apelido} className="w-full h-full object-cover" />
-                            ) : (
-                              <User className="w-3.5 h-3.5 text-muted-foreground/40" />
-                            )}
+                  {(() => {
+                    const planPrice = Number(selectedPlan?.preco_mensal ?? 0);
+                    const fee = getServiceFee(selectedPaymentMethod);
+                    const total = planPrice + fee;
+                    return (
+                      <div className="mb-6">
+                        <p className="text-[13px] font-medium text-neutral-500 mb-2 px-1">
+                          Resumo
+                        </p>
+                        <div className="rounded-[20px] bg-white border border-neutral-200/80 shadow-[0_2px_12px_rgba(0,0,0,0.03)] p-4 space-y-3">
+                          <div className="flex items-center justify-between text-[13px]">
+                            <span className="text-neutral-600 truncate">
+                              {selectedPlan.nome}
+                            </span>
+                            <span className="tabular-nums font-medium flex-shrink-0 text-neutral-900">
+                              R$ {planPrice.toFixed(2).replace('.', ',')}
+                            </span>
                           </div>
-                          <div className="min-w-0">
-                            <p className="text-[14px] font-medium text-neutral-900 truncate">{selectedBarber.apelido}</p>
-                            <p className="text-[12px] text-neutral-500 truncate mt-0.5">Barbeiro do seu plano</p>
+
+                          {fee > 0 && (
+                            <div className="flex items-center justify-between text-[13px]">
+                              <span className="text-neutral-600">Taxa de serviço</span>
+                              <span className="text-neutral-900 font-medium tabular-nums">
+                                R$ {fee.toFixed(2).replace('.', ',')}
+                              </span>
+                            </div>
+                          )}
+
+                          <div className="border-b border-dashed border-neutral-200 my-2" />
+
+                          <div className="flex items-center justify-between pt-0.5">
+                            <span className="text-[14px] font-medium text-neutral-900">Total</span>
+                            <span className="text-[18px] font-bold tabular-nums text-neutral-900">
+                              R$ {total.toFixed(2).replace('.', ',')}
+                            </span>
                           </div>
                         </div>
-                        <ChevronRight className="w-4 h-4 text-neutral-300 flex-shrink-0" />
                       </div>
-                    </div>
-                  )}
-
-                  <div className="flex items-center justify-center gap-1.5 mt-6">
-                    <Shield className="w-3 h-3 text-muted-foreground/40" />
-                    <span className="text-[10px] text-muted-foreground/40 uppercase tracking-wider font-medium">
-                      Pagamento Criptografado
-                    </span>
-                  </div>
+                    );
+                  })()}
                 </div>
               </motion.div>
             )
@@ -802,99 +979,20 @@ const ClienteAssinar = () => {
         </AnimatePresence>
       </div>
 
-      {/* ═══ Floating Bottom Bars (Steps 3 & 4) ═══ */}
-      <AnimatePresence>
-        {step === 4 && selectedPaymentMethod && (!hasActiveSubscription || isRenewalMode || isChangeMode) && (
-          <motion.div
-            key="bar-step4"
-            initial={{ y: 40, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: 40, opacity: 0 }}
-            transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-            className="fixed bottom-0 left-0 right-0 z-40"
-          >
-            {/* Subtle top fade */}
-            <div 
-              className="h-16 pointer-events-none"
-              style={{ background: "linear-gradient(to bottom, transparent, hsl(var(--background)))" }}
-            />
-
-            {/* Bar content */}
-            <div className="bg-background border-t border-border/40 px-5 pb-safe">
-              <div className="pt-3.5 pb-4 space-y-3">
-                {/* Info row */}
-                <div className="flex items-center justify-between px-0.5">
-                  <div className="flex items-center gap-2.5">
-                    {selectedBarber?.foto_url ? (
-                      <img src={selectedBarber.foto_url} alt="" className="w-7 h-7 rounded-full object-cover" />
-                    ) : (
-                      <div className="w-7 h-7 rounded-full bg-primary/30 flex items-center justify-center text-[11px] font-bold text-primary">
-                        {selectedBarber?.apelido?.charAt(0)}
-                      </div>
-                    )}
-                    <div className="flex flex-col">
-                      <span className="text-[10px] text-muted-foreground/60 leading-none mb-0.5">
-                        {selectedPlan?.nome}
-                      </span>
-                      <span className="text-[13px] font-semibold text-foreground leading-none">
-                        {selectedBarber?.apelido}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="flex flex-col items-end">
-                    {(selectedPaymentMethod === 'pix' || selectedPaymentMethod === 'card') && (
-                      <span className="text-[9px] text-muted-foreground/60 leading-none mb-1">
-                        + R$ 0,90 taxa de serviço
-                      </span>
-                    )}
-                    <div className="flex items-baseline gap-1">
-                      <span className="text-[10px] text-muted-foreground/50 font-medium">R$</span>
-                      <span className="text-[17px] font-bold text-foreground tabular-nums tracking-tight">
-                        {((selectedPlan?.preco_mensal ?? 0) + ((selectedPaymentMethod === 'pix' || selectedPaymentMethod === 'card') ? 0.9 : 0)).toFixed(2).replace('.', ',')}
-                      </span>
-                    </div>
-                  </div>
-
-                </div>
-
-                {/* Full-width CTA */}
-                <motion.button
-                  onClick={handlePayment}
-                  disabled={loading}
-                  whileTap={{ scale: loading ? 1 : 0.985 }}
-                  className={cn(
-                    "w-full flex items-center justify-center gap-2",
-                    "h-[50px] rounded-xl",
-                    "font-semibold text-[14px] text-primary-foreground",
-                    "bg-primary",
-                    "active:brightness-90 transition-all duration-150",
-                    loading && "opacity-70 cursor-wait"
-                  )}
-                  style={{
-                    boxShadow: "0 4px 16px hsl(var(--primary) / 0.25)"
-                  }}
-                >
-                  {loading ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      <span>Processando...</span>
-                    </>
-                  ) : (
-                    <>
-                      <span>
-                        {selectedPaymentMethod === 'pix' ? 'Gerar PIX' :
-                         selectedPaymentMethod === 'card' ? 'Pagar' :
-                         'Assinar'}
-                      </span>
-                      <ArrowRight className="w-4 h-4" />
-                    </>
-                  )}
-                </motion.button>
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Floating Bottom Bar — 100% idêntico ao Passo 5 do Agendamento */}
+      <FloatingActionBar
+        isVisible={
+          step === 4 &&
+          !!selectedPlan &&
+          !isPaymentConfigLoading &&
+          !!selectedPaymentMethod &&
+          (!hasActiveSubscription || isRenewalMode || isChangeMode)
+        }
+        onContinue={handleProceedFromPayment}
+        label={selectedPaymentMethod === "pix" ? "Gerar PIX" : "Finalizar"}
+        isLoading={loading}
+        loadingLabel="Processando..."
+      />
 
       {showBottomNav && <BottomNavigation />}
     </div>
