@@ -1,3 +1,4 @@
+import { CLIENT_PIX_ENABLED } from "@/lib/barber-payment-options";
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
@@ -256,6 +257,7 @@ export function RenovacaoSheet({
                     <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/50">
                       Forma de pagamento
                     </p>
+                    {CLIENT_PIX_ENABLED && (
                     <PaymentOption
                       icon={QrCode}
                       label="PIX"
@@ -263,6 +265,7 @@ export function RenovacaoSheet({
                       selected={formaPagamento === "pix"}
                       onClick={() => setFormaPagamento("pix")}
                     />
+                    )}
                     <PaymentOption
                       icon={CreditCard}
                       label="Cartão de crédito"

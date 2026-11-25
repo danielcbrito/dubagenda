@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { parseBarberPaymentOptions, type BarberPaymentOptions } from '@/lib/barber-payment-options';
+import { CLIENT_PIX_ENABLED, parseBarberPaymentOptions, type BarberPaymentOptions } from '@/lib/barber-payment-options';
 
 /** Configuração isolada por barbearia/profissional, sem cache persistente. */
 export function useBarberPaymentOptions(barberId: string | null, tenantId: string | null) {
@@ -53,7 +53,7 @@ export function useBarberPaymentOptions(barberId: string | null, tenantId: strin
 
   const current = key !== null && state.key === key;
   return {
-    pixHabilitado: current && state.ready && state.options.pix,
+    pixHabilitado: CLIENT_PIX_ENABLED && current && state.ready && state.options.pix,
     barbeariaHabilitado: current && state.ready && state.options.barbearia,
     loading: !current || (!state.ready && !state.error),
     error: current && state.error,

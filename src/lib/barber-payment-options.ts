@@ -1,3 +1,6 @@
+/** Global switch: PIX payments for clients are temporarily disabled; only pay-at-shop is offered. */
+export const CLIENT_PIX_ENABLED = false;
+
 export interface BarberPaymentOptions {
   pix: boolean;
   barbearia: boolean;
