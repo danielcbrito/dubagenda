@@ -43,10 +43,9 @@ export function PremiumCalendar({ selectedDate, onSelectDate, disabledDates = []
     const today = startOfDay(new Date());
     if (isBefore(date, today)) return true;
     if (minDate && isBefore(date, startOfDay(minDate))) return true;
-    if (closedWeekdays.includes(date.getDay())) return true;
     if (isDateClosed(date)) return true;
     return disabledDates.some(d => isSameDay(d, date));
-  }, [currentMonth, disabledDates, closedDates, closedWeekdays, minDate, isDateClosed]);
+  }, [currentMonth, disabledDates, minDate, isDateClosed]);
 
   const handlePrevMonth = () => {
     setDirection(-1);

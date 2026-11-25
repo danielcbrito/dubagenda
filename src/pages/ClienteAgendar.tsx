@@ -48,8 +48,6 @@ import { NextAvailableDateButton } from "@/components/booking/NextAvailableDateB
 import { useBlockedBarbers } from "@/hooks/useBlockedBarbers";
 import { useWalletStatus } from "@/hooks/useWalletStatus";
 import { useBarberPaymentOptions } from "@/hooks/useBarberPaymentOptions";
-import { useBookingPixEligibility } from "@/hooks/useBookingPixEligibility";
-import { normalizeBookingPixCheckout } from "@/lib/booking-pix-checkout";
 import { resolveBookingPaymentMethod, type BookingPaymentMethod } from "@/lib/barber-payment-options";
 import { PendingSubscriptionDrawer } from "@/components/client/PendingSubscriptionDrawer";
 import { usePendingSubscription } from "@/hooks/usePendingSubscription";
@@ -157,7 +155,7 @@ const ClienteAgendar = () => {
   const [step, setStep] = useState(1);
   const [bookingSuccess, setBookingSuccess] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<BookingPaymentMethod | null>('cash');
-  
+
 
   const [walletBalance, setWalletBalance] = useState(0);
   const [processingPayment, setProcessingPayment] = useState(false);
@@ -206,15 +204,15 @@ const ClienteAgendar = () => {
   const redemptionAutoSelectedRef = useRef(false);
   const loseWarningShownRef = useRef(false);
   const [serviceQuantities, setServiceQuantities] = useState<Record<string, number>>({});
-  
+
   // Durações personalizadas do barbeiro selecionado (servico_id → duracao)
   const [barberCustomDurations, setBarberCustomDurations] = useState<Record<string, number>>({});
-  
+
   // Dias fechados no calendário (barbearia/barbeiro não trabalha)
   const [closedDates, setClosedDates] = useState<Date[]>([]);
   const [closedWeekdays, setClosedWeekdays] = useState<number[]>([]);
   const [closedDatesLoading, setClosedDatesLoading] = useState(false);
-  
+
   // Estados para cupom de desconto (sistema novo: tabela `cupons` + RPCs)
   const [couponCode, setCouponCode] = useState("");
   const [appliedCoupon, setAppliedCoupon] = useState<{
@@ -230,7 +228,7 @@ const ClienteAgendar = () => {
     id: string;
     code: string;
   } | null>(null);
-  
+
   // Indica se o usuário está usando fluxo de plano (serviço pré-selecionado)
   const [isPlanFlow, setIsPlanFlow] = useState(false);
   const [isInitializing, setIsInitializing] = useState(!hasInstantBarbers);
@@ -265,14 +263,14 @@ const ClienteAgendar = () => {
     if (!isPlanFlow) return false;
     if (!activeSubscription || activeSubscription.status !== 'active') return false;
 
-    const currentTenantId = 
-      selectedBarber?.tenant_id || 
-      activeSubscription?.barbeiro?.tenant_id || 
+    const currentTenantId =
+      selectedBarber?.tenant_id ||
+      activeSubscription?.barbeiro?.tenant_id ||
       (activeSubscription?.plano as any)?.tenant_id ||
-      preferredShop?.id || 
+      preferredShop?.id ||
       boot.ctx?.tenantId;
 
-    const isVipTenant = 
+    const isVipTenant =
       currentTenantId === BARBEARIA_VIP_TENANT_ID ||
       /barbearia\s+vip/i.test(preferredShop?.nome || '') ||
       /vip\s+exclusive/i.test(preferredShop?.nome || '') ||
@@ -287,7 +285,7 @@ const ClienteAgendar = () => {
         ? rawBenefits.toLowerCase()
         : '';
 
-    const specifiesTueWedThu = 
+    const specifiesTueWedThu =
       (planDesc.includes('terça') && planDesc.includes('quinta')) ||
       (planBenefits.includes('terça') && planBenefits.includes('quinta')) ||
       (planDesc.includes('terca') && planDesc.includes('quinta')) ||
@@ -372,20 +370,36 @@ const ClienteAgendar = () => {
   // Status da carteira do barbeiro (legado Efí): define se podemos oferecer Carteira do app
   const { canReceivePix: canReceivePixWallet } = useWalletStatus(selectedBarberId);
 
-  // Conta Mercado Pago/Woovi aprovada ou chave Woovi, sempre no tenant selecionado.
-  const { canReceivePix, wooviKey: barberWooviKey } = useBookingPixEligibility(selectedBarberId, paymentTenantId);
+  // Woovi: verifica se o barbeiro selecionado tem chave Pix Woovi cadastrada
+  const [barberWooviKey, setBarberWooviKey] = useState<string | null>(null);
+  useEffect(() => {
+    if (!selectedBarberId) { setBarberWooviKey(null); return; }
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from('barbeiros')
+        .select('woovi_pix_key')
+        .eq('id', selectedBarberId)
+        .maybeSingle();
+      if (!cancelled) setBarberWooviKey((data?.woovi_pix_key as string | null) ?? null);
+    })();
+    return () => { cancelled = true; };
+  }, [selectedBarberId]);
+
+  // PIX disponível se o barbeiro tem chave Woovi (novo) ou carteira Efí ativa (legado)
+  const canReceivePix = !!barberWooviKey || canReceivePixWallet;
 
   const availabilityTenantId = selectedBarber?.tenant_id ?? (preferredShop?.id ?? null);
 
   const isDateAllowedForPlan = !isVipRestrictedPlan || (selectedDate && [2, 3, 4].includes(selectedDate.getDay()));
 
-  const { 
-    slots: availableSlots, 
-    loading: loadingSlots, 
+  const {
+    slots: availableSlots,
+    loading: loadingSlots,
     hasLoaded: slotsHasLoaded,
     refreshSlots
   } = useSlotAvailability(
-    isDateAllowedForPlan ? selectedDate : undefined, 
+    isDateAllowedForPlan ? selectedDate : undefined,
     totalDuration,
     isRescheduling ? rescheduleAppointmentId : null,
     selectedBarberId,
@@ -414,9 +428,9 @@ const ClienteAgendar = () => {
         .from("barbeiro_servico_duracao")
         .select("servico_id, duracao_personalizada")
         .eq("barbeiro_id", barberId);
-      
+
       if (error) throw error;
-      
+
       const durations: Record<string, number> = {};
       (data || []).forEach(d => {
         durations[d.servico_id] = d.duracao_personalizada;
@@ -491,10 +505,10 @@ const ClienteAgendar = () => {
 
         const profilePromise = uid
           ? supabase
-              .from("profiles")
-              .select("barbearia_preferida_id, unidade_preferida_id, cpf")
-              .eq("id", uid)
-              .single()
+            .from("profiles")
+            .select("barbearia_preferida_id, unidade_preferida_id, cpf")
+            .eq("id", uid)
+            .single()
           : Promise.resolve({ data: null, error: null });
 
         const [{ data: profile }, subscription] = await Promise.all([
@@ -854,7 +868,7 @@ const ClienteAgendar = () => {
       today.setHours(0, 0, 0, 0);
       const billingDate = new Date(subscription.next_billing_date + 'T12:00:00');
       billingDate.setHours(0, 0, 0, 0);
-      
+
       if (today > billingDate) {
         setSubscriptionBlocked(true);
         toast.error("Seu plano está vencido. Regularize o pagamento para continuar agendando.");
@@ -872,10 +886,10 @@ const ClienteAgendar = () => {
       const cycleStartDate = subscription.ciclo_inicio
         ? subscription.ciclo_inicio
         : (() => {
-            const cycleStart = new Date(`${subscription.next_billing_date}T12:00:00`);
-            cycleStart.setMonth(cycleStart.getMonth() - 1);
-            return cycleStart.toISOString().split('T')[0];
-          })();
+          const cycleStart = new Date(`${subscription.next_billing_date}T12:00:00`);
+          cycleStart.setMonth(cycleStart.getMonth() - 1);
+          return cycleStart.toISOString().split('T')[0];
+        })();
       const cycleEndDate = subscription.ciclo_fim || subscription.next_billing_date;
 
       // Fonte de verdade do consumo: mesma regra do banco/trigger
@@ -1036,10 +1050,10 @@ const ClienteAgendar = () => {
 
       const unitConfigPromise = tenantId
         ? supabase
-            .from('configuracoes_horario_unidade')
-            .select('dia_semana, aberto, unidade_id, updated_at')
-            .eq('tenant_id', tenantId)
-            .order('unidade_id', { nullsFirst: false })
+          .from('configuracoes_horario_unidade')
+          .select('dia_semana, aberto, unidade_id, updated_at')
+          .eq('tenant_id', tenantId)
+          .order('unidade_id', { nullsFirst: false })
         : Promise.resolve({ data: null as { dia_semana: number; aberto: boolean; unidade_id?: string | null; updated_at?: string | null }[] | null });
 
       const [globalConfigResult, unitConfigResult, barberConfigResult, globalExcResult, barberExcResult] = await Promise.all([
@@ -1060,7 +1074,7 @@ const ClienteAgendar = () => {
       for (const c of globalConfigResult.data || []) {
         weekdayOpenMap[c.dia_semana] = c.aberto !== false;
       }
-      
+
       // Indexar unitConfigs e barberConfigs por dia da semana
       const unitConfigMap = new Map<number, any>();
       for (const c of (unitConfigResult.data || [])) {
@@ -1507,7 +1521,7 @@ const ClienteAgendar = () => {
 
       // Normal flow: check if credits cover total
       const totalPrice = getTotalPrice();
-      
+
       // Se tem resgate disponível, SEMPRE passa pelo passo 5 (Pagamento)
       // para que o cliente veja as opções e o aviso de perda de promoção se não usar.
       if (canUseRedemption) {
@@ -1576,7 +1590,7 @@ const ClienteAgendar = () => {
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      
+
       if (!session) {
         toast.error("Você precisa estar logado");
         navigate("/auth");
@@ -1591,23 +1605,23 @@ const ClienteAgendar = () => {
 
       const bookingTime = normalizeTimeValue(selectedTime);
       const mainService = getCorteService() || selectedServices[0];
-      
+
       // Construir observações detalhadas para o webhook/notificação
-      let finalObservacoes = selectedServices.length > 1 
-        ? `Serviços: ${serviceNames}` 
+      let finalObservacoes = selectedServices.length > 1
+        ? `Serviços: ${serviceNames}`
         : "";
-        
+
       if (useRedemption) {
-        finalObservacoes = finalObservacoes 
+        finalObservacoes = finalObservacoes
           ? `${finalObservacoes} (Inclui Corte Grátis)`
           : "Resgate de Corte Grátis";
       }
-      
+
       if (availableCredits > 0) {
         const creditsApplied = Math.min(availableCredits, totalPrice);
         if (creditsApplied > 0) {
           const creditMsg = `Créditos aplicados: R$ ${creditsApplied.toFixed(2)}`;
-          finalObservacoes = finalObservacoes 
+          finalObservacoes = finalObservacoes
             ? `${finalObservacoes} | ${creditMsg}`
             : creditMsg;
         }
@@ -1655,26 +1669,36 @@ const ClienteAgendar = () => {
 
       // === PIX automático ===
       if (paymentMethod === 'pix') {
-        const { data, error } = await supabase.functions.invoke('create-payment', {
+        const useWoovi = !!barberWooviKey;
+        const fnName = useWoovi ? 'woovi-create-charge' : 'efi-create-pix-charge';
+        const { data, error } = await supabase.functions.invoke(fnName, {
           body: {
-            bookingData: {
-              ...bookingData,
-              tenant_id: paymentTenantId,
-              servico_ids: selectedServices.map(s => s.id),
-              preco: finalPrice,
-            },
-            metodo: 'pix',
-            rescheduleFromId: isRescheduling ? rescheduleAppointmentId : undefined,
+            barbeiro_id: bookingData.barbeiro_id,
+            valor: chargeAmount,
+            descricao: `Agendamento - ${serviceNames}`,
+            servico_id: bookingData.servico_id,
+            data: bookingData.data,
+            hora: bookingData.hora,
+            duracao: bookingData.duracao,
+            observacoes: bookingData.observacoes,
             consumeRedemptionOnPaidBooking: canUseRedemption && !useRedemption && availableRedemptions.length > 0,
           },
         });
         if (error) throw error;
         if (data?.error) throw new Error(data.error);
 
-        const checkout = normalizeBookingPixCheckout(data, bookingData.preco);
         sessionStorage.setItem('pix_checkout_data', JSON.stringify({
-          ...checkout,
-          serviceFee: Math.max(0, checkout.value - finalPrice),
+          pixQrCode: data.qr_code_image?.replace(/^data:image\/png;base64,/, '') ?? '',
+          pixPayload: data.br_code,
+          pendingBookingId: data.pending_booking_id,
+          asaasPaymentId: data.charge_id ?? data.txid,
+          provider: useWoovi ? 'woovi' : 'efi',
+          txid: data.txid,
+          correlationId: data.correlation_id,
+          chargeId: data.charge_id,
+          expiresAt: data.expires_at,
+          value: chargeAmount,
+          serviceFee,
           pendingDebtTotal: combinedPendingDebtTotal || 0,
           serviceName: serviceNames,
           barberName: barbers.find(b => b.id === selectedBarberId)?.apelido,
@@ -1730,7 +1754,7 @@ const ClienteAgendar = () => {
         if (useRedemption && data.appointmentId) {
           setAvailableRedemptions([]);
           setUseRedemption(false);
-      } else if (canUseRedemption && availableRedemptions.length > 0) {
+        } else if (canUseRedemption && availableRedemptions.length > 0) {
           await consumeRedemptionsAsLost(data.appointmentId);
         }
 
@@ -1784,9 +1808,9 @@ const ClienteAgendar = () => {
 
       sessionStorage.removeItem('isRescheduling');
       sessionStorage.removeItem('rescheduleAppointmentId');
-      
+
       // Webhook de confirmação é enviado automaticamente pelo trigger do banco de dados
-      
+
       if (combinedPendingDebtTotal > 0) {
         toast.success(`Agendamento criado! Total de R$ ${cashAmount.toFixed(2).replace('.', ',')} a pagar na barbearia (inclui taxa pendente).`);
       } else {
@@ -1810,9 +1834,9 @@ const ClienteAgendar = () => {
             const body = JSON.parse(text);
             if (body?.error) errorMessage = body.error;
             if (body?.code) errorCode = body.code;
-          } catch {}
+          } catch { }
         }
-      } catch {}
+      } catch { }
 
       if (
         errorCode === 'TIME_SLOT_UNAVAILABLE' ||
@@ -2120,7 +2144,7 @@ const ClienteAgendar = () => {
       if (isRescheduling && rescheduleAppointmentId) {
         await supabase
           .from("agendamentos")
-          .update({ 
+          .update({
             status: 'cancelled_by_user' as any,
             visivel_para_usuario: false
           } as any)
@@ -2291,7 +2315,7 @@ const ClienteAgendar = () => {
 
       toast.success(`Agendamento criado! Usando seu ${activeSubscription.plano_nome}.`);
       setBookingSuccess(true);
-      } catch (error: any) {
+    } catch (error: any) {
       console.error('Error creating appointment with plan:', error);
 
       if (error.message?.includes('PLAN_LIMIT_REACHED')) {
@@ -2334,11 +2358,11 @@ const ClienteAgendar = () => {
 
   const markRedemptionAsUsed = async (appointmentId: string) => {
     if (!useRedemption || availableRedemptions.length === 0) return;
-    
+
     setConsumingRedemption(true);
     // Usar o mesmo critério do trigger (mais antigo primeiro)
     const redemptionToUse = availableRedemptions[0];
-    
+
     try {
       const resolvedUserId = userId ?? (await supabase.auth.getUser()).data.user?.id;
       if (!resolvedUserId) throw new Error("Usuário não autenticado");
@@ -2492,7 +2516,7 @@ const ClienteAgendar = () => {
       const totalDuration = selectedServices.reduce((sum, s) => sum + getEffectiveDuration(s) * (serviceQuantities[s.id] || 1), 0);
       const dateStr = format(selectedDate, 'yyyy-MM-dd');
       const bookingTime = normalizeTimeValue(selectedTime);
-      
+
       const { data: validation, error: validationError } = await supabase.functions.invoke('validate-appointment', {
         body: {
           data: dateStr,
@@ -2517,7 +2541,7 @@ const ClienteAgendar = () => {
         refreshSlots();
         return;
       }
-      
+
       const { data: rescheduleResult, error } = await supabase.functions.invoke('cancel-appointment-client', {
         body: {
           action: 'reschedule',
@@ -2571,7 +2595,7 @@ const ClienteAgendar = () => {
    */
   const getCorteService = () => {
     if (!selectedServices || selectedServices.length === 0) return undefined;
-    
+
     // Filtra apenas serviços que contenham a palavra exata "Corte"
     // para evitar que combos ou serviços com nomes compostos (ex: "Corte + Alisante")
     // sejam marcados como gratuitos por inteiro.
@@ -2584,7 +2608,7 @@ const ClienteAgendar = () => {
     });
 
     if (cortes.length === 0) return undefined;
-    
+
     // Escolhe o de maior preço caso haja mais de um "Corte" puro (raro)
     return cortes.reduce((max, s) => (s.preco > max.preco ? s : max), cortes[0]);
   };
@@ -2643,7 +2667,7 @@ const ClienteAgendar = () => {
   };
 
   const pixAvailable = canReceivePix && pixHabilitado;
-  const walletAvailable = (!!barberWooviKey || canReceivePixWallet) && walletBalance > 0 && !paymentOptionsLoading && !paymentOptionsError &&
+  const walletAvailable = canReceivePix && walletBalance > 0 && !paymentOptionsLoading && !paymentOptionsError &&
     (barbeariaHabilitado || walletBalance >= Math.max(0, getTotalPrice() - availableCredits));
   // Quando há taxa de cancelamento pendente, o cliente só pode pagar via PIX — não pode pagar na barbearia.
   const cashAvailable = barbeariaHabilitado && combinedPendingDebtTotal === 0;
@@ -2773,7 +2797,7 @@ const ClienteAgendar = () => {
         toast.error("Informe um CPF válido para gerar o PIX.");
         return;
       }
-      
+
       try {
         const { data: { user } } = await supabase.auth.getUser();
         if (user && digits !== profileCpf) {
@@ -2905,16 +2929,16 @@ const ClienteAgendar = () => {
           <div className="w-20 h-20 mx-auto mb-6 bg-destructive/10 rounded-full flex items-center justify-center">
             <Clock className="w-10 h-10 text-destructive" />
           </div>
-          
+
           <h1 className="text-2xl font-medium text-foreground mb-3">
             Limite do Plano Atingido
           </h1>
-          
+
           <p className="text-muted-foreground mb-6">
-            Você já utilizou todos os {activeSubscription?.limite_agendamentos_mes || 4} agendamentos 
+            Você já utilizou todos os {activeSubscription?.limite_agendamentos_mes || 4} agendamentos
             do seu plano <span className="text-primary font-semibold">{activeSubscription?.plano_nome}</span> neste ciclo.
           </p>
-          
+
           <div className="bg-card border border-border rounded-2xl p-4 mb-6">
             <div className="flex justify-between items-center">
               <span className="text-muted-foreground text-sm">Agendamentos usados</span>
@@ -2923,11 +2947,11 @@ const ClienteAgendar = () => {
               </span>
             </div>
           </div>
-          
+
           <p className="text-sm text-muted-foreground mb-6">
             O limite será renovado no próximo período de cobrança.
           </p>
-          
+
           <button
             onClick={() => navigate("/cliente")}
             className="w-full py-3.5 bg-primary text-primary-foreground font-semibold rounded-xl hover:bg-primary/90 transition-all"
@@ -2940,7 +2964,7 @@ const ClienteAgendar = () => {
   }
 
   return (
-    <div 
+    <div
       ref={containerRef}
       className="h-full w-full bg-[#FFFFFF] relative overflow-y-auto overscroll-contain touch-pan-y"
     >
@@ -2948,7 +2972,7 @@ const ClienteAgendar = () => {
       <div className="fixed top-0 left-0 right-0 z-50 bg-[#FFFFFF]">
         <div className="max-w-2xl mx-auto px-4 pt-[max(env(safe-area-inset-top),0.75rem)] pb-3">
           <div className="flex items-center justify-between">
-            <button 
+            <button
               onClick={handleBack}
               className="w-10 h-10 rounded-full bg-white border border-neutral-200/70 shadow-[0_2px_8px_rgba(0,0,0,0.04)] flex items-center justify-center text-neutral-900 active:scale-90 transition-transform cursor-pointer"
             >
@@ -3064,7 +3088,7 @@ const ClienteAgendar = () => {
             transition={{ duration: 0.3 }}
             className="pt-16 pb-24 px-4 relative z-10"
           >
-             <div className="max-w-2xl mx-auto">
+            <div className="max-w-2xl mx-auto">
               <div className="mb-6 pt-1">
                 <h2 className="text-[26px] sm:text-[27px] font-bold text-[#111111] tracking-[-0.025em] leading-[1.12] font-display">
                   Melhor dia pra você
@@ -3091,16 +3115,15 @@ const ClienteAgendar = () => {
                 selectedDate={selectedDate}
                 onSelectDate={(date) => { setSelectedDate(date); syncBookingData(); }}
                 closedDates={closedDates}
-                closedWeekdays={closedWeekdays}
                 onMonthChange={loadClosedDates}
                 loading={closedDatesLoading}
               />
 
-            <FloatingActionBar
-              isVisible={!!selectedDate}
-              onContinue={handleNextStep}
-              label="Continuar"
-            />
+              <FloatingActionBar
+                isVisible={!!selectedDate}
+                onContinue={handleNextStep}
+                label="Continuar"
+              />
             </div>
           </motion.div>
         )}
@@ -3280,113 +3303,113 @@ const ClienteAgendar = () => {
 
                 return (
                   <div className="rounded-[22px] bg-white border border-neutral-200/80 shadow-[0_2px_12px_rgba(0,0,0,0.03)] p-2 space-y-1 mb-5">
-                      {canUseReferralCredit && (
+                    {canUseReferralCredit && (
+                      <PaymentOption
+                        value="referral"
+                        selected={useReferralCredit}
+                        onSelect={() => setUseReferralCredit((v) => !v)}
+                        title="Usar Corte Grátis de Indicação"
+                        description={useReferralCredit
+                          ? "Benefício aplicado — este agendamento será gratuito."
+                          : `Você tem ${referralCredits} corte${referralCredits > 1 ? 's' : ''} grátis por indicação.`}
+                        highlight={true}
+                        icon={<Star className={cn("w-5 h-5", useReferralCredit ? "fill-gold text-gold" : "text-muted-foreground/40")} />}
+                      />
+                    )}
+
+                    {canUseRedemption && (
+                      <PaymentOption
+                        value="redemption"
+                        selected={useRedemption}
+                        onSelect={handleToggleRedemption}
+                        title="Corte Grátis Disponível!"
+                        description={useRedemption
+                          ? "Benefício aplicado."
+                          : "Toque para aplicar seu benefício de fidelidade."}
+                        highlight={true}
+                        icon={<Star className={cn("w-5 h-5", useRedemption ? "fill-gold text-gold" : "text-muted-foreground/40")} />}
+                      />
+                    )}
+
+                    {paymentOptionsLoading && (
+                      <p role="status" className="flex items-center gap-2 p-3.5 text-sm text-muted-foreground">
+                        <Loader2 className="h-4 w-4 animate-spin" /> Carregando pagamento...
+                      </p>
+                    )}
+                    {paymentOptionsError && (
+                      <p role="alert" className="p-3.5 text-sm text-destructive">Não foi possível consultar as formas de pagamento. Tente novamente em instantes.</p>
+                    )}
+                    {!paymentOptionsLoading && !paymentOptionsError && !pixAvailable && !barbeariaHabilitado && !walletAvailable && (
+                      <p role="status" className="p-3.5 text-sm text-muted-foreground">Nenhuma forma de pagamento disponível para este profissional.</p>
+                    )}
+                    {pixAvailable && (
+                      <div>
                         <PaymentOption
-                          value="referral"
-                          selected={useReferralCredit}
-                          onSelect={() => setUseReferralCredit((v) => !v)}
-                          title="Usar Corte Grátis de Indicação"
-                          description={useReferralCredit
-                            ? "Benefício aplicado — este agendamento será gratuito."
-                            : `Você tem ${referralCredits} corte${referralCredits > 1 ? 's' : ''} grátis por indicação.`}
-                          highlight={true}
-                          icon={<Star className={cn("w-5 h-5", useReferralCredit ? "fill-gold text-gold" : "text-muted-foreground/40")} />}
+                          value="pix"
+                          selected={paymentMethod === 'pix' && !redemptionCoversAll && !referralCoversAll}
+                          onSelect={() => handleSelectPaymentMethod('pix')}
+                          title="PIX"
+                          description="Confirmação instantânea e segura"
+                          icon={<img src={pixIcon} alt="PIX" className="w-5 h-5 object-contain" />}
                         />
-                      )}
 
-                      {canUseRedemption && (
-                        <PaymentOption
-                          value="redemption"
-                          selected={useRedemption}
-                          onSelect={handleToggleRedemption}
-                          title="Corte Grátis Disponível!"
-                          description={useRedemption
-                            ? "Benefício aplicado."
-                            : "Toque para aplicar seu benefício de fidelidade."}
-                          highlight={true}
-                          icon={<Star className={cn("w-5 h-5", useRedemption ? "fill-gold text-gold" : "text-muted-foreground/40")} />}
-                        />
-                      )}
+                        <AnimatePresence>
+                          {paymentMethod === 'pix' && !redemptionCoversAll && !referralCoversAll && (
+                            <motion.div
+                              initial={{ opacity: 0, height: 0 }}
+                              animate={{ opacity: 1, height: 'auto' }}
+                              exit={{ opacity: 0, height: 0 }}
+                              className="overflow-hidden px-1 pb-1 pt-1"
+                            >
+                              <div className={cn(
+                                "p-3.5 rounded-xl transition-all",
+                                cpfError
+                                  ? "bg-red-50/90 border-2 border-red-500 shadow-[0_0_0_3px_rgba(239,68,68,0.15)]"
+                                  : "bg-neutral-50/80 border border-neutral-200/70"
+                              )}>
+                                <label className={cn("text-[11px] font-semibold block mb-1.5 transition-colors", cpfError ? "text-red-600" : "text-neutral-500")}>
+                                  {cpfError ? "Informe um CPF válido para continuar" : "CPF para emissão do PIX (obrigatório)"}
+                                </label>
+                                <input
+                                  type="text"
+                                  inputMode="numeric"
+                                  value={cpfInput}
+                                  onChange={(e) => {
+                                    setCpfInput(formatCPF(e.target.value));
+                                    if (cpfError) setCpfError(false);
+                                  }}
+                                  placeholder="000.000.000-00"
+                                  className={cn(
+                                    "w-full bg-transparent border-none outline-none text-[15px] font-medium placeholder:text-neutral-300 transition-colors",
+                                    cpfError ? "text-red-700 font-semibold" : "text-neutral-900"
+                                  )}
+                                />
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </div>
+                    )}
 
-                      {paymentOptionsLoading && (
-                        <p role="status" className="flex items-center gap-2 p-3.5 text-sm text-muted-foreground">
-                          <Loader2 className="h-4 w-4 animate-spin" /> Carregando pagamento...
-                        </p>
-                      )}
-                      {paymentOptionsError && (
-                        <p role="alert" className="p-3.5 text-sm text-destructive">Não foi possível consultar as formas de pagamento. Tente novamente em instantes.</p>
-                      )}
-                      {!paymentOptionsLoading && !paymentOptionsError && !pixAvailable && !barbeariaHabilitado && !walletAvailable && (
-                        <p role="status" className="p-3.5 text-sm text-muted-foreground">Nenhuma forma de pagamento disponível para este profissional.</p>
-                      )}
-                      {pixAvailable && (
-                        <div>
-                          <PaymentOption
-                            value="pix"
-                            selected={paymentMethod === 'pix' && !redemptionCoversAll && !referralCoversAll}
-                            onSelect={() => handleSelectPaymentMethod('pix')}
-                            title="PIX"
-                            description="Confirmação instantânea e segura"
-                            icon={<img src={pixIcon} alt="PIX" className="w-5 h-5 object-contain" />}
-                          />
-                          
-                          <AnimatePresence>
-                            {paymentMethod === 'pix' && !redemptionCoversAll && !referralCoversAll && (
-                              <motion.div
-                                initial={{ opacity: 0, height: 0 }}
-                                animate={{ opacity: 1, height: 'auto' }}
-                                exit={{ opacity: 0, height: 0 }}
-                                className="overflow-hidden px-1 pb-1 pt-1"
-                              >
-                                <div className={cn(
-                                  "p-3.5 rounded-xl transition-all",
-                                  cpfError 
-                                    ? "bg-red-50/90 border-2 border-red-500 shadow-[0_0_0_3px_rgba(239,68,68,0.15)]" 
-                                    : "bg-neutral-50/80 border border-neutral-200/70"
-                                )}>
-                                  <label className={cn("text-[11px] font-semibold block mb-1.5 transition-colors", cpfError ? "text-red-600" : "text-neutral-500")}>
-                                    {cpfError ? "Informe um CPF válido para continuar" : "CPF para emissão do PIX (obrigatório)"}
-                                  </label>
-                                  <input
-                                    type="text"
-                                    inputMode="numeric"
-                                    value={cpfInput}
-                                    onChange={(e) => {
-                                      setCpfInput(formatCPF(e.target.value));
-                                      if (cpfError) setCpfError(false);
-                                    }}
-                                    placeholder="000.000.000-00"
-                                    className={cn(
-                                      "w-full bg-transparent border-none outline-none text-[15px] font-medium placeholder:text-neutral-300 transition-colors",
-                                      cpfError ? "text-red-700 font-semibold" : "text-neutral-900"
-                                    )}
-                                  />
-                                </div>
-                              </motion.div>
-                            )}
-                          </AnimatePresence>
-                        </div>
-                      )}
+                    {walletAvailable && (
+                      <PaymentOption
+                        value="wallet"
+                        selected={paymentMethod === 'wallet' && !redemptionCoversAll && !referralCoversAll}
+                        onSelect={() => handleSelectPaymentMethod('wallet')}
+                        title="Pagar com Carteira"
+                        description={`Saldo: R$ ${walletBalance.toFixed(2).replace('.', ',')}`}
+                        icon={<Wallet className={cn("w-5 h-5", paymentMethod === 'wallet' && !redemptionCoversAll && !referralCoversAll ? "text-emerald-500" : "text-muted-foreground/40")} />}
+                      />
+                    )}
 
-                      {walletAvailable && (
-                        <PaymentOption
-                          value="wallet"
-                          selected={paymentMethod === 'wallet' && !redemptionCoversAll && !referralCoversAll}
-                          onSelect={() => handleSelectPaymentMethod('wallet')}
-                          title="Pagar com Carteira"
-                          description={`Saldo: R$ ${walletBalance.toFixed(2).replace('.', ',')}`}
-                          icon={<Wallet className={cn("w-5 h-5", paymentMethod === 'wallet' && !redemptionCoversAll && !referralCoversAll ? "text-emerald-500" : "text-muted-foreground/40")} />}
-                        />
-                      )}
-
-                      {cashAvailable && <PaymentOption
-                        value="cash"
-                        selected={paymentMethod === 'cash' && !redemptionCoversAll && !referralCoversAll}
-                        onSelect={() => handleSelectPaymentMethod('cash')}
-                        title="Pagar na Barbearia"
-                        description="Pagamento presencial no dia"
-                        icon={<Landmark className={cn("w-5 h-5", paymentMethod === 'cash' && !redemptionCoversAll && !referralCoversAll ? "text-primary" : "text-muted-foreground/40")} />}
-                      />}
+                    {cashAvailable && <PaymentOption
+                      value="cash"
+                      selected={paymentMethod === 'cash' && !redemptionCoversAll && !referralCoversAll}
+                      onSelect={() => handleSelectPaymentMethod('cash')}
+                      title="Pagar na Barbearia"
+                      description="Pagamento presencial no dia"
+                      icon={<Landmark className={cn("w-5 h-5", paymentMethod === 'cash' && !redemptionCoversAll && !referralCoversAll ? "text-primary" : "text-muted-foreground/40")} />}
+                    />}
 
                     <AnimatePresence>
                       {walletIsSelected && (
@@ -3681,28 +3704,28 @@ const ClienteAgendar = () => {
 
               {/* Card de resumo - Layout limpo para plano */}
               <div className="rounded-[20px] bg-white border border-neutral-200/80 shadow-[0_2px_12px_rgba(0,0,0,0.03)] p-5 space-y-4 mb-6">
-                <SummaryRow 
+                <SummaryRow
                   label="Serviço"
                   value={getFormattedServiceNames()}
                 />
-                
+
                 <div className="border-t border-neutral-100" />
-                
-                <SummaryRow 
+
+                <SummaryRow
                   label="Duração"
                   value={`${getTotalDuration()} minutos`}
                 />
-                
+
                 <div className="border-t border-neutral-100" />
-                
-                <SummaryRow 
+
+                <SummaryRow
                   label="Data"
                   value={selectedDate ? format(selectedDate, "dd 'de' MMMM 'de' yyyy", { locale: ptBR }) : ""}
                 />
-                
+
                 <div className="border-t border-neutral-100" />
-                
-                <SummaryRow 
+
+                <SummaryRow
                   label="Horário"
                   value={`${selectedTime} → ${getEndTime()}`}
                 />
@@ -3719,7 +3742,7 @@ const ClienteAgendar = () => {
                     <p className="text-xs text-neutral-500">Plano ativo</p>
                   </div>
                 </div>
-                
+
                 <div className="flex justify-between items-center pt-3 border-t border-neutral-100">
                   <span className="text-sm text-neutral-500">Agendamentos no plano</span>
                   <span className="text-sm font-semibold text-neutral-900">
@@ -3777,35 +3800,35 @@ const ClienteAgendar = () => {
 
                 <div className="border-t border-neutral-100" />
 
-                <SummaryRow 
+                <SummaryRow
                   label="Duração"
                   value={`${getTotalDuration()} minutos`}
                 />
-                
+
                 <div className="border-t border-neutral-100" />
-                
-                <SummaryRow 
+
+                <SummaryRow
                   label="Data"
                   value={selectedDate ? format(selectedDate, "dd 'de' MMMM 'de' yyyy", { locale: ptBR }) : ""}
                 />
-                
+
                 <div className="border-t border-neutral-100" />
-                
-                <SummaryRow 
+
+                <SummaryRow
                   label="Horário"
                   value={`${selectedTime} → ${getEndTime()}`}
                 />
-                
+
                 <div className="border-t border-neutral-100" />
-                
-                <SummaryRow 
+
+                <SummaryRow
                   label="Forma de Pagamento"
                   value={
                     useRedemption && getTotalPrice() === 0 ? "Resgate de Fidelidade" :
-                    paymentMethod === 'wallet' && walletBalance >= getTotalPrice() ? "Carteira do App" :
-                    paymentMethod === 'wallet' && walletBalance < getTotalPrice() ? `Carteira (R$ ${walletBalance.toFixed(2).replace('.', ',')}) + Barbearia (R$ ${(getTotalPrice() - walletBalance).toFixed(2).replace('.', ',')})` :
-                    availableCredits >= getTotalPrice() ? "Créditos do App" :
-                    "Pagar na Barbearia"
+                      paymentMethod === 'wallet' && walletBalance >= getTotalPrice() ? "Carteira do App" :
+                        paymentMethod === 'wallet' && walletBalance < getTotalPrice() ? `Carteira (R$ ${walletBalance.toFixed(2).replace('.', ',')}) + Barbearia (R$ ${(getTotalPrice() - walletBalance).toFixed(2).replace('.', ',')})` :
+                          availableCredits >= getTotalPrice() ? "Créditos do App" :
+                            "Pagar na Barbearia"
                   }
                 />
 
@@ -3824,7 +3847,7 @@ const ClienteAgendar = () => {
                     </div>
                   </>
                 )}
-                
+
                 <div className="border-t border-dashed border-neutral-200 mt-4 pt-4">
                   <div className="flex items-center justify-between">
                     <span className="text-[14px] font-medium text-neutral-900">Total</span>
@@ -3871,14 +3894,14 @@ const ClienteAgendar = () => {
               </div>
 
               <div className="rounded-[20px] bg-white border border-neutral-200/80 shadow-[0_2px_12px_rgba(0,0,0,0.03)] p-5 space-y-4 mb-6">
-                <SummaryRow 
+                <SummaryRow
                   label="Nova Data"
                   value={selectedDate ? format(selectedDate, "dd 'de' MMMM 'de' yyyy", { locale: ptBR }) : ""}
                 />
 
                 <div className="border-t border-neutral-100" />
 
-                <SummaryRow 
+                <SummaryRow
                   label="Novo Horário"
                   value={`${selectedTime} → ${getEndTime()}`}
                 />
@@ -4040,7 +4063,7 @@ const ClienteAgendar = () => {
               <p className="text-[13px] text-neutral-400 font-normal leading-relaxed max-w-[270px] mx-auto mb-8">
                 Tudo pronto! Seu horário foi reservado com sucesso. Acompanhe os detalhes em Meus Agendamentos.
               </p>
-              
+
               {/* Botões de Ação estilo Checkout da Referência */}
               <div className="space-y-3">
                 <button
@@ -4085,7 +4108,7 @@ const ClienteAgendar = () => {
               return;
             }
           }
-          navigate("/cliente/assinar", { 
+          navigate("/cliente/assinar", {
             state: { resumePlanId: ps.plano_id }
           });
         }}

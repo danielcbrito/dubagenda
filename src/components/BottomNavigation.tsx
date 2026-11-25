@@ -3,6 +3,10 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useState, type SVGProps } from "react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthProvider";
+import { usePendingSubscription } from "@/hooks/usePendingSubscription";
+import { useExpiredSubscription } from "@/hooks/useExpiredSubscription";
+import { PlanExpiredView } from "@/components/client/PlanExpiredView";
 
 /** Facebook-style outlined house icon — same shape in every state, color changes only. */
 function HomeIcon(props: SVGProps<SVGSVGElement>) {
@@ -130,8 +134,24 @@ export function BottomNavigation() {
   const location = useLocation();
   const navigate = useNavigate();
   const cartCount = useCartBadge();
+  const { user } = useAuth();
+  const userId = user?.id ?? null;
+  const [expiredPlanoOpen, setExpiredPlanoOpen] = useState(false);
+
+  const { data: pendingSubscription } = usePendingSubscription(userId);
+  const { data: expiredSubscription } = useExpiredSubscription(userId);
+  const assinaturaParaViewExpirado = pendingSubscription || expiredSubscription;
 
   const isActive = (path: string) => location.pathname === path;
+
+  const handlePlanosPress = () => {
+    // Com plano vencido/pendente, abre a tela de renovação em vez de navegar.
+    if (assinaturaParaViewExpirado) {
+      setExpiredPlanoOpen(true);
+      return;
+    }
+    navigate("/cliente/assinar");
+  };
 
   return (
     <>
@@ -186,7 +206,7 @@ export function BottomNavigation() {
             icon={Scissors}
             label="Planos"
             isActive={isActive("/cliente/assinar")}
-            onClick={() => navigate("/cliente/assinar")}
+            onClick={handlePlanosPress}
           />
           <NavItem
             icon={User}
@@ -199,6 +219,22 @@ export function BottomNavigation() {
         {/* Overscroll protection for iOS Home Indicator & physical bottom */}
         <div className="absolute top-full left-0 right-0 h-[250px] bg-[#0A0A0A] pointer-events-none" />
       </nav>
+
+      {/* Plan Expired View — tela de renovação quando há assinatura vencida/pendente */}
+      {assinaturaParaViewExpirado && (
+        <PlanExpiredView
+          open={expiredPlanoOpen}
+          onOpenChange={setExpiredPlanoOpen}
+          planName={(assinaturaParaViewExpirado as any).plano?.nome || "Plano"}
+          planPrice={(assinaturaParaViewExpirado as any).plano?.preco_mensal}
+          serviceName={(assinaturaParaViewExpirado as any).plano?.servico?.nome}
+          planDescription={(assinaturaParaViewExpirado as any).plano?.descricao}
+          planBenefits={(assinaturaParaViewExpirado as any).plano?.beneficios_json}
+          planLimitAppointments={(assinaturaParaViewExpirado as any).plano?.limite_agendamentos_mes}
+          assinaturaId={(assinaturaParaViewExpirado as any).id}
+          userId={userId ?? undefined}
+        />
+      )}
 
       {/* Persistent solid black filler for the absolute bottom edge of the phone */}
       <div 
