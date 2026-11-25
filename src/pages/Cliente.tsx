@@ -33,7 +33,6 @@ import { HomeAdRotator } from "@/components/client/HomeAdRotator";
 import { useHomeAds } from "@/hooks/useHomeAds";
 import { PlanExpiredView } from "@/components/client/PlanExpiredView";
 import { PlanExpiredBanner } from "@/components/client/PlanExpiredBanner";
-import { PendingSubscriptionDrawer } from "@/components/client/PendingSubscriptionDrawer";
 import { ScheduleButton } from "@/components/client/ScheduleButton";
 import { AppointmentCardPremium } from "@/components/client/AppointmentCardPremium";
 import { BarberReviewModal } from "@/components/client/BarberReviewModal";
@@ -201,12 +200,12 @@ const fetchLoyaltyData = async (userId: string, tenantId: string | null) => {
     supabase.from("resgates").select("id, status").eq("user_id", userId).eq("status", "available"),
     tenantId
       ? supabase
-          .from("promocoes")
-          .select("pontos_necessarios")
-          .eq("ativo", true)
-          .eq("tenant_id", tenantId)
-          .limit(1)
-          .maybeSingle()
+        .from("promocoes")
+        .select("pontos_necessarios")
+        .eq("ativo", true)
+        .eq("tenant_id", tenantId)
+        .limit(1)
+        .maybeSingle()
       : Promise.resolve({ data: null, error: null } as any),
     // Fetch active subscription in same parallel batch
     supabase
@@ -274,7 +273,7 @@ const fetchLoyaltyData = async (userId: string, tenantId: string | null) => {
     const rpcUsageCount = usageError ? 0 : Number(usageCount || 0);
     planUsageCount = Math.max(Number(activeSubData.usos_ciclo_atual || 0), rpcUsageCount);
   }
-  
+
   // Independent handling of pending subscription
   const pendingSub = pendingSubResult.data;
   pendingSubscription = pendingSub;
@@ -457,7 +456,7 @@ const Cliente = () => {
   const shopBarbers = (shopQueryData?.shopBarbers ?? []).filter(b => !blockedBarberIds.includes(b.id));
 
   // ─── Remaining manual state ───
-      const [pointsModalOpen, setPointsModalOpen] = useState(false);
+  const [pointsModalOpen, setPointsModalOpen] = useState(false);
   const [plansSheetOpen, setPlansSheetOpen] = useState(false);
   const [subscribeSheetOpen, setSubscribeSheetOpen] = useState(false);
 
@@ -473,10 +472,7 @@ const Cliente = () => {
     barberPhoto: string | null;
   } | null>(null);
 
-  const [pendingDrawerOpen, setPendingDrawerOpen] = useState(false);
-  const hasAutoOpenedPendingRef = useRef<string | null>(null);
   const { cancelSubscription, cancelling: isCancelingSubscription } = useCancelSubscriptionMutation();
-  const [hasAutoOpenedThisSession, setHasAutoOpenedThisSession] = useState(false);
 
 
 
@@ -502,7 +498,7 @@ const Cliente = () => {
           queryClient.invalidateQueries({ queryKey: ['cliente', 'loyalty', user.id] });
           queryClient.invalidateQueries({ queryKey: ['assinatura-status'] });
           queryClient.invalidateQueries({ queryKey: ['client-active-subscription'] });
-          
+
           if (payload.eventType === 'INSERT') {
             toast.success("Plano ativado com sucesso!");
           } else if (payload.eventType === 'UPDATE') {
@@ -550,23 +546,27 @@ const Cliente = () => {
     }
   }, [planExhausted, dataLoaded]);
 
-  // Auto-show pending subscription drawer
-  useEffect(() => {
-    if (pendingSubscription && dataLoaded && !hasAutoOpenedThisSession && hasAutoOpenedPendingRef.current !== (pendingSubscription as any).id) {
-      hasAutoOpenedPendingRef.current = (pendingSubscription as any).id;
-      setHasAutoOpenedThisSession(true);
-      setPendingDrawerOpen(true);
-    }
-  }, [pendingSubscription, dataLoaded, hasAutoOpenedThisSession]);
+  const getTodayLocalDateKey = () => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+  };
+  const expiredDismissedStorageKey = user?.id ? `dub_expired_view_dismissed_date_${user.id}` : null;
 
-  // Auto-show expired plan view when subscription is expired
+  // A gaveta de assinatura pendente nunca sobe automaticamente — apenas o banner permanece visível.
+  // Auto-show expired plan view once per day when subscription is expired
   const expiredViewShownRef = useRef(false);
   useEffect(() => {
     if (expiredSubscription && !pendingSubscription && dataLoaded && !expiredViewShownRef.current) {
       expiredViewShownRef.current = true;
-      setExpiredViewOpen(true);
+      const todayKey = getTodayLocalDateKey();
+      const dismissedDate = expiredDismissedStorageKey
+        ? localStorage.getItem(expiredDismissedStorageKey)
+        : null;
+      if (dismissedDate !== todayKey) {
+        setExpiredViewOpen(true);
+      }
     }
-  }, [expiredSubscription, pendingSubscription, dataLoaded]);
+  }, [expiredSubscription, pendingSubscription, dataLoaded, expiredDismissedStorageKey]);
 
   const handleCancelSubscription = async () => {
     cancelSubscription(() => {
@@ -610,7 +610,7 @@ const Cliente = () => {
   useEffect(() => {
     if (hasError) {
       console.warn('[DataError] Camadas com erro:', errors.map(e => `${e.camada}: ${e.mensagem}`));
-      
+
       if (retryCountRef.current <= 2) {
         toast.error("Alguns dados podem estar desatualizados. Toque para tentar novamente.", {
           id: "data-error-toast",
@@ -660,7 +660,7 @@ const Cliente = () => {
 
   useEffect(() => {
     if (!dataLoaded || reviewTriggeredRef.current || reviewClosedRef.current) return;
-    
+
     if (eligibleReviews.length >= REVIEW_INTERVAL) {
       reviewTriggeredRef.current = true;
       const pick = eligibleReviews[0];
@@ -733,7 +733,7 @@ const Cliente = () => {
           { event: '*', schema: 'public', table: 'agendamentos', filter: `user_id=eq.${userId}` },
           (payload) => {
             console.log('Appointment change detected:', payload);
-            
+
             if (payload.eventType === 'INSERT') {
               invalidateAppointments();
               toast.success("Novo agendamento recebido!");
@@ -745,7 +745,7 @@ const Cliente = () => {
               });
             } else if (payload.eventType === 'UPDATE') {
               const newData = payload.new as any;
-              
+
               if (newData.visivel_para_usuario === false) {
                 queryClient.setQueryData(['cliente', 'appointments', userId], (old: any) => {
                   if (!old) return old;
@@ -766,34 +766,34 @@ const Cliente = () => {
                   ),
                 };
               });
-              
+
               // Then refetch for full server data
               invalidateAppointments();
-              
+
               if (newData.status === 'confirmed' && payload.old.status !== 'confirmed') {
                 toast.success("✅ Agendamento confirmado pelo barbeiro!");
               } else if (newData.status === 'completed') {
                 const completedApt = appointments.find(apt => apt.id === newData.id);
                 const serviceName = completedApt?.servico?.nome;
-                
+
                 // Optimistic points increment
                 queryClient.setQueryData(['cliente', 'loyalty', userId, tenantId], (old: any) => {
                   if (!old) return old;
                   return { ...old, points: (old.points || 0) + 1 };
                 });
-                
+
                 toast.success(
-                  serviceName 
+                  serviceName
                     ? `🎉 ${serviceName} concluído! +1 ponto adicionado.`
                     : "🎉 Atendimento concluído! +1 ponto adicionado."
                 );
-                
+
                 if (points + 1 >= pontosNecessarios) {
                   setTimeout(() => {
                     toast.success("🎁 Você ganhou um corte grátis! Resgate no programa de fidelidade.");
                   }, 1000);
                 }
-                
+
                 invalidateLoyalty();
               } else if (newData.status === 'cancelled_by_admin') {
                 toast.error("❌ Agendamento cancelado pela barbearia");
@@ -998,7 +998,7 @@ const Cliente = () => {
     if (barberConfirmed && !pointReleased) {
       const { error: pointError } = await supabase
         .from("agendamentos")
-        .update({ 
+        .update({
           ponto_liberado: true,
           status: 'completed' as any
         } as any)
@@ -1078,7 +1078,7 @@ const Cliente = () => {
                 </motion.div>
               )
             )}
-            
+
             {/* Plan Tracker ou Loyalty Card */}
             <div className="mb-5">
               {loyaltyLoading ? (
@@ -1094,7 +1094,7 @@ const Cliente = () => {
                         animate={{ opacity: 1, scale: 1 }}
                         exit={{ opacity: 0, scale: 0.95 }}
                         whileTap={{ scale: 0.98 }}
-                        onClick={() => setPendingDrawerOpen(true)}
+                        onClick={() => setExpiredViewOpen(true)}
                         className="bg-primary/10 border border-primary/20 rounded-2xl p-4 cursor-pointer relative overflow-hidden group shadow-sm"
                       >
                         <div className="flex items-center gap-3 relative z-10">
@@ -1106,7 +1106,7 @@ const Cliente = () => {
                               Assinatura em andamento
                             </p>
                             <p className="text-[11px] text-muted-foreground line-clamp-1">
-                              {pendingSubscription.status === 'pending_renewal' 
+                              {pendingSubscription.status === 'pending_renewal'
                                 ? `Renovação pendente: ${(pendingSubscription as any).plano?.nome}`
                                 : `Toque para finalizar seu plano ${(pendingSubscription as any).plano?.nome}`
                               }
@@ -1165,6 +1165,10 @@ const Cliente = () => {
             {/* Schedule Button */}
             <div className="mb-6">
               <ScheduleButton onClick={() => {
+                if (expiredSubscription || pendingSubscription) {
+                  setExpiredViewOpen(true);
+                  return;
+                }
                 if (!preferredShop) {
                   navigate('/escolher-barbearia');
                   return;
@@ -1367,7 +1371,7 @@ const Cliente = () => {
       <AnnouncementDialog />
 
       {/* Aviso de reajuste de valores */}
-      
+
 
 
       {/* Modal de Avaliação */}
@@ -1397,17 +1401,41 @@ const Cliente = () => {
         }}
       />
 
-      {/* Plan Expired View — Booksy-inspired renewal screen para assinatura expirada */}
-      {!pendingSubscription && expiredSubscription && (
+      {/* Plan Expired View — tela de renovação para assinatura expirada ou pendente */}
+      {(expiredSubscription || pendingSubscription) && (
         <PlanExpiredView
           open={expiredViewOpen}
-          onOpenChange={setExpiredViewOpen}
-          planName={(expiredSubscription as any).plano?.nome || "Plano"}
-          planPrice={(expiredSubscription as any).plano?.preco_mensal}
-          serviceName={(expiredSubscription as any).plano?.servico?.nome}
-          planDescription={(expiredSubscription as any).plano?.descricao}
-          planBenefits={(expiredSubscription as any).plano?.beneficios_json}
-          planLimitAppointments={(expiredSubscription as any).plano?.limite_agendamentos_mes}
+          onOpenChange={(isOpen) => {
+            setExpiredViewOpen(isOpen);
+            if (!isOpen && expiredDismissedStorageKey) {
+              localStorage.setItem(expiredDismissedStorageKey, getTodayLocalDateKey());
+            }
+          }}
+          planName={
+            (expiredSubscription as any)?.plano?.nome ||
+            (pendingSubscription as any)?.plano?.nome ||
+            "Plano"
+          }
+          planPrice={
+            (expiredSubscription as any)?.plano?.preco_mensal ??
+            (pendingSubscription as any)?.plano?.preco_mensal
+          }
+          serviceName={
+            (expiredSubscription as any)?.plano?.servico?.nome ??
+            (pendingSubscription as any)?.plano?.servico?.nome
+          }
+          planDescription={
+            (expiredSubscription as any)?.plano?.descricao ??
+            (pendingSubscription as any)?.plano?.descricao
+          }
+          planBenefits={
+            (expiredSubscription as any)?.plano?.beneficios_json ??
+            (pendingSubscription as any)?.plano?.beneficios_json
+          }
+          planLimitAppointments={
+            (expiredSubscription as any)?.plano?.limite_agendamentos_mes ??
+            (pendingSubscription as any)?.plano?.limite_agendamentos_mes
+          }
         />
       )}
 
@@ -1424,43 +1452,6 @@ const Cliente = () => {
           planLimitAppointments={(activeSubscription as any)?.plano?.limite_agendamentos_mes}
         />
       )}
-
-      {/* Pending Subscription Drawer */}
-      <PendingSubscriptionDrawer
-        open={pendingDrawerOpen}
-        onOpenChange={setPendingDrawerOpen}
-        planName={(pendingSubscription as any)?.plano?.nome || "Plano"}
-        onFinalize={() => {
-          const ps = pendingSubscription as any;
-          // Se for Pix e o QR Code ainda estiver válido
-          if (ps.payment_method === "pix" && ps.pix_qr_code && ps.pix_expires_at) {
-            const pixExpiresAt = new Date(ps.pix_expires_at).getTime();
-            if (pixExpiresAt > Date.now()) {
-              const pixCheckoutData = {
-                pixQrCode: ps.pix_qr_code,
-                pixPayload: ps.pix_payload,
-                pendingBookingId: ps.id,
-                asaasPaymentId: ps.asaas_payment_id,
-                expiresAt: ps.pix_expires_at,
-                value: ps.plano?.preco_mensal || 0,
-                serviceName: ps.plano?.nome || "Plano",
-                barberName: ps.barbeiro?.apelido,
-                provider: 'woovi' as const,
-                correlationId: ps.asaas_payment_id,
-              };
-              sessionStorage.setItem("pix_checkout_data", JSON.stringify(pixCheckoutData));
-              navigate("/cliente/pix-checkout");
-              return;
-            }
-          }
-          // Se não for Pix ou o Pix expirou, direciona para a página de assinar original para escolher novamente
-          navigate("/cliente/assinar", { 
-            state: { resumePlanId: ps.plano_id }
-          });
-        }}
-        onCancel={handleCancelSubscription}
-        isCanceling={isCancelingSubscription}
-      />
 
     </div>
   );
