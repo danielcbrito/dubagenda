@@ -276,11 +276,49 @@ const ClienteAssinar = () => {
     if (isRenewalMode) {
       initRenewalMode();
     } else if (isChangeMode) {
-      autoSelectPreferredShop();
+      initChangeMode();
     } else if (!resumePlanId) {
       autoSelectPreferredShop();
     }
   }, []);
+
+  // Change mode: load all plans of the current/expired subscription's barbershop (step 2)
+  const initChangeMode = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) { setStep(1); return; }
+
+      const [{ data: sub }, { data: profile }] = await Promise.all([
+        supabase
+          .from("assinaturas")
+          .select("plano:planos(tenant_id)")
+          .eq("user_id", session.user.id)
+          .in("status", ["active", "cancelled", "past_due", "suspended", "pending_renewal", "pending_cash"] as any)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+        supabase
+          .from("profiles")
+          .select("barbearia_preferida_id")
+          .eq("id", session.user.id)
+          .maybeSingle(),
+      ]);
+
+      const rawPlano = Array.isArray(sub?.plano) ? sub?.plano[0] : sub?.plano;
+      const tenantId = rawPlano
+        ? (rawPlano.tenant_id ?? null)
+        : (profile?.barbearia_preferida_id ?? null);
+
+      setSelectedTenantId(tenantId || "dub");
+      await loadPlansForTenant(tenantId);
+      await loadBarbersForTenant(tenantId);
+      setCurrentPlanIndex(0);
+      setStep(2);
+    } catch (err) {
+      console.error("Erro ao carregar planos da barbearia:", err);
+      await autoSelectPreferredShop();
+    }
+  };
 
   // Renewal mode: load current plan + barbers, skip to barber selection (step 3)
   const initRenewalMode = async () => {
@@ -680,7 +718,7 @@ const ClienteAssinar = () => {
             >
               <div className="max-w-2xl mx-auto space-y-2.5">
                 <div className="mb-6 pt-1">
-                  <h2 className="text-[24px] sm:text-[25px] font-semibold text-neutral-900 tracking-tight leading-tight font-sans">
+                  <h2 className="text-[26px] sm:text-[27px] font-bold text-[#111111] tracking-[-0.025em] leading-[1.12] font-display">
                     Sua Barbearia
                   </h2>
                   <p className="text-[13px] text-neutral-500 mt-1">Selecione onde deseja assinar o plano</p>
@@ -761,7 +799,7 @@ const ClienteAssinar = () => {
             >
               <div className="max-w-2xl mx-auto">
                 <div className="mb-6 pt-1">
-                  <h2 className="text-[24px] sm:text-[25px] font-semibold text-neutral-900 tracking-tight leading-tight font-sans">
+                  <h2 className="text-[26px] sm:text-[27px] font-bold text-[#111111] tracking-[-0.025em] leading-[1.12] font-display">
                     Seu barbeiro
                   </h2>
                   <p className="text-[13px] text-neutral-500 mt-1">
@@ -816,7 +854,7 @@ const ClienteAssinar = () => {
               >
                 <div className="max-w-2xl mx-auto">
                   <div className="mb-6 pt-1">
-                    <h2 className="text-[24px] sm:text-[25px] font-semibold text-neutral-900 tracking-tight leading-tight font-sans">
+                    <h2 className="text-[26px] sm:text-[27px] font-bold text-[#111111] tracking-[-0.025em] leading-[1.12] font-display">
                       Forma de pagamento
                     </h2>
                   </div>

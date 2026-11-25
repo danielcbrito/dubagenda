@@ -82,7 +82,7 @@ export function PlanCarousel({
   return (
     <div className="relative flex-1 flex flex-col justify-between min-h-0 overflow-hidden select-none bg-transparent">
       {/* ═══ Header Minimalista e Estratégico (Flutuante) ═══ */}
-      <div 
+      <div
         className="fixed top-0 left-0 right-0 z-50 pointer-events-none"
         style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}
       >
@@ -128,7 +128,7 @@ export function PlanCarousel({
 
       <div className="flex-shrink-0 pt-14 px-4 z-10 w-full max-w-2xl mx-auto">
         <div className="mb-2 pt-1 px-2">
-          <h2 className="text-[24px] sm:text-[25px] font-semibold text-[#18181B] tracking-tight leading-none font-sans">
+          <h2 className="text-[26px] sm:text-[27px] font-bold text-[#111111] tracking-[-0.025em] leading-[1.12] font-display">
             Planos
           </h2>
         </div>
@@ -337,8 +337,8 @@ export function PlanCarousel({
                                       ? "text-neutral-200"
                                       : "text-neutral-800"
                                     : isFeatured
-                                    ? "text-neutral-500 line-through font-normal"
-                                    : "text-neutral-400 line-through font-normal"
+                                      ? "text-neutral-500 line-through font-normal"
+                                      : "text-neutral-400 line-through font-normal"
                                 )}
                               >
                                 {ben.texto}

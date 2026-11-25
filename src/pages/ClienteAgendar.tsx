@@ -3001,7 +3001,7 @@ const ClienteAgendar = () => {
           >
             <div className="max-w-2xl mx-auto">
               <div className="mb-6 pt-1">
-                <h2 className="text-[24px] sm:text-[25px] font-semibold text-neutral-900 tracking-tight leading-tight font-sans">
+                <h2 className="text-[26px] sm:text-[27px] font-bold text-[#111111] tracking-[-0.025em] leading-[1.12] font-display">
                   Escolha o profissional
                 </h2>
               </div>
@@ -3048,7 +3048,7 @@ const ClienteAgendar = () => {
           >
             <div className="max-w-2xl mx-auto">
               <div className="mb-6 pt-1">
-                <h2 className="text-[24px] sm:text-[25px] font-semibold text-neutral-900 tracking-tight leading-tight font-sans">
+                <h2 className="text-[26px] sm:text-[27px] font-bold text-[#111111] tracking-[-0.025em] leading-[1.12] font-display">
                   Escolha o serviço
                 </h2>
               </div>
@@ -3090,7 +3090,7 @@ const ClienteAgendar = () => {
           >
              <div className="max-w-2xl mx-auto">
               <div className="mb-6 pt-1">
-                <h2 className="text-[24px] sm:text-[25px] font-semibold text-neutral-900 tracking-tight leading-tight font-sans">
+                <h2 className="text-[26px] sm:text-[27px] font-bold text-[#111111] tracking-[-0.025em] leading-[1.12] font-display">
                   Melhor dia pra você
                 </h2>
               </div>
@@ -3142,7 +3142,7 @@ const ClienteAgendar = () => {
           >
             <div className="max-w-2xl mx-auto">
               <div className="mb-6 pt-1">
-                <h2 className="text-[24px] sm:text-[25px] font-semibold text-neutral-900 tracking-tight leading-tight font-sans">
+                <h2 className="text-[26px] sm:text-[27px] font-bold text-[#111111] tracking-[-0.025em] leading-[1.12] font-display">
                   Que horas fica bom?
                 </h2>
               </div>
@@ -3263,7 +3263,7 @@ const ClienteAgendar = () => {
           >
             <div className="max-w-2xl mx-auto">
               <div className="mb-6 pt-1">
-                <h2 className="text-[24px] sm:text-[25px] font-semibold text-neutral-900 tracking-tight leading-tight font-sans">
+                <h2 className="text-[26px] sm:text-[27px] font-bold text-[#111111] tracking-[-0.025em] leading-[1.12] font-display">
                   Pagamento
                 </h2>
               </div>
@@ -3698,7 +3698,7 @@ const ClienteAgendar = () => {
           >
             <div className="max-w-2xl mx-auto">
               <div className="mb-6 pt-1">
-                <h2 className="text-[24px] sm:text-[25px] font-semibold text-neutral-900 tracking-tight leading-tight font-sans">
+                <h2 className="text-[26px] sm:text-[27px] font-bold text-[#111111] tracking-[-0.025em] leading-[1.12] font-display">
                   Confirmar Agendamento
                 </h2>
               </div>
@@ -3776,7 +3776,7 @@ const ClienteAgendar = () => {
           >
             <div className="max-w-2xl mx-auto">
               <div className="mb-6 pt-1">
-                <h2 className="text-[24px] sm:text-[25px] font-semibold text-neutral-900 tracking-tight leading-tight font-sans">
+                <h2 className="text-[26px] sm:text-[27px] font-bold text-[#111111] tracking-[-0.025em] leading-[1.12] font-display">
                   Tudo certo?
                 </h2>
               </div>
@@ -3886,7 +3886,7 @@ const ClienteAgendar = () => {
           >
             <div className="max-w-2xl mx-auto">
               <div className="mb-6 pt-1">
-                <h2 className="text-[24px] sm:text-[25px] font-semibold text-neutral-900 tracking-tight leading-tight font-sans">
+                <h2 className="text-[26px] sm:text-[27px] font-bold text-[#111111] tracking-[-0.025em] leading-[1.12] font-display">
                   Confirmar Remarcação
                 </h2>
                 <p className="text-[13px] text-neutral-500 mt-1">
