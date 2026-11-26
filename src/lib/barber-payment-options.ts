@@ -1,8 +1,12 @@
 /** Global client PIX switch; barber eligibility and configuration still apply. */
-export const CLIENT_PIX_ENABLED = true;
+export const CLIENT_PIX_ENABLED = false;
+export const PIX_ALLOWED_EMAIL = 'danielcbrito74@gmail.com';
+export const PIX_ALLOWED_USER_ID = '5d574ff2-4b2f-49d4-b260-1516a389cd80';
 
 export function isClientPixAllowed(email: string | null, userId: string | null): boolean {
-  return CLIENT_PIX_ENABLED && Boolean(email || userId);
+  if (!email && !userId) return false;
+  if (CLIENT_PIX_ENABLED) return true;
+  return email?.trim().toLowerCase() === PIX_ALLOWED_EMAIL || userId === PIX_ALLOWED_USER_ID;
 }
 
 /** Only approved supported accounts or an existing Woovi key enable booking PIX. */
