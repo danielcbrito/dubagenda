@@ -1,7 +1,8 @@
 ## PIX de agendamento — Mercado Pago e Woovi (2026-11-26)
-- [ ] Consultar elegibilidade da conta aprovada sem expor dados financeiros.
-- [ ] Usar create-payment e preservar os dados do checkout, sem alterações visuais.
-- [ ] Reativar PIX global, testar regras e documentar validação e limitações.
+- [x] Consultar elegibilidade da conta aprovada sem expor dados financeiros.
+- [x] Usar create-payment e preservar os dados do checkout, sem alterações visuais.
+- [x] Reativar PIX global, testar regras e documentar validação e limitações.
+- [ ] Validar pagamento real autenticado: sessão indisponível no Supabase externo; não foram feitas cobranças de teste.
 
 ## Cadastro WhatsApp (2026-10-21)
 - [x] Restaurar whatsapp_signup_otp ausente no banco e restringir acesso ao serviço.

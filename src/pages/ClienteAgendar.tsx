@@ -48,6 +48,8 @@ import { NextAvailableDateButton } from "@/components/booking/NextAvailableDateB
 import { useBlockedBarbers } from "@/hooks/useBlockedBarbers";
 import { useWalletStatus } from "@/hooks/useWalletStatus";
 import { useBarberPaymentOptions } from "@/hooks/useBarberPaymentOptions";
+import { useBookingPixEligibility } from "@/hooks/useBookingPixEligibility";
+import { normalizeBookingPixCheckout } from "@/lib/booking-pix-checkout";
 import { resolveBookingPaymentMethod, type BookingPaymentMethod } from "@/lib/barber-payment-options";
 import { PendingSubscriptionDrawer } from "@/components/client/PendingSubscriptionDrawer";
 import { usePendingSubscription } from "@/hooks/usePendingSubscription";
@@ -370,24 +372,8 @@ const ClienteAgendar = () => {
   // Status da carteira do barbeiro (legado Efí): define se podemos oferecer Carteira do app
   const { canReceivePix: canReceivePixWallet } = useWalletStatus(selectedBarberId);
 
-  // Woovi: verifica se o barbeiro selecionado tem chave Pix Woovi cadastrada
-  const [barberWooviKey, setBarberWooviKey] = useState<string | null>(null);
-  useEffect(() => {
-    if (!selectedBarberId) { setBarberWooviKey(null); return; }
-    let cancelled = false;
-    (async () => {
-      const { data } = await supabase
-        .from('barbeiros')
-        .select('woovi_pix_key')
-        .eq('id', selectedBarberId)
-        .maybeSingle();
-      if (!cancelled) setBarberWooviKey((data?.woovi_pix_key as string | null) ?? null);
-    })();
-    return () => { cancelled = true; };
-  }, [selectedBarberId]);
-
-  // PIX disponível se o barbeiro tem chave Woovi (novo) ou carteira Efí ativa (legado)
-  const canReceivePix = !!barberWooviKey || canReceivePixWallet;
+  // Conta Mercado Pago/Woovi aprovada ou chave Woovi, sempre no tenant selecionado.
+  const { canReceivePix, wooviKey: barberWooviKey } = useBookingPixEligibility(selectedBarberId, paymentTenantId);
 
   const availabilityTenantId = selectedBarber?.tenant_id ?? (preferredShop?.id ?? null);
 
@@ -1669,36 +1655,26 @@ const ClienteAgendar = () => {
 
       // === PIX automático ===
       if (paymentMethod === 'pix') {
-        const useWoovi = !!barberWooviKey;
-        const fnName = useWoovi ? 'woovi-create-charge' : 'efi-create-pix-charge';
-        const { data, error } = await supabase.functions.invoke(fnName, {
+        const { data, error } = await supabase.functions.invoke('create-payment', {
           body: {
-            barbeiro_id: bookingData.barbeiro_id,
-            valor: chargeAmount,
-            descricao: `Agendamento - ${serviceNames}`,
-            servico_id: bookingData.servico_id,
-            data: bookingData.data,
-            hora: bookingData.hora,
-            duracao: bookingData.duracao,
-            observacoes: bookingData.observacoes,
+            bookingData: {
+              ...bookingData,
+              tenant_id: paymentTenantId,
+              servico_ids: selectedServices.map(s => s.id),
+              preco: finalPrice,
+            },
+            metodo: 'pix',
+            rescheduleFromId: isRescheduling ? rescheduleAppointmentId : undefined,
             consumeRedemptionOnPaidBooking: canUseRedemption && !useRedemption && availableRedemptions.length > 0,
           },
         });
         if (error) throw error;
         if (data?.error) throw new Error(data.error);
 
+        const checkout = normalizeBookingPixCheckout(data, bookingData.preco);
         sessionStorage.setItem('pix_checkout_data', JSON.stringify({
-          pixQrCode: data.qr_code_image?.replace(/^data:image\/png;base64,/, '') ?? '',
-          pixPayload: data.br_code,
-          pendingBookingId: data.pending_booking_id,
-          asaasPaymentId: data.charge_id ?? data.txid,
-          provider: useWoovi ? 'woovi' : 'efi',
-          txid: data.txid,
-          correlationId: data.correlation_id,
-          chargeId: data.charge_id,
-          expiresAt: data.expires_at,
-          value: chargeAmount,
-          serviceFee,
+          ...checkout,
+          serviceFee: Math.max(0, checkout.value - finalPrice),
           pendingDebtTotal: combinedPendingDebtTotal || 0,
           serviceName: serviceNames,
           barberName: barbers.find(b => b.id === selectedBarberId)?.apelido,
@@ -2667,7 +2643,7 @@ const ClienteAgendar = () => {
   };
 
   const pixAvailable = canReceivePix && pixHabilitado;
-  const walletAvailable = canReceivePix && walletBalance > 0 && !paymentOptionsLoading && !paymentOptionsError &&
+  const walletAvailable = (!!barberWooviKey || canReceivePixWallet) && walletBalance > 0 && !paymentOptionsLoading && !paymentOptionsError &&
     (barbeariaHabilitado || walletBalance >= Math.max(0, getTotalPrice() - availableCredits));
   // Quando há taxa de cancelamento pendente, o cliente só pode pagar via PIX — não pode pagar na barbearia.
   const cashAvailable = barbeariaHabilitado && combinedPendingDebtTotal === 0;

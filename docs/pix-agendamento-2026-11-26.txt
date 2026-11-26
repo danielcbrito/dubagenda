@@ -1,0 +1,97 @@
+CORREÇÃO DO PIX DE AGENDAMENTO — 26/11/2026
+
+1. USUÁRIO
+PIX global reativado para clientes autenticados, respeitando a configuração de
+pagamento de cada profissional. Conta Mercado Pago ou Woovi aprovada, ou chave
+Woovi preenchida, habilita a oferta do PIX. Nenhuma mudança visual foi feita.
+
+2. FRONTEND
+ClienteAgendar agora usa create-payment com metodo=pix, bookingData, servico_ids,
+preco final, tenant_id, rescheduleFromId e consumeRedemptionOnPaidBooking.
+A geração normal de PIX de agendamento não chama mais woovi-create-charge ou
+efi-create-pix-charge. O fluxo separado de taxa de cancelamento não foi alterado.
+
+useBookingPixEligibility consulta a chave do barbeiro e a aprovação da conta em
+paralelo, com tenant_id e barbeiro_id. Respostas de um profissional anterior são
+descartadas, e dados de outro escopo não habilitam o método.
+
+normalizeBookingPixCheckout valida reserva, payload e valor antes de armazenar
+pix_checkout_data em sessionStorage. Remove prefixo base64 quando presente,
+preserva o valor efetivamente retornado e usa o vencimento da reserva ou 30 minutos.
+Não exibe como cobrada uma taxa adicional que o serviço não incluiu na cobrança.
+O QR, nome do profissional, serviço, data e horário permanecem no checkout existente.
+Carteira, cartão e pagamento presencial conservam seus fluxos anteriores.
+
+3. BACKEND / N8N
+A função compartilhada create-payment foi conferida no snapshot do BarbeirosDUB
+(cbd34f4a). Não foi alterada nem republicada por este projeto: a cópia local
+pré-existente deste app é mais antiga e não deve substituir a integração compartilhada.
+O contrato atual retorna pendingBookingId, pendingBooking e wooviPayment.
+O helper compartilhado desse outro app escolhe Mercado Pago quando existe token
+do vendedor; caso contrário usa a conta própria aprovada Woovi.
+Os dois provedores persistem a intenção e a confirmação em woovi_charges.
+Por isso provider='woovi' no checkout é uma seleção de rastreamento, não uma
+afirmação de que a instituição financeira efetiva é sempre Woovi.
+Nenhuma alteração em N8N, notificações ou serviços externos.
+
+4. DATABASE SUPABASE
+Migração aplicada: get_barber_booking_payment_accounts(uuid, uuid), retornando
+somente status e provider de contas aprovadas Mercado Pago/Woovi de profissional
+ativo, não excluído, da barbearia informada. Nenhuma linha bancária privada é
+exposta diretamente ao cliente. As políticas existentes continuam intactas.
+Anon/PUBLIC sem EXECUTE; authenticated/service_role com EXECUTE; auth.uid()
+obrigatório no corpo. search_path fixo em public e parâmetros UUID sem SQL dinâmico.
+
+Revisão do aviso 0029: SECURITY DEFINER autenticado é intencional neste RPC
+estritamente de leitura, para contornar a política privada sem revelar CPF,
+nome completo, telefone, chave bancária da conta ou credenciais. Revogar a
+execução autenticada ou usar INVOKER impediria a consulta segura de aprovação.
+O alerta genérico permanece como exposição intencional revisada; não foram
+ignorados automaticamente achados nem abertas políticas da tabela financeira.
+120 achados preexistentes apontados pelo linter não foram alterados por esta tarefa.
+
+5. SERVIÇOS EXTERNOS E FLUXOS CRÍTICOS
+Auth: cliente precisa ter sessão; ausência de identidade não habilita PIX.
+Agendamento: seleção -> validação existente -> create-payment -> pending_booking.
+Pagamento: conta do profissional -> QR/payload -> sessionStorage -> pix-checkout
+-> Realtime/polling woovi_charges -> confirmação -> retorno ao painel.
+O consumidor do checkout não foi alterado: ambos os provedores compartilham
+a tabela de confirmação conforme o contrato verificado no app do barbeiro.
+
+DIAGRAMA DE SEQUÊNCIA
+Cliente          Frontend          Supabase                Banco do barbeiro
+  | selecionar      |                |                           |
+  |---------------->| chave + RPC    |                           |
+  |                 |--------------->| aprovação por tenant       |
+  | confirmar PIX   |                |                           |
+  |---------------->| create-payment |                           |
+  |                 |--------------->| pending_booking + intenção |
+  |                 |                |-------------------------->|
+  |                 | QR + reserva   |<--------------------------|
+  |                 |<---------------|                           |
+  | pagar           |                | webhook confirmado         |
+  |------------------------------------------------------------->|
+  |                 |                |<--------------------------|
+  |                 | charge PAID    |                           |
+  |                 |<---------------|                           |
+
+ERROS
+- Consulta de aprovação falha: conta aprovada não é presumida; uma chave Woovi
+  lida validamente ainda pode satisfazer a elegibilidade solicitada.
+- Troca de barbeiro/tenant: resposta velha não pode habilitar a conta nova.
+- Cobrança sem reserva/payload ou valor inválido: erro antes da navegação.
+- Horário indisponível: tratamento existente retorna à escolha do horário.
+- Erro do gateway: mantém tratamento existente, sem confirmação financeira local.
+- Expiração/confirmacão: permanecem sob o checkout e webhooks existentes.
+
+VALIDAÇÃO E LIMITAÇÕES
+- 77 testes aprovados (bun test tests), incluindo 21 de pagamento/elegibilidade.
+- Compilação automática: build OK após as alterações.
+- Navegador móvel 394x639: página sem erros JavaScript; módulos atualizados
+  importados e regras executadas com entradas sintéticas, sem transação real.
+- Conferidos os privilégios do RPC: anon=false, authenticated=true.
+- Sessão real indisponível: lovable auth-session recusou emissão de sessão para
+  Supabase externo. A chamada direta de create-payment sem sessão retornou 401.
+- Fluxo autenticado completo, criação real de reserva, recebimento do pagamento,
+  webhook, confirmação e cancelamento não foram testados nesta tarefa.
+- Sem cobrança de teste, sem movimentação financeira e sem publicação do app.
