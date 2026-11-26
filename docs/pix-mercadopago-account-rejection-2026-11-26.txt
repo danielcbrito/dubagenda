@@ -1,0 +1,90 @@
+PIX ACCOUNT REJECTION — 26 NOVEMBER 2026
+
+USER LAYER
+The reported barber has an approved Mercado Pago connection. A payment attempt
+was incorrectly rejected as if a Woovi credential were required. No payment was
+made by the agent. The unpaid hold from that failed attempt has been expired so
+the requested time is available for a retry, subject to other valid reservations.
+
+FRONTEND LAYER
+The existing client continues to invoke create-payment with bookingData and
+metodo=pix. Its QR, sessionStorage and confirmation tracking contract is unchanged.
+No visual changes, no role changes and no frontend access to bank credentials.
+
+BACKEND / N8N LAYER
+The shared handler was synchronized from the current BarbeirosDUB source
+(snapshot cbd34f4a), retaining this app's existing multi-tenant opening-hours
+normalization and zero-buffer availability checks. This supersedes the earlier
+document's statement that this project had not redeployed create-payment.
+The stale cash-only local handler was not deployed as-is.
+
+The receiver is resolved before creating a pending_booking:
+- Account approved + provider mercadopago + seller token -> Mercado Pago.
+- Account approved + provider woovi + own AppID -> Woovi.
+- Missing, pending, rejected, mismatched or disconnected account -> controlled
+  account-unavailable response (409), without creating a hold.
+There is no fallback to the master account or to a different payment provider.
+
+Mercado Pago charges use the seller token, external_reference=book-<hold ID>,
+an idempotency key and the existing mercadopago-oauth callback. Its QR is returned
+as wooviPayment to preserve compatibility with the unified checkout. Both paths
+write woovi_charges, and a failed local save after bank creation is reported as
+requiring reconciliation rather than claiming a successful local confirmation.
+
+The stored Mercado Pago token for the reported barber exists and is valid for
+more than one day. No new secret is required for this valid connection. Existing
+OAuth secrets, when available in the runtime, permit token refresh near expiry;
+otherwise a still-valid token is used until expiry. An expired connection needs
+reconnection in the barber app, never a fallback to the platform account.
+OAuth onboarding and webhook management remain owned by the barber application.
+No N8N workflow or unrelated gateway function was modified or deployed.
+
+DATABASE SUPABASE LAYER
+Reported barber: c7fd6c11-fa5c-4b84-ab1f-691c2942461c.
+Tenant: 2459facf-313e-4934-a815-f69a80d30a60.
+Observed: active, not deleted; account approved/mercadopago; Mercado Pago
+credential present; no Woovi AppID. Only credential presence and expiration
+booleans were queried; no credential values were printed or copied.
+
+Failed hold: 3dfac286-a321-4963-921f-6cad8904058b.
+Observed: R$25, 27 November at 09:35, no payment intent and no woovi_charges row.
+A narrowly guarded migration expired only that hold: exact hold/client/barber,
+matching tenant, no intent, no Asaas ID, no payload and no linked charge.
+Readback confirmed released=true and no_payment_intent=true. No paid charge,
+wallet, appointment, banking balance or unrelated reservation was changed.
+No permissions or RLS policies were modified by this repair. The database linter
+reported 121 preexisting findings, with none introduced by this data-only repair.
+
+EXTERNAL SERVICES LAYER
+create-payment was deployed successfully. Live OPTIONS returned 200 with
+X-Payment-Version: booking-pix-mp-2026-11-26.
+An unsigned POST returned 401 Missing authorization header, confirming that
+anonymous requests cannot create a payment. No real bank POST was performed.
+Bank responses in the integration tests were synthetic.
+
+CRITICAL FLOW AND ERROR PATHS
+Auth -> server verifies Supabase user -> validates tenant, service and price ->
+resolves approved receiver -> checks availability -> creates pending booking ->
+persists charge intent -> contacts selected bank -> saves QR -> client checkout ->
+existing provider webhook -> authoritative confirmation -> appointment.
+
+Unavailable account -> 409 before reservation.
+Expired connection -> reconnect in barber app.
+Wrong tenant -> receiver denied before credential retrieval.
+Unavailable time -> existing 409 slot-unavailable response.
+Missing profile email for Mercado Pago -> charge fails safely.
+Bank call/local save uncertainty -> do not mark paid; preserve reconciliation data.
+Actual payment confirmation still depends on the existing authoritative webhook.
+
+VALIDATION
+- 81 application/regression tests passed.
+- 5 Deno tests passed: approved Mercado Pago without Woovi credentials, tenant
+  isolation, pending account without writes, approved Woovi own credential, and
+  mocked Mercado Pago QR creation with seller-only authorization and tracking.
+- Automatic build log: build OK.
+- Live deployed version and anonymous 401 verified.
+- Full authenticated real-payment retry, actual QR from the bank, payment,
+  webhook confirmation and final appointment readback remain unverified because
+  the external Supabase session cannot be minted in this environment.
+- App publication was not requested and was not performed; the payment service
+  deployment itself is already live.
