@@ -1,18 +1,35 @@
 import { describe, test } from 'node:test';
 import { deepStrictEqual as equal } from 'node:assert';
-import { isClientPixAllowed, parseBarberPaymentOptions, resolveBookingPaymentMethod } from '../src/lib/barber-payment-options';
+import { CLIENT_PIX_ENABLED, canBarberReceiveBookingPix, isClientPixAllowed, parseBarberPaymentOptions, resolveBookingPaymentMethod } from '../src/lib/barber-payment-options';
 
-describe('liberação individual de PIX', () => {
-  test('libera somente o e-mail solicitado', () => {
+describe('liberação global de PIX', () => {
+  test('PIX está ativo para todos os clientes identificados', () => {
+    equal(CLIENT_PIX_ENABLED, true);
     equal(isClientPixAllowed('danielcbrito74@gmail.com', null), true);
-    equal(isClientPixAllowed('outro-cliente@example.com', null), false);
+    equal(isClientPixAllowed('outro-cliente@example.com', null), true);
   });
   test('identifica a mesma conta pelo ID confirmado quando não há e-mail', () => {
     equal(isClientPixAllowed(null, '5d574ff2-4b2f-49d4-b260-1516a389cd80'), true);
-    equal(isClientPixAllowed(null, 'aacff4be-266f-4a02-b1ce-b8d1ba642afc'), false);
+    equal(isClientPixAllowed(null, 'aacff4be-266f-4a02-b1ce-b8d1ba642afc'), true);
   });
   test('não libera PIX antes de identificar o cliente', () => {
     equal(isClientPixAllowed(null, null), false);
+  });
+});
+
+describe('elegibilidade PIX do profissional', () => {
+  test('Mercado Pago aprovado sem chave Woovi pode receber PIX', () => {
+    equal(canBarberReceiveBookingPix(null, [{ status: 'approved', provider: 'mercadopago' }]), true);
+  });
+  test('Woovi aprovado sem chave legada pode receber PIX', () => {
+    equal(canBarberReceiveBookingPix(null, [{ status: 'approved', provider: 'woovi' }]), true);
+  });
+  test('chave Woovi preenchida permite PIX sem conta aprovada', () => {
+    equal(canBarberReceiveBookingPix('barber@example.com', []), true);
+  });
+  test('contas pendentes, rejeitadas ou provedores desconhecidos não permitem PIX', () => {
+    equal(canBarberReceiveBookingPix(null, [{ status: 'pending', provider: 'mercadopago' }, { status: 'rejected', provider: 'woovi' }, { status: 'approved', provider: 'other' }]), false);
+    equal(canBarberReceiveBookingPix('   ', []), false);
   });
 });
 
