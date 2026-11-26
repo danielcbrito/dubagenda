@@ -1,4 +1,5 @@
 ## PIX de agendamento — Mercado Pago e Woovi (2026-11-26)
+- [ ] Corrigir serviço publicado que rejeita conta Mercado Pago aprovada; validar sem movimentar dinheiro.
 - [x] Consultar elegibilidade da conta aprovada sem expor dados financeiros.
 - [x] Usar create-payment e preservar os dados do checkout, sem alterações visuais.
 - [x] Reativar PIX global, testar regras e documentar validação e limitações.

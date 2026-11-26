@@ -1,11 +1,52 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createWooviCharge } from '../_shared/woovi-charge.ts';
+import { resolveBookingPixReceiver } from '../_shared/booking-payment-receiver.ts';
+import { BookingPixAccountError } from '../_shared/booking-payment-route.ts';
+import { assertWooviMethod } from '../_shared/woovi-payment-policy.ts';
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.0";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
+  'X-Payment-Version': 'booking-pix-mp-2026-11-26',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
+/**
+ * Valida CPF usando o algoritmo oficial
+ */
+function validateCPF(cpf: string): boolean {
+  const cleanCPF = cpf.replace(/\D/g, '');
+
+  if (cleanCPF.length !== 11) return false;
+  if (/^(\d)\1{10}$/.test(cleanCPF)) return false;
+
+  let sum = 0;
+  let remainder;
+
+  for (let i = 1; i <= 9; i++) {
+    sum += parseInt(cleanCPF.substring(i - 1, i)) * (11 - i);
+  }
+
+  remainder = (sum * 10) % 11;
+  if (remainder === 10 || remainder === 11) remainder = 0;
+  if (remainder !== parseInt(cleanCPF.substring(9, 10))) return false;
+
+  sum = 0;
+  for (let i = 1; i <= 10; i++) {
+    sum += parseInt(cleanCPF.substring(i - 1, i)) * (12 - i);
+  }
+
+  remainder = (sum * 10) % 11;
+  if (remainder === 10 || remainder === 11) remainder = 0;
+  if (remainder !== parseInt(cleanCPF.substring(10, 11))) return false;
+
+  return true;
+}
+
+/**
+ * Verifica disponibilidade do horário de forma atômica
+ * CRÍTICO: Evita race conditions e agendamentos duplicados
+ */
 /**
  * Converte HH:MM para minutos totais
  */
@@ -38,9 +79,9 @@ async function checkTimeSlotAvailability(
   excludeAppointmentId?: string,
   barbeiro_id?: string | null
 ): Promise<{ available: boolean; message: string }> {
-  
+
   console.log('[checkTimeSlotAvailability] Verificando:', { data, hora, duracao, excludeAppointmentId, barbeiro_id });
-  
+
   const [startHour, startMinute] = hora.split(':').map(Number);
   const startTimeInMinutes = startHour * 60 + startMinute;
   const endTimeInMinutes = startTimeInMinutes + duracao;
@@ -188,7 +229,7 @@ async function checkTimeSlotAvailability(
 
   // Sem intervalo entre serviços: próximo horário disponível = fim do serviço anterior
   const DELAY_MINUTES = 0;
-  
+
   // Verificar conflitos com agendamentos existentes
   let query = supabase
     .from('agendamentos')
@@ -218,9 +259,9 @@ async function checkTimeSlotAvailability(
     const aptEndWithDelay = aptEnd + DELAY_MINUTES;
 
     if (startTimeInMinutes < aptEndWithDelay && endTimeInMinutes > aptStart) {
-      return { 
-        available: false, 
-        message: 'Horário indisponível. Já existe um agendamento nesse período.' 
+      return {
+        available: false,
+        message: 'Horário indisponível. Já existe um agendamento nesse período.'
       };
     }
   }
@@ -242,9 +283,9 @@ async function checkTimeSlotAvailability(
     const pendingEndWithDelay = pendingEnd + DELAY_MINUTES;
 
     if (startTimeInMinutes < pendingEndWithDelay && endTimeInMinutes > pendingStart) {
-      return { 
-        available: false, 
-        message: 'Horário temporariamente reservado. Tente novamente em alguns minutos.' 
+      return {
+        available: false,
+        message: 'Horário temporariamente reservado. Tente novamente em alguns minutos.'
       };
     }
   }
@@ -255,6 +296,8 @@ async function checkTimeSlotAvailability(
 interface CreatePaymentRequest {
   bookingData: {
     servico_id: string;
+    servico_ids?: string[];
+    tenant_id?: string;
     barbeiro_id: string | null;
     data: string;
     hora: string;
@@ -262,9 +305,20 @@ interface CreatePaymentRequest {
     preco: number;
     observacoes?: string;
   };
-  metodo: 'cash' | 'wallet';
+  metodo: 'card' | 'pix' | 'cash';
+  customerInfo?: {
+    name: string;
+    email: string;
+    cpf: string;
+  };
+  cardInfo?: {
+    holderName: string;
+    number: string;
+    expiryMonth: string;
+    expiryYear: string;
+    ccv: string;
+  };
   rescheduleFromId?: string;
-  creditsUsed?: number;
   consumeRedemptionOnPaidBooking?: boolean;
 }
 
@@ -281,105 +335,154 @@ serve(async (req) => {
 
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
+      console.error('Missing authorization header');
       return new Response(
         JSON.stringify({ error: 'Missing authorization header' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
+    console.log('Authenticating user...');
     const { data: { user }, error: authError } = await supabase.auth.getUser(
       authHeader.replace('Bearer ', '')
     );
 
     if (authError || !user) {
+      console.error('Authentication failed:', authError?.message);
       return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
+        JSON.stringify({ error: 'Unauthorized', details: authError?.message }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const { bookingData, metodo, rescheduleFromId, consumeRedemptionOnPaidBooking }: CreatePaymentRequest = await req.json();
+    console.log('User authenticated:', user.id);
 
-    console.log('[create-payment] Request:', { bookingData, metodo, isRescheduling: !!rescheduleFromId });
+    const { bookingData, metodo, customerInfo, cardInfo, rescheduleFromId, consumeRedemptionOnPaidBooking }: CreatePaymentRequest = await req.json();
 
-    // Verificação atômica de disponibilidade
+    assertWooviMethod(metodo);
+    if (!bookingData?.barbeiro_id || !bookingData.servico_id) throw new Error('Serviço e barbeiro obrigatórios');
+    const serviceIds = [...new Set(bookingData.servico_ids ?? [bookingData.servico_id])];
+    if (!serviceIds.length || serviceIds.length > 20 || !serviceIds.includes(bookingData.servico_id)) throw new Error('Serviços inválidos');
+    const { data: barber, error: barberError } = await supabase.from('barbeiros').select('tenant_id').eq('id', bookingData.barbeiro_id).eq('ativo', true).is('deleted_at', null).single();
+    if (barberError || !barber?.tenant_id || (bookingData.tenant_id && bookingData.tenant_id !== barber.tenant_id)) throw new BookingPixAccountError('Profissional indisponível nesta barbearia.');
+    const { data: services, error: servicesError } = await supabase.from('servicos').select('id,preco,duracao_minutos,tenant_id').in('id', serviceIds).eq('tenant_id', barber.tenant_id).eq('ativo', true);
+    const { data: durations, error: durationError } = await supabase.from('barbeiro_servico_duracao').select('servico_id,duracao_personalizada').eq('barbeiro_id', bookingData.barbeiro_id).in('servico_id', serviceIds);
+    if (barberError || servicesError || durationError || !barber || services?.length !== serviceIds.length) throw new Error('Não foi possível validar os serviços');
+    if (services.some(service => service.tenant_id !== barber.tenant_id)) throw new Error('Serviço não pertence à barbearia selecionada');
+    const officialPrice = services.reduce((sum, service) => sum + Math.round(Number(service.preco) * 100), 0);
+    // Partial credits need atomic consumption when the callback creates the appointment.
+    // Fail closed rather than sell a discounted appointment without consuming credit.
+    if (Math.round(Number(bookingData.preco) * 100) !== officialPrice) {
+      return new Response(JSON.stringify({ error: 'Preço divergente ou créditos parciais: esta combinação precisa ser reconciliada antes do pagamento.', code: 'PRICE_RECONCILIATION_REQUIRED' }), { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+    bookingData.preco = officialPrice / 100;
+    bookingData.duracao = services.reduce((sum, service) => sum + Number(durations?.find(duration => duration.servico_id === service.id)?.duracao_personalizada ?? service.duracao_minutos), 0);
+    if (rescheduleFromId) {
+      const { data: owned } = await supabase.from('agendamentos').select('id').eq('id', rescheduleFromId).eq('user_id', user.id).eq('tenant_id', barber.tenant_id).maybeSingle();
+      if (!owned) throw new Error('Agendamento anterior não pertence ao cliente');
+    }
+
+    // Resolve the approved provider before creating a hold; missing configuration cannot orphan a slot.
+    const pixReceiver = metodo === 'pix'
+      ? await resolveBookingPixReceiver(supabase, bookingData.barbeiro_id, barber.tenant_id)
+      : undefined;
+
+    console.log('Received payment request:', { bookingData, metodo, hasCustomerInfo: !!customerInfo, hasCardInfo: !!cardInfo, isRescheduling: !!rescheduleFromId });
+
+    // ============================================
+    // VERIFICAÇÃO CRÍTICA DE DISPONIBILIDADE
+    // Deve acontecer ANTES de qualquer inserção
+    // ============================================
+    console.log('[create-payment] Verificando disponibilidade do horário...');
     const availability = await checkTimeSlotAvailability(
       supabase,
       bookingData.data,
       bookingData.hora,
       bookingData.duracao,
-      rescheduleFromId,
-      bookingData.barbeiro_id
+      rescheduleFromId, // Excluir agendamento atual se for reagendamento
+      bookingData.barbeiro_id // Filtrar por barbeiro para isolamento
     );
 
     if (!availability.available) {
+      console.log('[create-payment] Horário INDISPONÍVEL:', availability.message);
       return new Response(
-        JSON.stringify({ error: availability.message, code: 'TIME_SLOT_UNAVAILABLE' }),
+        JSON.stringify({
+          error: availability.message,
+          code: 'TIME_SLOT_UNAVAILABLE'
+        }),
         { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+    console.log('[create-payment] Horário DISPONÍVEL, prosseguindo...');
 
-    // Cancelar agendamento anterior (remarcação)
-    if (rescheduleFromId) {
-      await supabase
-        .from('agendamentos')
-        .update({ status: 'cancelled_by_user', visivel_para_usuario: false })
-        .eq('id', rescheduleFromId);
-    }
-
-    // Criar agendamento (status pending, aguardando barbeiro)
-    const { data: appointment, error: aptError } = await supabase
-      .from('agendamentos')
-      .insert({
-        user_id: user.id,
-        servico_id: bookingData.servico_id,
-        barbeiro_id: bookingData.barbeiro_id,
-        data: bookingData.data,
-        hora: bookingData.hora,
-        duracao: bookingData.duracao,
-        preco: bookingData.preco,
-        observacoes: bookingData.observacoes,
-        status: 'confirmed',
-        barbeiro_confirmou: true,
-        cliente_confirmou: true,
-        payment_method: metodo || 'cash',
-        remarcado_de: rescheduleFromId || null,
-      })
-      .select()
+    // Fetch user profile for name and CPF used in payment validation
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('nome, cpf')
+      .eq('id', user.id)
       .single();
 
-    if (aptError) throw aptError;
-
-    if (consumeRedemptionOnPaidBooking) {
-      const { error: consumeError } = await supabase.rpc('consume_available_redemptions_as_lost', {
-        p_user_id: user.id,
-        p_appointment_id: appointment.id,
-        p_reason: 'paid_booking_without_redemption',
-      });
-
-      if (consumeError) throw consumeError;
+    if (profileError || !profile) {
+      console.warn('Profile not found for user, proceeding with limited data:', { userId: user.id, error: profileError?.message });
     }
 
-    if (metodo === 'wallet') {
-      try {
-        await supabase.rpc('settle_client_debts', {
-          p_client_id: user.id,
-          p_correlation: `wallet-${appointment.id}`,
-        });
-      } catch (errDebt) {
-        console.warn('[create-payment] Falha ao quitar débitos via carteira:', errDebt);
+    // Validate CPF if payment requires profile validation (PIX or Card)
+    if ((metodo === 'pix' || metodo === 'card') && profile?.cpf && !validateCPF(profile.cpf)) {
+      console.error('Invalid CPF in customer profile');
+      return new Response(
+        JSON.stringify({
+          error: 'CPF inválido. Por favor, atualize seu perfil com um CPF válido antes de prosseguir com o pagamento.'
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Handle "cash" payment - create appointment immediately
+    if (metodo === 'cash') {
+      console.log('Creating cash appointment as confirmed (auto-confirm)');
+
+      // If rescheduling, cancel old appointment first
+      if (rescheduleFromId) {
+        console.log('Cancelling previous appointment:', rescheduleFromId);
+        await supabase
+          .from('agendamentos')
+          .update({
+            status: 'cancelled_by_user',
+            visivel_para_usuario: false,
+          })
+          .eq('id', rescheduleFromId);
       }
-    }
 
-    // Google Calendar sync (non-blocking) — só dispara se o barbeiro conectou
-    try {
-      const { data: barberInfo } = await supabase
-        .from('barbeiros')
-        .select('google_calendar_connected')
-        .eq('id', bookingData.barbeiro_id)
-        .maybeSingle();
+      // Create the appointment — AUTO-CONFIRMADO
+      const { data: appointment, error: aptError } = await supabase
+        .from('agendamentos')
+        .insert({
+          user_id: user.id,
+          servico_id: bookingData.servico_id,
+          barbeiro_id: bookingData.barbeiro_id,
+          data: bookingData.data,
+          hora: bookingData.hora,
+          duracao: bookingData.duracao,
+          preco: bookingData.preco,
+          observacoes: bookingData.observacoes,
+          status: 'confirmed', // AUTO-CONFIRMADO: sem necessidade de aprovação manual
+          barbeiro_confirmou: true, // AUTO-CONFIRMADO
+          cliente_confirmou: false,
+          payment_method: 'cash',
+          remarcado_de: rescheduleFromId || null,
+        })
+        .select()
+        .single();
 
-      if (barberInfo?.google_calendar_connected) {
+      if (aptError) {
+        console.error('Failed to create appointment:', aptError);
+        throw aptError;
+      }
+
+      // ============================================
+      // INTEGRAÇÃO GOOGLE CALENDAR - Criar evento
+      // ============================================
+      try {
         const { data: servico } = await supabase
           .from('servicos')
           .select('nome')
@@ -389,52 +492,157 @@ serve(async (req) => {
         const startDateTime = `${bookingData.data}T${bookingData.hora}:00`;
         const endDate = new Date(`${bookingData.data}T${bookingData.hora}`);
         endDate.setMinutes(endDate.getMinutes() + bookingData.duracao);
+        const endDateTime = endDate.toISOString().slice(0, 19);
 
-        await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/google-calendar-sync`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
-          },
-          body: JSON.stringify({
-            action: 'create',
-            appointmentId: appointment.id,
-            summary: `Agendamento: ${servico?.nome || 'Serviço'}`,
-            description: `Pagamento na barbearia (aguardando confirmação)`,
-            startDateTime,
-            endDateTime: endDate.toISOString().slice(0, 19),
-          }),
-        });
+        console.log('Creating Google Calendar event for cash appointment:', appointment.id);
+
+        // Chamar edge function de sync com Google Calendar
+        const googleCalendarResponse = await fetch(
+          `${Deno.env.get('SUPABASE_URL')}/functions/v1/google-calendar-sync`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
+            },
+            body: JSON.stringify({
+              action: 'create',
+              appointmentId: appointment.id,
+              summary: `Agendamento: ${servico?.nome || 'Serviço'}`,
+              description: `Cliente agendou ${servico?.nome || 'serviço'} - Pagamento em DINHEIRO (aguardando confirmação)`,
+              startDateTime,
+              endDateTime,
+            }),
+          }
+        );
+
+        if (googleCalendarResponse.ok) {
+          console.log('Google Calendar event created successfully');
+        } else {
+          console.error('Failed to create Google Calendar event:', await googleCalendarResponse.text());
+        }
+      } catch (gcError) {
+        console.error('Error creating Google Calendar event:', gcError);
+        // Não bloqueia o fluxo se Google Calendar falhar
       }
-    } catch (gcError) {
-      console.error('[create-payment] Google Calendar error:', gcError);
+
+      // Create payment record
+      const { data: payment, error: paymentError } = await supabase
+        .from('pagamentos')
+        .insert({
+          user_id: user.id,
+          agendamento_id: appointment.id,
+          metodo: 'cash',
+          valor: bookingData.preco,
+          status: 'pending', // Pagamento pendente até confirmação
+        })
+        .select()
+        .single();
+
+      if (paymentError) {
+        console.error('Failed to create payment:', paymentError);
+        throw paymentError;
+      }
+
+      console.log('Cash appointment created (auto-confirmed):', appointment.id);
+
+      // Notificação ao barbeiro
+      try {
+        if (bookingData.barbeiro_id) {
+          const { data: barbeiro } = await supabase
+            .from('barbeiros')
+            .select('user_id')
+            .eq('id', bookingData.barbeiro_id)
+            .single();
+
+          if (barbeiro?.user_id) {
+            const { data: servico } = await supabase
+              .from('servicos')
+              .select('nome')
+              .eq('id', bookingData.servico_id)
+              .single();
+
+            const dateParts = bookingData.data.split('-');
+            const dateFormatted = `${dateParts[2]}/${dateParts[1]}`;
+
+            await supabase.from('notificacoes').insert({
+              user_id: barbeiro.user_id,
+              agendamento_id: appointment.id,
+              titulo: 'Novo Agendamento',
+              mensagem: `${profile?.nome || 'Cliente'} agendou ${servico?.nome || 'serviço'} para ${dateFormatted} às ${bookingData.hora.substring(0, 5)} — Pagamento na barbearia.`,
+              tipo: 'geral',
+              lida: false,
+            });
+          }
+        }
+      } catch (notifError) {
+        console.error('Error sending barber notification:', notifError);
+      }
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          paymentMethod: 'cash',
+          appointment,
+          payment,
+          appointmentId: appointment.id,
+          message: 'Agendamento confirmado!',
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
-    // Registrar pagamento
-    await supabase.from('pagamentos').insert({
-      user_id: user.id,
-      agendamento_id: appointment.id,
-      metodo: metodo || 'cash',
-      valor: bookingData.preco,
-      status: metodo === 'wallet' ? 'paid' : 'pending',
-    });
+    // For PIX and Card, create pending booking first
+    console.log('Creating pending booking for PIX/Card payment');
 
-    return new Response(
-      JSON.stringify({
-        success: true,
-        paymentMethod: 'cash',
-        appointment,
-        appointmentId: appointment.id,
-        message: 'Agendamento criado! Aguardando confirmação do barbeiro.',
-      }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    const { data: pendingBooking, error: pendingError } = await supabase
+      .from('pending_bookings')
+      .insert({
+        user_id: user.id,
+        servico_id: bookingData.servico_id,
+        barbeiro_id: bookingData.barbeiro_id,
+        data: bookingData.data,
+        hora: bookingData.hora,
+        duracao: bookingData.duracao,
+        preco: bookingData.preco,
+        observacoes: bookingData.observacoes,
+        payment_method: metodo,
+      })
+      .select()
+      .single();
+
+    if (pendingError) {
+      console.error('Failed to create pending booking:', pendingError);
+      throw pendingError;
+    }
+
+    console.log('Pending booking created:', pendingBooking.id);
+
+    if (!bookingData.barbeiro_id) throw new Error('Barbeiro obrigatório');
+    const wooviPayment = await createWooviCharge(supabase, {
+      correlationID: `book-${pendingBooking.id}`, userId: user.id,
+      barberId: bookingData.barbeiro_id, tenantId: barber.tenant_id, receiver: pixReceiver, amount: pendingBooking.preco,
+      comment: `Reserva ${pendingBooking.id.slice(0, 8)}`,
+      target: { pending_booking_id: pendingBooking.id, metadata: { reschedule_from_id: rescheduleFromId ?? null, consume_redemption_on_paid_booking: !!consumeRedemptionOnPaidBooking } },
+    });
+    const { error: saveError } = await supabase.from('pending_bookings').update({
+      payment_intent_id: wooviPayment.id,
+      pix_qr_code: wooviPayment.pixQrCode.encodedImage,
+      pix_payload: wooviPayment.pixQrCode.payload,
+    }).eq('id', pendingBooking.id);
+    if (saveError) throw saveError;
+    return new Response(JSON.stringify({ success: true, paymentMethod: 'pix',
+      pendingBookingId: pendingBooking.id, pendingBooking, wooviPayment,
+    }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 
   } catch (error: any) {
-    console.error('[create-payment] Error:', error);
+    console.error('Error processing payment:', error);
     return new Response(
-      JSON.stringify({ error: error.message || 'Erro interno' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      JSON.stringify({
+        error: error.message || 'Erro ao processar pagamento',
+        ...(error instanceof BookingPixAccountError ? { code: error.code } : {})
+      }),
+      { status: error instanceof BookingPixAccountError ? 409 : 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 });
