@@ -1,4 +1,4 @@
-/** Global switch: PIX payments for clients are temporarily disabled; only pay-at-shop is offered. */
+/** Enables PIX only for the explicitly allowed client below. */
 export const CLIENT_PIX_ENABLED = true;
 
 /** E-mail do único cliente autorizado a pagar via PIX enquanto a liberação global estiver restrita. */
@@ -6,6 +6,10 @@ export const PIX_ALLOWED_EMAIL = 'danielcbrito74@gmail.com';
 
 /** ID do único cliente autorizado a pagar via PIX (fallback quando getUser não retorna o e-mail). */
 export const PIX_ALLOWED_USER_ID = '5d574ff2-4b2f-49d4-b260-1516a389cd80';
+
+export function isClientPixAllowed(email: string | null, userId: string | null): boolean {
+  return CLIENT_PIX_ENABLED && (email === PIX_ALLOWED_EMAIL || userId === PIX_ALLOWED_USER_ID);
+}
 
 export interface BarberPaymentOptions {
   pix: boolean;

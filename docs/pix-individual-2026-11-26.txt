@@ -1,0 +1,12 @@
+Liberação individual de PIX — 26/11/2026
+
+Usuário: PIX disponível somente para danielcbrito74@gmail.com, respeitando a configuração do profissional.
+Frontend: Regra compartilhada entre agendamento e renovação, com testes de conta permitida, conta não permitida e ausência de identificação.
+Correção: Respostas de configuração e Realtime preservam a identidade mais recente, em vez de restaurar valores antigos que ocultavam PIX.
+Backend N8N: Sem alterações.
+Database Supabase: ID da conta confirmado por consulta somente leitura; nenhuma alteração de dados.
+Serviços externos: Nenhuma cobrança iniciada e nenhuma publicação realizada.
+Fluxos críticos: Autenticação mantém identificação via Supabase; agendamento conserva filtros por barbearia e profissional; pagamento conserva as funções existentes.
+Erros: Ausência de identificação não libera PIX; erros de configuração continuam impedindo sua seleção.
+Validação: 12 testes aprovados e compilação automática OK.
+Limitação: Não foi possível validar as telas de agendamento e renovação com sessão real, pois o Supabase externo não permite gerar sessão pelo ambiente de verificação.

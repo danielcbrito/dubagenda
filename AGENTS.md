@@ -1,6 +1,7 @@
 # Architecture rules
 
 - Keep barber payment configuration parsing and fallback selection in a pure library, and database/Reatime lifecycle in a dedicated hook; this makes the rules testable and prevents leaked subscriptions.
+- Share client PIX eligibility through the payment library and preserve the latest authenticated identity in functional hook state updates; this prevents configuration responses from overwriting account eligibility.
 - Scope booking payment configuration reads by both tenant and selected barber key; this prevents cross-tenant configuration reuse.
 - Record cancellation debt in an appointment status trigger within the same transaction; this covers direct writes as well as Edge Functions and prevents duplicate fees.
 - Keep cancellation debts private; permit only the linked authenticated barber to read and waive their tenant-scoped debts through RLS plus an immutable-field trigger, and settle payments only via a service-only RPC after authoritative gateway lookup; this supports the existing barber panel without client self-release or forged payments.

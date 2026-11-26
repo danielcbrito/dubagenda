@@ -1,4 +1,4 @@
-import { CLIENT_PIX_ENABLED, PIX_ALLOWED_EMAIL, PIX_ALLOWED_USER_ID } from "@/lib/barber-payment-options";
+import { isClientPixAllowed } from "@/lib/barber-payment-options";
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
@@ -269,7 +269,7 @@ export function RenovacaoSheet({
                     <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/50">
                       Forma de pagamento
                     </p>
-                    {CLIENT_PIX_ENABLED && (userEmail === PIX_ALLOWED_EMAIL || authenticatedUserId === PIX_ALLOWED_USER_ID) && (
+                    {isClientPixAllowed(userEmail, authenticatedUserId) && (
                     <PaymentOption
                       icon={QrCode}
                       label="PIX"
