@@ -1,4 +1,4 @@
-import { CLIENT_PIX_ENABLED, PIX_ALLOWED_EMAIL } from "@/lib/barber-payment-options";
+import { CLIENT_PIX_ENABLED, PIX_ALLOWED_EMAIL, PIX_ALLOWED_USER_ID } from "@/lib/barber-payment-options";
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
@@ -87,6 +87,7 @@ export function RenovacaoSheet({
   const [loading, setLoading] = useState(false);
   const [pixData, setPixData] = useState<{ qr_code: string; copia_cola: string } | null>(null);
   const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
 
   const newCycleEnd = format(addDays(new Date(), 30), "dd 'de' MMMM", { locale: ptBR });
 
@@ -102,11 +103,12 @@ export function RenovacaoSheet({
     }
   }, [open]);
 
-  // Carrega o e-mail do usuário logado para restringir PIX a um único cliente
+  // Carrega o e-mail e o id do usuário logado para restringir PIX a um único cliente
   useEffect(() => {
     const loadUser = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       setUserEmail(user?.email ?? null);
+      setUserId(user?.id ?? null);
     };
     loadUser();
   }, []);
@@ -267,7 +269,7 @@ export function RenovacaoSheet({
                     <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/50">
                       Forma de pagamento
                     </p>
-                    {CLIENT_PIX_ENABLED && userEmail === PIX_ALLOWED_EMAIL && (
+                    {CLIENT_PIX_ENABLED && (userEmail === PIX_ALLOWED_EMAIL || userId === PIX_ALLOWED_USER_ID) && (
                     <PaymentOption
                       icon={QrCode}
                       label="PIX"

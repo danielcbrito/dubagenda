@@ -4,6 +4,9 @@ export const CLIENT_PIX_ENABLED = true;
 /** E-mail do único cliente autorizado a pagar via PIX enquanto a liberação global estiver restrita. */
 export const PIX_ALLOWED_EMAIL = 'danielcbrito74@gmail.com';
 
+/** ID do único cliente autorizado a pagar via PIX (fallback quando getUser não retorna o e-mail). */
+export const PIX_ALLOWED_USER_ID = '5d574ff2-4b2f-49d4-b260-1516a389cd80';
+
 export interface BarberPaymentOptions {
   pix: boolean;
   barbearia: boolean;
