@@ -19,7 +19,7 @@ export function useBarberPaymentOptions(barberId: string | null, tenantId: strin
     let disposed = false;
     let revision = 0;
     const configKey = `formas_pagamento_${barberId}`;
-    setState({ key, options: parseBarberPaymentOptions(), ready: false, error: false, userEmail: state.userEmail });
+    setState({ key, options: parseBarberPaymentOptions(), ready: false, error: false, userEmail: state.userEmail, userId: state.userId });
 
     const loadUser = async () => {
       try {

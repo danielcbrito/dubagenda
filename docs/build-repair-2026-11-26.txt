@@ -1,0 +1,13 @@
+Build repair — 2026-11-26
+
+User layer: Publication was blocked by a compilation error in the plan renewal sheet.
+Frontend layer: The userId prop and a local state variable had the same name.
+Renamed the authenticated-user state and its references to authenticatedUserId.
+The PIX eligibility check continues to use the authenticated account, not the prop.
+The barber payment hook also omitted the required userId field during its reset.
+Restored that field while preserving the existing state and tenant-scoped reads.
+Backend N8N layer: No changes.
+Database Supabase layer: No changes.
+External services layer: No changes; no payment or publication was initiated.
+Critical flows: Auth lookup, booking, and payment processing remain unchanged.
+Error handling: Existing renewal error messages and payment polling remain unchanged.
