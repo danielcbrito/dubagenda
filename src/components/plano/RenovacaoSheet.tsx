@@ -1,4 +1,4 @@
-import { CLIENT_PIX_ENABLED } from "@/lib/barber-payment-options";
+import { CLIENT_PIX_ENABLED, PIX_ALLOWED_EMAIL } from "@/lib/barber-payment-options";
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
@@ -86,6 +86,7 @@ export function RenovacaoSheet({
   const [formaPagamento, setFormaPagamento] = useState<FormaPagamento | null>(null);
   const [loading, setLoading] = useState(false);
   const [pixData, setPixData] = useState<{ qr_code: string; copia_cola: string } | null>(null);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
 
   const newCycleEnd = format(addDays(new Date(), 30), "dd 'de' MMMM", { locale: ptBR });
 
@@ -100,6 +101,15 @@ export function RenovacaoSheet({
       }, 300);
     }
   }, [open]);
+
+  // Carrega o e-mail do usuário logado para restringir PIX a um único cliente
+  useEffect(() => {
+    const loadUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setUserEmail(user?.email ?? null);
+    };
+    loadUser();
+  }, []);
 
   // PIX polling via edge function para confirmar e destravar renovações expiradas
   useEffect(() => {
@@ -257,7 +267,7 @@ export function RenovacaoSheet({
                     <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/50">
                       Forma de pagamento
                     </p>
-                    {CLIENT_PIX_ENABLED && (
+                    {CLIENT_PIX_ENABLED && userEmail === PIX_ALLOWED_EMAIL && (
                     <PaymentOption
                       icon={QrCode}
                       label="PIX"

@@ -570,7 +570,6 @@ const Cliente = () => {
 
   const handleCancelSubscription = async () => {
     cancelSubscription(() => {
-      setPendingDrawerOpen(false);
       invalidateLoyalty();
     });
   };
