@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { isClientPixAllowed, parseBarberPaymentOptions, type BarberPaymentOptions } from '@/lib/barber-payment-options';
+import { CLIENT_PIX_ENABLED, PIX_ALLOWED_EMAIL, PIX_ALLOWED_USER_ID, parseBarberPaymentOptions, type BarberPaymentOptions } from '@/lib/barber-payment-options';
 
 /** Configuração isolada por barbearia/profissional, sem cache persistente. */
 export function useBarberPaymentOptions(barberId: string | null, tenantId: string | null) {
@@ -19,7 +19,7 @@ export function useBarberPaymentOptions(barberId: string | null, tenantId: strin
     let disposed = false;
     let revision = 0;
     const configKey = `formas_pagamento_${barberId}`;
-    setState(prev => ({ ...prev, key, options: parseBarberPaymentOptions(), ready: false, error: false }));
+    setState({ key, options: parseBarberPaymentOptions(), ready: false, error: false, userEmail: state.userEmail, userId: state.userId });
 
     const loadUser = async () => {
       try {
@@ -44,7 +44,7 @@ export function useBarberPaymentOptions(barberId: string | null, tenantId: strin
         .eq('chave', configKey)
         .maybeSingle();
       if (disposed || revision !== requestRevision) return;
-      setState(prev => ({ ...prev, key, options: parseBarberPaymentOptions(data?.valor), ready: !error, error: !!error }));
+      setState({ key, options: parseBarberPaymentOptions(data?.valor), ready: !error, error: !!error, userEmail: state.userEmail, userId: state.userId });
     };
 
     const channel = supabase.channel(`booking-payment-options:${key}`)
@@ -54,7 +54,7 @@ export function useBarberPaymentOptions(barberId: string | null, tenantId: strin
       }, ({ new: row }) => {
         if (disposed || row.tenant_id !== tenantId) return;
         ++revision;
-        setState(prev => ({ ...prev, key, options: parseBarberPaymentOptions(row.valor), ready: true, error: false }));
+        setState({ key, options: parseBarberPaymentOptions(row.valor), ready: true, error: false, userEmail: state.userEmail, userId: state.userId });
       })
       .subscribe(status => {
         // Fecha a janela entre a consulta inicial e a assinatura; também atualiza após reconexão.
@@ -69,7 +69,7 @@ export function useBarberPaymentOptions(barberId: string | null, tenantId: strin
 
   const current = key !== null && state.key === key;
   return {
-    pixHabilitado: current && state.ready && state.options.pix && isClientPixAllowed(state.userEmail, state.userId),
+    pixHabilitado: CLIENT_PIX_ENABLED && current && state.ready && state.options.pix && (state.userEmail === PIX_ALLOWED_EMAIL || state.userId === PIX_ALLOWED_USER_ID),
     barbeariaHabilitado: current && state.ready && state.options.barbearia,
     loading: !current || (!state.ready && !state.error),
     error: current && state.error,
